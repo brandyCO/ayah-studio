@@ -23,7 +23,7 @@ export interface Mushaf {
 let cached: Promise<Mushaf> | null = null;
 
 export function loadMushaf(): Promise<Mushaf> {
-  cached ??= fetch(`${import.meta.env.BASE_URL}data/mushaf.json`, { cache: 'no-cache' })
+  cached ??= fetch(`${import.meta.env.BASE_URL}data/mushaf.json?v=${__DATA_VERSION__}`)
     .then((r) => {
       if (!r.ok) throw new Error(`Could not load mushaf layout (HTTP ${r.status})`);
       return r.json() as Promise<{ pages: MushafPage[] }>;

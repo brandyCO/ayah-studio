@@ -42,7 +42,9 @@ async function route() {
     screen.replaceChildren(h('div', { class: 'error' },
       h('h2', {}, 'Something went wrong'),
       h('p', {}, e instanceof Error ? e.message : String(e)),
-      h('a', { href: '#/', class: 'primary' }, 'Back to surahs')));
+      h('div', { class: 'row center' },
+        h('button', { class: 'primary', onclick: () => location.reload() }, 'Reload'),
+        h('a', { href: '#/', class: 'chip' }, 'Back to surahs'))));
   }
 }
 

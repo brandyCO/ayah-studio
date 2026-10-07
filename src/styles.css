@@ -178,6 +178,7 @@ button { font: inherit; color: inherit; }
 .result { margin-top: 12px; }
 .result-video { width: 160px; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; display: block; margin: 8px 0; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.center { justify-content: center; }
 
 /* debug sheet */
 .sheet {

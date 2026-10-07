@@ -16,8 +16,8 @@ const cache = new Map<string, Promise<unknown>>();
 
 function load<T>(file: string): Promise<T> {
   if (!cache.has(file)) {
-    // no-cache: revalidate with the server so an update never pairs new code with stale data.
-    const p = fetch(`${base}data/${file}`, { cache: 'no-cache' }).then((r) => {
+    // Versioned URL: after an update, new code never gets a stale cached copy of old data.
+    const p = fetch(`${base}data/${file}?v=${__DATA_VERSION__}`).then((r) => {
       if (!r.ok) throw new Error(`Could not load ${file} (HTTP ${r.status})`);
       return r.json();
     });
