@@ -50,3 +50,6 @@ export const globalAyahNumber = (s: SurahMeta, ayah: number) => s.start + ayah;
 
 export const reference = (s: SurahMeta, from: number, to = from) =>
   `${s.en} · ${s.n}:${from}${to > from ? `–${to}` : ''}`;
+
+/** Quran.com word positions (QDC segment indices) → our word indices, where they differ (word-map.json). */
+export const loadWordMap = () => load<{ map: Record<string, string> }>('word-map.json').then((d) => d.map);
