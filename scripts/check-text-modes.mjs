@@ -1,9 +1,13 @@
 // Check the word-timed text modes against real Quran.com QDC timings: `node scripts/check-text-modes.mjs`
 // (needs network for api.quran.com). Loads the real engine modules through Vite and measures text with
-// a stub canvas (approximate glyph widths), then asserts for every reciter × selection × mode:
-//   - every word appears exactly once, in order, and the groups join back to the exact ayah text
-//   - group times only move forward (text never jumps backwards, also through repetitions)
-//   - no group is shorter than 0.6 s unless merging would not fit; every group fits its box
+// a stub canvas (approximate glyph widths), then asserts for every reciter × selection × mode ×
+// translation (and title/credit/watermark layouts):
+//   - every on-screen group is an exact run of whole words; every word is shown at least once
+//   - the text follows the recitation: whenever a word is recited, the words on screen include it,
+//     so a repeated word or phrase is shown again
+//   - the synced translation is exactly the meanings of the Arabic words on screen
+//   - no group is shorter than 0.6 s unless merging would not fit; everything fits its box, inside
+//     the title-safe area, without overlapping the surah name, credit or watermark
 //   - malformed segments are ignored and missing words interpolated (no word dropped)
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
@@ -17,7 +21,7 @@ const { buildTimeline } = await load('/src/engine/timeline.ts');
 const layout = await load('/src/engine/layout.ts');
 
 const data = (f) => readFile(new URL(`../public/data/${f}`, import.meta.url), 'utf8').then(JSON.parse);
-const [quran, en, meta, wordMap] = await Promise.all([data('quran-uthmani.json'), data('en-sahih.json'), data('meta.json'), data('word-map.json')]);
+const [quran, en, meta, wordMap, wbw] = await Promise.all([data('quran-uthmani.json'), data('en-sahih.json'), data('meta.json'), data('word-map.json'), data('en-wbw.json')]);
 
 let failures = 0, checks = 0;
 function assert(cond, msg) {
@@ -61,50 +65,83 @@ async function qdc(reciter, chapter) {
 const RECITERS = [7, 173, 3, 10, 6, 12, 2, 1, 9, 4, 5, 97, 161];
 const SELECTIONS = [[2, 255, 255], [2, 282, 282], [2, 1, 5], [2, 72, 72], [2, 181, 181], [1, 1, 7], [103, 1, 3], [112, 1, 4]];
 const MODES = [['ayah', 1], ['line', 1], ['half', 1], ['words', 1], ['words', 2], ['words', 3]];
+const STYLE = { titlePos: 'top', titleSize: 'm', credit: false, watermark: true };
+const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true }, { titlePos: 'bottom', titleSize: 's', credit: true, watermark: false }, { titlePos: 'bottom', titleSize: 'l', credit: false, watermark: true }];
 const surah = (n) => meta[n - 1];
 const reciter = { id: 0, name: 'Test', short: 'Test', everyayah: '' };
+const norm = (x) => x.split(/\s+/).filter(Boolean).join(' ');
 
-const stats = { repeats: 0, malformed: 0, interpolated: 0, unmergedShort: 0, timelines: 0, groups: 0 };
+const stats = { repeats: 0, malformed: 0, interpolated: 0, unmergedShort: 0, timelines: 0, events: 0, shownAgain: 0 };
 
-function checkTimeline(tl, label, texts) {
-  let lastPos = [-1, -1];
+const meaningsOf = (s, from, texts) => texts.map((t, i) =>
+  words.wordMeanings(wbw.surahs[s - 1][from - 1 + i], words.parseSpans(wordMap.map[`${s}:${from + i}`]), words.displayWords(t).length));
+
+function build(s, from, texts, plan, mode, n, tr, style) {
+  return buildTimeline(ctx, {
+    surah: surah(s), reciter, plan, arabic: texts, english: en.surahs[s - 1].slice(from - 1, texts.length + from - 1),
+    meanings: meaningsOf(s, from, texts), mode, wordsPerStep: n, translationMode: tr === 'ayah' ? 'ayah' : 'words',
+    style: { ...style, translation: tr !== 'off' },
+  });
+}
+
+function checkLayout(lay, style, label) {
+  const z = layout.TITLE_SIZES[style.titleSize];
+  const T = Math.round((z.name + z.ref) * 1.4);
+  const title = [lay.title, lay.title + T];
+  const S = layout.SAFE;
+  assert(lay.ar.top >= S.y0 && lay.en.bottom <= S.y1 && title[0] >= S.y0 && title[1] <= S.y1, `${label}: inside the title-safe area`);
+  for (const b of [lay.ar, lay.en]) if (b.bottom > b.top) assert(title[1] <= b.top || title[0] >= b.bottom, `${label}: surah name does not overlap the text`);
+  assert(lay.ar.bottom <= lay.en.top || lay.en.bottom === lay.en.top, `${label}: Arabic above translation`);
+  for (const y of [lay.credit, lay.watermark]) if (y !== null) assert(y - 20 >= Math.max(lay.en.bottom, lay.ar.bottom, title[1]) && y + 20 <= S.y1, `${label}: footer clear of everything`);
+}
+
+function checkTimeline(tl, label, texts, plan, meanings, synced) {
+  const lay = tl.layout;
+  const fitsBox = (f, lh, box) => f.lines.length * f.size * lh <= box.bottom - box.top + 1e-6;
   tl.ayat.forEach((a, i) => {
-    const text = texts[i];
-    const dw = words.displayWords(text);
-    // Every word exactly once, in order; joined back = the exact ayah text.
-    const got = a.ar.flatMap((g) => words.displayWords(g.lines.join(' ')));
-    assert(got.length === dw.length && got.every((w, k) => w === dw[k]), `${label} ${a.ayah}: words once, in order`);
-    assert(a.ar.flatMap((g) => g.lines).join(' ') === text, `${label} ${a.ayah}: groups join to the exact ayah`);
-    const box = layout.boxes(true);
-    a.ar.forEach((g, k) => {
-      stats.groups++;
-      assert(Number.isFinite(g.start) && Number.isFinite(g.end), `${label} ${a.ayah}: finite times`);
-      if (k > 0) assert(g.start >= a.ar[k - 1].start && Math.abs(a.ar[k - 1].end - g.start) < 1e-9, `${label} ${a.ayah}: groups follow each other`);
-      assert(g.start >= a.start - 1e-9 && g.end <= a.end + 1e-9, `${label} ${a.ayah}: group inside its ayah`);
-      assert(g.size >= 64, `${label} ${a.ayah}: legible size`);
-      ctx.font = `${g.size}px x`;
-      assert(g.lines.every((l) => ctx.measureText(l).width <= layout.TEXT_W + 1), `${label} ${a.ayah}: lines fit the width`);
-      if (tl.mode !== 'ayah' && g.end - g.start < words.MIN_GROUP - 1e-9) {
-        // Allowed only if merging with a neighbour would not fit.
-        const nb = a.ar[k + 1] ?? a.ar[k - 1];
-        const merged = nb ? (k + 1 < a.ar.length ? [...g.lines, ...nb.lines] : [...nb.lines, ...g.lines]) : null;
-        const fits = merged && layout.fitArabic(ctx, words.displayWords(merged.join(' ')), layout.AR_SIZES[tl.mode], box.ar);
-        assert(!fits, `${label} ${a.ayah}: short group ${(g.end - g.start).toFixed(2)} s could have merged`);
+    const dw = words.displayWords(texts[i]);
+    const p = plan.ayat[i];
+    const mode = p.seq ? tl.mode : 'ayah';
+    const seen = new Array(dw.length).fill(false);
+    a.events.forEach((e, k) => {
+      stats.events++;
+      for (let w = e.first; w <= e.last; w++) seen[w] = true;
+      assert(e.ar.lines.join(' ') === dw.slice(e.first, e.last + 1).join(' '), `${label} ${a.ayah}: group is an exact run of words`);
+      if (synced) assert(e.en && norm(e.en.lines.join(' ')) === norm(meanings[i].slice(e.first, e.last + 1).join(' ')), `${label} ${a.ayah}: translation = meanings of the words shown`);
+      assert(Number.isFinite(e.start) && Number.isFinite(e.end), `${label} ${a.ayah}: finite times`);
+      if (k > 0) assert(e.start >= a.events[k - 1].start && Math.abs(a.events[k - 1].end - e.start) < 1e-9, `${label} ${a.ayah}: events follow each other`);
+      if (e.start < a.end) assert(e.start >= a.start - 1e-9, `${label} ${a.ayah}: event inside its ayah`);
+      assert(e.ar.size >= 64 && fitsBox(e.ar, layout.AR_LINE, lay.ar), `${label} ${a.ayah}: Arabic fits, legible size`);
+      if (e.en) assert(fitsBox(e.en, layout.EN_LINE, lay.en), `${label} ${a.ayah}: translation fits`);
+      ctx.font = `${e.ar.size}px x`;
+      assert(e.ar.lines.every((l) => ctx.measureText(l).width <= layout.TEXT_W + 1), `${label} ${a.ayah}: lines fit the width`);
+      if (mode !== 'ayah' && e.end - e.start < words.MIN_GROUP - 1e-9 && e.start < a.end) {
+        // Allowed only if no neighbour joins it into one run of words that fits.
+        const joinable = [a.events[k - 1], a.events[k + 1]].some((nb) => {
+          if (!nb || !(nb.first <= e.last + 1 && e.first <= nb.last + 1)) return false;
+          const f = Math.min(nb.first, e.first), l = Math.max(nb.last, e.last);
+          return layout.fitArabic(ctx, dw.slice(f, l + 1), layout.AR_SIZES[mode], lay.ar) && (!synced || layout.fitEnglish(ctx, meanings[i].slice(f, l + 1).join(' '), lay.en));
+        });
+        assert(!joinable, `${label} ${a.ayah}: short group ${(e.end - e.start).toFixed(2)} s could have merged`);
         stats.unmergedShort++;
+        stats.shortest = Math.min(stats.shortest ?? Infinity, e.end - e.start);
+        if (process.env.SHOW_SHORT) console.log(`short: ${label} ${a.ayah} ev ${k}: [${e.first}-${e.last}] ${(e.end - e.start).toFixed(2)} s · prev ${a.events[k - 1] ? `[${a.events[k - 1].first}-${a.events[k - 1].last}]` : "-"} next ${a.events[k + 1] ? `[${a.events[k + 1].first}-${a.events[k + 1].last}]` : "-"}`);
       }
     });
+    assert(seen.every(Boolean), `${label} ${a.ayah}: every word shown`);
+    // The text follows the recitation, repeats included.
+    const seq = p.seq ?? [];
+    seq.forEach(([w, st], k) => {
+      if (k + 1 < seq.length && seq[k + 1][1] < st + 0.05) return; // overlapping/zero-length source timing
+      const t = st + 0.02;
+      if (st < a.start || t >= a.end) return;
+      const e = a.events.find((x) => t >= x.start && t < x.end);
+      assert(e && e.first <= w && w <= e.last, `${label} ${a.ayah}: word ${w + 1} recited at ${st.toFixed(2)} s is on screen`);
+    });
+    const firsts = new Set();
+    for (const e of a.events) { const key = `${e.first}-${e.last}`; if (firsts.has(key)) stats.shownAgain++; firsts.add(key); }
     if (i > 0) assert(a.start >= tl.ayat[i - 1].end, `${label}: ayat do not overlap`);
   });
-  // Never jumps backwards: sample the reel and require the (ayah, first word) shown to only increase.
-  for (let t = 0; t < tl.duration; t += 0.02) {
-    const ai = tl.ayat.findIndex((a) => t >= a.start && t < a.end);
-    if (ai < 0) continue;
-    const g = tl.ayat[ai].ar.findIndex((x) => t >= x.start && t < x.end);
-    if (g < 0) continue;
-    const pos = [ai, g];
-    assert(pos[0] > lastPos[0] || (pos[0] === lastPos[0] && pos[1] >= lastPos[1]), `${label}: text jumped backwards at ${t.toFixed(2)} s`);
-    lastPos = pos;
-  }
 }
 
 const chapters = [...new Set(SELECTIONS.map(([s]) => s))];
@@ -129,15 +166,19 @@ for (const r of RECITERS) {
       stats.interpolated += a.stats.interpolated;
       assert(a.wordStart.every(Number.isFinite), `reciter ${r} ${s}:${a.ayah}: every word timed`);
     }
-    for (const [mode, n] of MODES) {
-      for (const showTranslation of [true, false]) {
-        const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''}${showTranslation ? '+en' : ''}`;
-        try {
-          const tl = buildTimeline(ctx, { surah: surah(s), reciter, plan, arabic: texts, english: en.surahs[s - 1].slice(from - 1, to), mode, wordsPerStep: n, showTranslation });
-          stats.timelines++;
-          checkTimeline(tl, label, texts);
-        } catch (e) {
-          assert(false, `${label}: ${e.message}`);
+    const meanings = meaningsOf(s, from, texts);
+    for (const style of r === 7 ? STYLES : [STYLE]) {
+      for (const [mode, n] of MODES) {
+        for (const tr of ['words', 'ayah', 'off']) {
+          const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''} en:${tr} title:${style.titlePos}/${style.titleSize}${style.credit ? '+credit' : ''}`;
+          try {
+            const tl = build(s, from, texts, plan, mode, n, tr, style);
+            stats.timelines++;
+            checkLayout(tl.layout, style, label);
+            checkTimeline(tl, label, texts, plan, meanings, tr === 'words');
+          } catch (e) {
+            assert(false, `${label}: ${e.message}`);
+          }
         }
       }
     }
@@ -155,9 +196,10 @@ const sudais = new Map([...await qdc(3, 103)]);
   assert(wt.stats.repeats > 0, 'repetition counted');
   const second6 = words.validSegments(v.segments).find((x) => x[0] === 6)[1] / 1000;
   assert(Math.abs(wt.start[5] - second6) < 1e-9, 'word 6 is timed after the repeat');
-  const groups = words.timeGroups(layout.wordUnits(wt.start.length, 1), wt.start, wt.last);
-  const g5 = groups.find((g) => g.first <= 4 && 4 <= g.last);
-  assert(g5.end >= second6 - 1e-9, 'word 5 holds while the reciter repeats (no jump back)');
+  // Shown again: in Words mode (1 per step) word 1 is on screen twice, the second time after word 5.
+  const ev = words.timeEvents(layout.wordUnits(wt.start.length, 1), wt.seq, wt.last, () => false);
+  const w1 = ev.filter((e) => e.first === 0);
+  assert(w1.length === 2 && w1[1].start > ev.find((e) => e.first === 4).start, 'repeated words are shown again');
 }
 {
   // Malformed segments: [1], [2] (Alafasy 1:3) and [50, start] (Alafasy 2:255) are ignored.
@@ -178,6 +220,17 @@ const sudais = new Map([...await qdc(3, 103)]);
   assert(words.wordTimings(3, { verse_key: 'y', timestamp_from: 0, timestamp_to: 1000, segments: [[1], [2, 5]] }, null) === null, 'no valid segment → no word timing (never guess sync)');
 }
 {
+  // Mislabelled indices (seen in the data) are dropped; real repetitions are kept.
+  const seg = (ix) => ({ verse_key: 'z', timestamp_from: 0, timestamp_to: ix.length * 500, segments: ix.map((i, k) => [i, k * 500, k * 500 + 480]) });
+  const range = (a, b) => Array.from({ length: b - a + 1 }, (_, k) => a + k);
+  const ahead = words.wordTimings(130, seg([...range(1, 34), 118, ...range(36, 130)]), null);
+  assert(ahead.stats.malformed === 1 && ahead.stats.repeats === 0 && ahead.stats.interpolated === 1, 'jump-ahead mislabel dropped (2:282 pattern)');
+  const back = words.wordTimings(50, seg([...range(1, 45), 22, 23, ...range(48, 50)]), null);
+  assert(back.stats.malformed === 2 && back.stats.repeats === 0 && back.stats.interpolated === 2, 'jump-back mislabel dropped (2:213 pattern)');
+  const real = words.wordTimings(9, seg([...range(1, 5), ...range(1, 9)]), null);
+  assert(real.stats.malformed === 0 && real.stats.repeats === 4 && real.seq.length === 14, 'real repetition kept');
+}
+{
   // Word map: in 2:181 Quran.com word 3 covers our words 3–4 ("بَعۡدَ مَا"); they share one time.
   const v = (await qdc(7, 2)).get('2:181');
   const wt = words.wordTimings(words.displayWords(quran.surahs[1][180]).length, v, words.parseSpans(wordMap.map['2:181']));
@@ -186,11 +239,25 @@ const sudais = new Map([...await qdc(3, 103)]);
 {
   // Everyayah fallback plan: Ayah mode only, pages by word count.
   const plan = rec.planClipReel(282, [120]);
-  const tl = buildTimeline(ctx, { surah: surah(2), reciter, plan, arabic: [quran.surahs[1][281]], english: [en.surahs[1][281]], mode: 'words', wordsPerStep: 1, showTranslation: true });
-  assert(tl.ayat[0].joint && tl.ayat[0].ar.length > 1, 'fallback: Ayah mode, 2:282 paginated');
-  checkTimeline(tl, 'fallback 2:282', [quran.surahs[1][281]]);
+  const texts = [quran.surahs[1][281]];
+  for (const tr of ['words', 'ayah']) {
+    const tl = build(2, 282, texts, plan, 'words', 1, tr, STYLE);
+    assert(tl.ayat[0].events.length > 1 && tl.ayat[0].events.every((e) => e.en), `fallback (${tr}): Ayah mode, 2:282 paginated with its translation`);
+    checkTimeline(tl, `fallback 2:282 en:${tr}`, texts, plan, meaningsOf(2, 282, texts), tr === 'words');
+  }
+}
+{
+  // Word meanings: 2:181 Quran.com word 3 ("after what") sits on our word 3; every meaning used once.
+  const m = meaningsOf(2, 181, [quran.surahs[1][180]])[0];
+  assert(m[2] === 'after what' && m[3] === '', '2:181 meaning of the grouped word');
+  for (let s = 1; s <= 114; s++) {
+    quran.surahs[s - 1].forEach((t, a) => {
+      const m = meaningsOf(s, a + 1, [t])[0];
+      assert(norm(m.join(' ')) === norm(wbw.surahs[s - 1][a].split('|').join(' ')), `${s}:${a + 1}: every word meaning used once, in order`);
+    });
+  }
 }
 
 await server.close();
-console.log(`${failures ? 'FAILED' : 'OK'}: ${checks} checks, ${failures} failures · ${stats.timelines} timelines, ${stats.groups} groups · segments: ${stats.repeats} repeats, ${stats.malformed} malformed, ${stats.interpolated} words interpolated · ${stats.unmergedShort} short groups that could not merge`);
+console.log(`${failures ? 'FAILED' : 'OK'}: ${checks} checks, ${failures} failures · ${stats.timelines} timelines, ${stats.events} events (${stats.shownAgain} shown again for repeats) · segments: ${stats.repeats} repeats, ${stats.malformed} malformed, ${stats.interpolated} words interpolated · ${stats.unmergedShort} short groups that could not merge ${stats.shortest !== undefined ? ` (shortest ${stats.shortest.toFixed(2)} s)` : ''}`);
 process.exit(failures ? 1 : 0);
