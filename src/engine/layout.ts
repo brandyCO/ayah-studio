@@ -32,10 +32,67 @@ export interface Box {
   bottom: number;
 }
 
-export function boxes(showTranslation: boolean): { ar: Box; en: Box } {
-  return showTranslation
-    ? { ar: { top: 300, bottom: 1130 }, en: { top: 1160, bottom: 1650 } }
-    : { ar: { top: 300, bottom: 1650 }, en: { top: 0, bottom: 0 } };
+export type TitlePos = 'top' | 'below' | 'bottom';
+export type TitleSize = 's' | 'm' | 'l';
+
+/** The choices that move things on the frame. */
+export interface FrameStyle {
+  translation: boolean;
+  titlePos: TitlePos; // surah name + reference: top, right below the Arabic, or bottom
+  titleSize: TitleSize;
+  credit: boolean; // "Recited by …" line (optional)
+  watermark: boolean;
+}
+
+export const TITLE_SIZES: Record<TitleSize, { name: number; ref: number }> = {
+  s: { name: 44, ref: 30 },
+  m: { name: 56, ref: 36 },
+  l: { name: 72, ref: 46 },
+};
+const titleHeight = (z: TitleSize) => Math.round((TITLE_SIZES[z].name + TITLE_SIZES[z].ref) * 1.4);
+
+export interface FrameLayout {
+  ar: Box; // Arabic fits here
+  en: Box; // translation fits here (empty when off)
+  text: Box; // the whole text area: Arabic + translation together are centred in it
+  title: number; // top of the surah name + reference block
+  credit: number | null; // centre line of the reciter credit
+  watermark: number | null;
+}
+
+/** Everything stays inside the 5% title-safe area and nothing overlaps (rule 6). */
+export function frameLayout(st: FrameStyle): FrameLayout {
+  let bottom = SAFE.y1;
+  let watermark: number | null = null, credit: number | null = null;
+  if (st.watermark) {
+    watermark = bottom - 22;
+    bottom -= 50;
+  }
+  if (st.credit) {
+    credit = bottom - 22;
+    bottom -= 52;
+  }
+  const T = titleHeight(st.titleSize);
+  let top = SAFE.y0 + 24, title: number;
+  if (st.titlePos === 'top') {
+    title = top;
+    top += T + 60;
+  } else if (st.titlePos === 'bottom') {
+    title = bottom - 20 - T;
+    bottom = title - 50;
+  } else {
+    top += 40;
+    bottom -= 30;
+    title = 0;
+  }
+  const below = st.titlePos === 'below';
+  // Arabic gets ~62% of the area when a translation shares it; "below" keeps a slot for the title
+  // under the Arabic (and above the translation).
+  const split = st.translation ? Math.round(top + 0.62 * (bottom - top - 30)) : bottom;
+  const ar = { top, bottom: below ? split - T - 60 : split };
+  if (below) title = ar.bottom + 30;
+  const en = st.translation ? { top: below ? title + T + 30 : split + 30, bottom } : { top: bottom, bottom };
+  return { ar, en, text: { top, bottom }, title, credit, watermark };
 }
 
 export interface Fit {
@@ -100,22 +157,32 @@ const ranges = (counts: number[]): Range[] => {
   return counts.map((c) => [at, (at += c) - 1] as Range);
 };
 
+/** English text in its box at the largest size that fits, or null. */
+export function fitEnglish(ctx: TextCtx, text: string, box: Box): Fit | null {
+  ctx.direction = 'ltr';
+  const f = fitAll(ctx, [text.split(/\s+/).filter(Boolean)], EN_SIZES, FONT_EN, EN_LINE, box);
+  return f ? f[0] : null;
+}
+
 /**
  * Ayah mode: the whole ayah, or — when it cannot fit even at the minimum size — the fewest pages that
- * do (split at word boundaries). With a translation, it is split into the same number of pages.
+ * do (split at word boundaries). The translation goes with each page: the word meanings of that
+ * page's words (`meanings`, synced), or the ayah translation split into as many pages (`english`).
  */
-export function ayahPages(ctx: TextCtx, words: string[], english: string | null, showTranslation: boolean) {
-  const b = boxes(showTranslation);
+export function ayahPages(ctx: TextCtx, words: string[], lay: FrameLayout, english: string | null, meanings: string[] | null) {
   const enWords = english ? english.split(/\s+/).filter(Boolean) : [];
   for (let n = 1; n <= words.length; n++) {
     const arChunks = chunk(words, n);
     ctx.direction = 'rtl';
-    const ar = fitAll(ctx, arChunks, AR_SIZES.ayah, FONT_AR, AR_LINE, b.ar);
+    const ar = fitAll(ctx, arChunks, AR_SIZES.ayah, FONT_AR, AR_LINE, lay.ar);
     if (!ar) continue;
     let en: Fit[] | null = null;
-    if (showTranslation && english) {
+    if (meanings || english) {
+      const enPages = meanings
+        ? ranges(arChunks.map((c) => c.length)).map(([f, l]) => meanings.slice(f, l + 1).join(' ').split(/\s+/).filter(Boolean))
+        : chunk(enWords, n);
       ctx.direction = 'ltr';
-      en = fitAll(ctx, chunk(enWords, n), EN_SIZES, FONT_EN, EN_LINE, b.en);
+      en = fitAll(ctx, enPages, EN_SIZES, FONT_EN, EN_LINE, lay.en);
       if (!en) continue;
     }
     if (ar.flatMap((p) => p.lines).join(' ') !== words.join(' ')) throw new Error('Pagination altered the ayah text');

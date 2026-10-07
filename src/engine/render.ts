@@ -2,10 +2,10 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import type { BackgroundMedia } from './backgrounds';
-import { AR_LINE, boxes, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, SAFE, W } from './layout';
+import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, W, type Fit } from './layout';
 import type { Project } from './project';
 import { reciterCredit } from '../data/reciters';
-import type { Timeline, TimedAyah, TimedText } from './timeline';
+import type { Timeline, TimedAyah } from './timeline';
 
 const ENTER = 0.45; // text fades/rises in over this long (less for short groups)
 const EXIT = 0.25;
@@ -58,7 +58,7 @@ function ayahAt(tl: Timeline, t: number): TimedAyah | null {
   return tl.ayat.find((a) => t >= a.start && t < a.end) ?? null;
 }
 
-const itemAt = (items: TimedText[], t: number) => items.find((g) => t >= g.start && t < g.end) ?? null;
+const itemAt = <T extends { start: number; end: number }>(items: T[], t: number) => items.find((g) => t >= g.start && t < g.end) ?? null;
 
 /** Opacity and entry progress of a timed item: in after its start, out before its end. */
 function fade(g: { start: number; end: number }, t: number, enter: number, exit: number) {
@@ -94,65 +94,69 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 14;
 
-  // Header: surah name + reference (always visible).
-  ctx.direction = 'rtl';
-  ctx.font = `54px ${FONT_NAME}`;
-  ctx.fillText(tl.surah.ar, W / 2, SAFE.y0 + 70);
-  ctx.direction = 'ltr';
-  ctx.font = `500 36px ${FONT_UI}`;
-  ctx.globalAlpha = 0.9;
-  ctx.fillText(headerRef(tl, t), W / 2, SAFE.y0 + 150);
-  ctx.globalAlpha = 1;
-
-  // Ayah text: each group shows from its first word until the next group (word-timed).
+  const lay = tl.layout;
   const ayah = ayahAt(tl, t);
-  if (ayah) {
-    const b = boxes(project.showTranslation);
-    const g = itemAt(ayah.ar, t);
-    const en = itemAt(ayah.en, t);
-    const arH = (x: TimedText) => x.lines.length * x.size * AR_LINE;
-    const enH = (x: TimedText) => x.lines.length * x.size * EN_LINE;
-    let arTop = 0, enTop = 0;
-    if (ayah.joint && g) {
-      // Ayah mode: Arabic and translation are centred as one block (layout guarantees fit).
-      const k = ayah.ar.indexOf(g);
-      const pair = ayah.en[k];
-      const total = arH(g) + (pair ? b.en.top - b.ar.bottom + enH(pair) : 0);
-      arTop = (b.ar.top + (pair ? b.en.bottom : b.ar.bottom)) / 2 - total / 2;
-      if (pair) enTop = arTop + total - enH(pair);
-    } else {
-      if (g) arTop = (b.ar.top + b.ar.bottom) / 2 - arH(g) / 2;
-      if (en) enTop = (b.en.top + b.en.bottom) / 2 - enH(en) / 2;
-    }
-    let dy = 0;
-    if (g) {
-      const f = fade(g, t, ENTER, EXIT);
-      if (project.textEffect === 'rise') dy = (1 - f.pin) * 36 * Math.min(1, (g.end - g.start) / 1.5);
-      ctx.globalAlpha = f.alpha;
-      ctx.direction = 'rtl';
-      ctx.font = `${g.size}px ${FONT_AR}`;
-      drawLines(ctx, g.lines, g.size, AR_LINE, arTop + dy);
-    }
-    if (en) {
-      // The translation is calm: it fades with its page (the whole ayah unless it is long).
-      const f = ayah.joint && g ? fade(g, t, ENTER, EXIT) : fade(en, t, EN_ENTER, EXIT);
-      ctx.globalAlpha = f.alpha * 0.92;
-      ctx.direction = 'ltr';
-      ctx.font = `${en.size}px ${FONT_EN}`;
-      drawLines(ctx, en.lines, en.size, EN_LINE, ayah.joint ? enTop + dy : enTop);
-    }
-    ctx.globalAlpha = 1;
+  const ev = ayah ? itemAt(ayah.events, t) : null;
+  const page = ayah && !ev?.en ? itemAt(ayah.enPages, t) : null;
+  const en: (Fit & { start: number; end: number }) | null = ev?.en ? { ...ev.en, start: ev.start, end: ev.end } : page;
+  const arH = (x: Fit) => x.lines.length * x.size * AR_LINE;
+  const enH = (x: Fit) => x.lines.length * x.size * EN_LINE;
+
+  // Where the text goes. "Below": Arabic sits right on the title, translation right under it.
+  // Otherwise text that belongs together (Arabic + its own translation) is centred as one block.
+  let arTop = 0, enTop = 0;
+  if (project.titlePos === 'below') {
+    if (ev) arTop = lay.ar.bottom - arH(ev.ar);
+    enTop = lay.en.top;
+  } else if (ev && ev.en) {
+    const total = arH(ev.ar) + 30 + enH(ev.en);
+    arTop = (lay.ar.top + lay.en.bottom) / 2 - total / 2;
+    enTop = arTop + arH(ev.ar) + 30;
+  } else {
+    if (ev) arTop = (lay.ar.top + lay.ar.bottom) / 2 - arH(ev.ar) / 2;
+    if (en) enTop = (lay.en.top + lay.en.bottom) / 2 - enH(en) / 2;
   }
 
-  // Footer: reciter credit + optional watermark.
+  // Ayah text: each event shows from its first recited word until the next (word-timed).
+  let dy = 0;
+  if (ev) {
+    const f = fade(ev, t, ENTER, EXIT);
+    if (project.textEffect === 'rise') dy = (1 - f.pin) * 36 * Math.min(1, (ev.end - ev.start) / 1.5);
+    ctx.globalAlpha = f.alpha;
+    ctx.direction = 'rtl';
+    ctx.font = `${ev.ar.size}px ${FONT_AR}`;
+    drawLines(ctx, ev.ar.lines, ev.ar.size, AR_LINE, arTop + dy);
+  }
+  if (en) {
+    // Synced meanings move with their words; a whole-ayah translation fades calmly with its page.
+    const f = ev?.en ? fade(ev, t, ENTER, EXIT) : fade(en, t, EN_ENTER, EXIT);
+    ctx.globalAlpha = f.alpha * 0.92;
+    ctx.direction = 'ltr';
+    ctx.font = `${en.size}px ${FONT_EN}`;
+    drawLines(ctx, en.lines, en.size, EN_LINE, ev?.en ? enTop + dy : enTop);
+  }
+  ctx.globalAlpha = 1;
+
+  // Surah name + reference (always visible, rule 2) at the chosen place and size.
+  const z = TITLE_SIZES[project.titleSize];
+  ctx.direction = 'rtl';
+  ctx.font = `${z.name}px ${FONT_NAME}`;
+  ctx.fillText(tl.surah.ar, W / 2, lay.title + z.name * 0.7);
   ctx.direction = 'ltr';
-  ctx.font = `500 32px ${FONT_UI}`;
-  ctx.globalAlpha = 0.92;
-  ctx.fillText(`Recited by ${reciterCredit(tl.reciter)}`, W / 2, SAFE.y1 - (project.watermark ? 80 : 40));
-  if (project.watermark) {
+  ctx.font = `500 ${z.ref}px ${FONT_UI}`;
+  ctx.globalAlpha = 0.9;
+  ctx.fillText(headerRef(tl, t), W / 2, lay.title + z.name * 1.4 + z.ref * 0.7);
+
+  // Footer: optional reciter credit and watermark.
+  if (lay.credit !== null) {
+    ctx.font = `500 32px ${FONT_UI}`;
+    ctx.globalAlpha = 0.92;
+    ctx.fillText(`Recited by ${reciterCredit(tl.reciter)}`, W / 2, lay.credit);
+  }
+  if (lay.watermark !== null) {
     ctx.font = `500 26px ${FONT_UI}`;
     ctx.globalAlpha = 0.6;
-    ctx.fillText('Ayah Studio', W / 2, SAFE.y1 - 30);
+    ctx.fillText('Ayah Studio', W / 2, lay.watermark);
   }
   ctx.restore();
 }

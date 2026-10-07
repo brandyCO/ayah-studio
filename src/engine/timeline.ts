@@ -1,16 +1,30 @@
 // Timeline derived from the recitation: the reel plan says when each ayah and word is recited; the
-// text mode turns each ayah into timed groups of whole words (pure apart from text measuring).
+// text mode turns that into text events — groups of whole words on screen, shown again when the
+// reciter repeats them (pure apart from text measuring).
 import type { SurahMeta } from '../data/quran';
 import { reference } from '../data/quran';
 import type { Reciter } from '../data/reciters';
-import { AR_SIZES, ayahPages, boxes, fitArabic, halfUnits, lineUnits, translationPages, wordUnits, type Fit, type Range, type TextCtx } from './layout';
-import type { TextMode } from './project';
+import {
+  AR_SIZES, ayahPages, fitArabic, fitEnglish, frameLayout, halfUnits, lineUnits, translationPages, wordUnits,
+  type Fit, type FrameLayout, type FrameStyle, type Range, type TextCtx,
+} from './layout';
+import type { TextMode, TranslationMode } from './project';
 import type { ReelPlan } from './recitation';
-import { displayWords, timeGroups } from './words';
+import { displayWords, timeEvents, type Recited } from './words';
 
 export interface TimedText extends Fit {
   start: number;
   end: number;
+}
+
+/** Words first..last on screen from start to end, with their translation when it follows the words. */
+export interface TimedEvent {
+  start: number;
+  end: number;
+  first: number;
+  last: number;
+  ar: Fit;
+  en: Fit | null;
 }
 
 export interface TimedAyah {
@@ -18,10 +32,9 @@ export interface TimedAyah {
   ref: string; // e.g. "Al-Baqara · 2:255"
   start: number;
   end: number;
-  ar: TimedText[]; // consecutive groups of whole words
-  en: TimedText[]; // translation pages (empty when off)
-  /** Ayah mode: ar[i] and en[i] are one page, centred together. */
-  joint: boolean;
+  events: TimedEvent[];
+  /** Whole-ayah translation pages when it does not follow the words (Line/Half/Words + "whole ayah"). */
+  enPages: TimedText[];
 }
 
 export interface Timeline {
@@ -29,6 +42,7 @@ export interface Timeline {
   surah: SurahMeta;
   reciter: Reciter;
   mode: TextMode;
+  layout: FrameLayout;
   ayat: TimedAyah[];
 }
 
@@ -37,54 +51,64 @@ export interface TimelineInput {
   reciter: Reciter;
   plan: ReelPlan;
   arabic: string[];
-  english: string[];
+  english: string[]; // Sahih International, per ayah
+  meanings: string[][]; // English meaning per display word, per ayah (synced translation)
   mode: TextMode;
   wordsPerStep: number;
-  showTranslation: boolean;
+  translationMode: TranslationMode;
+  style: FrameStyle;
 }
 
-/** Group starts proportional to word counts (no word timings: Ayah-mode pages only). */
-function proportional(units: Range[], start: number, end: number): number[] {
+/** Without word timings (Ayah mode only): pages follow each other, proportional to word counts. */
+function proportional(units: Range[], start: number, end: number): Recited[] {
   const total = units[units.length - 1][1] + 1;
-  return units.map(([f]) => start + ((end - start) * f) / total);
+  return units.map(([f]) => [f, start + ((end - start) * f) / total, 0]);
 }
 
 export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
-  const b = boxes(o.showTranslation);
+  const lay = frameLayout(o.style);
+  const synced = o.style.translation && o.translationMode === 'words';
   const ayat = o.plan.ayat.map((p, i): TimedAyah => {
     const text = o.arabic[i];
-    const english = o.english[i];
     const words = displayWords(text);
-    const mode: TextMode = p.wordStart ? o.mode : 'ayah';
-    let ar: TimedText[];
-    let en: TimedText[] = [];
-    const joint = mode === 'ayah';
+    const meanings = synced ? o.meanings[i] : null;
+    const english = o.style.translation && !synced ? o.english[i] : null;
+    const mode: TextMode = p.seq ? o.mode : 'ayah';
+    const enText = (f: number, l: number) => meanings!.slice(f, l + 1).filter(Boolean).join(' ');
+    let events: TimedEvent[];
+    let enPages: TimedText[] = [];
     if (mode === 'ayah') {
-      const pages = ayahPages(ctx, words, english, o.showTranslation);
-      const starts = p.wordStart ? pages.units.map(([f]) => p.wordStart![f]) : proportional(pages.units, p.start, p.end);
-      const span = (k: number) => ({ start: starts[k], end: k + 1 < starts.length ? starts[k + 1] : p.end });
-      ar = pages.ar.map((f, k) => ({ ...f, ...span(k) }));
-      if (pages.en) en = pages.en.map((f, k) => ({ ...f, ...span(k) }));
+      const pages = ayahPages(ctx, words, lay, english, meanings);
+      const seq = p.seq ?? proportional(pages.units, p.start, p.end);
+      const at = new Map(pages.units.map(([f], k) => [f, k]));
+      events = timeEvents(pages.units, seq, p.end, () => false).map((e) => {
+        const k = at.get(e.first)!;
+        return { ...e, ar: pages.ar[k], en: pages.en ? pages.en[k] : null };
+      });
     } else {
       const sizes = AR_SIZES[mode];
       const units = mode === 'line' ? lineUnits(ctx, words) : mode === 'half' ? halfUnits(ctx, words) : wordUnits(words.length, o.wordsPerStep);
-      const fit = (f: number, l: number) => fitArabic(ctx, words.slice(f, l + 1), sizes, b.ar);
-      const groups = timeGroups(units, p.wordStart!, p.end, (f, l) => fit(f, l) !== null);
-      ar = groups.map((g) => {
-        const f = fit(g.first, g.last);
-        if (!f) throw new Error('Text group could not be laid out');
-        return { ...f, start: g.start, end: g.end };
+      const arFit = (f: number, l: number) => fitArabic(ctx, words.slice(f, l + 1), sizes, lay.ar);
+      const enFit = (f: number, l: number) => (meanings ? fitEnglish(ctx, enText(f, l), lay.en) : null);
+      const fits = (f: number, l: number) => arFit(f, l) !== null && (!meanings || enFit(f, l) !== null);
+      events = timeEvents(units, p.seq!, p.end, fits).map((e) => {
+        const ar = arFit(e.first, e.last);
+        const en = enFit(e.first, e.last);
+        if (!ar || (meanings && !en)) throw new Error('Text group could not be laid out');
+        return { ...e, ar, en };
       });
-      if (o.showTranslation && english) {
-        // Shown per ayah, calm; a long translation turns pages as the recitation progresses.
-        const pages = translationPages(ctx, english, b.en);
+      if (english) {
+        // Whole-ayah translation, calm; a long one turns pages as the recitation progresses.
+        const pages = translationPages(ctx, english, lay.en);
         const starts = pages.map((_, k) => (k === 0 ? p.start : p.wordStart![Math.floor((k * words.length) / pages.length)]));
-        en = pages.map((f, k) => ({ ...f, start: starts[k], end: k + 1 < pages.length ? starts[k + 1] : p.end }));
+        enPages = pages.map((f, k) => ({ ...f, start: starts[k], end: k + 1 < pages.length ? starts[k + 1] : p.end }));
       }
     }
-    // Rule 1 guard: the groups, in order, reproduce the ayah exactly.
-    if (ar.flatMap((g) => g.lines).join(' ') !== text) throw new Error('Text grouping altered the ayah text');
-    return { ayah: p.ayah, ref: reference(o.surah, p.ayah), start: p.start, end: p.end, ar, en, joint };
+    // Rule 1 guard: every event is an exact run of whole words of the ayah.
+    for (const e of events) {
+      if (e.ar.lines.join(' ') !== words.slice(e.first, e.last + 1).join(' ')) throw new Error('Text grouping altered the ayah text');
+    }
+    return { ayah: p.ayah, ref: reference(o.surah, p.ayah), start: p.start, end: p.end, events, enPages };
   });
-  return { duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, ayat };
+  return { duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat };
 }
