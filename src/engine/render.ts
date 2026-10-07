@@ -2,7 +2,7 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import type { BackgroundMedia } from './backgrounds';
-import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, W, type Fit } from './layout';
+import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import type { Project } from './project';
 import { reciterCredit } from '../data/reciters';
 import type { Timeline, TimedAyah } from './timeline';
@@ -68,6 +68,18 @@ function fade(g: { start: number; end: number }, t: number, enter: number, exit:
   return { alpha: Math.min(pin, pout), pin };
 }
 
+/** The text shown last before t (or the first text, before any), with its translation. */
+function nearestText(tl: Timeline, t: number): { ar: Fit; en: Fit | null } {
+  let best: { ar: Fit; en: Fit | null } | null = null;
+  for (const a of tl.ayat) {
+    for (const e of a.events) {
+      if (best && e.start > t) return best;
+      best = { ar: e.ar, en: e.en ?? itemAt(a.enPages, e.start) ?? a.enPages[0] ?? null };
+    }
+  }
+  return best!;
+}
+
 /** Reference shown in the header: current ayah, or the nearest one during lead-in/gaps/tail. */
 function headerRef(tl: Timeline, t: number): string {
   let ref = tl.ayat[0].ref;
@@ -102,12 +114,17 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   const arH = (x: Fit) => x.lines.length * x.size * AR_LINE;
   const enH = (x: Fit) => x.lines.length * x.size * EN_LINE;
 
-  // Where the text goes. "Below": Arabic sits right on the title, translation right under it.
+  // Where the text goes. "Below": Arabic, translation and surah name are one centred block, the name
+  // last; between ayat it keeps the place of the text last (or next) shown, so it never jumps.
   // Otherwise text that belongs together (Arabic + its own translation) is centred as one block.
-  let arTop = 0, enTop = 0;
+  let arTop = 0, enTop = 0, titleTop = lay.title;
   if (project.titlePos === 'below') {
-    if (ev) arTop = lay.ar.bottom - arH(ev.ar);
-    enTop = lay.en.top;
+    const ref = ev ? { ar: ev.ar, en } : nearestText(tl, t);
+    const T = titleBlock(project.titleSize);
+    const hA = arH(ref.ar), hE = ref.en ? enH(ref.en) + 30 : 0;
+    arTop = (lay.text.top + lay.title + T) / 2 - (hA + hE + 30 + T) / 2;
+    enTop = arTop + hA + 30;
+    titleTop = arTop + hA + hE + 30;
   } else if (ev && ev.en) {
     const total = arH(ev.ar) + 30 + enH(ev.en);
     arTop = (lay.ar.top + lay.en.bottom) / 2 - total / 2;
@@ -141,11 +158,11 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   const z = TITLE_SIZES[project.titleSize];
   ctx.direction = 'rtl';
   ctx.font = `${z.name}px ${FONT_NAME}`;
-  ctx.fillText(tl.surah.ar, W / 2, lay.title + z.name * 0.7);
+  ctx.fillText(tl.surah.ar, W / 2, titleTop + z.name * 0.7);
   ctx.direction = 'ltr';
   ctx.font = `500 ${z.ref}px ${FONT_UI}`;
   ctx.globalAlpha = 0.9;
-  ctx.fillText(headerRef(tl, t), W / 2, lay.title + z.name * 1.4 + z.ref * 0.7);
+  ctx.fillText(headerRef(tl, t), W / 2, titleTop + z.name * 1.4 + z.ref * 0.7);
 
   // Footer: optional reciter credit and watermark.
   if (lay.credit !== null) {

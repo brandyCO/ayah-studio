@@ -171,7 +171,9 @@ The owner's PC and Android phone both report hardware H.264 + AAC support (verif
 - **Save/share**: web → download; Android → Capacitor Filesystem + Share; Tauri → save dialog.
 
 ### Default layout (9:16)
-Surah name + reference: Top (default), Below the ayah, or Bottom; size Small / Medium / Large ·
+Surah name + reference: Top (default), Below the ayah (under the translation, or under the Arabic
+when translation is off; Arabic + translation + name are one centred block), or Bottom; size
+Small / Medium / Large ·
 Center: Arabic (RTL, large) · Below: translation (optional) · Bottom: optional reciter credit and
 optional watermark. `frameLayout()` places everything inside the 5% title-safe area without overlaps.
 

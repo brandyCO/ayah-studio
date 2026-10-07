@@ -38,7 +38,7 @@ export type TitleSize = 's' | 'm' | 'l';
 /** The choices that move things on the frame. */
 export interface FrameStyle {
   translation: boolean;
-  titlePos: TitlePos; // surah name + reference: top, right below the Arabic, or bottom
+  titlePos: TitlePos; // surah name + reference: top, right below the ayah (and its translation), or bottom
   titleSize: TitleSize;
   credit: boolean; // "Recited by …" line (optional)
   watermark: boolean;
@@ -49,13 +49,14 @@ export const TITLE_SIZES: Record<TitleSize, { name: number; ref: number }> = {
   m: { name: 56, ref: 36 },
   l: { name: 72, ref: 46 },
 };
-const titleHeight = (z: TitleSize) => Math.round((TITLE_SIZES[z].name + TITLE_SIZES[z].ref) * 1.4);
+/** Height of the surah name + reference block. */
+export const titleBlock = (z: TitleSize) => Math.round((TITLE_SIZES[z].name + TITLE_SIZES[z].ref) * 1.4);
 
 export interface FrameLayout {
   ar: Box; // Arabic fits here
   en: Box; // translation fits here (empty when off)
   text: Box; // the whole text area: Arabic + translation together are centred in it
-  title: number; // top of the surah name + reference block
+  title: number; // top of the surah name + reference block ("below": its lowest place; it follows the text)
   credit: number | null; // centre line of the reciter credit
   watermark: number | null;
 }
@@ -72,7 +73,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     credit = bottom - 22;
     bottom -= 52;
   }
-  const T = titleHeight(st.titleSize);
+  const T = titleBlock(st.titleSize);
   let top = SAFE.y0 + 24, title: number;
   if (st.titlePos === 'top') {
     title = top;
@@ -86,12 +87,15 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     title = 0;
   }
   const below = st.titlePos === 'below';
-  // Arabic gets ~62% of the area when a translation shares it; "below" keeps a slot for the title
-  // under the Arabic (and above the translation).
+  // "Below": the title sits right under the text (Arabic, then translation), so the text area
+  // ends above it. Arabic gets ~62% of the text area when a translation shares it.
+  if (below) {
+    title = bottom - T;
+    bottom = title - 30;
+  }
   const split = st.translation ? Math.round(top + 0.62 * (bottom - top - 30)) : bottom;
-  const ar = { top, bottom: below ? split - T - 60 : split };
-  if (below) title = ar.bottom + 30;
-  const en = st.translation ? { top: below ? title + T + 30 : split + 30, bottom } : { top: bottom, bottom };
+  const ar = { top, bottom: split };
+  const en = st.translation ? { top: split + 30, bottom } : { top: bottom, bottom };
   return { ar, en, text: { top, bottom }, title, credit, watermark };
 }
 

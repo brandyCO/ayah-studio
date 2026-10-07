@@ -92,6 +92,7 @@ function checkLayout(lay, style, label) {
   assert(lay.ar.top >= S.y0 && lay.en.bottom <= S.y1 && title[0] >= S.y0 && title[1] <= S.y1, `${label}: inside the title-safe area`);
   for (const b of [lay.ar, lay.en]) if (b.bottom > b.top) assert(title[1] <= b.top || title[0] >= b.bottom, `${label}: surah name does not overlap the text`);
   assert(lay.ar.bottom <= lay.en.top || lay.en.bottom === lay.en.top, `${label}: Arabic above translation`);
+  if (style.titlePos === 'below') assert(lay.title >= Math.max(lay.ar.bottom, lay.en.bottom) + 30, `${label}: room for the surah name under the translation`);
   for (const y of [lay.credit, lay.watermark]) if (y !== null) assert(y - 20 >= Math.max(lay.en.bottom, lay.ar.bottom, title[1]) && y + 20 <= S.y1, `${label}: footer clear of everything`);
 }
 
