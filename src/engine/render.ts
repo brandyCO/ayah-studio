@@ -4,10 +4,12 @@
 import type { BackgroundMedia } from './backgrounds';
 import { AR_LINE, boxes, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, SAFE, W } from './layout';
 import type { Project } from './project';
-import type { Timeline, TimedPage } from './timeline';
+import { reciterCredit } from '../data/reciters';
+import type { Timeline, TimedAyah, TimedText } from './timeline';
 
-const ENTER = 0.45;
+const ENTER = 0.45; // text fades/rises in over this long (less for short groups)
 const EXIT = 0.25;
+const EN_ENTER = 0.6;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeOut = (x: number) => 1 - (1 - x) ** 3;
@@ -52,14 +54,18 @@ function drawScrim(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(0, 0, W, H);
 }
 
-function pageAt(tl: Timeline, t: number): { page: TimedPage; ref: string } | null {
-  for (const a of tl.ayat) {
-    if (t >= a.start && t < a.end) {
-      const page = a.pages.find((p) => t >= p.start && t < p.end) ?? a.pages[a.pages.length - 1];
-      return { page, ref: a.ref };
-    }
-  }
-  return null;
+function ayahAt(tl: Timeline, t: number): TimedAyah | null {
+  return tl.ayat.find((a) => t >= a.start && t < a.end) ?? null;
+}
+
+const itemAt = (items: TimedText[], t: number) => items.find((g) => t >= g.start && t < g.end) ?? null;
+
+/** Opacity and entry progress of a timed item: in after its start, out before its end. */
+function fade(g: { start: number; end: number }, t: number, enter: number, exit: number) {
+  const d = Math.max(0.001, g.end - g.start);
+  const pin = easeOut(clamp01((t - g.start) / Math.min(enter, d * 0.4)));
+  const pout = clamp01((g.end - t) / Math.min(exit, d * 0.25));
+  return { alpha: Math.min(pin, pout), pin };
 }
 
 /** Reference shown in the header: current ayah, or the nearest one during lead-in/gaps/tail. */
@@ -98,30 +104,42 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   ctx.fillText(headerRef(tl, t), W / 2, SAFE.y0 + 150);
   ctx.globalAlpha = 1;
 
-  // Ayah text, visible exactly while its recitation plays.
-  const cur = pageAt(tl, t);
-  if (cur) {
-    const { page } = cur;
-    const pin = clamp01((t - page.start) / ENTER);
-    const pout = clamp01((page.end - t) / EXIT);
-    const alpha = Math.min(easeOut(pin), pout);
-    const dy = project.textEffect === 'rise' ? (1 - easeOut(pin)) * 36 : 0;
-    // Arabic and translation are centred as one group inside the text area (layout guarantees fit).
+  // Ayah text: each group shows from its first word until the next group (word-timed).
+  const ayah = ayahAt(tl, t);
+  if (ayah) {
     const b = boxes(project.showTranslation);
-    const arH = page.ar.lines.length * page.ar.size * AR_LINE;
-    const enH = page.en ? page.en.lines.length * page.en.size * EN_LINE : 0;
-    const total = arH + (page.en ? b.en.top - b.ar.bottom : 0) + enH;
-    const top = (b.ar.top + (page.en ? b.en.bottom : b.ar.bottom)) / 2 - total / 2 + dy;
-    ctx.globalAlpha = alpha;
-    ctx.direction = 'rtl';
-    ctx.font = `${page.ar.size}px ${FONT_AR}`;
-    drawLines(ctx, page.ar.lines, page.ar.size, AR_LINE, top);
-    if (page.en) {
+    const g = itemAt(ayah.ar, t);
+    const en = itemAt(ayah.en, t);
+    const arH = (x: TimedText) => x.lines.length * x.size * AR_LINE;
+    const enH = (x: TimedText) => x.lines.length * x.size * EN_LINE;
+    let arTop = 0, enTop = 0;
+    if (ayah.joint && g) {
+      // Ayah mode: Arabic and translation are centred as one block (layout guarantees fit).
+      const k = ayah.ar.indexOf(g);
+      const pair = ayah.en[k];
+      const total = arH(g) + (pair ? b.en.top - b.ar.bottom + enH(pair) : 0);
+      arTop = (b.ar.top + (pair ? b.en.bottom : b.ar.bottom)) / 2 - total / 2;
+      if (pair) enTop = arTop + total - enH(pair);
+    } else {
+      if (g) arTop = (b.ar.top + b.ar.bottom) / 2 - arH(g) / 2;
+      if (en) enTop = (b.en.top + b.en.bottom) / 2 - enH(en) / 2;
+    }
+    let dy = 0;
+    if (g) {
+      const f = fade(g, t, ENTER, EXIT);
+      if (project.textEffect === 'rise') dy = (1 - f.pin) * 36 * Math.min(1, (g.end - g.start) / 1.5);
+      ctx.globalAlpha = f.alpha;
+      ctx.direction = 'rtl';
+      ctx.font = `${g.size}px ${FONT_AR}`;
+      drawLines(ctx, g.lines, g.size, AR_LINE, arTop + dy);
+    }
+    if (en) {
+      // The translation is calm: it fades with its page (the whole ayah unless it is long).
+      const f = ayah.joint && g ? fade(g, t, ENTER, EXIT) : fade(en, t, EN_ENTER, EXIT);
+      ctx.globalAlpha = f.alpha * 0.92;
       ctx.direction = 'ltr';
-      ctx.font = `${page.en.size}px ${FONT_EN}`;
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      drawLines(ctx, page.en.lines, page.en.size, EN_LINE, top + total - enH);
-      ctx.fillStyle = '#fff';
+      ctx.font = `${en.size}px ${FONT_EN}`;
+      drawLines(ctx, en.lines, en.size, EN_LINE, ayah.joint ? enTop + dy : enTop);
     }
     ctx.globalAlpha = 1;
   }
@@ -130,7 +148,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   ctx.direction = 'ltr';
   ctx.font = `500 32px ${FONT_UI}`;
   ctx.globalAlpha = 0.92;
-  ctx.fillText(`Recited by ${tl.reciter.name}`, W / 2, SAFE.y1 - (project.watermark ? 80 : 40));
+  ctx.fillText(`Recited by ${reciterCredit(tl.reciter)}`, W / 2, SAFE.y1 - (project.watermark ? 80 : 40));
   if (project.watermark) {
     ctx.font = `500 26px ${FONT_UI}`;
     ctx.globalAlpha = 0.6;
