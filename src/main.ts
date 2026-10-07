@@ -1,10 +1,12 @@
 // Entry: hash router for the three Phase 0 screens.
 //   #/                 surah list
-//   #/s/2[/255]        reading view (optionally scrolled to an ayah)
+//   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257   editor for a selection
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
+import { showMushaf } from './ui/mushaf';
+import { readerMode } from './ui/prefs';
 import { showReader } from './ui/reader';
 import { showSurahList } from './ui/surahList';
 
@@ -23,8 +25,10 @@ async function route() {
   window.scrollTo(0, 0);
   try {
     let c: () => void;
-    if (view === 's' && Number(a)) c = await showReader(screen, Number(a), Number(b) || undefined);
-    else if (view === 'reel' && Number(a) && b) {
+    if (view === 's' && Number(a)) {
+      const show = readerMode() === 'mushaf' ? showMushaf : showReader;
+      c = await show(screen, Number(a), Number(b) || undefined);
+    } else if (view === 'reel' && Number(a) && b) {
       const [from, to] = b.split('-').map(Number);
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');

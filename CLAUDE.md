@@ -134,6 +134,16 @@ The real user flow end-to-end, kept simple (no timeline yet). Acceptance criteri
 - [x] Capability panel (moved from the starter page) available from a debug/settings menu
 - [ ] Tested by the owner on their Android phone in Chrome via the Pages link
 
+### Phase 0.5 — mushaf reading view (owner request after Phase 0 phone test)
+- [x] Opening a surah shows Madinah mushaf pages (604 pages, 15-line layout, same line breaks as the
+      printed copy) built from the bundled text + `public/data/mushaf.json` (line breaks only,
+      generated and verified word-by-word by `scripts/fetch-mushaf.mjs`)
+- [x] Swipe / arrows / ←→ keys turn pages; surah header frames and basmala; juz + page number
+- [x] Tap an ayah → translation sheet; long-press / drag / tap-to-extend (also across pages) →
+      "Turn into reel"
+- [x] Translation card view kept as a toggle (remembered per device)
+- [ ] Tested by the owner on their phone
+
 ### Phase 1a — timeline editor
 Tracks (Background / Arabic / Translation / Audio) with a scrubbable playhead; text clips
 auto-placed and locked to recitation timing; background clips add/trim/reorder/replace;
