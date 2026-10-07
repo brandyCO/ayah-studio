@@ -49,7 +49,8 @@ export interface Project {
   enFont: EnFont;
   pause: number; // extra seconds of silence between ayat
   gap: GapText;
-  gaps: Record<number, number>; // per ayah number: seconds added (or taken, < 0) before it
+  gaps: Record<number, number>; // per ayah number: seconds of silence added before it
+  trims: Record<number, [number, number]>; // per ayah number: silence trimmed from its audio's start and end
   holds: Record<number, number>; // per ayah number: seconds its text stays after its last word
   intro: boolean; // title card before the recitation
   outro: boolean; // closing reference card
@@ -73,7 +74,7 @@ export const OUTRO = 3; // seconds of the closing reference card
 export const PAUSES = [0, 0.5, 1, 2];
 
 /** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'holds' | 'from' | 'to'>>) => {
+export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to'>>) => {
   const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
   return {
     pause: p.pause,
@@ -81,6 +82,7 @@ export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & P
     intro: p.intro ? INTRO : 0,
     outro: p.outro ? OUTRO : 0,
     gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
+    trims: ayat.map((a): [number, number] => p.trims?.[a] ?? [0, 0]),
     holds: ayat.map((a) => p.holds?.[a] ?? null),
   };
 };
@@ -103,6 +105,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     sceneLengths: [],
     sceneSnap: true,
     gaps: {},
+    trims: {},
     holds: {},
     transition: 'crossfade',
     textEffect: 'rise',

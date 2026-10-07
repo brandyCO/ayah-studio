@@ -194,32 +194,34 @@ function checkScenes(plan, label) {
 }
 
 const PACINGS = [{ pause: 1, hold: true, intro: 3, outro: 3 }, { pause: 0.5, hold: false, intro: 0, outro: 3 }, { pause: 0, hold: true, intro: 3, outro: 0 },
-  // per-ayah edits: pauses shortened (as far as allowed) or lengthened, custom text holds
-  { pause: 0, hold: false, intro: 0, outro: 0, gaps: [0, -10, 1.5, -0.3, -10], holds: [2, null, 0, 5, 0.3] }];
+  // per-ayah edits: silence trimmed (as far as allowed, or a little), pauses added, custom text holds
+  { pause: 0, hold: false, intro: 0, outro: 0, gaps: [5, 0, 1.5, 0, 0.5], trims: [[10, 10], [0.2, 10], [0, 0], [10, 0.1], [10, 10]], holds: [2, null, 0, 5, 0.3] },
+  { pause: 0.5, hold: true, intro: 3, outro: 3, gaps: [0, -4, 0, 0, 0], trims: [[10, 0], [0, 0], [0, 10], [0, 0], [0, 10]] }];
 
 function checkPacing(base, pc, label, s, from, texts, meanings) {
   const plan = rec.arrangeReel(base, pc);
   const n = base.ayat.length;
   const shift = (i) => plan.ayat[i].start - base.ayat[i].start;
-  assert(Math.abs(plan.duration - (base.duration + shift(n - 1) + pc.outro)) < 1e-9, `${label}: length`);
   const P = plan.pieces;
-  assert(P.length === n && P[0].from === 0 && P[n - 1].to === base.duration, `${label}: audio pieces cover the recitation`);
+  const spans = rec.audioSpans(base);
+  assert(P.length === n && Math.abs(P[0].at - pc.intro) < 1e-9, `${label}: audio starts after the intro`);
+  assert(Math.abs(plan.duration - (P[n - 1].at + P[n - 1].to - P[n - 1].from + pc.outro)) < 1e-9, `${label}: length`);
   P.forEach((x, i) => {
-    const want = pc.pause + (pc.gaps?.[i] ?? 0);
-    assert(Math.abs(x.at - x.from - shift(i)) < 1e-9 && x.to >= x.from, `${label}: piece ${i} moves with its ayah`);
-    if (i === 0) assert(Math.abs(shift(0) - pc.intro) < 1e-9, `${label}: first ayah after the intro`);
-    if (i + 1 < n) {
-      const a = base.ayat[i], b = base.ayat[i + 1], nx = P[i + 1];
-      // Only silence is removed: the source audio between the pieces lies in the reciter's pause.
-      assert(x.to <= nx.from + 1e-9 && x.to <= b.start + 1e-9 && nx.from <= b.start + 1e-9 && (x.to >= a.last - 1e-9 || x.to === b.start), `${label}: cut ${i} between words`);
-      if (nx.from > x.to + 1e-9) assert(x.to - a.last >= rec.MIN_SILENCE - 1e-6 && b.start - nx.from >= rec.MIN_SILENCE - 1e-6, `${label}: silence kept around cut ${i}`);
-      if (a.seq) assert(a.seq.every(([, , e]) => e <= x.to + 1e-9 || x.to === b.start), `${label}: no word of ayah ${a.ayah} cut`);
-      // The output never overlaps; the pause changes by what was asked (or as much as the silence allows).
-      const gapOut = nx.at - (x.at + x.to - x.from);
-      const asked = pc.pause + (pc.gaps?.[i + 1] ?? 0);
-      assert(gapOut >= -1e-9 && (Math.abs(gapOut - asked) < 1e-6 || (asked < 0 && gapOut < 1e-6)), `${label}: pause before ayah ${b.ayah}`);
+    const a = base.ayat[i];
+    assert(Math.abs(x.at - x.from - shift(i)) < 1e-9 && x.to > x.from, `${label}: piece ${i} moves with its ayah`);
+    // Trimming takes silence only: the piece keeps every word, with silence around it.
+    const [sa, sb] = spans[i];
+    const edgeL = i === 0 ? rec.MIN_EDGE : rec.MIN_SILENCE, edgeR = i === n - 1 ? rec.MIN_EDGE : rec.MIN_SILENCE;
+    assert(x.from >= sa - 1e-9 && x.to <= sb + 1e-9, `${label}: piece ${i} inside its own audio`);
+    assert(x.from <= a.start + 1e-9 && (a.start - x.from >= Math.min(edgeL, a.start - sa) - 1e-6), `${label}: start of ayah ${a.ayah} not cut`);
+    assert(x.to >= Math.min(a.last, sb) - 1e-9 && (x.to - a.last >= Math.min(edgeR, sb - a.last) - 1e-6 || sb < a.last), `${label}: end of ayah ${a.ayah} not cut`);
+    if (a.seq) assert(a.seq.every(([, st, e]) => st >= x.from - 1e-9 && (e <= x.to + 1e-9 || sb < a.last)), `${label}: no word of ayah ${a.ayah} cut`);
+    if (i > 0) {
+      const p = P[i - 1];
+      const gapOut = x.at - (p.at + p.to - p.from);
+      assert(p.to <= x.from + 1e-9, `${label}: pieces in recitation order`);
+      assert(Math.abs(gapOut - Math.max(0, pc.pause + (pc.gaps?.[i] ?? 0))) < 1e-9, `${label}: pause before ayah ${a.ayah}`);
     }
-    void want;
   });
   plan.ayat.forEach((a, i) => {
     const d = shift(i), b = base.ayat[i];
@@ -230,7 +232,7 @@ function checkPacing(base, pc, label, s, from, texts, meanings) {
     if (own != null) assert(a.end <= a.last + own + 1e-9 && a.end >= Math.min(a.last, nextStart) - 1e-9, `${label}: ayah ${a.ayah} keeps its own hold`);
     else if (pc.hold && i + 1 < n) assert(a.end >= plan.ayat[i + 1].start - 0.15 - 1e-9, `${label}: ayah ${a.ayah} held until the next`);
     if (i + 1 < n) assert(a.end <= plan.ayat[i + 1].start + 1e-9, `${label}: ayah ${a.ayah} text gone before the next`);
-    assert(a.start >= pc.intro && a.end <= plan.duration - pc.outro - 0.2 + 1e-9, `${label}: ayah ${a.ayah} clear of the cards`);
+    assert(a.start >= pc.intro && a.end <= Math.max(a.last, plan.duration - pc.outro - 0.2) + 1e-9 && a.end <= plan.duration - pc.outro + 1e-9, `${label}: ayah ${a.ayah} clear of the cards`);
   });
   for (const [mode, k] of [['line', 1], ['words', 2], ['ayah', 1]]) {
     const tl = build(s, from, texts, plan, mode, k, 'words', STYLE);

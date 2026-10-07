@@ -1,9 +1,11 @@
-// Reel editor, laid out like CapCut: the preview and the timeline (recitation spine) stay on screen;
-// the bottom bar opens a tool's options, an option opens a compact panel, and selecting a block in
-// the timeline shows that block's actions. Everything edits the live preview, even while playing.
+// Reel editor, laid out like CapCut: ✕ / quality / Export on top; the preview; a control row (time,
+// play, undo, redo, fullscreen); then a fixed bottom area with the timeline and the tool bar, where a
+// tool's panel slides up in place (the preview never changes size). A tool opens its options, an
+// option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
+// live in the preview, even while playing, and can be undone.
 import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
-import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { BACKGROUNDS, backgroundById, loadBackground, type Background, type BackgroundMedia } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
@@ -11,18 +13,19 @@ import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
 import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
-import { applyMood, currentMood, GRADES, MOODS, PALETTE } from '../engine/moods';
+import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES,
-  type GapText, type Grade, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
+  type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
-import { MAX_SCENES, prepareScenes, sceneSpans, TRANSITIONS, type SceneMode, type Transition } from '../engine/scenes';
+import { MAX_SCENES, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, type SceneMode, type Transition } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
-import { fmtTime, h, toast } from './dom';
+import { h, toast } from './dom';
+import { icon } from './icons';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
 import { createSpine, type Selection } from './spine';
 
@@ -67,6 +70,8 @@ interface Tool {
   options: Opt[];
 }
 
+const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
   const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap()]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
@@ -83,7 +88,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let tl: Timeline | null = null;
   let audio: AudioBuffer | null = null;
   let plan: ReelPlan | null = null;
-  let base: Reel | null = null; // the recitation before pacing (pauses, cards)
+  let base: Reel | null = null; // the recitation before edits (trims, pauses, cards)
   const measure = document.createElement('canvas').getContext('2d')!;
   let media: BackgroundMedia[] = []; // decoded background of each entry in project.scenes
   let mediaReady = false;
@@ -96,17 +101,82 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startT = 0;
   let dirty = true;
   let syncText = 'Loading word timings…';
+  let quality: 1920 | 1280 = 1920;
+  let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
 
-  // --- DOM ---
+  // --- DOM: preview and control row ---
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
-  const pctx = canvas.getContext('2d', { alpha: false })!;
+  const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
-  const playBtn = h('button', { class: 'play-btn', 'aria-label': 'Play', onclick: () => (playing ? pause() : play()) }, '▶');
-  const timeLabel = h('span', { class: 'time' }, '0:00 / 0:00');
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': 'Play', onclick: () => (playing ? pause() : play()) }, icon('play', 26));
+  const timeLabel = h('span', { class: 'time' }, '00:00 / 00:00');
+  const undoBtn = h('button', { class: 'ctl', 'aria-label': 'Undo', disabled: true, onclick: () => undo() }, icon('undo'));
+  const redoBtn = h('button', { class: 'ctl', 'aria-label': 'Redo', disabled: true, onclick: () => redo() }, icon('redo'));
+  const fullBtn = h('button', { class: 'ctl', 'aria-label': 'Full screen', onclick: () => setFull(!studio.classList.contains('full')) }, icon('full'));
+  const setPlayIcon = () => {
+    playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  };
+  function setFull(on: boolean) {
+    studio.classList.toggle('full', on);
+    fullBtn.replaceChildren(icon(on ? 'unfull' : 'full'));
+  }
 
-  /** After any change: remember the look, redraw the open bar/panel and the preview. */
+  // --- undo / redo: snapshots of the project, a change committed once edits pause briefly ---
+  const history: string[] = [JSON.stringify(project)];
+  let hIndex = 0;
+  let commitTimer = 0;
+  const updateUndo = () => {
+    undoBtn.disabled = hIndex === 0 && JSON.stringify(project) === history[0];
+    redoBtn.disabled = hIndex >= history.length - 1;
+  };
+  function commit() {
+    clearTimeout(commitTimer);
+    commitTimer = 0;
+    const json = JSON.stringify(project);
+    if (json !== history[hIndex]) {
+      history.splice(hIndex + 1);
+      history.push(json);
+      if (history.length > 80) history.shift();
+      hIndex = history.length - 1;
+    }
+    updateUndo();
+  }
+  function restore(json: string) {
+    const prev = project;
+    const before = { reciter: prev.reciterId, scenes: JSON.stringify(prev.scenes) };
+    Object.assign(project, JSON.parse(json) as Project);
+    selection = null;
+    option = null;
+    setReelLook(lookOf(project));
+    if (project.reciterId !== before.reciter) {
+      setReelReciter(project.reciterId);
+      void loadAudio();
+    } else arrange();
+    if (JSON.stringify(project.scenes) !== before.scenes) void loadScenes();
+    refreshUI();
+    updateUndo();
+    dirty = true;
+  }
+  function undo() {
+    if (exporting) return;
+    commit();
+    if (hIndex === 0) return;
+    hIndex--;
+    restore(history[hIndex]);
+  }
+  function redo() {
+    if (exporting || hIndex >= history.length - 1) return;
+    hIndex++;
+    restore(history[hIndex]);
+  }
+
+  /** After any change: remember the look, record it for undo, redraw the bar/panel and the preview. */
   const changed = (rerender = true) => {
     setReelLook(lookOf(project));
+    clearTimeout(commitTimer);
+    commitTimer = window.setTimeout(commit, 400);
+    undoBtn.disabled = false;
     if (rerender) refreshUI();
     spine.invalidate();
     dirty = true;
@@ -160,6 +230,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (project.scenes.length === 1) project.sceneMode = 'single';
     selection = null;
     scenesChanged();
+    changed();
   }
   function moveScene(i: number, j: number) {
     toCustom();
@@ -170,7 +241,26 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.sceneLengths.splice(j, 0, len);
     selection = { kind: 'scene', index: j };
     scenesChanged();
+    changed();
   }
+  /** Split scene i at the playhead into two scenes of the same background (CapCut "Split"). */
+  function splitScene(i: number) {
+    if (!tl) return;
+    const sc = tl.scenes[i];
+    if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(`Move the playhead inside the scene (at least ${MIN_SCENE} s from its ends)`);
+    if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
+    toCustom();
+    if (project.sceneMode === 'single') {
+      project.sceneLengths = [tl.duration];
+    }
+    project.scenes.splice(i + 1, 0, project.scenes[i]);
+    project.sceneLengths.splice(i, 1, t - sc.start, sc.end - t);
+    project.sceneMode = 'custom';
+    selection = { kind: 'scene', index: i + 1 };
+    scenesChanged();
+    changed();
+  }
+  const sceneAtPlayhead = () => Math.max(0, tl?.scenes.findIndex((x) => t >= x.start && t < x.end) ?? 0);
   /** Background picker: add a new scene (replace = null), or replace scene `replace`. */
   function bgPicker(replace: number | null): Node[] {
     const current = replace !== null ? project.scenes[tl?.scenes[replace]?.entry ?? replace] : null;
@@ -181,18 +271,56 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           class: `bg-thumb${current === b.id ? ' on' : ''}`, title: b.label, style: thumbStyle(b),
           onclick: () => {
             if (exporting) return;
-            if (replace !== null) {
-              if (project.sceneMode === 'ayah' && project.scenes.length < (tl?.scenes.length ?? 0)) toCustom();
-              project.scenes[project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl!.scenes[replace].entry] = b.id;
-            } else return addScene(b.id);
-            changed();
+            if (replace === null) return addScene(b.id);
+            if (project.sceneMode === 'ayah' && project.scenes.length < (tl?.scenes.length ?? 0)) toCustom();
+            project.scenes[project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl!.scenes[replace].entry] = b.id;
             scenesChanged();
+            changed();
           },
         }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label)))),
     ];
   }
 
-  const sceneAtPlayhead = () => Math.max(0, tl?.scenes.findIndex((x) => t >= x.start && t < x.end) ?? 0);
+  // --- audio: trims (silence only), pauses, whole ayat at the ends ---
+  const ayahNo = (i: number) => from + i;
+  function audioTrim(i: number) {
+    if (!base) return null;
+    const [maxHead, maxTail] = trimLimits(base.plan, i);
+    const [head, tail] = project.trims[ayahNo(i)] ?? [0, 0];
+    return {
+      head: Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
+      gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : 0,
+    };
+  }
+  const round2 = (x: number) => Math.round(x * 100) / 100;
+  function trimAudio(i: number, head: number, tail: number) {
+    project.trims[ayahNo(i)] = [round2(head), round2(tail)];
+    arrange();
+    changed();
+  }
+  function setGap(i: number, gap: number) {
+    project.gaps[ayahNo(i)] = round2(gap - project.pause);
+    arrange();
+    changed();
+  }
+  /** Trim every silence to the minimum (start, end and between ayat), CapCut's "remove silences". */
+  function removeSilences(only?: number) {
+    if (!base) return;
+    for (let i = 0; i < base.plan.ayat.length; i++) {
+      if (only !== undefined && i !== only) continue;
+      const [mh, mt] = trimLimits(base.plan, i);
+      project.trims[ayahNo(i)] = [round2(mh), round2(mt)];
+      if (only === undefined && i > 0) project.gaps[ayahNo(i)] = -project.pause;
+    }
+    if (only === undefined) project.pause = 0;
+    arrange();
+    changed();
+    toast('Silences trimmed — every word kept');
+  }
+  const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
+  const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
+  /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
+  const goRange = (a: number, b: number) => { location.hash = `#/reel/${n}/${a}${b > a ? `-${b}` : ''}`; };
 
   // --- panels ---
   const reciterPanel = () => [h('div', { class: 'list' }, ...RECITERS.map((r) =>
@@ -202,10 +330,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         if (exporting || r.id === project.reciterId) return;
         project.reciterId = r.id;
         setReelReciter(r.id);
-        refreshUI();
+        changed();
         void loadAudio();
       },
-    }, h('span', {}, reciterPickerLabel(r)), r.id === project.reciterId ? h('span', { class: 'check' }, '✓') : null)))];
+    }, h('span', {}, reciterPickerLabel(r)), r.id === project.reciterId ? icon('check', 18) : null)))];
 
   const moodPanel = () => [
     h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
@@ -232,26 +360,26 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   const transitionPanel = () => [
-    (tl?.scenes.length ?? 1) < 2 ? note('Transitions play between scenes: add a second scene (Scenes → Add) to see them.') : null,
+    (tl?.scenes.length ?? 1) < 2 ? note('Transitions play between scenes: add a second scene (the + in the timeline) to see them.') : null,
     h('div', { class: 'tiles' }, ...TRANSITIONS.map((tr) => tile({
       on: project.transition === tr.value, label: tr.label, art: h('span', { class: 'glyph' }, TRANSITION_ICONS[tr.value]),
       onclick: () => { project.transition = tr.value; changed(); previewTransition(); },
     }))),
   ].filter(Boolean) as Node[];
 
-  const colourPanel = (key: keyof TextColors, label: string) => () => {
-    const set = (c: string, rerender: boolean) => { if (!exporting) { project.colors[key] = c.toLowerCase(); changed(rerender); } };
-    const picker = h('input', { type: 'color', value: project.colors[key], 'aria-label': `${label}: custom colour`, oninput: () => set(picker.value, false) });
-    return [
-      h('div', { class: 'swatches big' },
-        ...PALETTE.map((c) => h('button', {
-          class: `swatch${project.colors[key] === c.color ? ' on' : ''}`, style: `background:${c.color}`, title: c.label,
-          'aria-label': `${label}: ${c.label}`, onclick: () => set(c.color, true),
-        })),
-        h('label', { class: `swatch custom${PALETTE.some((x) => x.color === project.colors[key]) ? '' : ' on'}`, title: 'Custom colour' }, picker)),
-      note('A soft shadow keeps the text readable on any background.'),
-    ];
-  };
+  /** Colour grid (no hue/saturation picker) + eyedropper to take a colour from the video. */
+  const colourPanel = (key: keyof TextColors, label: string) => () => [
+    h('div', { class: 'colour-grid' },
+      h('button', {
+        class: `swatch eyedropper${picking === key ? ' on' : ''}`, 'aria-label': `${label}: pick a colour from the video`, title: 'Pick from the video',
+        onclick: () => { picking = picking === key ? null : key; refreshUI(); if (picking) toast('Tap the video to pick a colour'); },
+      }, icon('eyedropper', 20)),
+      ...COLOURS.map((c) => h('button', {
+        class: `swatch${project.colors[key] === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${label}: ${c}`,
+        onclick: () => { if (!exporting) { project.colors[key] = c; picking = null; changed(); } },
+      }))),
+    note('A soft shadow keeps the text readable on any background.'),
+  ];
 
   const sceneLayoutPanel = () => {
     const k = project.scenes.length, na = to - from + 1;
@@ -269,164 +397,127 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       note(project.sceneMode === 'ayah'
         ? (na < 2 ? 'One ayah: use Even split or Custom for more than one scene.' : `Each ayah gets the next scene${k < na ? ' (the list repeats when there are fewer scenes than ayat)' : ''}; changes fall in the pause between ayat.`)
         : project.sceneMode === 'even' ? 'The scenes share the length of the reel equally.'
-          : project.sceneMode === 'custom' ? 'Select a scene in the timeline and drag its edges to resize it, or drag it to reorder. Scenes always fill the reel exactly (each at least 1 s).'
-            : 'One background for the whole reel. Tap + in the timeline to add more.'),
+          : project.sceneMode === 'custom' ? 'Select a scene in the timeline: drag its edges to trim, drag it to reorder, or Split it at the playhead. Scenes always fill the reel (each at least 1 s).'
+            : 'One background for the whole reel. Tap + in the timeline to add more scenes.'),
     ];
   };
 
-  // Export panel (opened from the top bar).
-  let quality: 1920 | 1280 = 1920;
-  const exportBtn = h('button', { class: 'primary wide', onclick: () => void doExport() }, '⬇ Export MP4');
-  const exportPathLabel = h('p', { class: 'muted small' }, 'Checking export support…');
-  const progressBar = h('progress', { max: 1, value: 0 });
-  const progressText = h('span', { class: 'small' });
-  const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, 'Cancel');
-  const progressRow = h('div', { class: 'progress-row', hidden: true }, progressBar, progressText, cancelBtn);
-  const result = h('div', { class: 'result', hidden: true });
-  const exportPanel = () => [
-    chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
-      () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
-    exportBtn, exportPathLabel, progressRow, result,
-  ];
-
   // --- tools (bottom bar) ---
-  const resetEdits = () => { project.gaps = {}; project.holds = {}; arrange(); changed(); };
-  const hasEdits = () => Object.keys(project.gaps).length > 0 || Object.keys(project.holds).length > 0;
   const TOOLS: Tool[] = [
-    { id: 'reciter', icon: '🎙', label: 'Reciter', options: [{ id: 'reciter', icon: '🎙', label: 'Reciter', panel: reciterPanel }] },
-    { id: 'mood', icon: '✦', label: 'Mood', options: [{ id: 'mood', icon: '✦', label: 'Mood', panel: moodPanel }] },
-    { id: 'text', icon: 'Aa', label: 'Text', options: [
-      { id: 'mode', icon: '☰', label: 'Text mode', panel: () => [
+    { id: 'reciter', icon: 'mic', label: 'Reciter', options: [{ id: 'reciter', icon: 'mic', label: 'Reciter', panel: reciterPanel }] },
+    { id: 'audio', icon: 'audio', label: 'Audio', options: [
+      { id: 'silences', icon: 'silence', label: 'Remove silences', action: () => removeSilences() },
+      { id: 'pause', icon: 'gap', label: 'Pauses', panel: () => [
+        row('Between all ayat', chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+        note('For one ayah: tap its audio in the timeline, then drag its edges to trim silence or drag it to add a pause. Words are never cut.')] },
+      { id: 'reset', icon: 'reset', label: 'Reset audio', disabled: () => !hasAudioEdits(), action: resetAudio },
+    ] },
+    { id: 'mood', icon: 'mood', label: 'Mood', options: [{ id: 'mood', icon: 'mood', label: 'Mood', panel: moodPanel }] },
+    { id: 'text', icon: 'text', label: 'Text', options: [
+      { id: 'mode', icon: 'mode', label: 'Text mode', panel: () => [
         chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
         mode() === 'words' ? row('Per step', chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
           () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
         note(syncText),
       ].filter(Boolean) as Node[] },
-      { id: 'size', icon: 'A⇕', label: 'Size', panel: () => [chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+      { id: 'size', icon: 'size', label: 'Size', panel: () => [chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
         () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
-      { id: 'position', icon: '⇳', label: 'Position', panel: () => [chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
+      { id: 'position', icon: 'position', label: 'Position', panel: () => [chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
         () => project.textPos, (v) => { project.textPos = v; })] },
+      { id: 'gap', icon: 'hold', label: 'Between ayat', panel: () => [
+        chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); }),
+        note('What the text does in the pause between ayat.')] },
     ] },
-    { id: 'effects', icon: '✧', label: 'Effects', options: [
-      { id: 'text-effect', icon: '✧', label: 'Text effect', panel: effectPanel },
-      { id: 'transition', icon: '◆', label: 'Transition', panel: transitionPanel },
+    { id: 'effects', icon: 'effects', label: 'Effects', options: [
+      { id: 'text-effect', icon: 'effects', label: 'Text effect', panel: effectPanel },
+      { id: 'transition', icon: 'transition', label: 'Transition', panel: transitionPanel },
     ] },
-    { id: 'colours', icon: '🎨', label: 'Colours', options: [
+    { id: 'colours', icon: 'colours', label: 'Colours', options: [
       { id: 'c-ar', icon: () => dot(project.colors.ar), label: 'Ayah', panel: colourPanel('ar', 'Ayah') },
       { id: 'c-en', icon: () => dot(project.colors.en), label: 'Translation', panel: colourPanel('en', 'Translation') },
       { id: 'c-title', icon: () => dot(project.colors.title), label: 'Surah name', panel: colourPanel('title', 'Surah name') },
     ] },
-    { id: 'scenes', icon: '▦', label: 'Scenes', options: [
-      { id: 'change', icon: '⇄', label: 'Change', panel: () => bgPicker(sceneAtPlayhead()) },
-      { id: 'add', icon: '+', label: 'Add', panel: () => bgPicker(null) },
-      { id: 'layout', icon: '▦', label: 'Layout', panel: sceneLayoutPanel },
-      { id: 'grade', icon: '◑', label: 'Grade', panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
+    { id: 'scenes', icon: 'scenes', label: 'Scenes', options: [
+      { id: 'add', icon: 'plus', label: 'Add', panel: () => bgPicker(null) },
+      { id: 'change', icon: 'replace', label: 'Change', panel: () => bgPicker(sceneAtPlayhead()) },
+      { id: 'layout', icon: 'layout', label: 'Arrange', panel: sceneLayoutPanel },
+      { id: 'grade', icon: 'grade', label: 'Grade', panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
         on: project.grade === g, label: GRADES[g].label, art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
       })))] },
-      { id: 'scrim', icon: '◐', label: 'Darken', panel: () => [chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }],
+      { id: 'scrim', icon: 'darken', label: 'Darken', panel: () => [chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }],
         () => project.scrim, (v) => { project.scrim = v; }), note('Darkens the background behind the text so it stays readable.')] },
-      { id: 'snap', icon: '🧲', label: 'Snap', toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'snap', icon: 'magnet', label: 'Snap', toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
     ] },
-    { id: 'translation', icon: 'En', label: 'Translation', options: [
-      { id: 'tr-show', icon: 'En', label: 'Show', toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
-      { id: 'tr-sync', icon: '⇄', label: 'Sync', disabled: () => !project.showTranslation, panel: () => [
+    { id: 'translation', icon: 'translation', label: 'Translation', options: [
+      { id: 'tr-show', icon: 'show', label: 'Show', toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
+      { id: 'tr-sync', icon: 'sync', label: 'Sync', disabled: () => !project.showTranslation, panel: () => [
         chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
           () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
         note('Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.')] },
-      { id: 'tr-font', icon: 'Ff', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
+      { id: 'tr-font', icon: 'font', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
         chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
-    { id: 'timing', icon: '⏱', label: 'Timing', options: [
-      { id: 'pause', icon: '⏸', label: 'Pauses', panel: () => [
-        row('Between all ayat', chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-        note('To change one pause, select an ayah\'s audio in the timeline and drag it left or right (only silence is ever cut).')] },
-      { id: 'gap', icon: '⋯', label: 'Between ayat', panel: () => [
-        chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); }),
-        note('What the text does in the pause between ayat. To set one ayah, select its text in the timeline and drag its end.')] },
-      { id: 'intro', icon: '⏮', label: 'Intro card', toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
-      { id: 'outro', icon: '⏭', label: 'End card', toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
-      { id: 'reset', icon: '↺', label: 'Reset edits', disabled: () => !hasEdits(), action: resetEdits },
-    ] },
-    { id: 'layout', icon: '⊞', label: 'Layout', options: [
-      { id: 'title', icon: '۞', label: 'Surah name', panel: () => [
+    { id: 'layout', icon: 'layout', label: 'Layout', options: [
+      { id: 'title', icon: 'text', label: 'Surah name', panel: () => [
         row('Place', chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
           () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
         row('Size', chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
           () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))] },
-      { id: 'credit', icon: '🎙', label: 'Reciter name', toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
-      { id: 'watermark', icon: '©', label: 'Watermark', toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
+      { id: 'intro', icon: 'card', label: 'Intro card', toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
+      { id: 'outro', icon: 'card', label: 'End card', toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
+      { id: 'credit', icon: 'mic', label: 'Reciter name', toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
+      { id: 'watermark', icon: 'watermark', label: 'Watermark', toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
     ] },
   ];
-  const EXPORT: Opt = { id: 'export', icon: '⬇', label: 'Export', panel: exportPanel };
 
   // --- block actions (when a block is selected in the timeline) ---
-  const ayahNo = (i: number) => from + i;
   function selectionOptions(sel: NonNullable<Selection>): Opt[] {
     const i = sel.index;
     if (sel.kind === 'scene') {
       const count = tl?.scenes.length ?? 1;
       return [
-        { id: 'replace', icon: '⇄', label: 'Replace', panel: () => bgPicker(i) },
-        { id: 'left', icon: '◀', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
-        { id: 'right', icon: '▶', label: 'Move right', disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
-        { id: 'transition', icon: '◆', label: 'Transition', panel: transitionPanel },
-        { id: 'delete', icon: '🗑', label: 'Delete', disabled: () => count < 2, action: () => removeScene(i) },
+        { id: 'split', icon: 'split', label: 'Split', action: () => splitScene(i) },
+        { id: 'replace', icon: 'replace', label: 'Replace', panel: () => bgPicker(i) },
+        { id: 'left', icon: 'left', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
+        { id: 'right', icon: 'right', label: 'Move right', disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
+        { id: 'transition', icon: 'transition', label: 'Transition', panel: transitionPanel },
+        { id: 'delete', icon: 'trash', label: 'Delete', disabled: () => count < 2, action: () => removeScene(i) },
       ];
     }
-    if (sel.kind === 'text') {
-      return [
-        { id: 'text-effect', icon: '✧', label: 'Effect', panel: effectPanel },
-        { id: 'c-ar', icon: () => dot(project.colors.ar), label: 'Colour', panel: colourPanel('ar', 'Ayah') },
-        { id: 'mode', icon: '☰', label: 'Text mode', panel: TOOLS[2].options[0].panel },
-        { id: 'hold-reset', icon: '↺', label: 'Reset end', disabled: () => project.holds[ayahNo(i)] === undefined,
-          action: () => { delete project.holds[ayahNo(i)]; arrange(); changed(); } },
-      ];
-    }
-    const nudge = (d: number) => () => shiftAyah(i, d);
-    const out: Opt[] = [];
+    const out: Opt[] = [{ id: 'silence', icon: 'silence', label: 'Trim silence', action: () => removeSilences(i) }];
     if (i > 0) {
-      out.push({ id: 'less', icon: '⇤', label: 'Pause −0.5s', action: nudge(-0.5) },
-        { id: 'more', icon: '⇥', label: 'Pause +0.5s', action: nudge(0.5) },
-        { id: 'gap-reset', icon: '↺', label: 'Reset pause', disabled: () => project.gaps[ayahNo(i)] === undefined,
-          action: () => { delete project.gaps[ayahNo(i)]; arrange(); changed(); } });
+      const tr = () => audioTrim(i)!;
+      out.push({ id: 'less', icon: 'left', label: 'Pause −0.5s', disabled: () => tr().gap <= 0, action: () => setGap(i, Math.max(0, tr().gap - 0.5)) },
+        { id: 'more', icon: 'right', label: 'Pause +0.5s', action: () => setGap(i, tr().gap + 0.5) });
     }
+    out.push({ id: 'audio-reset', icon: 'reset', label: 'Reset', disabled: () => project.gaps[ayahNo(i)] === undefined && project.trims[ayahNo(i)] === undefined,
+      action: () => { delete project.gaps[ayahNo(i)]; delete project.trims[ayahNo(i)]; arrange(); changed(); } });
     const last = i === (tl?.ayat.length ?? 1) - 1;
-    if (i === 0 && from > 1 && to - from + 1 < MAX_AYAT) out.push({ id: 'add-prev', icon: '⊕', label: `Add ${n}:${from - 1}`, action: () => goRange(from - 1, to) });
-    if (last && to < s.ayahs && to - from + 1 < MAX_AYAT) out.push({ id: 'add-next', icon: '⊕', label: `Add ${n}:${to + 1}`, action: () => goRange(from, to + 1) });
-    if ((i === 0 || last) && to > from) out.push({ id: 'remove', icon: '✂', label: `Remove ${n}:${ayahNo(i)}`, action: () => (i === 0 ? goRange(from + 1, to) : goRange(from, to - 1)) });
+    if (i === 0 && from > 1 && to - from + 1 < MAX_AYAT) out.push({ id: 'add-prev', icon: 'plus', label: `Add ${n}:${from - 1}`, action: () => goRange(from - 1, to) });
+    if (last && to < s.ayahs && to - from + 1 < MAX_AYAT) out.push({ id: 'add-next', icon: 'plus', label: `Add ${n}:${to + 1}`, action: () => goRange(from, to + 1) });
+    if ((i === 0 || last) && to > from) out.push({ id: 'remove', icon: 'trash', label: `Remove ${n}:${ayahNo(i)}`, action: () => (i === 0 ? goRange(from + 1, to) : goRange(from, to - 1)) });
     return out;
-  }
-  /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
-  const goRange = (a: number, b: number) => { location.hash = `#/reel/${n}/${a}${b > a ? `-${b}` : ''}`; };
-  /** Change the pause before ayah i by d seconds (the engine never cuts more than the reciter's silence). */
-  function shiftAyah(i: number, d: number) {
-    if (!base || !plan || i < 1) return;
-    const now = plan.ayat[i].start - plan.ayat[i - 1].last;
-    const natural = base.plan.ayat[i].start - base.plan.ayat[i - 1].last;
-    project.gaps[ayahNo(i)] = Math.round((now + d - natural - project.pause) * 100) / 100;
-    arrange();
-    changed();
   }
 
   // --- bars and panels ---
-  const wide = matchMedia('(min-width: 900px)');
   let tool: Tool | null = null; // its options are in the bottom bar
   let option: Opt | null = null; // its panel is open
   let selection: Selection = null;
   const panelTitle = h('h2', {});
   const panelBody = h('div', { class: 'sheet-body panel' });
-  const panel = h('section', { class: 'sheet' },
-    h('div', { class: 'sheet-head' }, panelTitle, h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Done', onclick: () => openOption(null) }, '✓')),
+  const panel = h('section', { class: 'sheet', hidden: true },
+    h('div', { class: 'sheet-head' }, panelTitle,
+      h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Done', onclick: () => { picking = null; openOption(null); } }, icon('check'))),
     panelBody);
   const bar = h('nav', { class: 'toolbar', 'aria-label': 'Tools' });
 
-  const iconOf = (o: Opt) => (typeof o.icon === 'function' ? o.icon() : o.icon);
+  const iconOf = (o: Opt) => (typeof o.icon === 'function' ? o.icon() : icon(o.icon));
   function barButton(o: Opt, onclick: () => void) {
     const on = o.toggle ? o.toggle.get() : option?.id === o.id;
     return h('button', {
       class: `tool${on ? ' on' : ''}${o.toggle ? ' toggle-tool' : ''}`, disabled: o.disabled?.() ?? false, onclick,
       'aria-pressed': o.toggle ? String(on) : undefined,
-    }, h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, iconOf(o)), h('span', {}, o.label));
+    }, h('span', { class: 'tool-icon' }, iconOf(o)), h('span', {}, o.label));
   }
   function runOption(o: Opt) {
     if (exporting) return;
@@ -436,19 +527,19 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     } else if (o.action) {
       o.action();
       refreshUI();
-    } else openOption(option?.id === o.id && !wide.matches ? null : o);
+    } else openOption(o);
   }
   function openTool(x: Tool | null) {
     tool = x;
     selection = null;
     option = null;
-    // A tool with one panel opens it straight away; on wide screens the first panel shows too.
-    const first = x?.options.find((o) => o.panel);
-    if (x && first && (x.options.length === 1 || wide.matches)) option = first;
+    // A tool with a single panel opens it straight away (Reciter, Mood).
+    if (x && x.options.length === 1 && x.options[0].panel) option = x.options[0];
     refreshUI();
   }
   function openOption(o: Opt | null) {
     option = o;
+    if (!o && tool && tool.options.length === 1) tool = null;
     refreshUI();
   }
   function select(sel: Selection) {
@@ -457,32 +548,28 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     option = null;
     refreshUI();
   }
+  const back = (label: string, onclick: () => void) =>
+    h('button', { class: 'tool back', 'aria-label': 'Back', onclick }, h('span', { class: 'tool-icon' }, icon('back')), h('span', {}, label));
   function refreshUI() {
     // Bottom bar: a selected block's actions, a tool's options, or the tools.
     if (selection) {
-      const kind = selection.kind === 'scene' ? 'Scene' : selection.kind === 'text' ? 'Text' : 'Audio';
-      bar.replaceChildren(
-        h('button', { class: 'tool back', 'aria-label': 'Deselect', onclick: () => { select(null); spine.invalidate(); } },
-          h('span', { class: 'tool-icon' }, '‹'), h('span', {}, kind)),
+      bar.replaceChildren(back(selection.kind === 'scene' ? 'Scene' : 'Audio', () => select(null)),
         ...selectionOptions(selection).map((o) => barButton(o, () => runOption(o))));
     } else if (tool) {
-      bar.replaceChildren(
-        h('button', { class: 'tool back', 'aria-label': 'Back to tools', onclick: () => openTool(null) },
-          h('span', { class: 'tool-icon' }, '‹'), h('span', {}, tool.label)),
-        ...tool.options.map((o) => barButton(o, () => runOption(o))));
+      bar.replaceChildren(back(tool.label, () => openTool(null)), ...tool.options.map((o) => barButton(o, () => runOption(o))));
     } else {
       bar.replaceChildren(...TOOLS.map((x) => h('button', { class: 'tool', onclick: () => openTool(x) },
-        h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, x.icon), h('span', {}, x.label))));
+        h('span', { class: 'tool-icon' }, icon(x.icon)), h('span', {}, x.label))));
     }
-    // Panel: the open option's controls (wide screens: a hint when none is open).
+    // Panel: slides up over the timeline and bar (the preview keeps its size).
     const content = option?.panel?.();
+    panel.hidden = !content;
     studio.classList.toggle('panel-open', !!content);
-    panel.hidden = !content && !wide.matches;
-    panelTitle.textContent = option ? (option.id.startsWith('c-') ? `Colour · ${option.label}` : option.label) : 'Ayah Studio';
-    panelBody.replaceChildren(...(content ?? [note('Pick a tool below, or tap a block in the timeline to edit it.')]));
+    panelTitle.textContent = option ? (option.id.startsWith('c-') ? `Colour · ${option.label}` : option.label) : '';
+    panelBody.replaceChildren(...(content ?? []));
+    canvas.classList.toggle('picking', !!picking);
     spine.invalidate();
   }
-  wide.addEventListener('change', refreshUI);
 
   /** Show an effect: play from the start of the text on screen (or the first). */
   function previewText() {
@@ -522,33 +609,62 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const edges = [0, ...bounds, tl.duration];
       project.sceneLengths = edges.slice(1).map((e, i) => e - edges[i]);
       project.sceneMode = 'custom';
-      changed(false);
       rebuild();
+      changed();
     },
-    moveScene: (a, b) => { if (!exporting) { moveScene(a, b); changed(); } },
+    moveScene: (a, b) => { if (!exporting) moveScene(a, b); },
     addScene: () => { if (!exporting) { tool = TOOLS.find((x) => x.id === 'scenes')!; selection = null; option = tool.options.find((o) => o.id === 'add')!; refreshUI(); } },
-    setHold: (i, sec) => { if (!exporting) { project.holds[ayahNo(i)] = Math.round(sec * 100) / 100; arrange(); changed(); } },
-    shiftAyah: (i, d) => { if (!exporting) shiftAyah(i, d); },
+    audioTrim,
+    trimAudio: (i, hd, tlv) => { if (!exporting) trimAudio(i, hd, tlv); },
+    setGap: (i, g) => { if (!exporting) setGap(i, g); },
   });
+
+  // Eyedropper: a tap on the preview takes the colour under the finger.
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!picking) return;
+    const r = canvas.getBoundingClientRect();
+    const x = Math.round(((e.clientX - r.left) / r.width) * canvas.width), y = Math.round(((e.clientY - r.top) / r.height) * canvas.height);
+    const [R, G, B] = pctx.getImageData(x, y, 1, 1).data;
+    project.colors[picking] = `#${[R, G, B].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    picking = null;
+    changed();
+  });
+
+  // Quality menu (top bar) and export page.
+  const qualityLabel = h('span', {}, '1080P');
+  const qualityMenu = h('div', { class: 'menu', hidden: true });
+  const drawQualityMenu = () => qualityMenu.replaceChildren(
+    ...([[1920, '1080P', 'Best for Instagram, TikTok and Shorts'], [1280, '720P', 'Smaller file, faster export']] as const).map(([q, l, d]) =>
+      h('button', { class: `menu-item${quality === q ? ' on' : ''}`, onclick: () => { quality = q; qualityLabel.textContent = l; qualityMenu.hidden = true; } },
+        h('b', {}, l), h('span', { class: 'muted small' }, d))),
+    h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, 'Device check'), h('span', { class: 'muted small' }, 'What this device can export')));
+  const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
+  const exportBtn = h('button', { class: 'primary export-open', onclick: () => void doExport() }, 'Export');
+  const exportPathLabel = h('p', { class: 'muted small' });
+  const progressBar = h('div', { class: 'export-bar' }, h('div', {}));
+  const progressText = h('div', { class: 'export-pct' }, '0%');
+  const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, 'Cancel');
+  const progressRow = h('div', { class: 'export-progress' }, progressText, progressBar, note('Keep this screen open while the video is made on your device.'), exportPathLabel, cancelBtn);
+  const result = h('div', { class: 'export-result', hidden: true });
+  const overlay = h('div', { class: 'export-overlay', hidden: true }, progressRow, result);
 
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
-      h('a', { class: 'icon-btn', href: `#/s/${n}/${from}`, 'aria-label': 'Back to reading' }, '‹'),
-      h('div', { class: 'brand' }, h('h1', {}, 'New reel'), h('p', { class: 'muted' }, reference(s, from, to))),
-      h('button', { class: 'icon-btn', 'aria-label': 'Device check', onclick: openDebugPanel }, '⚙'),
-      h('button', { class: 'primary export-open', onclick: () => { selection = null; tool = null; openOption(EXPORT); } }, 'Export')),
+      h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': 'Close the editor' }, icon('close')),
+      h('div', { class: 'top-right' }, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
-    h('div', { class: 'transport' }, playBtn, timeLabel),
-    spine.el,
-    panel,
-    bar);
+    h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
+    h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
+    overlay);
   root.append(studio);
   refreshUI();
 
   capabilities().then(({ path }) => {
-    exportPathLabel.textContent = path ? `Export: ${describePath(path)}` : 'This browser cannot export video (no WebCodecs). Try Chrome on Android or desktop.';
-    if (path?.container === 'webm') exportBtn.textContent = '⬇ Export video (WebM)';
-    if (!path) exportBtn.disabled = true;
+    exportPathLabel.textContent = path ? describePath(path) : '';
+    if (!path) {
+      exportBtn.disabled = true;
+      exportBtn.title = 'This browser cannot export video (no WebCodecs). Try Chrome on Android or desktop.';
+    }
   });
 
   // --- preview sizing ---
@@ -701,8 +817,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     startCtx = ac.currentTime;
     startT = t;
     playing = true;
-    playBtn.textContent = '❚❚';
-    playBtn.setAttribute('aria-label', 'Pause');
+    setPlayIcon();
   }
 
   function pause() {
@@ -714,8 +829,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     if (playing && ac) t = startT + ac.currentTime - startCtx;
     playing = false;
-    playBtn.textContent = '▶';
-    playBtn.setAttribute('aria-label', 'Play');
+    setPlayIcon();
     dirty = true;
   }
 
@@ -738,7 +852,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!dirty) return;
     dirty = false;
     render(pctx, t, project, tl, media);
-    timeLabel.textContent = `${fmtTime(t)} / ${fmtTime(tl.duration)}`;
+    timeLabel.textContent = `${clock(t)} / ${clock(tl.duration)}`;
   }
   raf = requestAnimationFrame(frame);
 
@@ -751,19 +865,22 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       return;
     }
     pause();
+    commit();
     exporting = new AbortController();
-    exportBtn.disabled = true;
+    overlay.hidden = false;
     progressRow.hidden = false;
     result.hidden = true;
+    const setProgress = (f: number) => {
+      (progressBar.firstChild as HTMLElement).style.width = `${Math.round(f * 100)}%`;
+      progressText.textContent = `${Math.round(f * 100)}%`;
+    };
+    setProgress(0);
     const started = performance.now();
     try {
       const signal = exporting.signal;
       const run = (p: typeof path) => exportVideo({
         project: structuredClone(project), timeline: tl!, audio: audio!, media: [...media], path: p, height: quality, signal,
-        onProgress: (f) => {
-          progressBar.value = f;
-          progressText.textContent = `${Math.round(f * 100)}%`;
-        },
+        onProgress: setProgress,
       });
       // Some hardware encoders reject a config they claimed to support: retry once in software.
       const blob = await run(path).catch((e) => {
@@ -778,23 +895,24 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const file = new File([blob], name, { type: blob.type });
       const canShare = !!navigator.canShare?.({ files: [file] });
       const secs = ((performance.now() - started) / 1000).toFixed(1);
+      progressRow.hidden = true;
       result.replaceChildren(
-        h('p', { class: 'small' }, `✓ ${name} · ${(blob.size / 1e6).toFixed(1)} MB · made in ${secs}s`),
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
-        h('div', { class: 'row' },
-          h('a', { class: 'primary', href: resultUrl, download: name }, 'Save video'),
-          canShare && h('button', { class: 'chip', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, 'Share…')),
+        h('p', { class: 'small' }, `✓ Made in ${secs} s · ${(blob.size / 1e6).toFixed(1)} MB · ${quality === 1920 ? '1080P' : '720P'}`),
+        h('div', { class: 'export-actions' },
+          h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), 'Save to device'),
+          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), 'Share')),
+        h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, 'Back to editing'),
       );
       result.hidden = false;
     } catch (e) {
+      overlay.hidden = true;
       if ((e as Error).name !== 'AbortError' && !exporting.signal.aborted) {
         toast(`Export failed: ${e instanceof Error ? e.message : e}`);
         console.error(e);
       } else toast('Export cancelled');
     } finally {
       exporting = null;
-      exportBtn.disabled = false;
-      progressRow.hidden = true;
       dirty = true;
     }
   }

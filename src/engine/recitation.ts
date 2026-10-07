@@ -80,8 +80,9 @@ function holdEnds(ayat: PlannedAyah[], end: number, hold = false, holds: (number
   });
 }
 
-/** Silence kept on each side when a pause between ayat is shortened. */
+/** Silence always kept next to a word when audio is trimmed: between ayat, and at the reel's ends. */
 export const MIN_SILENCE = 0.15;
+export const MIN_EDGE = 0.05;
 
 /**
  * Plan from QDC timings. `texts` are our ayah texts for from..to; `wordMap` is word-map.json's map.
@@ -138,8 +139,10 @@ export interface Pacing {
   hold: boolean; // keep an ayah's text on screen until just before the next ayah
   intro: number; // seconds of intro card before the recitation
   outro: number; // seconds of closing card after it
-  /** Per ayah: seconds added before it (negative shortens the reciter's own pause, never cutting a word). */
+  /** Per ayah: seconds of silence added before it (≥ 0; the first ayah's entry is ignored). */
   gaps?: number[];
+  /** Per ayah: seconds of silence trimmed from the start and end of its audio (clamped so no word is cut). */
+  trims?: [number, number][];
   /** Per ayah: seconds its text stays after its last word (null: the default hold). */
   holds?: (number | null)[];
 }
@@ -147,32 +150,49 @@ export interface Pacing {
 /** Extra seconds the pacing adds to a reel of n ayat (for the length estimate). */
 export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro;
 
-/** Seconds the pause before ayah i (i ≥ 1) can shrink: its silence minus MIN_SILENCE each side. */
-export const shrinkable = (A: { start: number; last: number }[], i: number) => Math.max(0, A[i].start - A[i - 1].last - 2 * MIN_SILENCE);
+/**
+ * Each ayah's audio before trimming (base reel seconds): the recording is cut in the middle of the
+ * pause between ayat, the first ayah starts with the lead-in and the last ends with the tail.
+ */
+export function audioSpans(base: ReelPlan): [number, number][] {
+  const A = base.ayat, n = A.length;
+  const cut = A.map((_, i) => (i === 0 ? 0 : Math.min(A[i].start, Math.max(A[i - 1].last, (A[i - 1].last + A[i].start) / 2))));
+  return A.map((_, i) => [cut[i], i + 1 < n ? cut[i + 1] : base.duration]);
+}
+
+/** The most that can be trimmed from the start and end of ayah i's audio: silence only, never a word. */
+export function trimLimits(base: ReelPlan, i: number): [number, number] {
+  const A = base.ayat, n = A.length;
+  const [a, b] = audioSpans(base)[i];
+  return [
+    Math.max(0, A[i].start - a - (i === 0 ? MIN_EDGE : MIN_SILENCE)),
+    Math.max(0, b - A[i].last - (i === n - 1 ? MIN_EDGE : MIN_SILENCE)),
+  ];
+}
 
 /**
- * The reel with its pacing: `pause` (+ the ayah's own `gaps` entry) seconds of silence are added
- * before each ayah — or, when negative, taken out of the reciter's own pause — cut in the middle of
- * that pause, never inside a word. The intro card goes before and the closing card after. Every time
- * in the plan moves with its ayah; `pieces` say where the base audio goes.
+ * The reel as edited: each ayah's audio keeps its words and loses only the silence trimmed from its
+ * start and end; the ayat follow each other with `pause` (+ the ayah's own gap) seconds of silence
+ * added before each; the intro card goes before and the closing card after. Every time in the plan
+ * moves with its ayah; `pieces` say where the base audio goes.
  */
 export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
   const n = base.ayat.length;
   const A = base.ayat;
-  // b[i]: cut between ayah i-1 and i (middle of the pause); r[i]: silence removed there; d[i]: shift of ayah i.
-  const b = A.map((_, i) => (i === 0 ? 0 : Math.min(A[i].start, Math.max(A[i - 1].last, (A[i - 1].last + A[i].start) / 2))));
-  const applied = A.map((_, i) => (i === 0 ? 0 : Math.max(o.pause + (o.gaps?.[i] ?? 0), -shrinkable(A, i))));
-  const r = applied.map((x) => Math.max(0, -x));
-  const d: number[] = [];
-  applied.forEach((x, i) => d.push((i ? d[i - 1] : o.intro) + x));
-  const pieces = A.map((_, i) => {
-    const from = i === 0 ? 0 : b[i] + r[i] / 2;
-    const to = i === n - 1 ? base.duration : b[i + 1] - r[i + 1] / 2;
-    return { from, to, at: from + d[i] };
+  const spans = audioSpans(base);
+  const pieces: AudioPiece[] = [];
+  spans.forEach(([a, b], i) => {
+    const [maxHead, maxTail] = trimLimits(base, i);
+    const head = Math.min(Math.max(0, o.trims?.[i]?.[0] ?? 0), maxHead);
+    const tail = Math.min(Math.max(0, o.trims?.[i]?.[1] ?? 0), maxTail);
+    const prev = pieces[i - 1];
+    const at = i === 0 ? o.intro : prev.at + (prev.to - prev.from) + Math.max(0, o.pause + (o.gaps?.[i] ?? 0));
+    pieces.push({ from: a + head, to: b - tail, at });
   });
-  const duration = base.duration + d[n - 1] + o.outro;
+  const lastP = pieces[n - 1];
+  const duration = lastP.at + (lastP.to - lastP.from) + o.outro;
   const ayat = A.map((a, i): PlannedAyah => {
-    const d0 = d[i];
+    const d0 = pieces[i].at - pieces[i].from;
     const sh = (x: number) => x + d0;
     return {
       ...a, start: sh(a.start), end: 0, last: sh(a.last),

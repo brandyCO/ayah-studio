@@ -219,22 +219,26 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [x] Recitation spine / timeline (`src/ui/spine.ts`): starts at the left, moving playhead (kept
-      mid-screen while playing), zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub, drag elsewhere
-      to scroll. Tracks: scenes (thumbnails, lengths, transition markers, + to add), ayah text (a tick
-      per text step, cards), recitation audio (waveform per ayah)
+- [x] Timeline (`src/ui/spine.ts`, CapCut-style): starts at the left, white playhead (kept mid-screen
+      while playing), "00:00 • 00:02" ruler, zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub,
+      drag elsewhere to scroll; room under the tracks. Tracks: scenes (thumbnails, lengths, transition
+      markers, white + to add) and recitation audio (waveform per ayah). No text track (owner request)
 - [x] Block editing (owner request), within the rules: tap a block to select it →
       **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
-      drag to reorder, replace/move/delete; **audio** (per ayah): drag to lengthen/shorten the pause
-      before it (`project.gaps`; only the reciter's own silence is ever cut, ≥ 0.15 s kept each side),
-      ±0.5 s buttons, add/remove a whole ayah at either end; **text**: drag its end to set how long the
-      ayah stays after its last word (`project.holds`). Not allowed: moving text away from its words
+      drag to reorder, Split at the playhead, replace/move/delete; **audio** (per ayah): drag its edges
+      to trim silence at its start/end (`project.trims`; e.g. the silence at the start of the reel —
+      never a word: ≥ 0.05 s kept at the reel's ends, 0.15 s between ayat), drag it to add a pause
+      before it (`project.gaps`, ≥ 0), "Trim silence", add/remove a whole ayah at either end; Audio →
+      "Remove silences" trims all of them at once. Not allowed: moving text away from its words
       (rule 8), reordering ayat or cutting audio inside an ayah (rule 1)
-- [x] Studio layout (owner request, CapCut-style): preview + timeline stay on screen; the bottom bar
-      opens a tool's options (Colours → Ayah / Translation / Surah name; Effects → Text effect with
-      category tabs and animated tiles / Transition), an option opens a compact panel; a selected
-      block shows its own actions. Picking an effect or transition plays it. Export at top right.
-      Wide screens: panel left, preview right, timeline full width. Dark editor theme
+- [x] Studio layout (owner request, CapCut-style): top bar ✕ · quality (1080P/720P, device check) ·
+      Export (full-screen progress page, then Save/Share); control row: time · play · undo · redo ·
+      full screen; a fixed bottom area (timeline + tool bar) where panels slide up in place, so the
+      preview never changes size. Line icons. Tool → options → panel (Colours → Ayah / Translation /
+      Surah name → a 36-colour grid + eyedropper from the video, no hue/saturation picker; Effects →
+      Text effect in category tabs with animated tiles / Transition); a selected block shows its own
+      actions. Picking an effect or transition plays it. Wide screens: panels open left of the preview
+- [x] Undo/redo (snapshots of the project, every edit)
 - [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
       (done: Single / Per ayah / Even split from the preset backgrounds, filling the reel exactly —
@@ -255,7 +259,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Text colours (owner request): tap a colour swatch to set the colour of the Arabic ayah text,
       the translation and/or the surah name + reference, each separately (preset palette of calm
       colours + custom picker; keep the legibility scrim/shadow so text stays readable)
-- [ ] Undo/redo; project autosave
+- [ ] Project autosave (drafts list, like CapCut's projects)
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
 
 ### Phase 1b — media

@@ -30,18 +30,17 @@ export function currentMood(p: Project): string | null {
   return MOODS.find(same)?.id ?? null;
 }
 
-/** Calm text colours offered as swatches (a custom colour can be picked too). */
-export const PALETTE: { color: string; label: string }[] = [
-  { color: '#ffffff', label: 'White' },
-  { color: '#fff6e8', label: 'Warm white' },
-  { color: '#f1ece2', label: 'Ivory' },
-  { color: '#e9d8b4', label: 'Sand' },
-  { color: '#f3e3bc', label: 'Pale gold' },
-  { color: '#e8c77a', label: 'Gold' },
-  { color: '#e9c3c9', label: 'Rose' },
-  { color: '#cfe8d8', label: 'Mint' },
-  { color: '#c9d6ea', label: 'Mist blue' },
-  { color: '#d9dee4', label: 'Silver' },
+/**
+ * Text colours offered as a grid (no hue/saturation picker): rows of whites, creams and golds, roses,
+ * greens, blues and greys, light to deep. The eyedropper can also take a colour from the video.
+ */
+export const COLOURS: string[] = [
+  '#ffffff', '#fdf0f0', '#fff6e8', '#f3ebdd', '#f1ece2', '#eef3ff',
+  '#f6e3cc', '#f8e7b9', '#f3e3bc', '#f2c98a', '#e8c77a', '#c9a24a',
+  '#f6e3e6', '#ecd9de', '#e9c3c9', '#d9a0ab', '#c7a6d6', '#8f78b8',
+  '#e3f1e6', '#cfe8d8', '#a9d6bd', '#7fbf9d', '#5aa281', '#3f7f63',
+  '#e4ecf7', '#c8d2e6', '#c9d6ea', '#a7bde0', '#7f9fcf', '#4f6fa8',
+  '#d9dee4', '#b5bcc6', '#8b939e', '#5f6670', '#3a3f46', '#1f2328',
 ];
 
 /** Colour grades: [composite operation, fill] layers over the background, under the scrim. */
