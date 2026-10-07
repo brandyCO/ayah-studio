@@ -45,10 +45,15 @@ export function validSegments(segments: unknown[] | undefined, apiWords = Infini
   return out;
 }
 
+/** One recited word: [display word index, start, end] (seconds). */
+export type Recited = [number, number, number];
+
 export interface WordTiming {
   /** Per display word, seconds (file time). Non-decreasing: the first recitation in reading order. */
   start: number[];
   end: number[];
+  /** Everything recited, in time order, repetitions included; missing words appear at their interpolated time. */
+  seq: Recited[];
   /** End of the last recited word, repeats included (seconds). */
   last: number;
   stats: { valid: number; malformed: number; repeats: number; interpolated: number };
@@ -59,16 +64,44 @@ export interface WordTiming {
  *
  * - Malformed segments are ignored; words without a valid segment are interpolated between their
  *   timed neighbours, so no word is ever dropped.
- * - Repetitions: a word's time is its first recitation after the previous word's, so the display only
- *   moves forward. While the reciter goes back over earlier words, the current text stays on screen.
+ * - Repetitions: `start` is each word's first recitation in reading order; `seq` keeps every
+ *   recitation, so words the reciter goes back to are shown again.
  */
 export function wordTimings(nWords: number, v: VerseTiming, spans: [number, number][] | null): WordTiming | null {
   const apiWords = spans ? spans.length : nWords;
-  const segs = validSegments(v.segments, apiWords);
+  // Mislabelled segments are dropped like malformed ones (their words are interpolated instead):
+  // - 1–3 segments jumping ahead over unrecited words and straight back ([34, 118, 36] in 2:282);
+  // - 1–2 segments jumping back that the reading does not continue from ([44, 45, 22, 23, 48] in
+  //   2:213). A real repetition goes back and carries on in order ([1…5, 1, 2, 3 …]).
+  const all = validSegments(v.segments, apiWords);
+  const segs: [number, number, number][] = [];
+  let ahead = 0;
+  for (let k = 0; k < all.length; k++) {
+    const runEnd = (test: (i: number) => boolean, max: number) => {
+      let m = k;
+      while (m < all.length && m - k < max && test(all[m][0])) m++;
+      return m;
+    };
+    if (all[k][0] > ahead + 2) {
+      const m = runEnd((i) => i > ahead + 2, 3);
+      if (m < all.length && all[m][0] <= ahead + 2) {
+        k = m - 1;
+        continue;
+      }
+    } else if (all[k][0] < ahead - 1) {
+      const m = runEnd((i) => i < ahead - 1, 2);
+      if (m < all.length && all[m][0] > all[m - 1][0] + 2) {
+        k = m - 1;
+        continue;
+      }
+    }
+    segs.push(all[k]);
+    ahead = Math.max(ahead, all[k][0]);
+  }
   const from = v.timestamp_from / 1000, to = v.timestamp_to / 1000;
   if (nWords === 1 && !segs.length && to > from) {
     // One-word ayah (e.g. 2:1): the ayah's own timing is the word's timing.
-    return { start: [from], end: [to], last: to, stats: { valid: 0, malformed: v.segments?.length ?? 0, repeats: 0, interpolated: 0 } };
+    return { start: [from], end: [to], seq: [[0, from, to]], last: to, stats: { valid: 0, malformed: v.segments?.length ?? 0, repeats: 0, interpolated: 0 } };
   }
   if (!segs.length) return null;
 
@@ -76,6 +109,7 @@ export function wordTimings(nWords: number, v: VerseTiming, spans: [number, numb
   // i-1 ended (the API splits one of our words), the segment extends that occurrence.
   const span = (i: number): [number, number] => (spans ? spans[i - 1] : [i - 1, i - 1]);
   const occ: [number, number][][] = Array.from({ length: nWords }, () => []);
+  const seq: Recited[] = [];
   let prevI = 0;
   let reached = -1, repeats = 0, last = 0;
   for (const [i, a, b] of segs) {
@@ -85,8 +119,13 @@ export function wordTimings(nWords: number, v: VerseTiming, spans: [number, numb
     last = Math.max(last, b / 1000);
     const joined = prevI === i - 1 && prevI >= 1 && span(prevI)[1] === f && occ[f].length > 0;
     for (let w = f; w <= l; w++) {
-      if (w === f && joined) occ[w][occ[w].length - 1][1] = b / 1000;
-      else occ[w].push([a / 1000, b / 1000]);
+      if (w === f && joined) {
+        occ[w][occ[w].length - 1][1] = b / 1000;
+        for (let k = seq.length - 1; k >= 0; k--) if (seq[k][0] === w) { seq[k][2] = b / 1000; break; }
+      } else {
+        occ[w].push([a / 1000, b / 1000]);
+        seq.push([w, a / 1000, b / 1000]);
+      }
     }
     prevI = i;
   }
@@ -117,6 +156,7 @@ export function wordTimings(nWords: number, v: VerseTiming, spans: [number, numb
     for (let j = 0; j < m; j++) {
       start[w + j] = lo + ((hi - lo) * j) / m;
       end[w + j] = lo + ((hi - lo) * (j + 1)) / m;
+      seq.push([w + j, start[w + j], end[w + j]]);
     }
     interpolated += m;
     w = k - 1;
@@ -125,9 +165,11 @@ export function wordTimings(nWords: number, v: VerseTiming, spans: [number, numb
   for (let w = 1; w < nWords; w++) if (start[w] < start[w - 1]) start[w] = start[w - 1];
   for (let w = 0; w < nWords; w++) end[w] = Math.max(end[w], start[w]);
   last = Math.max(last, end[nWords - 1]);
+  seq.sort((x, y) => x[1] - y[1]); // stable: equal starts keep reading order
   return {
     start,
     end,
+    seq,
     last,
     stats: { valid: segs.length, malformed: (v.segments?.length ?? 0) - segs.length, repeats, interpolated },
   };
@@ -147,7 +189,7 @@ export function recitedSpan(v: VerseTiming): [number, number] | null {
 
 export const MIN_GROUP = 0.6; // seconds: shorter groups merge so text never flashes
 
-export interface Group {
+export interface TextEvent {
   first: number; // word index (inclusive)
   last: number; // word index (inclusive)
   start: number;
@@ -155,38 +197,64 @@ export interface Group {
 }
 
 /**
- * Time groups of consecutive words: a group appears when its first word starts and stays until the
- * next group starts (the last one until `end`). Groups shorter than MIN_GROUP merge with the next one
- * (the last with the one before) when `canMerge` allows the combined text.
+ * Text on screen over time. `units` split the words into groups (a line, half line, N words or a
+ * page); each recited word shows its group, so when the reciter goes back the earlier group shows
+ * again. An event lasts until the next one starts (the last until `end`). Events shorter than
+ * MIN_GROUP merge with a neighbour whose words join them into one run, when `canMerge` allows it.
  */
-export function timeGroups(
+export function timeEvents(
   units: [number, number][],
-  wordStart: number[],
+  seq: Recited[],
   end: number,
   canMerge: (first: number, last: number) => boolean = () => true,
   minDur = MIN_GROUP,
-): Group[] {
+): TextEvent[] {
+  const unitOf: number[] = [];
   let expect = 0;
-  for (const [f, l] of units) {
+  units.forEach(([f, l], u) => {
     if (f !== expect || l < f) throw new Error('Text groups must cover every word once, in order');
+    for (let w = f; w <= l; w++) unitOf[w] = u;
     expect = l + 1;
-  }
-  if (expect !== wordStart.length) throw new Error('Text groups must cover every word once, in order');
+  });
 
-  const g: Group[] = units.map(([first, last], i) => ({
-    first,
-    last,
-    start: wordStart[first],
-    end: i + 1 < units.length ? wordStart[units[i + 1][0]] : Math.max(end, wordStart[first]),
-  }));
-  for (let i = 0; i < g.length; ) {
-    const short = g[i].end - g[i].start < minDur;
-    if (short && i + 1 < g.length && canMerge(g[i].first, g[i + 1].last)) {
-      g.splice(i, 2, { first: g[i].first, last: g[i + 1].last, start: g[i].start, end: g[i + 1].end });
-    } else if (short && i + 1 === g.length && i > 0 && canMerge(g[i - 1].first, g[i].last)) {
-      g.splice(i - 1, 2, { first: g[i - 1].first, last: g[i].last, start: g[i - 1].start, end: g[i].end });
+  const ev: TextEvent[] = [];
+  for (const [w, start] of seq) {
+    const [first, last] = units[unitOf[w]];
+    const prev = ev[ev.length - 1];
+    if (prev && prev.first === first && prev.last === last) continue;
+    ev.push({ first, last, start, end: 0 });
+  }
+  ev.forEach((e, i) => (e.end = i + 1 < ev.length ? ev[i + 1].start : Math.max(end, e.start)));
+
+  // Runs of words join only when they touch or overlap.
+  const join = (a: TextEvent, b: TextEvent) =>
+    a.first <= b.last + 1 && b.first <= a.last + 1 && canMerge(Math.min(a.first, b.first), Math.max(a.last, b.last));
+  const merged = (a: TextEvent, b: TextEvent): TextEvent =>
+    ({ first: Math.min(a.first, b.first), last: Math.max(a.last, b.last), start: a.start, end: b.end });
+  for (let i = 0; i < ev.length; ) {
+    const short = ev[i].end - ev[i].start < minDur;
+    if (short && i + 1 < ev.length && join(ev[i], ev[i + 1])) ev.splice(i, 2, merged(ev[i], ev[i + 1]));
+    else if (short && i > 0 && join(ev[i - 1], ev[i])) {
+      ev.splice(i - 1, 2, merged(ev[i - 1], ev[i]));
       i--;
     } else i++;
   }
-  return g;
+  // Neighbours that ended up showing the same words are one event.
+  for (let i = ev.length - 1; i > 0; i--) {
+    if (ev[i].first === ev[i - 1].first && ev[i].last === ev[i - 1].last) ev.splice(i - 1, 2, { ...ev[i - 1], end: ev[i].end });
+  }
+  // Rule 1: every word is shown at least once.
+  const seen = new Array(expect).fill(false);
+  for (const e of ev) for (let w = e.first; w <= e.last; w++) seen[w] = true;
+  if (seen.some((x) => !x)) throw new Error('A word would never be shown');
+  return ev;
+}
+
+/** English meaning per display word: Quran.com word meanings ("a|b|…" per API word) placed on the word holding each API word's first letter. */
+export function wordMeanings(entry: string, spans: [number, number][] | null, nWords: number): string[] {
+  const parts = entry.split('|');
+  const out: string[][] = Array.from({ length: nWords }, () => []);
+  parts.forEach((m, i) => out[spans ? spans[i][0] : i]?.push(m));
+  if (parts.length !== (spans ? spans.length : nWords)) throw new Error('Word meanings do not match the ayah');
+  return out.map((m) => m.join(' '));
 }

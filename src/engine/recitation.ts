@@ -1,7 +1,7 @@
 // Reel plan: which slice of the reciter's full-surah recording the reel plays, and when each ayah and
 // word falls in reel time (pure: runs in node too). The same plan gives the length estimate shown
 // while selecting, so the estimate equals the editor's length.
-import { displayWords, parseSpans, recitedSpan, wordTimings, type VerseTiming, type WordTiming } from './words';
+import { displayWords, parseSpans, recitedSpan, wordTimings, type Recited, type VerseTiming, type WordTiming } from './words';
 
 export const LEAD_IN = 0.4; // silence before the recitation starts
 export const TAIL = 0.8; // after the recitation ends
@@ -16,8 +16,10 @@ export interface PlannedAyah {
   /** Reel seconds: the ayah's text shows from start (its first word) until end (after a short hold). */
   start: number;
   end: number;
-  /** Reel-time start of each display word, or null without word timings (Ayah mode only). */
+  /** Reel-time first start of each display word, or null without word timings (Ayah mode only). */
   wordStart: number[] | null;
+  /** Reel-time recitation of words in time order, repetitions included (null without word timings). */
+  seq: Recited[] | null;
   stats: WordTiming['stats'] | null;
 }
 
@@ -86,11 +88,12 @@ export function planQdcReel(
     if (!wt) {
       const [a, b] = recitedSpan(v)!;
       lastWord.push(reel(Math.min(b, clip[1])));
-      return { ayah: from + i, start: reel(Math.max(a, clip[0])), end: 0, wordStart: null, stats: null };
+      return { ayah: from + i, start: reel(Math.max(a, clip[0])), end: 0, wordStart: null, seq: null, stats: null };
     }
     const wordStart = wt.start.map((s) => Math.max(LEAD_IN, reel(s)));
     lastWord.push(reel(Math.min(wt.last, clip[1])));
-    return { ayah: from + i, start: wordStart[0], end: 0, wordStart, stats: wt.stats };
+    const seq = wt.seq.map(([w, a, b]): Recited => [w, Math.max(LEAD_IN, reel(a)), reel(b)]);
+    return { ayah: from + i, start: Math.min(wordStart[0], seq[0][1]), end: 0, wordStart, seq, stats: wt.stats };
   });
   holdEnds(ayat, lastWord, duration);
   return { source: 'qdc', duration, ayat, wordTimed: ayat.every((a) => a.wordStart), clip };
@@ -104,7 +107,7 @@ export function planClipReel(from: number, durations: number[]): ReelPlan {
   const ayat = durations.map((d, i): PlannedAyah => {
     offsets.push(t);
     lastWord.push(t + d);
-    const a = { ayah: from + i, start: t, end: 0, wordStart: null, stats: null };
+    const a = { ayah: from + i, start: t, end: 0, wordStart: null, seq: null, stats: null };
     t += d + GAP;
     return a;
   });
