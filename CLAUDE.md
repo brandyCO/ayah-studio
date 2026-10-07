@@ -220,6 +220,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
 - [ ] Full calm text-effect set (~15-20, RTL-aware ink reveal) and scene transitions (~10-12)
 - [ ] Moods presets; font/size/position/colours; pause between ayat; intro/outro cards
+- [ ] Text colours (owner request): tap a colour swatch to set the colour of the Arabic ayah text,
+      the translation and/or the surah name + reference, each separately (preset palette of calm
+      colours + custom picker; keep the legibility scrim/shadow so text stays readable)
 - [ ] Undo/redo; project autosave
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
 
