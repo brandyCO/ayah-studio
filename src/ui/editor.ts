@@ -1,16 +1,15 @@
-// Reel editor (CapCut-style studio: the preview and recitation spine stay on screen, tools open in a
-// sheet): reciter, mood, text mode (Ayah / Line / Half line / Words), text size/position/effect/
-// colours, background + grade, translation, pacing and cards, live 9:16 preview with play/pause +
-// scrubbing, and MP4 export.
+// Reel editor, laid out like CapCut: the preview and the timeline (recitation spine) stay on screen;
+// the bottom bar opens a tool's options, an option opens a compact panel, and selecting a block in
+// the timeline shows that block's actions. Everything edits the live preview, even while playing.
 import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
 import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { BACKGROUNDS, backgroundById, loadBackground, type Background, type BackgroundMedia } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
+import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import { TEXT_EFFECTS } from '../engine/effects';
 import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
 import { applyMood, currentMood, GRADES, MOODS, PALETTE } from '../engine/moods';
 import {
@@ -25,7 +24,7 @@ import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
 import { fmtTime, h, toast } from './dom';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
-import { createSpine } from './spine';
+import { createSpine, type Selection } from './spine';
 
 interface Reel {
   plan: ReelPlan;
@@ -38,6 +37,35 @@ const MODES: { value: TextMode; label: string }[] = [
   { value: 'half', label: 'Half line' },
   { value: 'words', label: 'Words' },
 ];
+
+/** Text effects by kind, for the effect picker. */
+const EFFECT_GROUPS: { label: string; items: TextEffect[] }[] = [
+  { label: 'Fade & motion', items: ['fade', 'rise', 'descend', 'drift', 'still'] },
+  { label: 'Soft focus', items: ['blur-in', 'focus', 'mist', 'dissolve'] },
+  { label: 'Light', items: ['glow', 'sweep', 'bloom'] },
+  { label: 'Reveal', items: ['ink', 'lines'] },
+  { label: 'Scale', items: ['settle', 'zoom', 'push'] },
+];
+const TRANSITION_ICONS: Record<Transition, string> = {
+  crossfade: '◐', blur: '◍', black: '●', white: '○', zoom: '⊕', leak: '☀', mist: '☁', parallax: '⇅', wipe: '⇠', iris: '◎', cut: '│',
+};
+
+/** An entry of a bar: opens a panel, flips a setting, or runs an action. */
+interface Opt {
+  id: string;
+  icon: string | (() => Node);
+  label: string;
+  panel?: () => Node[];
+  toggle?: { get: () => boolean; set: (v: boolean) => void };
+  action?: () => void;
+  disabled?: () => boolean;
+}
+interface Tool {
+  id: string;
+  icon: string;
+  label: string;
+  options: Opt[];
+}
 
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
   const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap()]);
@@ -67,6 +95,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startCtx = 0;
   let startT = 0;
   let dirty = true;
+  let syncText = 'Loading word timings…';
 
   // --- DOM ---
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
@@ -75,97 +104,177 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const playBtn = h('button', { class: 'play-btn', 'aria-label': 'Play', onclick: () => (playing ? pause() : play()) }, '▶');
   const timeLabel = h('span', { class: 'time' }, '0:00 / 0:00');
 
-  // Every control redraws from the project after any change (a mood changes many settings at once).
-  const redraws: (() => void)[] = [];
-  const changed = () => {
+  /** After any change: remember the look, redraw the open bar/panel and the preview. */
+  const changed = (rerender = true) => {
     setReelLook(lookOf(project));
-    for (const r of redraws) r();
+    if (rerender) refreshUI();
+    spine.invalidate();
     dirty = true;
   };
-  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) => {
-    const wrap = h('div', { class: 'chips' }) as HTMLDivElement & { redraw(): void };
-    const draw = () => wrap.replaceChildren(...items.map((it) =>
+  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) =>
+    h('div', { class: 'chips' }, ...items.map((it) =>
       h('button', {
         class: `chip${get() === it.value ? ' on' : ''}`,
         disabled: !enabled(it.value),
         onclick: () => { if (get() !== it.value && !exporting) { set(it.value); changed(); } },
       }, it.label)));
-    wrap.redraw = draw;
-    redraws.push(draw);
-    draw();
-    return wrap;
-  };
-  const toggle = (label: string, get: () => boolean, set: (v: boolean) => void) => {
-    const input = h('input', { type: 'checkbox', checked: get(), onchange: () => { if (exporting) return void (input.checked = get()); set(input.checked); changed(); } });
-    redraws.push(() => (input.checked = get()));
-    return h('label', { class: 'toggle' }, input, h('span', {}, label));
-  };
-  // Text colour: tap a calm swatch, or pick any colour (the legibility shadow adapts to it).
-  const colorRow = (label: string, key: keyof TextColors) => {
-    const set = (c: string) => { if (!exporting) { project.colors[key] = c.toLowerCase(); changed(); } };
-    const swatches = PALETTE.map((c) => h('button', {
-      class: 'swatch', style: `background:${c.color}`, title: c.label, 'aria-label': `${label}: ${c.label}`, onclick: () => set(c.color),
-    }));
-    const picker = h('input', { type: 'color', 'aria-label': `${label}: custom colour`, oninput: () => set(picker.value) });
-    const custom = h('label', { class: 'swatch custom', title: 'Custom colour' }, picker);
-    redraws.push(() => {
-      const c = project.colors[key];
-      swatches.forEach((b, i) => b.classList.toggle('on', PALETTE[i].color === c));
-      custom.classList.toggle('on', !PALETTE.some((x) => x.color === c));
-      if (picker.value !== c) picker.value = c;
-    });
-    return h('div', { class: 'color-row' }, h('span', { class: 'muted small' }, label), h('div', { class: 'swatches' }, ...swatches, custom));
-  };
-
-  // Scenes: Single picks one background; Per ayah / Even split build a list (tap to add, ✕ to remove).
-  const multi = () => project.sceneMode !== 'single';
+  const row = (label: string, ...kids: Node[]) => h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, label), ...kids);
+  const note = (text: string) => h('p', { class: 'muted small' }, text);
+  const tile = (o: { on: boolean; label: string; art: Node; onclick: () => void; title?: string }) =>
+    h('button', { class: `tile${o.on ? ' on' : ''}`, title: o.title ?? o.label, onclick: () => { if (!exporting) o.onclick(); } },
+      h('span', { class: 'tile-art' }, o.art), h('span', { class: 'tile-label' }, o.label));
   const thumbStyle = (b: Background) => (b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`);
-  const scenesChanged = () => { rebuild(); void loadScenes(); };
-  const bgGrid = h('div', { class: 'bg-grid' });
-  const drawBgGrid = () => bgGrid.replaceChildren(...BACKGROUNDS.map((b) =>
-    h('button', {
-      class: `bg-thumb${!multi() && project.scenes[0] === b.id ? ' on' : ''}`,
-      title: multi() ? `Add ${b.label}` : b.label,
-      style: thumbStyle(b),
-      onclick: () => {
-        if (exporting) return;
-        if (!multi()) {
-          if (project.scenes[0] === b.id) return;
-          project.scenes[0] = b.id;
-        } else if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
-        else project.scenes.push(b.id);
-        changed();
-        scenesChanged();
-      },
-    }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label))));
-  redraws.push(drawBgGrid);
-  drawBgGrid();
-  const sceneList = h('div', { class: 'scene-list' });
-  const sceneNote = h('p', { class: 'muted small' });
-  const gridLabel = h('p', { class: 'muted small' });
-  const drawSceneList = () => {
-    sceneList.hidden = !multi();
-    sceneList.replaceChildren(...project.scenes.map((id, i) => {
-      const b = backgroundById(id);
-      return h('div', { class: 'scene-item', style: thumbStyle(b), title: b.label },
-        h('span', {}, String(i + 1)),
-        project.scenes.length > 1 && h('button', {
-          class: 'scene-x', 'aria-label': `Remove scene ${i + 1}`,
-          onclick: () => { if (!exporting) { project.scenes.splice(i, 1); changed(); scenesChanged(); } },
-        }, '✕'));
-    }));
-    const n = to - from + 1, k = project.scenes.length;
-    gridLabel.textContent = multi() ? 'Tap a background to add a scene' : 'Tap a background to choose it';
-    sceneNote.textContent = project.sceneMode === 'ayah'
-      ? (n < 2 ? 'One ayah: use Even split for more than one scene.' : `Each ayah gets the next scene in the list${k < n ? ' (the list repeats when there are fewer scenes than ayat)' : ''}. Scenes change in the pause between ayat.`)
-      : project.sceneMode === 'even' ? 'The scenes share the length of the reel equally.' : '';
-    sceneNote.hidden = !multi();
-    trRowScenes.hidden = !multi() || k < 2;
-  };
-  const trRowScenes = h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Transition'),
-    chips<Transition>(TRANSITIONS, () => project.transition, (v) => { project.transition = v; }));
-  redraws.push(drawSceneList);
+  const dot = (c: string) => h('span', { class: 'dot', style: `background:${c}` });
 
+  // Text modes other than Ayah need word timings (rule 8: never guess sync).
+  const wordTimed = () => !!plan?.wordTimed;
+  const mode = (): TextMode => (wordTimed() ? project.textMode : 'ayah');
+
+  // --- scenes: every structural edit works on an explicit list (Custom) with one entry per scene ---
+  const scenesChanged = () => { rebuild(); void loadScenes(); };
+  function toCustom() {
+    if (!tl || project.sceneMode === 'custom') return;
+    project.scenes = tl.scenes.map((x) => project.scenes[x.entry]);
+    project.sceneLengths = tl.scenes.map((x) => x.end - x.start);
+    project.sceneMode = project.scenes.length > 1 ? 'custom' : 'single';
+  }
+  function addScene(id: string) {
+    if (project.scenes.length >= MAX_SCENES && project.sceneMode !== 'single') return toast(`Up to ${MAX_SCENES} scenes`);
+    toCustom();
+    const lens = project.sceneMode === 'custom' ? project.sceneLengths : [tl?.duration ?? 1];
+    const sum = lens.reduce((a, b) => a + b, 0);
+    project.scenes.push(id);
+    project.sceneLengths = [...lens, sum / lens.length]; // the new scene gets an equal share; the others shrink in proportion
+    project.sceneMode = 'custom';
+    selection = { kind: 'scene', index: project.scenes.length - 1 };
+    tool = null;
+    option = null;
+    scenesChanged();
+    changed();
+  }
+  function removeScene(i: number) {
+    toCustom();
+    if (project.scenes.length < 2) return;
+    project.scenes.splice(i, 1);
+    project.sceneLengths.splice(i, 1);
+    if (project.scenes.length === 1) project.sceneMode = 'single';
+    selection = null;
+    scenesChanged();
+  }
+  function moveScene(i: number, j: number) {
+    toCustom();
+    if (j < 0 || j >= project.scenes.length || i === j) return;
+    const [id] = project.scenes.splice(i, 1);
+    const [len] = project.sceneLengths.splice(i, 1);
+    project.scenes.splice(j, 0, id);
+    project.sceneLengths.splice(j, 0, len);
+    selection = { kind: 'scene', index: j };
+    scenesChanged();
+  }
+  /** Background picker: add a new scene (replace = null), or replace scene `replace`. */
+  function bgPicker(replace: number | null): Node[] {
+    const current = replace !== null ? project.scenes[tl?.scenes[replace]?.entry ?? replace] : null;
+    return [
+      note(replace !== null ? `Pick a background for scene ${replace + 1}.` : 'Tap a background to add it as a new scene at the end.'),
+      h('div', { class: 'bg-grid' }, ...BACKGROUNDS.map((b) =>
+        h('button', {
+          class: `bg-thumb${current === b.id ? ' on' : ''}`, title: b.label, style: thumbStyle(b),
+          onclick: () => {
+            if (exporting) return;
+            if (replace !== null) {
+              if (project.sceneMode === 'ayah' && project.scenes.length < (tl?.scenes.length ?? 0)) toCustom();
+              project.scenes[project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl!.scenes[replace].entry] = b.id;
+            } else return addScene(b.id);
+            changed();
+            scenesChanged();
+          },
+        }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label)))),
+    ];
+  }
+
+  const sceneAtPlayhead = () => Math.max(0, tl?.scenes.findIndex((x) => t >= x.start && t < x.end) ?? 0);
+
+  // --- panels ---
+  const reciterPanel = () => [h('div', { class: 'list' }, ...RECITERS.map((r) =>
+    h('button', {
+      class: `list-item${r.id === project.reciterId ? ' on' : ''}`,
+      onclick: () => {
+        if (exporting || r.id === project.reciterId) return;
+        project.reciterId = r.id;
+        setReelReciter(r.id);
+        refreshUI();
+        void loadAudio();
+      },
+    }, h('span', {}, reciterPickerLabel(r)), r.id === project.reciterId ? h('span', { class: 'check' }, '✓') : null)))];
+
+  const moodPanel = () => [
+    h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
+      on: currentMood(project) === m.id, label: m.label,
+      art: h('span', { class: `mood-art grade-${m.set.grade}` }, dot(m.set.colors.ar), dot(m.set.colors.en), dot(m.set.colors.title)),
+      onclick: () => { applyMood(project, m); arrange(); changed(); previewText(); },
+    }))),
+    note('A mood sets the text effect, transition, colours, colour grade, darkening and pacing. Adjust anything after.'),
+  ];
+
+  const effectPanel = () => {
+    const wrap = h('div', {});
+    let group = Math.max(0, EFFECT_GROUPS.findIndex((g) => g.items.includes(project.textEffect)));
+    const draw = () => wrap.replaceChildren(
+      h('div', { class: 'tabs' }, ...EFFECT_GROUPS.map((g, i) =>
+        h('button', { class: `tab${i === group ? ' on' : ''}`, onclick: () => { group = i; draw(); } }, g.label))),
+      h('div', { class: 'tiles' }, ...EFFECT_GROUPS[group].items.map((fx) => tile({
+        on: project.textEffect === fx, label: TEXT_EFFECTS.find((e) => e.value === fx)!.label,
+        art: h('span', { class: `fx-sample fx-${fx}` }, 'آية'),
+        onclick: () => { project.textEffect = fx; changed(false); draw(); previewText(); },
+      }))));
+    draw();
+    return [wrap, note('Calm effects only. Ink reveal and light sweep move right to left on the Arabic.')];
+  };
+
+  const transitionPanel = () => [
+    (tl?.scenes.length ?? 1) < 2 ? note('Transitions play between scenes: add a second scene (Scenes → Add) to see them.') : null,
+    h('div', { class: 'tiles' }, ...TRANSITIONS.map((tr) => tile({
+      on: project.transition === tr.value, label: tr.label, art: h('span', { class: 'glyph' }, TRANSITION_ICONS[tr.value]),
+      onclick: () => { project.transition = tr.value; changed(); previewTransition(); },
+    }))),
+  ].filter(Boolean) as Node[];
+
+  const colourPanel = (key: keyof TextColors, label: string) => () => {
+    const set = (c: string, rerender: boolean) => { if (!exporting) { project.colors[key] = c.toLowerCase(); changed(rerender); } };
+    const picker = h('input', { type: 'color', value: project.colors[key], 'aria-label': `${label}: custom colour`, oninput: () => set(picker.value, false) });
+    return [
+      h('div', { class: 'swatches big' },
+        ...PALETTE.map((c) => h('button', {
+          class: `swatch${project.colors[key] === c.color ? ' on' : ''}`, style: `background:${c.color}`, title: c.label,
+          'aria-label': `${label}: ${c.label}`, onclick: () => set(c.color, true),
+        })),
+        h('label', { class: `swatch custom${PALETTE.some((x) => x.color === project.colors[key]) ? '' : ' on'}`, title: 'Custom colour' }, picker)),
+      note('A soft shadow keeps the text readable on any background.'),
+    ];
+  };
+
+  const sceneLayoutPanel = () => {
+    const k = project.scenes.length, na = to - from + 1;
+    return [
+      chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }, { value: 'custom', label: 'Custom' }],
+        () => project.sceneMode, (v) => {
+          if (v !== 'single' && project.scenes.length < 2) {
+            const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
+            project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
+          }
+          if (v === 'custom' && project.sceneLengths.length !== project.scenes.length) project.sceneLengths = project.scenes.map(() => 1);
+          project.sceneMode = v;
+          scenesChanged();
+        }),
+      note(project.sceneMode === 'ayah'
+        ? (na < 2 ? 'One ayah: use Even split or Custom for more than one scene.' : `Each ayah gets the next scene${k < na ? ' (the list repeats when there are fewer scenes than ayat)' : ''}; changes fall in the pause between ayat.`)
+        : project.sceneMode === 'even' ? 'The scenes share the length of the reel equally.'
+          : project.sceneMode === 'custom' ? 'Select a scene in the timeline and drag its edges to resize it, or drag it to reorder. Scenes always fill the reel exactly (each at least 1 s).'
+            : 'One background for the whole reel. Tap + in the timeline to add more.'),
+    ];
+  };
+
+  // Export panel (opened from the top bar).
   let quality: 1920 | 1280 = 1920;
   const exportBtn = h('button', { class: 'primary wide', onclick: () => void doExport() }, '⬇ Export MP4');
   const exportPathLabel = h('p', { class: 'muted small' }, 'Checking export support…');
@@ -174,141 +283,252 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, 'Cancel');
   const progressRow = h('div', { class: 'progress-row', hidden: true }, progressBar, progressText, cancelBtn);
   const result = h('div', { class: 'result', hidden: true });
-
-  // Text modes other than Ayah need word timings (rule 8: never guess sync).
-  const wordTimed = () => !!plan?.wordTimed;
-  const mode = (): TextMode => (wordTimed() ? project.textMode : 'ayah');
-  const modeChips = chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed());
-  const stepChips = chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
-    () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); });
-  const stepRow = h('div', { class: 'sub-row', hidden: project.textMode !== 'words' }, h('span', { class: 'muted small' }, 'Per step'), stepChips);
-  redraws.push(() => (stepRow.hidden = mode() !== 'words'));
-  const syncNote = h('p', { class: 'muted small' }, 'Loading word timings…');
-  const trRow = h('div', { class: 'sub-row', hidden: !project.showTranslation },
-    chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
-      () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
-    h('span', { class: 'muted small' }, 'Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.'),
-    h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Font'),
-      chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })));
-  redraws.push(() => (trRow.hidden = !project.showTranslation));
-  const reciterSelect = h('select', {
-    class: 'select',
-    'aria-label': 'Reciter',
-    onchange: () => {
-      if (exporting) return;
-      project.reciterId = Number(reciterSelect.value);
-      setReelReciter(project.reciterId);
-      void loadAudio();
-    },
-  }, ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === project.reciterId }, reciterPickerLabel(r))));
-
-  // --- studio layout: preview + spine always on screen; tools open in a sheet (side panel on wide screens) ---
-  const TOOLS: { id: string; icon: string; label: string; content: Node[] }[] = [
-    { id: 'reciter', icon: '🎙', label: 'Reciter', content: [
-          h('section', {}, h('h3', {}, 'Reciter'), reciterSelect)] },
-    { id: 'mood', icon: '✦', label: 'Mood', content: [
-          h('section', {}, h('h3', {}, 'Mood'),
-            chips(MOODS.map((m) => ({ value: m.id, label: m.label })), () => currentMood(project), (id) => {
-              applyMood(project, MOODS.find((m) => m.id === id)!);
-              arrange();
-            }),
-            h('p', { class: 'muted small' }, 'A mood sets the text effect, colours, colour grade, scrim, translation font and pacing. Adjust anything after.'))] },
-    { id: 'text', icon: 'Aa', label: 'Text', content: [
-          h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote,
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
-              chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
-                () => project.textSize, (v) => { project.textSize = v; rebuild(); })),
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Position'),
-              chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
-                () => project.textPos, (v) => { project.textPos = v; })))] },
-    { id: 'effect', icon: '✧', label: 'Effect', content: [
-          h('section', {}, h('h3', {}, 'Text effect'),
-            chips<TextEffect>(TEXT_EFFECTS, () => project.textEffect, (v) => { project.textEffect = v; }))] },
-    { id: 'colours', icon: '🎨', label: 'Colours', content: [
-          h('section', {}, h('h3', {}, 'Colours'),
-            colorRow('Ayah', 'ar'), colorRow('Translation', 'en'), colorRow('Surah name', 'title'))] },
-    { id: 'scenes', icon: '▦', label: 'Scenes', content: [
-          h('section', {}, h('h3', {}, 'Scenes'),
-            chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }],
-              () => project.sceneMode, (v) => {
-                project.sceneMode = v;
-                // A list needs at least two scenes to change: add the next background as a start.
-                if (v !== 'single' && project.scenes.length < 2) {
-                  const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
-                  project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
-                }
-                scenesChanged();
-              }),
-            sceneNote, sceneList, trRowScenes, gridLabel, bgGrid,
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Colour grade'),
-              chips<Grade>((Object.keys(GRADES) as Grade[]).map((g) => ({ value: g, label: GRADES[g].label })), () => project.grade, (v) => { project.grade = v; })),
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Darken behind text'),
-              chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }], () => project.scrim, (v) => { project.scrim = v; })))] },
-    { id: 'translation', icon: 'En', label: 'Translation', content: [
-          h('section', {}, h('h3', {}, 'Translation'),
-            toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); }),
-            trRow)] },
-    { id: 'timing', icon: '⏱', label: 'Timing', content: [
-          h('section', {}, h('h3', {}, 'Pacing'),
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Pause between ayat'),
-              chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Between ayat'),
-              chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); })),
-            h('div', { class: 'toggles sub-row' },
-              toggle('Intro title card', () => project.intro, (v) => { project.intro = v; arrange(); }),
-              toggle('Closing card', () => project.outro, (v) => { project.outro = v; arrange(); })))] },
-    { id: 'layout', icon: '⊞', label: 'Layout', content: [
-          h('section', {}, h('h3', {}, 'Surah name'),
-            chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
-              () => project.titlePos, (v) => { project.titlePos = v; rebuild(); }),
-            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
-              chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
-                () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))),
-          h('section', { class: 'toggles' },
-            toggle('Reciter name', () => project.credit, (v) => { project.credit = v; rebuild(); }),
-            toggle('App watermark', () => project.watermark, (v) => { project.watermark = v; rebuild(); }))] },
-    { id: 'export', icon: '⬇', label: 'Export', content: [
-  h('section', {}, h('h3', {}, 'Export'),
-            chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
-              () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
-            exportBtn, exportPathLabel, progressRow, result)] },
+  const exportPanel = () => [
+    chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
+      () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
+    exportBtn, exportPathLabel, progressRow, result,
   ];
 
-  const wide = matchMedia('(min-width: 900px)');
-  const sheetTitle = h('h2', {});
-  const sheetBody = h('div', { class: 'sheet-body panel' });
-  const sheet = h('section', { class: 'sheet', hidden: true },
-    h('div', { class: 'sheet-head' }, sheetTitle,
-      h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Close', onclick: () => openTool(null) }, '✓')),
-    sheetBody);
-  const toolButtons = TOOLS.filter((x) => x.id !== 'export').map((x) =>
-    h('button', { class: 'tool', 'data-tool': x.id, onclick: () => openTool(current === x.id && !wide.matches ? null : x.id) },
-      h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, x.icon), h('span', {}, x.label)));
-  let current: string | null = null;
-  function openTool(id: string | null) {
-    if (!id && wide.matches) id = current ?? 'mood'; // the side panel always shows a tool
-    current = id;
-    const tool = TOOLS.find((x) => x.id === id);
-    sheet.hidden = !tool;
-    studio.classList.toggle('sheet-open', !!tool);
-    for (const b of toolButtons) b.classList.toggle('on', b.dataset.tool === id);
-    if (tool) {
-      sheetTitle.textContent = tool.label;
-      sheetBody.replaceChildren(...tool.content);
-      sheetBody.scrollTop = 0;
+  // --- tools (bottom bar) ---
+  const resetEdits = () => { project.gaps = {}; project.holds = {}; arrange(); changed(); };
+  const hasEdits = () => Object.keys(project.gaps).length > 0 || Object.keys(project.holds).length > 0;
+  const TOOLS: Tool[] = [
+    { id: 'reciter', icon: '🎙', label: 'Reciter', options: [{ id: 'reciter', icon: '🎙', label: 'Reciter', panel: reciterPanel }] },
+    { id: 'mood', icon: '✦', label: 'Mood', options: [{ id: 'mood', icon: '✦', label: 'Mood', panel: moodPanel }] },
+    { id: 'text', icon: 'Aa', label: 'Text', options: [
+      { id: 'mode', icon: '☰', label: 'Text mode', panel: () => [
+        chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
+        mode() === 'words' ? row('Per step', chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
+          () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
+        note(syncText),
+      ].filter(Boolean) as Node[] },
+      { id: 'size', icon: 'A⇕', label: 'Size', panel: () => [chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+        () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
+      { id: 'position', icon: '⇳', label: 'Position', panel: () => [chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
+        () => project.textPos, (v) => { project.textPos = v; })] },
+    ] },
+    { id: 'effects', icon: '✧', label: 'Effects', options: [
+      { id: 'text-effect', icon: '✧', label: 'Text effect', panel: effectPanel },
+      { id: 'transition', icon: '◆', label: 'Transition', panel: transitionPanel },
+    ] },
+    { id: 'colours', icon: '🎨', label: 'Colours', options: [
+      { id: 'c-ar', icon: () => dot(project.colors.ar), label: 'Ayah', panel: colourPanel('ar', 'Ayah') },
+      { id: 'c-en', icon: () => dot(project.colors.en), label: 'Translation', panel: colourPanel('en', 'Translation') },
+      { id: 'c-title', icon: () => dot(project.colors.title), label: 'Surah name', panel: colourPanel('title', 'Surah name') },
+    ] },
+    { id: 'scenes', icon: '▦', label: 'Scenes', options: [
+      { id: 'change', icon: '⇄', label: 'Change', panel: () => bgPicker(sceneAtPlayhead()) },
+      { id: 'add', icon: '+', label: 'Add', panel: () => bgPicker(null) },
+      { id: 'layout', icon: '▦', label: 'Layout', panel: sceneLayoutPanel },
+      { id: 'grade', icon: '◑', label: 'Grade', panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
+        on: project.grade === g, label: GRADES[g].label, art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
+      })))] },
+      { id: 'scrim', icon: '◐', label: 'Darken', panel: () => [chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }],
+        () => project.scrim, (v) => { project.scrim = v; }), note('Darkens the background behind the text so it stays readable.')] },
+      { id: 'snap', icon: '🧲', label: 'Snap', toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+    ] },
+    { id: 'translation', icon: 'En', label: 'Translation', options: [
+      { id: 'tr-show', icon: 'En', label: 'Show', toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
+      { id: 'tr-sync', icon: '⇄', label: 'Sync', disabled: () => !project.showTranslation, panel: () => [
+        chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
+          () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
+        note('Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.')] },
+      { id: 'tr-font', icon: 'Ff', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
+        chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+    ] },
+    { id: 'timing', icon: '⏱', label: 'Timing', options: [
+      { id: 'pause', icon: '⏸', label: 'Pauses', panel: () => [
+        row('Between all ayat', chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+        note('To change one pause, select an ayah\'s audio in the timeline and drag it left or right (only silence is ever cut).')] },
+      { id: 'gap', icon: '⋯', label: 'Between ayat', panel: () => [
+        chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); }),
+        note('What the text does in the pause between ayat. To set one ayah, select its text in the timeline and drag its end.')] },
+      { id: 'intro', icon: '⏮', label: 'Intro card', toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
+      { id: 'outro', icon: '⏭', label: 'End card', toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
+      { id: 'reset', icon: '↺', label: 'Reset edits', disabled: () => !hasEdits(), action: resetEdits },
+    ] },
+    { id: 'layout', icon: '⊞', label: 'Layout', options: [
+      { id: 'title', icon: '۞', label: 'Surah name', panel: () => [
+        row('Place', chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
+          () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
+        row('Size', chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+          () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))] },
+      { id: 'credit', icon: '🎙', label: 'Reciter name', toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
+      { id: 'watermark', icon: '©', label: 'Watermark', toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
+    ] },
+  ];
+  const EXPORT: Opt = { id: 'export', icon: '⬇', label: 'Export', panel: exportPanel };
+
+  // --- block actions (when a block is selected in the timeline) ---
+  const ayahNo = (i: number) => from + i;
+  function selectionOptions(sel: NonNullable<Selection>): Opt[] {
+    const i = sel.index;
+    if (sel.kind === 'scene') {
+      const count = tl?.scenes.length ?? 1;
+      return [
+        { id: 'replace', icon: '⇄', label: 'Replace', panel: () => bgPicker(i) },
+        { id: 'left', icon: '◀', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
+        { id: 'right', icon: '▶', label: 'Move right', disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
+        { id: 'transition', icon: '◆', label: 'Transition', panel: transitionPanel },
+        { id: 'delete', icon: '🗑', label: 'Delete', disabled: () => count < 2, action: () => removeScene(i) },
+      ];
     }
+    if (sel.kind === 'text') {
+      return [
+        { id: 'text-effect', icon: '✧', label: 'Effect', panel: effectPanel },
+        { id: 'c-ar', icon: () => dot(project.colors.ar), label: 'Colour', panel: colourPanel('ar', 'Ayah') },
+        { id: 'mode', icon: '☰', label: 'Text mode', panel: TOOLS[2].options[0].panel },
+        { id: 'hold-reset', icon: '↺', label: 'Reset end', disabled: () => project.holds[ayahNo(i)] === undefined,
+          action: () => { delete project.holds[ayahNo(i)]; arrange(); changed(); } },
+      ];
+    }
+    const nudge = (d: number) => () => shiftAyah(i, d);
+    const out: Opt[] = [];
+    if (i > 0) {
+      out.push({ id: 'less', icon: '⇤', label: 'Pause −0.5s', action: nudge(-0.5) },
+        { id: 'more', icon: '⇥', label: 'Pause +0.5s', action: nudge(0.5) },
+        { id: 'gap-reset', icon: '↺', label: 'Reset pause', disabled: () => project.gaps[ayahNo(i)] === undefined,
+          action: () => { delete project.gaps[ayahNo(i)]; arrange(); changed(); } });
+    }
+    const last = i === (tl?.ayat.length ?? 1) - 1;
+    if (i === 0 && from > 1 && to - from + 1 < MAX_AYAT) out.push({ id: 'add-prev', icon: '⊕', label: `Add ${n}:${from - 1}`, action: () => goRange(from - 1, to) });
+    if (last && to < s.ayahs && to - from + 1 < MAX_AYAT) out.push({ id: 'add-next', icon: '⊕', label: `Add ${n}:${to + 1}`, action: () => goRange(from, to + 1) });
+    if ((i === 0 || last) && to > from) out.push({ id: 'remove', icon: '✂', label: `Remove ${n}:${ayahNo(i)}`, action: () => (i === 0 ? goRange(from + 1, to) : goRange(from, to - 1)) });
+    return out;
+  }
+  /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
+  const goRange = (a: number, b: number) => { location.hash = `#/reel/${n}/${a}${b > a ? `-${b}` : ''}`; };
+  /** Change the pause before ayah i by d seconds (the engine never cuts more than the reciter's silence). */
+  function shiftAyah(i: number, d: number) {
+    if (!base || !plan || i < 1) return;
+    const now = plan.ayat[i].start - plan.ayat[i - 1].last;
+    const natural = base.plan.ayat[i].start - base.plan.ayat[i - 1].last;
+    project.gaps[ayahNo(i)] = Math.round((now + d - natural - project.pause) * 100) / 100;
+    arrange();
+    changed();
+  }
+
+  // --- bars and panels ---
+  const wide = matchMedia('(min-width: 900px)');
+  let tool: Tool | null = null; // its options are in the bottom bar
+  let option: Opt | null = null; // its panel is open
+  let selection: Selection = null;
+  const panelTitle = h('h2', {});
+  const panelBody = h('div', { class: 'sheet-body panel' });
+  const panel = h('section', { class: 'sheet' },
+    h('div', { class: 'sheet-head' }, panelTitle, h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Done', onclick: () => openOption(null) }, '✓')),
+    panelBody);
+  const bar = h('nav', { class: 'toolbar', 'aria-label': 'Tools' });
+
+  const iconOf = (o: Opt) => (typeof o.icon === 'function' ? o.icon() : o.icon);
+  function barButton(o: Opt, onclick: () => void) {
+    const on = o.toggle ? o.toggle.get() : option?.id === o.id;
+    return h('button', {
+      class: `tool${on ? ' on' : ''}${o.toggle ? ' toggle-tool' : ''}`, disabled: o.disabled?.() ?? false, onclick,
+      'aria-pressed': o.toggle ? String(on) : undefined,
+    }, h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, iconOf(o)), h('span', {}, o.label));
+  }
+  function runOption(o: Opt) {
+    if (exporting) return;
+    if (o.toggle) {
+      o.toggle.set(!o.toggle.get());
+      changed();
+    } else if (o.action) {
+      o.action();
+      refreshUI();
+    } else openOption(option?.id === o.id && !wide.matches ? null : o);
+  }
+  function openTool(x: Tool | null) {
+    tool = x;
+    selection = null;
+    option = null;
+    // A tool with one panel opens it straight away; on wide screens the first panel shows too.
+    const first = x?.options.find((o) => o.panel);
+    if (x && first && (x.options.length === 1 || wide.matches)) option = first;
+    refreshUI();
+  }
+  function openOption(o: Opt | null) {
+    option = o;
+    refreshUI();
+  }
+  function select(sel: Selection) {
+    selection = sel;
+    tool = null;
+    option = null;
+    refreshUI();
+  }
+  function refreshUI() {
+    // Bottom bar: a selected block's actions, a tool's options, or the tools.
+    if (selection) {
+      const kind = selection.kind === 'scene' ? 'Scene' : selection.kind === 'text' ? 'Text' : 'Audio';
+      bar.replaceChildren(
+        h('button', { class: 'tool back', 'aria-label': 'Deselect', onclick: () => { select(null); spine.invalidate(); } },
+          h('span', { class: 'tool-icon' }, '‹'), h('span', {}, kind)),
+        ...selectionOptions(selection).map((o) => barButton(o, () => runOption(o))));
+    } else if (tool) {
+      bar.replaceChildren(
+        h('button', { class: 'tool back', 'aria-label': 'Back to tools', onclick: () => openTool(null) },
+          h('span', { class: 'tool-icon' }, '‹'), h('span', {}, tool.label)),
+        ...tool.options.map((o) => barButton(o, () => runOption(o))));
+    } else {
+      bar.replaceChildren(...TOOLS.map((x) => h('button', { class: 'tool', onclick: () => openTool(x) },
+        h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, x.icon), h('span', {}, x.label))));
+    }
+    // Panel: the open option's controls (wide screens: a hint when none is open).
+    const content = option?.panel?.();
+    studio.classList.toggle('panel-open', !!content);
+    panel.hidden = !content && !wide.matches;
+    panelTitle.textContent = option ? (option.id.startsWith('c-') ? `Colour · ${option.label}` : option.label) : 'Ayah Studio';
+    panelBody.replaceChildren(...(content ?? [note('Pick a tool below, or tap a block in the timeline to edit it.')]));
     spine.invalidate();
   }
-  wide.addEventListener('change', () => openTool(current));
+  wide.addEventListener('change', refreshUI);
+
+  /** Show an effect: play from the start of the text on screen (or the first). */
+  function previewText() {
+    if (!tl || playing) return;
+    const evs = tl.ayat.flatMap((a) => a.events.filter((e) => e.start < a.end));
+    const ev = evs.find((e) => t >= e.start && t < e.end) ?? evs.find((e) => e.start >= t) ?? evs[0];
+    if (!ev) return;
+    t = Math.max(0, ev.start - 0.05);
+    spine.reveal(t);
+    void play();
+  }
+  /** Show a transition: play across the nearest scene change. */
+  function previewTransition() {
+    if (!tl || playing || tl.scenes.length < 2) return;
+    const cuts = tl.scenes.slice(1).map((x) => x.start);
+    const c = cuts.reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a));
+    t = Math.max(0, c - 1.5);
+    spine.reveal(t);
+    void play();
+  }
 
   const spine = createSpine({
     timeline: () => tl,
+    plan: () => plan,
     time: () => t,
+    playing: () => playing,
     scenes: () => project.scenes,
     transition: () => project.transition,
+    snap: () => project.sceneSnap,
+    selection: () => selection,
+    select: (sel) => { if (!exporting) select(sel); },
     onScrubStart: () => pause(),
     seek: (x) => { t = x; dirty = true; },
-    onTap: (track) => openTool(track === 'scenes' ? 'scenes' : 'text'),
+    resizeScenes: (bounds) => {
+      if (!tl || exporting) return;
+      toCustom();
+      const edges = [0, ...bounds, tl.duration];
+      project.sceneLengths = edges.slice(1).map((e, i) => e - edges[i]);
+      project.sceneMode = 'custom';
+      changed(false);
+      rebuild();
+    },
+    moveScene: (a, b) => { if (!exporting) { moveScene(a, b); changed(); } },
+    addScene: () => { if (!exporting) { tool = TOOLS.find((x) => x.id === 'scenes')!; selection = null; option = tool.options.find((o) => o.id === 'add')!; refreshUI(); } },
+    setHold: (i, sec) => { if (!exporting) { project.holds[ayahNo(i)] = Math.round(sec * 100) / 100; arrange(); changed(); } },
+    shiftAyah: (i, d) => { if (!exporting) shiftAyah(i, d); },
   });
 
   const studio = h('div', { class: 'studio' },
@@ -316,14 +536,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       h('a', { class: 'icon-btn', href: `#/s/${n}/${from}`, 'aria-label': 'Back to reading' }, '‹'),
       h('div', { class: 'brand' }, h('h1', {}, 'New reel'), h('p', { class: 'muted' }, reference(s, from, to))),
       h('button', { class: 'icon-btn', 'aria-label': 'Device check', onclick: openDebugPanel }, '⚙'),
-      h('button', { class: 'primary export-open', onclick: () => openTool('export') }, 'Export')),
+      h('button', { class: 'primary export-open', onclick: () => { selection = null; tool = null; openOption(EXPORT); } }, 'Export')),
     h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
     h('div', { class: 'transport' }, playBtn, timeLabel),
     spine.el,
-    sheet,
-    h('nav', { class: 'toolbar', 'aria-label': 'Tools' }, ...toolButtons));
+    panel,
+    bar);
   root.append(studio);
-  openTool(wide.matches ? 'mood' : null);
+  refreshUI();
 
   capabilities().then(({ path }) => {
     exportPathLabel.textContent = path ? `Export: ${describePath(path)}` : 'This browser cannot export video (no WebCodecs). Try Chrome on Android or desktop.';
@@ -352,11 +572,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   /** Apply the pacing (pause between ayat, cards) to the loaded recitation, then rebuild the text. */
   function arrange() {
     if (!base) return;
-    const pc = pacing(project);
+    const pc = pacing(project); // includes this reel's own pauses (gaps) and text holds
     const was = playing; // keep watching while editing
     pause();
     plan = arrangeReel(base.plan, pc);
-    audio = pc.pause || pc.intro || pc.outro ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    audio = pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
     spine.setAudio(audio);
     rebuild();
     if (was) void play();
@@ -367,10 +587,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     tl = buildTimeline(measure, {
       surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
-      style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length,
+      style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
     spine.invalidate();
     if (t > tl.duration) t = 0;
+    if (selection?.kind === 'scene' && selection.index >= tl.scenes.length) selection = null;
     dirty = true;
   }
 
@@ -411,7 +632,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     base = null;
     tl = null;
     setStatus('Loading recitation…');
-    syncNote.textContent = 'Loading word timings…';
+    syncText = 'Loading word timings…';
     try {
       if (!reels.has(r.id)) {
         const p = buildReel(r, (msg) => { if (req === audioReq) setStatus(msg); });
@@ -423,11 +644,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const reel = await reels.get(r.id)!;
       if (req !== audioReq || !alive) return;
       base = reel;
-      syncNote.textContent = base.plan.wordTimed
+      syncText = base.plan.wordTimed
         ? 'Text follows the reciter word by word.'
         : `Word timings are not available for this reciter here, so only Ayah mode is offered${base.plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
       arrange();
-      for (const r of redraws) r();
+      refreshUI();
       setStatus(mediaReady ? '' : 'Loading background…');
     } catch (e) {
       if (req === audioReq) setStatus(`${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`);
@@ -513,10 +734,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
     void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, true)?.then(() => (dirty = true));
-    if (!dirty) return spine.frame();
+    spine.frame();
+    if (!dirty) return;
     dirty = false;
     render(pctx, t, project, tl, media);
-    spine.frame(true);
     timeLabel.textContent = `${fmtTime(t)} / ${fmtTime(tl.duration)}`;
   }
   raf = requestAnimationFrame(frame);
