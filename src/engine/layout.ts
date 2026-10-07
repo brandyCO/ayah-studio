@@ -11,6 +11,7 @@ export const FONT_AR = '"UthmanicHafs", "AmiriQuran", serif';
 // Surah names come from a different source/encoding than the Quran text, so use Amiri for them.
 export const FONT_NAME = '"AmiriQuran", serif';
 export const FONT_EN = '"Noto Serif", Georgia, "Times New Roman", serif';
+export const FONT_EN_SANS = 'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 export const FONT_UI = 'system-ui, "Segoe UI", Roboto, sans-serif';
 
 export const AR_LINE = 1.8;
@@ -23,6 +24,21 @@ export const AR_SIZES = {
   half: [88, 80, 72, 64],
   words: [96, 88, 80, 72, 64],
 } as const;
+const AR_MIN = 64;
+const EN_MIN = 32;
+
+export type TextSize = 's' | 'm' | 'l';
+export type EnFont = 'serif' | 'sans';
+const SIZE_SCALE: Record<TextSize, number> = { s: 0.88, m: 1, l: 1.14 };
+
+/**
+ * Sizes scaled for the chosen text size, largest first, never below the legible minimum (long text
+ * wraps instead); the minimum stays the last resort so whatever fits at Medium still fits.
+ */
+function scaled(sizes: readonly number[], z: TextSize, min: number): number[] {
+  const out = [...sizes.map((x) => Math.max(min, 2 * Math.round((x * SIZE_SCALE[z]) / 2))), min];
+  return out.filter((x, i) => out.indexOf(x) === i);
+}
 
 /** The canvas calls layout needs (a stub with the same shape is used by the node checks). */
 export type TextCtx = Pick<CanvasRenderingContext2D, 'font' | 'direction' | 'measureText'>;
@@ -42,6 +58,8 @@ export interface FrameStyle {
   titleSize: TitleSize;
   credit: boolean; // "Recited by …" line (optional)
   watermark: boolean;
+  textSize?: TextSize; // default 'm'
+  enFont?: EnFont; // default 'serif'
 }
 
 export const TITLE_SIZES: Record<TitleSize, { name: number; ref: number }> = {
@@ -59,6 +77,9 @@ export interface FrameLayout {
   title: number; // top of the surah name + reference block ("below": its lowest place; it follows the text)
   credit: number | null; // centre line of the reciter credit
   watermark: number | null;
+  arSizes: Record<keyof typeof AR_SIZES, number[]>;
+  enSizes: number[];
+  enFont: string;
 }
 
 /** Everything stays inside the 5% title-safe area and nothing overlaps (rule 6). */
@@ -96,7 +117,15 @@ export function frameLayout(st: FrameStyle): FrameLayout {
   const split = st.translation ? Math.round(top + 0.62 * (bottom - top - 30)) : bottom;
   const ar = { top, bottom: split };
   const en = st.translation ? { top: split + 30, bottom } : { top: bottom, bottom };
-  return { ar, en, text: { top, bottom }, title, credit, watermark };
+  const z = st.textSize ?? 'm';
+  const arSizes = {
+    ayah: scaled(AR_SIZES.ayah, z, AR_MIN),
+    line: scaled(AR_SIZES.line, z, AR_MIN),
+    half: scaled(AR_SIZES.half, z, AR_MIN),
+    words: scaled(AR_SIZES.words, z, AR_MIN),
+  };
+  const enFont = st.enFont === 'sans' ? FONT_EN_SANS : FONT_EN;
+  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: scaled(EN_SIZES, z, EN_MIN), enFont };
 }
 
 export interface Fit {
@@ -162,9 +191,9 @@ const ranges = (counts: number[]): Range[] => {
 };
 
 /** English text in its box at the largest size that fits, or null. */
-export function fitEnglish(ctx: TextCtx, text: string, box: Box): Fit | null {
+export function fitEnglish(ctx: TextCtx, text: string, box: Box, sizes: readonly number[] = EN_SIZES, font = FONT_EN): Fit | null {
   ctx.direction = 'ltr';
-  const f = fitAll(ctx, [text.split(/\s+/).filter(Boolean)], EN_SIZES, FONT_EN, EN_LINE, box);
+  const f = fitAll(ctx, [text.split(/\s+/).filter(Boolean)], sizes, font, EN_LINE, box);
   return f ? f[0] : null;
 }
 
@@ -178,7 +207,7 @@ export function ayahPages(ctx: TextCtx, words: string[], lay: FrameLayout, engli
   for (let n = 1; n <= words.length; n++) {
     const arChunks = chunk(words, n);
     ctx.direction = 'rtl';
-    const ar = fitAll(ctx, arChunks, AR_SIZES.ayah, FONT_AR, AR_LINE, lay.ar);
+    const ar = fitAll(ctx, arChunks, lay.arSizes.ayah, FONT_AR, AR_LINE, lay.ar);
     if (!ar) continue;
     let en: Fit[] | null = null;
     if (meanings || english) {
@@ -186,7 +215,7 @@ export function ayahPages(ctx: TextCtx, words: string[], lay: FrameLayout, engli
         ? ranges(arChunks.map((c) => c.length)).map(([f, l]) => meanings.slice(f, l + 1).join(' ').split(/\s+/).filter(Boolean))
         : chunk(enWords, n);
       ctx.direction = 'ltr';
-      en = fitAll(ctx, enPages, EN_SIZES, FONT_EN, EN_LINE, lay.en);
+      en = fitAll(ctx, enPages, lay.enSizes, lay.enFont, EN_LINE, lay.en);
       if (!en) continue;
     }
     if (ar.flatMap((p) => p.lines).join(' ') !== words.join(' ')) throw new Error('Pagination altered the ayah text');
@@ -196,16 +225,16 @@ export function ayahPages(ctx: TextCtx, words: string[], lay: FrameLayout, engli
 }
 
 /** Line mode: the ayah wrapped at the Ayah-mode size, one screen line per unit. */
-export function lineUnits(ctx: TextCtx, words: string[]): Range[] {
+export function lineUnits(ctx: TextCtx, words: string[], size: number = AR_SIZES.line[0]): Range[] {
   ctx.direction = 'rtl';
-  ctx.font = `${AR_SIZES.line[0]}px ${FONT_AR}`;
+  ctx.font = `${size}px ${FONT_AR}`;
   return ranges(wrapCounts(ctx, words, TEXT_W));
 }
 
 /** Half-line mode: each screen line split at the word boundary nearest its middle. */
-export function halfUnits(ctx: TextCtx, words: string[]): Range[] {
+export function halfUnits(ctx: TextCtx, words: string[], size: number = AR_SIZES.line[0]): Range[] {
   const out: Range[] = [];
-  for (const [f, l] of lineUnits(ctx, words)) {
+  for (const [f, l] of lineUnits(ctx, words, size)) {
     if (l === f) {
       out.push([f, l]);
       continue;
@@ -229,11 +258,11 @@ export function wordUnits(count: number, n: number): Range[] {
 }
 
 /** Translation of one ayah in the fewest pages that fit its box. */
-export function translationPages(ctx: TextCtx, english: string, box: Box): Fit[] {
+export function translationPages(ctx: TextCtx, english: string, box: Box, sizes: readonly number[] = EN_SIZES, font = FONT_EN): Fit[] {
   const words = english.split(/\s+/).filter(Boolean);
   ctx.direction = 'ltr';
   for (let n = 1; n <= Math.max(1, words.length); n++) {
-    const f = fitAll(ctx, chunk(words, n), EN_SIZES, FONT_EN, EN_LINE, box);
+    const f = fitAll(ctx, chunk(words, n), sizes, font, EN_LINE, box);
     if (f) return f;
   }
   throw new Error('Translation could not be laid out');

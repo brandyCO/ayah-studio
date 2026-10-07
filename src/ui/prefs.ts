@@ -34,3 +34,20 @@ export function setReelReciter(id: number) {
     /* ignore */
   }
 }
+
+/** The look of the last reel (text mode, mood settings, colours, pacing…), applied to the next one. */
+export function reelLook(): unknown {
+  try {
+    return JSON.parse(localStorage.getItem('reelLook') ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
+export function setReelLook(look: unknown) {
+  try {
+    localStorage.setItem('reelLook', JSON.stringify(look));
+  } catch {
+    /* ignore */
+  }
+}

@@ -6,10 +6,10 @@
 import { qdcSurah } from '../data/qdc';
 import { reference, type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, reciterById } from '../data/reciters';
-import { MAX_AYAT } from '../engine/project';
-import { clipBounds, reelDuration } from '../engine/recitation';
+import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
+import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
-import { reelReciter } from './prefs';
+import { reelLook, reelReciter } from './prefs';
 
 const fmtLength = (sec: number) => {
   const s = Math.round(sec);
@@ -81,7 +81,11 @@ export function selectionController(o: SelectionOptions) {
     try {
       const q = await qdcSurah(r.id, sel.surah);
       const clip = clipBounds(q.timings, sel.surah, sel.lo, sel.hi);
-      if (req === estReq && clip) estimate.textContent = ` · ${fmtLength(reelDuration(clip))} · ${r.short}`;
+      // Same pacing as the editor will use (pause between ayat, cards: remembered from the last reel).
+      const p = newProject(sel.surah, sel.lo, sel.hi, r.id);
+      applyLook(p, reelLook(), () => true);
+      const len = clip && reelDuration(clip) + pacingExtra(pacing(p), sel.hi - sel.lo + 1);
+      if (req === estReq && len) estimate.textContent = ` · ${fmtLength(len)} · ${r.short}`;
     } catch {
       /* offline: no estimate */
     }

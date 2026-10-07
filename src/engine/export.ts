@@ -14,6 +14,7 @@ import type { ExportPath } from './capabilities';
 import { H, W } from './layout';
 import type { Project } from './project';
 import { render } from './render';
+import { prepareScenes, sceneSpans } from './scenes';
 import type { Timeline } from './timeline';
 
 export const FPS = 30;
@@ -22,7 +23,7 @@ export interface ExportOptions {
   project: Project;
   timeline: Timeline;
   audio: AudioBuffer;
-  media: BackgroundMedia;
+  media: BackgroundMedia[]; // per scene entry
   path: ExportPath;
   height: 1920 | 1280;
   onProgress: (fraction: number) => void;
@@ -69,10 +70,11 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     audio.close();
 
     const frames = Math.ceil(o.timeline.duration * FPS);
+    const spans = sceneSpans(o.timeline.scenes, o.project.transition);
     for (let i = 0; i < frames; i++) {
       if (o.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
       const t = i / FPS;
-      await o.media.video?.prepare(t);
+      await prepareScenes(spans, t, o.media);
       render(ctx, t, o.project, o.timeline, o.media);
       await video.add(t, 1 / FPS);
       if (i % 5 === 0) o.onProgress(i / frames);

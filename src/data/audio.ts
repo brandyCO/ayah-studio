@@ -2,6 +2,7 @@
 // fetched and trimmed by its timings. Fallback: everyayah.com per-ayah files (no word timings).
 import { decodeMp3Span, VbrError, type DecodedSpan } from './mp3';
 import { everyayahUrl, type Reciter } from './reciters';
+import type { AudioPiece } from '../engine/recitation';
 
 export const SAMPLE_RATE = 48_000;
 const WHOLE_FILE_MAX = 240; // seconds: a VBR recording up to this long is decoded whole instead
@@ -68,6 +69,28 @@ export async function sliceAudio(url: string, clip: [number, number], at: number
       seg[n - 1 - i] *= g;
     }
     out.copyToChannel(seg, ch, Math.round(at * R));
+  }
+  return out;
+}
+
+/** The base reel audio rearranged into its pieces (pauses between ayat, room for the cards). */
+export function arrangeAudio(src: AudioBuffer, pieces: AudioPiece[], duration: number): AudioBuffer {
+  const R = src.sampleRate;
+  const out = new AudioBuffer({ length: Math.ceil(duration * R), numberOfChannels: 2, sampleRate: R });
+  const fade = Math.round(0.01 * R); // cuts fall in the reciter's pauses; fade them anyway
+  for (const p of pieces) {
+    const a = Math.round(p.from * R), b = Math.min(src.length, Math.round(p.to * R)), at = Math.round(p.at * R);
+    const n = Math.min(b - a, out.length - at);
+    if (n <= 0) continue;
+    for (let ch = 0; ch < 2; ch++) {
+      const seg = src.getChannelData(Math.min(ch, src.numberOfChannels - 1)).slice(a, a + n);
+      for (let i = 0; i < fade && i < n; i++) {
+        const g = Math.sin((Math.PI / 2) * (i / fade));
+        if (a > 0) seg[i] *= g;
+        if (b < src.length) seg[n - 1 - i] *= g;
+      }
+      out.copyToChannel(seg, ch, at);
+    }
   }
   return out;
 }

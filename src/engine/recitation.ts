@@ -16,6 +16,8 @@ export interface PlannedAyah {
   /** Reel seconds: the ayah's text shows from start (its first word) until end (after a short hold). */
   start: number;
   end: number;
+  /** Reel seconds: end of its last recited word. */
+  last: number;
   /** Reel-time first start of each display word, or null without word timings (Ayah mode only). */
   wordStart: number[] | null;
   /** Reel-time recitation of words in time order, repetitions included (null without word timings). */
@@ -33,6 +35,18 @@ export interface ReelPlan {
   clip?: [number, number];
   /** everyayah: reel offset of each ayah's clip. */
   offsets?: number[];
+  /** Arranged (arrangeReel): seconds of intro card at the start and closing card at the end. */
+  intro?: number;
+  outro?: number;
+  /** Arranged: where each stretch of the base reel's audio goes. */
+  pieces?: AudioPiece[];
+}
+
+/** Base reel seconds from..to are played at reel second `at`. */
+export interface AudioPiece {
+  from: number;
+  to: number;
+  at: number;
 }
 
 /** Slice of the surah recording covering ayat from..to, never reaching into the neighbouring ayat. */
@@ -52,14 +66,15 @@ export function clipBounds(timings: Map<string, VerseTiming>, surah: number, fro
 export const reelDuration = (clip: [number, number]) => LEAD_IN + (clip[1] - clip[0]) + TAIL;
 
 /**
- * Holds each ayah's text a little after its last word, clearing it before the next ayah starts. A last
- * word whose timing runs past the next ayah's first word (seen in the data) is cut at that word.
+ * Holds each ayah's text a little after its last word (or, with `hold`, until just before the next
+ * ayah), clearing it before the next ayah starts. Text ends by `end` (the video's end or the closing
+ * card). A last word whose timing runs past the next ayah's first word (seen in the data) is cut at that word.
  */
-function holdEnds(ayat: PlannedAyah[], lastWord: number[], duration: number) {
+function holdEnds(ayat: PlannedAyah[], end: number, hold = false) {
   ayat.forEach((a, i) => {
-    const next = i + 1 < ayat.length ? ayat[i + 1].start : duration;
-    const limit = i + 1 < ayat.length ? next - CLEAR : duration - 0.2;
-    a.end = Math.min(next, Math.max(lastWord[i], Math.min(lastWord[i] + HOLD, limit)));
+    const next = i + 1 < ayat.length ? ayat[i + 1].start : end;
+    const limit = i + 1 < ayat.length ? next - CLEAR : end - 0.2;
+    a.end = Math.min(next, Math.max(a.last, hold ? limit : Math.min(a.last + HOLD, limit)));
   });
 }
 
@@ -79,7 +94,6 @@ export function planQdcReel(
   if (!clip) return null;
   const reel = (fileSec: number) => LEAD_IN + fileSec - clip[0];
   const duration = reelDuration(clip);
-  const lastWord: number[] = [];
   const ayat = texts.map((text, i): PlannedAyah => {
     const key = `${surah}:${from + i}`;
     const v = timings.get(key)!;
@@ -87,15 +101,15 @@ export function planQdcReel(
     const wt = wordTimings(n, v, parseSpans(wordMap[key]));
     if (!wt) {
       const [a, b] = recitedSpan(v)!;
-      lastWord.push(reel(Math.min(b, clip[1])));
-      return { ayah: from + i, start: reel(Math.max(a, clip[0])), end: 0, wordStart: null, seq: null, stats: null };
+      const last = reel(Math.min(b, clip[1]));
+      return { ayah: from + i, start: reel(Math.max(a, clip[0])), end: 0, last, wordStart: null, seq: null, stats: null };
     }
     const wordStart = wt.start.map((s) => Math.max(LEAD_IN, reel(s)));
-    lastWord.push(reel(Math.min(wt.last, clip[1])));
+    const last = reel(Math.min(wt.last, clip[1]));
     const seq = wt.seq.map(([w, a, b]): Recited => [w, Math.max(LEAD_IN, reel(a)), reel(b)]);
-    return { ayah: from + i, start: Math.min(wordStart[0], seq[0][1]), end: 0, wordStart, seq, stats: wt.stats };
+    return { ayah: from + i, start: Math.min(wordStart[0], seq[0][1]), end: 0, last, wordStart, seq, stats: wt.stats };
   });
-  holdEnds(ayat, lastWord, duration);
+  holdEnds(ayat, duration);
   return { source: 'qdc', duration, ayat, wordTimed: ayat.every((a) => a.wordStart), clip };
 }
 
@@ -103,15 +117,48 @@ export function planQdcReel(
 export function planClipReel(from: number, durations: number[]): ReelPlan {
   let t = LEAD_IN;
   const offsets: number[] = [];
-  const lastWord: number[] = [];
   const ayat = durations.map((d, i): PlannedAyah => {
     offsets.push(t);
-    lastWord.push(t + d);
-    const a = { ayah: from + i, start: t, end: 0, wordStart: null, seq: null, stats: null };
+    const a = { ayah: from + i, start: t, end: 0, last: t + d, wordStart: null, seq: null, stats: null };
     t += d + GAP;
     return a;
   });
   const duration = t - GAP + TAIL;
-  holdEnds(ayat, lastWord, duration);
+  holdEnds(ayat, duration);
   return { source: 'everyayah', duration, ayat, wordTimed: false, offsets };
+}
+
+export interface Pacing {
+  pause: number; // seconds of silence added between ayat
+  hold: boolean; // keep an ayah's text on screen until just before the next ayah
+  intro: number; // seconds of intro card before the recitation
+  outro: number; // seconds of closing card after it
+}
+
+/** Extra seconds the pacing adds to a reel of n ayat (for the length estimate). */
+export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro;
+
+/**
+ * The reel with its pacing: `pause` seconds of silence are added between ayat (cut in the middle of
+ * the reciter's own pause, never inside a word), the intro card goes before and the closing card
+ * after. Every time in the plan moves with its ayah; `pieces` say where the base audio goes.
+ */
+export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
+  const n = base.ayat.length;
+  const A = base.ayat;
+  const cut = (i: number) => (i < 0 ? 0 : i >= n - 1 ? base.duration
+    : Math.min(A[i + 1].start, Math.max(A[i].last, (A[i].last + A[i + 1].start) / 2)));
+  const shift = (i: number) => o.intro + i * o.pause;
+  const pieces = A.map((_, i) => ({ from: cut(i - 1), to: cut(i), at: cut(i - 1) + shift(i) }));
+  const duration = base.duration + pacingExtra(o, n);
+  const ayat = A.map((a, i): PlannedAyah => {
+    const d = shift(i);
+    return {
+      ...a, start: a.start + d, end: 0, last: a.last + d,
+      wordStart: a.wordStart?.map((x) => x + d) ?? null,
+      seq: a.seq?.map(([w, s, e]): Recited => [w, s + d, e + d]) ?? null,
+    };
+  });
+  holdEnds(ayat, duration - o.outro, o.hold);
+  return { ...base, duration, ayat, intro: o.intro, outro: o.outro, pieces };
 }
