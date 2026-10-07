@@ -222,9 +222,15 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [ ] Recitation spine (waveform + ayah/word markers)
 - [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
+      (done: Single / Per ayah / Even split from the preset backgrounds, filling the reel exactly —
+      `src/engine/scenes.ts`; per-ayah changes in the pause between ayat; Ken Burns per scene; videos
+      start from their first frame when their scene shows. Left: Custom dividers, snap to pauses,
+      loop/slow/hold + in-point)
 - [x] Full calm text-effect set: 17 effects in `src/engine/effects.ts` (ink reveal and light sweep
       run right-to-left on the Arabic, left-to-right on the English)
-- [ ] Scene transitions (~10-12) — with Scenes
+- [x] Scene transitions (11): crossfade, blur dissolve, dip to black/white, soft zoom-through, light
+      leak, mist, slow parallax, soft wipe (right-to-left), soft iris, cut; centred on the scene change,
+      never longer than half a scene; moods pick one
 - [x] Moods presets (Serene, Dawn, Night, Gold, Dusk, Minimal: effect, colours, colour grade, scrim,
       translation font, pacing; shown as picked while unchanged); text size (S/M/L, never below the
       legible minimum) and position (higher/centre/lower); translation font (serif/sans); pause between

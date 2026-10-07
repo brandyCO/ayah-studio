@@ -176,6 +176,16 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: flex-end; padding: 0; overflow: hidden;
 }
 .bg-thumb span { width: 100%; padding: 3px 4px; font-size: 11px; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.65)); text-align: left; }
+.scene-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.scene-item {
+  position: relative; width: 52px; aspect-ratio: 9 / 16; border-radius: 8px;
+  background-size: cover; background-position: center; border: 2px solid var(--accent);
+}
+.scene-item > span { position: absolute; left: 4px; bottom: 2px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000; }
+.scene-x {
+  position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; padding: 0;
+  border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 12px; cursor: pointer;
+}
 .bg-thumb.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 .toggles { display: flex; flex-wrap: wrap; gap: 18px; }
 .color-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; }

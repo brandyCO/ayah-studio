@@ -1,8 +1,8 @@
-// Moods: one-tap presets bundling text effect, colours, colour grade, scrim, translation font and
+// Moods: one-tap presets bundling text effect, scene transition, colours, colour grade, scrim, translation font and
 // pacing. Everything stays adjustable afterwards; a mood shows as picked while its settings match.
 import type { Project } from './project';
 
-type MoodSettings = Pick<Project, 'textEffect' | 'colors' | 'grade' | 'scrim' | 'enFont' | 'pause' | 'gap'>;
+type MoodSettings = Pick<Project, 'textEffect' | 'transition' | 'colors' | 'grade' | 'scrim' | 'enFont' | 'pause' | 'gap'>;
 
 export interface Mood {
   id: string;
@@ -11,12 +11,12 @@ export interface Mood {
 }
 
 export const MOODS: Mood[] = [
-  { id: 'serene', label: 'Serene', set: { textEffect: 'rise', colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' }, grade: 'none', scrim: 'normal', enFont: 'serif', pause: 0, gap: 'clear' } },
-  { id: 'dawn', label: 'Dawn', set: { textEffect: 'blur-in', colors: { ar: '#fff6e8', en: '#f6e3cc', title: '#f2c98a' }, grade: 'warm', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
-  { id: 'night', label: 'Night', set: { textEffect: 'glow', colors: { ar: '#eef3ff', en: '#c9d6ea', title: '#c8d2e6' }, grade: 'cool', scrim: 'strong', enFont: 'serif', pause: 1, gap: 'hold' } },
-  { id: 'gold', label: 'Gold', set: { textEffect: 'ink', colors: { ar: '#f8e7b9', en: '#f3ebdd', title: '#e8c77a' }, grade: 'golden', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
-  { id: 'dusk', label: 'Dusk', set: { textEffect: 'mist', colors: { ar: '#fdf0f0', en: '#ecd9de', title: '#e9c3c9' }, grade: 'dusk', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
-  { id: 'minimal', label: 'Minimal', set: { textEffect: 'fade', colors: { ar: '#ffffff', en: '#ffffff', title: '#ffffff' }, grade: 'none', scrim: 'light', enFont: 'sans', pause: 0, gap: 'clear' } },
+  { id: 'serene', label: 'Serene', set: { textEffect: 'rise', transition: 'crossfade', colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' }, grade: 'none', scrim: 'normal', enFont: 'serif', pause: 0, gap: 'clear' } },
+  { id: 'dawn', label: 'Dawn', set: { textEffect: 'blur-in', transition: 'white', colors: { ar: '#fff6e8', en: '#f6e3cc', title: '#f2c98a' }, grade: 'warm', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
+  { id: 'night', label: 'Night', set: { textEffect: 'glow', transition: 'blur', colors: { ar: '#eef3ff', en: '#c9d6ea', title: '#c8d2e6' }, grade: 'cool', scrim: 'strong', enFont: 'serif', pause: 1, gap: 'hold' } },
+  { id: 'gold', label: 'Gold', set: { textEffect: 'ink', transition: 'leak', colors: { ar: '#f8e7b9', en: '#f3ebdd', title: '#e8c77a' }, grade: 'golden', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
+  { id: 'dusk', label: 'Dusk', set: { textEffect: 'mist', transition: 'mist', colors: { ar: '#fdf0f0', en: '#ecd9de', title: '#e9c3c9' }, grade: 'dusk', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
+  { id: 'minimal', label: 'Minimal', set: { textEffect: 'fade', transition: 'crossfade', colors: { ar: '#ffffff', en: '#ffffff', title: '#ffffff' }, grade: 'none', scrim: 'light', enFont: 'sans', pause: 0, gap: 'clear' } },
 ];
 
 export function applyMood(p: Project, m: Mood) {

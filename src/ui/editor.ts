@@ -5,7 +5,7 @@ import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
 import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
-import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
+import { BACKGROUNDS, backgroundById, loadBackground, type Background, type BackgroundMedia } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
@@ -18,6 +18,7 @@ import {
 } from '../engine/project';
 import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
+import { MAX_SCENES, prepareScenes, sceneSpans, TRANSITIONS, type SceneMode, type Transition } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
@@ -54,7 +55,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let plan: ReelPlan | null = null;
   let base: Reel | null = null; // the recitation before pacing (pauses, cards)
   const measure = document.createElement('canvas').getContext('2d')!;
-  let media: BackgroundMedia | null = null;
+  let media: BackgroundMedia[] = []; // decoded background of each entry in project.scenes
+  let mediaReady = false;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
   let src: AudioBufferSourceNode | null = null;
@@ -114,16 +116,54 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return h('div', { class: 'color-row' }, h('span', { class: 'muted small' }, label), h('div', { class: 'swatches' }, ...swatches, custom));
   };
 
+  // Scenes: Single picks one background; Per ayah / Even split build a list (tap to add, ✕ to remove).
+  const multi = () => project.sceneMode !== 'single';
+  const thumbStyle = (b: Background) => (b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`);
+  const scenesChanged = () => { rebuild(); void loadScenes(); };
   const bgGrid = h('div', { class: 'bg-grid' });
   const drawBgGrid = () => bgGrid.replaceChildren(...BACKGROUNDS.map((b) =>
     h('button', {
-      class: `bg-thumb${project.backgroundId === b.id ? ' on' : ''}`,
-      title: b.label,
-      style: b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`,
-      onclick: () => { if (!exporting && project.backgroundId !== b.id) { project.backgroundId = b.id; changed(); void loadBg(); } },
+      class: `bg-thumb${!multi() && project.scenes[0] === b.id ? ' on' : ''}`,
+      title: multi() ? `Add ${b.label}` : b.label,
+      style: thumbStyle(b),
+      onclick: () => {
+        if (exporting) return;
+        if (!multi()) {
+          if (project.scenes[0] === b.id) return;
+          project.scenes[0] = b.id;
+        } else if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
+        else project.scenes.push(b.id);
+        changed();
+        scenesChanged();
+      },
     }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label))));
   redraws.push(drawBgGrid);
   drawBgGrid();
+  const sceneList = h('div', { class: 'scene-list' });
+  const sceneNote = h('p', { class: 'muted small' });
+  const gridLabel = h('p', { class: 'muted small' });
+  const drawSceneList = () => {
+    sceneList.hidden = !multi();
+    sceneList.replaceChildren(...project.scenes.map((id, i) => {
+      const b = backgroundById(id);
+      return h('div', { class: 'scene-item', style: thumbStyle(b), title: b.label },
+        h('span', {}, String(i + 1)),
+        project.scenes.length > 1 && h('button', {
+          class: 'scene-x', 'aria-label': `Remove scene ${i + 1}`,
+          onclick: () => { if (!exporting) { project.scenes.splice(i, 1); changed(); scenesChanged(); } },
+        }, '✕'));
+    }));
+    const n = to - from + 1, k = project.scenes.length;
+    gridLabel.textContent = multi() ? 'Tap a background to add a scene' : 'Tap a background to choose it';
+    sceneNote.textContent = project.sceneMode === 'ayah'
+      ? (n < 2 ? 'One ayah: use Even split for more than one scene.' : `Each ayah gets the next scene in the list${k < n ? ' (the list repeats when there are fewer scenes than ayat)' : ''}. Scenes change in the pause between ayat.`)
+      : project.sceneMode === 'even' ? 'The scenes share the length of the reel equally.' : '';
+    sceneNote.hidden = !multi();
+    trRowScenes.hidden = !multi() || k < 2;
+  };
+  const trRowScenes = h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Transition'),
+    chips<Transition>(TRANSITIONS, () => project.transition, (v) => { project.transition = v; }));
+  redraws.push(drawSceneList);
 
   let quality: 1920 | 1280 = 1920;
   const exportBtn = h('button', { class: 'primary wide', onclick: () => void doExport() }, '⬇ Export MP4');
@@ -189,7 +229,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           chips<TextEffect>(TEXT_EFFECTS, () => project.textEffect, (v) => { project.textEffect = v; })),
         h('section', {}, h('h3', {}, 'Colours'),
           colorRow('Ayah', 'ar'), colorRow('Translation', 'en'), colorRow('Surah name', 'title')),
-        h('section', {}, h('h3', {}, 'Background'), bgGrid,
+        h('section', {}, h('h3', {}, 'Scenes'),
+          chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }],
+            () => project.sceneMode, (v) => {
+              project.sceneMode = v;
+              // A list needs at least two scenes to change: add the next background as a start.
+              if (v !== 'single' && project.scenes.length < 2) {
+                const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
+                project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
+              }
+              scenesChanged();
+            }),
+          sceneNote, sceneList, trRowScenes, gridLabel, bgGrid,
           h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Colour grade'),
             chips<Grade>((Object.keys(GRADES) as Grade[]).map((g) => ({ value: g, label: GRADES[g].label })), () => project.grade, (v) => { project.grade = v; })),
           h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Darken behind text'),
@@ -259,7 +310,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     tl = buildTimeline(measure, {
       surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
-      style: frameStyle(project),
+      style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length,
     });
     scrub.max = String(tl.duration);
     if (t > tl.duration) t = 0;
@@ -319,25 +370,34 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         : `Word timings are not available for this reciter here, so only Ayah mode is offered${base.plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
       arrange();
       for (const r of redraws) r();
-      setStatus(media ? '' : 'Loading background…');
+      setStatus(mediaReady ? '' : 'Loading background…');
     } catch (e) {
       if (req === audioReq) setStatus(`${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`);
     }
   }
 
+  // Decoded media per scene entry; an entry keeps its media when the list changes around it.
   let bgReq = 0;
-  async function loadBg() {
+  async function loadScenes() {
     const req = ++bgReq;
-    try {
-      const m = await loadBackground(backgroundById(project.backgroundId));
-      if (req !== bgReq || !alive) return m.video?.dispose();
-      media?.video?.dispose();
-      media = m;
-      if (tl) setStatus('');
-      dirty = true;
-    } catch (e) {
-      toast(`Background failed to load: ${e instanceof Error ? e.message : e}`);
+    const pool = [...media];
+    const next = await Promise.all(project.scenes.map((id) => {
+      const k = pool.findIndex((m) => m.bg.id === id);
+      if (k >= 0) return pool.splice(k, 1)[0];
+      return loadBackground(backgroundById(id)).catch((e) => {
+        toast(`Background failed to load: ${e instanceof Error ? e.message : e}`);
+        return { bg: backgroundById('charcoal') } as BackgroundMedia;
+      });
+    }));
+    if (req !== bgReq || !alive) {
+      for (const m of next) if (!media.includes(m)) m.video?.dispose();
+      return;
     }
+    for (const m of media) if (!next.includes(m)) m.video?.dispose();
+    media = next;
+    mediaReady = true;
+    if (tl) setStatus('');
+    dirty = true;
   }
 
   // Fonts must be ready before text is measured for layout.
@@ -346,12 +406,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     document.fonts.load('54px "AmiriQuran"', s.ar),
   ]).catch(() => {});
   void loadAudio();
-  void loadBg();
+  void loadScenes();
 
   // --- playback (preview clock = audio clock) ---
 
   async function play() {
-    if (!audio || !tl || !media || exporting) return;
+    if (!audio || !tl || !mediaReady || exporting) return;
     ac ??= new AudioContext();
     await ac.resume();
     if (t >= tl.duration - 0.05) t = 0;
@@ -391,7 +451,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let raf = 0;
   function frame() {
     raf = requestAnimationFrame(frame);
-    if (exporting || !tl || !media) return;
+    if (exporting || !tl || !mediaReady) return;
     if (playing && ac) {
       t = startT + ac.currentTime - startCtx;
       if (t >= tl.duration) {
@@ -400,10 +460,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       }
       dirty = true;
     }
-    if (media.video && !media.video.isBusy) {
-      // Fetch the frame for t; the decoded frame is drawn on the next tick.
-      void media.video.prepare(t).then(() => (dirty = true));
-    }
+    // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
+    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, true)?.then(() => (dirty = true));
     if (!dirty) return;
     dirty = false;
     render(pctx, t, project, tl, media);
@@ -416,7 +474,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let resultUrl = '';
   async function doExport() {
     const { path } = await capabilities();
-    if (!path || !tl || !audio || !media) {
+    if (!path || !tl || !audio || !mediaReady) {
       toast(path ? 'Still loading — try again in a moment' : 'Export is not supported in this browser');
       return;
     }
@@ -429,7 +487,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     try {
       const signal = exporting.signal;
       const run = (p: typeof path) => exportVideo({
-        project: structuredClone(project), timeline: tl!, audio: audio!, media: media!, path: p, height: quality, signal,
+        project: structuredClone(project), timeline: tl!, audio: audio!, media: [...media], path: p, height: quality, signal,
         onProgress: (f) => {
           progressBar.value = f;
           progressText.textContent = `${Math.round(f * 100)}%`;
@@ -476,7 +534,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     exporting?.abort();
     pause();
     void ac?.close();
-    media?.video?.dispose();
+    for (const m of media) m.video?.dispose();
     URL.revokeObjectURL(resultUrl);
   };
 }

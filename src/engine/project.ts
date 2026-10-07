@@ -1,8 +1,9 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import type { EnFont, FrameStyle, TextSize, TitlePos, TitleSize } from './layout';
+import { MAX_SCENES, TRANSITIONS, type SceneMode, type Transition } from './scenes';
 
-export type { TextEffect };
+export type { SceneMode, TextEffect, Transition };
 /** Ayah: whole ayah · Line: one screen line · Half: half a line · Words: 1–3 words per step. */
 export type TextMode = 'ayah' | 'line' | 'half' | 'words';
 /** words: English meanings of exactly the Arabic words on screen · ayah: the whole ayah (Sahih International). */
@@ -34,7 +35,9 @@ export interface Project {
   translationMode: TranslationMode;
   titlePos: TitlePos;
   titleSize: TitleSize;
-  backgroundId: string;
+  scenes: string[]; // background ids (1…MAX_SCENES); Single uses the first
+  sceneMode: SceneMode;
+  transition: Transition; // between scenes
   textEffect: TextEffect;
   colors: TextColors;
   grade: Grade;
@@ -86,7 +89,9 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     translationMode: 'words',
     titlePos: 'top',
     titleSize: 'm',
-    backgroundId: 'mist',
+    scenes: ['mist'],
+    sceneMode: 'single',
+    transition: 'crossfade',
     textEffect: 'rise',
     colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' },
     grade: 'none',
@@ -105,8 +110,8 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 
 /** The look of a reel (everything but the selection and reciter), remembered for the next reel. */
 export const LOOK_KEYS = [
-  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'backgroundId',
-  'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
+  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'scenes',
+  'sceneMode', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
   'credit', 'watermark',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
@@ -118,6 +123,8 @@ const ALLOWED: Partial<Record<keyof Look, readonly unknown[]>> = {
   titlePos: ['top', 'below', 'bottom'],
   titleSize: ['s', 'm', 'l'],
   textEffect: TEXT_EFFECTS.map((e) => e.value),
+  sceneMode: ['single', 'ayah', 'even'],
+  transition: TRANSITIONS.map((e) => e.value),
   grade: ['none', 'warm', 'golden', 'cool', 'dusk', 'mono'],
   scrim: ['light', 'normal', 'strong'],
   textSize: ['s', 'm', 'l'],
@@ -131,15 +138,17 @@ const HEX = /^#[0-9a-f]{6}$/i;
 /** Copy the valid parts of a stored look onto the project (stored data may be old or damaged). */
 export function applyLook(p: Project, look: unknown, validBackground: (id: string) => boolean) {
   if (!look || typeof look !== 'object') return;
-  const l = look as Record<string, unknown>;
+  const l = { ...(look as Record<string, unknown>) };
   const out = p as unknown as Record<string, unknown>;
+  if (!('scenes' in l) && typeof l.backgroundId === 'string') l.scenes = [l.backgroundId]; // looks saved before scenes
   for (const k of LOOK_KEYS) {
     const v = l[k];
     if (k === 'colors') {
       const c = v as Partial<TextColors> | undefined;
       if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
-    } else if (k === 'backgroundId') {
-      if (typeof v === 'string' && validBackground(v)) p.backgroundId = v;
+    } else if (k === 'scenes') {
+      const ids = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && validBackground(x)).slice(0, MAX_SCENES) : [];
+      if (ids.length) p.scenes = ids;
     } else if (ALLOWED[k] ? ALLOWED[k]!.includes(v) : typeof v === typeof out[k]) {
       out[k] = v;
     }

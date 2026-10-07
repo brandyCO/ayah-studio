@@ -12,6 +12,8 @@
 //   - text sizes (Small/Large) and the sans translation font lay out within the same rules
 //   - pacing (pause between ayat, intro/closing cards): cuts fall between words, every time moves
 //     with its ayah, the text still follows the recitation and stays clear of the cards
+//   - scenes fill the reel exactly; per-ayah changes fall in the pause between ayat; transitions
+//     are centred on the changes and never longer than half a scene
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 
@@ -22,6 +24,7 @@ const words = await load('/src/engine/words.ts');
 const rec = await load('/src/engine/recitation.ts');
 const { buildTimeline } = await load('/src/engine/timeline.ts');
 const layout = await load('/src/engine/layout.ts');
+const scenes = await load('/src/engine/scenes.ts');
 
 const data = (f) => readFile(new URL(`../public/data/${f}`, import.meta.url), 'utf8').then(JSON.parse);
 const [quran, en, meta, wordMap, wbw] = await Promise.all([data('quran-uthmani.json'), data('en-sahih.json'), data('meta.json'), data('word-map.json'), data('en-wbw.json')]);
@@ -149,6 +152,41 @@ function checkTimeline(tl, label, texts, plan, meanings, synced) {
   });
 }
 
+function checkScenes(plan, label) {
+  const n = plan.ayat.length, D = plan.duration;
+  for (const [mode, count] of [['single', 3], ['ayah', 1], ['ayah', 2], ['ayah', 3], ['even', 1], ['even', 4]]) {
+    const L = `${label} scenes:${mode}×${count}`;
+    const sc = scenes.planScenes(mode, count, D, plan.ayat);
+    const expect = count < 2 || mode === 'single' ? 1 : mode === 'ayah' ? n : count;
+    assert(sc.length === expect && sc[0].start === 0 && sc[sc.length - 1].end === D, `${L}: scenes fill the reel exactly`);
+    sc.forEach((x, i) => {
+      assert(x.end > x.start && x.entry >= 0 && x.entry < count, `${L}: scene ${i} valid`);
+      if (i > 0) assert(x.start === sc[i - 1].end && x.entry !== sc[i - 1].entry, `${L}: scenes follow each other and change`);
+      if (mode === 'even') assert(Math.abs(x.end - x.start - D / count) < 1e-9, `${L}: equal shares`);
+      if (mode === 'ayah' && i > 0) {
+        const a = plan.ayat[i - 1], b = plan.ayat[i];
+        assert(x.start <= b.start + 1e-9 && (x.start >= a.last - 1e-9 || x.start === b.start), `${L}: change ${i} in the pause between ayat`);
+      }
+    });
+    for (const tr of ['crossfade', 'mist', 'cut']) {
+      const sp = scenes.sceneSpans(sc, tr);
+      sp.forEach((x, i) => {
+        if (i + 1 < sp.length) {
+          const len = Math.min(x.end - x.start, sp[i + 1].end - sp[i + 1].start);
+          assert(x.tOut <= len / 2 + 1e-9 && Math.abs(x.to - x.end - x.tOut / 2) < 1e-9 && Math.abs(sp[i + 1].from - (x.end - x.tOut / 2)) < 1e-9, `${L} ${tr}: transition ${i} centred, ≤ half a scene`);
+        }
+      });
+      for (let t = 0; t < D; t += 0.05) {
+        const { a, b, p } = scenes.scenesAt(sp, t);
+        const owner = sc.findIndex((x) => t >= x.start && t < x.end);
+        const ia = sp.indexOf(a);
+        assert(ia === owner || (b && sp.indexOf(b) === owner), `${L} ${tr}: scene at ${t.toFixed(2)} s`);
+        if (b) assert(p >= 0 && p <= 1 + 1e-9 && sp.indexOf(b) === ia + 1, `${L} ${tr}: transition progress`);
+      }
+    }
+  }
+}
+
 const PACINGS = [{ pause: 1, hold: true, intro: 3, outro: 3 }, { pause: 0.5, hold: false, intro: 0, outro: 3 }, { pause: 0, hold: true, intro: 3, outro: 0 }];
 
 function checkPacing(base, pc, label, s, from, texts, meanings) {
@@ -220,6 +258,8 @@ for (const r of RECITERS) {
         }
       }
     }
+    checkScenes(plan, `reciter ${r} ${s}:${from}-${to}`);
+    checkScenes(rec.arrangeReel(plan, PACINGS[0]), `reciter ${r} ${s}:${from}-${to} paced`);
     for (const pc of PACINGS) checkPacing(plan, pc, `reciter ${r} ${s}:${from}-${to} pause:${pc.pause}${pc.hold ? ' hold' : ''}${pc.intro ? ' cards' : ''}`, s, from, texts, meanings);
   }
 }

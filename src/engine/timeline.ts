@@ -9,6 +9,7 @@ import {
   type Fit, type FrameLayout, type FrameStyle, type Range, type TextCtx,
 } from './layout';
 import type { TextMode, TranslationMode } from './project';
+import { planScenes, type Scene, type SceneMode } from './scenes';
 import type { ReelPlan } from './recitation';
 import { displayWords, timeEvents, type Recited } from './words';
 
@@ -44,6 +45,8 @@ export interface Timeline {
   mode: TextMode;
   layout: FrameLayout;
   ayat: TimedAyah[];
+  /** Backgrounds: they fill the reel exactly. */
+  scenes: Scene[];
   /** Seconds of intro title card at the start / closing reference card at the end (0 = none). */
   intro: number;
   outro: number;
@@ -60,6 +63,8 @@ export interface TimelineInput {
   wordsPerStep: number;
   translationMode: TranslationMode;
   style: FrameStyle;
+  sceneMode?: SceneMode; // default single
+  sceneCount?: number; // entries in the scene list
 }
 
 /** Without word timings (Ayah mode only): pages follow each other, proportional to word counts. */
@@ -117,5 +122,6 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,
     intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0,
+    scenes: planScenes(o.sceneMode ?? 'single', o.sceneCount ?? 1, o.plan.duration, o.plan.ayat),
   };
 }

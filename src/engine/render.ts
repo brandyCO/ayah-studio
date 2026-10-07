@@ -3,6 +3,7 @@
 // sets the canvas transform for the output size.
 import type { BackgroundMedia } from './backgrounds';
 import { drawText, setTextShadow } from './effects';
+import { drawScenes, sceneSpans } from './scenes';
 import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
@@ -15,31 +16,6 @@ const easeOut = (x: number) => 1 - (1 - x) ** 3;
 const smooth = (x: number) => x * x * (3 - 2 * x);
 /** Where the text block sits in its free space (0 top … 1 bottom). */
 const TEXT_POS = { upper: 0.2, center: 0.5, lower: 0.8 } as const;
-
-function cover(ctx: CanvasRenderingContext2D, src: CanvasImageSource, sw: number, sh: number, zoom = 1, panY = 0) {
-  const s = Math.max(W / sw, H / sh) * zoom;
-  const dw = sw * s, dh = sh * s;
-  ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2 + panY, dw, dh);
-}
-
-function drawBackground(ctx: CanvasRenderingContext2D, t: number, tl: Timeline, media: BackgroundMedia) {
-  const b = media.bg;
-  ctx.fillStyle = b.kind === 'color' ? b.color : '#000';
-  ctx.fillRect(0, 0, W, H);
-  if (b.kind === 'image' && media.image) {
-    // Gentle Ken Burns: slow zoom-in with a slight upward drift over the whole video.
-    const p = clamp01(t / Math.max(tl.duration, 1));
-    cover(ctx, media.image, media.image.width, media.image.height, 1.04 + 0.08 * p, -30 * p);
-  } else if (b.kind === 'video' && media.video) {
-    cover(ctx, media.video.canvas, media.video.canvas.width, media.video.canvas.height);
-  } else if (b.kind === 'color') {
-    const g = ctx.createRadialGradient(W / 2, H * 0.45, 100, W / 2, H * 0.45, H * 0.75);
-    g.addColorStop(0, 'rgba(255,255,255,0.07)');
-    g.addColorStop(1, 'rgba(0,0,0,0.25)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-}
 
 function drawGrade(ctx: CanvasRenderingContext2D, grade: Project['grade']) {
   for (const [op, color] of GRADES[grade]?.layers ?? []) {
@@ -131,9 +107,10 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
   ctx.globalAlpha = 1;
 }
 
-export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: BackgroundMedia) {
+/** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */
+export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: (BackgroundMedia | undefined)[]) {
   ctx.save();
-  drawBackground(ctx, t, tl, media);
+  drawScenes(ctx, t, sceneSpans(tl.scenes, project.transition), project.transition, media);
   drawGrade(ctx, project.grade);
   drawScrim(ctx, SCRIM_STRENGTH[project.scrim] ?? 1);
 
