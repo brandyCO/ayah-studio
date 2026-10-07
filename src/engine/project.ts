@@ -37,6 +37,8 @@ export interface Project {
   titleSize: TitleSize;
   scenes: string[]; // background ids (1…MAX_SCENES); Single uses the first
   sceneMode: SceneMode;
+  sceneLengths: number[]; // Custom: share of the reel per scene (any scale)
+  sceneSnap: boolean; // Custom: scene changes snap to the reciter's pauses
   transition: Transition; // between scenes
   textEffect: TextEffect;
   colors: TextColors;
@@ -47,6 +49,8 @@ export interface Project {
   enFont: EnFont;
   pause: number; // extra seconds of silence between ayat
   gap: GapText;
+  gaps: Record<number, number>; // per ayah number: seconds added (or taken, < 0) before it
+  holds: Record<number, number>; // per ayah number: seconds its text stays after its last word
   intro: boolean; // title card before the recitation
   outro: boolean; // closing reference card
   credit: boolean; // "Recited by …" (optional, off by default: owner decision)
@@ -68,13 +72,18 @@ export const INTRO = 3; // seconds of the intro title card
 export const OUTRO = 3; // seconds of the closing reference card
 export const PAUSES = [0, 0.5, 1, 2];
 
-/** Pacing of the reel: silence added between ayat, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'>) => ({
-  pause: p.pause,
-  hold: p.gap === 'hold',
-  intro: p.intro ? INTRO : 0,
-  outro: p.outro ? OUTRO : 0,
-});
+/** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
+export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'holds' | 'from' | 'to'>>) => {
+  const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
+  return {
+    pause: p.pause,
+    hold: p.gap === 'hold',
+    intro: p.intro ? INTRO : 0,
+    outro: p.outro ? OUTRO : 0,
+    gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
+    holds: ayat.map((a) => p.holds?.[a] ?? null),
+  };
+};
 
 export function newProject(surah: number, from: number, to: number, reciterId: number): Project {
   return {
@@ -91,6 +100,10 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     titleSize: 'm',
     scenes: ['mist'],
     sceneMode: 'single',
+    sceneLengths: [],
+    sceneSnap: true,
+    gaps: {},
+    holds: {},
     transition: 'crossfade',
     textEffect: 'rise',
     colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' },
@@ -111,7 +124,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 /** The look of a reel (everything but the selection and reciter), remembered for the next reel. */
 export const LOOK_KEYS = [
   'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'scenes',
-  'sceneMode', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
+  'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
   'credit', 'watermark',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
@@ -123,7 +136,7 @@ const ALLOWED: Partial<Record<keyof Look, readonly unknown[]>> = {
   titlePos: ['top', 'below', 'bottom'],
   titleSize: ['s', 'm', 'l'],
   textEffect: TEXT_EFFECTS.map((e) => e.value),
-  sceneMode: ['single', 'ayah', 'even'],
+  sceneMode: ['single', 'ayah', 'even', 'custom'],
   transition: TRANSITIONS.map((e) => e.value),
   grade: ['none', 'warm', 'golden', 'cool', 'dusk', 'mono'],
   scrim: ['light', 'normal', 'strong'],
@@ -149,6 +162,8 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
     } else if (k === 'scenes') {
       const ids = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && validBackground(x)).slice(0, MAX_SCENES) : [];
       if (ids.length) p.scenes = ids;
+    } else if (k === 'sceneLengths') {
+      if (Array.isArray(v) && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x > 0)) p.sceneLengths = v.slice(0, MAX_SCENES);
     } else if (ALLOWED[k] ? ALLOWED[k]!.includes(v) : typeof v === typeof out[k]) {
       out[k] = v;
     }

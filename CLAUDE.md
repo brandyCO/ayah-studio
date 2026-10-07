@@ -219,19 +219,28 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [x] Recitation spine (`src/ui/spine.ts`): scenes (thumbnails, transition markers), ayat with a tick
-      per text step, intro/closing cards and the recitation waveform under a fixed centre playhead;
-      drag/fling/wheel to scrub, tap a track to open its tool
-- [x] Studio layout (owner request, CapCut-style): preview + spine stay on screen; a bottom toolbar
-      (Reciter, Mood, Text, Effect, Colours, Scenes, Translation, Timing, Layout) opens each tool in a
-      sheet so edits show live, even while playing; Export at top right. Wide screens: toolbar + side
-      panel + preview. Dark editor theme
+- [x] Recitation spine / timeline (`src/ui/spine.ts`): starts at the left, moving playhead (kept
+      mid-screen while playing), zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub, drag elsewhere
+      to scroll. Tracks: scenes (thumbnails, lengths, transition markers, + to add), ayah text (a tick
+      per text step, cards), recitation audio (waveform per ayah)
+- [x] Block editing (owner request), within the rules: tap a block to select it →
+      **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
+      drag to reorder, replace/move/delete; **audio** (per ayah): drag to lengthen/shorten the pause
+      before it (`project.gaps`; only the reciter's own silence is ever cut, ≥ 0.15 s kept each side),
+      ±0.5 s buttons, add/remove a whole ayah at either end; **text**: drag its end to set how long the
+      ayah stays after its last word (`project.holds`). Not allowed: moving text away from its words
+      (rule 8), reordering ayat or cutting audio inside an ayah (rule 1)
+- [x] Studio layout (owner request, CapCut-style): preview + timeline stay on screen; the bottom bar
+      opens a tool's options (Colours → Ayah / Translation / Surah name; Effects → Text effect with
+      category tabs and animated tiles / Transition), an option opens a compact panel; a selected
+      block shows its own actions. Picking an effect or transition plays it. Export at top right.
+      Wide screens: panel left, preview right, timeline full width. Dark editor theme
 - [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
       (done: Single / Per ayah / Even split from the preset backgrounds, filling the reel exactly —
       `src/engine/scenes.ts`; per-ayah changes in the pause between ayat; Ken Burns per scene; videos
-      start from their first frame when their scene shows. Left: Custom dividers, snap to pauses,
-      loop/slow/hold + in-point)
+      start from their first frame when their scene shows; Custom: trimmed/reordered in the timeline,
+      lengths kept as shares of the reel, snap to pauses. Left: video loop/slow/hold + in-point)
 - [x] Full calm text-effect set: 17 effects in `src/engine/effects.ts` (ink reveal and light sweep
       run right-to-left on the Arabic, left-to-right on the English)
 - [x] Scene transitions (11): crossfade, blur dissolve, dip to black/white, soft zoom-through, light

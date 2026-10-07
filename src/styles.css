@@ -292,8 +292,8 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .sheet.bottom { margin: auto auto 0; width: min(640px, 100%); border-radius: 18px 18px 0 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 .sheet-text { font-size: 17px; line-height: 1.6; margin: 10px 0 4px; }
 
-/* studio editor (CapCut-style): the preview and the recitation spine stay on screen while
-   tools open in a bottom sheet (a side panel on wide screens) */
+/* studio editor (CapCut-style): the preview and the timeline stay on screen; the bottom bar opens a
+   tool's options, an option opens a compact panel (a side panel on wide screens) */
 body[data-view="reel"] {
   --bg: #0f1216; --card: #1b2027; --text: #eceae5; --muted: #98a0a9; --line: #2b323c;
   --accent: #3fb59a; --accent-ink: #08201b; --shadow: 0 6px 24px rgba(0, 0, 0, .5);
@@ -313,39 +313,118 @@ body[data-view="reel"] {
 .studio .stage { height: 100%; max-width: 100%; margin: 0; border-radius: 10px; }
 .studio .transport { grid-area: transport; max-width: none; margin: 0; padding: 4px 12px; justify-content: center; }
 .studio .play-btn { width: 40px; height: 40px; }
-.spine { grid-area: spine; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; padding-bottom: 4px; }
-.spine:active { cursor: grabbing; }
+
+/* timeline */
+.spine { grid-area: spine; position: relative; touch-action: none; user-select: none; -webkit-user-select: none; padding-bottom: 2px; border-top: 1px solid var(--line); }
 .spine-canvas { display: block; width: 100%; }
+.spine-zooms { position: absolute; top: 0; right: 4px; display: flex; gap: 2px; }
+.spine-zoom {
+  width: 26px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--card); color: var(--text); font-size: 15px; line-height: 1; cursor: pointer;
+}
+.studio.panel-open .spine { display: none; }
+
+/* panel */
 .sheet {
-  grid-area: sheet; display: flex; flex-direction: column; max-height: 42vh; max-height: 42dvh; min-height: 0;
+  grid-area: sheet; display: flex; flex-direction: column; max-height: 40vh; max-height: 40dvh; min-height: 0;
   background: var(--card); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0;
 }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0 16px; }
 .sheet-head h2 { margin: 0; font-size: 15px; }
-.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 12px; }
-.sheet-body > section:only-child > h3 { display: none; }
-.sheet-body > section:last-child { border-bottom: 0; }
-.studio.sheet-open .spine { display: none; }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 14px; }
+.sheet-body > .chips, .sheet-body > .sub-row, .sheet-body > .tiles, .sheet-body > .list, .sheet-body > .bg-grid { margin-top: 6px; }
+.sheet-body .muted.small { margin: 10px 0 0; }
+
+/* bottom bar */
 .toolbar {
   grid-area: tools; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none;
   padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg);
 }
 .toolbar::-webkit-scrollbar { display: none; }
 .tool {
-  flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 66px; padding: 6px 4px;
-  border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 11px; cursor: pointer;
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 66px; padding: 6px 4px; border: 0; border-radius: 10px; background: none; color: var(--muted);
+  font-size: 11px; cursor: pointer; white-space: nowrap;
 }
-.tool-icon { font-size: 19px; line-height: 1.25; }
+.tool-icon { font-size: 19px; line-height: 1.25; height: 24px; display: flex; align-items: center; }
 .tool.on { color: var(--text); background: var(--line); }
+.tool.toggle-tool.on .tool-icon { color: var(--accent); }
+.tool:disabled { opacity: .35; cursor: default; }
+.tool.back { color: var(--text); border-right: 1px solid var(--line); border-radius: 0; margin-right: 4px; }
+.tool .dot { width: 20px; height: 20px; }
+
+/* panel contents */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+.tile {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none;
+  color: var(--muted); font-size: 11px; cursor: pointer;
+}
+.tile-art {
+  width: 100%; aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background: #262c35;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.tile.on { color: var(--text); }
+.tile.on .tile-art { border-color: var(--accent); }
+.tile-label { text-align: center; line-height: 1.2; }
+.glyph { font-size: 26px; color: #dfe6ee; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 2px 0 10px; }
+.tab { flex: none; padding: 6px 12px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-size: 13px; cursor: pointer; }
+.tab.on { background: var(--line); color: var(--text); }
+.list { display: flex; flex-direction: column; gap: 4px; }
+.list-item {
+  display: flex; align-items: center; justify-content: space-between; padding: 11px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: none; text-align: left; cursor: pointer;
+}
+.list-item.on { border-color: var(--accent); }
+.list-item .check { color: var(--accent); font-weight: 700; }
+.dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); }
+.mood-art { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; background: linear-gradient(160deg, #24384a, #10161d); }
+.grade-warm { background: linear-gradient(160deg, #6b4a32, #1f1712); }
+.grade-golden { background: linear-gradient(160deg, #7a5a22, #231a0c); }
+.grade-cool { background: linear-gradient(160deg, #1f3c6b, #0b1220); }
+.grade-dusk { background: linear-gradient(160deg, #5d3150, #1a1020); }
+.grade-mono { background: linear-gradient(160deg, #555, #151515); }
+.swatches.big { gap: 10px; }
+.swatches.big .swatch { width: 38px; height: 38px; }
+.add-scene { margin-top: 10px; }
+
+/* effect samples: a word animated like the effect (loops) */
+.fx-sample { font: 600 26px "AmiriQuran", serif; color: #fff; direction: rtl; display: inline-block; animation: 2.4s ease-out infinite both; }
+@keyframes fx-fade { 0% { opacity: 0 } 35%, 80% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes fx-rise { 0% { opacity: 0; transform: translateY(10px) } 35%, 80% { opacity: 1; transform: none } 100% { opacity: 0 } }
+@keyframes fx-descend { 0% { opacity: 0; transform: translateY(-10px) } 35%, 80% { opacity: 1; transform: none } 100% { opacity: 0 } }
+@keyframes fx-drift { 0% { opacity: 0; transform: translateY(4px) } 30% { opacity: 1 } 80% { opacity: 1; transform: translateY(-4px) } 100% { opacity: 0; transform: translateY(-5px) } }
+@keyframes fx-still { 0%, 4% { opacity: 0 } 6%, 94% { opacity: 1 } 96%, 100% { opacity: 0 } }
+@keyframes fx-blur { 0% { opacity: 0; filter: blur(6px) } 40%, 80% { opacity: 1; filter: none } 100% { opacity: 0 } }
+@keyframes fx-focus { 0% { opacity: 0; filter: blur(5px); transform: scale(1.12) } 40%, 80% { opacity: 1; filter: none; transform: none } 100% { opacity: 0 } }
+@keyframes fx-mist { 0% { opacity: 0; filter: blur(8px); transform: translateY(6px) } 45%, 70% { opacity: 1; filter: none; transform: none } 100% { opacity: 0; filter: blur(6px) } }
+@keyframes fx-dissolve { 0% { opacity: 0; filter: blur(3px) } 35%, 70% { opacity: 1; filter: none } 100% { opacity: 0; filter: blur(5px) } }
+@keyframes fx-glow { 0% { opacity: 0 } 25% { opacity: 1; text-shadow: 0 0 4px #fff8 } 55% { text-shadow: 0 0 14px #fff } 85% { opacity: 1; text-shadow: 0 0 4px #fff8 } 100% { opacity: 0 } }
+@keyframes fx-bloom { 0% { opacity: 0; text-shadow: 0 0 22px #fff } 30% { opacity: 1; text-shadow: 0 0 18px #fff } 75% { opacity: 1; text-shadow: none } 100% { opacity: 0 } }
+@keyframes fx-sweep { 0% { opacity: 0; background-position: 150% 0 } 20% { opacity: 1; background-position: 150% 0 } 80% { opacity: 1; background-position: -50% 0 } 100% { opacity: 0; background-position: -50% 0 } }
+@keyframes fx-ink { 0% { clip-path: inset(0 0 0 100%) } 55%, 85% { clip-path: inset(0 0 0 0); opacity: 1 } 100% { clip-path: inset(0 0 0 0); opacity: 0 } }
+@keyframes fx-settle { 0% { opacity: 0; transform: scale(1.18) } 40%, 80% { opacity: 1; transform: none } 100% { opacity: 0 } }
+@keyframes fx-zoom { 0% { opacity: 0; transform: scale(.82) } 40%, 80% { opacity: 1; transform: none } 100% { opacity: 0 } }
+@keyframes fx-push { 0% { opacity: 0; transform: scale(1) } 25% { opacity: 1 } 85% { opacity: 1; transform: scale(1.12) } 100% { opacity: 0; transform: scale(1.12) } }
+.fx-fade { animation-name: fx-fade } .fx-rise, .fx-lines { animation-name: fx-rise } .fx-descend { animation-name: fx-descend }
+.fx-drift { animation-name: fx-drift } .fx-still { animation-name: fx-still } .fx-blur-in { animation-name: fx-blur }
+.fx-focus { animation-name: fx-focus } .fx-mist { animation-name: fx-mist } .fx-dissolve { animation-name: fx-dissolve }
+.fx-glow { animation-name: fx-glow } .fx-bloom { animation-name: fx-bloom } .fx-ink { animation-name: fx-ink }
+.fx-settle { animation-name: fx-settle } .fx-zoom { animation-name: fx-zoom } .fx-push { animation-name: fx-push }
+.fx-sweep {
+  animation-name: fx-sweep; color: transparent; background: linear-gradient(100deg, #fff 40%, #ffe9b0 50%, #fff 60%) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+}
+@media (prefers-reduced-motion: reduce) { .fx-sample { animation: none; } }
+
 @media (min-width: 900px) {
   .studio {
-    grid-template-columns: 84px 390px minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "top top top" "tools sheet stage" "tools sheet transport" "tools sheet spine";
+    grid-template-columns: 400px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "top top" "sheet stage" "sheet transport" "spine spine" "tools tools";
   }
-  .toolbar { flex-direction: column; overflow: hidden auto; border-top: 0; border-right: 1px solid var(--line); padding: 8px 6px; }
-  .tool { min-width: 0; width: 100%; }
   .sheet { max-height: none; border-radius: 0; border-top: 0; border-right: 1px solid var(--line); }
   .sheet-close { display: none; }
-  .studio.sheet-open .spine { display: block; }
+  .studio.panel-open .spine { display: block; }
+  .toolbar { justify-content: center; }
 }

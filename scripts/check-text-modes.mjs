@@ -154,10 +154,16 @@ function checkTimeline(tl, label, texts, plan, meanings, synced) {
 
 function checkScenes(plan, label) {
   const n = plan.ayat.length, D = plan.duration;
-  for (const [mode, count] of [['single', 3], ['ayah', 1], ['ayah', 2], ['ayah', 3], ['even', 1], ['even', 4]]) {
+  // Snap points (custom scene changes) never fall inside a recited word.
+  for (const p of scenes.snapPoints(plan.ayat)) {
+    assert(plan.ayat.every((a) => (a.seq ?? []).every(([, st, e]) => !(st < p - 1e-9 && p + 1e-9 < e))), `${label}: snap point ${p.toFixed(2)} s in a pause`);
+  }
+  for (const [mode, count] of [['single', 3], ['ayah', 1], ['ayah', 2], ['ayah', 3], ['even', 1], ['even', 4], ['custom', 4], ['custom', 2]]) {
     const L = `${label} scenes:${mode}×${count}`;
-    const sc = scenes.planScenes(mode, count, D, plan.ayat);
+    const lengths = mode === 'custom' ? [1, 0.001, 3, 2].slice(0, count) : null;
+    const sc = scenes.planScenes(mode, count, D, plan.ayat, lengths);
     const expect = count < 2 || mode === 'single' ? 1 : mode === 'ayah' ? n : count;
+    if (mode === 'custom' && D >= count * scenes.MIN_SCENE) assert(sc.every((x) => x.end - x.start >= scenes.MIN_SCENE - 1e-6), `${L}: every scene at least ${scenes.MIN_SCENE} s`);
     assert(sc.length === expect && sc[0].start === 0 && sc[sc.length - 1].end === D, `${L}: scenes fill the reel exactly`);
     sc.forEach((x, i) => {
       assert(x.end > x.start && x.entry >= 0 && x.entry < count, `${L}: scene ${i} valid`);
@@ -187,29 +193,43 @@ function checkScenes(plan, label) {
   }
 }
 
-const PACINGS = [{ pause: 1, hold: true, intro: 3, outro: 3 }, { pause: 0.5, hold: false, intro: 0, outro: 3 }, { pause: 0, hold: true, intro: 3, outro: 0 }];
+const PACINGS = [{ pause: 1, hold: true, intro: 3, outro: 3 }, { pause: 0.5, hold: false, intro: 0, outro: 3 }, { pause: 0, hold: true, intro: 3, outro: 0 },
+  // per-ayah edits: pauses shortened (as far as allowed) or lengthened, custom text holds
+  { pause: 0, hold: false, intro: 0, outro: 0, gaps: [0, -10, 1.5, -0.3, -10], holds: [2, null, 0, 5, 0.3] }];
 
 function checkPacing(base, pc, label, s, from, texts, meanings) {
   const plan = rec.arrangeReel(base, pc);
   const n = base.ayat.length;
-  assert(Math.abs(plan.duration - (base.duration + pc.intro + pc.outro + (n - 1) * pc.pause)) < 1e-9, `${label}: length`);
+  const shift = (i) => plan.ayat[i].start - base.ayat[i].start;
+  assert(Math.abs(plan.duration - (base.duration + shift(n - 1) + pc.outro)) < 1e-9, `${label}: length`);
   const P = plan.pieces;
-  assert(P.length === n && P[0].from === 0 && P[n - 1].to === base.duration, `${label}: audio pieces cover the whole recitation`);
+  assert(P.length === n && P[0].from === 0 && P[n - 1].to === base.duration, `${label}: audio pieces cover the recitation`);
   P.forEach((x, i) => {
-    assert(Math.abs(x.at - (x.from + pc.intro + i * pc.pause)) < 1e-9 && x.to >= x.from, `${label}: piece ${i} placed after its pause`);
+    const want = pc.pause + (pc.gaps?.[i] ?? 0);
+    assert(Math.abs(x.at - x.from - shift(i)) < 1e-9 && x.to >= x.from, `${label}: piece ${i} moves with its ayah`);
+    if (i === 0) assert(Math.abs(shift(0) - pc.intro) < 1e-9, `${label}: first ayah after the intro`);
     if (i + 1 < n) {
-      assert(x.to === P[i + 1].from, `${label}: pieces are contiguous`);
-      // The cut falls in the reciter's own pause: after this ayah's last word, before the next ayah.
-      const a = base.ayat[i], b = base.ayat[i + 1];
-      assert(x.to <= b.start + 1e-9 && (x.to >= a.last - 1e-9 || x.to === b.start), `${label}: cut ${i} between words`);
+      const a = base.ayat[i], b = base.ayat[i + 1], nx = P[i + 1];
+      // Only silence is removed: the source audio between the pieces lies in the reciter's pause.
+      assert(x.to <= nx.from + 1e-9 && x.to <= b.start + 1e-9 && nx.from <= b.start + 1e-9 && (x.to >= a.last - 1e-9 || x.to === b.start), `${label}: cut ${i} between words`);
+      if (nx.from > x.to + 1e-9) assert(x.to - a.last >= rec.MIN_SILENCE - 1e-6 && b.start - nx.from >= rec.MIN_SILENCE - 1e-6, `${label}: silence kept around cut ${i}`);
       if (a.seq) assert(a.seq.every(([, , e]) => e <= x.to + 1e-9 || x.to === b.start), `${label}: no word of ayah ${a.ayah} cut`);
+      // The output never overlaps; the pause changes by what was asked (or as much as the silence allows).
+      const gapOut = nx.at - (x.at + x.to - x.from);
+      const asked = pc.pause + (pc.gaps?.[i + 1] ?? 0);
+      assert(gapOut >= -1e-9 && (Math.abs(gapOut - asked) < 1e-6 || (asked < 0 && gapOut < 1e-6)), `${label}: pause before ayah ${b.ayah}`);
     }
+    void want;
   });
   plan.ayat.forEach((a, i) => {
-    const d = pc.intro + i * pc.pause, b = base.ayat[i];
-    assert(Math.abs(a.start - b.start - d) < 1e-9 && Math.abs(a.last - b.last - d) < 1e-9, `${label}: ayah ${a.ayah} moved with its audio`);
+    const d = shift(i), b = base.ayat[i];
+    assert(Math.abs(a.last - b.last - d) < 1e-9, `${label}: ayah ${a.ayah} moved with its audio`);
     if (b.seq) assert(a.seq.every(([w, st, e], k) => w === b.seq[k][0] && Math.abs(st - b.seq[k][1] - d) < 1e-9 && Math.abs(e - b.seq[k][2] - d) < 1e-9), `${label}: words of ${a.ayah} moved with their audio`);
-    if (pc.hold && i + 1 < n) assert(a.end >= plan.ayat[i + 1].start - 0.15 - 1e-9, `${label}: ayah ${a.ayah} held until the next`);
+    const own = pc.holds?.[i];
+    const nextStart = i + 1 < n ? plan.ayat[i + 1].start : Infinity;
+    if (own != null) assert(a.end <= a.last + own + 1e-9 && a.end >= Math.min(a.last, nextStart) - 1e-9, `${label}: ayah ${a.ayah} keeps its own hold`);
+    else if (pc.hold && i + 1 < n) assert(a.end >= plan.ayat[i + 1].start - 0.15 - 1e-9, `${label}: ayah ${a.ayah} held until the next`);
+    if (i + 1 < n) assert(a.end <= plan.ayat[i + 1].start + 1e-9, `${label}: ayah ${a.ayah} text gone before the next`);
     assert(a.start >= pc.intro && a.end <= plan.duration - pc.outro - 0.2 + 1e-9, `${label}: ayah ${a.ayah} clear of the cards`);
   });
   for (const [mode, k] of [['line', 1], ['words', 2], ['ayah', 1]]) {

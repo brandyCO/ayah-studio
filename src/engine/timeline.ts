@@ -65,6 +65,7 @@ export interface TimelineInput {
   style: FrameStyle;
   sceneMode?: SceneMode; // default single
   sceneCount?: number; // entries in the scene list
+  sceneLengths?: number[] | null; // Custom mode
 }
 
 /** Without word timings (Ayah mode only): pages follow each other, proportional to word counts. */
@@ -122,6 +123,6 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,
     intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0,
-    scenes: planScenes(o.sceneMode ?? 'single', o.sceneCount ?? 1, o.plan.duration, o.plan.ayat),
+    scenes: planScenes(o.sceneMode ?? 'single', o.sceneCount ?? 1, o.plan.duration, o.plan.ayat, o.sceneLengths),
   };
 }

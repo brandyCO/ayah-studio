@@ -4,8 +4,11 @@ import type { BackgroundMedia } from './backgrounds';
 import { pxScale } from './effects';
 import { H, W } from './layout';
 
-/** Single: one background · Per ayah: one scene per ayah (changes in the pause between ayat) · Even: equal shares. */
-export type SceneMode = 'single' | 'ayah' | 'even';
+/**
+ * Single: one background · Per ayah: one scene per ayah (changes in the pause between ayat) ·
+ * Even: equal shares · Custom: lengths set by dragging the dividers (fractions of the reel).
+ */
+export type SceneMode = 'single' | 'ayah' | 'even' | 'custom';
 export type Transition = 'crossfade' | 'blur' | 'black' | 'white' | 'zoom' | 'leak' | 'mist' | 'parallax' | 'wipe' | 'iris' | 'cut';
 
 export const TRANSITIONS: { value: Transition; label: string }[] = [
@@ -28,6 +31,41 @@ const DUR: Record<Transition, number> = {
 };
 
 export const MAX_SCENES = 10;
+export const MIN_SCENE = 1; // seconds
+
+/** Scene lengths in seconds from fractions: each at least MIN_SCENE (when the reel allows), summing to `duration`. */
+export function sceneSeconds(fractions: number[], duration: number): number[] {
+  const n = fractions.length;
+  const total = fractions.reduce((a, b) => a + Math.max(0, b), 0) || 1;
+  let len = fractions.map((f) => (Math.max(0, f) / total) * duration);
+  if (duration < n * MIN_SCENE) return len.map(() => duration / n);
+  for (let pass = 0; pass < 4; pass++) {
+    const short = len.map((l) => l < MIN_SCENE);
+    if (!short.some(Boolean)) break;
+    const need = len.reduce((a, l, i) => a + (short[i] ? MIN_SCENE - l : 0), 0);
+    const spare = len.reduce((a, l, i) => a + (short[i] ? 0 : l - MIN_SCENE), 0);
+    len = len.map((l, i) => (short[i] ? MIN_SCENE : l - ((l - MIN_SCENE) / spare) * need));
+  }
+  return len;
+}
+
+/**
+ * Times a scene change can snap to: the middle of each pause between ayat and of each pause between
+ * words (≥ 0.25 s) in the recitation — never inside a word.
+ */
+export function snapPoints(ayat: { start: number; last: number; seq: [number, number, number][] | null }[]): number[] {
+  const out: number[] = [];
+  ayat.forEach((a, i) => {
+    if (i > 0 && a.start > ayat[i - 1].last) out.push((ayat[i - 1].last + a.start) / 2);
+    // Against the furthest word end so far: timings of neighbouring words can overlap in the data.
+    let reach = -Infinity;
+    for (const [, st, e] of a.seq ?? []) {
+      if (st - reach >= 0.25 && reach > -Infinity) out.push((reach + st) / 2);
+      reach = Math.max(reach, e);
+    }
+  });
+  return out.sort((x, y) => x - y);
+}
 
 /** reel seconds start..end; `entry` indexes the project's scene list. */
 export interface Scene {
@@ -37,10 +75,17 @@ export interface Scene {
 }
 
 /** Scene boundaries for the reel: they always add up to exactly its length. */
-export function planScenes(mode: SceneMode, entries: number, duration: number, ayat: { start: number; last: number }[]): Scene[] {
+export function planScenes(mode: SceneMode, entries: number, duration: number, ayat: { start: number; last: number }[], lengths?: number[] | null): Scene[] {
   const bounds: number[] = [];
   const which: number[] = [0];
-  if (mode === 'ayah' && entries > 1) {
+  if (mode === 'custom' && entries > 1) {
+    const len = sceneSeconds(lengths?.length === entries ? lengths : new Array(entries).fill(1), duration);
+    let at = 0;
+    for (let k = 1; k < entries; k++) {
+      bounds.push((at += len[k - 1]));
+      which.push(k);
+    }
+  } else if (mode === 'ayah' && entries > 1) {
     // In the middle of the pause between ayat (never inside a word); cycles through the scenes.
     for (let i = 0; i + 1 < ayat.length; i++) {
       bounds.push(Math.min(ayat[i + 1].start, (ayat[i].last + ayat[i + 1].start) / 2));
