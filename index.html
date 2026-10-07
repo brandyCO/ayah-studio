@@ -2,21 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1b2d" />
     <title>Ayah Studio</title>
     <style>
-      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f5f2; color: #222; }
-      h1 { margin: 0 0 4px; font-weight: 600; }
-      .muted { color: #777; margin: 0 0 20px; }
-      table { border-collapse: collapse; width: 100%; max-width: 640px; background: #fff; border-radius: 12px; overflow: hidden; }
-      td { padding: 10px 14px; border-bottom: 1px solid #eee; }
-      .ok { color: #1a7f37; font-weight: 600; } .no { color: #c62828; font-weight: 600; }
+      /* Fonts live in public/fonts (see LICENSES.md); relative URLs work on Pages, Capacitor and Tauri. */
+      @font-face { font-family: 'UthmanicHafs'; src: url('./fonts/UthmanicHafs.woff2') format('woff2'); font-display: block; }
+      @font-face { font-family: 'AmiriQuran'; src: url('./fonts/AmiriQuran.woff2') format('woff2'); font-display: swap; }
     </style>
   </head>
   <body>
-    <h1>Ayah Studio</h1>
-    <p class="muted">Device check: can this browser export the video on-device?</p>
-    <table id="caps"><tr><td>Checking…</td></tr></table>
+    <div id="app"></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
