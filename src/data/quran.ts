@@ -53,3 +53,9 @@ export const reference = (s: SurahMeta, from: number, to = from) =>
 
 /** Quran.com word positions (QDC segment indices) → our word indices, where they differ (word-map.json). */
 export const loadWordMap = () => load<{ map: Record<string, string> }>('word-map.json').then((d) => d.map);
+
+/** Quran.com English word-by-word meanings, "a|b|…" per Quran.com word position (en-wbw.json). */
+export async function surahWordMeanings(n: number): Promise<string[]> {
+  const d = await load<{ surahs: string[][] }>('en-wbw.json');
+  return d.surahs[n - 1];
+}

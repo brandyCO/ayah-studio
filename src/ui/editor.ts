@@ -2,16 +2,18 @@
 // preset, text effect, live 9:16 preview with play/pause + scrubbing, and MP4 export.
 import { ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
-import { loadWordMap, reference, surahMeta, surahText, surahTranslation } from '../data/quran';
+import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import { MAX_AYAT, newProject, type TextEffect, type TextMode } from '../engine/project';
+import type { TitlePos, TitleSize } from '../engine/layout';
+import { frameStyle, MAX_AYAT, newProject, type TextEffect, type TextMode, type TranslationMode } from '../engine/project';
 import { LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import { buildTimeline, type Timeline } from '../engine/timeline';
+import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
 import { fmtTime, h, toast } from './dom';
 import { reelReciter, setReelReciter } from './prefs';
@@ -29,12 +31,15 @@ const MODES: { value: TextMode; label: string }[] = [
 ];
 
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
-  const [s, allAr, allEn] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n)]);
+  const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap()]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   const arabic = allAr.slice(from - 1, to);
   const english = allEn.slice(from - 1, to);
+  // English meaning of each Arabic word on screen (synced translation).
+  const meanings = arabic.map((text, i) =>
+    wordMeanings(allWbw[from - 1 + i], parseSpans(wordMap[`${n}:${from + i}`]), displayWords(text).length));
 
   let alive = true;
   let tl: Timeline | null = null;
@@ -103,6 +108,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); });
   const stepRow = h('div', { class: 'sub-row', hidden: project.textMode !== 'words' }, h('span', { class: 'muted small' }, 'Per step'), stepChips);
   const syncNote = h('p', { class: 'muted small' }, 'Loading word timings…');
+  const trRow = h('div', { class: 'sub-row', hidden: !project.showTranslation },
+    chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
+      () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
+    h('span', { class: 'muted small' }, 'Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.'));
   const reciterSelect = h('select', {
     class: 'select',
     'aria-label': 'Reciter',
@@ -129,9 +138,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('section', {}, h('h3', {}, 'Background'), bgGrid),
         h('section', {}, h('h3', {}, 'Text effect'),
           chips<TextEffect>([{ value: 'rise', label: 'Gentle rise' }, { value: 'fade', label: 'Fade' }], () => project.textEffect, (v) => { project.textEffect = v; dirty = true; })),
+        h('section', {}, h('h3', {}, 'Translation'),
+          toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; trRow.hidden = !v; rebuild(); }),
+          trRow),
+        h('section', {}, h('h3', {}, 'Surah name'),
+          chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
+            () => project.titlePos, (v) => { project.titlePos = v; rebuild(); }),
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
+            chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+              () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))),
         h('section', { class: 'toggles' },
-          toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); }),
-          toggle('App watermark', () => project.watermark, (v) => { project.watermark = v; dirty = true; })),
+          toggle('Reciter name', () => project.credit, (v) => { project.credit = v; rebuild(); }),
+          toggle('App watermark', () => project.watermark, (v) => { project.watermark = v; rebuild(); })),
         h('section', {}, h('h3', {}, 'Export'),
           chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
             () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
@@ -166,7 +184,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!plan) return;
     tl = buildTimeline(measure, {
       surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
-      mode: mode(), wordsPerStep: project.wordsPerStep, showTranslation: project.showTranslation,
+      meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
+      style: frameStyle(project),
     });
     scrub.max = String(tl.duration);
     if (t > tl.duration) t = 0;
@@ -177,7 +196,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const reels = new Map<number, Promise<Reel>>();
   async function buildReel(r: Reciter, progress: (msg: string) => void): Promise<Reel> {
     try {
-      const [q, wordMap] = await Promise.all([qdcSurah(r.id, n), loadWordMap()]);
+      const q = await qdcSurah(r.id, n);
       const p = planQdcReel(q.timings, n, from, arabic, wordMap);
       if (p) {
         progress('Loading recitation…');
