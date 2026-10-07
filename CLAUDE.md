@@ -4,6 +4,27 @@ A Quran companion app for Android and PC. The flagship feature is a **Shorts Stu
 turns selected ayat + a chosen reciter into a 9:16 vertical video (TikTok / Reels / Shorts),
 rendered on-device. Later features: Recite & Compare, Leitner flashcards, ayah reminders.
 
+### Core user flow (owner's vision)
+1. **Read**: open a surah in a clean reading view (Arabic + English translation).
+2. **Select**: long-press an ayah to select it; press-and-drag (or long-press then tap another
+   ayah) to extend the selection across consecutive ayat.
+3. **Turn into reel**: a floating action appears → opens the editor with the selection.
+4. **Edit**: a timeline editor with the ayat (Arabic in the chosen font + translation) over a
+   default background image/video. The user picks the **reciter**; text timing follows that
+   recitation. The user can swap backgrounds (upload own videos/images, or pick from the Pixabay
+   free library), and choose **text effects** and **background transitions/effects**.
+5. **Export** the 9:16 MP4 and save/share.
+
+### Editor model
+- Tracks: **Background** (image/video clips), **Arabic text**, **Translation**, **Audio**
+  (recitation, read-only).
+- **Text clips are locked to the recitation timing** (generated from per-ayah audio durations);
+  users style them but cannot drag them away from their audio.
+- Background clips are free: add, trim, reorder, replace, transition between them (fade, slide,
+  zoom/Ken Burns, blur, dip-to-color). Images get gentle motion by default.
+- Text effects come from a curated **respectful set** (see rules): applied per clip or globally.
+- Project state is plain JSON (serializable, undoable); `render(t)` reads it — preview = export.
+
 Owner: brandyCO (GitHub). Built mainly in Claude Code cloud sessions on a fixed credit budget —
 see "Working conventions" at the bottom and follow them.
 
@@ -21,6 +42,11 @@ see "Working conventions" at the bottom and follow them.
    FFmpeg `drawtext`.
 6. Framing: every text element stays inside the 5% title-safe area and is never covered by
    another element.
+7. **Respectful text effects only** on Quran text: fade, gentle rise, soft blur-in, slow scale,
+   word-by-word reveal. Never bounce, shake, glitch, distort, spin or cartoon effects on the
+   Arabic. Backgrounds may use a wider range of transitions.
+8. Uploaded/library media: blocked from being placed over text in a way that hides it; keep a
+   legibility scrim (darken/blur) under text by default.
 
 ---
 
@@ -50,7 +76,9 @@ see "Working conventions" at the bottom and follow them.
 | Recitation audio (per ayah) | `https://cdn.islamic.network/quran/audio/128/{edition}/{globalAyahNumber}.mp3` | Editions e.g. `ar.alafasy`, `ar.abdurrahmaansudais`, `ar.husary`. Verify the list via `https://api.alquran.cloud/v1/edition?format=audio&type=versebyverse` |
 | Word timings (phase 3) | Quran.com / QUL segment data | Only for reciters that have it |
 | Font | KFGQPC Uthmanic Script Hafs (King Fahd Complex), fallback Amiri Quran | Vendor the font files into `public/fonts/` with their license |
-| Background loops | Pexels / Pixabay | Store a small curated set; record source URL + license per file in `public/backgrounds/CREDITS.md` |
+| Background loops | Pexels / Pixabay | Store a small curated default set; record source URL + license per file in `public/backgrounds/CREDITS.md` |
+| Pixabay library (phase 1b) | Pixabay API (images + videos search) | Free API key. The repo is **public**, so never commit the key: call Pixabay through a tiny proxy (Cloudflare Worker, free tier) that holds the key. Respect Pixabay API terms (cache results, show attribution, no hotlinking at scale). |
+| User uploads | Device gallery / file picker | Kept local; never uploaded anywhere |
 
 `globalAyahNumber` = sum of ayah counts of previous surahs + ayah number (1..6236).
 
@@ -84,18 +112,30 @@ title-safe area.
 
 ## Roadmap
 
-### Phase 0 — proof of concept (web page, deploys to GitHub Pages)
-Acceptance criteria:
-- [ ] Pick surah, ayah range (max ~10 ayat), reciter (3 options), background (solid colors + 2 loops), translation on/off
+### Phase 0 — read → select → reel (web, deploys to GitHub Pages)
+The real user flow end-to-end, kept simple (no timeline yet). Acceptance criteria:
+- [ ] Surah list (search by name/number) → reading view: Arabic (Quran font) + English translation, RTL correct, smooth on phone
+- [ ] Long-press selects an ayah; press-and-drag (or long-press then tap) extends to consecutive ayat; clear selection highlight; max ~10 ayat for now
+- [ ] "Turn into reel" floating button → simple editor screen
+- [ ] Editor: reciter (3 options), translation on/off, preset background (2 images + 2 video loops + solid colors), one default respectful text effect (fade/rise)
 - [ ] Live 9:16 preview with play/pause and scrubbing, text synced to recitation
 - [ ] Export MP4 (H.264 + AAC) that plays in the phone gallery and uploads to Instagram/TikTok
-- [ ] Capability panel showing what the device supports
+- [ ] Capability panel (moved from the starter page) available from a debug/settings menu
 - [ ] Tested by the owner on their Android phone in Chrome via the Pages link
 
-### Phase 1 — Shorts Studio app
+### Phase 1a — timeline editor
+Tracks (Background / Arabic / Translation / Audio) with a scrubbable playhead; text clips
+auto-placed and locked to recitation timing; background clips add/trim/reorder/replace;
+background transitions (fade, slide, zoom/Ken Burns, blur, dip-to-color); curated text effects
+per clip or global; font, size, position, colors; undo/redo; templates/presets; project autosave.
+
+### Phase 1b — media
+Upload own videos/images (gallery / file picker); Pixabay library browser (search, preview,
+add to timeline) through a key-holding proxy; attribution handling; local media cache.
+
+### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (built in GitHub Actions, APK/installer as
-artifacts). Full surah/ayah picker with search, more reciters, font size/position, background
-library + user-supplied video/image, offline audio cache, save to gallery / share, settings.
+artifacts); save to gallery / share sheet; offline audio cache; more reciters; settings.
 
 ### Phase 2 — practice
 Recite & Compare (MediaRecorder; Sheikh vs Me A/B toggle; side-by-side waveforms; recordings
