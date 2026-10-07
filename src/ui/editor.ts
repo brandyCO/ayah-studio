@@ -1,4 +1,5 @@
-// Reel editor: reciter, mood, text mode (Ayah / Line / Half line / Words), text size/position/effect/
+// Reel editor (CapCut-style studio: the preview and recitation spine stay on screen, tools open in a
+// sheet): reciter, mood, text mode (Ayah / Line / Half line / Words), text size/position/effect/
 // colours, background + grade, translation, pacing and cards, live 9:16 preview with play/pause +
 // scrubbing, and MP4 export.
 import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
@@ -24,6 +25,7 @@ import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
 import { fmtTime, h, toast } from './dom';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
+import { createSpine } from './spine';
 
 interface Reel {
   plan: ReelPlan;
@@ -71,7 +73,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const pctx = canvas.getContext('2d', { alpha: false })!;
   const status = h('div', { class: 'stage-status' });
   const playBtn = h('button', { class: 'play-btn', 'aria-label': 'Play', onclick: () => (playing ? pause() : play()) }, '▶');
-  const scrub = h('input', { type: 'range', class: 'scrub', min: '0', max: '1', step: '0.01', value: '0', 'aria-label': 'Scrub' });
   const timeLabel = h('span', { class: 'time' }, '0:00 / 0:00');
 
   // Every control redraws from the project after any change (a mood changes many settings at once).
@@ -201,75 +202,128 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     },
   }, ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === project.reciterId }, reciterPickerLabel(r))));
 
-  root.append(
-    h('header', { class: 'topbar' },
+  // --- studio layout: preview + spine always on screen; tools open in a sheet (side panel on wide screens) ---
+  const TOOLS: { id: string; icon: string; label: string; content: Node[] }[] = [
+    { id: 'reciter', icon: '🎙', label: 'Reciter', content: [
+          h('section', {}, h('h3', {}, 'Reciter'), reciterSelect)] },
+    { id: 'mood', icon: '✦', label: 'Mood', content: [
+          h('section', {}, h('h3', {}, 'Mood'),
+            chips(MOODS.map((m) => ({ value: m.id, label: m.label })), () => currentMood(project), (id) => {
+              applyMood(project, MOODS.find((m) => m.id === id)!);
+              arrange();
+            }),
+            h('p', { class: 'muted small' }, 'A mood sets the text effect, colours, colour grade, scrim, translation font and pacing. Adjust anything after.'))] },
+    { id: 'text', icon: 'Aa', label: 'Text', content: [
+          h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote,
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
+              chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+                () => project.textSize, (v) => { project.textSize = v; rebuild(); })),
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Position'),
+              chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
+                () => project.textPos, (v) => { project.textPos = v; })))] },
+    { id: 'effect', icon: '✧', label: 'Effect', content: [
+          h('section', {}, h('h3', {}, 'Text effect'),
+            chips<TextEffect>(TEXT_EFFECTS, () => project.textEffect, (v) => { project.textEffect = v; }))] },
+    { id: 'colours', icon: '🎨', label: 'Colours', content: [
+          h('section', {}, h('h3', {}, 'Colours'),
+            colorRow('Ayah', 'ar'), colorRow('Translation', 'en'), colorRow('Surah name', 'title'))] },
+    { id: 'scenes', icon: '▦', label: 'Scenes', content: [
+          h('section', {}, h('h3', {}, 'Scenes'),
+            chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }],
+              () => project.sceneMode, (v) => {
+                project.sceneMode = v;
+                // A list needs at least two scenes to change: add the next background as a start.
+                if (v !== 'single' && project.scenes.length < 2) {
+                  const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
+                  project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
+                }
+                scenesChanged();
+              }),
+            sceneNote, sceneList, trRowScenes, gridLabel, bgGrid,
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Colour grade'),
+              chips<Grade>((Object.keys(GRADES) as Grade[]).map((g) => ({ value: g, label: GRADES[g].label })), () => project.grade, (v) => { project.grade = v; })),
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Darken behind text'),
+              chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }], () => project.scrim, (v) => { project.scrim = v; })))] },
+    { id: 'translation', icon: 'En', label: 'Translation', content: [
+          h('section', {}, h('h3', {}, 'Translation'),
+            toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); }),
+            trRow)] },
+    { id: 'timing', icon: '⏱', label: 'Timing', content: [
+          h('section', {}, h('h3', {}, 'Pacing'),
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Pause between ayat'),
+              chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Between ayat'),
+              chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); })),
+            h('div', { class: 'toggles sub-row' },
+              toggle('Intro title card', () => project.intro, (v) => { project.intro = v; arrange(); }),
+              toggle('Closing card', () => project.outro, (v) => { project.outro = v; arrange(); })))] },
+    { id: 'layout', icon: '⊞', label: 'Layout', content: [
+          h('section', {}, h('h3', {}, 'Surah name'),
+            chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
+              () => project.titlePos, (v) => { project.titlePos = v; rebuild(); }),
+            h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
+              chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+                () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))),
+          h('section', { class: 'toggles' },
+            toggle('Reciter name', () => project.credit, (v) => { project.credit = v; rebuild(); }),
+            toggle('App watermark', () => project.watermark, (v) => { project.watermark = v; rebuild(); }))] },
+    { id: 'export', icon: '⬇', label: 'Export', content: [
+  h('section', {}, h('h3', {}, 'Export'),
+            chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
+              () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
+            exportBtn, exportPathLabel, progressRow, result)] },
+  ];
+
+  const wide = matchMedia('(min-width: 900px)');
+  const sheetTitle = h('h2', {});
+  const sheetBody = h('div', { class: 'sheet-body panel' });
+  const sheet = h('section', { class: 'sheet', hidden: true },
+    h('div', { class: 'sheet-head' }, sheetTitle,
+      h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Close', onclick: () => openTool(null) }, '✓')),
+    sheetBody);
+  const toolButtons = TOOLS.filter((x) => x.id !== 'export').map((x) =>
+    h('button', { class: 'tool', 'data-tool': x.id, onclick: () => openTool(current === x.id && !wide.matches ? null : x.id) },
+      h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, x.icon), h('span', {}, x.label)));
+  let current: string | null = null;
+  function openTool(id: string | null) {
+    if (!id && wide.matches) id = current ?? 'mood'; // the side panel always shows a tool
+    current = id;
+    const tool = TOOLS.find((x) => x.id === id);
+    sheet.hidden = !tool;
+    studio.classList.toggle('sheet-open', !!tool);
+    for (const b of toolButtons) b.classList.toggle('on', b.dataset.tool === id);
+    if (tool) {
+      sheetTitle.textContent = tool.label;
+      sheetBody.replaceChildren(...tool.content);
+      sheetBody.scrollTop = 0;
+    }
+    spine.invalidate();
+  }
+  wide.addEventListener('change', () => openTool(current));
+
+  const spine = createSpine({
+    timeline: () => tl,
+    time: () => t,
+    scenes: () => project.scenes,
+    transition: () => project.transition,
+    onScrubStart: () => pause(),
+    seek: (x) => { t = x; dirty = true; },
+    onTap: (track) => openTool(track === 'scenes' ? 'scenes' : 'text'),
+  });
+
+  const studio = h('div', { class: 'studio' },
+    h('header', { class: 'studio-top' },
       h('a', { class: 'icon-btn', href: `#/s/${n}/${from}`, 'aria-label': 'Back to reading' }, '‹'),
       h('div', { class: 'brand' }, h('h1', {}, 'New reel'), h('p', { class: 'muted' }, reference(s, from, to))),
-      h('button', { class: 'icon-btn', 'aria-label': 'Device check', onclick: openDebugPanel }, '⚙')),
-    h('div', { class: 'editor' },
-      h('div', { class: 'stage-col' },
-        h('div', { class: 'stage' }, canvas, status),
-        h('div', { class: 'transport' }, playBtn, scrub, timeLabel)),
-      h('div', { class: 'panel' },
-        h('section', {}, h('h3', {}, 'Reciter'), reciterSelect),
-        h('section', {}, h('h3', {}, 'Mood'),
-          chips(MOODS.map((m) => ({ value: m.id, label: m.label })), () => currentMood(project), (id) => {
-            applyMood(project, MOODS.find((m) => m.id === id)!);
-            arrange();
-          }),
-          h('p', { class: 'muted small' }, 'A mood sets the text effect, colours, colour grade, scrim, translation font and pacing. Adjust anything after.')),
-        h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote,
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
-            chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
-              () => project.textSize, (v) => { project.textSize = v; rebuild(); })),
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Position'),
-            chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
-              () => project.textPos, (v) => { project.textPos = v; }))),
-        h('section', {}, h('h3', {}, 'Text effect'),
-          chips<TextEffect>(TEXT_EFFECTS, () => project.textEffect, (v) => { project.textEffect = v; })),
-        h('section', {}, h('h3', {}, 'Colours'),
-          colorRow('Ayah', 'ar'), colorRow('Translation', 'en'), colorRow('Surah name', 'title')),
-        h('section', {}, h('h3', {}, 'Scenes'),
-          chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }],
-            () => project.sceneMode, (v) => {
-              project.sceneMode = v;
-              // A list needs at least two scenes to change: add the next background as a start.
-              if (v !== 'single' && project.scenes.length < 2) {
-                const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
-                project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
-              }
-              scenesChanged();
-            }),
-          sceneNote, sceneList, trRowScenes, gridLabel, bgGrid,
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Colour grade'),
-            chips<Grade>((Object.keys(GRADES) as Grade[]).map((g) => ({ value: g, label: GRADES[g].label })), () => project.grade, (v) => { project.grade = v; })),
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Darken behind text'),
-            chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }], () => project.scrim, (v) => { project.scrim = v; }))),
-        h('section', {}, h('h3', {}, 'Translation'),
-          toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); }),
-          trRow),
-        h('section', {}, h('h3', {}, 'Pacing'),
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Pause between ayat'),
-            chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Between ayat'),
-            chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); })),
-          h('div', { class: 'toggles sub-row' },
-            toggle('Intro title card', () => project.intro, (v) => { project.intro = v; arrange(); }),
-            toggle('Closing card', () => project.outro, (v) => { project.outro = v; arrange(); }))),
-        h('section', {}, h('h3', {}, 'Surah name'),
-          chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
-            () => project.titlePos, (v) => { project.titlePos = v; rebuild(); }),
-          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
-            chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
-              () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))),
-        h('section', { class: 'toggles' },
-          toggle('Reciter name', () => project.credit, (v) => { project.credit = v; rebuild(); }),
-          toggle('App watermark', () => project.watermark, (v) => { project.watermark = v; rebuild(); })),
-        h('section', {}, h('h3', {}, 'Export'),
-          chips<'1920' | '1280'>([{ value: '1920', label: '1080p' }, { value: '1280', label: '720p (faster)' }],
-            () => String(quality) as '1920' | '1280', (v) => { quality = Number(v) as 1920 | 1280; }),
-          exportBtn, exportPathLabel, progressRow, result))),
-  );
+      h('button', { class: 'icon-btn', 'aria-label': 'Device check', onclick: openDebugPanel }, '⚙'),
+      h('button', { class: 'primary export-open', onclick: () => openTool('export') }, 'Export')),
+    h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
+    h('div', { class: 'transport' }, playBtn, timeLabel),
+    spine.el,
+    sheet,
+    h('nav', { class: 'toolbar', 'aria-label': 'Tools' }, ...toolButtons));
+  root.append(studio);
+  openTool(wide.matches ? 'mood' : null);
 
   capabilities().then(({ path }) => {
     exportPathLabel.textContent = path ? `Export: ${describePath(path)}` : 'This browser cannot export video (no WebCodecs). Try Chrome on Android or desktop.';
@@ -299,10 +353,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function arrange() {
     if (!base) return;
     const pc = pacing(project);
+    const was = playing; // keep watching while editing
     pause();
     plan = arrangeReel(base.plan, pc);
     audio = pc.pause || pc.intro || pc.outro ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    spine.setAudio(audio);
     rebuild();
+    if (was) void play();
   }
 
   function rebuild() {
@@ -312,7 +369,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length,
     });
-    scrub.max = String(tl.duration);
+    spine.invalidate();
     if (t > tl.duration) t = 0;
     dirty = true;
   }
@@ -350,6 +407,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Drop the previous reel so its audio can never go out under this reciter's credit.
     plan = null;
     audio = null;
+    spine.setAudio(null);
     base = null;
     tl = null;
     setStatus('Loading recitation…');
@@ -440,13 +498,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     dirty = true;
   }
 
-  scrub.addEventListener('input', () => {
-    const wasPlaying = playing;
-    if (wasPlaying) pause();
-    t = Number(scrub.value);
-    dirty = true;
-    if (wasPlaying) void play();
-  });
 
   let raf = 0;
   function frame() {
@@ -462,10 +513,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
     void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, true)?.then(() => (dirty = true));
-    if (!dirty) return;
+    if (!dirty) return spine.frame();
     dirty = false;
     render(pctx, t, project, tl, media);
-    scrub.value = String(t);
+    spine.frame(true);
     timeLabel.textContent = `${fmtTime(t)} / ${fmtTime(tl.duration)}`;
   }
   raf = requestAnimationFrame(frame);
@@ -531,6 +582,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     alive = false;
     cancelAnimationFrame(raf);
     ro.disconnect();
+    spine.dispose();
     exporting?.abort();
     pause();
     void ac?.close();

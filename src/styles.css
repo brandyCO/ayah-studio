@@ -134,8 +134,6 @@ button { font: inherit; color: inherit; }
 .primary.wide { width: 100%; margin-top: 12px; padding: 14px; font-size: 17px; }
 
 /* editor */
-.editor { display: grid; gap: 18px; padding-top: 14px; }
-@media (min-width: 820px) { .editor { grid-template-columns: auto 1fr; align-items: start; } .stage-col { position: sticky; top: 76px; } }
 .stage {
   position: relative; margin: 0 auto;
   height: min(62vh, 760px); aspect-ratio: 9 / 16; max-width: 100%;
@@ -293,3 +291,61 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 /* bottom sheet (ayah translation) */
 .sheet.bottom { margin: auto auto 0; width: min(640px, 100%); border-radius: 18px 18px 0 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 .sheet-text { font-size: 17px; line-height: 1.6; margin: 10px 0 4px; }
+
+/* studio editor (CapCut-style): the preview and the recitation spine stay on screen while
+   tools open in a bottom sheet (a side panel on wide screens) */
+body[data-view="reel"] {
+  --bg: #0f1216; --card: #1b2027; --text: #eceae5; --muted: #98a0a9; --line: #2b323c;
+  --accent: #3fb59a; --accent-ink: #08201b; --shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  color-scheme: dark; background: var(--bg); color: var(--text); overflow: hidden;
+}
+.screen-reel { max-width: none; padding: 0; }
+.studio {
+  height: 100vh; height: 100dvh; display: grid;
+  grid-template-columns: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "top" "stage" "transport" "spine" "sheet" "tools";
+}
+.studio-top { grid-area: top; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.studio-top .brand h1 { font-size: 16px; }
+.export-open { flex: none; padding: 8px 18px; border-radius: 999px; }
+.studio-stage { grid-area: stage; min-height: 0; display: flex; justify-content: center; align-items: center; padding: 8px 12px 2px; }
+.studio .stage { height: 100%; max-width: 100%; margin: 0; border-radius: 10px; }
+.studio .transport { grid-area: transport; max-width: none; margin: 0; padding: 4px 12px; justify-content: center; }
+.studio .play-btn { width: 40px; height: 40px; }
+.spine { grid-area: spine; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; padding-bottom: 4px; }
+.spine:active { cursor: grabbing; }
+.spine-canvas { display: block; width: 100%; }
+.sheet {
+  grid-area: sheet; display: flex; flex-direction: column; max-height: 42vh; max-height: 42dvh; min-height: 0;
+  background: var(--card); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0;
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0 16px; }
+.sheet-head h2 { margin: 0; font-size: 15px; }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 12px; }
+.sheet-body > section:only-child > h3 { display: none; }
+.sheet-body > section:last-child { border-bottom: 0; }
+.studio.sheet-open .spine { display: none; }
+.toolbar {
+  grid-area: tools; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg);
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.tool {
+  flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 66px; padding: 6px 4px;
+  border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 11px; cursor: pointer;
+}
+.tool-icon { font-size: 19px; line-height: 1.25; }
+.tool.on { color: var(--text); background: var(--line); }
+@media (min-width: 900px) {
+  .studio {
+    grid-template-columns: 84px 390px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "top top top" "tools sheet stage" "tools sheet transport" "tools sheet spine";
+  }
+  .toolbar { flex-direction: column; overflow: hidden auto; border-top: 0; border-right: 1px solid var(--line); padding: 8px 6px; }
+  .tool { min-width: 0; width: 100%; }
+  .sheet { max-height: none; border-radius: 0; border-top: 0; border-right: 1px solid var(--line); }
+  .sheet-close { display: none; }
+  .studio.sheet-open .spine { display: block; }
+}

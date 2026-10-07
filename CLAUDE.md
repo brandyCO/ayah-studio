@@ -219,7 +219,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [ ] Recitation spine (waveform + ayah/word markers)
+- [x] Recitation spine (`src/ui/spine.ts`): scenes (thumbnails, transition markers), ayat with a tick
+      per text step, intro/closing cards and the recitation waveform under a fixed centre playhead;
+      drag/fling/wheel to scrub, tap a track to open its tool
+- [x] Studio layout (owner request, CapCut-style): preview + spine stay on screen; a bottom toolbar
+      (Reciter, Mood, Text, Effect, Colours, Scenes, Translation, Timing, Layout) opens each tool in a
+      sheet so edits show live, even while playing; Export at top right. Wide screens: toolbar + side
+      panel + preview. Dark editor theme
 - [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
       (done: Single / Per ayah / Even split from the preset backgrounds, filling the reel exactly —
