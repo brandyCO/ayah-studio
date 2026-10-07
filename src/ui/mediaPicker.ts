@@ -1,0 +1,213 @@
+// Background picker: Presets · My media (uploads from the device, kept locally) · Pixabay (search
+// through the proxy, download into My media). The panel keeps its own state (tab, search, results)
+// while the editor redraws it.
+import { BACKGROUNDS, backgroundById, libraryBackgrounds, type Background } from '../engine/backgrounds';
+import { deleteMedia, importFile, MAX_VIDEO_MB, storageUsed } from '../data/library';
+import { downloadHit, pixabayEnabled, pixabayId, searchPixabay, SUGGESTIONS, type PixabayHit } from '../data/pixabay';
+import { h, toast } from './dom';
+import { icon } from './icons';
+
+type Tab = 'presets' | 'mine' | 'pixabay';
+
+export interface PickerOptions {
+  intro: string;
+  current: string | null; // the background being replaced (highlighted)
+  multiple: boolean; // files picked from the device each become a scene
+  pick: (id: string) => void;
+}
+
+export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () => void }) {
+  let tab: Tab = 'presets';
+  let opts: PickerOptions | null = null;
+  let status = '';
+  let working = false;
+  let used: number | null = null;
+  // Pixabay search state
+  let type: 'image' | 'video' = 'video';
+  let query = '';
+  let hits: PixabayHit[] = [];
+  let total = 0;
+  let page = 0;
+  let searching = false;
+  let searchError = '';
+
+  const wrap = h('div', { class: 'media-picker' });
+  const fileInput = h('input', { type: 'file', accept: 'image/*,video/*', multiple: true, hidden: true });
+  fileInput.addEventListener('change', () => {
+    const files = [...(fileInput.files ?? [])];
+    fileInput.value = '';
+    if (files.length) void addFiles(files);
+  });
+
+  const note = (text: string) => h('p', { class: 'muted small' }, text);
+  const setStatus = (s: string) => { status = s; draw(); };
+  const thumbStyle = (b: Background) => (b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`);
+  const label = (b: Background) => (b.kind === 'video' ? `▶ ${b.label}` : b.label);
+
+  function choose(id: string) {
+    if (o.busy() || working || !opts) return;
+    opts.pick(id);
+  }
+
+  async function addFiles(files: File[]) {
+    if (!opts) return;
+    const target = opts;
+    working = true;
+    const ids: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setStatus(files.length > 1 ? `Adding ${i + 1} of ${files.length}…` : 'Adding…');
+      try {
+        ids.push((await importFile(files[i])).id);
+      } catch (e) {
+        toast(e instanceof Error ? e.message : String(e));
+      }
+    }
+    working = false;
+    status = '';
+    o.libraryChanged();
+    void refreshUsage();
+    for (const id of target.multiple ? ids : ids.slice(0, 1)) target.pick(id);
+    draw();
+  }
+
+  async function remove(b: Background) {
+    if (o.busy() || working) return;
+    if (!confirm(`Remove “${b.label}” from this device? Scenes using it show a plain colour instead.`)) return;
+    try {
+      await deleteMedia(b.id);
+    } catch (e) {
+      toast(`Could not remove it: ${e instanceof Error ? e.message : e}`);
+    }
+    o.libraryChanged();
+    void refreshUsage();
+    draw();
+  }
+
+  async function refreshUsage() {
+    used = await storageUsed();
+    draw();
+  }
+
+  async function search(more = false) {
+    if (!query.trim()) return;
+    const want = more ? page + 1 : 1;
+    searching = true;
+    searchError = '';
+    if (!more) hits = [];
+    draw();
+    try {
+      const r = await searchPixabay(type, query, want);
+      hits = more ? [...hits, ...r.hits] : r.hits;
+      total = r.total;
+      page = want;
+    } catch (e) {
+      searchError = e instanceof Error ? e.message : String(e);
+    }
+    searching = false;
+    draw();
+  }
+
+  async function pickHit(hit: PixabayHit) {
+    if (o.busy() || working || !opts) return;
+    const target = opts;
+    working = true;
+    setStatus('Downloading… 0%');
+    try {
+      const id = await downloadHit(hit, (f) => setStatus(`Downloading… ${Math.round(f * 100)}%`));
+      working = false;
+      status = '';
+      o.libraryChanged();
+      void refreshUsage();
+      target.pick(id);
+    } catch (e) {
+      working = false;
+      status = '';
+      toast(e instanceof Error ? e.message : String(e));
+    }
+    draw();
+  }
+
+  const tile = (b: Background, extra?: Node | null) =>
+    h('div', { class: 'bg-cell' },
+      h('button', {
+        class: `bg-thumb${opts?.current === b.id ? ' on' : ''}`, style: thumbStyle(b),
+        title: b.kind !== 'color' && b.credit ? `${b.label} · by ${b.credit.author} on ${b.credit.source}` : b.label,
+        onclick: () => choose(b.id),
+      }, h('span', {}, label(b))),
+      extra ?? null);
+
+  function presets(): Node[] {
+    return [h('div', { class: 'bg-grid' }, ...BACKGROUNDS.map((b) => tile(b)))];
+  }
+
+  function mine(): Node[] {
+    const items = libraryBackgrounds();
+    return [
+      h('div', { class: 'bg-grid' },
+        h('div', { class: 'bg-cell' },
+          h('button', { class: 'bg-thumb bg-add', disabled: working, onclick: () => fileInput.click() },
+            icon('plus', 26), h('span', {}, 'From device'))),
+        ...items.map((b) => tile(b, h('div', { class: 'bg-tags' },
+          b.kind !== 'color' && b.credit ? h('span', { class: 'bg-badge' }, b.credit.source) : null,
+          h('button', { class: 'bg-del', 'aria-label': `Remove ${b.label}`, title: 'Remove from this device', onclick: () => void remove(b) }, '✕'))))),
+      items.length ? null : note('Add your own photos and videos (calm scenes, no faces). They stay on this device and are never uploaded.'),
+      note(`Videos play without their own sound: the recitation is the only audio. Videos up to ${MAX_VIDEO_MB} MB.${used ? ` Using ${used < 1e6 ? 'under 1' : (used / 1e6).toFixed(0)} MB on this device.` : ''}`),
+    ].filter(Boolean) as Node[];
+  }
+
+  function pixabay(): Node[] {
+    if (!pixabayEnabled()) {
+      return [note('The Pixabay library is not set up in this build yet: it needs the small search proxy described in proxy/README.md.')];
+    }
+    const input = h('input', { class: 'search-input', type: 'search', placeholder: 'Search calm scenes…', value: query, enterKeyHint: 'search' });
+    input.addEventListener('input', () => { query = input.value; });
+    const form = h('form', { class: 'search-row', onsubmit: (e: Event) => { e.preventDefault(); input.blur(); void search(); } },
+      input, h('button', { class: 'chip on', type: 'submit', disabled: searching }, 'Search'));
+    const typeChips = h('div', { class: 'chips' }, ...([['video', 'Videos'], ['image', 'Photos']] as const).map(([v, l]) =>
+      h('button', { class: `chip${type === v ? ' on' : ''}`, onclick: () => { if (type !== v) { type = v; void search(); draw(); } } }, l)));
+    const ideas = h('div', { class: 'chips ideas' }, ...SUGGESTIONS.map((s) =>
+      h('button', { class: 'chip', onclick: () => { query = s; void search(); } }, s)));
+    const owned = new Set(libraryBackgrounds().map((b) => b.id));
+    const grid = hits.length ? h('div', { class: 'bg-grid' }, ...hits.map((x) =>
+      h('div', { class: 'bg-cell' },
+        h('button', {
+          class: `bg-thumb${opts?.current === pixabayId(x) ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
+          title: `${x.tags} · by ${x.user} on Pixabay`, onclick: () => void pickHit(x),
+        }, h('span', {}, x.type === 'video' ? `▶ ${Math.round(x.duration ?? 0)} s` : x.user)),
+        owned.has(pixabayId(x)) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, 'Saved')) : null))) : null;
+    return [
+      typeChips, form, ideas,
+      searchError ? note(searchError) : null,
+      searching && !hits.length ? note('Searching…') : null,
+      !searching && page > 0 && !hits.length && !searchError ? note('Nothing found — try another word.') : null,
+      grid,
+      hits.length && hits.length < total ? h('button', { class: 'chip more', disabled: searching, onclick: () => void search(true) }, searching ? 'Loading…' : 'More') : null,
+      h('p', { class: 'muted small' }, 'Photos and videos from ', h('a', { href: 'https://pixabay.com/', target: '_blank', rel: 'noopener' }, 'Pixabay'),
+        ' (free to use). A picked item is saved to My media; its creator is credited on the export page. Choose calm scenes without people.'),
+    ].filter(Boolean) as Node[];
+  }
+
+  function draw() {
+    if (!opts) return;
+    const tabs: [Tab, string][] = [['presets', 'Presets'], ['mine', 'My media'], ['pixabay', 'Pixabay']];
+    wrap.replaceChildren(
+      note(opts.intro),
+      h('div', { class: 'tabs' }, ...tabs.map(([v, l]) =>
+        h('button', { class: `tab${tab === v ? ' on' : ''}`, onclick: () => { tab = v; if (v === 'mine') void refreshUsage(); draw(); } }, l))),
+      status ? h('p', { class: 'picker-status small' }, status) : '',
+      ...(tab === 'presets' ? presets() : tab === 'mine' ? mine() : pixabay()),
+      fileInput,
+    );
+  }
+
+  return {
+    /** The panel content for the editor (redrawn in place on every call). */
+    panel(p: PickerOptions): Node[] {
+      // A newly opened picker starts on the tab holding the background being replaced.
+      if (p.intro !== opts?.intro && p.current && backgroundById(p.current).id === p.current) tab = p.current.includes(':') ? 'mine' : 'presets';
+      opts = p;
+      draw();
+      return [wrap];
+    },
+  };
+}

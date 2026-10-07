@@ -263,8 +263,22 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
 
 ### Phase 1b — media
-Upload own videos/images (gallery / file picker); Pixabay library browser (search, preview, add
-to scenes) through a key-holding proxy; attribution handling; local media cache.
+- [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
+      device" (several files → several scenes). Images are downscaled to what the 9:16 frame + Ken
+      Burns needs (JPEG); videos are checked for decodability (≤ 250 MB) and play without their sound
+      (rule 3). Remove (✕) → scenes using it show a plain colour
+- [x] Local media cache: `src/data/library.ts`, IndexedDB `ayah-studio`/`media` (blob + 9:16 thumb +
+      credit), registered as backgrounds with ids `u:…` / `px:image:…` / `px:video:…`; persists across
+      reloads and in the remembered look; `navigator.storage.persist()` requested
+- [x] Pixabay browser (**Pixabay** tab: Videos/Photos, search + calm suggestions, More, "from Pixabay"
+      link): `src/data/pixabay.ts` → Cloudflare Worker `proxy/pixabay-worker.js` (key as secret,
+      24 h cache, safesearch, vertical photos, origin allow-list, `/file` relay for files without
+      CORS). A picked item is downloaded into My media (no hotlinking)
+- [x] Attribution: creator + page kept per Pixabay item; shown on tiles and on the export page
+      ("Background by X on Pixabay" + Copy credits for the caption)
+- [ ] Owner: deploy the worker and set the repo variable `PIXABAY_PROXY` (steps in `proxy/README.md`);
+      until then the Pixabay tab says it is not set up
+- [ ] Tested by the owner on their phone (upload from gallery, Pixabay pick, export)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);

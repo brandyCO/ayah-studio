@@ -1,10 +1,18 @@
 // Background presets and their decoded media. Video loops are decoded frame-accurately with
 // Mediabunny (never by seeking a <video> element), so preview and export see the same frames.
-import { ALL_FORMATS, CanvasSink, Input, UrlSource, type InputVideoTrack, type WrappedCanvas } from 'mediabunny';
+// User media (uploads, Pixabay downloads) comes from the local library as blobs: see src/data/library.ts.
+import { ALL_FORMATS, BlobSource, CanvasSink, Input, UrlSource, type InputVideoTrack, type WrappedCanvas } from 'mediabunny';
+
+/** Who made a library item and where it came from (shown in the picker and on the export page). */
+export interface Credit {
+  author: string;
+  url: string; // the item's page at the source
+  source: 'Pixabay';
+}
 
 export type Background =
-  | { id: string; label: string; kind: 'image'; src: string; thumb: string }
-  | { id: string; label: string; kind: 'video'; src: string; alt: string; thumb: string }
+  | { id: string; label: string; kind: 'image'; src: string | Blob; thumb: string; credit?: Credit }
+  | { id: string; label: string; kind: 'video'; src: string | Blob; alt?: string; thumb: string; credit?: Credit }
   | { id: string; label: string; kind: 'color'; color: string };
 
 const bg = (f: string) => `${import.meta.env.BASE_URL}backgrounds/${f}`;
@@ -19,7 +27,20 @@ export const BACKGROUNDS: Background[] = [
   { id: 'charcoal', label: 'Charcoal', kind: 'color', color: '#1d1d22' },
 ];
 
-export const backgroundById = (id: string) => BACKGROUNDS.find((b) => b.id === id) ?? BACKGROUNDS[0];
+/** Backgrounds from the user's library (registered by src/data/library.ts), in library order. */
+const library = new Map<string, Background>();
+export const libraryBackgrounds = () => [...library.values()];
+export function registerBackground(b: Background) {
+  library.set(b.id, b);
+}
+export function unregisterBackground(id: string) {
+  library.delete(id);
+}
+
+export const isBackground = (id: string) => library.has(id) || BACKGROUNDS.some((b) => b.id === id);
+/** A scene whose media was deleted from the library shows a calm colour instead. */
+export const backgroundById = (id: string) =>
+  library.get(id) ?? BACKGROUNDS.find((b) => b.id === id) ?? (id.includes(':') ? BACKGROUNDS.find((b) => b.id === 'charcoal')! : BACKGROUNDS[0]);
 
 /** A seamlessly looping video whose current frame is copied into `canvas` by `prepare(t)`. */
 export class VideoLoop {
@@ -36,10 +57,10 @@ export class VideoLoop {
   }
 
   /** Opens the first source this device can decode (H.264 MP4, then VP9 WebM). */
-  static async open(...srcs: string[]): Promise<VideoLoop> {
+  static async open(...srcs: (string | Blob)[]): Promise<VideoLoop> {
     let track: InputVideoTrack | null = null;
     for (const src of srcs) {
-      const input = new Input({ source: new UrlSource(src), formats: ALL_FORMATS });
+      const input = new Input({ source: typeof src === 'string' ? new UrlSource(src) : new BlobSource(src), formats: ALL_FORMATS });
       const t = await input.getPrimaryVideoTrack();
       if (t && (await t.canDecode())) {
         track = t;
@@ -48,7 +69,9 @@ export class VideoLoop {
     }
     if (!track) throw new Error('This device cannot decode the background video');
     const duration = await track.computeDuration();
-    const w = track.displayWidth, h = track.displayHeight;
+    // Decode no larger than needed to cover the 1080×1920 frame (phone videos are often 4K).
+    const k = Math.min(1, Math.max(1080 / track.displayWidth, 1920 / track.displayHeight));
+    const w = Math.round(track.displayWidth * k), h = Math.round(track.displayHeight * k);
     const loop = new VideoLoop(new CanvasSink(track, { width: w, height: h, fit: 'cover', poolSize: 2 }), duration, w, h);
     await loop.prepare(0);
     return loop;
@@ -100,15 +123,18 @@ export interface BackgroundMedia {
   video?: VideoLoop;
 }
 
-const images = new Map<string, Promise<ImageBitmap>>();
+const images = new Map<string | Blob, Promise<ImageBitmap>>();
 
 export async function loadBackground(b: Background): Promise<BackgroundMedia> {
   if (b.kind === 'image') {
-    if (!images.has(b.src)) {
-      images.set(b.src, fetch(b.src).then((r) => r.blob()).then((blob) => createImageBitmap(blob)));
+    const src = b.src;
+    if (!images.has(src)) {
+      const p = (typeof src === 'string' ? fetch(src).then((r) => r.blob()) : Promise.resolve(src)).then((blob) => createImageBitmap(blob));
+      p.catch(() => images.delete(src));
+      images.set(src, p);
     }
-    return { bg: b, image: await images.get(b.src)! };
+    return { bg: b, image: await images.get(src)! };
   }
-  if (b.kind === 'video') return { bg: b, video: await VideoLoop.open(b.src, b.alt) };
+  if (b.kind === 'video') return { bg: b, video: await VideoLoop.open(...(b.alt ? [b.src, b.alt] : [b.src])) };
   return { bg: b };
 }
