@@ -20,7 +20,8 @@ export interface SelectionOptions {
   meta: SurahMeta[];
   area: HTMLElement; // gestures are read inside this element
   paint(sel: Sel | null): void; // highlight the selection in the current DOM
-  onTap?(surah: number, ayah: number): void; // short tap on an ayah while nothing is selected
+  onTap?(hit: { s: number; a: number } | null): void; // short tap while nothing is selected
+  onTranslate?(sel: Sel): void; // adds a Translation button to the selection bar
   onSwipe?(dir: 1 | -1): void; // horizontal swipe: +1 = finger moved right
 }
 
@@ -36,6 +37,7 @@ export function selectionController(o: SelectionOptions) {
   const bar = h('div', { class: 'selbar', 'aria-live': 'polite' },
     h('button', { class: 'icon-btn', 'aria-label': 'Clear selection', onclick: () => set(0, null, null) }, '✕'),
     label,
+    o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
     h('button', { class: 'primary', onclick: () => {
       const sel = current();
       if (sel) location.hash = `#/reel/${sel.surah}/${sel.lo}-${sel.hi}`;
@@ -120,9 +122,9 @@ export function selectionController(o: SelectionOptions) {
       if (o.onSwipe && Math.abs(dx) > SWIPE_MIN && Math.abs(dx) > 1.5 * Math.abs(dy)) o.onSwipe(dx > 0 ? 1 : -1);
       return;
     }
-    if (!d.a) return;
     const sel = current();
-    if (!sel) o.onTap?.(d.s, d.a);
+    if (!sel) o.onTap?.(d.a ? { s: d.s, a: d.a } : null);
+    else if (!d.a) set(0, null, null); // tap outside the ayat clears the selection
     else if (d.s !== surah) toast('A reel uses ayat from one surah');
     else if (sel.lo === sel.hi && d.a === anchor) set(0, null, null);
     else set(surah, anchor, d.a);

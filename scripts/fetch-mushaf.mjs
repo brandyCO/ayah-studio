@@ -1,16 +1,18 @@
 // One-off: fetch the 15-line Madinah mushaf layout (604 pages) and map it onto the bundled text.
 // Run after fetch-data.mjs: `node scripts/fetch-mushaf.mjs`, then commit public/data/mushaf.json.
 //
-// Source: Quran.com API v4 `verses/by_chapter` with word `page_number` + `line_number` (Madinah 15-line layout).
-// Only line breaks are taken from the API. The words are verified to match public/data/quran-uthmani.json
-// exactly, and the app renders the bundled text — never the API's copy.
+// Source: Quran.com API v4 `verses/by_chapter` with word `code_v2` + `v2_page` + `line_v2` (QCF V2 Madinah
+// 15-line layout).
 //
 // Output: { pages: [{ juz, lines }] }, where each line is one of
-//   ["h", surah]                    surah header
-//   ["b", surah]                    basmala before the surah
-//   [[surah, ayah, from, to], ...]  word ranges (token indices, `to` exclusive) of the ayah text
-// Tokens are the ayah text split on regular spaces, with a lone ayah-number token joined to the word
-// before it — the same rule as arabicWords() in src/engine/layout.ts.
+//   ["h", surah]                     surah header
+//   ["b", surah]                     basmala before the surah
+//   [[surah, ayah, "glyphs"], ...]   the ayah's words on this line as King Fahd Complex QCF V2 glyph
+//                                    codes (space-separated), drawn with that page's font
+//                                    (public/fonts/qcf-v2/p{page}.woff2)
+// The glyphs are the King Fahd Complex's own page rendering of the mushaf. Each word's Unicode text
+// (from the same API word) is verified letter-for-letter against public/data/quran-uthmani.json, and
+// scripts/verify-qcf-glyphs.py checks every glyph exists in its page font.
 import { readFile, writeFile } from 'node:fs/promises';
 
 const DATA = new URL('../public/data/', import.meta.url);
@@ -43,19 +45,9 @@ async function json(url) {
 async function chapter(s) {
   const out = [];
   for (let pg = 1; ; pg++) {
-    // Text and positions are fetched separately: asking for both in one call returns wrong page
-    // numbers for some words (seen at 5:77). Merged by word position, which must agree.
-    const base = `https://api.quran.com/api/v4/verses/by_chapter/${s}?words=true&fields=juz_number&per_page=50&page=${pg}&mushaf=5`;
-    const [d, t] = await Promise.all([json(`${base}&word_fields=line_number,page_number`), json(`${base}&word_fields=text_qpc_hafs`)]);
-    assert(d.verses.length === t.verses.length, `surah ${s} batch ${pg} sizes agree`);
-    d.verses.forEach((v, i) => {
-      const tv = t.verses[i];
-      assert(v.verse_key === tv.verse_key && v.words.length === tv.words.length, `${v.verse_key} batches agree`);
-      v.words.forEach((w, k) => {
-        assert(w.position === tv.words[k].position && w.char_type_name === tv.words[k].char_type_name, `${v.verse_key} word ${k} agrees`);
-        w.text_qpc_hafs = tv.words[k].text_qpc_hafs;
-      });
-    });
+    // v2_page / line_v2 are the positions in the QCF V2 (1441H Madinah print) layout that the glyph
+    // codes and page fonts belong to; page_number / line_number follow an older layout in places.
+    const d = await json(`https://api.quran.com/api/v4/verses/by_chapter/${s}?words=true&fields=juz_number&per_page=50&page=${pg}&mushaf=1&word_fields=text_qpc_hafs,code_v2,v2_page,line_v2`);
     out.push(...d.verses);
     if (!d.pagination.next_page) break;
   }
@@ -88,27 +80,29 @@ for (const v of verses.flat()) {
   const apiStr = words.map((w) => bare(w.text_qpc_hafs)).join('');
   const ourStr = bare(tk.join(' ').replace(/\s+[\u0660-\u0669]+$/, ''));
   assert(apiStr === ourStr, `${v.verse_key} text differs:\n  api: ${apiStr}\n  ours: ${ourStr}`);
-  const owner = []; // letter offset -> API word index
-  words.forEach((w, wi) => {
-    for (let c = 0; c < bare(w.text_qpc_hafs).length; c++) owner.push(wi);
-  });
-  let offset = 0;
-  tk.forEach((t, i) => {
-    const w = words[owner[offset]];
-    offset += bare(t).length;
-    const p = w.page_number, ln = w.line_number;
+  // Place every API word (and the end-of-ayah marker) on its page/line as QCF V2 glyphs.
+  for (const w of v.words) {
+    assert(typeof w.code_v2 === 'string' && w.code_v2.length > 0, `${v.verse_key} word ${w.position} has a glyph`);
+    let p = w.v2_page, ln = w.line_v2;
+    if (w.char_type_name === 'end' && p * 100 + ln < lastPos) {
+      // Source data error (seen at 84:21): an end-of-ayah marker listed before its own last word.
+      // The marker always follows the last word, so it goes on that word's line.
+      console.warn(`note: ${v.verse_key} end marker listed at ${p}:${ln}, placed after its last word`);
+      p = Math.floor(lastPos / 100);
+      ln = lastPos % 100;
+    }
     const pg = pages[p - 1];
-    assert(pg && ln >= 1 && ln <= pg.lines.length, `${v.verse_key} token ${i + 1} at page ${p} line ${ln}`);
+    assert(pg && ln >= 1 && ln <= pg.lines.length, `${v.verse_key} word ${w.position} at page ${p} line ${ln}`);
     const pos = p * 100 + ln;
-    assert(pos >= lastPos, `${v.verse_key} token ${i + 1} goes backwards`);
+    assert(pos >= lastPos, `${v.verse_key} word ${w.position} goes backwards`);
     lastPos = pos;
     pg.juz ||= v.juz_number;
     pg.lines[ln - 1] ??= [];
     const segs = pg.lines[ln - 1];
     const last = segs[segs.length - 1];
-    if (last && last[0] === s && last[1] === a && last[3] === i) last[3] = i + 1;
-    else segs.push([s, a, i, i + 1]);
-  });
+    if (last && last[0] === s && last[1] === a) last[2] += ` ${w.code_v2}`;
+    else segs.push([s, a, w.code_v2]);
+  }
 }
 pages.forEach((pg, i) => assert(pg.juz > 0, `page ${i + 1} has ayat`));
 
@@ -129,7 +123,7 @@ for (let i = 0; i < flat.length; ) {
 }
 
 await writeFile(new URL('mushaf.json', DATA), JSON.stringify({
-  source: 'Quran.com API v4 (verses/by_chapter word page/line) — Madinah mushaf 15-line layout (KFGQPC Hafs, mushaf=5). Line breaks only; text from quran-uthmani.json.',
+  source: 'Quran.com API v4 (verses/by_chapter: word code_v2, v2_page, line_v2) — Madinah mushaf 15-line layout, King Fahd Complex QCF V2 glyphs. Word text verified against quran-uthmani.json.',
   pages,
 }) + '\n');
-console.log('OK: 604 pages, 6236 ayat, every word verified; wrote mushaf.json');
+console.log('OK: 604 pages, 6236 ayat, every word verified; wrote mushaf.json (next: python3 scripts/verify-qcf-glyphs.py)');
