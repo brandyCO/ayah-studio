@@ -1,6 +1,7 @@
-// Reel editor: reciter, text mode (Ayah / Line / Half line / Words), translation on/off, background
-// preset, text effect, live 9:16 preview with play/pause + scrubbing, and MP4 export.
-import { ayahAudio, mixdown, sliceAudio } from '../data/audio';
+// Reel editor: reciter, mood, text mode (Ayah / Line / Half line / Words), text size/position/effect/
+// colours, background + grade, translation, pacing and cards, live 9:16 preview with play/pause +
+// scrubbing, and MP4 export.
+import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
 import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
@@ -8,15 +9,20 @@ import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } fro
 import { capabilities, describePath } from '../engine/capabilities';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import type { TitlePos, TitleSize } from '../engine/layout';
-import { frameStyle, MAX_AYAT, newProject, type TextEffect, type TextMode, type TranslationMode } from '../engine/project';
-import { LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
+import { TEXT_EFFECTS } from '../engine/effects';
+import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
+import { applyMood, currentMood, GRADES, MOODS, PALETTE } from '../engine/moods';
+import {
+  applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES,
+  type GapText, type Grade, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
+} from '../engine/project';
+import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
 import { fmtTime, h, toast } from './dom';
-import { reelReciter, setReelReciter } from './prefs';
+import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
 
 interface Reel {
   plan: ReelPlan;
@@ -35,6 +41,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
+  applyLook(project, reelLook(), (id) => BACKGROUNDS.some((b) => b.id === id));
   const arabic = allAr.slice(from - 1, to);
   const english = allEn.slice(from - 1, to);
   // English meaning of each Arabic word on screen (synced translation).
@@ -45,6 +52,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let tl: Timeline | null = null;
   let audio: AudioBuffer | null = null;
   let plan: ReelPlan | null = null;
+  let base: Reel | null = null; // the recitation before pacing (pauses, cards)
   const measure = document.createElement('canvas').getContext('2d')!;
   let media: BackgroundMedia | null = null;
   let exporting: AbortController | null = null;
@@ -64,21 +72,46 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const scrub = h('input', { type: 'range', class: 'scrub', min: '0', max: '1', step: '0.01', value: '0', 'aria-label': 'Scrub' });
   const timeLabel = h('span', { class: 'time' }, '0:00 / 0:00');
 
-  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T, set: (v: T) => void, enabled: (v: T) => boolean = () => true) => {
+  // Every control redraws from the project after any change (a mood changes many settings at once).
+  const redraws: (() => void)[] = [];
+  const changed = () => {
+    setReelLook(lookOf(project));
+    for (const r of redraws) r();
+    dirty = true;
+  };
+  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) => {
     const wrap = h('div', { class: 'chips' }) as HTMLDivElement & { redraw(): void };
     const draw = () => wrap.replaceChildren(...items.map((it) =>
       h('button', {
         class: `chip${get() === it.value ? ' on' : ''}`,
         disabled: !enabled(it.value),
-        onclick: () => { if (get() !== it.value && !exporting) { set(it.value); draw(); } },
+        onclick: () => { if (get() !== it.value && !exporting) { set(it.value); changed(); } },
       }, it.label)));
     wrap.redraw = draw;
+    redraws.push(draw);
     draw();
     return wrap;
   };
   const toggle = (label: string, get: () => boolean, set: (v: boolean) => void) => {
-    const input = h('input', { type: 'checkbox', checked: get(), onchange: () => set(input.checked) });
+    const input = h('input', { type: 'checkbox', checked: get(), onchange: () => { if (exporting) return void (input.checked = get()); set(input.checked); changed(); } });
+    redraws.push(() => (input.checked = get()));
     return h('label', { class: 'toggle' }, input, h('span', {}, label));
+  };
+  // Text colour: tap a calm swatch, or pick any colour (the legibility shadow adapts to it).
+  const colorRow = (label: string, key: keyof TextColors) => {
+    const set = (c: string) => { if (!exporting) { project.colors[key] = c.toLowerCase(); changed(); } };
+    const swatches = PALETTE.map((c) => h('button', {
+      class: 'swatch', style: `background:${c.color}`, title: c.label, 'aria-label': `${label}: ${c.label}`, onclick: () => set(c.color),
+    }));
+    const picker = h('input', { type: 'color', 'aria-label': `${label}: custom colour`, oninput: () => set(picker.value) });
+    const custom = h('label', { class: 'swatch custom', title: 'Custom colour' }, picker);
+    redraws.push(() => {
+      const c = project.colors[key];
+      swatches.forEach((b, i) => b.classList.toggle('on', PALETTE[i].color === c));
+      custom.classList.toggle('on', !PALETTE.some((x) => x.color === c));
+      if (picker.value !== c) picker.value = c;
+    });
+    return h('div', { class: 'color-row' }, h('span', { class: 'muted small' }, label), h('div', { class: 'swatches' }, ...swatches, custom));
   };
 
   const bgGrid = h('div', { class: 'bg-grid' });
@@ -87,8 +120,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       class: `bg-thumb${project.backgroundId === b.id ? ' on' : ''}`,
       title: b.label,
       style: b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`,
-      onclick: () => { if (!exporting && project.backgroundId !== b.id) { project.backgroundId = b.id; drawBgGrid(); void loadBg(); } },
+      onclick: () => { if (!exporting && project.backgroundId !== b.id) { project.backgroundId = b.id; changed(); void loadBg(); } },
     }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label))));
+  redraws.push(drawBgGrid);
   drawBgGrid();
 
   let quality: 1920 | 1280 = 1920;
@@ -103,15 +137,19 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   // Text modes other than Ayah need word timings (rule 8: never guess sync).
   const wordTimed = () => !!plan?.wordTimed;
   const mode = (): TextMode => (wordTimed() ? project.textMode : 'ayah');
-  const modeChips = chips(MODES, mode, (v) => { project.textMode = v; stepRow.hidden = v !== 'words'; rebuild(); }, (v) => v === 'ayah' || wordTimed());
+  const modeChips = chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed());
   const stepChips = chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
     () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); });
   const stepRow = h('div', { class: 'sub-row', hidden: project.textMode !== 'words' }, h('span', { class: 'muted small' }, 'Per step'), stepChips);
+  redraws.push(() => (stepRow.hidden = mode() !== 'words'));
   const syncNote = h('p', { class: 'muted small' }, 'Loading word timings…');
   const trRow = h('div', { class: 'sub-row', hidden: !project.showTranslation },
     chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
       () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
-    h('span', { class: 'muted small' }, 'Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.'));
+    h('span', { class: 'muted small' }, 'Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.'),
+    h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Font'),
+      chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })));
+  redraws.push(() => (trRow.hidden = !project.showTranslation));
   const reciterSelect = h('select', {
     class: 'select',
     'aria-label': 'Reciter',
@@ -134,13 +172,39 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('div', { class: 'transport' }, playBtn, scrub, timeLabel)),
       h('div', { class: 'panel' },
         h('section', {}, h('h3', {}, 'Reciter'), reciterSelect),
-        h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote),
-        h('section', {}, h('h3', {}, 'Background'), bgGrid),
+        h('section', {}, h('h3', {}, 'Mood'),
+          chips(MOODS.map((m) => ({ value: m.id, label: m.label })), () => currentMood(project), (id) => {
+            applyMood(project, MOODS.find((m) => m.id === id)!);
+            arrange();
+          }),
+          h('p', { class: 'muted small' }, 'A mood sets the text effect, colours, colour grade, scrim, translation font and pacing. Adjust anything after.')),
+        h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote,
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Size'),
+            chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+              () => project.textSize, (v) => { project.textSize = v; rebuild(); })),
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Position'),
+            chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
+              () => project.textPos, (v) => { project.textPos = v; }))),
         h('section', {}, h('h3', {}, 'Text effect'),
-          chips<TextEffect>([{ value: 'rise', label: 'Gentle rise' }, { value: 'fade', label: 'Fade' }], () => project.textEffect, (v) => { project.textEffect = v; dirty = true; })),
+          chips<TextEffect>(TEXT_EFFECTS, () => project.textEffect, (v) => { project.textEffect = v; })),
+        h('section', {}, h('h3', {}, 'Colours'),
+          colorRow('Ayah', 'ar'), colorRow('Translation', 'en'), colorRow('Surah name', 'title')),
+        h('section', {}, h('h3', {}, 'Background'), bgGrid,
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Colour grade'),
+            chips<Grade>((Object.keys(GRADES) as Grade[]).map((g) => ({ value: g, label: GRADES[g].label })), () => project.grade, (v) => { project.grade = v; })),
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Darken behind text'),
+            chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }], () => project.scrim, (v) => { project.scrim = v; }))),
         h('section', {}, h('h3', {}, 'Translation'),
-          toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; trRow.hidden = !v; rebuild(); }),
+          toggle('Show translation', () => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); }),
           trRow),
+        h('section', {}, h('h3', {}, 'Pacing'),
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Pause between ayat'),
+            chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+          h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, 'Between ayat'),
+            chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); })),
+          h('div', { class: 'toggles sub-row' },
+            toggle('Intro title card', () => project.intro, (v) => { project.intro = v; arrange(); }),
+            toggle('Closing card', () => project.outro, (v) => { project.outro = v; arrange(); }))),
         h('section', {}, h('h3', {}, 'Surah name'),
           chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
             () => project.titlePos, (v) => { project.titlePos = v; rebuild(); }),
@@ -179,6 +243,16 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     status.textContent = msg;
     status.hidden = !msg;
   };
+
+  /** Apply the pacing (pause between ayat, cards) to the loaded recitation, then rebuild the text. */
+  function arrange() {
+    if (!base) return;
+    const pc = pacing(project);
+    pause();
+    plan = arrangeReel(base.plan, pc);
+    audio = pc.pause || pc.intro || pc.outro ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    rebuild();
+  }
 
   function rebuild() {
     if (!plan) return;
@@ -225,6 +299,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Drop the previous reel so its audio can never go out under this reciter's credit.
     plan = null;
     audio = null;
+    base = null;
     tl = null;
     setStatus('Loading recitation…');
     syncNote.textContent = 'Loading word timings…';
@@ -238,14 +313,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       }
       const reel = await reels.get(r.id)!;
       if (req !== audioReq || !alive) return;
-      plan = reel.plan;
-      audio = reel.audio;
-      syncNote.textContent = plan.wordTimed
+      base = reel;
+      syncNote.textContent = base.plan.wordTimed
         ? 'Text follows the reciter word by word.'
-        : `Word timings are not available for this reciter here, so only Ayah mode is offered${plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
-      modeChips.redraw();
-      stepRow.hidden = mode() !== 'words';
-      rebuild();
+        : `Word timings are not available for this reciter here, so only Ayah mode is offered${base.plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
+      arrange();
+      for (const r of redraws) r();
       setStatus(media ? '' : 'Loading background…');
     } catch (e) {
       if (req === audioReq) setStatus(`${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`);
