@@ -1,10 +1,20 @@
 // Ayah selection shared by the mushaf and translation views: long-press selects an ayah; keep the
 // finger down and drag (or tap another ayah afterwards, even on another page) to extend the
-// selection across consecutive ayat of one surah. A floating bar offers "Turn into reel".
-// Selectable elements carry data-s (surah) and data-a (ayah).
+// selection across consecutive ayat of one surah. A floating bar offers "Turn into reel" and shows
+// the reel's estimated length for the last-used reciter. Selectable elements carry data-s (surah)
+// and data-a (ayah).
+import { qdcSurah } from '../data/qdc';
 import { reference, type SurahMeta } from '../data/quran';
+import { DEFAULT_RECITER, reciterById } from '../data/reciters';
 import { MAX_AYAT } from '../engine/project';
+import { clipBounds, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
+import { reelReciter } from './prefs';
+
+const fmtLength = (sec: number) => {
+  const s = Math.round(sec);
+  return s < 60 ? `~${s} s` : `~${Math.floor(s / 60)} min ${s % 60} s`;
+};
 
 const LONG_PRESS_MS = 420;
 const MOVE_TOLERANCE = 10;
@@ -34,6 +44,7 @@ export function selectionController(o: SelectionOptions) {
     anchor === null || focus === null ? null : { surah, lo: Math.min(anchor, focus), hi: Math.max(anchor, focus) };
 
   const label = h('span', { class: 'sel-label' });
+  const estimate = h('span', { class: 'sel-est' });
   const bar = h('div', { class: 'selbar', 'aria-live': 'polite' },
     h('button', { class: 'icon-btn', 'aria-label': 'Clear selection', onclick: () => set(0, null, null) }, '✕'),
     label,
@@ -55,7 +66,25 @@ export function selectionController(o: SelectionOptions) {
     o.paint(sel);
     bar.classList.toggle('show', !!sel);
     document.body.classList.toggle('has-selbar', !!sel);
-    if (sel) label.textContent = `${reference(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${sel.hi - sel.lo + 1} ${sel.hi > sel.lo ? 'ayat' : 'ayah'}`;
+    if (sel) {
+      label.replaceChildren(`${reference(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${sel.hi - sel.lo + 1} ${sel.hi > sel.lo ? 'ayat' : 'ayah'}`, estimate);
+      void showEstimate(sel);
+    }
+  }
+
+  /** Estimated reel length from the reciter's timings (same plan the editor uses). */
+  let estReq = 0;
+  async function showEstimate(sel: Sel) {
+    const req = ++estReq;
+    estimate.textContent = '';
+    const r = reciterById(reelReciter(DEFAULT_RECITER));
+    try {
+      const q = await qdcSurah(r.id, sel.surah);
+      const clip = clipBounds(q.timings, sel.surah, sel.lo, sel.hi);
+      if (req === estReq && clip) estimate.textContent = ` · ${fmtLength(reelDuration(clip))} · ${r.short}`;
+    } catch {
+      /* offline: no estimate */
+    }
   }
 
   // --- gestures ---

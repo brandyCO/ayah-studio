@@ -1,30 +1,46 @@
-// Phase 0 editor: reciter, translation on/off, background preset, text effect, live 9:16 preview
-// with play/pause + scrubbing, and MP4 export.
-import { ayahAudio, mixdown } from '../data/audio';
-import { globalAyahNumber, reference, surahMeta, surahText, surahTranslation } from '../data/quran';
-import { RECITERS, reciterById } from '../data/reciters';
+// Reel editor: reciter, text mode (Ayah / Line / Half line / Words), translation on/off, background
+// preset, text effect, live 9:16 preview with play/pause + scrubbing, and MP4 export.
+import { ayahAudio, mixdown, sliceAudio } from '../data/audio';
+import { qdcSurah } from '../data/qdc';
+import { loadWordMap, reference, surahMeta, surahText, surahTranslation } from '../data/quran';
+import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import { MAX_AYAT, newProject, type TextEffect } from '../engine/project';
+import { MAX_AYAT, newProject, type TextEffect, type TextMode } from '../engine/project';
+import { LEAD_IN, planClipReel, planQdcReel, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
-import { audioOffsets, buildTimeline, type Timeline } from '../engine/timeline';
+import { buildTimeline, type Timeline } from '../engine/timeline';
 import { openDebugPanel } from './debug';
 import { fmtTime, h, toast } from './dom';
+import { reelReciter, setReelReciter } from './prefs';
+
+interface Reel {
+  plan: ReelPlan;
+  audio: AudioBuffer;
+}
+
+const MODES: { value: TextMode; label: string }[] = [
+  { value: 'ayah', label: 'Ayah' },
+  { value: 'line', label: 'Line' },
+  { value: 'half', label: 'Half line' },
+  { value: 'words', label: 'Words' },
+];
 
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
   const [s, allAr, allEn] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n)]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
-  const project = newProject(n, from, to);
+  const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   const arabic = allAr.slice(from - 1, to);
   const english = allEn.slice(from - 1, to);
 
   let alive = true;
   let tl: Timeline | null = null;
   let audio: AudioBuffer | null = null;
-  let durations: number[] | null = null;
+  let plan: ReelPlan | null = null;
+  const measure = document.createElement('canvas').getContext('2d')!;
   let media: BackgroundMedia | null = null;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
@@ -43,10 +59,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const scrub = h('input', { type: 'range', class: 'scrub', min: '0', max: '1', step: '0.01', value: '0', 'aria-label': 'Scrub' });
   const timeLabel = h('span', { class: 'time' }, '0:00 / 0:00');
 
-  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T, set: (v: T) => void) => {
-    const wrap = h('div', { class: 'chips' });
+  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T, set: (v: T) => void, enabled: (v: T) => boolean = () => true) => {
+    const wrap = h('div', { class: 'chips' }) as HTMLDivElement & { redraw(): void };
     const draw = () => wrap.replaceChildren(...items.map((it) =>
-      h('button', { class: `chip${get() === it.value ? ' on' : ''}`, onclick: () => { if (get() !== it.value && !exporting) { set(it.value); draw(); } } }, it.label)));
+      h('button', {
+        class: `chip${get() === it.value ? ' on' : ''}`,
+        disabled: !enabled(it.value),
+        onclick: () => { if (get() !== it.value && !exporting) { set(it.value); draw(); } },
+      }, it.label)));
+    wrap.redraw = draw;
     draw();
     return wrap;
   };
@@ -74,6 +95,25 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const progressRow = h('div', { class: 'progress-row', hidden: true }, progressBar, progressText, cancelBtn);
   const result = h('div', { class: 'result', hidden: true });
 
+  // Text modes other than Ayah need word timings (rule 8: never guess sync).
+  const wordTimed = () => !!plan?.wordTimed;
+  const mode = (): TextMode => (wordTimed() ? project.textMode : 'ayah');
+  const modeChips = chips(MODES, mode, (v) => { project.textMode = v; stepRow.hidden = v !== 'words'; rebuild(); }, (v) => v === 'ayah' || wordTimed());
+  const stepChips = chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
+    () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); });
+  const stepRow = h('div', { class: 'sub-row', hidden: project.textMode !== 'words' }, h('span', { class: 'muted small' }, 'Per step'), stepChips);
+  const syncNote = h('p', { class: 'muted small' }, 'Loading word timings…');
+  const reciterSelect = h('select', {
+    class: 'select',
+    'aria-label': 'Reciter',
+    onchange: () => {
+      if (exporting) return;
+      project.reciterId = Number(reciterSelect.value);
+      setReelReciter(project.reciterId);
+      void loadAudio();
+    },
+  }, ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === project.reciterId }, reciterPickerLabel(r))));
+
   root.append(
     h('header', { class: 'topbar' },
       h('a', { class: 'icon-btn', href: `#/s/${n}/${from}`, 'aria-label': 'Back to reading' }, '‹'),
@@ -84,8 +124,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('div', { class: 'stage' }, canvas, status),
         h('div', { class: 'transport' }, playBtn, scrub, timeLabel)),
       h('div', { class: 'panel' },
-        h('section', {}, h('h3', {}, 'Reciter'),
-          chips(RECITERS.map((r) => ({ value: r.id, label: r.name })), () => project.reciterId, (v) => { project.reciterId = v; void loadAudio(); })),
+        h('section', {}, h('h3', {}, 'Reciter'), reciterSelect),
+        h('section', {}, h('h3', {}, 'Text'), modeChips, stepRow, syncNote),
         h('section', {}, h('h3', {}, 'Background'), bgGrid),
         h('section', {}, h('h3', {}, 'Text effect'),
           chips<TextEffect>([{ value: 'rise', label: 'Gentle rise' }, { value: 'fade', label: 'Fade' }], () => project.textEffect, (v) => { project.textEffect = v; dirty = true; })),
@@ -123,10 +163,39 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   function rebuild() {
-    if (!durations) return;
-    tl = buildTimeline(s, reciterById(project.reciterId), from, arabic, english, durations, project.showTranslation);
+    if (!plan) return;
+    tl = buildTimeline(measure, {
+      surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
+      mode: mode(), wordsPerStep: project.wordsPerStep, showTranslation: project.showTranslation,
+    });
     scrub.max = String(tl.duration);
+    if (t > tl.duration) t = 0;
     dirty = true;
+  }
+
+  // Recitation per reciter (kept while the editor is open, so switching back is instant).
+  const reels = new Map<number, Promise<Reel>>();
+  async function buildReel(r: Reciter, progress: (msg: string) => void): Promise<Reel> {
+    try {
+      const [q, wordMap] = await Promise.all([qdcSurah(r.id, n), loadWordMap()]);
+      const p = planQdcReel(q.timings, n, from, arabic, wordMap);
+      if (p) {
+        progress('Loading recitation…');
+        return { plan: p, audio: await sliceAudio(q.audioUrl, p.clip!, LEAD_IN, p.duration, q.duration) };
+      }
+      console.warn(`QDC has no timing for ${n}:${from}-${to} (reciter ${r.id}); using everyayah`);
+    } catch (e) {
+      console.warn(`QDC recitation failed (reciter ${r.id}); using everyayah`, e);
+    }
+    // Fallback: per-ayah files without word timings (Ayah mode only).
+    let done = 0;
+    progress(`Loading recitation… 0/${arabic.length}`);
+    const clips = await Promise.all(arabic.map((_, i) => ayahAudio(r, n, from + i).then((b) => {
+      progress(`Loading recitation… ${++done}/${arabic.length}`);
+      return b;
+    })));
+    const p = planClipReel(from, clips.map((c) => c.duration));
+    return { plan: p, audio: mixdown(clips, p.offsets!, p.duration) };
   }
 
   let audioReq = 0;
@@ -134,19 +203,30 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const req = ++audioReq;
     pause();
     const r = reciterById(project.reciterId);
-    let done = 0;
-    setStatus(`Loading recitation… 0/${arabic.length}`);
+    // Drop the previous reel so its audio can never go out under this reciter's credit.
+    plan = null;
+    audio = null;
+    tl = null;
+    setStatus('Loading recitation…');
+    syncNote.textContent = 'Loading word timings…';
     try {
-      const clips = await Promise.all(arabic.map((_, i) =>
-        ayahAudio(r, n, from + i, globalAyahNumber(s, from + i)).then((b) => {
-          if (req === audioReq) setStatus(`Loading recitation… ${++done}/${arabic.length}`);
-          return b;
-        })));
+      if (!reels.has(r.id)) {
+        const p = buildReel(r, (msg) => { if (req === audioReq) setStatus(msg); });
+        p.catch(() => reels.delete(r.id));
+        reels.set(r.id, p);
+        // Decoded audio is large: keep only the two most recent reciters.
+        while (reels.size > 2) reels.delete(reels.keys().next().value!);
+      }
+      const reel = await reels.get(r.id)!;
       if (req !== audioReq || !alive) return;
-      durations = clips.map((c) => c.duration);
+      plan = reel.plan;
+      audio = reel.audio;
+      syncNote.textContent = plan.wordTimed
+        ? 'Text follows the reciter word by word.'
+        : `Word timings are not available for this reciter here, so only Ayah mode is offered${plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
+      modeChips.redraw();
+      stepRow.hidden = mode() !== 'words';
       rebuild();
-      audio = mixdown(clips, audioOffsets(tl!), tl!.duration);
-      if (t > tl!.duration) t = 0;
       setStatus(media ? '' : 'Loading background…');
     } catch (e) {
       if (req === audioReq) setStatus(`${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`);
