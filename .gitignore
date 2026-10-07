@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+*.local
+.DS_Store
+Thumbs.db
+# native build outputs (Capacitor / Tauri)
+android/app/build/
+android/.gradle/
+src-tauri/target/

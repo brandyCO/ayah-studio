@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayah Studio</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f5f2; color: #222; }
+      h1 { margin: 0 0 4px; font-weight: 600; }
+      .muted { color: #777; margin: 0 0 20px; }
+      table { border-collapse: collapse; width: 100%; max-width: 640px; background: #fff; border-radius: 12px; overflow: hidden; }
+      td { padding: 10px 14px; border-bottom: 1px solid #eee; }
+      .ok { color: #1a7f37; font-weight: 600; } .no { color: #c62828; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Ayah Studio</h1>
+    <p class="muted">Device check: can this browser export the video on-device?</p>
+    <table id="caps"><tr><td>Checking…</td></tr></table>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
