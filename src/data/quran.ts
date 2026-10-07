@@ -16,7 +16,8 @@ const cache = new Map<string, Promise<unknown>>();
 
 function load<T>(file: string): Promise<T> {
   if (!cache.has(file)) {
-    const p = fetch(`${base}data/${file}`).then((r) => {
+    // no-cache: revalidate with the server so an update never pairs new code with stale data.
+    const p = fetch(`${base}data/${file}`, { cache: 'no-cache' }).then((r) => {
       if (!r.ok) throw new Error(`Could not load ${file} (HTTP ${r.status})`);
       return r.json();
     });

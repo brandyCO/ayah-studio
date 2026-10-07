@@ -23,12 +23,14 @@ export interface Mushaf {
 let cached: Promise<Mushaf> | null = null;
 
 export function loadMushaf(): Promise<Mushaf> {
-  cached ??= fetch(`${import.meta.env.BASE_URL}data/mushaf.json`)
+  cached ??= fetch(`${import.meta.env.BASE_URL}data/mushaf.json`, { cache: 'no-cache' })
     .then((r) => {
       if (!r.ok) throw new Error(`Could not load mushaf layout (HTTP ${r.status})`);
       return r.json() as Promise<{ pages: MushafPage[] }>;
     })
     .then(({ pages }) => {
+      const sample = pages[2]?.lines.find((l) => l[0] !== 'h' && l[0] !== 'b') as [number, number, string][] | undefined;
+      if (typeof sample?.[0]?.[2] !== 'string') throw new Error('Mushaf data is out of date — please reload the page');
       const first = new Map<string, number>();
       const header = new Map<number, number>();
       pages.forEach((pg, i) => {
