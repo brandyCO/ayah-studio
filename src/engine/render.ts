@@ -2,17 +2,19 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import type { BackgroundMedia } from './backgrounds';
+import { drawText, setTextShadow } from './effects';
 import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
+import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
+import { reference } from '../data/quran';
 import { reciterCredit } from '../data/reciters';
 import type { Timeline, TimedAyah } from './timeline';
 
-const ENTER = 0.45; // text fades/rises in over this long (less for short groups)
-const EXIT = 0.25;
-const EN_ENTER = 0.6;
-
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeOut = (x: number) => 1 - (1 - x) ** 3;
+const smooth = (x: number) => x * x * (3 - 2 * x);
+/** Where the text block sits in its free space (0 top … 1 bottom). */
+const TEXT_POS = { upper: 0.2, center: 0.5, lower: 0.8 } as const;
 
 function cover(ctx: CanvasRenderingContext2D, src: CanvasImageSource, sw: number, sh: number, zoom = 1, panY = 0) {
   const s = Math.max(W / sw, H / sh) * zoom;
@@ -39,17 +41,27 @@ function drawBackground(ctx: CanvasRenderingContext2D, t: number, tl: Timeline, 
   }
 }
 
-function drawScrim(ctx: CanvasRenderingContext2D) {
-  // Legibility scrim: overall darken plus deeper bands behind header, text and footer.
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+function drawGrade(ctx: CanvasRenderingContext2D, grade: Project['grade']) {
+  for (const [op, color] of GRADES[grade]?.layers ?? []) {
+    ctx.globalCompositeOperation = op;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawScrim(ctx: CanvasRenderingContext2D, k: number) {
+  // Legibility scrim (always on, rule 6): overall darken plus deeper bands behind header, text and footer.
+  const a = (x: number) => `rgba(0,0,0,${Math.min(0.9, x * k).toFixed(3)})`;
+  ctx.fillStyle = a(0.22);
   ctx.fillRect(0, 0, W, H);
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, 'rgba(0,0,0,0.45)');
-  g.addColorStop(0.16, 'rgba(0,0,0,0.05)');
-  g.addColorStop(0.3, 'rgba(0,0,0,0.25)');
-  g.addColorStop(0.7, 'rgba(0,0,0,0.25)');
-  g.addColorStop(0.86, 'rgba(0,0,0,0.05)');
-  g.addColorStop(1, 'rgba(0,0,0,0.5)');
+  g.addColorStop(0, a(0.45));
+  g.addColorStop(0.16, a(0.05));
+  g.addColorStop(0.3, a(0.25));
+  g.addColorStop(0.7, a(0.25));
+  g.addColorStop(0.86, a(0.05));
+  g.addColorStop(1, a(0.5));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
@@ -59,14 +71,6 @@ function ayahAt(tl: Timeline, t: number): TimedAyah | null {
 }
 
 const itemAt = <T extends { start: number; end: number }>(items: T[], t: number) => items.find((g) => t >= g.start && t < g.end) ?? null;
-
-/** Opacity and entry progress of a timed item: in after its start, out before its end. */
-function fade(g: { start: number; end: number }, t: number, enter: number, exit: number) {
-  const d = Math.max(0.001, g.end - g.start);
-  const pin = easeOut(clamp01((t - g.start) / Math.min(enter, d * 0.4)));
-  const pout = clamp01((g.end - t) / Math.min(exit, d * 0.25));
-  return { alpha: Math.min(pin, pout), pin };
-}
 
 /** The text shown last before t (or the first text, before any), with its translation. */
 function nearestText(tl: Timeline, t: number): { ar: Fit; en: Fit | null } {
@@ -87,24 +91,57 @@ function headerRef(tl: Timeline, t: number): string {
   return ref;
 }
 
-function drawLines(ctx: CanvasRenderingContext2D, lines: string[], size: number, lh: number, top: number) {
-  let y = top + (size * lh) / 2;
-  for (const line of lines) {
-    ctx.fillText(line, W / 2, y);
-    y += size * lh;
-  }
+/** Opacity of the intro card (fully shown on the first frame, gone before the recitation) or the closing card. */
+function cardAt(tl: Timeline, t: number): { kind: 'intro' | 'outro'; alpha: number } | null {
+  if (tl.intro > 0 && t < tl.intro) return { kind: 'intro', alpha: smooth(clamp01((tl.intro - 0.15 - t) / 0.7)) };
+  const s = tl.duration - tl.outro;
+  if (tl.outro > 0 && t >= s) return { kind: 'outro', alpha: easeOut(clamp01((t - s) / 0.9)) };
+  return null;
+}
+
+/** Intro title card / closing reference card, centred in the frame. */
+function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha: number, project: Project, tl: Timeline) {
+  const c = project.colors.title;
+  const ref = reference(tl.surah, tl.ayat[0].ayah, tl.ayat[tl.ayat.length - 1].ayah);
+  const intro = kind === 'intro';
+  const cy = H * 0.46 + (intro ? 0 : (1 - alpha) * 16);
+  setTextShadow(ctx, c);
+  ctx.fillStyle = c;
+  ctx.globalAlpha = alpha;
+  ctx.direction = 'rtl';
+  ctx.font = `${intro ? 104 : 84}px ${FONT_NAME}`;
+  ctx.fillText(tl.surah.ar, W / 2, cy - (intro ? 80 : 70));
+  ctx.save();
+  ctx.shadowColor = 'transparent';
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.fillRect(W / 2 - 110, cy - 1, 220, 2);
+  ctx.restore();
+  ctx.direction = 'ltr';
+  ctx.font = `500 ${intro ? 46 : 44}px ${FONT_UI}`;
+  ctx.fillText(ref, W / 2, cy + 60);
+  const notes: string[] = [];
+  if (intro) notes.push(tl.surah.tr);
+  if (project.credit) notes.push(`Recited by ${reciterCredit(tl.reciter)}`);
+  if (!intro && project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : 'Translation: Sahih International');
+  ctx.globalAlpha = alpha * 0.85;
+  notes.forEach((x, i) => {
+    ctx.font = i === 0 && intro ? `italic 36px ${FONT_EN}` : `500 32px ${FONT_UI}`;
+    ctx.fillText(x, W / 2, cy + 125 + i * 54);
+  });
+  ctx.globalAlpha = 1;
 }
 
 export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: BackgroundMedia) {
   ctx.save();
   drawBackground(ctx, t, tl, media);
-  drawScrim(ctx);
+  drawGrade(ctx, project.grade);
+  drawScrim(ctx, SCRIM_STRENGTH[project.scrim] ?? 1);
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff';
-  ctx.shadowColor = 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur = 14;
+  const colors = project.colors;
+  const fx = project.textEffect;
+  const k = TEXT_POS[project.textPos] ?? 0.5;
 
   const lay = tl.layout;
   const ayah = ayahAt(tl, t);
@@ -113,64 +150,65 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   const en: (Fit & { start: number; end: number }) | null = ev?.en ? { ...ev.en, start: ev.start, end: ev.end } : page;
   const arH = (x: Fit) => x.lines.length * x.size * AR_LINE;
   const enH = (x: Fit) => x.lines.length * x.size * EN_LINE;
+  const place = (top: number, bottom: number, h: number) => top + (bottom - top - h) * k;
 
-  // Where the text goes. "Below": Arabic, translation and surah name are one centred block, the name
-  // last; between ayat it keeps the place of the text last (or next) shown, so it never jumps.
-  // Otherwise text that belongs together (Arabic + its own translation) is centred as one block.
+  // Where the text goes. "Below": Arabic, translation and surah name are one block, the name last;
+  // between ayat it keeps the place of the text last (or next) shown, so it never jumps. Otherwise
+  // text that belongs together (Arabic + its own translation) is placed as one block.
   let arTop = 0, enTop = 0, titleTop = lay.title;
   if (project.titlePos === 'below') {
     const ref = ev ? { ar: ev.ar, en } : nearestText(tl, t);
     const T = titleBlock(project.titleSize);
     const hA = arH(ref.ar), hE = ref.en ? enH(ref.en) + 30 : 0;
-    arTop = (lay.text.top + lay.title + T) / 2 - (hA + hE + 30 + T) / 2;
+    arTop = place(lay.text.top, lay.title + T, hA + hE + 30 + T);
     enTop = arTop + hA + 30;
     titleTop = arTop + hA + hE + 30;
   } else if (ev && ev.en) {
-    const total = arH(ev.ar) + 30 + enH(ev.en);
-    arTop = (lay.ar.top + lay.en.bottom) / 2 - total / 2;
+    arTop = place(lay.ar.top, lay.en.bottom, arH(ev.ar) + 30 + enH(ev.en));
     enTop = arTop + arH(ev.ar) + 30;
   } else {
-    if (ev) arTop = (lay.ar.top + lay.ar.bottom) / 2 - arH(ev.ar) / 2;
-    if (en) enTop = (lay.en.top + lay.en.bottom) / 2 - enH(en) / 2;
+    if (ev) arTop = place(lay.ar.top, lay.ar.bottom, arH(ev.ar));
+    if (en) enTop = place(lay.en.top, lay.en.bottom, enH(en));
   }
 
   // Ayah text: each event shows from its first recited word until the next (word-timed).
-  let dy = 0;
   if (ev) {
-    const f = fade(ev, t, ENTER, EXIT);
-    if (project.textEffect === 'rise') dy = (1 - f.pin) * 36 * Math.min(1, (ev.end - ev.start) / 1.5);
-    ctx.globalAlpha = f.alpha;
-    ctx.direction = 'rtl';
-    ctx.font = `${ev.ar.size}px ${FONT_AR}`;
-    drawLines(ctx, ev.ar.lines, ev.ar.size, AR_LINE, arTop + dy);
+    setTextShadow(ctx, colors.ar);
+    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1 });
   }
   if (en) {
-    // Synced meanings move with their words; a whole-ayah translation fades calmly with its page.
-    const f = ev?.en ? fade(ev, t, ENTER, EXIT) : fade(en, t, EN_ENTER, EXIT);
-    ctx.globalAlpha = f.alpha * 0.92;
-    ctx.direction = 'ltr';
-    ctx.font = `${en.size}px ${FONT_EN}`;
-    drawLines(ctx, en.lines, en.size, EN_LINE, ev?.en ? enTop + dy : enTop);
+    // Synced meanings move with their words; a whole-ayah translation turns pages on its own timing.
+    setTextShadow(ctx, colors.en);
+    drawText(ctx, fx, en, t, { lines: en.lines, size: en.size, lh: EN_LINE, top: enTop, font: lay.enFont, dir: 'ltr', color: colors.en, opacity: 0.92 });
   }
-  ctx.globalAlpha = 1;
+
+  // Intro / closing card; the surah name + reference make way for it (the card shows the reference).
+  const card = cardAt(tl, t);
+  if (card) drawCard(ctx, card.kind, card.alpha, project, tl);
+  const under = 1 - (card?.alpha ?? 0);
 
   // Surah name + reference (always visible, rule 2) at the chosen place and size.
   const z = TITLE_SIZES[project.titleSize];
+  setTextShadow(ctx, colors.title);
+  ctx.fillStyle = colors.title;
+  ctx.globalAlpha = under;
   ctx.direction = 'rtl';
   ctx.font = `${z.name}px ${FONT_NAME}`;
   ctx.fillText(tl.surah.ar, W / 2, titleTop + z.name * 0.7);
   ctx.direction = 'ltr';
   ctx.font = `500 ${z.ref}px ${FONT_UI}`;
-  ctx.globalAlpha = 0.9;
+  ctx.globalAlpha = 0.9 * under;
   ctx.fillText(headerRef(tl, t), W / 2, titleTop + z.name * 1.4 + z.ref * 0.7);
 
   // Footer: optional reciter credit and watermark.
   if (lay.credit !== null) {
     ctx.font = `500 32px ${FONT_UI}`;
-    ctx.globalAlpha = 0.92;
+    ctx.globalAlpha = 0.92 * under;
     ctx.fillText(`Recited by ${reciterCredit(tl.reciter)}`, W / 2, lay.credit);
   }
   if (lay.watermark !== null) {
+    setTextShadow(ctx, '#ffffff');
+    ctx.fillStyle = '#ffffff';
     ctx.font = `500 26px ${FONT_UI}`;
     ctx.globalAlpha = 0.6;
     ctx.fillText('Ayah Studio', W / 2, lay.watermark);

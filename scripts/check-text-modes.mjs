@@ -9,6 +9,9 @@
 //   - no group is shorter than 0.6 s unless merging would not fit; everything fits its box, inside
 //     the title-safe area, without overlapping the surah name, credit or watermark
 //   - malformed segments are ignored and missing words interpolated (no word dropped)
+//   - text sizes (Small/Large) and the sans translation font lay out within the same rules
+//   - pacing (pause between ayat, intro/closing cards): cuts fall between words, every time moves
+//     with its ayah, the text still follows the recitation and stays clear of the cards
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 
@@ -66,7 +69,8 @@ const RECITERS = [7, 173, 3, 10, 6, 12, 2, 1, 9, 4, 5, 97, 161];
 const SELECTIONS = [[2, 255, 255], [2, 282, 282], [2, 1, 5], [2, 72, 72], [2, 181, 181], [1, 1, 7], [103, 1, 3], [112, 1, 4]];
 const MODES = [['ayah', 1], ['line', 1], ['half', 1], ['words', 1], ['words', 2], ['words', 3]];
 const STYLE = { titlePos: 'top', titleSize: 'm', credit: false, watermark: true };
-const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true }, { titlePos: 'bottom', titleSize: 's', credit: true, watermark: false }, { titlePos: 'bottom', titleSize: 'l', credit: false, watermark: true }];
+const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true }, { titlePos: 'bottom', titleSize: 's', credit: true, watermark: false }, { titlePos: 'bottom', titleSize: 'l', credit: false, watermark: true },
+  { ...STYLE, textSize: 'l', enFont: 'sans' }, { titlePos: 'below', titleSize: 'm', credit: false, watermark: true, textSize: 's' }];
 const surah = (n) => meta[n - 1];
 const reciter = { id: 0, name: 'Test', short: 'Test', everyayah: '' };
 const norm = (x) => x.split(/\s+/).filter(Boolean).join(' ');
@@ -121,7 +125,7 @@ function checkTimeline(tl, label, texts, plan, meanings, synced) {
         const joinable = [a.events[k - 1], a.events[k + 1]].some((nb) => {
           if (!nb || !(nb.first <= e.last + 1 && e.first <= nb.last + 1)) return false;
           const f = Math.min(nb.first, e.first), l = Math.max(nb.last, e.last);
-          return layout.fitArabic(ctx, dw.slice(f, l + 1), layout.AR_SIZES[mode], lay.ar) && (!synced || layout.fitEnglish(ctx, meanings[i].slice(f, l + 1).join(' '), lay.en));
+          return layout.fitArabic(ctx, dw.slice(f, l + 1), lay.arSizes[mode], lay.ar) && (!synced || layout.fitEnglish(ctx, meanings[i].slice(f, l + 1).join(' '), lay.en, lay.enSizes, lay.enFont));
         });
         assert(!joinable, `${label} ${a.ayah}: short group ${(e.end - e.start).toFixed(2)} s could have merged`);
         stats.unmergedShort++;
@@ -143,6 +147,39 @@ function checkTimeline(tl, label, texts, plan, meanings, synced) {
     for (const e of a.events) { const key = `${e.first}-${e.last}`; if (firsts.has(key)) stats.shownAgain++; firsts.add(key); }
     if (i > 0) assert(a.start >= tl.ayat[i - 1].end, `${label}: ayat do not overlap`);
   });
+}
+
+const PACINGS = [{ pause: 1, hold: true, intro: 3, outro: 3 }, { pause: 0.5, hold: false, intro: 0, outro: 3 }, { pause: 0, hold: true, intro: 3, outro: 0 }];
+
+function checkPacing(base, pc, label, s, from, texts, meanings) {
+  const plan = rec.arrangeReel(base, pc);
+  const n = base.ayat.length;
+  assert(Math.abs(plan.duration - (base.duration + pc.intro + pc.outro + (n - 1) * pc.pause)) < 1e-9, `${label}: length`);
+  const P = plan.pieces;
+  assert(P.length === n && P[0].from === 0 && P[n - 1].to === base.duration, `${label}: audio pieces cover the whole recitation`);
+  P.forEach((x, i) => {
+    assert(Math.abs(x.at - (x.from + pc.intro + i * pc.pause)) < 1e-9 && x.to >= x.from, `${label}: piece ${i} placed after its pause`);
+    if (i + 1 < n) {
+      assert(x.to === P[i + 1].from, `${label}: pieces are contiguous`);
+      // The cut falls in the reciter's own pause: after this ayah's last word, before the next ayah.
+      const a = base.ayat[i], b = base.ayat[i + 1];
+      assert(x.to <= b.start + 1e-9 && (x.to >= a.last - 1e-9 || x.to === b.start), `${label}: cut ${i} between words`);
+      if (a.seq) assert(a.seq.every(([, , e]) => e <= x.to + 1e-9 || x.to === b.start), `${label}: no word of ayah ${a.ayah} cut`);
+    }
+  });
+  plan.ayat.forEach((a, i) => {
+    const d = pc.intro + i * pc.pause, b = base.ayat[i];
+    assert(Math.abs(a.start - b.start - d) < 1e-9 && Math.abs(a.last - b.last - d) < 1e-9, `${label}: ayah ${a.ayah} moved with its audio`);
+    if (b.seq) assert(a.seq.every(([w, st, e], k) => w === b.seq[k][0] && Math.abs(st - b.seq[k][1] - d) < 1e-9 && Math.abs(e - b.seq[k][2] - d) < 1e-9), `${label}: words of ${a.ayah} moved with their audio`);
+    if (pc.hold && i + 1 < n) assert(a.end >= plan.ayat[i + 1].start - 0.15 - 1e-9, `${label}: ayah ${a.ayah} held until the next`);
+    assert(a.start >= pc.intro && a.end <= plan.duration - pc.outro - 0.2 + 1e-9, `${label}: ayah ${a.ayah} clear of the cards`);
+  });
+  for (const [mode, k] of [['line', 1], ['words', 2], ['ayah', 1]]) {
+    const tl = build(s, from, texts, plan, mode, k, 'words', STYLE);
+    assert(tl.intro === pc.intro && tl.outro === pc.outro, `${label}: cards on the timeline`);
+    checkTimeline(tl, `${label} ${mode}`, texts, plan, meanings, true);
+    for (const a of tl.ayat) for (const e of a.events) if (e.start < a.end) assert(e.start >= pc.intro && e.end <= plan.duration - pc.outro, `${label} ${mode}: text clear of the cards`);
+  }
 }
 
 const chapters = [...new Set(SELECTIONS.map(([s]) => s))];
@@ -171,7 +208,7 @@ for (const r of RECITERS) {
     for (const style of r === 7 ? STYLES : [STYLE]) {
       for (const [mode, n] of MODES) {
         for (const tr of ['words', 'ayah', 'off']) {
-          const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''} en:${tr} title:${style.titlePos}/${style.titleSize}${style.credit ? '+credit' : ''}`;
+          const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''} en:${tr} title:${style.titlePos}/${style.titleSize}${style.credit ? '+credit' : ''}${style.textSize ? ` size:${style.textSize}` : ''}`;
           try {
             const tl = build(s, from, texts, plan, mode, n, tr, style);
             stats.timelines++;
@@ -183,6 +220,7 @@ for (const r of RECITERS) {
         }
       }
     }
+    for (const pc of PACINGS) checkPacing(plan, pc, `reciter ${r} ${s}:${from}-${to} pause:${pc.pause}${pc.hold ? ' hold' : ''}${pc.intro ? ' cards' : ''}`, s, from, texts, meanings);
   }
 }
 
@@ -246,6 +284,8 @@ const sudais = new Map([...await qdc(3, 103)]);
     assert(tl.ayat[0].events.length > 1 && tl.ayat[0].events.every((e) => e.en), `fallback (${tr}): Ayah mode, 2:282 paginated with its translation`);
     checkTimeline(tl, `fallback 2:282 en:${tr}`, texts, plan, meaningsOf(2, 282, texts), tr === 'words');
   }
+  const multi = rec.planClipReel(1, [4, 3.5, 5]);
+  for (const pc of PACINGS) checkPacing(multi, pc, `fallback 1:1-3 pause:${pc.pause}`, 1, 1, quran.surahs[0].slice(0, 3), meaningsOf(1, 1, quran.surahs[0].slice(0, 3)));
 }
 {
   // Word meanings: 2:181 Quran.com word 3 ("after what") sits on our word 3; every meaning used once.

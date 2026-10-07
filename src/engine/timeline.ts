@@ -5,7 +5,7 @@ import type { SurahMeta } from '../data/quran';
 import { reference } from '../data/quran';
 import type { Reciter } from '../data/reciters';
 import {
-  AR_SIZES, ayahPages, fitArabic, fitEnglish, frameLayout, halfUnits, lineUnits, translationPages, wordUnits,
+  ayahPages, fitArabic, fitEnglish, frameLayout, halfUnits, lineUnits, translationPages, wordUnits,
   type Fit, type FrameLayout, type FrameStyle, type Range, type TextCtx,
 } from './layout';
 import type { TextMode, TranslationMode } from './project';
@@ -44,6 +44,9 @@ export interface Timeline {
   mode: TextMode;
   layout: FrameLayout;
   ayat: TimedAyah[];
+  /** Seconds of intro title card at the start / closing reference card at the end (0 = none). */
+  intro: number;
+  outro: number;
 }
 
 export interface TimelineInput {
@@ -86,10 +89,11 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
         return { ...e, ar: pages.ar[k], en: pages.en ? pages.en[k] : null };
       });
     } else {
-      const sizes = AR_SIZES[mode];
-      const units = mode === 'line' ? lineUnits(ctx, words) : mode === 'half' ? halfUnits(ctx, words) : wordUnits(words.length, o.wordsPerStep);
+      const sizes = lay.arSizes[mode];
+      const lineSize = lay.arSizes.line[0];
+      const units = mode === 'line' ? lineUnits(ctx, words, lineSize) : mode === 'half' ? halfUnits(ctx, words, lineSize) : wordUnits(words.length, o.wordsPerStep);
       const arFit = (f: number, l: number) => fitArabic(ctx, words.slice(f, l + 1), sizes, lay.ar);
-      const enFit = (f: number, l: number) => (meanings ? fitEnglish(ctx, enText(f, l), lay.en) : null);
+      const enFit = (f: number, l: number) => (meanings ? fitEnglish(ctx, enText(f, l), lay.en, lay.enSizes, lay.enFont) : null);
       const fits = (f: number, l: number) => arFit(f, l) !== null && (!meanings || enFit(f, l) !== null);
       events = timeEvents(units, p.seq!, p.end, fits).map((e) => {
         const ar = arFit(e.first, e.last);
@@ -99,7 +103,7 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
       });
       if (english) {
         // Whole-ayah translation, calm; a long one turns pages as the recitation progresses.
-        const pages = translationPages(ctx, english, lay.en);
+        const pages = translationPages(ctx, english, lay.en, lay.enSizes, lay.enFont);
         const starts = pages.map((_, k) => (k === 0 ? p.start : p.wordStart![Math.floor((k * words.length) / pages.length)]));
         enPages = pages.map((f, k) => ({ ...f, start: starts[k], end: k + 1 < pages.length ? starts[k + 1] : p.end }));
       }
@@ -110,5 +114,8 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
     }
     return { ayah: p.ayah, ref: reference(o.surah, p.ayah), start: p.start, end: p.end, events, enPages };
   });
-  return { duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat };
+  return {
+    duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,
+    intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0,
+  };
 }
