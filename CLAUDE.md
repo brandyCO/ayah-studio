@@ -40,16 +40,19 @@ pause mid-phrase — the display follows the actual words either way.
 
 Engine edge cases:
 - **Repetitions**: some reciters repeat words/phrases. Segments may revisit earlier word
-  indices. Text never jumps backwards (owner decision, Phase 1a): each word is timed by its first
-  recitation in reading order, so the current group stays on screen while earlier words are
-  re-recited and the display moves on when new words start.
+  indices — show the matching group again when its words are re-recited (owner decision after the
+  Phase 1a test; the display always contains the word being recited).
+- **Mislabelled indices** (common in the data): 1–3 segments that jump ahead over unrecited words and
+  straight back (`34, 118, 36`), or 1–2 that jump back and are not continued from (`44, 45, 22, 23,
+  48`), are dropped like malformed ones. A real repetition goes back and carries on in order.
 - **Malformed segments**: some entries lack timings (e.g. `[1]` instead of `[1, start, end]`).
   Ignore them; interpolate between valid neighbours if a word has no valid segment.
 - **Too-short groups** (< ~0.6 s): merge with the next group so text never flashes.
 - **Too-long groups**: wrap onto more lines; never shrink text below a legible minimum.
 - **Gaps between ayat**: hold the previous text with a gentle fade, or clear — per mood.
-- **Translation** (English word order differs): shown per ayah, calm, below the Arabic, in every
-  mode.
+- **Translation**: user choice. *Synced to the words* (default): Quran.com's English word-by-word
+  meanings of exactly the Arabic words on screen, moving with them. *Whole ayah*: Sahih
+  International per ayah, calm, turning pages for long ayat.
 
 ### Scenes (backgrounds) fill the recitation exactly
 | Mode | Behaviour |
@@ -84,7 +87,8 @@ Engine edge cases:
 1. **Never alter Quran text.** Text comes only from verified data. No truncation, no ellipsis,
    no re-typing, no "cleaning" of diacritics. Splitting into lines/half lines/words happens only
    at word boundaries and never drops a word.
-2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`) and **credit the reciter**.
+2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`). The reciter credit line is
+   optional and off by default (owner decision).
 3. **No music and no sound effects** anywhere in exported videos. Recitation audio only.
 4. Default background library: calm nature/abstract media only, no people or faces.
 5. Arabic text is drawn by the browser (canvas / DOM) with a proper Quran font — never by
@@ -143,7 +147,8 @@ The owner's PC and Android phone both report hardware H.264 + AAC support (verif
   api.qurancdn.com and is tried second. everyayah.com is the fallback (Ayah mode only).
 - (Phase 1a) `public/data/word-map.json` (by `scripts/fetch-word-map.mjs`) maps Quran.com word
   positions (QDC `wordIndex`) to our words, aligned letter-for-letter; only 7 ayat differ (2:181,
-  8:6, 13:37, 15:7, 27:20, 36:22, 37:130). `npm run check` (`scripts/check-text-modes.mjs`) checks the
+  8:6, 13:37, 15:7, 27:20, 36:22, 37:130). The same script writes `en-wbw.json`, Quran.com's English
+  word-by-word meanings (one per word position) for the synced translation. `npm run check` (`scripts/check-text-modes.mjs`) checks the
   text modes against live QDC data for all 13 reciters. Known data gap: reciter 173 has no timing for
   1:1 (→ everyayah).
 - AAC fallback is `@mediabunny/aac-encoder` (WASM, lazy-loaded) instead of ffmpeg.wasm.
@@ -166,8 +171,9 @@ The owner's PC and Android phone both report hardware H.264 + AAC support (verif
 - **Save/share**: web → download; Android → Capacitor Filesystem + Share; Tauri → save dialog.
 
 ### Default layout (9:16)
-Top: surah name + reference · Center: Arabic (RTL, large) · Below: translation (optional) ·
-Bottom: reciter credit + small toggleable watermark. All inside the 5% title-safe area.
+Surah name + reference: Top (default), Below the ayah, or Bottom; size Small / Medium / Large ·
+Center: Arabic (RTL, large) · Below: translation (optional) · Bottom: optional reciter credit and
+optional watermark. `frameLayout()` places everything inside the 5% title-safe area without overlaps.
 
 ---
 
@@ -205,6 +211,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Text modes **Ayah, Line, Half line, Words (1/2/3)**, all timed from word timings, with the
       edge cases above (repetitions, malformed segments, short-group merge, long-group wrap)
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
+- [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
+      position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
 - [ ] Recitation spine (waveform + ayah/word markers)
 - [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
