@@ -1,6 +1,7 @@
 // One-off: map Quran.com word positions (the `wordIndex` of QDC recitation segments) onto the words of
-// the bundled text. Run after fetch-data.mjs: `node scripts/fetch-word-map.mjs`, then commit
-// public/data/word-map.json.
+// the bundled text, and bundle Quran.com's English word-by-word meanings (used to show a translation
+// that follows the Arabic words on screen). Run after fetch-data.mjs: `node scripts/fetch-word-map.mjs`,
+// then commit public/data/word-map.json and public/data/en-wbw.json.
 //
 // The API's word split is for word-by-word study and differs from the text's spaces in places (it
 // groups "بَعۡدَ مَا", splits "لَّوۡمَا", and joins ۞ with a regular space). Like fetch-mushaf.mjs we
@@ -10,6 +11,7 @@
 // Output: { map: { "s:a": "0 1 2-3 4 4 …" } } listing, for each API word position (1-based, in order),
 // the index of the space-separated token of our ayah text holding its first letter, and "-last" when it
 // runs into a later token. Ayat where API word p is exactly our token p-1 are left out (identity).
+// en-wbw.json: { surahs: [[ "meaning|meaning|…" per ayah ]] }, one meaning per API word position.
 import { readFile, writeFile } from 'node:fs/promises';
 
 const DATA = new URL('../public/data/', import.meta.url);
@@ -35,7 +37,7 @@ async function json(url) {
 async function chapter(s) {
   const out = [];
   for (let pg = 1; ; pg++) {
-    const d = await json(`https://api.quran.com/api/v4/verses/by_chapter/${s}?words=true&per_page=50&page=${pg}&word_fields=text_qpc_hafs`);
+    const d = await json(`https://api.quran.com/api/v4/verses/by_chapter/${s}?words=true&per_page=50&page=${pg}&word_fields=text_qpc_hafs&word_translation_language=en`);
     out.push(...d.verses);
     if (!d.pagination.next_page) break;
   }
@@ -57,6 +59,7 @@ const bare = (x) => x.replace(/\s+/g, '');
 const stripNumber = (t) => t.replace(/[\s ]*[٠-٩]+$/, '');
 
 const map = {};
+const wbw = text.map((ayat) => ayat.map(() => ''));
 let mapped = 0, apiWords = 0;
 for (const v of verses.flat()) {
   const [s, a] = v.verse_key.split(':').map(Number);
@@ -79,6 +82,9 @@ for (const v of verses.flat()) {
   });
   assert(pos === ours.length, `${v.verse_key} every letter covered`);
   words.forEach((w, i) => assert(w.position === i + 1, `${v.verse_key} positions are 1..n`));
+  const meanings = words.map((w) => (w.translation?.text ?? '').trim());
+  meanings.forEach((m, i) => assert(m && !m.includes('|'), `${v.verse_key} word ${i + 1} has an English meaning`));
+  wbw[s - 1][a - 1] = meanings.join('|');
   const identity = spans.length === tokens.length && spans.every((x, i) => x === `${i}`);
   if (!identity) {
     map[v.verse_key] = spans.join(' ');
@@ -90,4 +96,8 @@ await writeFile(new URL('word-map.json', DATA), JSON.stringify({
   source: 'Quran.com API v4 (verses/by_chapter words, text_qpc_hafs): word positions used by QDC recitation segments, aligned letter-for-letter to quran-uthmani.json tokens. Ayat not listed map 1:1.',
   map,
 }) + '\n');
-console.log(`OK: 6236 ayat, ${apiWords} API words aligned letter-for-letter; ${mapped} ayat differ from our spacing; wrote word-map.json`);
+await writeFile(new URL('en-wbw.json', DATA), JSON.stringify({
+  source: 'Quran.com API v4 word-by-word English (word translation, en), one meaning per Quran.com word position; positions map to quran-uthmani.json words via word-map.json.',
+  surahs: wbw,
+}) + '\n');
+console.log(`OK: 6236 ayat, ${apiWords} API words aligned letter-for-letter; ${mapped} ayat differ from our spacing; wrote word-map.json and en-wbw.json`);
