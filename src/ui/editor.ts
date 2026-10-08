@@ -570,7 +570,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     panel.hidden = !content;
     studio.classList.toggle('panel-open', !!content);
     panelTitle.textContent = option ? (option.id.startsWith('c-') ? `Colour · ${option.label}` : option.label) : '';
-    panelBody.replaceChildren(...(content ?? []));
+    // Keep the same nodes in place (a focused search box would lose the phone keyboard).
+    const next = content ?? [];
+    if (next.length !== panelBody.childNodes.length || next.some((x, i) => panelBody.childNodes[i] !== x)) panelBody.replaceChildren(...next);
     canvas.classList.toggle('picking', !!picking);
     spine.invalidate();
   }
