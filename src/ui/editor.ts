@@ -790,9 +790,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   });
 
   // --- preview sizing ---
+  // One canvas pixel per screen pixel (phones are often 2.6–3.5×), so the text is as sharp as the
+  // screen allows; never more than the 1080 px of the export.
   const resize = () => {
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    const w = Math.min(1080, Math.round(canvas.clientWidth * dpr)) || 540;
+    const w = Math.min(1080, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1))) || 540;
     canvas.width = w;
     canvas.height = Math.round((w * H) / W);
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
