@@ -924,7 +924,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('b', {}, l), h('span', { class: 'muted small' }, d))),
     h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, 'Device check'), h('span', { class: 'muted small' }, 'What this device can export')));
   const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
-  const exportBtn = h('button', { class: 'primary export-open', onclick: () => void doExport() }, 'Export');
+  const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => void doExport() }, 'Export');
   const exportPathLabel = h('p', { class: 'muted small' });
   const progressBar = h('div', { class: 'export-bar' }, h('div', {}));
   const progressText = h('div', { class: 'export-pct' }, '0%');
