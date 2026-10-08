@@ -269,6 +269,8 @@ flashcard sessions. Brightness = f(days since revision / interval of the page's 
 drawn on one canvas (604 cells) for smooth zoom. Local reminder (local notification) for due
 pages at the user's chosen time.
 
+**As built (T5a, 2026-10-08):** see CLAUDE.md → Phase 4 → T5a.
+
 **Done when:** the grid renders in < 16 ms per frame on the owner's phone, brightness matches the
 Leitner schedule, and the lamps sync across devices.
 
