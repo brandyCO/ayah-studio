@@ -7,6 +7,8 @@ const config: CapacitorConfig = {
   appName: 'Ayah Studio',
   webDir: 'dist',
   server: { androidScheme: 'https' },
+  // Ramadan reminders (T7): local notifications with a crescent as the small icon.
+  plugins: { LocalNotifications: { smallIcon: 'ic_stat_crescent', iconColor: '#0a6e55' } },
 };
 
 export default config;

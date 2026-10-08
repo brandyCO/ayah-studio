@@ -483,7 +483,22 @@ cloud. Build in this order:
       local-notifications plugin in T7/T5b)
 - [ ] T5b Lamps + Phase 2 flashcards (a dim lamp opens a revision session)
 - [ ] T6 Memorise with a partner (shared plan lamps, gentle nudges)
-- [ ] T7 Ramadan mode (daily portion, Maghrib reminder, nightly template, Eid recap)
+- [x] T7 Ramadan mode (2026-10-08): `src/data/ramadan.ts` (this device only: plan one/two Khatms or
+      "just keep me company", pages read this Ramadan (a page open ≥ 20 s), today's portion = the pages
+      left over the days left, fixed at the day's first look — a missed day just spreads out; days with
+      reading; ayat returned to (listen/bookmark/reflect) for the recap; Umm al-Qura via `Intl` with a
+      ±1 day moon-sighting shift; **preview** setting (night 1 / day 10 / night 27 / Eid) to try it out of
+      season) + `src/ui/ramadan.ts`: first-night full-screen moment (crescent, Ramadan Mubarak, plan,
+      or a Khatm circle; "Not now"); ☰ → **Ramadan** sheet (plan, today's portion + Open, pages read,
+      circle, reminder, dates, preview); Today card: today's portion (opens the page), "Tonight's ayah"
+      after 16:00 (an ayah from today's portion → reel draft in the Night mood), Eid → **Your Ramadan**
+      (days, Khatms, the ayah returned to most in the Quran font + ▶ Listen (everyayah), "Make my Ramadan
+      reel": that ayah, Gold mood, closing card "My Ramadan 1448 AH" + lines via `project.closing`;
+      shown once by itself). Last ten nights: deeper night tint (`timeTint`, ≤ 6 %) + Today line.
+      Android: `@capacitor/local-notifications` reminders before Maghrib for the rest of Ramadan
+      (`adhan`, Umm al-Qura method, from the rounded location or the user's own time; 10–60 min before;
+      rescheduled whenever the mushaf opens; small icon `ic_stat_crescent`; tap → `#/ramadan` → the next
+      page of today's portion); web: Today card only
 - [ ] T8 Multi-segment reels + Dua & ayah wall (QR join, live host screen, keepsake reel)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in

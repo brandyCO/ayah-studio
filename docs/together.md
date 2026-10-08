@@ -313,6 +313,9 @@ the reminder) or a picked city / manual time. Local notifications are reschedule
 Ramadan dates from `config/public` with the Umm al-Qura fallback; the user can shift by ±1 day for
 local moon sighting.
 
+**As built (2026-10-08):** see CLAUDE.md → Phase 4 → T7. Ramadan dates come from `Intl` (Umm al-Qura)
+with the ±1 day shift; `config/public` dates can be added with T2b/app_config later.
+
 **Done when:** the plan rebalances correctly after missed days, the reminder fires at the right
 local time on Android, and the Eid recap exports.
 
