@@ -305,6 +305,11 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mp-num { flex: none; font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
  /* While a page moves, the sheets cast a soft edge shadow (a page-like feel). */
 .mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.16); }
+/* a page whose font is still downloading */
+.mushaf-page.loading { align-items: center; gap: 12px; }
+.mushaf-page.loading .spinner, .player .spinner { border-color: color-mix(in srgb, var(--ink, #888) 18%, transparent); border-top-color: var(--accent); }
+.mp-loading { font-size: 13px; color: var(--muted); }
+.player .pl-play .spinner { width: 20px; height: 20px; border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 @media (prefers-color-scheme: dark) { .mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.6); } }
 /* listening: the ayah being recited is tinted, its word being recited coloured */
 .mp-line .w.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); border-radius: 0; }
