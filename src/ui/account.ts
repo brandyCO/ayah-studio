@@ -5,6 +5,7 @@ import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/syn
 import { supabase } from '../cloud/supabase';
 import { bookmarkRecords } from '../data/bookmarks';
 import { listDrafts } from '../data/drafts';
+import { loadReflections, reflections } from '../data/reflections';
 import { isNative, shareTextFile } from '../native';
 import { h, toast } from './dom';
 import { prefRecords } from './prefs';
@@ -43,7 +44,7 @@ export function openAccount() {
     if (!a) {
       statusLine = null;
       body.replaceChildren(
-        h('p', {}, 'Sign in to keep your bookmarks, settings and reel drafts the same on your phone, computer and the web.'),
+        h('p', {}, 'Sign in to keep your bookmarks, reflections, settings and reel drafts the same on your phone, computer and the web.'),
         h('p', { class: 'muted small' }, 'Everything keeps working without an account. Your own photos and videos stay on this device.'),
         signInAvailable()
           ? h('button', { class: 'primary google-btn', onclick: async (e: Event) => {
@@ -79,7 +80,7 @@ export function openAccount() {
 
   function confirmDelete() {
     body.replaceChildren(
-      h('p', {}, 'Delete your account and everything synced to it? Bookmarks, settings and drafts on this device stay here.'),
+      h('p', {}, 'Delete your account and everything synced to it? Bookmarks, reflections, settings and drafts on this device stay here.'),
       h('div', { class: 'row' },
         h('button', { class: 'chip', onclick: () => draw() }, 'Cancel'),
         h('button', { class: 'primary danger', onclick: async () => {
@@ -109,11 +110,17 @@ async function exportData() {
   const { data: docs, error } = await sb.from('user_docs').select('kind,id,data,deleted,updated_at');
   if (error) throw error;
   const { data: profile } = await sb.from('profiles').select('name,created_at').maybeSingle();
+  await loadReflections();
   const file = {
     exported: new Date().toISOString(),
     account: { name: a.name, email: a.email, created: profile?.created_at ?? null },
     synced: docs,
-    thisDevice: { bookmarks: bookmarkRecords(), settings: prefRecords(), drafts: (await listDrafts()).map((x) => ({ id: x.id, project: x.project, updated: x.updated })) },
+    thisDevice: {
+      bookmarks: bookmarkRecords(),
+      reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),
+      settings: prefRecords(),
+      drafts: (await listDrafts()).map((x) => ({ id: x.id, project: x.project, updated: x.updated })),
+    },
   };
   const text = JSON.stringify(file, null, 2);
   const name = `ayah-studio-data-${new Date().toISOString().slice(0, 10)}.json`;

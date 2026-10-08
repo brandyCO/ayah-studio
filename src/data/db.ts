@@ -1,9 +1,9 @@
 // The app's local database (IndexedDB, this device only): the media library, reel drafts and the
-// recitation audio and timings kept for offline use.
+// recitation audio and timings kept for offline use, and the reflections journal.
 const NAME = 'ayah-studio';
-const VERSION = 3;
+const VERSION = 4;
 
-export type StoreName = 'media' | 'drafts' | 'audio' | 'timings';
+export type StoreName = 'media' | 'drafts' | 'audio' | 'timings' | 'reflections';
 
 let dbp: Promise<IDBDatabase> | null = null;
 
@@ -17,6 +17,7 @@ function open(): Promise<IDBDatabase> {
         if (!d.objectStoreNames.contains('drafts')) d.createObjectStore('drafts', { keyPath: 'id' });
         if (!d.objectStoreNames.contains('audio')) d.createObjectStore('audio', { keyPath: 'key' }).createIndex('used', 'used');
         if (!d.objectStoreNames.contains('timings')) d.createObjectStore('timings', { keyPath: 'key' }).createIndex('used', 'used');
+        if (!d.objectStoreNames.contains('reflections')) d.createObjectStore('reflections', { keyPath: 'id' });
       };
       req.onsuccess = () => {
         // Another tab with a newer version wants to upgrade: let it.

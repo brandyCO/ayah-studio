@@ -5,12 +5,14 @@ import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
+import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
+import { openReflection, openReflections, writtenOn } from './reflections';
 import { selectionController, type Sel } from './selection';
 
 type Seg = [number, number, string];
@@ -22,6 +24,9 @@ const bismillah = () =>
 // The living mushaf's first sources: bookmarks in the margin, and Today lines for a recent bookmark
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: `Bookmark ${b.s}:${b.a}` })));
+registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: `You wrote here ${writtenOn(lastWritten(r))}` })));
+// A note's mark pulses once per app session when its page is visited again (not for today's notes).
+const pulsed = new Set<string>();
 const DAY = 86_400_000;
 registerToday(async () => {
   const meta = await loadMeta();
@@ -49,7 +54,7 @@ function firstVisitHint() {
 }
 
 export async function showMushaf(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
-  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah()]);
+  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah(), loadReflections()]);
   let page = focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n);
   root.classList.add('screen-mushaf');
   document.body.classList.add('mushaf-mode');
@@ -124,6 +129,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       const on = toggleBookmark(s.surah, s.lo);
       toast(on ? `Bookmarked ${reference(meta[s.surah - 1], s.lo, s.lo)}` : 'Bookmark removed');
     },
+    onReflect: (s) => { sel.clear(); void openReflection(meta, s.surah, s.lo); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
@@ -135,9 +141,46 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   area.addEventListener('click', (e) => {
     const mark = (e.target as Element).closest<HTMLElement>('.mp-mark');
     if (mark?.dataset.kind === 'bookmark') openBookmark(Number(mark.dataset.s), Number(mark.dataset.a));
+    if (mark?.dataset.kind === 'reflection') void openReflection(meta, Number(mark.dataset.s), Number(mark.dataset.a));
   });
   const repaintMarks = () => { for (const el of built.values()) if (el.dataset.fit) paintMarks(el); };
   window.addEventListener('bookmarks-changed', repaintMarks);
+  window.addEventListener('reflections-changed', repaintMarks);
+
+  // Coming back to a page with an older note: its mark pulses once, with "You wrote here on …".
+  const hint = h('button', { class: 'rf-hint', hidden: true });
+  root.append(hint);
+  let hintTimer = 0;
+  function pulseNotes(force?: { s: number; a: number }) {
+    const el = built.get(page);
+    if (!el?.dataset.fit || panning || animating) return;
+    let first: { s: number; a: number; at: number } | null = null;
+    for (const mark of el.querySelectorAll<HTMLElement>('.mp-mark.reflection')) {
+      const s = Number(mark.dataset.s);
+      const a = Number(mark.dataset.a);
+      const key = `${s}:${a}`;
+      const r = reflectionAt(s, a);
+      const forced = force?.s === s && force.a === a;
+      if (!r || (!forced && (pulsed.has(key) || new Date(lastWritten(r)).toDateString() === new Date().toDateString()))) continue;
+      pulsed.add(key);
+      mark.classList.remove('pulse');
+      void mark.offsetWidth; // restart the animation
+      mark.classList.add('pulse');
+      if (!first && !forced) first = { s, a, at: lastWritten(r) };
+    }
+    if (!first) return;
+    const { s, a, at } = first;
+    hint.textContent = `✎ You wrote here ${writtenOn(at)}`;
+    hint.onclick = () => { hint.hidden = true; void openReflection(meta, s, a); };
+    hint.hidden = false;
+    hint.classList.remove('show');
+    requestAnimationFrame(() => hint.classList.add('show'));
+    clearTimeout(hintTimer);
+    hintTimer = window.setTimeout(() => {
+      hint.classList.remove('show');
+      hintTimer = window.setTimeout(() => { hint.hidden = true; }, 600);
+    }, 4200);
+  }
   window.addEventListener('prefs-synced', applyTimeTint); // settings arrived from another device
   applyTimeTint();
   const tintTimer = window.setInterval(applyTimeTint, 10 * 60_000);
@@ -242,6 +285,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       place();
       sel.repaint();
       paintPlaying();
+      pulseNotes();
     };
     attach();
     header();
@@ -353,6 +397,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
         h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, '🔖  Bookmarks'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
+          toggleBar(false);
+          go(mushaf.pageOf(s, a));
+          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
+        }); } }, '✎  Reflections'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
@@ -412,7 +461,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     renderId++;
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
+    window.removeEventListener('reflections-changed', repaintMarks);
     window.removeEventListener('prefs-synced', applyTimeTint);
+    clearTimeout(hintTimer);
     clearTimeout(resizeTimer);
     sel.destroy();
     player.destroy();

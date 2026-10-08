@@ -1,0 +1,32 @@
+name: Database rules
+
+# Row-level security tests (pgTAP) for supabase/migrations, run against a local Supabase database
+# started by the Supabase CLI in the runner — no access token, the live project is never touched.
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**', '.github/workflows/supabase.yml']
+  pull_request:
+    paths: ['supabase/**', '.github/workflows/supabase.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      # Postgres only (applies supabase/migrations), then supabase/tests/*.sql with pg_prove.
+      - run: supabase db start
+      - run: supabase test db
+      - if: always()
+        run: supabase stop --no-backup

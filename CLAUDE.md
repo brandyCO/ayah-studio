@@ -350,7 +350,7 @@ save to gallery / share sheet; offline audio cache; settings.
       After the worker takes control, the data, fonts, editor and default backgrounds are loaded once
       in the background. Recitation audio: `src/data/audioCache.ts` keeps the exact MP3 byte ranges
       (and whole everyayah/VBR files) each reel downloaded in IndexedDB `audio` (newest 150), so reels
-      opened before work offline. Shared DB module `src/data/db.ts` (version 3: media, drafts, audio,
+      opened before work offline. Shared DB module `src/data/db.ts` (version 4: media, drafts, audio, reflections,
       timings)
 - [x] Android app (Capacitor 8): `capacitor.config.ts` (`com.brandyco.ayahstudio`, webDir `dist`,
       origin https://localhost), `android/` committed (copied web assets are git-ignored; `npx cap sync
@@ -400,13 +400,12 @@ Functions; project `jposubjybzstfmnngews`, migrations in `supabase/migrations/`)
 push (FCM, from T2). Everything personal works signed out and syncs when signed in; the mushaf is the
 home (margin marks, Today card, calm moments), no scores/badges; Quran text never comes from the
 cloud. Build in this order:
-- [ ] P1 Prerequisites: fixed signing key (GitHub secret); Supabase project; Google sign-in client (§7)
-      (done in code: `android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
-      `ANDROID_KEYSTORE_PASSWORD` when set, else the debug key; versionCode = CI run number. Key
-      generated 2026-10-08 and handed to the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed.
-      Supabase project created by the owner (Tokyo); waiting on the owner: the two secrets, the
-      Google OAuth web + Android clients (§7))
-- [ ] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
+- [x] P1 Prerequisites: fixed signing key (GitHub secret); Supabase project; Google sign-in client (§7)
+      (`android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
+      `ANDROID_KEYSTORE_PASSWORD`; versionCode = CI run number. Key generated 2026-10-08 and handed to
+      the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed. Owner, 2026-10-08: both secrets set,
+      Supabase project (Tokyo), Google OAuth web + Android clients created)
+- [x] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
       last read, bookmarks, settings; day summaries; rules + emulator tests in CI; privacy page
       (built 2026-10-08: migration `20261008180000_t0_user_docs.sql` applied — `profiles`, `user_docs`,
       RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
@@ -414,8 +413,9 @@ cloud. Build in this order:
       `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
       Google provider on (owner's OAuth web client `178803855692-hqbv…` in Google Cloud project
       "Ayah Studio"; secret only in Supabase; web sign-in checked to reach Google's page).
-      Still to do: the Android OAuth client (package + SHA-1, owner), end-to-end sync test on two
-      devices; day summaries move to T9; RLS tests into CI)
+      RLS tests: `supabase/tests/*.test.sql` (pgTAP), run by `.github/workflows/supabase.yml` with the
+      Supabase CLI against a local database (`supabase db start` + `supabase test db`, no token).
+      Day summaries move to T9; the two-device sync test is on the owner's checklist)
 - [x] T1 Living mushaf (`src/ui/living.ts`): 8 px page margins hold marks (`registerMarks()`, drawn
       by `paintMarks()` beside the line where an ayah starts, max 2 per line, tap → its sheet); first
       mark = **bookmarks** (`src/data/bookmarks.ts`, localStorage; 🔖 in the selection bar, ☰ →
@@ -423,7 +423,15 @@ cloud. Build in this order:
       `--tod`/`--tod-amt`, ☰ toggle `timeTint`); Ramadan (Umm al-Qura via `Intl`) → crescent by the
       page number + Today line; Today card in the drop-down bar (`registerToday()`: Ramadan day,
       recent bookmark < 7 days, reel draft edited < 3 days), hidden when empty
-- [ ] T4 Reflections journal
+- [x] T4 Reflections journal (`src/data/reflections.ts` + `src/ui/reflections.ts`): selection bar
+      **✎ Reflect** (mushaf and translation view) → paper-like sheet with the reference, the ayah's
+      translation and dated paragraphs (today's continues, earlier ones tap to edit; autosave; "Copy for
+      caption" — never onto the video; delete). IndexedDB store `reflections` (`db.ts` version 4), one
+      note per ayah; a soft dot in the margin (`registerMarks`); a page with an older note pulses its
+      dot once per app session with a "You wrote here on …" pill (tap → the note); ☰ → Reflections:
+      grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
+      kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
+      120 days), so nothing written on two devices is lost; in Export my data and the privacy page
 - [ ] T2 Khatm circles (30-juz ring, Khatm reel) + push foundation (evening digest)
 - [ ] T3 Gift an ayah (link opens a word-synced player, reply with an ayah)
 - [ ] T5 Revision lamps (604-page lamp grid; with Phase 2 flashcards)

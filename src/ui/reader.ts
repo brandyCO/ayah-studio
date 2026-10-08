@@ -3,6 +3,7 @@
 import { loadMeta, surahText, surahTranslation } from '../data/quran';
 import { h } from './dom';
 import { setReaderMode } from './prefs';
+import { openReflection } from './reflections';
 import { selectionController } from './selection';
 
 export async function showReader(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
@@ -25,6 +26,7 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
       c.classList.toggle('sel-first', on && k === sel!.lo);
       c.classList.toggle('sel-last', on && k === sel!.hi);
     }),
+    onReflect: (x) => { sel.clear(); void openReflection(meta, x.surah, x.lo); },
   });
 
   root.append(

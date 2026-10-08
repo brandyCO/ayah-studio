@@ -234,8 +234,14 @@ rules/validation and never renders.
 when signed in. Search is local (all notes are small). Private: never shared, not even with
 circles. Included in data export and account deletion.
 
-**Done when:** notes survive offline edits on two devices (LWW + "(copy)" on conflict), search
-finds words in notes, and the pulse appears once per visit.
+**As built (2026-10-08):** one note per ayah (`user_docs` kind `reflection`, id `s:a`) whose
+paragraphs merge one by one — the newest edit of each wins and removals travel as tombstones — so
+two devices writing offline never conflict and no "(copy)" is needed. The pulse shows once per note
+per app session (not for notes written today). "Reflect" is in the selection bar of both reading
+views.
+
+**Done when:** notes survive offline edits on two devices, search finds words in notes, and the
+pulse appears once per visit.
 
 ### T5 — Revision lamps (memorisation garden)
 **Experience**
@@ -369,8 +375,9 @@ are skipped, never "0").
 - **Moderation:** user text only appears to people the author invited (circle, partner, wall,
   gift link holders); hosts/owners can hide entries; "Report" sends an email to the owner's address
   stored in `config/public`. Length limits everywhere.
-- **Testing:** RLS policy tests (pgTAP, `supabase test db`) in CI
-  (`firebase emulators:exec "npm run test:rules"`); sync engine tests against the emulator; a
+- **Testing:** RLS policy tests (pgTAP, `supabase/tests/*.test.sql`) run in CI by
+  `.github/workflows/supabase.yml` (`supabase db start` + `supabase test db`, a local database, no
+  access token); each new migration adds its tests there; a
   Playwright smoke test for gift and wall pages on the web build; `npm run check` unchanged.
 - **Monitoring:** Crashlytics (opt-in), Functions logs with error alerts by email, the $5 budget
   alert, and a weekly glance at Supabase usage (Reports).

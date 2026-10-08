@@ -616,3 +616,55 @@ body[data-view="reel"] .chip.on, body[data-view="reel"] .tab.on { background: va
 .tune-value:focus-within { border-color: var(--accent); }
 .tune-value span { color: var(--muted); font-size: 13px; }
 .tune-hint { margin: 8px 0 0; }
+
+/* the reflections journal (src/ui/reflections.ts): a soft margin mark, a one-time pulse, a paper sheet */
+.mp-mark.reflection { width: 5px; height: 5px; right: 1.5px; border-radius: 50%; background: #b0823f; opacity: .7; }
+@media (prefers-color-scheme: dark) { .mp-mark.reflection { background: #d9b67c; } }
+.mp-mark.reflection.pulse { animation: rf-pulse 2.4s cubic-bezier(.25,.1,.25,1) 2; }
+@keyframes rf-pulse {
+  0%, 100% { opacity: .7; box-shadow: 0 0 0 0 rgba(200, 150, 70, 0); }
+  45% { opacity: 1; box-shadow: 0 0 0 5px rgba(200, 150, 70, .28), 0 0 12px 4px rgba(200, 150, 70, .25); }
+}
+.rf-hint {
+  position: fixed; left: 50%; bottom: calc(44px + env(safe-area-inset-bottom)); z-index: 7; transform: translate(-50%, 6px);
+  padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--text);
+  font-size: 14px; box-shadow: var(--shadow); opacity: 0; transition: opacity .6s ease, transform .6s ease; cursor: pointer;
+  white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis;
+}
+.rf-hint.show { opacity: 1; transform: translate(-50%, 0); }
+body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) {
+  .mp-mark.reflection.pulse { animation: rf-fade 2.4s ease 1; }
+  .rf-hint { transform: translate(-50%, 0); }
+}
+@keyframes rf-fade { 50% { opacity: 1; } }
+.reflect-sheet { background: var(--paper) var(--paper-grain); color: var(--ink); max-height: 88vh; overflow: auto; }
+.sheet.bottom[open] { animation: sheet-up .32s cubic-bezier(.25,.1,.25,1); }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet.bottom[open] { animation: none; } }
+.reflect-sheet .sheet-head h2 { font-size: 17px; }
+.reflect-sheet .icon-btn { color: var(--ink); }
+.rf-ayah { margin: 6px 0 2px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rf-body { max-height: 52vh; overflow: auto; overscroll-behavior: contain; }
+.rf-entry { margin: 14px 0 0; }
+.rf-date { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; opacity: .6; margin-bottom: 4px; }
+.rf-text { margin: 0; font-size: 16px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; border-radius: 8px; }
+.rf-text:hover, .rf-text:focus-visible { background: color-mix(in srgb, var(--ink) 5%, transparent); outline: none; }
+.rf-input {
+  display: block; box-sizing: border-box; width: 100%; min-height: 84px; padding: 10px 12px; resize: none;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); border-radius: 10px;
+  background: color-mix(in srgb, var(--paper) 70%, #fff 30%); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.6;
+}
+@media (prefers-color-scheme: dark) { .rf-input { background: color-mix(in srgb, var(--paper) 85%, #fff 15%); } }
+.rf-input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 1px; }
+.rf-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.rf-status { flex: 1 1 100%; margin: 0; }
+.chip.danger { color: #c62828; }
+@media (prefers-color-scheme: dark) { .chip.danger { color: #ff7b7b; } }
+.reflections-sheet .search { width: 100%; box-sizing: border-box; margin: 10px 0 4px; }
+.rf-list { max-height: 60vh; }
+.rf-group { margin: 14px 0 2px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.rf-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+.rf-row-head { display: flex; gap: 8px; align-items: baseline; }
+.rf-snip { font-size: 14px; line-height: 1.45; opacity: .85; overflow-wrap: anywhere; }
+.rf-snip mark { background: color-mix(in srgb, var(--accent) 24%, transparent); color: inherit; border-radius: 3px; }
