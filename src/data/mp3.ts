@@ -7,6 +7,7 @@
 // of a chunk whose bit reservoir points into bytes we did not fetch. Verified in Chromium against a
 // whole-file decode (within one sample at 48 kHz). Variable-bitrate files can only be positioned
 // approximately, so they are refused (`VbrError`) and the caller decodes the whole file or falls back.
+import { cachedBytes } from './audioCache';
 
 interface Frame {
   len: number;
@@ -67,8 +68,11 @@ export interface Mp3Info {
   skip: number;
 }
 
+/** Bytes a..b (inclusive): kept on the device after the first download (offline use). */
+const range = (url: string, a: number, b: number, signal?: AbortSignal) => cachedBytes(`${url}|${a}-${b}`, () => fetchRange(url, a, b, signal));
+
 /** Fetch bytes a..b (inclusive). Reads only what is needed if the server ignores Range. */
-async function range(url: string, a: number, b: number, signal?: AbortSignal): Promise<Uint8Array> {
+async function fetchRange(url: string, a: number, b: number, signal?: AbortSignal): Promise<Uint8Array> {
   const res = await fetch(url, { headers: { Range: `bytes=${a}-${b}` }, signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   if (res.status === 206) return new Uint8Array(await res.arrayBuffer());

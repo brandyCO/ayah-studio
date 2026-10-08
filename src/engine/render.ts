@@ -135,7 +135,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   let arTop = 0, enTop = 0, titleTop = lay.title;
   if (project.titlePos === 'below') {
     const ref = ev ? { ar: ev.ar, en } : nearestText(tl, t);
-    const T = titleBlock(project.titleSize);
+    const T = titleBlock(project.titleSize, project.surahName !== false);
     const hA = arH(ref.ar), hE = ref.en ? enH(ref.en) + 30 : 0;
     arTop = place(lay.text.top, lay.title + T, hA + hE + 30 + T);
     enTop = arTop + hA + 30;
@@ -164,18 +164,21 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   if (card) drawCard(ctx, card.kind, card.alpha, project, tl);
   const under = 1 - (card?.alpha ?? 0);
 
-  // Surah name + reference (always visible, rule 2) at the chosen place and size.
+  // Surah name (optional) + reference (always visible, rule 2) at the chosen place and size.
   const z = TITLE_SIZES[project.titleSize];
+  const nameH = project.surahName !== false ? z.name * 1.4 : 0;
   setTextShadow(ctx, colors.title);
   ctx.fillStyle = colors.title;
   ctx.globalAlpha = under;
-  ctx.direction = 'rtl';
-  ctx.font = `${z.name}px ${FONT_NAME}`;
-  ctx.fillText(tl.surah.ar, W / 2, titleTop + z.name * 0.7);
+  if (nameH) {
+    ctx.direction = 'rtl';
+    ctx.font = `${z.name}px ${FONT_NAME}`;
+    ctx.fillText(tl.surah.ar, W / 2, titleTop + z.name * 0.7);
+  }
   ctx.direction = 'ltr';
   ctx.font = `500 ${z.ref}px ${FONT_UI}`;
   ctx.globalAlpha = 0.9 * under;
-  ctx.fillText(headerRef(tl, t), W / 2, titleTop + z.name * 1.4 + z.ref * 0.7);
+  ctx.fillText(headerRef(tl, t), W / 2, titleTop + nameH + z.ref * 0.7);
 
   // Footer: optional reciter credit and watermark.
   if (lay.credit !== null) {

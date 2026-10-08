@@ -35,6 +35,7 @@ export interface Project {
   translationMode: TranslationMode;
   titlePos: TitlePos;
   titleSize: TitleSize;
+  surahName: boolean; // Arabic surah name shown above the reference (the reference always shows: rule 2)
   scenes: string[]; // background ids (1…MAX_SCENES); Single uses the first
   sceneMode: SceneMode;
   sceneLengths: number[]; // Custom: share of the reel per scene (any scale)
@@ -62,6 +63,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   translation: p.showTranslation,
   titlePos: p.titlePos,
   titleSize: p.titleSize,
+  surahName: p.surahName,
   credit: p.credit,
   watermark: p.watermark,
   textSize: p.textSize,
@@ -100,6 +102,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     translationMode: 'words',
     titlePos: 'top',
     titleSize: 'm',
+    surahName: true,
     scenes: ['mist'],
     sceneMode: 'single',
     sceneLengths: [],
@@ -126,7 +129,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 
 /** The look of a reel (everything but the selection and reciter), remembered for the next reel. */
 export const LOOK_KEYS = [
-  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'scenes',
+  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
   'credit', 'watermark',
 ] as const;
@@ -175,3 +178,18 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
 
 export const lookOf = (p: Project): Look =>
   Object.fromEntries(LOOK_KEYS.map((k) => [k, structuredClone(p[k])])) as unknown as Look;
+
+const isNumRecord = (v: unknown, ok: (x: unknown) => boolean) =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.entries(v as object).every(([k, x]) => /^\d+$/.test(k) && ok(x));
+const finite = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
+
+/** Copy a saved draft onto a new project: its look, reciter and per-ayah audio edits (stored data may be old or damaged). */
+export function restoreProject(p: Project, saved: unknown, validBackground: (id: string) => boolean, validReciter: (id: number) => boolean) {
+  if (!saved || typeof saved !== 'object') return;
+  const d = saved as Partial<Project>;
+  applyLook(p, d, validBackground);
+  if (typeof d.reciterId === 'number' && validReciter(d.reciterId)) p.reciterId = d.reciterId;
+  if (isNumRecord(d.gaps, finite)) p.gaps = { ...d.gaps! };
+  if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
+  if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
+}
