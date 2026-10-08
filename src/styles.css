@@ -267,21 +267,27 @@ button { font: inherit; color: inherit; }
 .topbar .chip { flex: none; }
 
 /* mushaf view: full-screen page */
-:root { --paper: #fffdf7; --ink: #1b1b1b; }
-@media (prefers-color-scheme: dark) { :root { --paper: #12110e; --ink: #ece6d6; } }
+/* Day mode: warm paper — a cream tone, fine grain with faint mottling (an SVG noise tile) and softly
+   shaded sheet edges. Night mode stays plain dark. */
+:root {
+  --paper: #fbf6e8; --ink: #1b1b1b;
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .26 0 0 0 0 .12 0 0 0 .09 0'/%3E%3C/filter%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.014' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .42 0 0 0 0 .2 0 0 0 .1 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --paper-edge: inset 0 0 28px rgba(140, 105, 50, .10), inset 0 0 2px rgba(140, 105, 50, .12);
+}
+@media (prefers-color-scheme: dark) { :root { --paper: #12110e; --ink: #ece6d6; --paper-grain: none; --paper-edge: none; } }
 body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden; overscroll-behavior: none; }
 .screen-mushaf { max-width: none; padding: 0; }
 .mushaf {
   position: fixed; inset: 0; touch-action: pan-y; overflow: hidden;
   display: flex; flex-direction: column; align-items: center;
   padding: max(10px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
-  background: var(--paper); color: var(--ink);
+  background: var(--paper) var(--paper-grain); color: var(--ink);
 }
 .mushaf-view { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 640px; overflow: hidden; }
 .mushaf-strip { position: absolute; inset: 0; will-change: transform; }
 .mushaf-page {
   --f: 24px; --lh: 40px;
-  position: absolute; inset: 0; background: var(--paper);
+  position: absolute; inset: 0; background: var(--paper) var(--paper-grain); box-shadow: var(--paper-edge);
   padding: 5px 0; /* room for the surah frame's outer line when it is the first or last line */
   display: flex; flex-direction: column; justify-content: center;
   font-size: var(--f); line-height: 1;
@@ -307,7 +313,7 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mp-basmala svg { height: calc(var(--lh) * 0.8); width: auto; color: var(--ink); }
 .mp-num { flex: none; font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
  /* While a page moves, the sheets cast a soft edge shadow (a page-like feel). */
-.mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.16); }
+.mushaf-strip.moving .mushaf-page { box-shadow: var(--paper-edge), 0 0 22px rgba(0,0,0,.16); }
 /* a page whose font is still downloading */
 .mushaf-page.loading { align-items: center; gap: 12px; }
 .mushaf-page.loading .spinner, .player .spinner { border-color: color-mix(in srgb, var(--ink, #888) 18%, transparent); border-top-color: var(--accent); }
