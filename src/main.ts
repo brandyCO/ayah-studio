@@ -9,6 +9,8 @@ import { h } from './ui/dom';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
 import { showReader } from './ui/reader';
+import { initAuth } from './cloud/auth';
+import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
 import { showSurahList } from './ui/surahList';
 
@@ -62,3 +64,7 @@ window.addEventListener('hashchange', route);
 void route();
 void capabilities(); // warm up the device check
 setupOffline();
+// Accounts are optional: restore a sign-in made on this device (or finish one coming back from
+// Google), then keep bookmarks, settings and drafts in sync with the account.
+startSync();
+void initAuth();

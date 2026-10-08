@@ -35,136 +35,105 @@ CLAUDE.md. Tick the boxes in CLAUDE.md → "Phase 4 — Together" as phases ship
 
 ## 2. Architecture
 
+**Decision (owner, 2026-10-08): Supabase**, chosen over Firebase for a large user base with
+relational data (circles, members, parts, plans, recaps) and the more useful free plan: no daily
+request cap and server functions included without a card. Firebase is kept **only for push
+notifications** (Firebase Cloud Messaging is how Android delivers push; free, no card).
+
 ### Services
 | Need | Choice | Notes |
 |---|---|---|
-| Accounts | Firebase Authentication: Google sign-in; **anonymous** sign-in for wall guests and gift replies | Account linking upgrades an anonymous user to Google without losing data |
-| Database | Cloud Firestore, web SDK with `persistentLocalCache` (IndexedDB, multi-tab) | Same JS SDK on the web, in the Capacitor WebView and in Tauri |
-| Server logic | Cloud Functions (2nd gen, TypeScript, `functions/` folder) | Push fan-out, Khatm completion, account deletion, gift preview pages, daily digests |
-| Push | Firebase Cloud Messaging (FCM): Android via `@capacitor-firebase/messaging`, web via service-worker push | Personal reminders (Ramadan portion, revision) use **local** notifications (`@capacitor/local-notifications`), no server |
-| Abuse protection | Firebase App Check: Play Integrity (Android), reCAPTCHA Enterprise (web) | Enforced on Firestore and Functions after a monitoring week |
-| Crash reports | Crashlytics (Android) via `@capacitor-firebase/crashlytics` | Optional, opt-in in Settings |
-| Hosting for share links | GitHub Pages app routes now (`…/ayah-studio/#/gift/{id}`); a Firebase Hosting custom domain later (§8) | A custom domain enables Android App Links and rich link previews |
-| Prayer times (Ramadan) | `adhan` (MIT, computed on the device) | Location is optional; a city picker or a manual time works without it |
-| QR codes (wall) | `qrcode` (MIT) | Generated on the device |
+| Accounts | Supabase Auth: **Google** (web: OAuth + PKCE redirect; Android: native Credential Manager via `@capgo/capacitor-social-login`, then `signInWithIdToken` with a hashed nonce). **Anonymous** sign-in later for wall guests and gift replies (off until T3/T8) | Email/password sign-up is **off** |
+| Database | Supabase Postgres, every table behind **row-level security**; schema in `supabase/migrations/*.sql` | Local-first: the app keeps its own copy (IndexedDB/localStorage) and syncs (`src/cloud/sync.ts`) |
+| Live updates | Supabase Realtime, only while a circle/wall screen is open | Free plan: 200 concurrent connections |
+| Server logic | Supabase **Edge Functions** (Deno, `supabase/functions/`) + `pg_cron` for schedules | Khatm completion, push fan-out, evening digest, gift link previews |
+| Push | Firebase Cloud Messaging (HTTP v1) called from an Edge Function with a Firebase service account (stored as a Supabase secret); Android receives via `@capacitor-firebase/messaging` | Personal reminders (Ramadan portion, revision) use **local** notifications |
+| Abuse protection | RLS + per-user row caps + CHECK size limits; Supabase rate limits on auth; hCaptcha/Turnstile on anonymous sign-in when it is turned on | |
+| Hosting for share links | GitHub Pages app routes now; a custom domain later (§8) | |
+| Prayer times (Ramadan) | `adhan` (MIT, on the device) | |
+| QR codes (wall) | `qrcode` (MIT) | |
 
-**Plan and cost:** Cloud Functions need the **Blaze** (pay-as-you-go) plan. At family/friends scale
-the free quotas cover it (Firestore 50k reads / 20k writes a day, Functions 2M calls a month, FCM
-free). Set a **budget alert at $5** in Google Cloud Billing on day one. Firestore reads are the
-main cost driver: every screen reads small documents, listeners are detached when a view closes,
-and recaps are computed from daily summary documents (§3), never by scanning raw events.
+**Project (created 2026-10-08):** `jposubjybzstfmnngews`, region `ap-northeast-1`, Postgres 17,
+free plan. Site URL `https://brandyco.github.io/ayah-studio/`; redirect allow-list: that site,
+`http://localhost:5173/**`, `http://localhost:4173/**`, `https://localhost/**` (the Android app).
+The publishable key and URL are in `src/cloud/config.ts` (public by design). The **secret /
+service-role key never goes into the app or the repo.**
 
-**Library versions (checked on npm 2026-10-08):** `@capacitor-firebase/authentication` and
-`@capacitor-firebase/messaging` 8.5.2 need `firebase` **^12.6** — pin `firebase@12` until those
-plugins support 13 (`firebase` 13.0.0 is out). `@capacitor/local-notifications` 8.3.1, `adhan`
-4.4.6, `qrcode` 1.5.4, `firebase-tools` 15.33.0, `@firebase/rules-unit-testing` (use the release
-matching the pinned `firebase` major). Re-check at build time.
+**Free plan limits to watch:** 500 MB database (drafts are the largest item: ~20 KB each; cap at
+3000 synced items per user), 50k monthly active users, 500k Edge Function calls a month, 5 GB
+egress, 200 Realtime connections; a project with no activity for 7 days is paused (any real use
+keeps it awake). Next step: Pro, $25/month.
 
-### Client modules (new)
+### Client modules
 ```
-src/cloud/firebase.ts   lazy init from VITE_FIREBASE_* (absent → every cloud feature hidden, app works as now)
-src/cloud/auth.ts       Google sign-in (native plugin on Android, popup/redirect on the web), anonymous, link, sign out
-src/cloud/sync.ts       local-first sync engine (IndexedDB ↔ Firestore) for personal collections
-src/cloud/push.ts       FCM token registration per device, notification preferences, quiet hours
-src/together/*.ts       one module per feature (circles, partners, gifts, walls, reflections, lamps, year, ramadan)
-src/ui/today.ts         the pull-down "Today" card in the mushaf bar
-src/ui/margin.ts        margin-mark layer drawn over mushaf pages
-src/ui/moment.ts        full-screen calm "moment" player (story cards; reused by Khatm, gift, year)
-functions/src/*.ts      Cloud Functions
-firestore.rules, firestore.indexes.json, firebase.json
+src/cloud/config.ts     project URL, publishable key, Google web client ID (public values)
+src/cloud/supabase.ts   lazy client (loaded only for signed-in users or a returning sign-in)
+src/cloud/auth.ts       Google sign-in (web redirect / Android native), sign out, delete account
+src/cloud/sync.ts       local-first sync of bookmarks, settings and drafts (below)
+src/ui/account.ts       ☰ → Account sheet (sign in, sync state, export, sign out, delete)
+src/cloud/push.ts       (T2) FCM token per device, preferences, quiet hours
+src/together/*.ts       (T2+) one module per feature
 ```
-- Firebase is loaded with dynamic `import()` only after the user opts in or opens a share link, so
-  the reading view and editor stay as fast as now.
-- **Android sign-in:** Google blocks OAuth pages inside WebViews, so the app signs in natively with
-  `@capacitor-firebase/authentication` (Credential Manager) and then signs the JS SDK in with the
-  returned ID token (`skipNativeAuth: true` + `signInWithCredential`). Needs the APK's **SHA-1/SHA-256
-  fingerprints** registered in Firebase, which needs the **fixed signing key** (prerequisite P1).
-- **Web sign-in:** `signInWithPopup`, falling back to `signInWithRedirect` on mobile browsers.
-  `brandyco.github.io` must be in Firebase Auth → Authorized domains.
-- **Tauri (Windows):** sign in through the system browser with a loopback redirect (PKCE), then
-  `signInWithCredential`. Built with the Tauri phase, not before.
 
-### Sync engine (`src/cloud/sync.ts`)
-- Personal collections (drafts, bookmarks, last read, settings, reflections, lamps, days) are
-  written to IndexedDB first (as today) and mirrored to `users/{uid}/…` when signed in.
-- Every document carries `updatedAt` (server timestamp) and `deviceId`; conflicts are resolved
-  **last-writer-wins per document**. Reflections and drafts are small, so whole-document LWW is
-  enough. A draft edited on two devices offline keeps the newest one and saves the older one as
-  "(copy)" instead of dropping it.
-- Deletes are tombstones (`deleted: true`, purged after 30 days) so other devices learn about them.
-- **First sign-in migration:** everything local is uploaded once with a progress toast. If the
-  account already has data (a second device), both sets are merged by id and nothing is deleted.
-- Drafts sync their project JSON only. Thumbnails are regenerated on each device. Media from
-  Pixabay/Pexels re-downloads by id; **own uploads never leave the device**. A draft opened on
-  another device shows "Background is on your other device" with a plain colour in its place.
-- Size guard: a Firestore document is at most 1 MiB; drafts are typically < 20 KB. Reject over
-  500 KB with a clear message.
+### Sync engine (`src/cloud/sync.ts`, as built in T0)
+- Table `user_docs (user_id, kind, id, data jsonb, deleted, device_id, updated_at)`; the server
+  sets `updated_at` on every write, so "changed since" never trusts device clocks.
+- A round: **pull** rows written by other devices since the last pull → **merge** → **push** this
+  device's documents whose content changed since they were last pushed. Runs after sign-in, at
+  start, when the app comes back to the foreground or online, and 4 s after a local change.
+- **Bookmarks** (`state/bookmarks`) and **settings** (`setting/prefs`: reader mode, reciter, reel
+  look, page tint, last read) are one document each, merged **per entry, newest change wins**;
+  removed bookmarks travel as dated tombstones (kept 120 days).
+- **Drafts** (`draft/{id}`): project JSON only (no thumbnail, never own media); the most recently
+  edited version wins; deletions travel as tombstones. A draft whose background was the user's own
+  upload shows a plain colour on other devices.
+- First sign-in uploads everything local; a second device merges both sets (nothing is deleted).
+- Day summaries (`kind = 'day'`) start with T9's data collection; reflections and lamps reuse the
+  same table and engine (`kind = 'reflection' | 'lamp'`).
 
 ---
 
-## 3. Data model (Firestore)
+## 3. Data model (Supabase Postgres)
 
+T0 (live): `profiles` (id → auth.users, name, avatar_url) and `user_docs` (above) — migration
+`supabase/migrations/20261008180000_t0_user_docs.sql`; `delete_my_account()` (security definer)
+removes the auth user and, by cascade, all their rows. Tested 2026-10-08 against the live database
+(as two users, an anonymous user and a signed-out visitor): own rows only, no writing as another
+user, unknown kinds rejected, anonymous sessions cannot sync, delete removes everything.
+
+Planned tables (one migration per phase):
 ```
-users/{uid}                          { name, photoUrl, createdAt, locale, settings{…}, consent{crash, analytics} }
-users/{uid}/devices/{deviceId}       { fcmToken, platform, quietHours{from,to}, notify{circle,partner,gift,wall,ramadan}, updatedAt }
-users/{uid}/drafts/{draftId}         { project (JSON), ref "2:255-257", reciter, updatedAt, deleted? }
-users/{uid}/state/reading            { lastRead{surah,page}, bookmarks[{ref,page,at}], updatedAt }
-users/{uid}/reflections/{id}         { ref "2:255", page, text ≤ 4000, createdAt, updatedAt, deleted? }
-users/{uid}/lamps/{page}             { page, lastRevised, box 1-5, revisions, memorised: bool }
-users/{uid}/days/{yyyy-mm-dd}        { pages[], minutesRead, ayatPlayed{"2:255":n}, reelsMade, revised[], khatmParts[] }
-users/{uid}/plans/{planId}           { kind 'ramadan'|'khatm', year, start, end, target, portionPerDay, circleId? }
-
-circles/{circleId}                   { name, ownerUid, memberUids[], members{uid:{name,color,joinedAt}},
-                                       inviteCode, kind 'khatm', round, status 'open'|'complete', startedAt,
-                                       dueDate?, completedAt?, closingRef? }
-circles/{circleId}/parts/{1..30}     { juz, uid?, status 'free'|'taken'|'done', takenAt?, doneAt?, pagesDone[] }
-circles/{circleId}/feed/{id}         { kind 'joined'|'took'|'done'|'complete', uid, juz?, at }   ← small, for the "Today" card
-
-partnerships/{pid}                   { memberUids[2], members{…}, plan{pages[]|surahs[]}, createdAt, inviteCode }
-partnerships/{pid}/progress/{uid}    { pages{page: lastRevised}, updatedAt }        ← only the plan's pages
-partnerships/{pid}/nudges/{id}       { from, to, preset 'easy'|'thinking'|'proud', at }
-
-gifts/{giftId}                       { fromUid, fromName, ref{surah,from,to}, reciter, look{…validated},
-                                       message? ≤ 140, replyTo?, createdAt, opens }
-walls/{wallId}                       { hostUid, title ≤ 60, occasion 'eid'|'wedding'|'aqiqah'|'other',
-                                       joinCode, status 'open'|'closed', look{…}, createdAt }
-walls/{wallId}/entries/{uid}         { name ≤ 40, dua? ≤ 140, ref{surah,from,to} (≤ 3 ayat), hidden?, at }
-config/public                        { minAppVersion, collections, ramadanStart{year: date} }
+devices        (user_id, device_id, fcm_token, platform, quiet_from, quiet_to, notify jsonb)          T2
+circles        (id, name, owner_id, invite_code, round, status, due_date, completed_at, closing_ref)   T2
+circle_members (circle_id, user_id, name, color, joined_at)                                           T2
+circle_parts   (circle_id, round, juz 1..30, user_id, status free|taken|done, taken_at, done_at)        T2
+circle_feed    (circle_id, kind, user_id, juz, at)                                                    T2
+gifts          (id, from_id, from_name, surah, ayah_from, ayah_to, reciter, look jsonb, message ≤140,
+                reply_to, created_at, opens)                                                          T3
+partnerships   (id, invite_code, plan jsonb, created_at) + partners (pid, user_id) + partner_progress
+                (pid, user_id, pages jsonb) + nudges (pid, from_id, to_id, preset, day)               T6
+walls          (id, host_id, title, occasion, join_code, status, look jsonb) + wall_entries (wall_id,
+                user_id, name ≤40, dua ≤140, surah, ayah_from, ayah_to ≤ 3 ayat, hidden)              T8
+app_config     (key, value jsonb) — feature flags, Ramadan start dates                                T1+
 ```
-- Ids for gifts and walls are random 20-character ids (unguessable); invite codes are 6 characters
-  from an unambiguous alphabet, valid 14 days, regenerated by the owner.
-- `ref` values are validated against `meta.json` ayah counts on the client and in Functions.
-- Indexes: `circles` by `memberUids` (array-contains) + `status`; `partnerships` by `memberUids`;
-  `users/{uid}/days` by id range (year recap).
+- References only (surah/ayah numbers, validated against `meta.json` ayah counts by CHECK
+  constraints or a function); never Quran text.
+- RLS outline: personal tables `user_id = auth.uid()`; circles/partnerships readable by members
+  (`exists (select 1 from circle_members …)`), joined only through a security-definer function that
+  checks the invite code; members change only their own part; completion is set by a trigger, not
+  by clients; gifts readable by id (no listing), insert by the author, otherwise immutable; wall
+  entries one per user while the wall is open, host can hide.
+- Every policy gets a test in `supabase/tests/` run in CI (pgTAP via the Supabase CLI) before
+  deploying.
 
-### Security rules (outline; full file in `firestore.rules`, tested in CI)
-- `users/{uid}/**`: read/write only by `request.auth.uid == uid`; field types and sizes checked
-  (`text.size() <= 4000`, `project` map size, timestamps = `request.time`).
-- `circles/{id}`: read by members; create by any signed-in user (who becomes owner and first
-  member); join only through the `joinCircle` callable function (checks the invite code); members
-  may update only their own entry in `members`.
-- `circles/{id}/parts/{juz}`: members may take a `free` part (set `uid` to themselves), release
-  their own, mark their own `done`; nobody edits another member's part except the owner, who can
-  free a part. Completion of the circle is written only by a Function.
-- `partnerships/**`: members only; `progress/{uid}` writable only by that uid; nudges rate-limited
-  (one per pair per day, enforced by a document per day id).
-- `gifts/{id}`: **get** by anyone (link holders, no listing — `list` is denied); create by
-  signed-in or anonymous users with `fromUid == auth.uid`; immutable afterwards except the `opens`
-  counter (via Function).
-- `walls/{id}`: get by anyone with the id; `entries/{uid}`: create/update by that (anonymous or
-  Google) uid while `status == 'open'`, one entry per uid; host can set `hidden` and close the wall.
-- Everything else denied. App Check enforced on Firestore and callable Functions.
-
-### Cloud Functions
+### Edge Functions and schedules
 | Function | Trigger | Job |
 |---|---|---|
-| `joinCircle`, `joinPartnership`, `joinWall` | callable | Check invite/join code, add member, return the id |
-| `onPartDone` | Firestore `circles/{id}/parts/{juz}` update | Append to feed; if all 30 are done → set `status: complete`, `completedAt`, notify every member once |
-| `digest` | scheduled, hourly | Per user in their local evening: one calm push summarising circle activity of the day ("Aisha and Omar finished their juz") — never one push per event |
-| `onNudge` | Firestore create in `nudges` | Push to the partner (respecting quiet hours and preferences) |
-| `giftPage` | HTTPS (custom domain phase) | Serves Open Graph tags (title, reference, image) for WhatsApp/iMessage previews, then redirects to the app route |
-| `deleteAccount` | callable | Deletes `users/{uid}/**`, removes the user from circles/partnerships/walls (keeps finished Khatm history anonymised as "a member"), deletes gifts, then the Auth user |
-| `exportData` | callable | Returns a JSON export of the user's data (privacy requirement) |
+| `notify` | database webhook on `circle_parts`, `nudges` inserts | Push to the right devices via FCM, respecting quiet hours and preferences |
+| `digest` | `pg_cron`, hourly | One calm evening push per user summarising circle activity |
+| `gift-page` | HTTPS (custom domain phase) | Open Graph preview for gift links, then redirect to the app |
+| (none needed) | — | Khatm completion is a trigger in Postgres; delete account and export are done by the client with RLS + `delete_my_account()` |
+
 
 ---
 
@@ -218,7 +187,7 @@ come from a single `marksForPage(page)` function that each feature registers int
   names on the closing card (names are user text: drawn in the UI font, never the Quran font).
 - "Start another round" keeps the members and clears the parts (round + 1).
 
-**Build notes:** `src/together/circles.ts`, Firestore listeners only while the circle sheet or
+**Build notes:** `src/together/circles.ts`, Realtime subscriptions only while the circle sheet or
 Today card needs them. The ring is SVG (30 arcs), animated with CSS. The Khatm reel needs one
 engine addition: a **closing card with extra lines** (names), within the 5 % safe area, wrapping
 and shrinking to a legible minimum (rule 6).
@@ -400,11 +369,11 @@ are skipped, never "0").
 - **Moderation:** user text only appears to people the author invited (circle, partner, wall,
   gift link holders); hosts/owners can hide entries; "Report" sends an email to the owner's address
   stored in `config/public`. Length limits everywhere.
-- **Testing:** security-rules unit tests with the Firebase Emulator Suite in CI
+- **Testing:** RLS policy tests (pgTAP, `supabase test db`) in CI
   (`firebase emulators:exec "npm run test:rules"`); sync engine tests against the emulator; a
   Playwright smoke test for gift and wall pages on the web build; `npm run check` unchanged.
 - **Monitoring:** Crashlytics (opt-in), Functions logs with error alerts by email, the $5 budget
-  alert, and a weekly glance at Firestore usage.
+  alert, and a weekly glance at Supabase usage (Reports).
 - **Feature flags:** `config/public` enables each feature (and a minimum app version), so a phase
   can be turned off without a release.
 
@@ -414,18 +383,18 @@ are skipped, never "0").
 
 | Phase | Content | Depends on | Sessions (est.) |
 |---|---|---|---|
-| P1 | Prerequisites: fixed signing key (GitHub secret), owner creates the Firebase project (§7) | — | owner + ½ |
-| **T0** | Firebase foundation: lazy init, Google + anonymous sign-in (web + Android), account sheet in ☰ (sign in/out, delete account, export data), sync of drafts / last read / bookmarks / settings, first-sign-in migration, App Check, rules + emulator tests in CI, privacy page, `config/public` flags | P1 | 2 |
+| P1 | Prerequisites: fixed signing key (GitHub secret), Supabase project, Google sign-in client (§7) | — | owner + ½ |
+| **T0** | Supabase foundation: lazy client, Google sign-in (web + Android), account sheet in ☰ (sign in/out, delete account, export data), sync of drafts / last read / bookmarks / settings, first-sign-in merge, RLS (tested), privacy page | P1 | 2 |
 | **T1** | Living mushaf: margin layer, time-of-day page tint, Ramadan crescent, Today card | — (no account) | 1 |
 | **T4** | Reflections journal (local first, then synced) | T1 (marks), T0 (sync) | 1 |
-| **T2** | Khatm circles + push foundation (FCM tokens, preferences, quiet hours, evening digest) + Khatm reel closing card | T0, T1 | 2 |
+| **T2** | Khatm circles + push foundation (Firebase project for FCM only, device tokens, preferences, quiet hours, evening digest via Edge Function + pg_cron) + Khatm reel closing card | T0, T1 | 2 |
 | **T3** | Gift an ayah (read-only player route, replies, anonymous sign-in) | T0 | 1–2 |
 | **T5** | Revision lamps (T5a manual; T5b with Phase 2 flashcards) | T1, Phase 2 for T5b | 1–2 |
 | **T6** | Memorise with a partner (plans, shared lamps, nudges) | T5, T2 push | 1 |
 | **T7** | Ramadan mode (plan, Maghrib reminder, nightly template, Eid recap) | T1, T2 (optional circle), local notifications | 1–2 |
 | **T8** | Multi-segment reels + Dua & ayah wall (host screen, QR join, keepsake reel) | T0, engine work | 2–3 |
 | **T9** | Your year with the Quran (day summaries from T0 on, story cards, recap reel) | T8 (segments), T1–T5 data | 1–2 |
-| T10 | Custom domain on Firebase Hosting: Android App Links, rich link previews (`giftPage`), Tauri sign-in | T3, Tauri phase | 1 |
+| T10 | Custom domain: Android App Links, rich link previews (`gift-page` Edge Function), Tauri sign-in | T3, Tauri phase | 1 |
 
 **Day summaries start in T0** (writing `days/{date}`), so by the time T9 is built there is already
 a year of data to recap.
@@ -434,30 +403,32 @@ a year of data to recap.
 
 ## 7. What the owner needs to do (one time)
 
-1. **Signing key first** (from the Android work): a fixed release/test key stored as a GitHub
-   secret, so the APK fingerprints stay the same — Google sign-in on Android depends on it.
-2. Create a Firebase project at console.firebase.google.com ("Ayah Studio"); upgrade to **Blaze**
-   and set a **$5 budget alert** (Google Cloud console → Billing → Budgets).
-3. Authentication → Sign-in method: enable **Google** and **Anonymous**; Settings → Authorized
-   domains: add `brandyco.github.io`.
-4. Firestore: create the database (production mode, a region near the users, e.g. `europe-west`).
-5. Project settings → Add app → **Web**: copy the config values into GitHub repo **variables**
-   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`,
-   `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID` (these identify the project; access
-   is controlled by the security rules and App Check).
-6. Add app → **Android** with package `com.brandyco.ayahstudio` and the SHA-1 + SHA-256 of the
-   signing key (the session prints them); download `google-services.json` and store it base64 as
-   the repo **secret** `GOOGLE_SERVICES_JSON` (the workflow writes it into `android/app/`).
-7. App Check: register Play Integrity (Android) and reCAPTCHA Enterprise (web).
-8. A service account for deploys: store as the secret `FIREBASE_SERVICE_ACCOUNT`, so GitHub Actions
-   deploys rules and Functions from `main`.
+1. **Signing key** (done 2026-10-08 in code): add the GitHub secrets `ANDROID_KEYSTORE_BASE64` and
+   `ANDROID_KEYSTORE_PASSWORD` from the file handed over, so APK fingerprints stay the same — Google
+   sign-in on Android depends on it.
+2. **Supabase** (done): project created; a personal access token was used by the setup session
+   (delete it at supabase.com/dashboard/account/tokens when setup is finished).
+3. **Google sign-in client** (Google Cloud console, the "Ayah Studio" project):
+   - Google Auth Platform → **Branding / Get started**: app name "Ayah Studio", support email,
+     audience **External**, contact email → Create; then **Audience → Publish app** (basic profile
+     and email need no Google review).
+   - **Clients → Create client → Web application** "Ayah Studio web": Authorized JavaScript origins
+     `https://brandyco.github.io`; Authorized redirect URIs
+     `https://jposubjybzstfmnngews.supabase.co/auth/v1/callback`. Send the **Client ID** and
+     **Client secret** to the session (the secret goes into Supabase only, never into the repo).
+   - **Clients → Create client → Android** "Ayah Studio Android": package `com.brandyco.ayahstudio`,
+     SHA-1 `B0:F6:CC:91:59:C1:47:75:21:29:25:70:92:2F:8A:65:21:72:6E:13` (from the signing key).
+4. (T2) Firebase project for push only: Android app with the same package + fingerprints,
+   `google-services.json` as the repo secret `GOOGLE_SERVICES_JSON`, and a service-account key for
+   FCM stored as a Supabase secret.
+
 
 ---
 
 ## 8. Later: custom domain
 
-A domain (e.g. `ayahstudio.app`) on Firebase Hosting gives: short share links
-(`ayahstudio.app/g/{id}`), link previews in WhatsApp/iMessage (`giftPage` Function), **Android App
+A domain (e.g. `ayahstudio.app`) gives: short share links
+(`ayahstudio.app/g/{id}`), link previews in WhatsApp/iMessage (`gift-page` Edge Function), **Android App
 Links** (links open the installed app directly; needs `/.well-known/assetlinks.json` on the
 domain root, which GitHub Pages project sites cannot serve), and a clean home for the privacy
 policy. Until then, links use the GitHub Pages address and the web app offers "Open in the app".

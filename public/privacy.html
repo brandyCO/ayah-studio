@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayah Studio · Privacy</title>
+<style>
+  :root { --bg: #f6f4ef; --text: #1f2328; --muted: #6b6f76; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #12161c; --text: #e8e6e1; --muted: #9aa1aa; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 6px; }
+  .muted { color: var(--muted); font-size: 14px; } li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy</h1>
+  <p class="muted">Ayah Studio · last updated 8 October 2026</p>
+
+  <h2>Without an account</h2>
+  <p>Everything stays on your device: your bookmarks, settings, reel drafts, the photos and videos you add,
+  and the recitations kept for offline use. Nothing is sent to us. Exported videos are saved on your device
+  and only shared where you choose to share them.</p>
+
+  <h2>If you sign in with Google</h2>
+  <p>Signing in is optional. It keeps the following the same on your devices, stored with
+  <a href="https://supabase.com">Supabase</a> (our database provider):</p>
+  <ul>
+    <li>your name, email address and profile picture from your Google account;</li>
+    <li>your bookmarks (which ayat and when);</li>
+    <li>your app settings (for example the reciter and the look of your last reel, and the page you were reading);</li>
+    <li>your reel drafts (which ayat, reciter, text and scene settings) — not their preview pictures, and
+      never your own photos or videos, which stay on the device where you added them.</li>
+  </ul>
+  <p>Only you can read or change this data. We do not sell it, show ads, or share it with anyone else.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li><b>Export:</b> ☰ → Account → Export my data gives you everything stored with your account as a file.</li>
+    <li><b>Delete:</b> ☰ → Account → Delete account removes your account and all data synced to it at once.
+      The copy on your device stays until you remove the app or clear its data.</li>
+    <li><b>Sign out</b> at any time; the app keeps working on your device.</li>
+  </ul>
+
+  <h2>Other services the app uses</h2>
+  <ul>
+    <li>Recitations, word timings and text data come from Quran.com (QDC) and everyayah.com; your device
+      downloads them directly.</li>
+    <li>When you search the free background library, your search goes to Pixabay (or Pexels) through our
+      small proxy, which keeps no record of who searched.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions or requests: open an issue at
+  <a href="https://github.com/brandyCO/ayah-studio/issues">github.com/brandyCO/ayah-studio</a>.</p>
+</main>
+</body>
+</html>

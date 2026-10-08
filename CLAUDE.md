@@ -113,7 +113,7 @@ Engine edge cases:
 | Web test build | GitHub Pages, auto-deployed from `main` by `.github/workflows/pages.yml` |
 | Video export | WebCodecs `VideoEncoder` (H.264) + `AudioEncoder` (AAC) → **Mediabunny** MP4 muxer |
 | Fallbacks | Audio: `ffmpeg.wasm` for AAC only if `AudioEncoder` lacks AAC. Video: WebM (VP9) if H.264 unsupported |
-| Storage | IndexedDB (web) / Capacitor Filesystem; no backend server |
+| Storage | IndexedDB (web) / Capacitor Filesystem, local first; optional account sync with Supabase (Phase 4, `docs/together.md`) |
 
 `vite.config.ts` uses `base: './'` so the same build works on GitHub Pages, Capacitor and Tauri.
 The owner's PC and Android phone both report hardware H.264 + AAC support (verified 2026-10-07).
@@ -378,18 +378,27 @@ Ayah reminders (scheduled local notifications on Android; tray app on PC; interv
 opens the ayah). Store listings.
 
 ### Phase 4 — Together (accounts, family, your journey; owner request 2026-10-08)
-Full production plan: **`docs/together.md`** (principles, Firebase architecture, data model,
-security rules, Functions, each feature's experience + acceptance criteria, owner setup). Firebase
-(Auth with Google + anonymous, Firestore with offline cache, Functions, FCM, App Check); everything
-personal works signed out and syncs when signed in; the mushaf is the home (margin marks, Today
-card, calm moments), no scores/badges; Quran text never comes from the cloud. Build in this order:
-- [ ] P1 Prerequisites: fixed signing key (GitHub secret); owner creates the Firebase project (§7)
+Full production plan: **`docs/together.md`** (principles, architecture, data model, row-level
+security, server functions, each feature's experience + acceptance criteria, owner setup).
+**Supabase** (owner decision 2026-10-08: Auth with Google, Postgres + RLS, Realtime, Edge
+Functions; project `jposubjybzstfmnngews`, migrations in `supabase/migrations/`); Firebase only for
+push (FCM, from T2). Everything personal works signed out and syncs when signed in; the mushaf is the
+home (margin marks, Today card, calm moments), no scores/badges; Quran text never comes from the
+cloud. Build in this order:
+- [ ] P1 Prerequisites: fixed signing key (GitHub secret); Supabase project; Google sign-in client (§7)
       (done in code: `android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
       `ANDROID_KEYSTORE_PASSWORD` when set, else the debug key; versionCode = CI run number. Key
       generated 2026-10-08 and handed to the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed.
-      Waiting on the owner: add the two secrets; create the Firebase project)
+      Supabase project created by the owner (Tokyo); waiting on the owner: the two secrets, the
+      Google OAuth web + Android clients (§7))
 - [ ] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
       last read, bookmarks, settings; day summaries; rules + emulator tests in CI; privacy page
+      (built 2026-10-08: migration `20261008180000_t0_user_docs.sql` applied — `profiles`, `user_docs`,
+      RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
+      `src/cloud/{config,supabase,auth,sync}.ts` + `src/ui/account.ts` (☰ → Account) +
+      `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
+      Still to do: Google provider (needs the owner's OAuth client), `VITE_GOOGLE_WEB_CLIENT_ID`,
+      end-to-end test on two devices; day summaries move to T9; RLS tests into CI)
 - [x] T1 Living mushaf (`src/ui/living.ts`): 8 px page margins hold marks (`registerMarks()`, drawn
       by `paintMarks()` beside the line where an ayah starts, max 2 per line, tap → its sheet); first
       mark = **bookmarks** (`src/data/bookmarks.ts`, localStorage; 🔖 in the selection bar, ☰ →

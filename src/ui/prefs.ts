@@ -1,4 +1,70 @@
-// Per-device UI preferences (best effort: storage can be unavailable).
+// Per-device UI preferences (best effort: storage can be unavailable). The ones in SYNCED_PREFS
+// follow the user's account across devices (src/cloud/sync.ts): each change records when it was made,
+// and the newest change wins.
+export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead'] as const;
+type SyncedPref = (typeof SYNCED_PREFS)[number];
+
+function prefTimes(): Record<string, number> {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem('prefsAt') ?? '{}');
+    return v && typeof v === 'object' ? (v as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Records that a synced preference changed now. */
+export function touchPref(key: SyncedPref) {
+  try {
+    localStorage.setItem('prefsAt', JSON.stringify({ ...prefTimes(), [key]: Date.now() }));
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new Event('prefs-changed'));
+}
+
+/** Synced preferences with their change times (for syncing). */
+export function prefRecords(): Record<string, { v: string | null; at: number }> {
+  const at = prefTimes();
+  const out: Record<string, { v: string | null; at: number }> = {};
+  for (const k of SYNCED_PREFS) {
+    try {
+      out[k] = { v: localStorage.getItem(k), at: at[k] ?? 0 };
+    } catch {
+      /* ignore */
+    }
+  }
+  return out;
+}
+
+/** Takes the newer value of each preference from another device. Returns true if any changed. */
+export function mergePrefs(remote: unknown): boolean {
+  if (!remote || typeof remote !== 'object') return false;
+  const times = prefTimes();
+  let changed = false;
+  for (const k of SYNCED_PREFS) {
+    const r = (remote as Record<string, { v?: unknown; at?: unknown }>)[k];
+    if (!r || typeof r.at !== 'number' || r.at <= (times[k] ?? 0)) continue;
+    if (r.v !== null && typeof r.v !== 'string') continue;
+    if (typeof r.v === 'string' && r.v.length > 20000) continue;
+    try {
+      if (r.v === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, r.v);
+      times[k] = r.at;
+      changed = true;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (changed) {
+    try {
+      localStorage.setItem('prefsAt', JSON.stringify(times));
+    } catch {
+      /* ignore */
+    }
+  }
+  return changed;
+}
 export type ReaderMode = 'mushaf' | 'translation';
 
 export function readerMode(): ReaderMode {
@@ -15,6 +81,7 @@ export function setReaderMode(m: ReaderMode) {
   } catch {
     /* ignore */
   }
+  touchPref('readerMode');
 }
 
 /** Last reciter picked in the editor (QDC id); also used for the length estimate while selecting. */
@@ -33,6 +100,7 @@ export function setReelReciter(id: number) {
   } catch {
     /* ignore */
   }
+  touchPref('reelReciter');
 }
 
 /** The look of the last reel (text mode, mood settings, colours, pacing…), applied to the next one. */
@@ -50,6 +118,7 @@ export function setReelLook(look: unknown) {
   } catch {
     /* ignore */
   }
+  touchPref('reelLook');
 }
 
 /** Where the user was reading (`#/s/{surah}/{ayah}`): the app reopens there; Al-Fatiha the first time. */
@@ -67,8 +136,10 @@ export function lastRead(): string {
 export function setLastRead(hash: string) {
   if (!READ.test(hash)) return;
   try {
+    if (localStorage.getItem('lastRead') === hash) return;
     localStorage.setItem('lastRead', hash);
   } catch {
     /* ignore */
   }
+  touchPref('lastRead');
 }
