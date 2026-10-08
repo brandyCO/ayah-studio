@@ -347,6 +347,12 @@ save to gallery / share sheet; offline audio cache; settings.
       launcher icons (legacy, round, adaptive gradient background + foreground, Android 13 monochrome)
       and splash PNGs (dark `#07130f` + teal glow + icon + "ayah studio" in the gradient); Android 12+
       shows the launcher icon on `@color/splash_background`
+- [x] App colours follow the logo (`src/styles.css` tokens): `--accent` `#0a6e55` (light) / `#3dd1ad`
+      (dark); dark theme background `#07130f` (= the splash), studio `#070c0a`; `--brand-fill`
+      (`#05573d` → `#0f8273`, deeper than the icon's teal so white text stays ≥ 4.5:1), `--brand-bar`,
+      `--brand-text`, `--brand-glow`. Used only by `.brand-name` (app name), `.primary.brand-btn` (Export,
+      "Turn into reel"), studio `.chip.on` / `.tab.on`, export + download bars and the empty Drafts glow;
+      `theme-color` per colour scheme. The mushaf keeps its own `--paper` / `--ink`
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native

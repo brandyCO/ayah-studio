@@ -38,7 +38,7 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
       }, '✕'));
     return el;
   };
-  const empty = () => h('p', { class: 'muted empty' }, 'No drafts yet. Open a surah, long-press an ayah and tap “Turn into reel” — your reel is saved here as you edit it.');
+  const empty = () => h('p', { class: 'muted empty empty-glow' }, 'No drafts yet. Open a surah, long-press an ayah and tap “Turn into reel” — your reel is saved here as you edit it.');
 
   grid.append(...drafts.map(card));
   root.append(

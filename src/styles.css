@@ -4,24 +4,35 @@
   --text: #1f2328;
   --muted: #6b6f76;
   --line: #e7e3da;
-  --accent: #0f6b5a;
+  --accent: #0a6e55;
   --accent-ink: #ffffff;
-  --sel: #e3f1ec;
-  --sel-line: #0f6b5a;
+  --sel: #e1f2ec;
+  --sel-line: #0a6e55;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  /* Brand (from the app icon): emerald → teal. Gradients are for brand moments only — the app name,
+     Export / "Turn into reel", selected chips and tabs in the studio, progress bars, empty-state glow.
+     Never on the mushaf page, the Arabic text, the reel or big backgrounds behind text.
+     --brand-fill ends on a deeper teal than the icon so white text on it stays ≥ 4.5:1. */
+  --brand-fill: linear-gradient(45deg, #05573d, #0f8273);
+  --brand-bar: linear-gradient(90deg, #05573d, #22b3a0);
+  --brand-text: linear-gradient(90deg, #05573d, #0f8273);
+  --brand-glow: rgba(34, 179, 160, 0.16);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12161c;
-    --card: #1a2028;
-    --text: #e8e6e1;
-    --muted: #9aa1aa;
-    --line: #2a313b;
-    --accent: #3fb59a;
-    --accent-ink: #08201b;
-    --sel: #17352f;
-    --sel-line: #3fb59a;
+    --bg: #07130f;
+    --card: #0f1c18;
+    --text: #e6ebe8;
+    --muted: #8e9f98;
+    --line: #1e2d28;
+    --accent: #3dd1ad;
+    --accent-ink: #04201a;
+    --sel: #10322a;
+    --sel-line: #3dd1ad;
+    --brand-bar: linear-gradient(90deg, #22b3a0, #5eead4);
+    --brand-text: linear-gradient(90deg, #34d399, #5eead4);
+    --brand-glow: rgba(34, 179, 160, 0.22);
     --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
@@ -57,6 +68,8 @@ button { font: inherit; color: inherit; }
 .brand { flex: 1; min-width: 0; }
 .brand h1 { margin: 0; font-size: 19px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand p { margin: 0; font-size: 13px; }
+.brand-name { width: fit-content; max-width: 100%; background: var(--brand-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.primary.brand-btn { background: var(--brand-fill); color: #fff; }
 .icon-btn {
   display: inline-grid; place-items: center; flex: none;
   width: 40px; height: 40px; border-radius: 50%;
@@ -216,7 +229,7 @@ button { font: inherit; color: inherit; }
   border-radius: 10px; background: rgba(0,0,0,.55); color: #fff; pointer-events: none;
 }
 .bg-progress b { font-size: 13px; font-variant-numeric: tabular-nums; }
-.bg-progress i { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 3px; border-radius: 2px; background: var(--accent); max-width: calc(100% - 16px); transition: width .2s; }
+.bg-progress i { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 3px; border-radius: 2px; background: var(--brand-bar); max-width: calc(100% - 16px); transition: width .2s; }
 .spinner { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .picker-status { margin: 0 0 8px; color: var(--accent); font-weight: 600; }
@@ -360,8 +373,9 @@ body.has-selbar .player.show { transform: translate(-50%, 160%); } /* the select
    undo, redo, full screen), then a fixed bottom area: timeline + tool bar, where panels slide up in
    place so the preview never changes size */
 body[data-view="reel"] {
-  --bg: #0b0d10; --card: #1c2027; --text: #f1f1ef; --muted: #8d949d; --line: #2a3038;
-  --accent: #3fb59a; --accent-ink: #06201a; --shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  --bg: #070c0a; --card: #161d1b; --text: #f1f3f2; --muted: #8e9a95; --line: #25302c;
+  --accent: #3dd1ad; --accent-ink: #04201a; --shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  --brand-bar: linear-gradient(90deg, #22b3a0, #5eead4);
   --bottom-h: clamp(250px, 36dvh, 330px);
   color-scheme: dark; background: var(--bg); color: var(--text); overflow: hidden;
 }
@@ -455,7 +469,7 @@ body[data-view="reel"] {
 .export-progress { width: min(360px, 100%); text-align: center; }
 .export-pct { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .export-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 12px 0 4px; }
-.export-bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.export-bar > div { height: 100%; width: 0; background: var(--brand-bar); transition: width .2s; }
 .export-progress .chip { margin-top: 18px; }
 .export-result { width: min(360px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .export-result .result-video { width: min(220px, 60vw); margin: 0; border-radius: 8px; }
@@ -481,6 +495,7 @@ body[data-view="reel"] {
 .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 2px 0 10px; }
 .tab { flex: none; padding: 6px 12px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-size: 13px; cursor: pointer; }
 .tab.on { background: var(--line); color: var(--text); }
+body[data-view="reel"] .chip.on, body[data-view="reel"] .tab.on { background: var(--brand-fill); border-color: transparent; color: #fff; }
 .list { display: flex; flex-direction: column; gap: 4px; }
 .list-item {
   display: flex; align-items: center; justify-content: space-between; padding: 11px 12px; border-radius: 10px;
@@ -542,6 +557,7 @@ body[data-view="reel"] {
 .draft-thumb { aspect-ratio: 9 / 16; border-radius: 10px; background: #1d1d22 center / cover no-repeat; border: 1px solid var(--line); }
 .draft-open strong { font-size: 14px; margin-top: 4px; }
 .draft-del { position: absolute; top: 6px; right: 6px; }
+.empty-glow { margin: 24px 0; padding: 56px 18px; text-align: center; background: radial-gradient(closest-side, var(--brand-glow), transparent); }
 
 /* scene video panel */
 .clip-time { font-variant-numeric: tabular-nums; font-size: 14px; }
