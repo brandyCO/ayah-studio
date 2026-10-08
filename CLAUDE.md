@@ -400,13 +400,12 @@ Functions; project `jposubjybzstfmnngews`, migrations in `supabase/migrations/`)
 push (FCM, from T2). Everything personal works signed out and syncs when signed in; the mushaf is the
 home (margin marks, Today card, calm moments), no scores/badges; Quran text never comes from the
 cloud. Build in this order:
-- [ ] P1 Prerequisites: fixed signing key (GitHub secret); Supabase project; Google sign-in client (§7)
-      (done in code: `android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
-      `ANDROID_KEYSTORE_PASSWORD` when set, else the debug key; versionCode = CI run number. Key
-      generated 2026-10-08 and handed to the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed.
-      Supabase project created by the owner (Tokyo); waiting on the owner: the two secrets, the
-      Google OAuth web + Android clients (§7))
-- [ ] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
+- [x] P1 Prerequisites: fixed signing key (GitHub secret); Supabase project; Google sign-in client (§7)
+      (`android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
+      `ANDROID_KEYSTORE_PASSWORD`; versionCode = CI run number. Key generated 2026-10-08 and handed to
+      the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed. Owner, 2026-10-08: both secrets set,
+      Supabase project (Tokyo), Google OAuth web + Android clients created)
+- [x] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
       last read, bookmarks, settings; day summaries; rules + emulator tests in CI; privacy page
       (built 2026-10-08: migration `20261008180000_t0_user_docs.sql` applied — `profiles`, `user_docs`,
       RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
@@ -414,8 +413,9 @@ cloud. Build in this order:
       `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
       Google provider on (owner's OAuth web client `178803855692-hqbv…` in Google Cloud project
       "Ayah Studio"; secret only in Supabase; web sign-in checked to reach Google's page).
-      Still to do: the Android OAuth client (package + SHA-1, owner), end-to-end sync test on two
-      devices; day summaries move to T9; RLS tests into CI)
+      RLS tests: `supabase/tests/*.test.sql` (pgTAP), run by `.github/workflows/supabase.yml` with the
+      Supabase CLI against a local database (`supabase db start` + `supabase test db`, no token).
+      Day summaries move to T9; the two-device sync test is on the owner's checklist)
 - [x] T1 Living mushaf (`src/ui/living.ts`): 8 px page margins hold marks (`registerMarks()`, drawn
       by `paintMarks()` beside the line where an ayah starts, max 2 per line, tap → its sheet); first
       mark = **bookmarks** (`src/data/bookmarks.ts`, localStorage; 🔖 in the selection bar, ☰ →

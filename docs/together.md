@@ -369,8 +369,9 @@ are skipped, never "0").
 - **Moderation:** user text only appears to people the author invited (circle, partner, wall,
   gift link holders); hosts/owners can hide entries; "Report" sends an email to the owner's address
   stored in `config/public`. Length limits everywhere.
-- **Testing:** RLS policy tests (pgTAP, `supabase test db`) in CI
-  (`firebase emulators:exec "npm run test:rules"`); sync engine tests against the emulator; a
+- **Testing:** RLS policy tests (pgTAP, `supabase/tests/*.test.sql`) run in CI by
+  `.github/workflows/supabase.yml` (`supabase db start` + `supabase test db`, a local database, no
+  access token); each new migration adds its tests there; a
   Playwright smoke test for gift and wall pages on the web build; `npm run check` unchanged.
 - **Monitoring:** Crashlytics (opt-in), Functions logs with error alerts by email, the $5 budget
   alert, and a weekly glance at Supabase usage (Reports).
