@@ -38,6 +38,7 @@ export interface SelectionOptions {
   onListen?(sel: Sel): void; // adds a ▶ button to the selection bar
   onBookmark?(sel: Sel): void; // adds a 🔖 button (bookmarks the first selected ayah)
   onReflect?(sel: Sel): void; // adds a ✎ Reflect button (a private note on the first selected ayah)
+  onGift?(sel: Sel): void; // adds a 🎁 Gift button (send the selected ayat as a gift link)
 }
 
 export function selectionController(o: SelectionOptions) {
@@ -57,6 +58,7 @@ export function selectionController(o: SelectionOptions) {
     o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': 'Bookmark', title: 'Bookmark this ayah', onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
     o.onReflect && h('button', { class: 'chip', title: 'A private note on this ayah', onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, '✎ Reflect'),
+    o.onGift && h('button', { class: 'chip', title: 'Send these ayat as a gift', onclick: () => { const sel = current(); if (sel) o.onGift!(sel); } }, '🎁 Gift'),
     h('button', { class: 'primary brand-btn', onclick: () => {
       const sel = current();
       if (sel) location.hash = `#/reel/${sel.surah}/${sel.lo}-${sel.hi}`;

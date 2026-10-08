@@ -151,6 +151,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       toast(on ? `Bookmarked ${reference(meta[s.surah - 1], s.lo, s.lo)}` : 'Bookmark removed');
     },
     onReflect: (s) => { sel.clear(); void openReflection(meta, s.surah, s.lo); },
+    onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
@@ -454,6 +455,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, '✎  Reflections'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, '◯  Khatm circles'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, '🎁  Gifts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {

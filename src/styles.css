@@ -714,3 +714,56 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .join { max-width: 520px; margin: 0 auto; padding: 16px; }
 .join-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); text-align: center; margin-bottom: 12px; }
 .join-card h2 { margin: 0 0 6px; }
+/* Gift an ayah (src/ui/gift.ts) */
+.gift-sheet, .gifts-sheet { max-height: 92vh; overflow: auto; }
+.gift-ref { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.gift-reply-to { margin: 8px 0 0; font-size: 14px; }
+.gift-msg { resize: none; font: inherit; line-height: 1.4; }
+.gift-label-row { display: flex; justify-content: space-between; }
+.gift-presets { display: flex; gap: 6px; overflow-x: auto; margin-top: -4px; padding-bottom: 2px; }
+.gift-presets .chip { flex: none; font-size: 13px; }
+.gift-signin { padding: 10px 12px; border-radius: 12px; background: var(--sel); }
+.gift-signin p { margin: 0 0 8px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.gift-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 8px 0; }
+.gift-done h3 { margin: 4px 0 0; }
+.gift-url { width: 100%; box-sizing: border-box; text-align: center; color: var(--text); font-size: 13px; }
+.gift-page { max-width: 520px; margin: 0 auto; padding: 10px 16px 32px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.gift-stage {
+  position: relative; height: min(66vh, calc((100vw - 32px) * 16 / 9), 780px); aspect-ratio: 9 / 16; max-width: 100%;
+  border-radius: 14px; overflow: hidden; background: #000; box-shadow: var(--shadow);
+}
+.gift-canvas { display: block; width: 100%; height: 100%; }
+.gift-sealed {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  border: 0; cursor: pointer; color: #f3efe6; font: inherit; text-align: center; padding: 24px;
+  background: radial-gradient(circle at 50% 42%, rgba(34, 179, 160, .28), transparent 60%), #07130f;
+  transition: opacity .9s cubic-bezier(.25,.1,.25,1), transform .9s cubic-bezier(.25,.1,.25,1);
+}
+.gift-sealed.open { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.gift-seal { font-size: 54px; filter: drop-shadow(0 0 18px rgba(34, 179, 160, .45)); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
+.gift-seal.small-seal { font-size: 40px; }
+@keyframes gift-breathe { to { filter: drop-shadow(0 0 28px rgba(94, 234, 212, .6)); transform: translateY(-2px); } }
+.gift-from { font-size: 22px; font-weight: 650; }
+.gift-sealed-ref { font-size: 15px; opacity: .8; }
+.gift-tap { margin-top: 12px; font-size: 13px; opacity: .7; letter-spacing: .04em; }
+.gift-controls { display: flex; justify-content: center; min-height: 44px; }
+.gift-controls .ctl { color: var(--text); }
+.gift-note { margin: 0; max-width: 440px; text-align: center; }
+.gift-note blockquote { margin: 0; font-size: 17px; line-height: 1.5; }
+.gift-note figcaption { margin-top: 4px; color: var(--muted); font-size: 14px; }
+.gift-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+.gift-actions.glow { animation: gift-actions-in 1.2s cubic-bezier(.25,.1,.25,1) both; }
+@keyframes gift-actions-in { from { opacity: .4; transform: translateY(6px); } }
+.gift-extra { width: 100%; text-align: center; }
+.gift-extra .gift-row { justify-content: center; }
+.gift-error { text-align: center; padding: 40px 0; }
+.gift-list { display: flex; flex-direction: column; gap: 4px; }
+.gift-row { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); }
+.gift-row-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px;
+  border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.gift-row-main:hover { background: var(--sel); }
+a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
+@media (prefers-reduced-motion: reduce) { .gift-seal, .gift-actions.glow { animation: none; } .gift-sealed { transition: opacity .4s; transform: none; } }

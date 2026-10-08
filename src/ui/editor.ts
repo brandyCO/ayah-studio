@@ -3,8 +3,7 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
-import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
-import { qdcSurah } from '../data/qdc';
+import { arrangeAudio } from '../data/audio';
 import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
@@ -20,7 +19,7 @@ import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, audioSpans, LEAD_IN, planClipReel, planQdcReel, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
@@ -34,12 +33,8 @@ import { h, toast } from './dom';
 import { icon } from './icons';
 import { createMediaPicker } from './mediaPicker';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
+import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
-
-interface Reel {
-  plan: ReelPlan;
-  audio: AudioBuffer;
-}
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: 'Ayah' },
@@ -925,6 +920,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, 'Device check'), h('span', { class: 'muted small' }, 'What this device can export')));
   const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
   const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => void doExport() }, 'Export');
+  const giftBtn = h('button', { class: 'ctl', 'aria-label': 'Send as a gift', title: 'Send as a gift', onclick: () => {
+    pause();
+    void import('./gift').then((m) => m.openGiftComposer(s, project.from, project.to, { look: lookOf(project), reciter: project.reciterId }));
+  } }, icon('gift'));
   const exportPathLabel = h('p', { class: 'muted small' });
   const progressBar = h('div', { class: 'export-bar' }, h('div', {}));
   const progressText = h('div', { class: 'export-pct' }, '0%');
@@ -936,7 +935,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': 'Close the editor' }, icon('close')),
-      h('div', { class: 'top-right' }, qualityBtn, exportBtn, qualityMenu)),
+      h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
     h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
@@ -1002,29 +1001,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // Recitation per reciter (kept while the editor is open, so switching back is instant).
   const reels = new Map<number, Promise<Reel>>();
-  async function buildReel(r: Reciter, progress: (msg: string) => void): Promise<Reel> {
-    try {
-      const q = await qdcSurah(r.id, n);
-      const p = planQdcReel(q.timings, n, from, arabic, wordMap);
-      if (p) {
-        progress('Loading recitation…');
-        return { plan: p, audio: await sliceAudio(q.audioUrl, p.clip!, LEAD_IN, p.duration, q.duration) };
-      }
-      console.warn(`QDC has no timing for ${n}:${from}-${to} (reciter ${r.id}); using everyayah`);
-    } catch (e) {
-      console.warn(`QDC recitation failed (reciter ${r.id}); using everyayah`, e);
-    }
-    // Fallback: per-ayah files without word timings (Ayah mode only).
-    let done = 0;
-    progress(`Loading recitation… 0/${arabic.length}`);
-    const clips = await Promise.all(arabic.map((_, i) => ayahAudio(r, n, from + i).then((b) => {
-      progress(`Loading recitation… ${++done}/${arabic.length}`);
-      return b;
-    })));
-    const p = planClipReel(from, clips.map((c) => c.duration));
-    return { plan: p, audio: mixdown(clips, p.offsets!, p.duration) };
-  }
-
   let audioReq = 0;
   async function loadAudio() {
     const req = ++audioReq;
@@ -1040,7 +1016,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     syncText = 'Loading word timings…';
     try {
       if (!reels.has(r.id)) {
-        const p = buildReel(r, (msg) => { if (req === audioReq) setStatus(msg); });
+        const p = loadReel(r, n, from, arabic, wordMap, (msg) => { if (req === audioReq) setStatus(msg); });
         p.catch(() => reels.delete(r.id));
         reels.set(r.id, p);
         // Decoded audio is large: keep only the two most recent reciters.

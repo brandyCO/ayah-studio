@@ -4,6 +4,7 @@
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
 //   #/join/CODE        an invitation to a Khatm circle
+//   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
@@ -42,6 +43,9 @@ async function route() {
     } else if (view === 'join' && a) {
       const { showJoin } = await import('./ui/circles');
       c = await showJoin(screen, a);
+    } else if (view === 'gift' && a) {
+      const { showGift } = await import('./ui/gift');
+      c = await showGift(screen, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);

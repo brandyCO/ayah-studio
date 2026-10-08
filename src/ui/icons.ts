@@ -45,6 +45,7 @@ const P: Record<string, string> = {
   down: '<path d="M6 9l6 6 6-6"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
   share: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 14v6h14v-6"/>',
+  gift: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-4-6-4.5-5.5-1.5.3 1.4 3 1.5 5.5 1.5zM12 9c1.5-4 6-4.5 5.5-1.5-.3 1.4-3 1.5-5.5 1.5z"/>',
   save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
 };
 
