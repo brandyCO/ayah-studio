@@ -133,7 +133,7 @@ The owner's PC and Android phone both report hardware H.264 + AAC support (verif
 | Per-ayah audio (Ayah-mode fallback) | `https://everyayah.com/data/{folder}/{SSS}{AAA}.mp3` | No word timings. Used when QDC fails or has no timing for an ayah. `cdn.islamic.network` sends no CORS headers, so it is not usable from the browser. See `src/data/reciters.ts`. |
 | Font | KFGQPC Uthmanic Script Hafs (King Fahd Complex), fallback Amiri Quran | Vendor into `public/fonts/` with license |
 | Default backgrounds | Pexels / Pixabay | Small curated set; source + license per file in `public/backgrounds/CREDITS.md` |
-| Pixabay library (phase 1b) | Pixabay API (images + videos) | Repo is **public**: never commit the key; call through a tiny proxy (Cloudflare Worker, free tier). Respect Pixabay API terms (attribution, caching). |
+| Stock libraries (phase 1b) | Pixabay API + Pexels API (images + videos) | Repo is **public**: never commit the keys; call through a tiny proxy (Cloudflare Worker, free tier). Respect their API terms (attribution, caching). `images.pexels.com`, `videos.pexels.com` and `cdn.pixabay.com` send CORS headers (checked 2026-10-08). |
 | User uploads | Device gallery / file picker | Kept local; never uploaded anywhere |
 
 **As built (Phase 0):**
@@ -276,8 +276,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       CORS). A picked item is downloaded into My media (no hotlinking)
 - [x] Attribution: creator + page kept per Pixabay item; shown on tiles and on the export page
       ("Background by X on Pixabay" + Copy credits for the caption)
-- [ ] Owner: deploy the worker and set the repo variable `PIXABAY_PROXY` (steps in `proxy/README.md`);
-      until then the Pixabay tab says it is not set up
+- [x] Owner: deployed the worker and set the repo variable `PIXABAY_PROXY` (steps in `proxy/README.md`)
+- [x] Scale-up (owner request): the worker now also serves **Pexels** (secret `PEXELS_KEY`, optional;
+      portrait photos/videos, 1080×1920 file picked), curated calm **collections** (`/sources`; the
+      library opens on the first one), a people filter on tags/descriptions (rule 4), per-visitor limits
+      (30 uncached searches, 20 file relays a minute; optional `RATE_LIMITER` binding) and a cap per
+      library (Pixabay 90/min, Pexels 180/h). App: `src/data/stock.ts` (was `pixabay.ts`); tab
+      **Free library** with a Pixabay/Pexels switch and "Try the other library" when one is busy; ids
+      `pe:image:…` / `pe:video:…`; credits name the source
+- [ ] Owner: paste the updated worker into Cloudflare; optionally add `PEXELS_KEY`; before a public
+      launch ask Pixabay and Pexels for higher limits (`proxy/README.md`)
 - [ ] Tested by the owner on their phone (upload from gallery, Pixabay pick, export)
 
 ### Phase 1c — app packaging

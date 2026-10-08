@@ -7,7 +7,7 @@ import { ALL_FORMATS, BlobSource, CanvasSink, Input, UrlSource, type InputVideoT
 export interface Credit {
   author: string;
   url: string; // the item's page at the source
-  source: 'Pixabay';
+  source: 'Pixabay' | 'Pexels';
 }
 
 export type Background =
