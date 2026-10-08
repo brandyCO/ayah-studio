@@ -74,7 +74,7 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     for (let i = 0; i < frames; i++) {
       if (o.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
       const t = i / FPS;
-      await prepareScenes(spans, t, o.media);
+      await prepareScenes(spans, t, o.media, o.project.clips ?? []);
       render(ctx, t, o.project, o.timeline, o.media);
       await video.add(t, 1 / FPS);
       if (i % 5 === 0) o.onProgress(i / frames);

@@ -515,3 +515,7 @@ body[data-view="reel"] {
 .draft-thumb { aspect-ratio: 9 / 16; border-radius: 10px; background: #1d1d22 center / cover no-repeat; border: 1px solid var(--line); }
 .draft-open strong { font-size: 14px; margin-top: 4px; }
 .draft-del { position: absolute; top: 6px; right: 6px; }
+
+/* scene video panel */
+.clip-time { font-variant-numeric: tabular-nums; font-size: 14px; }
+.clip-slider { width: 100%; margin: 10px 0 4px; accent-color: var(--accent); height: 28px; }

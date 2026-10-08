@@ -22,7 +22,10 @@ import {
 } from '../engine/project';
 import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
-import { MAX_SCENES, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, type SceneMode, type Transition } from '../engine/scenes';
+import {
+  CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
+  type Clip, type ClipFit, type SceneMode, type Transition,
+} from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
@@ -239,8 +242,19 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- scenes: every structural edit works on an explicit list (Custom) with one entry per scene ---
   const scenesChanged = () => { rebuild(); void loadScenes(); };
+  /** Each scene entry's video settings (`clips`) follow it through every edit: one per entry. */
+  const fitClips = () => {
+    // In place, so a reference taken earlier in the same statement stays the project's list.
+    const c = (project.clips ??= []);
+    while (c.length < project.scenes.length) c.push(null);
+    c.length = project.scenes.length;
+    for (let i = 0; i < c.length; i++) c[i] ??= null;
+    return c;
+  };
   function toCustom() {
     if (!tl || project.sceneMode === 'custom') return;
+    const clips = fitClips();
+    project.clips = tl.scenes.map((x) => clips[x.entry] ?? null);
     project.scenes = tl.scenes.map((x) => project.scenes[x.entry]);
     project.sceneLengths = tl.scenes.map((x) => x.end - x.start);
     project.sceneMode = project.scenes.length > 1 ? 'custom' : 'single';
@@ -250,6 +264,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     toCustom();
     const lens = project.sceneMode === 'custom' ? project.sceneLengths : [tl?.duration ?? 1];
     const sum = lens.reduce((a, b) => a + b, 0);
+    fitClips().push(null);
     project.scenes.push(id);
     project.sceneLengths = [...lens, sum / lens.length]; // the new scene gets an equal share; the others shrink in proportion
     project.sceneMode = 'custom';
@@ -262,6 +277,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function removeScene(i: number) {
     toCustom();
     if (project.scenes.length < 2) return;
+    fitClips().splice(i, 1);
     project.scenes.splice(i, 1);
     project.sceneLengths.splice(i, 1);
     if (project.scenes.length === 1) project.sceneMode = 'single';
@@ -274,6 +290,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (j < 0 || j >= project.scenes.length || i === j) return;
     const [id] = project.scenes.splice(i, 1);
     const [len] = project.sceneLengths.splice(i, 1);
+    const [clip] = fitClips().splice(i, 1);
+    project.clips.splice(j, 0, clip);
     project.scenes.splice(j, 0, id);
     project.sceneLengths.splice(j, 0, len);
     selection = { kind: 'scene', index: j };
@@ -286,10 +304,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const sc = tl.scenes[i];
     if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(`Move the playhead inside the scene (at least ${MIN_SCENE} s from its ends)`);
     if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
+    // The second part continues the video from the frame at the playhead.
+    const v = media[sc.entry]?.video;
+    const clip = fitClips()[sc.entry];
+    const second: Clip | null = v ? { in: videoTime(sceneSpans(tl.scenes, project.transition)[i], t, clip, v.duration), fit: clip?.fit ?? 'loop' } : clip;
     toCustom();
     if (project.sceneMode === 'single') {
       project.sceneLengths = [tl.duration];
     }
+    fitClips().splice(i + 1, 0, second);
     project.scenes.splice(i + 1, 0, project.scenes[i]);
     project.sceneLengths.splice(i, 1, t - sc.start, sc.end - t);
     project.sceneMode = 'custom';
@@ -315,10 +338,56 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         const k = project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl?.scenes[replace]?.entry ?? replace;
         if (k >= project.scenes.length) return;
         project.scenes[k] = id;
+        fitClips()[k] = null; // new media starts from its beginning
         scenesChanged();
         changed();
       },
     });
+  }
+
+  /** A scene's video: where it starts, and how a clip shorter than the scene fills it. */
+  const secs = (x: number) => `${Math.floor(x / 60)}:${(x % 60).toFixed(1).padStart(4, '0')}`;
+  function videoPanel(i: number): Node[] {
+    const sc = tl?.scenes[i];
+    const v = sc && media[sc.entry]?.video;
+    if (!tl || !sc || !v) return [note('This scene is a photo or a colour. Photos move slowly on their own.')];
+    const span = sceneSpans(tl.scenes, project.transition)[i];
+    const D = v.duration, slot = span.to - span.from;
+    const clip = (): Clip => fitClips()[sc.entry] ?? { in: 0, fit: 'loop' };
+    const start = () => clipIn(clip(), D);
+    const label = h('span', { class: 'clip-time' });
+    const info = h('p', { class: 'muted small' });
+    const show = () => {
+      const avail = D - start();
+      label.textContent = `${secs(start())} / ${secs(D)}`;
+      info.textContent = avail >= slot
+        ? `The scene uses ${slot.toFixed(1)} s of the clip, from ${secs(start())}.`
+        : `From here the clip lasts ${avail.toFixed(1)} s, shorter than the scene (${slot.toFixed(1)} s): ` +
+          (clip().fit === 'loop' ? 'it plays again from the start point.'
+            : clip().fit === 'slow' ? `it plays at ${Math.round(Math.max(MIN_RATE, avail / slot) * 100)}% speed${avail / slot < MIN_RATE ? ', then loops' : ''}.`
+              : 'it stops on its last frame.');
+    };
+    const slider = h('input', { class: 'clip-slider', type: 'range', min: '0', max: String(Math.max(0, D - 0.1).toFixed(1)), step: '0.1', value: String(start()) });
+    slider.addEventListener('input', () => {
+      if (exporting) return;
+      pause();
+      fitClips()[sc.entry] = { ...clip(), in: Number(slider.value) };
+      t = Math.min(sc.end - 0.05, 2 * sc.start - span.from); // the scene, fully in view
+      spine.reveal(t);
+      show();
+      changed(false); // keep the slider while dragging
+    });
+    slider.addEventListener('change', () => changed());
+    show();
+    const short = D - start() < slot;
+    return [
+      row('Start from', label),
+      slider,
+      short ? row('Clip too short', chips<ClipFit>(CLIP_FITS, () => clip().fit, (f) => { fitClips()[sc.entry] = { ...clip(), fit: f }; })) : null,
+      info,
+      project.sceneMode === 'ayah' && project.scenes.length < tl.scenes.length ? note('This video repeats in other scenes; they all use these settings.') : null,
+      note('Background videos play without their own sound.'),
+    ].filter(Boolean) as Node[];
   }
 
   // --- audio: trims (silence only), pauses, whole ayat at the ends ---
@@ -434,6 +503,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           if (v !== 'single' && project.scenes.length < 2) {
             const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
             project.scenes.push(BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id);
+            fitClips();
           }
           if (v === 'custom' && project.sceneLengths.length !== project.scenes.length) project.sceneLengths = project.scenes.map(() => 1);
           project.sceneMode = v;
@@ -526,6 +596,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       return [
         { id: 'split', icon: 'split', label: 'Split', action: () => splitScene(i) },
         { id: 'replace', icon: 'replace', label: 'Replace', panel: () => bgPicker(i) },
+        { id: 'video', icon: 'clip', label: 'Video', disabled: () => !media[tl?.scenes[i]?.entry ?? -1]?.video, panel: () => videoPanel(i) },
         { id: 'left', icon: 'left', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
         { id: 'right', icon: 'right', label: 'Move right', disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
         { id: 'transition', icon: 'transition', label: 'Transition', panel: transitionPanel },
@@ -902,7 +973,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       dirty = true;
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
-    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, true)?.then(() => (dirty = true));
+    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true)?.then(() => (dirty = true));
     spine.frame();
     if (!dirty) return;
     dirty = false;

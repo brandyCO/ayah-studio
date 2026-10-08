@@ -240,12 +240,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Text effect in category tabs with animated tiles / Transition); a selected block shows its own
       actions. Picking an effect or transition plays it. Wide screens: panels open left of the preview
 - [x] Undo/redo (snapshots of the project, every edit)
-- [ ] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
+- [x] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
-      (done: Single / Per ayah / Even split from the preset backgrounds, filling the reel exactly —
-      `src/engine/scenes.ts`; per-ayah changes in the pause between ayat; Ken Burns per scene; videos
-      start from their first frame when their scene shows; Custom: trimmed/reordered in the timeline,
-      lengths kept as shares of the reel, snap to pauses. Left: video loop/slow/hold + in-point)
+      (Single / Per ayah / Even split / Custom fill the reel exactly — `src/engine/scenes.ts`; per-ayah
+      changes in the pause between ayat; Ken Burns per scene; Custom: trimmed/reordered in the
+      timeline, lengths kept as shares of the reel, snap to pauses. Video timing: `project.clips`
+      (one per scene entry, kept in step with `scenes` by every edit; remembered with the look):
+      in-point + fit for a clip shorter than its scene — loop from the in-point, slow down (≥ 25 %
+      speed, then loops) or freeze on the last frame (`videoTime()`). Select a video scene → **Video**:
+      "Start from" slider (the preview shows the frame) + fit chips; Split continues the clip from
+      the frame at the playhead)
 - [x] Full calm text-effect set: 17 effects in `src/engine/effects.ts` (ink reveal and light sweep
       run right-to-left on the Arabic, left-to-right on the English)
 - [x] Scene transitions (11): crossfade, blur dissolve, dip to black/white, soft zoom-through, light
