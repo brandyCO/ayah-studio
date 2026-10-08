@@ -5,6 +5,7 @@ import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
+import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
@@ -137,6 +138,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   });
   const repaintMarks = () => { for (const el of built.values()) if (el.dataset.fit) paintMarks(el); };
   window.addEventListener('bookmarks-changed', repaintMarks);
+  window.addEventListener('prefs-synced', applyTimeTint); // settings arrived from another device
   applyTimeTint();
   const tintTimer = window.setInterval(applyTimeTint, 10 * 60_000);
 
@@ -351,6 +353,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
         h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, '🔖  Bookmarks'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
@@ -409,6 +412,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     renderId++;
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
+    window.removeEventListener('prefs-synced', applyTimeTint);
     clearTimeout(resizeTimer);
     sel.destroy();
     player.destroy();

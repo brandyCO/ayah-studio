@@ -2,6 +2,7 @@
 // of day, the Ramadan crescent and the "Today" card in the drop-down bar. Features add their marks and
 // Today lines through registerMarks() / registerToday(); everything here works without an account.
 import { h } from './dom';
+import { touchPref } from './prefs';
 
 // --- margin marks ---
 export interface Mark {
@@ -47,6 +48,7 @@ export function setTimeTint(on: boolean) {
   } catch {
     /* ignore */
   }
+  touchPref('timeTint');
   applyTimeTint();
 }
 

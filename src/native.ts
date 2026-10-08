@@ -70,3 +70,10 @@ export async function shareFile(uri: string, title: string) {
   const { Share } = await import('@capacitor/share');
   await Share.share({ files: [uri], dialogTitle: title });
 }
+
+/** Writes a text file to the app's cache and opens the share sheet for it (data export). */
+export async function shareTextFile(name: string, text: string) {
+  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+  const { uri } = await Filesystem.writeFile({ directory: Directory.Cache, path: name, data: text, encoding: Encoding.UTF8 });
+  await shareFile(uri, name);
+}

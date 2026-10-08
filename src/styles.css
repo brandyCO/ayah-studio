@@ -344,6 +344,14 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 @keyframes today-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .today-item { animation: none; } .mushaf, .mushaf-page { transition: none; } }
 .bm-row { display: flex; align-items: center; gap: 4px; }
+/* ☰ → Account (src/ui/account.ts) */
+.account p { margin: 10px 0; }
+.acc-who { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
+.acc-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--sel); font-weight: 700; }
+.google-btn { width: 100%; padding: 12px; font-size: 16px; }
+.menu-item.danger, .primary.danger { color: #c62828; }
+.primary.danger { background: #c62828; color: #fff; border-color: transparent; }
+@media (prefers-color-scheme: dark) { .menu-item.danger { color: #ff7b7b; } }
 .bm-go { flex-direction: column; align-items: flex-start; gap: 0; }
 
 /* listening: the ayah being recited is tinted, its word being recited coloured */
