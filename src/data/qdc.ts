@@ -1,6 +1,7 @@
 // Quran.com QDC recitations: per reciter and surah, one full-surah MP3 plus verse and word timings.
 // api.qurancdn.com is the documented host; api.quran.com serves the same API (also with CORS).
 import type { VerseTiming } from '../engine/words';
+import { keepNewest, tx } from './db';
 
 const HOSTS = ['https://api.qurancdn.com', 'https://api.quran.com'];
 
@@ -16,8 +17,10 @@ interface AudioFilesResponse {
 }
 
 const cache = new Map<string, Promise<QdcSurah>>();
+/** Timings kept on this device (IndexedDB) so reels opened before also work offline, in the app too. */
+const MAX_KEPT = 60;
 
-async function fetchJson(path: string): Promise<AudioFilesResponse> {
+async function fetchNetwork(path: string): Promise<AudioFilesResponse> {
   let lastErr: unknown;
   for (const host of HOSTS) {
     try {
@@ -31,7 +34,22 @@ async function fetchJson(path: string): Promise<AudioFilesResponse> {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
-/** Audio URL and timings of one surah for one reciter (cached; the HTTP cache keeps the JSON too). */
+/** Network first (then kept on the device); the copy kept before when offline. */
+async function fetchJson(path: string): Promise<AudioFilesResponse> {
+  try {
+    const data = await fetchNetwork(path);
+    void tx('timings', 'readwrite', (s) => s.put({ key: path, data, used: Date.now() }))
+      .then(() => keepNewest('timings', MAX_KEPT))
+      .catch((e) => console.warn('Timings not kept for offline use', e));
+    return data;
+  } catch (e) {
+    const kept = await tx<{ data: AudioFilesResponse } | undefined>('timings', 'readonly', (s) => s.get(path)).catch(() => undefined);
+    if (kept?.data) return kept.data;
+    throw e;
+  }
+}
+
+/** Audio URL and timings of one surah for one reciter (cached in memory and kept on the device). */
 export function qdcSurah(reciterId: number, surah: number): Promise<QdcSurah> {
   const key = `${reciterId}/${surah}`;
   if (!cache.has(key)) {
