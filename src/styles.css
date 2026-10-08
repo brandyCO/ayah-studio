@@ -379,11 +379,12 @@ body[data-view="reel"] {
   background: none; color: var(--text); font-weight: 650; font-size: 14px; cursor: pointer;
 }
 .export-open { flex: none; padding: 5px 13px; border-radius: 6px; font-size: 13px; font-weight: 600; }
-.menu {
+/* The editor's quality drop-down (the reading view's .menu sheets use the rules above). */
+.quality-menu {
   position: absolute; right: 10px; top: 48px; z-index: 20; min-width: 240px; padding: 6px;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
 }
-.menu-item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+.quality-menu .menu-item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
 .menu-item.on { background: var(--line); }
 .menu-item .muted { margin: 0; }
 .ctl {
@@ -413,15 +414,16 @@ body[data-view="reel"] {
   width: 32px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px;
   background: var(--card); color: var(--text); font-size: 15px; line-height: 1; cursor: pointer;
 }
-.sheet {
+/* The editor's slide-up panel (section.sheet); the reading view's dialog sheets keep the rules above. */
+section.sheet {
   position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; min-height: 0;
   /* Full width of the screen (the device-check dialog's .sheet sizing does not apply here). */
   width: auto; padding: 0; border: 0;
   background: var(--card); border-radius: 14px 14px 0 0; animation: sheet-up .18s ease-out;
 }
 @keyframes sheet-up { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
-.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0 16px; }
-.sheet-head h2 { margin: 0; font-size: 15px; }
+section.sheet .sheet-head { padding: 6px 8px 0 16px; }
+section.sheet .sheet-head h2 { font-size: 15px; }
 .sheet-close { background: none; border: 0; color: var(--text); }
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(14px + env(safe-area-inset-bottom)); }
 .sheet-body > .chips, .sheet-body > .sub-row, .sheet-body > .tiles, .sheet-body > .list, .sheet-body > .bg-grid, .sheet-body > .colour-grid { margin-top: 6px; }
@@ -531,7 +533,7 @@ body[data-view="reel"] {
 @media (min-width: 900px) {
   body[data-view="reel"] { --bottom-h: 300px; }
   /* Panels open at the left of the preview; the timeline stays visible. */
-  .sheet { position: fixed; inset: 56px auto var(--bottom-h) 0; width: 380px; border-radius: 0 14px 0 0; }
+  section.sheet { position: fixed; inset: 56px auto var(--bottom-h) 0; width: 380px; border-radius: 0 14px 0 0; }
   .studio.panel-open .studio-stage, .studio.panel-open .transport { padding-left: 392px; }
 }
 

@@ -754,7 +754,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // Quality menu (top bar) and export page.
   const qualityLabel = h('span', {}, '1080P');
-  const qualityMenu = h('div', { class: 'menu', hidden: true });
+  const qualityMenu = h('div', { class: 'quality-menu', hidden: true });
   const drawQualityMenu = () => qualityMenu.replaceChildren(
     ...([[1920, '1080P', 'Best for Instagram, TikTok and Shorts'], [1280, '720P', 'Smaller file, faster export']] as const).map(([q, l, d]) =>
       h('button', { class: `menu-item${quality === q ? ' on' : ''}`, onclick: () => { quality = q; qualityLabel.textContent = l; qualityMenu.hidden = true; } },
