@@ -192,6 +192,12 @@ Today card needs them. The ring is SVG (30 arcs), animated with CSS. The Khatm r
 engine addition: a **closing card with extra lines** (names), within the 5 % safe area, wrapping
 and shrinking to a legible minimum (rule 6).
 
+**As built (T2a, 2026-10-08):** everything above except push. Changes go only through
+security-definer functions (no client writes to the tables); "Pick one for me" is `take_part(c, null)`;
+pages read are counted on the device only (not shared); a member's finished juz sweeps in the next
+time others open the circle; deleting an account leaves its circles first, so a circle passes to the
+next member. Push (the evening digest) is T2b, after the owner's Firebase setup (§7 step 4).
+
 **Done when:** two phones can create/join a circle, take and finish parts, see each other's
 progress within seconds online and after reconnecting offline, completion triggers exactly once,
 and the Khatm reel exports with names.
@@ -425,7 +431,13 @@ a year of data to recap.
      **Client secret** to the session (the secret goes into Supabase only, never into the repo).
    - **Clients → Create client → Android** "Ayah Studio Android": package `com.brandyco.ayahstudio`,
      SHA-1 `B0:F6:CC:91:59:C1:47:75:21:29:25:70:92:2F:8A:65:21:72:6E:13` (from the signing key).
-4. (T2) Firebase project for push only: Android app with the same package + fingerprints,
+4. **Migrations to the live database** (from T2 on): add the repo secrets `SUPABASE_ACCESS_TOKEN`
+   (supabase.com/dashboard/account/tokens → Generate new token) and `SUPABASE_DB_PASSWORD` (the
+   database password chosen when the project was made; Project Settings → Database → Reset database
+   password if unknown). The "Database rules" workflow then applies new migrations after its tests
+   pass on main. Without them: open the SQL editor, paste the new file from `supabase/migrations/`
+   and Run.
+5. (T2b) Firebase project for push only: Android app with the same package + fingerprints,
    `google-services.json` as the repo secret `GOOGLE_SERVICES_JSON`, and a service-account key for
    FCM stored as a Supabase secret.
 

@@ -279,3 +279,20 @@ begin
     end if;
   end if;
 end $$;
+
+-- Deleting an account leaves each circle first (so a circle passes to the next member instead of
+-- disappearing with its owner), then removes the user and, by cascade, all their rows.
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = '' as $$
+declare c uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Not signed in';
+  end if;
+  for c in select circle_id from public.circle_members where user_id = auth.uid() loop
+    perform public.leave_circle(c);
+  end loop;
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

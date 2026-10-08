@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(38);
+select plan(40);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -101,6 +101,19 @@ select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
 select leave_circle((select v::uuid from ids where k = 'c'));
 reset role;
 select is((select count(*)::int from circles) + (select count(*)::int from circle_parts), 0, 'the last member leaving deletes the circle');
+
+-- Deleting an account hands the owner's circle on instead of deleting it for everyone
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+insert into ids select 'c2', create_circle('Second circle', 'Aisha');
+insert into ids select 'code2', invite_code from circles where name = 'Second circle';
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select join_circle((select v from ids where k = 'code2'), 'Bilal');
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+select delete_my_account();
+reset role;
+select is((select owner_id::text from circles where name = 'Second circle'), 'bbbbbbbb-0000-0000-0000-000000000002',
+  'deleting the owner''s account hands the circle to the next member');
+select is((select count(*)::int from circle_members where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0, 'and removes her membership');
 
 select * from finish();
 rollback;
