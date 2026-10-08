@@ -1,7 +1,7 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import type { EnFont, FrameStyle, TextSize, TitlePos, TitleSize } from './layout';
-import { MAX_SCENES, TRANSITIONS, type SceneMode, type Transition } from './scenes';
+import { MAX_SCENES, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
 export type { SceneMode, TextEffect, Transition };
 /** Ayah: whole ayah · Line: one screen line · Half: half a line · Words: 1–3 words per step. */
@@ -37,6 +37,7 @@ export interface Project {
   titleSize: TitleSize;
   surahName: boolean; // Arabic surah name shown above the reference (the reference always shows: rule 2)
   scenes: string[]; // background ids (1…MAX_SCENES); Single uses the first
+  clips: (Clip | null)[]; // per scene entry (same index as scenes): a video's in-point and fit; null = start, loop
   sceneMode: SceneMode;
   sceneLengths: number[]; // Custom: share of the reel per scene (any scale)
   sceneSnap: boolean; // Custom: scene changes snap to the reciter's pauses
@@ -104,6 +105,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     titleSize: 'm',
     surahName: true,
     scenes: ['mist'],
+    clips: [],
     sceneMode: 'single',
     sceneLengths: [],
     sceneSnap: true,
@@ -129,7 +131,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 
 /** The look of a reel (everything but the selection and reciter), remembered for the next reel. */
 export const LOOK_KEYS = [
-  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes',
+  'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes', 'clips',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
   'credit', 'watermark',
 ] as const;
@@ -160,14 +162,24 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
   const l = { ...(look as Record<string, unknown>) };
   const out = p as unknown as Record<string, unknown>;
   if (!('scenes' in l) && typeof l.backgroundId === 'string') l.scenes = [l.backgroundId]; // looks saved before scenes
+  let kept: number[] | null = null; // stored scene indices still valid (a library item may have been deleted)
   for (const k of LOOK_KEYS) {
     const v = l[k];
     if (k === 'colors') {
       const c = v as Partial<TextColors> | undefined;
       if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
     } else if (k === 'scenes') {
-      const ids = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && validBackground(x)).slice(0, MAX_SCENES) : [];
-      if (ids.length) p.scenes = ids;
+      const idx = Array.isArray(v) ? v.map((x, i) => (typeof x === 'string' && validBackground(x) ? i : -1)).filter((i) => i >= 0).slice(0, MAX_SCENES) : [];
+      if (idx.length) {
+        p.scenes = idx.map((i) => (v as string[])[i]);
+        kept = idx;
+      }
+    } else if (k === 'clips') {
+      const ok = (c: unknown) => c === null || (!!c && typeof c === 'object' && Number.isFinite((c as Clip).in) && (c as Clip).in >= 0 && ['loop', 'slow', 'hold'].includes((c as Clip).fit));
+      if (Array.isArray(v) && v.every(ok)) {
+        const list = v as (Clip | null)[];
+        p.clips = (kept ?? list.map((_, i) => i)).slice(0, MAX_SCENES).map((i) => (list[i] ? { in: list[i]!.in, fit: list[i]!.fit } : null));
+      }
     } else if (k === 'sceneLengths') {
       if (Array.isArray(v) && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x > 0)) p.sceneLengths = v.slice(0, MAX_SCENES);
     } else if (ALLOWED[k] ? ALLOWED[k]!.includes(v) : typeof v === typeof out[k]) {

@@ -9,6 +9,20 @@ import { H, W } from './layout';
  * Even: equal shares · Custom: lengths set by dragging the dividers (fractions of the reel).
  */
 export type SceneMode = 'single' | 'ayah' | 'even' | 'custom';
+/** A video shorter than its scene: loop it, slow it down to fill the scene, or hold its last frame. */
+export type ClipFit = 'loop' | 'slow' | 'hold';
+/** How a scene's video is used: where it starts (seconds into the file) and how a short clip fills the scene. */
+export interface Clip {
+  in: number;
+  fit: ClipFit;
+}
+export const CLIP_FITS: { value: ClipFit; label: string }[] = [
+  { value: 'loop', label: 'Loop' },
+  { value: 'slow', label: 'Slow down' },
+  { value: 'hold', label: 'Freeze last frame' },
+];
+/** Slowest playback for "Slow down" (slower would look frozen); beyond it the slowed clip loops. */
+export const MIN_RATE = 0.25;
 export type Transition = 'crossfade' | 'blur' | 'black' | 'white' | 'zoom' | 'leak' | 'mist' | 'parallax' | 'wipe' | 'iris' | 'cut';
 
 export const TRANSITIONS: { value: Transition; label: string }[] = [
@@ -123,16 +137,31 @@ export function scenesAt(spans: SceneSpan[], t: number): { a: SceneSpan; b: Scen
   return { a: spans[spans.length - 1], b: null, p: 0 };
 }
 
-/** Video time of a scene's background: it starts from its first frame when the scene first shows. */
-export const localTime = (s: SceneSpan, t: number) => Math.max(0, t - s.from);
+/** The usable start of a clip: within the video, leaving at least a tenth of a second. */
+export const clipIn = (clip: Clip | null | undefined, duration: number) => Math.min(Math.max(0, clip?.in ?? 0), Math.max(0, duration - 0.1));
+
+/**
+ * Video time of a scene's background at reel time t: it starts at the clip's in-point when the scene
+ * first shows; a clip shorter than the scene loops from its in-point, slows down, or holds its last frame.
+ */
+export function videoTime(s: SceneSpan, t: number, clip: Clip | null | undefined, duration: number): number {
+  const lt = Math.max(0, t - s.from);
+  const start = clipIn(clip, duration);
+  const avail = Math.max(0.1, duration - start);
+  const slot = s.to - s.from;
+  const fit = clip?.fit ?? 'loop';
+  if (fit === 'hold' || (fit === 'loop' && avail >= slot)) return Math.min(start + lt, duration - 1 / 60);
+  const rate = fit === 'slow' ? Math.max(MIN_RATE, Math.min(1, avail / slot)) : 1;
+  return start + ((lt * rate) % avail);
+}
 
 /** Make every video visible at t hold its frame (export: awaited; preview: fire and forget). */
-export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], skipBusy = false): Promise<unknown> | null {
+export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false): Promise<unknown> | null {
   const { a, b } = scenesAt(spans, t);
   const jobs: Promise<void>[] = [];
   for (const s of [a, b]) {
     const v = s && media[s.entry]?.video;
-    if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(localTime(s, t)));
+    if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(videoTime(s, t, clips[s.entry], v.duration)));
   }
   return jobs.length ? Promise.all(jobs) : null;
 }

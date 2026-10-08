@@ -19,6 +19,7 @@ const P: Record<string, string> = {
   back: '<path d="M15 6l-6 6 6 6"/>',
   left: '<path d="M15 6l-6 6 6 6"/>',
   right: '<path d="M9 6l6 6-6 6"/>',
+  clip: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M10.5 9.5v5l4-2.5z"/>',
   split: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 7.5L20 18M8 16.5L20 6"/>',
   trash: '<path d="M4 7h16M9.5 7V4h5v3M6 7l1 13h10l1-13"/>',
   replace: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
