@@ -40,6 +40,9 @@ export interface ReelPlan {
   outro?: number;
   /** Arranged: where each stretch of the base reel's audio goes. */
   pieces?: AudioPiece[];
+  /** Where the reciter's voice really starts in the base reel's audio (seconds; `voiceOnset`), or null
+   *  when it could not be told from the audio. Unset until measured. */
+  onset?: number | null;
 }
 
 /** Base reel seconds from..to are played at reel second `at`. */
@@ -83,6 +86,8 @@ function holdEnds(ayat: PlannedAyah[], end: number, hold = false, holds: (number
 /** Silence always kept next to a word when audio is trimmed: between ayat, and at the reel's ends. */
 export const MIN_SILENCE = 0.15;
 export const MIN_EDGE = 0.05;
+/** Kept before the reciter's voice at the very start of the reel (owner decision 2026-10-08). */
+export const MIN_LEAD = 0.1;
 
 /**
  * Plan from QDC timings. `texts` are our ayah texts for from..to; `wordMap` is word-map.json's map.
@@ -160,12 +165,17 @@ export function audioSpans(base: ReelPlan): [number, number][] {
   return A.map((_, i) => [cut[i], i + 1 < n ? cut[i + 1] : base.duration]);
 }
 
-/** The most that can be trimmed from the start and end of ayah i's audio: silence only, never a word. */
+/** Where the recitation starts sounding: the voice found in the audio, else the first word's timing. */
+export const voiceStart = (base: ReelPlan) => base.onset ?? base.ayat[0].start;
+
+/** The most that can be trimmed from the start and end of ayah i's audio: silence only, never a word.
+ *  At the very start: up to MIN_LEAD before the voice heard in the audio (the timings can be off by
+ *  a few tenths of a second either way). */
 export function trimLimits(base: ReelPlan, i: number): [number, number] {
   const A = base.ayat, n = A.length;
   const [a, b] = audioSpans(base)[i];
   return [
-    Math.max(0, A[i].start - a - (i === 0 ? MIN_EDGE : MIN_SILENCE)),
+    Math.max(0, i === 0 ? voiceStart(base) - a - MIN_LEAD : A[i].start - a - MIN_SILENCE),
     Math.max(0, b - A[i].last - (i === n - 1 ? MIN_EDGE : MIN_SILENCE)),
   ];
 }
@@ -193,7 +203,8 @@ export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
   const duration = lastP.at + (lastP.to - lastP.from) + o.outro;
   const ayat = A.map((a, i): PlannedAyah => {
     const d0 = pieces[i].at - pieces[i].from;
-    const sh = (x: number) => x + d0;
+    // Never before the ayah's own audio (the first ayah may be trimmed past an early word timing).
+    const sh = (x: number) => Math.max(pieces[i].at, x + d0);
     return {
       ...a, start: sh(a.start), end: 0, last: sh(a.last),
       wordStart: a.wordStart?.map(sh) ?? null,
@@ -202,4 +213,36 @@ export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
   });
   holdEnds(ayat, duration - o.outro, o.hold, o.holds);
   return { ...base, duration, ayat, intro: o.intro, outro: o.outro, pieces };
+}
+
+/**
+ * Where the voice starts near `timed` (the first word's timing), from the audio itself: 10 ms
+ * loudness windows compared with the loudest moment of the next 3 s. If the audio is already
+ * sounding at `timed`, walk back to the last 60 ms of quiet; if it is quiet, walk forward (≤ 0.8 s)
+ * to the first 30 ms of sound. Null when nothing clear is found.
+ */
+export function voiceOnset(data: Float32Array, rate: number, timed: number): number | null {
+  const win = Math.max(1, Math.round(rate * 0.01));
+  const n = Math.floor(data.length / win);
+  if (n < 10) return null;
+  const rms = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let sum = 0;
+    for (let k = i * win; k < (i + 1) * win; k++) sum += data[k] * data[k];
+    rms[i] = Math.sqrt(sum / win);
+  }
+  const ti = Math.min(n - 1, Math.max(0, Math.round(timed / 0.01)));
+  let peak = 0;
+  for (let i = ti; i < Math.min(n, ti + 300); i++) peak = Math.max(peak, rms[i]);
+  if (peak < 1e-4) return null;
+  const loud = (i: number) => rms[i] > peak * 0.06; // about −24 dB under the loudest moment
+  if (loud(ti)) {
+    let first = ti, quiet = 0;
+    for (let i = ti - 1; i >= Math.max(0, ti - 150); i--) {
+      if (loud(i)) { first = i; quiet = 0; } else if (++quiet >= 6) return first * 0.01;
+    }
+    return first <= 1 ? 0 : null; // sound right from the start, or no clear gap
+  }
+  for (let i = ti; i < Math.min(n - 2, ti + 80); i++) if (loud(i) && loud(i + 1) && loud(i + 2)) return i * 0.01;
+  return null;
 }

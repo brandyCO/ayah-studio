@@ -20,7 +20,7 @@ import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, audioSpans, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, audioSpans, LEAD_IN, planClipReel, planQdcReel, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
@@ -539,7 +539,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function natural(i: number): [number, number] {
     const [a, b] = audioSpans(base!.plan)[i];
     const A = base!.plan.ayat[i];
-    return [A.start - a, b - A.last];
+    return [(i === 0 ? voiceStart(base!.plan) : A.start) - a, b - A.last];
   }
   /** Silence before ayah i's first word (from the previous ayah's last word; for the first ayah, from the start). */
   function silenceBefore(i: number) {
@@ -955,8 +955,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   // --- preview sizing ---
   // One canvas pixel per screen pixel (phones are often 2.6–3.5×), so the text is as sharp as the
   // screen allows; never more than the 1080 px of the export.
+  // A page pinch-zoomed by the browser magnifies the canvas too: count that zoom in.
   const resize = () => {
-    const w = Math.min(1080, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1))) || 540;
+    const zoom = Math.max(1, window.visualViewport?.scale ?? 1);
+    const w = Math.min(1080, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1) * zoom)) || 540;
     canvas.width = w;
     canvas.height = Math.round((w * H) / W);
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
@@ -964,6 +966,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
+  window.visualViewport?.addEventListener('resize', resize);
 
   // --- loading ---
   const setStatus = (msg: string) => {
@@ -1045,6 +1048,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       }
       const reel = await reels.get(r.id)!;
       if (req !== audioReq || !alive) return;
+      // Where the voice really starts (the start can be trimmed to MIN_LEAD before it).
+      if (reel.plan.onset === undefined) reel.plan.onset = voiceOnset(reel.audio.getChannelData(0), reel.audio.sampleRate, reel.plan.ayat[0].start);
       base = reel;
       syncText = base.plan.wordTimed
         ? 'Text follows the reciter word by word.'
@@ -1266,6 +1271,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     alive = false;
     cancelAnimationFrame(raf);
     ro.disconnect();
+    window.visualViewport?.removeEventListener('resize', resize);
     spine.dispose();
     exporting?.abort();
     pause();

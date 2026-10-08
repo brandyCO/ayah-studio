@@ -249,7 +249,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
       drag to reorder, Split at the playhead, replace/move/delete; **audio** (per ayah): drag its edges
       to trim silence at its start/end (`project.trims`; e.g. the silence at the start of the reel —
-      never a word: ≥ 0.05 s kept at the reel's ends, 0.15 s between ayat), drag it to add a pause
+      never a word: ≥ 0.1 s kept before the voice at the reel's start — found in the audio itself by
+      `voiceOnset()`, as the timings can be off by tenths of a second — 0.05 s at its end, 0.15 s between ayat), drag it to add a pause
       before it (`project.gaps`, ≥ 0), "Trim silence", add/remove a whole ayah at either end; Audio →
       "Remove silences" trims all of them at once. Not allowed: moving text away from its words
       (rule 8), reordering ayat or cutting audio inside an ayah (rule 1)
@@ -271,7 +272,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Text effect in category tabs with animated tiles / Transition); a selected block shows its own
       actions. Picking an effect or transition plays it. Wide screens: panels open left of the preview. The
       preview canvas has one pixel per screen pixel (full device pixel ratio, ≤ 1080 px wide) so text
-      is sharp on 2.6–3.5× phone screens
+      is sharp on 2.6–3.5× phone screens (times the browser's pinch-zoom, which is blocked in the studio:
+      `touch-action: pan-x pan-y`)
 - [x] Undo/redo (snapshots of the project, every edit)
 - [x] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
