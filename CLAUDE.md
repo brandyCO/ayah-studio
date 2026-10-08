@@ -397,8 +397,10 @@ cloud. Build in this order:
       RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
       `src/cloud/{config,supabase,auth,sync}.ts` + `src/ui/account.ts` (☰ → Account) +
       `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
-      Still to do: Google provider (needs the owner's OAuth client), `VITE_GOOGLE_WEB_CLIENT_ID`,
-      end-to-end test on two devices; day summaries move to T9; RLS tests into CI)
+      Google provider on (owner's OAuth web client `178803855692-hqbv…` in Google Cloud project
+      "Ayah Studio"; secret only in Supabase; web sign-in checked to reach Google's page).
+      Still to do: the Android OAuth client (package + SHA-1, owner), end-to-end sync test on two
+      devices; day summaries move to T9; RLS tests into CI)
 - [x] T1 Living mushaf (`src/ui/living.ts`): 8 px page margins hold marks (`registerMarks()`, drawn
       by `paintMarks()` beside the line where an ayah starts, max 2 per line, tap → its sheet); first
       mark = **bookmarks** (`src/data/bookmarks.ts`, localStorage; 🔖 in the selection bar, ☰ →
