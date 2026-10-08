@@ -5,7 +5,7 @@ import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
-import { setReaderMode } from './prefs';
+import { setLastRead, setReaderMode } from './prefs';
 import { selectionController, type Sel } from './selection';
 
 type Seg = [number, number, string];
@@ -109,6 +109,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     sub.textContent = `Juz ${pg.juz} · Page ${page}`;
     pageNum.textContent = String(page);
     history.replaceState(null, '', `#/s/${s}/${a}`);
+    setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
     pageEl.classList.remove('turn-next', 'turn-prev');
     if (dir) {
       void pageEl.offsetWidth; // restart the animation
