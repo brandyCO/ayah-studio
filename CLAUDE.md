@@ -499,7 +499,36 @@ cloud. Build in this order:
       (`adhan`, Umm al-Qura method, from the rounded location or the user's own time; 10–60 min before;
       rescheduled whenever the mushaf opens; small icon `ic_stat_crescent`; tap → `#/ramadan` → the next
       page of today's portion); web: Today card only
-- [ ] T8 Multi-segment reels + Dua & ayah wall (QR join, live host screen, keepsake reel)
+- [x] T8 Multi-segment reels + Dua & ayah wall (2026-10-08): engine `src/engine/segments.ts` —
+      `joinSegments()` places N arranged one-range plans (each its own surah, word timings, audio slice,
+      pause/hold; `PlannedAyah.surah`) one after another, each optionally followed by a **note card**
+      (`TimedNote`: name + dua, `noteLength()` 3–8 s), then the closing card; `loadSegments()` in
+      `src/ui/reelSource.ts` loads them three at a time and stops at 30 segments / ~600 s (the rest is
+      the next part); audio joined with `mixdown()`. `Timeline` gained `ayat[].surah`, `notes`,
+      `segmented`: `render()` shows each ayah's own surah name + reference (rule 2), fades the header
+      under a note card (`drawNote()`: name, "chose Al-Furqaan · 25:74", the dua quoted in italics +
+      "a dua in Bilal's own words" — UI fonts, never like the ayah), and a segmented closing card shows
+      `project.closing` (title + date) large. Drafts/gifts/editor unchanged (one-range projects).
+      Wall: migration `20261011000000_t8_walls.sql` — `walls` (title ≤ 80, occasion, 6-char
+      `join_code`, open/closed, look = `valid_gift_look`, reciter) + `wall_entries` (one per user per
+      wall: name ≤ 40, dua ≤ 140, ≤ 3 ayat checked by `ayah_count`, hidden); RLS: host reads their walls
+      and all entries, a guest only their own; writes only via `create_wall` / `update_wall` /
+      `set_wall_open` / `delete_wall` / `hide_wall_entry` / `add_wall_entry` (open walls < 30 days,
+      300 entries, 20 a day, anonymous 5) / `remove_wall_entry`, `wall_preview(code)` (anon too);
+      caps 5 open / 50 walls per host; Realtime on `wall_entries`; 42 pgTAP checks
+      (`supabase/tests/walls.test.sql`). App: `src/together/walls.ts` + `src/ui/wall.ts`:
+      ☰ → **Ayah wall** (list, create: title, occasion, reciter; the current reel look with built-in
+      backgrounds via `giftLook()`); `#/wall/{id}` host screen (dark, QR via `qrcode` + big code + link,
+      lanterns drift in and settle into a grid, newest glows; Arabic shown only when ≤ 28 words — never
+      cut, longer ones show the reference; tap → hide / show again; close/reopen; ⋯ settings: title,
+      occasion, reciter, use current look, delete; full screen; wake lock); `#/w/{code}` guest page
+      (name, surah + from/to ≤ 3 with occasion suggestions and a live Arabic preview, dua ≤ 140 "shown as
+      your own words"; `ensureGuest()` = Google or anonymous; without either: Google sign-in, the form
+      kept in sessionStorage `pendingWall` and resumed; done → change / remove / read in the mushaf);
+      `#/wall/{id}/reel[/{start}]` keepsake: visible entries in arrival order, preview + scrub +
+      **Export** (`src/ui/reelExport.ts`, the editor's export page as a reusable overlay), "Next part"
+      past 30 entries / ~10 min. In Export my data and the privacy page. Owner: paste the migration;
+      turn on Anonymous sign-ins so guests need no Google account
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 

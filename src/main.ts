@@ -6,6 +6,8 @@
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
+//   #/w/CODE           a guest adds their ayah to a dua & ayah wall (from the QR code)
+//   #/wall/ID[/reel[/N]]  the host's wall screen / its keepsake reel (from entry N)
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
@@ -47,6 +49,12 @@ async function route() {
     } else if (view === 'gift' && a) {
       const { showGift } = await import('./ui/gift');
       c = await showGift(screen, a);
+    } else if (view === 'w' && a) {
+      const { showWallJoin } = await import('./ui/wall');
+      c = await showWallJoin(screen, a);
+    } else if (view === 'wall' && a) {
+      const m = await import('./ui/wall');
+      c = b === 'reel' ? await m.showKeepsake(screen, a, Math.max(0, Math.floor(Number(c4) || 0))) : await m.showWallHost(screen, a);
     } else if (view === 'ramadan') {
       // A Ramadan reminder was tapped: the mushaf on the next page of today's portion.
       const { ramadanTarget } = await import('./ui/ramadan');
@@ -83,3 +91,8 @@ setupOffline();
 startSync();
 void initAuth();
 void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
+try {
+  if (sessionStorage.getItem('pendingWall')) void import('./ui/wall').then((m) => m.resumePendingWall()); // a wall entry before signing in
+} catch {
+  /* ignore */
+}

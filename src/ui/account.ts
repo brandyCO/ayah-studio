@@ -118,12 +118,16 @@ async function exportData() {
   const { data: parts } = await sb.from('circle_parts').select('circle_id,round,juz,status,taken_at,done_at').eq('user_id', a.id);
   // Gifts you sent and the replies they received (references, names and messages only).
   const { data: gifts } = await sb.rpc('my_gifts');
+  // Ayah walls you host (with every entry on them) and your own entries on other walls.
+  const { data: walls } = await sb.from('walls').select('title,occasion,join_code,status,reciter,created_at,closed_at,wall_entries(name,dua,surah,ayah_from,ayah_to,hidden,created_at)').eq('host_id', a.id);
+  const { data: entries } = await sb.from('wall_entries').select('wall_id,name,dua,surah,ayah_from,ayah_to,hidden,created_at').eq('user_id', a.id);
   const file = {
     exported: new Date().toISOString(),
     account: { name: a.name, email: a.email, created: profile?.created_at ?? null },
     synced: docs,
     circles: { memberships: circles ?? [], juz: parts ?? [] },
     gifts: gifts ?? [],
+    walls: { hosted: walls ?? [], myEntries: entries ?? [] },
     thisDevice: {
       bookmarks: bookmarkRecords(),
       reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),

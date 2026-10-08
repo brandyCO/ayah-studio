@@ -11,6 +11,7 @@ import {
 import type { TextMode, TranslationMode } from './project';
 import { planScenes, type Scene, type SceneMode } from './scenes';
 import type { ReelPlan } from './recitation';
+import type { TimedNote } from './segments';
 import { displayWords, timeEvents, type Recited } from './words';
 
 export interface TimedText extends Fit {
@@ -30,6 +31,7 @@ export interface TimedEvent {
 
 export interface TimedAyah {
   ayah: number;
+  surah: SurahMeta;
   ref: string; // e.g. "Al-Baqara · 2:255"
   start: number;
   end: number;
@@ -50,6 +52,10 @@ export interface Timeline {
   /** Seconds of intro title card at the start / closing reference card at the end (0 = none). */
   intro: number;
   outro: number;
+  /** Multi-segment reels: note cards (a guest's name and dua) between segments; the closing card
+   *  shows the reel's title instead of one surah's reference. */
+  notes: TimedNote[];
+  segmented: boolean;
 }
 
 export interface TimelineInput {
@@ -66,6 +72,9 @@ export interface TimelineInput {
   sceneMode?: SceneMode; // default single
   sceneCount?: number; // entries in the scene list
   sceneLengths?: number[] | null; // Custom mode
+  /** Multi-segment reels: each ayah's surah (same index as plan.ayat), and the note cards. */
+  surahs?: SurahMeta[];
+  notes?: TimedNote[];
 }
 
 /** Without word timings (Ayah mode only): pages follow each other, proportional to word counts. */
@@ -118,11 +127,12 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
     for (const e of events) {
       if (e.ar.lines.join(' ') !== words.slice(e.first, e.last + 1).join(' ')) throw new Error('Text grouping altered the ayah text');
     }
-    return { ayah: p.ayah, ref: reference(o.surah, p.ayah), start: p.start, end: p.end, events, enPages };
+    const surah = o.surahs?.[i] ?? o.surah;
+    return { ayah: p.ayah, surah, ref: reference(surah, p.ayah), start: p.start, end: p.end, events, enPages };
   });
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,
-    intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0,
+    intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0, notes: o.notes ?? [], segmented: !!o.surahs,
     scenes: planScenes(o.sceneMode ?? 'single', o.sceneCount ?? 1, o.plan.duration, o.plan.ayat, o.sceneLengths),
   };
 }

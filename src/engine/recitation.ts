@@ -13,6 +13,8 @@ export const GAP = 0.25; // between per-ayah clips (everyayah fallback)
 
 export interface PlannedAyah {
   ayah: number;
+  /** Multi-segment reels (segments.ts): the ayah's surah when it differs from the reel's first. */
+  surah?: number;
   /** Reel seconds: the ayah's text shows from start (its first word) until end (after a short hold). */
   start: number;
   end: number;

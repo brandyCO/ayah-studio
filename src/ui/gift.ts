@@ -34,7 +34,7 @@ const BUILT_IN = new Set(BACKGROUNDS.map((b) => b.id));
 const builtIn = (id: string) => BUILT_IN.has(id);
 /** The look as sent: the receiver does not have the sender's own media, so only the built-in
  *  backgrounds travel (with their clip settings); without any, the default background. */
-function giftLook(look: Look): Partial<Look> {
+export function giftLook(look: Look): Partial<Look> {
   const out: Partial<Look> = structuredClone(look);
   const keep = look.scenes.map((id, i) => (BUILT_IN.has(id) ? i : -1)).filter((i) => i >= 0);
   if (keep.length) {

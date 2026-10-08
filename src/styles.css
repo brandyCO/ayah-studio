@@ -815,3 +815,77 @@ a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
 .ramadan-preview { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .ramadan-preview .search { width: auto; color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .moment[open], .moment-crescent { animation: none; } }
+
+/* T8 Dua & ayah wall: the host's screen (dark, calm, readable across a room), the guest page, the keepsake */
+body[data-view="wall"] { background: #07130f; }
+.wall-host {
+  min-height: 100vh; min-height: 100dvh; color: #eef1ec; display: flex; flex-direction: column;
+  background: radial-gradient(ellipse at 50% 0%, rgba(34, 179, 160, .10), transparent 60%), #07130f;
+  padding: 0 0 env(safe-area-inset-bottom);
+}
+.wall-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.wall-host .icon-btn { color: #eef1ec; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); flex: none; }
+.wall-title { flex: 1; min-width: 0; }
+.wall-title h1 { margin: 0; font-size: clamp(20px, 3vw, 34px); font-weight: 600; font-family: Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
+.wall-title p { margin: 2px 0 0; font-size: 13px; opacity: .7; }
+.wall-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.wall-host .chip { color: #eef1ec; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); }
+.wall-host .chip.disabled { opacity: .5; }
+.wall-host .link-btn { color: #e8cf96; }
+.wall-body { flex: 1; display: grid; grid-template-columns: minmax(240px, 30%) 1fr; gap: 24px; padding: 8px 24px 24px; align-items: start; }
+.wall-join { position: sticky; top: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.wall-qr { width: min(100%, 320px); aspect-ratio: 1; background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 0 40px rgba(232, 207, 150, .15); }
+.wall-qr svg { display: block; width: 100%; height: 100%; }
+.wall-scan { margin: 8px 0 0; font-size: 18px; opacity: .85; }
+.wall-code { margin: 0; font-size: clamp(34px, 5vw, 56px); font-weight: 700; letter-spacing: .18em; color: #e8cf96; font-variant-numeric: tabular-nums; }
+.wall-url { margin: 0; font-size: 12px; opacity: .55; overflow-wrap: anywhere; }
+.wall-join.closed { padding-top: 40px; }
+.wall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px; align-content: start; }
+.wall-empty { grid-column: 1 / -1; text-align: center; opacity: .6; font-size: 18px; padding: 40px 0; }
+.lantern {
+  display: flex; flex-direction: column; gap: 8px; text-align: center; padding: 18px 16px; border-radius: 18px; cursor: pointer;
+  color: inherit; font: inherit; border: 1px solid rgba(232, 207, 150, .22);
+  background: radial-gradient(ellipse at 50% 0%, rgba(232, 207, 150, .14), rgba(255, 255, 255, .03) 70%);
+  box-shadow: 0 0 24px rgba(232, 207, 150, .06);
+}
+.lantern-ref { font-size: 13px; letter-spacing: .04em; color: #e8cf96; }
+.lantern-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 26px; line-height: 1.9; }
+.lantern-dua { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 17px; opacity: .92; overflow-wrap: anywhere; }
+.lantern-name { font-size: 15px; font-weight: 600; opacity: .85; overflow-wrap: anywhere; }
+.lantern.arrive { animation: lantern-in 1.6s cubic-bezier(.25,.1,.25,1) both; }
+.lantern.newest { animation: lantern-in 1.6s cubic-bezier(.25,.1,.25,1) both, lantern-glow 2.4s cubic-bezier(.25,.1,.25,1) 1.6s 3 alternate; }
+.lantern:not(.arrive).newest { animation: lantern-glow 2.4s cubic-bezier(.25,.1,.25,1) 3 alternate; }
+.lantern.hidden-entry { opacity: .45; border-style: dashed; }
+@keyframes lantern-in { from { opacity: 0; transform: translateY(40px) scale(.96); filter: blur(4px); } }
+@keyframes lantern-glow { to { box-shadow: 0 0 46px rgba(232, 207, 150, .32); border-color: rgba(232, 207, 150, .6); } }
+.wall-hidden-row { grid-column: 1 / -1; display: grid; grid-template-columns: inherit; gap: 16px; }
+.wall-hidden-row .link-btn { justify-self: start; }
+.wall-message { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+@media (max-width: 720px) {
+  .wall-top { flex-wrap: wrap; }
+  .wall-tools { width: 100%; justify-content: flex-start; }
+  .wall-body { grid-template-columns: 1fr; padding: 4px 16px 24px; gap: 16px; }
+  .wall-join { position: static; }
+  .wall-qr { width: min(60vw, 240px); }
+  .wall-tools .chip { font-size: 12px; padding: 6px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .lantern.arrive, .lantern.newest { animation: lantern-fade 1.2s both; } }
+@keyframes lantern-fade { from { opacity: 0; } }
+.wall-join-page { max-width: 520px; margin: 0 auto; padding: 10px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+.wall-card h2 { margin: 2px 0 4px; font-family: Georgia, 'Times New Roman', serif; font-weight: 600; overflow-wrap: anywhere; }
+.wall-card p { margin: 0; }
+.wall-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wall-preview { padding: 12px 14px; border-radius: 12px; background: var(--sel); text-align: center; }
+.wall-preview-ref { margin: 0; font-size: 13px; color: var(--muted); }
+.wall-preview-ar { margin: 6px 0 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 24px; line-height: 1.9; }
+.wall-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 16px 0; }
+.wall-done h3 { margin: 10px 0 2px; }
+.wall-done p { margin: 4px 0; }
+.wall-own-dua { font-family: Georgia, 'Times New Roman', serif; font-style: italic; overflow-wrap: anywhere; }
+.wall-lamp { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle, #f3e3bc 0%, rgba(232, 207, 150, .5) 35%, transparent 70%); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
+.check-row { display: flex; align-items: center; gap: 8px; flex-direction: row !important; }
+.chip.danger { color: #c0392b; }
+.keepsake-controls { gap: 12px; align-items: center; width: min(420px, 100%); }
+.keepsake-scrub { flex: 1; accent-color: var(--accent); }
+.keepsake-next { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.keepsake .primary { min-width: 160px; }
