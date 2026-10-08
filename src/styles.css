@@ -280,7 +280,7 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mushaf {
   position: fixed; inset: 0; touch-action: pan-y; overflow: hidden;
   display: flex; flex-direction: column; align-items: center;
-  padding: max(10px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
+  padding: max(10px, env(safe-area-inset-top)) 0 max(4px, env(safe-area-inset-bottom));
   background: var(--paper) var(--paper-grain); color: var(--ink);
 }
 .mushaf-view { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 640px; overflow: hidden; }
@@ -288,7 +288,9 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mushaf-page {
   --f: 24px; --lh: 40px;
   position: absolute; inset: 0; background: var(--paper) var(--paper-grain); box-shadow: var(--paper-edge);
-  padding: 5px 0; /* room for the surah frame's outer line when it is the first or last line */
+  /* 5 px: room for the surah frame's outer line when it is the first or last line; 8 px side margins
+     hold the living-mushaf marks (bookmarks, later reflections, Khatm, lamps). */
+  padding: 5px 8px;
   display: flex; flex-direction: column; justify-content: center;
   font-size: var(--f); line-height: 1;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -320,6 +322,30 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mp-loading { font-size: 13px; color: var(--muted); }
 .player .pl-play .spinner { width: 20px; height: 20px; border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 @media (prefers-color-scheme: dark) { .mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.6); } }
+/* the living mushaf (src/ui/living.ts): the page tint follows the time of day (--tod, --tod-amt) */
+:root { --tod: #ffffff; --tod-amt: 0%; }
+.mushaf, .mushaf-page { background-color: color-mix(in srgb, var(--paper) calc(100% - var(--tod-amt)), var(--tod)); transition: background-color 2s ease; }
+.mp-mark {
+  position: absolute; right: 2px; width: 4px; height: calc(var(--lh) * 0.42); transform: translateY(-50%);
+  border-radius: 2px; cursor: pointer;
+}
+.mp-mark::before { content: ''; position: absolute; inset: -6px -2px -6px -2px; } /* a larger touch area within the margin */
+.mp-mark.bookmark { background: var(--accent); opacity: .85; border-radius: 1px 1px 2px 2px; }
+.mp-num { display: inline-flex; align-items: center; gap: 4px; }
+.crescent { display: inline-flex; color: #c9a14a; }
+.mushaf-bar { flex-wrap: wrap; }
+.today { flex-basis: 100%; display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.today-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--text); text-align: left; text-decoration: none;
+  font-size: 14px; cursor: pointer; animation: today-in .5s ease-out both;
+}
+.today-icon { flex: none; width: 1.2em; text-align: center; }
+@keyframes today-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .today-item { animation: none; } .mushaf, .mushaf-page { transition: none; } }
+.bm-row { display: flex; align-items: center; gap: 4px; }
+.bm-go { flex-direction: column; align-items: flex-start; gap: 0; }
+
 /* listening: the ayah being recited is tinted, its word being recited coloured */
 .mp-line .w.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); border-radius: 0; }
 .mp-line .w.play-word { color: var(--accent); }

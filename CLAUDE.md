@@ -384,9 +384,19 @@ security rules, Functions, each feature's experience + acceptance criteria, owne
 personal works signed out and syncs when signed in; the mushaf is the home (margin marks, Today
 card, calm moments), no scores/badges; Quran text never comes from the cloud. Build in this order:
 - [ ] P1 Prerequisites: fixed signing key (GitHub secret); owner creates the Firebase project (§7)
+      (done in code: `android/app/build.gradle` signs with secrets `ANDROID_KEYSTORE_BASE64` +
+      `ANDROID_KEYSTORE_PASSWORD` when set, else the debug key; versionCode = CI run number. Key
+      generated 2026-10-08 and handed to the owner (SHA-1 B0:F6:CC:91:…:6E:13), never committed.
+      Waiting on the owner: add the two secrets; create the Firebase project)
 - [ ] T0 Foundation: sign-in (web + Android native), account sheet (delete / export), sync of drafts,
       last read, bookmarks, settings; day summaries; rules + emulator tests in CI; privacy page
-- [ ] T1 Living mushaf: margin marks, time-of-day page tint, Ramadan crescent, Today card
+- [x] T1 Living mushaf (`src/ui/living.ts`): 8 px page margins hold marks (`registerMarks()`, drawn
+      by `paintMarks()` beside the line where an ayah starts, max 2 per line, tap → its sheet); first
+      mark = **bookmarks** (`src/data/bookmarks.ts`, localStorage; 🔖 in the selection bar, ☰ →
+      Bookmarks list); page tint follows the local hour (dawn rose, Maghrib amber, night indigo, ≤ 6 %,
+      `--tod`/`--tod-amt`, ☰ toggle `timeTint`); Ramadan (Umm al-Qura via `Intl`) → crescent by the
+      page number + Today line; Today card in the drop-down bar (`registerToday()`: Ramadan day,
+      recent bookmark < 7 days, reel draft edited < 3 days), hidden when empty
 - [ ] T4 Reflections journal
 - [ ] T2 Khatm circles (30-juz ring, Khatm reel) + push foundation (evening digest)
 - [ ] T3 Gift an ayah (link opens a word-synced player, reply with an ayah)

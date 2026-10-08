@@ -7,8 +7,9 @@ android {
         applicationId "com.brandyco.ayahstudio"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // CI run number, so each APK from GitHub Actions installs as an update of the previous one.
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer)
+        versionName "0.1.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // The app's own signing key, given by CI from repo secrets (never committed): the same key on
+    // every build, so a newer APK installs over the old one and Google sign-in knows the app.
+    // Without it (local builds, forks) the usual per-machine debug key is used.
+    def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+    signingConfigs {
+        app {
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storeType 'PKCS12'
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'ayahstudio'
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (keystorePath) signingConfig signingConfigs.app
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
