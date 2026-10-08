@@ -210,7 +210,6 @@ button { font: inherit; color: inherit; }
 .chip-gap { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--line); }
 .chips.ideas .chip { padding: 5px 10px; font-size: 13px; }
 .chip.more { display: block; margin: 10px auto 0; }
-.bg-grid.busy .bg-cell:not(.loading) { opacity: .45; }
 .bg-progress {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   border-radius: 10px; background: rgba(0,0,0,.55); color: #fff; pointer-events: none;

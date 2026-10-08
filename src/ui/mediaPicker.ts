@@ -11,6 +11,7 @@ import { h, toast } from './dom';
 import { icon } from './icons';
 
 type Tab = 'presets' | 'mine' | 'stock';
+const MAX_DOWNLOADS = 4;
 
 export interface PickerOptions {
   intro: string;
@@ -36,7 +37,10 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   let page = 0;
   let searching = false;
   let searchError = '';
-  let downloading: { id: string; pct: number | null } | null = null; // shown on the tapped card
+  // Downloads run side by side, each shown on its own card (id → percent, null until known).
+  const downloads = new Map<string, number | null>();
+  // Picks waiting to be applied, in the order they were tapped.
+  const jobs: { id: string; target: PickerOptions; state: 'busy' | 'done' | 'failed' }[] = [];
 
   // The search box is created once and never replaced, so the phone keyboard stays open while
   // results arrive and the panel redraws around it.
@@ -139,27 +143,39 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   }
 
   async function pickHit(hit: StockHit) {
-    if (o.busy() || working || !opts) return;
-    const target = opts;
-    working = true;
-    downloading = { id: stockId(hit), pct: null };
+    if (o.busy() || !opts) return;
+    const id = stockId(hit);
+    if (downloads.has(id)) return;
+    if (downloads.size >= MAX_DOWNLOADS) return toast(`Up to ${MAX_DOWNLOADS} downloads at a time — wait for one to finish`);
+    const job = { id, target: opts, state: 'busy' as 'busy' | 'done' | 'failed' };
+    jobs.push(job);
+    downloads.set(id, null);
     draw();
     try {
-      const id = await downloadHit(hit, (f) => {
+      await downloadHit(hit, (f) => {
         const pct = Math.round(f * 100);
-        if (downloading && downloading.pct !== pct) { downloading.pct = pct; draw(); }
+        if (downloads.has(id) && downloads.get(id) !== pct) { downloads.set(id, pct); draw(); }
       });
-      working = false;
-      downloading = null;
+      job.state = 'done';
       o.libraryChanged();
       void refreshUsage();
-      target.pick(id);
     } catch (e) {
-      working = false;
-      downloading = null;
+      job.state = 'failed';
       toast(e instanceof Error ? e.message : String(e));
     }
+    downloads.delete(id);
+    settle();
     draw();
+  }
+
+  /** Applies finished picks in the order they were tapped: each adds a scene, or — when replacing
+   *  one scene — only the last one tapped is used (the others stay in My media). */
+  function settle() {
+    while (jobs.length && jobs[0].state !== 'busy') {
+      const j = jobs.shift()!;
+      if (j.state !== 'done' || o.busy()) continue;
+      if (j.target.multiple || !jobs.some((k) => k.target === j.target)) j.target.pick(j.id);
+    }
   }
 
   const tile = (b: Background, extra?: Node | null) =>
@@ -213,9 +229,9 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       : SUGGESTIONS.map((x) => h('button', { class: 'chip', onclick: () => { collection = null; query = x; void search(); } }, x))));
     const owned = new Set(libraryBackgrounds().map((b) => b.id));
     const name = SOURCE_NAME[source];
-    const grid = hits.length ? h('div', { class: `bg-grid${downloading ? ' busy' : ''}` }, ...hits.map((x) => {
+    const grid = hits.length ? h('div', { class: 'bg-grid' }, ...hits.map((x) => {
       const id = stockId(x);
-      const dl = downloading?.id === id ? downloading : null;
+      const dl = downloads.has(id) ? { pct: downloads.get(id) ?? null } : null;
       return h('div', { class: `bg-cell${dl ? ' loading' : ''}` },
         h('button', {
           class: `bg-thumb${opts?.current === id ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,

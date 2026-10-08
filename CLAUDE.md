@@ -256,7 +256,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       preview never changes size. Line icons. Tool → options → panel (Colours → Ayah / Translation /
       Surah name → a 36-colour grid + eyedropper from the video, no hue/saturation picker; Effects →
       Text effect in category tabs with animated tiles / Transition); a selected block shows its own
-      actions. Picking an effect or transition plays it. Wide screens: panels open left of the preview
+      actions. Picking an effect or transition plays it. Wide screens: panels open left of the preview. The
+      preview canvas has one pixel per screen pixel (full device pixel ratio, ≤ 1080 px wide) so text
+      is sharp on 2.6–3.5× phone screens
 - [x] Undo/redo (snapshots of the project, every edit)
 - [x] Scenes: Single / Per ayah / Even split / Custom, auto-rebalance to the exact length,
       snap-to-pauses, video loop/slow/hold + in-point, Ken Burns on images
@@ -303,7 +305,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Pixabay browser (**Pixabay** tab: Videos/Photos, search + calm suggestions, More, "from Pixabay"
       link): `src/data/pixabay.ts` → Cloudflare Worker `proxy/pixabay-worker.js` (key as secret,
       24 h cache, safesearch, vertical photos, origin allow-list, `/file` relay for files without
-      CORS). A picked item is downloaded into My media (no hotlinking)
+      CORS). A picked item is downloaded into My media (no hotlinking). Up to 4 downloads run at once,
+      each with its progress on its own card; they become scenes in the order tapped (when replacing
+      a scene, the last one tapped is used)
 - [x] Attribution: creator + page kept per Pixabay item; shown on tiles and on the export page
       ("Background by X on Pixabay" + Copy credits for the caption)
 - [x] Owner: deployed the worker and set the repo variable `PIXABAY_PROXY` (steps in `proxy/README.md`)
