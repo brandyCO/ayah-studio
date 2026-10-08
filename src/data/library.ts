@@ -3,6 +3,7 @@
 // refer to it by id like a preset ('u:…' for uploads, 'px:image:…' / 'px:video:…' for Pixabay).
 import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { registerBackground, unregisterBackground, type Background, type Credit } from '../engine/backgrounds';
+import { tx as dbTx } from './db';
 
 export interface MediaItem {
   id: string;
@@ -17,33 +18,8 @@ export interface MediaItem {
 /** Largest video accepted (IndexedDB space on a phone is limited). */
 export const MAX_VIDEO_MB = 250;
 
-const DB = 'ayah-studio';
 const STORE = 'media';
-let dbp: Promise<IDBDatabase> | null = null;
-
-function db(): Promise<IDBDatabase> {
-  if (!dbp) {
-    dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'id' });
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    dbp.catch(() => (dbp = null));
-  }
-  return dbp;
-}
-
-async function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  const d = await db();
-  return new Promise((resolve, reject) => {
-    const t = d.transaction(STORE, mode);
-    const req = run(t.objectStore(STORE));
-    t.oncomplete = () => resolve(req.result);
-    t.onerror = () => reject(t.error ?? req.error);
-    t.onabort = () => reject(t.error ?? new Error('Storage transaction aborted'));
-  });
-}
+const tx = <T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>) => dbTx<T>(STORE, mode, run);
 
 const thumbUrls = new Map<string, string>();
 function register(m: MediaItem) {

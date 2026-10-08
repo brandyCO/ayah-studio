@@ -149,6 +149,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const d: HTMLDialogElement = sheet(sheetHead('Menu', () => d.close()),
       h('div', { class: 'menu' },
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
+        h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();

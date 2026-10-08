@@ -7,6 +7,7 @@ import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
 import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
@@ -16,7 +17,7 @@ import { H, W } from '../engine/layout';
 import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
-  applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES,
+  applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
@@ -74,12 +75,19 @@ interface Tool {
 
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
-  const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap(), loadLibrary()]);
+/** `draftId`: reopen a saved draft (its ayat range comes from the address, which may have changed). */
+export async function showEditor(root: HTMLElement, n: number, from: number, to: number, draftId?: string): Promise<() => void> {
+  const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap(), loadLibrary(),
+    draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
+  if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
+  // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
+  const draftKey = draft?.id ?? draftId ?? newDraftId();
+  const created = draft?.created ?? Date.now();
+  let saveTimer = 0;
   const arabic = allAr.slice(from - 1, to);
   const english = allEn.slice(from - 1, to);
   // English meaning of each Arabic word on screen (synced translation).
@@ -144,6 +152,32 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     updateUndo();
   }
+  // --- drafts ---
+  /** A small picture of the preview for the drafts list. */
+  function previewThumb(): Promise<Blob | undefined> {
+    const c = document.createElement('canvas');
+    c.width = 135;
+    c.height = 240;
+    c.getContext('2d')!.drawImage(canvas, 0, 0, c.width, c.height);
+    return new Promise((resolve) => c.toBlob((b) => resolve(b ?? undefined), 'image/jpeg', 0.75));
+  }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => void saveNow(), 800);
+  }
+  async function saveNow() {
+    clearTimeout(saveTimer);
+    saveTimer = 0;
+    try {
+      const thumb = await previewThumb().catch(() => undefined);
+      await saveDraft({ id: draftKey, project: structuredClone(project), created, updated: Date.now(), thumb });
+      // Reloading (or coming back) reopens this draft.
+      if (alive && location.hash.startsWith(`#/reel/${n}/`) && !location.hash.endsWith(`/${draftKey}`)) window.history.replaceState(null, '', draftHash(project, draftKey));
+    } catch (e) {
+      console.warn('Draft not saved', e);
+    }
+  }
+
   function restore(json: string) {
     const prev = project;
     const before = { reciter: prev.reciterId, scenes: JSON.stringify(prev.scenes) };
@@ -158,6 +192,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (JSON.stringify(project.scenes) !== before.scenes) void loadScenes();
     refreshUI();
     updateUndo();
+    scheduleSave();
     dirty = true;
   }
   function undo() {
@@ -181,6 +216,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     undoBtn.disabled = false;
     if (rerender) refreshUI();
     spine.invalidate();
+    scheduleSave();
     dirty = true;
   };
   const chips = <T extends string>(items: { value: T; label: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) =>
@@ -324,7 +360,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
   /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
-  const goRange = (a: number, b: number) => { location.hash = `#/reel/${n}/${a}${b > a ? `-${b}` : ''}`; };
+  const goRange = (a: number, b: number) => {
+    // The draft follows to the new range (its edits and look are kept).
+    project.from = a;
+    project.to = b;
+    void saveNow().finally(() => { location.hash = draftHash(project, draftKey); });
+  };
 
   // --- panels ---
   const reciterPanel = () => [h('div', { class: 'list' }, ...RECITERS.map((r) =>
@@ -466,7 +507,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         row('Place', chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
           () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
         row('Size', chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
-          () => project.titleSize, (v) => { project.titleSize = v; rebuild(); }))] },
+          () => project.titleSize, (v) => { project.titleSize = v; rebuild(); })),
+        row('Surah name', chips<'show' | 'hide'>([{ value: 'show', label: 'Show' }, { value: 'hide', label: 'Hide' }],
+          () => (project.surahName ? 'show' : 'hide'), (v) => { project.surahName = v === 'show'; rebuild(); })),
+        note('The reference (e.g. Al-Fatiha · 1:1) always stays on screen.')] },
       { id: 'intro', icon: 'card', label: 'Intro card', toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
       { id: 'outro', icon: 'card', label: 'End card', toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
       { id: 'credit', icon: 'mic', label: 'Reciter name', toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
@@ -773,7 +817,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       refreshUI();
       setStatus(mediaReady ? '' : 'Loading background…');
     } catch (e) {
-      if (req === audioReq) setStatus(`${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`);
+      if (req !== audioReq) return;
+      setStatus(navigator.onLine
+        ? `${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`
+        // Reels opened before keep their recitation on the device; this one was not downloaded yet.
+        : 'You are offline, and this recitation is not on your device yet. Connect once to download it; after that it works offline too.');
     }
   }
 
@@ -941,6 +989,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
 
   return () => {
+    if (saveTimer) void saveNow(); // an edit not yet saved
     alive = false;
     cancelAnimationFrame(raf);
     ro.disconnect();

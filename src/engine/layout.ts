@@ -56,6 +56,7 @@ export interface FrameStyle {
   translation: boolean;
   titlePos: TitlePos; // surah name + reference: top, right below the ayah (and its translation), or bottom
   titleSize: TitleSize;
+  surahName?: boolean; // the Arabic surah name above the reference (default on); the reference always shows (rule 2)
   credit: boolean; // "Recited by …" line (optional)
   watermark: boolean;
   textSize?: TextSize; // default 'm'
@@ -67,8 +68,8 @@ export const TITLE_SIZES: Record<TitleSize, { name: number; ref: number }> = {
   m: { name: 56, ref: 36 },
   l: { name: 72, ref: 46 },
 };
-/** Height of the surah name + reference block. */
-export const titleBlock = (z: TitleSize) => Math.round((TITLE_SIZES[z].name + TITLE_SIZES[z].ref) * 1.4);
+/** Height of the surah name + reference block (only the reference when the name is hidden). */
+export const titleBlock = (z: TitleSize, name = true) => Math.round(((name ? TITLE_SIZES[z].name : 0) + TITLE_SIZES[z].ref) * 1.4);
 
 export interface FrameLayout {
   ar: Box; // Arabic fits here
@@ -94,7 +95,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     credit = bottom - 22;
     bottom -= 52;
   }
-  const T = titleBlock(st.titleSize);
+  const T = titleBlock(st.titleSize, st.surahName ?? true);
   let top = SAFE.y0 + 24, title: number;
   if (st.titlePos === 'top') {
     title = top;

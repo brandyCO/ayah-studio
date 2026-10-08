@@ -1,13 +1,15 @@
 // Entry: hash router for the three Phase 0 screens.
 //   #/                 surah list
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
-//   #/reel/2/255-257   editor for a selection
+//   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
+//   #/drafts           saved reel drafts
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
 import { showMushaf } from './ui/mushaf';
 import { readerMode } from './ui/prefs';
 import { showReader } from './ui/reader';
+import { setupOffline } from './offline';
 import { showSurahList } from './ui/surahList';
 
 const app = document.getElementById('app')!;
@@ -18,7 +20,7 @@ async function route() {
   const id = ++routeId;
   cleanup?.();
   cleanup = null;
-  const [view, a, b] = location.hash.replace(/^#\/?/, '').split('/');
+  const [view, a, b, c4] = location.hash.replace(/^#\/?/, '').split('/');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
   document.body.dataset.view = view || 'home';
@@ -32,7 +34,10 @@ async function route() {
       const [from, to] = b.split('-').map(Number);
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
-      c = await showEditor(screen, Number(a), from, to || from);
+      c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
+    } else if (view === 'drafts') {
+      const { showDrafts } = await import('./ui/drafts');
+      c = await showDrafts(screen);
     } else c = await showSurahList(screen);
     if (id === routeId) cleanup = c;
     else c();
@@ -51,3 +56,4 @@ async function route() {
 window.addEventListener('hashchange', route);
 void route();
 void capabilities(); // warm up the device check
+setupOffline();

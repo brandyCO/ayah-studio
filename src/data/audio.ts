@@ -1,5 +1,6 @@
 // Recitation audio for a reel. Primary: a slice of the reciter's QDC full-surah recording, Range-
 // fetched and trimmed by its timings. Fallback: everyayah.com per-ayah files (no word timings).
+import { cachedBytes } from './audioCache';
 import { decodeMp3Span, VbrError, type DecodedSpan } from './mp3';
 import { everyayahUrl, type Reciter } from './reciters';
 import type { AudioPiece } from '../engine/recitation';
@@ -12,10 +13,14 @@ const decoded = new Map<string, Promise<AudioBuffer>>();
 
 const decode = (buf: ArrayBuffer) => new OfflineAudioContext(2, 1, SAMPLE_RATE).decodeAudioData(buf);
 
+/** A whole file (kept on the device for offline use); a fresh copy each time, as decoding consumes it. */
 async function download(url: string): Promise<ArrayBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Could not download recitation audio (HTTP ${res.status})`);
-  return res.arrayBuffer();
+  const bytes = await cachedBytes(`${url}|all`, async () => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Could not download recitation audio (HTTP ${res.status})`);
+    return new Uint8Array(await res.arrayBuffer());
+  });
+  return bytes.slice().buffer;
 }
 
 /** One ayah from everyayah.com (cached in memory; the HTTP cache keeps the MP3). */

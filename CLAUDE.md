@@ -87,8 +87,9 @@ Engine edge cases:
 1. **Never alter Quran text.** Text comes only from verified data. No truncation, no ellipsis,
    no re-typing, no "cleaning" of diacritics. Splitting into lines/half lines/words happens only
    at word boundaries and never drops a word.
-2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`). The reciter credit line is
-   optional and off by default (owner decision).
+2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`). The Arabic surah name above it
+   can be hidden (Layout → Surah name → Hide; owner decision 2026-10-08) — the reference line never.
+   The reciter credit line is optional and off by default (owner decision).
 3. **No music and no sound effects** anywhere in exported videos. Recitation audio only.
 4. Default background library: calm nature/abstract media only, no people or faces.
 5. Arabic text is drawn by the browser (canvas / DOM) with a proper Quran font — never by
@@ -259,7 +260,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Text colours (owner request): tap a colour swatch to set the colour of the Arabic ayah text,
       the translation and/or the surah name + reference, each separately (preset palette of calm
       colours + custom picker; keep the legibility scrim/shadow so text stays readable)
-- [ ] Project autosave (drafts list, like CapCut's projects)
+- [x] Project autosave (drafts list, like CapCut's projects): `src/data/drafts.ts` (IndexedDB store
+      `drafts`: project JSON + preview thumbnail). A reel becomes a draft at its first edit and is saved
+      ~0.8 s after every edit (and on leaving); its address becomes `#/reel/{s}/{a-b}/{draftId}` so a
+      reload reopens it; adding/removing an ayah keeps the draft. `restoreProject()` validates stored
+      data like `applyLook()`. Drafts screen `#/drafts` (`src/ui/drafts.ts`; links on the surah list
+      and in the mushaf ☰ menu): thumbnail, reference, reciter, "edited … ago", ✕ delete
+- [x] Hide surah name (owner request): `project.surahName` (remembered with the look); the layout
+      shrinks the title block to the reference line, which always stays (rule 2)
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
 
 ### Phase 1b — media
@@ -293,6 +301,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
 save to gallery / share sheet; offline audio cache; settings.
+- [x] Offline use on the web build (owner request, early): service worker `public/sw.js` (registered
+      by `src/offline.ts` in production over http(s)): the page network-first (4 s, then the cached
+      copy), hashed `assets/` cache-first (newest 80 kept), `data/` (versioned; older versions dropped),
+      `fonts/` (QCF mushaf pages as visited), `backgrounds/` cache-first, Range requests for our own
+      files answered from the cached whole file (background videos), QDC timings network-first.
+      After the worker takes control, the data, fonts, editor and default backgrounds are loaded once
+      in the background. Recitation audio: `src/data/audioCache.ts` keeps the exact MP3 byte ranges
+      (and whole everyayah/VBR files) each reel downloaded in IndexedDB `audio` (newest 150), so reels
+      opened before work offline. Shared DB module `src/data/db.ts` (version 2: media, drafts, audio)
+- [ ] Capacitor/Tauri: same offline behaviour inside the packaged apps
 
 ### Phase 2 — practice
 Recite & Compare (MediaRecorder; Sheikh vs Me A/B toggle; side-by-side waveforms; recordings
