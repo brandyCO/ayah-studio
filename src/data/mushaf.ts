@@ -18,6 +18,10 @@ export interface Mushaf {
   pageOf(surah: number, ayah: number): number;
   /** Page holding the surah's header (may precede the page of ayah 1). */
   surahStartPage(surah: number): number;
+  /** Page holding word `pos` (1-based Quran.com word position, as in QDC timings) of surah:ayah. */
+  wordPage(surah: number, ayah: number, pos: number): number;
+  /** 1-based position within its ayah of the first word of each text segment, keyed by the segment. */
+  segStart: WeakMap<[number, number, string], number>;
 }
 
 let cached: Promise<Mushaf> | null = null;
@@ -33,13 +37,22 @@ export function loadMushaf(): Promise<Mushaf> {
       if (typeof sample?.[0]?.[2] !== 'string') throw new Error('Mushaf data is out of date — please reload the page');
       const first = new Map<string, number>();
       const header = new Map<number, number>();
+      const count = new Map<string, number>(); // words of each ayah seen so far
+      const breaks = new Map<string, [number, number][]>(); // per ayah: [first word position, page] where it continues
+      const segStart = new WeakMap<[number, number, string], number>();
       pages.forEach((pg, i) => {
         for (const line of pg.lines) {
           if (line[0] === 'h') header.set(line[1] as number, i + 1);
           else if (line[0] !== 'b') {
-            for (const [s, a] of line as [number, number, string][]) {
-              const k = `${s}:${a}`;
+            for (const seg of line as [number, number, string][]) {
+              const k = `${seg[0]}:${seg[1]}`;
               if (!first.has(k)) first.set(k, i + 1);
+              const start = (count.get(k) ?? 0) + 1;
+              segStart.set(seg, start);
+              count.set(k, start - 1 + seg[2].split(' ').length);
+              const b = breaks.get(k) ?? [];
+              if (b[b.length - 1]?.[1] !== i + 1) b.push([start, i + 1]);
+              breaks.set(k, b);
             }
           }
         }
@@ -48,6 +61,14 @@ export function loadMushaf(): Promise<Mushaf> {
         pages,
         pageOf: (s, a) => first.get(`${s}:${a}`) ?? 1,
         surahStartPage: (s) => header.get(s) ?? first.get(`${s}:1`) ?? 1,
+        wordPage: (s, a, pos) => {
+          const b = breaks.get(`${s}:${a}`);
+          if (!b) return 1;
+          let p = b[0][1];
+          for (const [start, page] of b) if (pos >= start) p = page;
+          return p;
+        },
+        segStart,
       };
     });
   cached.catch(() => (cached = null));

@@ -5,6 +5,7 @@ import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
+import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { selectionController, type Sel } from './selection';
 
@@ -39,25 +40,56 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     h('button', { class: 'icon-btn', 'aria-label': 'Menu', onclick: () => openMenu() }, '☰'));
   const toggleBar = (show = !bar.classList.contains('show')) => bar.classList.toggle('show', show);
 
-  const pageEl = h('div', { class: 'mushaf-page', dir: 'rtl', lang: 'ar' });
+  // Pages sit side by side in a strip that follows the finger: the next page lies to the left,
+  // as in a printed mushaf. Only the current page and its two neighbours are in the DOM.
+  const strip = h('div', { class: 'mushaf-strip' });
+  const view = h('div', { class: 'mushaf-view' }, strip); // fixed window onto the moving strip
   const pageNum = h('div', { class: 'mp-num' });
-  const area = h('main', { class: 'mushaf' }, pageEl, pageNum);
+  const area = h('main', { class: 'mushaf' }, view, pageNum);
+
+  // --- listening: the recited ayah is tinted, the recited word coloured; pages turn with it ---
+  let playing: { s: number; a: number; w: number | null } | null = null;
+  const player = createPlayer({
+    meta,
+    onPosition: (pos) => {
+      playing = pos;
+      if (pos && !panning && !animating) {
+        const target = mushaf.wordPage(pos.s, pos.a, pos.w ?? 1);
+        if (target !== page) go(target);
+      }
+      paintPlaying();
+    },
+    onShow: (on) => {
+      document.body.classList.toggle('listening', on);
+      requestAnimationFrame(refitAll); // the page makes room for the player bar
+    },
+  });
+  function paintPlaying() {
+    for (const el of strip.querySelectorAll('.play-ayah, .play-word')) el.classList.remove('play-ayah', 'play-word');
+    if (!playing) return;
+    for (const el of strip.querySelectorAll<HTMLElement>(`.w[data-s="${playing.s}"][data-a="${playing.a}"]`)) {
+      el.classList.add('play-ayah');
+      if (playing.w !== null && Number(el.dataset.p) === playing.w) el.classList.add('play-word');
+    }
+  }
 
   const sel = selectionController({
     meta,
     area,
     paint: (s: Sel | null) => {
-      for (const el of pageEl.querySelectorAll<HTMLElement>('.w')) {
+      for (const el of strip.querySelectorAll<HTMLElement>('.w')) {
         const a = Number(el.dataset.a);
         el.classList.toggle('sel', !!s && Number(el.dataset.s) === s.surah && a >= s.lo && a <= s.hi);
       }
     },
-    onTap: () => toggleBar(),
+    // While listening, tapping an ayah plays from it.
+    onTap: (hit) => (player.active() && hit ? void player.playFrom(hit.s, hit.a) : toggleBar()),
     onTranslate: (s) => void showTranslation(s),
-    onSwipe: (dir) => go(page + dir), // the next page of an Arabic mushaf lies to the left
+    onListen: (s) => { sel.clear(); void player.playFrom(s.surah, s.lo); },
+    onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
-  root.append(bar, area, sel.bar);
+  root.append(bar, area, sel.bar, player.bar);
 
   const line = (l: MushafLine) => {
     if (l[0] === 'h') {
@@ -70,39 +102,60 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       return el;
     }
     const words: HTMLElement[] = [];
-    for (const [s, a, glyphs] of l as Seg[]) {
-      for (const g of glyphs.split(' ')) words.push(h('span', { class: 'w', 'data-s': String(s), 'data-a': String(a) }, g));
+    for (const seg of l as Seg[]) {
+      let pos = mushaf.segStart.get(seg) ?? 1; // word position within the ayah (as in the recitation timings)
+      for (const g of seg[2].split(' ')) words.push(h('span', { class: 'w', 'data-s': String(seg[0]), 'data-a': String(seg[1]), 'data-p': String(pos++) }, g));
     }
     return h('div', { class: 'mp-line text' }, ...words);
   };
 
   /** Font size so the widest line spans the page width; lines spread over the full height. */
-  function fit() {
-    const lines = pageEl.querySelectorAll<HTMLElement>('.mp-line');
-    const lh = Math.floor(pageEl.clientHeight / 15);
-    pageEl.style.setProperty('--lh', `${lh}px`);
+  function fit(el: HTMLElement) {
+    const lines = el.querySelectorAll<HTMLElement>('.mp-line');
+    const lh = Math.floor(el.clientHeight / 15);
+    el.style.setProperty('--lh', `${lh}px`);
     const base = 30;
-    pageEl.style.setProperty('--f', `${base}px`);
-    pageEl.classList.add('measuring');
+    el.style.setProperty('--f', `${base}px`);
+    el.classList.add('measuring');
     const widest = Math.max(1, ...[...lines].filter((l) => l.classList.contains('text')).map((l) => l.scrollWidth));
-    pageEl.classList.remove('measuring');
+    el.classList.remove('measuring');
     // Pages 1–2 sit in a narrower, centred block, as in the printed mushaf.
-    const width = pageEl.clientWidth * (pageEl.classList.contains('opening') ? 0.8 : 1);
+    const width = el.clientWidth * (el.classList.contains('opening') ? 0.8 : 1);
     const f = Math.min((base * width) / widest, lh * 0.72);
-    pageEl.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
+    el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
+    el.dataset.fit = '1';
+  }
+  const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
+
+  // --- pages: built once (font loaded), kept while near the current page ---
+  const built = new Map<number, HTMLElement>();
+  const building = new Map<number, Promise<HTMLElement>>();
+  const valid = (p: number) => p >= 1 && p <= PAGE_COUNT;
+  function buildPage(p: number): Promise<HTMLElement> {
+    if (!building.has(p)) {
+      let fontOk = true;
+      const pr = loadPageFont(p)
+        .catch(() => { fontOk = false; toast('Could not load the page font — check your connection'); })
+        .then(() => {
+          const el = h('div', { class: `mushaf-page${p <= 2 ? ' opening' : ''}`, dir: 'rtl', lang: 'ar', 'data-page': String(p) });
+          el.style.fontFamily = `qcf-p${p}`;
+          el.replaceChildren(...mushaf.pages[p - 1].lines.map(line));
+          built.set(p, el);
+          if (!fontOk) building.delete(p); // try again next time
+          return el;
+        });
+      building.set(p, pr);
+    }
+    return building.get(p)!;
   }
 
-  let renderId = 0;
-  async function render(dir: 0 | 1 | -1) {
-    const id = ++renderId;
+  const W = () => view.clientWidth + 16; // a page width plus a small gap between the sheets
+  function place() {
+    for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
+  }
+
+  function header() {
     const pg = mushaf.pages[page - 1];
-    await loadPageFont(page).catch(() => toast('Could not load the page font — check your connection'));
-    if (id !== renderId) return;
-    pageEl.style.fontFamily = `qcf-p${page}`;
-    pageEl.classList.toggle('opening', page <= 2);
-    pageEl.replaceChildren(...pg.lines.map(line));
-    fit();
-    sel.repaint();
     const segs = pg.lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
     const [s, a] = segs[0];
     title.textContent = `${s}. ${meta[s - 1].en}`;
@@ -110,20 +163,90 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     pageNum.textContent = String(page);
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
-    pageEl.classList.remove('turn-next', 'turn-prev');
-    if (dir) {
-      void pageEl.offsetWidth; // restart the animation
-      pageEl.classList.add(dir > 0 ? 'turn-next' : 'turn-prev');
+  }
+
+  let renderId = 0;
+  /** Show `page` with its neighbours (each added as soon as its font is ready). */
+  async function layout() {
+    const id = ++renderId;
+    await buildPage(page);
+    if (id !== renderId) return;
+    const want = [page - 1, page, page + 1].filter(valid);
+    const attach = () => {
+      const els = want.map((p) => built.get(p)).filter((x): x is HTMLElement => !!x);
+      if (els.length !== strip.childElementCount || els.some((el, i) => strip.children[i] !== el)) strip.replaceChildren(...els);
+      for (const el of els) if (!el.dataset.fit) fit(el);
+      place();
+      sel.repaint();
+      paintPlaying();
+    };
+    attach();
+    header();
+    for (const p of want) if (!built.has(p)) void buildPage(p).then(() => { if (id === renderId) attach(); });
+    // Warm up the fonts two pages away; forget pages far behind.
+    for (const p of [page + 2, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
+    for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
+  }
+
+  // --- swiping: the page follows the finger, then settles on the next page or springs back ---
+  let panning = false;
+  let animating = false;
+  function setStrip(x: number, ms = 0) {
+    strip.style.transition = ms ? `transform ${ms}ms cubic-bezier(.22,.8,.24,1)` : 'none';
+    strip.style.transform = x ? `translateX(${x}px)` : '';
+  }
+  function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
+    if (animating) return;
+    const dir = dx > 0 ? 1 : -1; // finger moving right brings in the next page (on the left)
+    const target = page + dir;
+    if (phase === 'move') {
+      panning = true;
+      strip.classList.add('moving');
+      setStrip(valid(target) ? dx : dx * 0.25); // resistance at the first and last page
+      return;
     }
-    // Warm up the neighbouring pages' fonts.
-    for (const p of [page + 1, page - 1]) if (p >= 1 && p <= PAGE_COUNT) void loadPageFont(p).catch(() => {});
+    panning = false;
+    const fling = Math.abs(vx) > 0.35 && Math.sign(vx) === dir;
+    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx));
+    else {
+      setStrip(0, 240);
+      window.setTimeout(() => { if (!panning && !animating) strip.classList.remove('moving'); }, 260);
+    }
+  }
+  /** Slide to a neighbouring page (from where the finger left it). */
+  function slideTo(target: number, from = 0) {
+    const dir = target > page ? 1 : -1;
+    if (!built.has(target) || !strip.contains(built.get(target)!)) {
+      page = target;
+      setStrip(0);
+      void layout();
+      return;
+    }
+    animating = true;
+    strip.classList.add('moving');
+    const ms = Math.round(160 + 160 * (1 - Math.min(1, from / W())));
+    setStrip(dir * W(), ms);
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      page = target;
+      setStrip(0);
+      strip.classList.remove('moving');
+      animating = false;
+      void layout();
+    };
+    strip.addEventListener('transitionend', finish, { once: true });
+    window.setTimeout(finish, ms + 80);
   }
 
   function go(p: number) {
-    if (p < 1 || p > PAGE_COUNT || p === page) return;
-    const dir = p > page ? 1 : -1;
-    page = p;
-    void render(dir);
+    if (!valid(p) || p === page || animating) return;
+    if (Math.abs(p - page) === 1) slideTo(p);
+    else {
+      page = p;
+      void layout();
+    }
   }
 
   function sheet(...content: (Node | string | false)[]) {
@@ -145,17 +268,25 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small' }, 'Saheeh International'));
   }
 
+  /** The first ayah that begins on the current page (or the one continuing onto it). */
+  function firstAyahOnPage(): { s: number; a: number } {
+    const words = [...(built.get(page)?.querySelectorAll<HTMLElement>('.w') ?? [])];
+    const w = words.find((x) => x.dataset.p === '1') ?? words[0];
+    return w ? { s: Number(w.dataset.s), a: Number(w.dataset.a) } : { s: n, a: 1 };
+  }
+
   function openMenu() {
     const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: `Page 1–${PAGE_COUNT}`, inputmode: 'numeric' });
     const d: HTMLDialogElement = sheet(sheetHead('Menu', () => d.close()),
       h('div', { class: 'menu' },
+        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, '🎧  Listen from this page'),
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
         h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
           const p = Math.round(Number(input.value));
-          if (p >= 1 && p <= PAGE_COUNT) { d.close(); toggleBar(false); go(p); }
+          if (valid(p)) { d.close(); toggleBar(false); go(p); }
         } }, input, h('button', { class: 'chip', type: 'submit' }, 'Go to page')),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, '⚙  Device check')));
   }
@@ -164,20 +295,22 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (e.target instanceof HTMLInputElement || document.querySelector('dialog[open]')) return;
     if (e.key === 'ArrowLeft') go(page + 1);
     else if (e.key === 'ArrowRight') go(page - 1);
+    else if (e.key === ' ' && player.active()) { e.preventDefault(); player.toggle(); }
   };
   let resizeTimer = 0;
-  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(fit, 120); };
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(() => { refitAll(); place(); }, 120); };
   window.addEventListener('keydown', onKey);
   window.addEventListener('resize', onResize);
 
-  await render(0);
+  await layout();
   firstVisitHint();
 
   return () => {
     renderId++;
     clearTimeout(resizeTimer);
     sel.destroy();
-    document.body.classList.remove('mushaf-mode');
+    player.destroy();
+    document.body.classList.remove('mushaf-mode', 'listening');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };
