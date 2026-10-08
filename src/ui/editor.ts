@@ -7,7 +7,8 @@ import { arrangeAudio, ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { qdcSurah } from '../data/qdc';
 import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
-import { BACKGROUNDS, backgroundById, loadBackground, type Background, type BackgroundMedia } from '../engine/backgrounds';
+import { loadLibrary } from '../data/library';
+import { BACKGROUNDS, backgroundById, isBackground, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
@@ -26,6 +27,7 @@ import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { icon } from './icons';
+import { createMediaPicker } from './mediaPicker';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
 import { createSpine, type Selection } from './spine';
 
@@ -73,11 +75,11 @@ interface Tool {
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number): Promise<() => void> {
-  const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap()]);
+  const [s, allAr, allEn, allWbw, wordMap] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap(), loadLibrary()]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
-  applyLook(project, reelLook(), (id) => BACKGROUNDS.some((b) => b.id === id));
+  applyLook(project, reelLook(), isBackground);
   const arabic = allAr.slice(from - 1, to);
   const english = allEn.slice(from - 1, to);
   // English meaning of each Arabic word on screen (synced translation).
@@ -193,7 +195,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const tile = (o: { on: boolean; label: string; art: Node; onclick: () => void; title?: string }) =>
     h('button', { class: `tile${o.on ? ' on' : ''}`, title: o.title ?? o.label, onclick: () => { if (!exporting) o.onclick(); } },
       h('span', { class: 'tile-art' }, o.art), h('span', { class: 'tile-label' }, o.label));
-  const thumbStyle = (b: Background) => (b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`);
   const dot = (c: string) => h('span', { class: 'dot', style: `background:${c}` });
 
   // Text modes other than Ayah need word timings (rule 8: never guess sync).
@@ -261,24 +262,27 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     changed();
   }
   const sceneAtPlayhead = () => Math.max(0, tl?.scenes.findIndex((x) => t >= x.start && t < x.end) ?? 0);
-  /** Background picker: add a new scene (replace = null), or replace scene `replace`. */
+  /** Background picker (presets, the device's library, Pixabay): add a new scene (replace = null), or replace scene `replace`. */
+  const picker = createMediaPicker({
+    busy: () => !!exporting,
+    libraryChanged: () => { void loadScenes(); spine.invalidate(); },
+  });
   function bgPicker(replace: number | null): Node[] {
-    const current = replace !== null ? project.scenes[tl?.scenes[replace]?.entry ?? replace] : null;
-    return [
-      note(replace !== null ? `Pick a background for scene ${replace + 1}.` : 'Tap a background to add it as a new scene at the end.'),
-      h('div', { class: 'bg-grid' }, ...BACKGROUNDS.map((b) =>
-        h('button', {
-          class: `bg-thumb${current === b.id ? ' on' : ''}`, title: b.label, style: thumbStyle(b),
-          onclick: () => {
-            if (exporting) return;
-            if (replace === null) return addScene(b.id);
-            if (project.sceneMode === 'ayah' && project.scenes.length < (tl?.scenes.length ?? 0)) toCustom();
-            project.scenes[project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl!.scenes[replace].entry] = b.id;
-            scenesChanged();
-            changed();
-          },
-        }, h('span', {}, b.kind === 'video' ? `▶ ${b.label}` : b.label)))),
-    ];
+    return picker.panel({
+      intro: replace !== null ? `Pick a background for scene ${replace + 1}.` : 'Tap a background to add it as a new scene at the end.',
+      current: replace !== null ? project.scenes[tl?.scenes[replace]?.entry ?? replace] ?? null : null,
+      multiple: replace === null,
+      pick: (id) => {
+        if (exporting || !alive) return;
+        if (replace === null) return addScene(id);
+        if (project.sceneMode === 'ayah' && project.scenes.length < (tl?.scenes.length ?? 0)) toCustom();
+        const k = project.sceneMode === 'custom' || project.sceneMode === 'single' ? replace : tl?.scenes[replace]?.entry ?? replace;
+        if (k >= project.scenes.length) return;
+        project.scenes[k] = id;
+        scenesChanged();
+        changed();
+      },
+    });
   }
 
   // --- audio: trims (silence only), pauses, whole ayat at the ends ---
@@ -777,9 +781,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const req = ++bgReq;
     const pool = [...media];
     const next = await Promise.all(project.scenes.map((id) => {
-      const k = pool.findIndex((m) => m.bg.id === id);
+      const b = backgroundById(id); // a deleted library item resolves to a plain colour
+      const k = pool.findIndex((m) => m.bg === b);
       if (k >= 0) return pool.splice(k, 1)[0];
-      return loadBackground(backgroundById(id)).catch((e) => {
+      return loadBackground(b).catch((e) => {
         toast(`Background failed to load: ${e instanceof Error ? e.message : e}`);
         return { bg: backgroundById('charcoal') } as BackgroundMedia;
       });
@@ -858,6 +863,21 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- export ---
   let resultUrl = '';
+  /** Creators of the stock media in this reel (Pixabay), ready to paste into the post's caption. */
+  function creditsBlock(): Node | null {
+    const seen = new Map<string, Credit>();
+    for (const id of project.scenes) {
+      const b = backgroundById(id);
+      if (b.kind !== 'color' && b.credit) seen.set(b.credit.url, b.credit);
+    }
+    if (!seen.size) return null;
+    const list = [...seen.values()];
+    const text = `Background${list.length > 1 ? 's' : ''}: ${list.map((c) => `${c.author} on ${c.source}`).join(', ')}`;
+    return h('div', { class: 'export-credits' },
+      h('p', { class: 'small' }, 'Background', list.length > 1 ? 's' : '', ' by ', ...list.flatMap((c, i) => [
+        i ? ', ' : '', h('a', { href: c.url, target: '_blank', rel: 'noopener' }, c.author), ` on ${c.source}`])),
+      h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(text).then(() => toast('Credits copied'), () => toast(text)) }, 'Copy credits'));
+  }
   async function doExport() {
     const { path } = await capabilities();
     if (!path || !tl || !audio || !mediaReady) {
@@ -899,6 +919,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
         h('p', { class: 'small' }, `✓ Made in ${secs} s · ${(blob.size / 1e6).toFixed(1)} MB · ${quality === 1920 ? '1080P' : '720P'}`),
+        creditsBlock() ?? '',
         h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), 'Save to device'),
           canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), 'Share')),

@@ -1,0 +1,7 @@
+# Deploy with: npx wrangler deploy   (then: npx wrangler secret put PIXABAY_KEY)
+name = "ayah-studio-pixabay"
+main = "pixabay-worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://brandyco.github.io,https://localhost,http://localhost,http://tauri.localhost,tauri://localhost,http://localhost:5173,http://localhost:4173"

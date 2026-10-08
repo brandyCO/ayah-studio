@@ -25,6 +25,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Pixabay search proxy (proxy/README.md); empty → the app hides the Pixabay library.
+          VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
