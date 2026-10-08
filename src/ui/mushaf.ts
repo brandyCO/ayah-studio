@@ -1,10 +1,13 @@
 // Mushaf reading view: a full-screen Madinah mushaf page (King Fahd Complex QCF V2 fonts, 15 lines,
 // exactly as printed). Swipe to turn pages. Tap the page to drop down the title bar with the menu;
 // long-press / drag to select ayat for a reel.
+import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
+import { draftHash, listDrafts } from '../data/drafts';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
+import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { selectionController, type Sel } from './selection';
@@ -14,6 +17,25 @@ type Seg = [number, number, string];
 let bismillahSvg: Promise<string> | null = null;
 const bismillah = () =>
   (bismillahSvg ??= fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()));
+
+// The living mushaf's first sources: bookmarks in the margin, and Today lines for a recent bookmark
+// and a reel draft still waiting.
+registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: `Bookmark ${b.s}:${b.a}` })));
+const DAY = 86_400_000;
+registerToday(async () => {
+  const meta = await loadMeta();
+  const b = bookmarks()[0];
+  return b && Date.now() - b.at < 7 * DAY
+    ? [{ icon: '🔖', text: `Continue from your bookmark · ${reference(meta[b.s - 1], b.a, b.a)}`, href: `#/s/${b.s}/${b.a}` }]
+    : [];
+});
+registerToday(async () => {
+  const [meta, drafts] = await Promise.all([loadMeta(), listDrafts()]);
+  const d = drafts[0];
+  if (!d || Date.now() - d.updated > 3 * DAY) return [];
+  const p = d.project;
+  return [{ icon: '🎬', text: `Your reel ${reference(meta[p.surah - 1], p.from, p.to)} is waiting`, href: draftHash(p, d.id) }];
+});
 
 function firstVisitHint() {
   try {
@@ -34,11 +56,17 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // --- drop-down title bar + menu ---
   const title = h('h1', {});
   const sub = h('p', { class: 'muted' });
+  const today = h('nav', { class: 'today', 'aria-label': 'Today', hidden: true });
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'All surahs' }, '‹'),
     h('div', { class: 'brand' }, title, sub),
-    h('button', { class: 'icon-btn', 'aria-label': 'Menu', onclick: () => openMenu() }, '☰'));
-  const toggleBar = (show = !bar.classList.contains('show')) => bar.classList.toggle('show', show);
+    h('button', { class: 'icon-btn', 'aria-label': 'Menu', onclick: () => openMenu() }, '☰'),
+    today);
+  const toggleBar = (show = !bar.classList.contains('show')) => {
+    bar.classList.toggle('show', show);
+    if (show) void fillToday(today, () => toggleBar(false));
+  };
+  let markTapped = false; // the current tap started on a margin mark
 
   // Pages sit side by side in a strip that follows the finger: the next page lies to the left,
   // as in a printed mushaf. Only the current page and its two neighbours are in the DOM.
@@ -83,13 +111,34 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       }
     },
     // While listening, tapping an ayah plays from it.
-    onTap: (hit) => (player.active() && hit ? void player.playFrom(hit.s, hit.a) : toggleBar()),
+    onTap: (hit) => {
+      if (markTapped) return; // a margin mark opens its own sheet (click handler below)
+      if (player.active() && hit) void player.playFrom(hit.s, hit.a);
+      else toggleBar();
+    },
     onTranslate: (s) => void showTranslation(s),
     onListen: (s) => { sel.clear(); void player.playFrom(s.surah, s.lo); },
+    onBookmark: (s) => {
+      sel.clear();
+      const on = toggleBookmark(s.surah, s.lo);
+      toast(on ? `Bookmarked ${reference(meta[s.surah - 1], s.lo, s.lo)}` : 'Bookmark removed');
+    },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
   root.append(bar, area, sel.bar, player.bar);
+
+  // --- the living mushaf: margin marks, the time-of-day tint ---
+  const onDownCapture = (e: PointerEvent) => { markTapped = !!(e.target as Element).closest?.('.mp-mark'); };
+  area.addEventListener('pointerdown', onDownCapture, true);
+  area.addEventListener('click', (e) => {
+    const mark = (e.target as Element).closest<HTMLElement>('.mp-mark');
+    if (mark?.dataset.kind === 'bookmark') openBookmark(Number(mark.dataset.s), Number(mark.dataset.a));
+  });
+  const repaintMarks = () => { for (const el of built.values()) if (el.dataset.fit) paintMarks(el); };
+  window.addEventListener('bookmarks-changed', repaintMarks);
+  applyTimeTint();
+  const tintTimer = window.setInterval(applyTimeTint, 10 * 60_000);
 
   const line = (l: MushafLine) => {
     if (l[0] === 'h') {
@@ -120,10 +169,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const widest = Math.max(1, ...[...lines].filter((l) => l.classList.contains('text')).map((l) => l.scrollWidth));
     el.classList.remove('measuring');
     // Pages 1–2 sit in a narrower, centred block, as in the printed mushaf.
-    const width = el.clientWidth * (el.classList.contains('opening') ? 0.8 : 1);
+    const cs = getComputedStyle(el);
+    const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); // margins hold the marks
+    const width = inner * (el.classList.contains('opening') ? 0.8 : 1);
     const f = Math.min((base * width) / widest, lh * 0.72);
     el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
     el.dataset.fit = '1';
+    paintMarks(el); // positions depend on the line heights just set
   }
   const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
 
@@ -160,7 +212,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const [s, a] = segs[0];
     title.textContent = `${s}. ${meta[s - 1].en}`;
     sub.textContent = `Juz ${pg.juz} · Page ${page}`;
-    pageNum.textContent = String(page);
+    pageNum.replaceChildren(...(ramadanDay() ? [crescent()] : []), String(page));
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
   }
@@ -298,13 +350,44 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, '🎧  Listen from this page'),
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
         h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, '🔖  Bookmarks'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
           const p = Math.round(Number(input.value));
           if (valid(p)) { d.close(); toggleBar(false); go(p); }
         } }, input, h('button', { class: 'chip', type: 'submit' }, 'Go to page')),
+        h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => {
+          setTimeTint(!timeTintOn());
+          d.close();
+          toast(timeTintOn() ? 'The page now follows the time of day' : 'Plain page colour');
+        } }, `🕰  Page follows the time of day: ${timeTintOn() ? 'on' : 'off'}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, '⚙  Device check')));
+  }
+
+  const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  function openBookmarks() {
+    const list = bookmarks();
+    const rows = list.map((b) => {
+      const row = h('div', { class: 'bm-row' },
+        h('button', { class: 'menu-item bm-go', onclick: () => { d.close(); toggleBar(false); go(mushaf.pageOf(b.s, b.a)); } },
+          h('span', {}, reference(meta[b.s - 1], b.a, b.a)),
+          h('span', { class: 'muted small' }, `Page ${mushaf.pageOf(b.s, b.a)} · ${dateFmt.format(b.at)}`)),
+        h('button', { class: 'icon-btn', 'aria-label': 'Remove bookmark', onclick: () => { removeBookmark(b.s, b.a); row.remove(); } }, '✕'));
+      return row;
+    });
+    const d: HTMLDialogElement = sheet(sheetHead('Bookmarks', () => d.close()),
+      rows.length ? h('div', { class: 'sheet-scroll' }, ...rows)
+        : h('p', { class: 'muted' }, 'Long-press an ayah, then tap 🔖 to bookmark it.'));
+  }
+  function openBookmark(s: number, a: number) {
+    const b = bookmarks().find((x) => x.s === s && x.a === a);
+    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${reference(meta[s - 1], a, a)}`, () => d.close()),
+      b ? h('p', { class: 'muted small' }, `Bookmarked on ${dateFmt.format(b.at)}`) : false,
+      h('div', { class: 'menu' },
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void player.playFrom(s, a); } }, '🎧  Listen from here'),
+        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, '🎬  Turn into reel'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast('Bookmark removed'); } }, '✕  Remove bookmark')));
   }
 
   const onKey = (e: KeyboardEvent) => {
@@ -324,6 +407,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   return () => {
     renderId++;
+    clearInterval(tintTimer);
+    window.removeEventListener('bookmarks-changed', repaintMarks);
     clearTimeout(resizeTimer);
     sel.destroy();
     player.destroy();

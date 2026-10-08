@@ -36,6 +36,7 @@ export interface SelectionOptions {
   /** Horizontal drag that follows the finger (replaces onSwipe): dx in px, vx in px/ms at release. */
   onPan?(phase: 'move' | 'end' | 'cancel', dx: number, vx: number): void;
   onListen?(sel: Sel): void; // adds a ▶ button to the selection bar
+  onBookmark?(sel: Sel): void; // adds a 🔖 button (bookmarks the first selected ayah)
 }
 
 export function selectionController(o: SelectionOptions) {
@@ -52,6 +53,7 @@ export function selectionController(o: SelectionOptions) {
     h('button', { class: 'icon-btn', 'aria-label': 'Clear selection', onclick: () => set(0, null, null) }, '✕'),
     label,
     o.onListen && h('button', { class: 'icon-btn', 'aria-label': 'Listen', title: 'Listen from here', onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
+    o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': 'Bookmark', title: 'Bookmark this ayah', onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
     h('button', { class: 'primary', onclick: () => {
       const sel = current();

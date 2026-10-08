@@ -189,6 +189,10 @@ Each feature lists the experience, then the build notes and acceptance criteria.
   portion, your Khatm juz progress, a partner's nudge, an unopened gift, lamps that are dimming. It
   is empty and hidden when there is nothing to say.
 
+**As built (2026-10-08):** bookmarks were added as the first mark (🔖 in the selection bar, ☰ →
+Bookmarks), since T0 syncs them. The Today card also offers a recent bookmark and a waiting reel
+draft.
+
 **Build notes:** a layer of absolutely positioned marks per `.mushaf-page`, positions from the
 existing word elements (`data-p`). Respects `prefers-reduced-motion` (no glow animation). Marks
 come from a single `marksForPage(page)` function that each feature registers into.
