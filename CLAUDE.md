@@ -226,6 +226,9 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
 - [x] Launch (owner request): opening the app without an address of its own goes straight to the
       mushaf — Al-Fatiha the first time, afterwards the page the user left (`lastRead` in
       `src/ui/prefs.ts`, saved on every page turn); the surah list stays at `#/` (‹ or ☰ → All surahs)
+- [x] Paper look in day mode (owner request): warm cream pages with a fine grain and faint mottling
+      (an inline SVG noise tile, `--paper-grain`) and softly shaded sheet edges (`--paper-edge`), which
+      move with the page while swiping; night mode stays plain dark
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
