@@ -55,7 +55,7 @@ export function selectionController(o: SelectionOptions) {
     o.onListen && h('button', { class: 'icon-btn', 'aria-label': 'Listen', title: 'Listen from here', onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
     o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': 'Bookmark', title: 'Bookmark this ayah', onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
-    h('button', { class: 'primary', onclick: () => {
+    h('button', { class: 'primary brand-btn', onclick: () => {
       const sel = current();
       if (sel) location.hash = `#/reel/${sel.surah}/${sel.lo}-${sel.hi}`;
     } }, '🎬 Turn into reel'));

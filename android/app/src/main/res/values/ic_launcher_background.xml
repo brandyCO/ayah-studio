@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Launch screen (Android 12+ draws the launcher icon on it); matches drawable*/splash.png -->
+    <color name="splash_background">#07130F</color>
 </resources>

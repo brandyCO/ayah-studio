@@ -37,7 +37,7 @@ export async function showSurahList(root: HTMLElement): Promise<() => void> {
 
   root.append(
     h('header', { class: 'topbar' },
-      h('div', { class: 'brand' }, h('h1', {}, 'Ayah Studio'), h('p', { class: 'muted' }, 'Read · select · turn into a reel')),
+      h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, 'Read · select · turn into a reel')),
       h('a', { class: 'chip', href: '#/drafts' }, 'Drafts'),
       h('button', { class: 'icon-btn', 'aria-label': 'Device check', title: 'Device check', onclick: openDebugPanel }, '⚙')),
     h('div', { class: 'search-wrap' }, search),
