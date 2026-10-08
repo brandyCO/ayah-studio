@@ -3,16 +3,17 @@
 // devices wrote. Synced: bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
 // travel as tombstones) and reflections (one document per ayah's note, merged per paragraph: the
-// newest edit wins). Thumbnails and own media never leave the device.
+// newest edit wins) and revision lamps (one document, merged per page). Thumbnails and own media never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
 import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
+import { lampRecords, mergeLamps } from '../data/lamps';
 import type { Project } from '../engine/project';
 import { mergePrefs, prefRecords } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 
-type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection';
+type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
 interface Row {
   user_id: string;
   kind: Kind;
@@ -86,6 +87,8 @@ async function applyRemote(rows: Row[], meta: Meta) {
       mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
     } else if (r.kind === 'setting' && r.id === 'prefs') {
       if (mergePrefs(r.data.prefs)) window.dispatchEvent(new Event('prefs-synced'));
+    } else if (r.kind === 'lamp' && r.id === 'pages') {
+      mergeLamps(r.data.pages); // merged per page; the result is pushed back on this round
     } else if (r.kind === 'reflection') {
       mergeReflection(r.data); // merged per paragraph; the result is pushed back on this round
     } else if (r.kind === 'draft') {
@@ -115,6 +118,8 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
   add('state', 'bookmarks', { items }, JSON.stringify(items));
   const prefs = prefRecords();
   add('setting', 'prefs', { prefs }, JSON.stringify(prefs));
+  const pages = lampRecords();
+  if (Object.keys(pages).length) add('lamp', 'pages', { pages }, JSON.stringify(pages));
   await loadReflections();
   for (const r of reflectionRecords()) {
     const data = { s: r.s, a: r.a, entries: r.entries };
@@ -200,7 +205,7 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'prefs-changed', 'drafts-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'prefs-changed', 'drafts-changed', 'reflections-changed', 'lamps-changed']) window.addEventListener(ev, () => soon());
   window.addEventListener('online', () => soon(500));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') soon(500);

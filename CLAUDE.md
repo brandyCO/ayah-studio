@@ -470,7 +470,18 @@ cloud. Build in this order:
       Anonymous sign-ins; until then the composer asks for Google sign-in. Shared links from the Android
       app point at the Pages site (`shareableLink()` in `src/native.ts`; circle invites too).
       In Export my data and the privacy page
-- [ ] T5 Revision lamps (604-page lamp grid; with Phase 2 flashcards)
+- [x] T5a Revision lamps, manual (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
+      (localStorage `lamps`: per page box 1–5, last revised, memorised since; Leitner intervals
+      1/2/4/8/16 days; "Revised today" = up a box, "Needs work" = box 1; light = 1 → 0.15 over two
+      intervals, `due` past one) + `src/ui/lamps.ts`: ☰ → **My memorisation**: one canvas, a row per juz,
+      outlines for pages not memorised, warm glowing lamps for memorised ones, a dim lamp with a ring
+      when it would like a visit, the current page underlined; tap → the page (‹ ›, Open page, Revised
+      today with a warm bloom, Needs work, Remove / Mark memorised); mark a surah, a juz or a page range.
+      Today card: "3 lamps are getting dim in Al-Mulk" (opens the grid). Synced as one `user_docs`
+      document (kind `lamp`, id `pages`), merged per page (newest change wins, removals as tombstones
+      for 120 days); in Export my data and the privacy page. No local reminder yet (comes with the
+      local-notifications plugin in T7/T5b)
+- [ ] T5b Lamps + Phase 2 flashcards (a dim lamp opens a revision session)
 - [ ] T6 Memorise with a partner (shared plan lamps, gentle nudges)
 - [ ] T7 Ramadan mode (daily portion, Maghrib reminder, nightly template, Eid recap)
 - [ ] T8 Multi-segment reels + Dua & ayah wall (QR join, live host screen, keepsake reel)

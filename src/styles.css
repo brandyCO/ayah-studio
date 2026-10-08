@@ -767,3 +767,13 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .gift-row-main:hover { background: var(--sel); }
 a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
 @media (prefers-reduced-motion: reduce) { .gift-seal, .gift-actions.glow { animation: none; } .gift-sealed { transition: opacity .4s; transform: none; } }
+/* Revision lamps (src/ui/lamps.ts) */
+.lamps-sheet { max-height: 94vh; overflow: auto; }
+.lamps-summary { margin: 4px 0 8px; }
+.lamps-grid { display: block; width: 100%; touch-action: manipulation; cursor: pointer; }
+.lamp-panel { margin: 10px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+.lamp-head { display: flex; align-items: center; gap: 8px; }
+.lamp-head > div { flex: 1; min-width: 0; text-align: center; }
+.lamp-mark-row select, .lamp-mark-row input { width: auto; flex: 1; min-width: 0; color: var(--text); }
+.lamp-range { display: flex; align-items: center; gap: 6px; flex: 1; }
+.lamp-range input { width: 5em; }

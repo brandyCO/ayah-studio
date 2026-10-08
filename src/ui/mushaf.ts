@@ -14,6 +14,7 @@ import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, writtenOn } from './reflections';
 import { account } from '../cloud/auth';
+import { lamps } from '../data/lamps';
 import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
 import { openCircle, openCircles, type CircleContext } from './circles';
 import { selectionController, type Sel } from './selection';
@@ -62,6 +63,17 @@ registerToday(async () => {
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
   return [{ icon: '🎬', text: `Your reel ${reference(meta[p.surah - 1], p.from, p.to)} is waiting`, href: draftHash(p, d.id) }];
+});
+
+// Revision lamps (T5a): lamps past their interval, gently.
+let openLampsHere: (() => void) | null = null;
+registerToday(async () => {
+  if (!openLampsHere || !Object.keys(lamps()).length) return [];
+  const { dimLamps } = await import('./lamps');
+  const { count, surah } = await dimLamps();
+  if (!count) return [];
+  const open = openLampsHere;
+  return [{ icon: '✦', text: count === 1 ? `A lamp is getting dim in ${surah!.en}` : `${count} lamps are getting dim${surah ? ` in ${surah.en}` : ''}`, onClick: () => open() }];
 });
 
 function firstVisitHint() {
@@ -160,6 +172,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
   const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
   circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
+  openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
   const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
   let portion = myPortion();
   const decorate = () => {
@@ -455,6 +468,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, '✎  Reflections'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, '◯  Khatm circles'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, '✦  My memorisation'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, '🎁  Gifts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
@@ -519,6 +533,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     window.removeEventListener('circles-changed', decorate);
     clearTimeout(readTimer);
     circleCtx = null;
+    openLampsHere = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
     clearTimeout(hintTimer);
     clearTimeout(resizeTimer);

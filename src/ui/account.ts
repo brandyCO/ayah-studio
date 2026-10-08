@@ -8,6 +8,7 @@ import { listDrafts } from '../data/drafts';
 import { loadReflections, reflections } from '../data/reflections';
 import { isNative, shareTextFile } from '../native';
 import { received } from '../together/gifts';
+import { lampRecords } from '../data/lamps';
 import { h, toast } from './dom';
 import { prefRecords } from './prefs';
 
@@ -128,6 +129,7 @@ async function exportData() {
       reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),
       settings: prefRecords(),
       giftsReceived: received(),
+      revisionLamps: lampRecords(),
       drafts: (await listDrafts()).map((x) => ({ id: x.id, project: x.project, updated: x.updated })),
     },
   };
