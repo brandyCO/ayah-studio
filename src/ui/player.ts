@@ -48,11 +48,15 @@ export function createPlayer(o: PlayerHooks) {
     h('div', { class: 'pl-info' }, label, who),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
 
+  // Starting or buffering: a spinner on the play button and "Loading…" (the recording streams).
+  let loading = false;
+  let pending: { s: number; a: number } | null = null;
   function paint() {
     const playing = !audio.paused;
-    playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 22));
-    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-    label.textContent = cur ? `${o.meta[cur.s - 1].en} · ${cur.s}:${cur.a}` : surah ? o.meta[surah - 1].en : '';
+    playBtn.replaceChildren(loading ? h('span', { class: 'spinner' }) : icon(playing ? 'pause' : 'play', 22));
+    playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
+    const at = loading && pending ? pending : cur;
+    label.textContent = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '';
     who.textContent = `${reciter().short} ▾`;
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
@@ -90,6 +94,8 @@ export function createPlayer(o: PlayerHooks) {
   /** Play from the start of surah:ayah. */
   async function playFrom(s: number, a: number) {
     show(true);
+    loading = true;
+    pending = { s, a };
     paint();
     try {
       if (!(await load(s))) return;
@@ -101,6 +107,7 @@ export function createPlayer(o: PlayerHooks) {
       if ((e as Error).name === 'AbortError') return;
       toast(navigator.onLine ? `Could not play the recitation: ${e instanceof Error ? e.message : e}` : 'Listening needs an internet connection');
     }
+    loading = false;
     paint();
   }
 
@@ -134,6 +141,7 @@ export function createPlayer(o: PlayerHooks) {
 
   function stop() {
     req++;
+    loading = false;
     audio.pause();
     cancelAnimationFrame(raf);
     cur = null;
@@ -165,7 +173,9 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   audio.addEventListener('play', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); paint(); });
-  audio.addEventListener('pause', () => { cancelAnimationFrame(raf); paint(); });
+  audio.addEventListener('pause', () => { cancelAnimationFrame(raf); loading = false; paint(); });
+  audio.addEventListener('waiting', () => { loading = true; paint(); }); // buffering
+  audio.addEventListener('playing', () => { loading = false; paint(); });
   audio.addEventListener('ended', () => {
     cancelAnimationFrame(raf);
     if (surah && surah < 114) void playFrom(surah + 1, 1);

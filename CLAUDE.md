@@ -212,7 +212,10 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       onto a `.mushaf-strip` holding the current page and its neighbours, the next page on the left),
       then settles on the next page (past 22 % of the width or a fling) or springs back; soft sheet
       shadows while moving; resistance at pages 1 and 604; arrow keys slide too. `selection.ts` reports
-      horizontal pans (`onPan`, axis decided once) besides long-press selection
+      horizontal pans (`onPan`, axis decided once) besides long-press selection. Smoothness pass: a swipe
+      during a slide lands it at once and follows the new swipe (chained flips); a page whose font is
+      still downloading slides in as a "Page N" placeholder (spinner) and fills in when ready; fonts
+      load 3 pages ahead; the player shows a spinner + "loading…" while starting or buffering
 - [x] Listen while reading (owner request): ☰ → "Listen from this page", ▶ in the selection bar, or —
       while listening — tap an ayah to play from it. `src/ui/player.ts` streams the reciter's QDC
       full-surah MP3 (seeking by the verse timings), tints the ayah being recited and colours the word
