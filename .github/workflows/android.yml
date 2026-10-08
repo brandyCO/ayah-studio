@@ -40,13 +40,20 @@ jobs:
       - run: npx cap sync android
       - name: Signing key
         if: env.KEYSTORE_B64 != ''
+        env:
+          PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          printf %s "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/app.keystore"
+          # Stray spaces or line breaks from copy-pasting the secrets are ignored.
+          printf %s "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/app.keystore"
+          PW=$(printf %s "$PW" | tr -d '[:space:]')
+          if ! keytool -list -keystore "$RUNNER_TEMP/app.keystore" -storetype PKCS12 -storepass "$PW" -alias ayahstudio > /dev/null 2>&1; then
+            echo "::error::The app's signing key could not be opened. Check the repo secrets: ANDROID_KEYSTORE_BASE64 = the whole long line from the key file, ANDROID_KEYSTORE_PASSWORD = only the password line."
+            exit 1
+          fi
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/app.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
       - run: ./gradlew assembleDebug --no-daemon
         working-directory: android
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: ayah-studio-apk
