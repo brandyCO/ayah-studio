@@ -2,13 +2,16 @@
 // loads the bundled data, fonts, default backgrounds and the editor in the background, so they are
 // kept on the device even before they are first needed. Recitation audio is kept per reel by
 // src/data/audioCache.ts.
+import { isNative } from './native';
+
 const BASE = import.meta.env.BASE_URL;
 const DATA = ['meta.json', 'quran-uthmani.json', 'en-sahih.json', 'en-wbw.json', 'mushaf.json', 'word-map.json'];
 const FONTS = ['UthmanicHafs.woff2', 'SuraNames.woff2', 'AmiriQuran.woff2', 'bismillah.svg'];
 
 export function setupOffline() {
-  // Only for the built app over http(s) (not the dev server; Capacitor/Tauri get their own in Phase 1c).
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  // Only for the built web app over http(s): not the dev server, and not the Android app (Capacitor),
+  // whose files are on the device already.
+  if (isNative() || !import.meta.env.PROD || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
   navigator.serviceWorker.register(`${BASE}sw.js`).catch((e) => console.warn('Offline mode unavailable', e));
   const warm = () => window.setTimeout(() => void warmUp(), 3000);
   if (navigator.serviceWorker.controller) warm();

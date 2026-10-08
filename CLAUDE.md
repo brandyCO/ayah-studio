@@ -331,8 +331,23 @@ save to gallery / share sheet; offline audio cache; settings.
       After the worker takes control, the data, fonts, editor and default backgrounds are loaded once
       in the background. Recitation audio: `src/data/audioCache.ts` keeps the exact MP3 byte ranges
       (and whole everyayah/VBR files) each reel downloaded in IndexedDB `audio` (newest 150), so reels
-      opened before work offline. Shared DB module `src/data/db.ts` (version 2: media, drafts, audio)
-- [ ] Capacitor/Tauri: same offline behaviour inside the packaged apps
+      opened before work offline. Shared DB module `src/data/db.ts` (version 3: media, drafts, audio,
+      timings)
+- [x] Android app (Capacitor 8): `capacitor.config.ts` (`com.brandyco.ayahstudio`, webDir `dist`,
+      origin https://localhost), `android/` committed (copied web assets are git-ignored; `npx cap sync
+      android` after `npm run build`). `.github/workflows/android.yml` (push to main, PRs, manual) builds
+      the debug APK → artifact **ayah-studio-apk** (debug-signed, for sideloading; Play signing later).
+      Default Capacitor app icon and splash for now
+- [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
+      MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
+      `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
+      `MediaScanPlugin.java` adds it to the gallery. Share = `@capacitor/share` with the saved file's URI
+      (saves first if needed). Storage permission only asked on Android ≤ 10 (manifest: maxSdkVersion)
+- [x] Offline in the app: no service worker inside Capacitor (the app files are local); QDC timings
+      kept in IndexedDB `timings` (network first, newest 60) by `src/data/qdc.ts`; audio as on the web
+- [ ] Android app tested by the owner on their phone (not verifiable in the cloud container: no
+      Android SDK/device; only the CI build is checked)
+- [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice
 Recite & Compare (MediaRecorder; Sheikh vs Me A/B toggle; side-by-side waveforms; recordings

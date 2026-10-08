@@ -28,6 +28,7 @@ import {
 } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
+import { isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { icon } from './icons';
@@ -999,6 +1000,33 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         i ? ', ' : '', h('a', { href: c.url, target: '_blank', rel: 'noopener' }, c.author), ` on ${c.source}`])),
       h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(text).then(() => toast('Credits copied'), () => toast(text)) }, 'Copy credits'));
   }
+  /** Save / Share in the Android app: the file is written once, then shared by its URI. */
+  function nativeActions(blob: Blob, name: string) {
+    let saving: Promise<SavedFile> | null = null;
+    const saveBtn = h('button', { class: 'primary' }, icon('save', 18), 'Save to device');
+    const label = saveBtn.lastChild as Text;
+    const save = () => {
+      saving ??= saveVideo(blob, name, (f) => { label.data = `Saving… ${Math.round(f * 100)}%`; }).then((r) => {
+        label.data = 'Saved';
+        toast(`Saved to ${r.where}`);
+        return r;
+      }, (e) => {
+        saving = null;
+        label.data = 'Save to device';
+        throw e;
+      });
+      return saving;
+    };
+    const fail = (what: string) => (e: unknown) => toast(`${what}: ${e instanceof Error ? e.message : e}`);
+    saveBtn.onclick = () => void save().catch(fail('Could not save'));
+    return h('div', { class: 'export-actions' }, saveBtn,
+      h('button', {
+        class: 'primary alt',
+        onclick: () => void save().then((r) => shareFile(r.uri, 'Share your reel').catch((e) => {
+          if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail('Could not share')(e);
+        }), fail('Could not save')),
+      }, icon('share', 18), 'Share'));
+  }
   async function doExport() {
     const { path } = await capabilities();
     if (!path || !tl || !audio || !mediaReady) {
@@ -1041,7 +1069,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
         h('p', { class: 'small' }, `✓ Made in ${secs} s · ${(blob.size / 1e6).toFixed(1)} MB · ${quality === 1920 ? '1080P' : '720P'}`),
         creditsBlock() ?? '',
-        h('div', { class: 'export-actions' },
+        isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), 'Save to device'),
           canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), 'Share')),
         h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, 'Back to editing'),
