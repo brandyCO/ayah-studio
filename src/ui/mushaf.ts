@@ -15,6 +15,7 @@ import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, writtenOn } from './reflections';
 import { account } from '../cloud/auth';
 import { lamps } from '../data/lamps';
+import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
 import { openCircle, openCircles, type CircleContext } from './circles';
 import { selectionController, type Sel } from './selection';
@@ -63,6 +64,15 @@ registerToday(async () => {
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
   return [{ icon: '🎬', text: `Your reel ${reference(meta[p.surah - 1], p.from, p.to)} is waiting`, href: draftHash(p, d.id) }];
+});
+
+// Ramadan (T7): today's portion, tonight's ayah, Eid.
+let ramadanCtx: import('./ramadan').RamadanContext | null = null;
+registerToday(async () => {
+  const now = ramadanNow();
+  if (!ramadanCtx || (!now.day && !now.eid)) return [];
+  const ctx = ramadanCtx;
+  return (await import('./ramadan')).ramadanToday(ctx);
 });
 
 // Revision lamps (T5a): lamps past their interval, gently.
@@ -156,13 +166,14 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       else toggleBar();
     },
     onTranslate: (s) => void showTranslation(s),
-    onListen: (s) => { sel.clear(); void player.playFrom(s.surah, s.lo); },
+    onListen: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void player.playFrom(s.surah, s.lo); },
     onBookmark: (s) => {
+      noteAyah(s.surah, s.lo);
       sel.clear();
       const on = toggleBookmark(s.surah, s.lo);
       toast(on ? `Bookmarked ${reference(meta[s.surah - 1], s.lo, s.lo)}` : 'Bookmark removed');
     },
-    onReflect: (s) => { sel.clear(); void openReflection(meta, s.surah, s.lo); },
+    onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
     onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
@@ -172,6 +183,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
   const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
   circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
+  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
   openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
   const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
   let portion = myPortion();
@@ -185,7 +197,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const startReadTimer = () => {
     clearTimeout(readTimer);
     const p = page;
-    if (portion.has(p)) readTimer = window.setTimeout(() => { if (p === page) markPageRead(p, juzPages); }, 20_000);
+    const ramadan = !!ramadanNow().day && !!ramadanData().plan;
+    if (portion.has(p) || ramadan) readTimer = window.setTimeout(() => { if (p !== page) return; markPageRead(p, juzPages); markRamadanRead(p); }, 20_000);
   };
   if (account() && navigator.onLine) void loadCircles().catch(() => {});
   try {
@@ -469,6 +482,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         }); } }, '✎  Reflections'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, '◯  Khatm circles'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, '✦  My memorisation'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, '☾  Ramadan'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, '🎁  Gifts'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
@@ -524,6 +538,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
   firstVisitHint();
+  // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
+  {
+    const rn = ramadanNow();
+    const rd = ramadanData(rn);
+    if ((rn.day && !rd.welcomed) || (rn.eid && !rd.recapSeen && (rd.days.length || rd.khatms))) {
+      window.setTimeout(() => void import('./ramadan').then((x) => (rn.day ? x.ramadanWelcome(ramadanCtx!) : x.openRecap())), 700);
+    }
+    if (rd.plan) void import('./ramadan').then((x) => x.scheduleReminders());
+  }
 
   return () => {
     renderId++;
@@ -534,6 +557,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(readTimer);
     circleCtx = null;
     openLampsHere = null;
+    ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
     clearTimeout(hintTimer);
     clearTimeout(resizeTimer);

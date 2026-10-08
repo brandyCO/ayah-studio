@@ -1,6 +1,7 @@
 // The living mushaf (docs/together.md T1): marks in the page margin, a page tint that follows the time
 // of day, the Ramadan crescent and the "Today" card in the drop-down bar. Features add their marks and
 // Today lines through registerMarks() / registerToday(); everything here works without an account.
+import { ramadanNow } from '../data/ramadan';
 import { h } from './dom';
 import { touchPref } from './prefs';
 
@@ -61,10 +62,11 @@ const bump = (h: number, centre: number, half: number, max: number) => {
 /** Tint colour and strength (%) for a local time: dawn rose, Maghrib amber, night indigo; none by day. */
 export function timeTint(date = new Date()): { color: string; amount: number } {
   const hour = date.getHours() + date.getMinutes() / 60;
+  const lastTen = ramadanNow(date).lastTen; // the last ten nights: the night deepens (still ≤ 6 %)
   const options = [
     { color: '#f0b49a', amount: bump(hour, 5.75, 1.75, 5) }, // dawn
     { color: '#e9a053', amount: bump(hour, 18.25, 1.75, 6) }, // Maghrib
-    { color: '#3d4f86', amount: Math.min(4, bump(hour, 0.5, 4.5, 6.5)) }, // night (flat in the middle)
+    { color: '#3d4f86', amount: lastTen ? Math.min(6, bump(hour, 0.5, 6, 9)) : Math.min(4, bump(hour, 0.5, 4.5, 6.5)) }, // night (flat in the middle)
   ];
   const best = options.reduce((a, b) => (b.amount > a.amount ? b : a));
   return { color: best.color, amount: Math.round(best.amount * 10) / 10 };
@@ -90,10 +92,8 @@ export function hijriToday(date = new Date()): { month: number; day: number } | 
     return null;
   }
 }
-export const ramadanDay = (date = new Date()): number | null => {
-  const d = hijriToday(date);
-  return d && d.month === 9 ? d.day : null;
-};
+/** Day of Ramadan, with the user's moon-sighting shift and the Ramadan-mode preview (T7). */
+export const ramadanDay = (date = new Date()): number | null => ramadanNow(date).day;
 
 export const crescent = () => {
   const el = h('span', { class: 'crescent', 'aria-hidden': 'true' });
@@ -131,6 +131,6 @@ export async function fillToday(card: HTMLElement, onPick: () => void) {
 }
 
 registerToday(() => {
-  const day = ramadanDay();
-  return day ? [{ icon: '☾', text: `Ramadan Mubarak · day ${day}` }] : [];
+  const now = ramadanNow();
+  return now.day ? [{ icon: '☾', text: `Ramadan Mubarak · day ${now.day}${now.lastTen ? ' · the last ten nights' : ''}` }] : [];
 });

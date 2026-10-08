@@ -4,6 +4,7 @@
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
 //   #/join/CODE        an invitation to a Khatm circle
+//   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
 import './styles.css';
 import { capabilities } from './engine/capabilities';
@@ -46,6 +47,11 @@ async function route() {
     } else if (view === 'gift' && a) {
       const { showGift } = await import('./ui/gift');
       c = await showGift(screen, a);
+    } else if (view === 'ramadan') {
+      // A Ramadan reminder was tapped: the mushaf on the next page of today's portion.
+      const { ramadanTarget } = await import('./ui/ramadan');
+      history.replaceState(null, '', await ramadanTarget());
+      return void route();
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);

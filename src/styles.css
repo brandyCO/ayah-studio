@@ -777,3 +777,41 @@ a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
 .lamp-mark-row select, .lamp-mark-row input { width: auto; flex: 1; min-width: 0; color: var(--text); }
 .lamp-range { display: flex; align-items: center; gap: 6px; flex: 1; }
 .lamp-range input { width: 5em; }
+/* Ramadan mode (src/ui/ramadan.ts): full-screen moments and the sheet */
+.moment {
+  width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border: 0; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 28%, rgba(214, 178, 110, .16), transparent 55%), #07130f; color: #eef1ec;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; box-sizing: border-box; overflow: auto;
+}
+.moment:not([open]) { display: none; }
+.moment[open] { animation: moment-in 1.2s cubic-bezier(.25,.1,.25,1) both; }
+@keyframes moment-in { from { opacity: 0; } }
+.moment::backdrop { background: #07130f; }
+.moment h2 { margin: 4px 0 0; font-size: 28px; font-weight: 600; letter-spacing: .01em; }
+.moment-crescent { width: 72px; height: 72px; color: #e8cf96; filter: drop-shadow(0 0 22px rgba(232, 207, 150, .45)); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
+.moment-crescent svg { width: 100%; height: 100%; }
+.moment-sub { margin: 0; opacity: .8; }
+.moment-choices { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); margin-top: 8px; }
+.moment-choice {
+  display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 14px; cursor: pointer; text-align: left;
+  border: 1px solid rgba(232, 207, 150, .28); background: rgba(255, 255, 255, .04); color: inherit; font: inherit;
+}
+.moment-choice:hover, .moment-choice:focus-visible { border-color: rgba(232, 207, 150, .7); background: rgba(232, 207, 150, .08); }
+.moment-choice span { font-size: 13px; opacity: .7; }
+.moment .link-btn { color: #e8cf96; }
+.moment-skip { opacity: .7; margin-top: 4px; }
+.moment-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+.moment .chip { color: #eef1ec; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); }
+.recap-line { margin: 0; font-size: 18px; }
+.recap-ayah { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 12px; max-width: 520px; }
+.recap-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 28px; line-height: 1.9; margin: 0; }
+.recap-ayah .muted { color: rgba(238, 241, 236, .65); margin: 0; }
+.ramadan-sheet { max-height: 92vh; overflow: auto; }
+.ramadan-status { margin: 6px 0 2px; font-weight: 600; }
+.ramadan-plans { display: flex; flex-wrap: wrap; gap: 8px; }
+.ramadan-today { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 4px; padding: 12px; border-radius: 12px; background: var(--sel); }
+.ramadan-switch { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.ramadan-reminder .row .search { width: auto; color: var(--text); }
+.ramadan-preview { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.ramadan-preview .search { width: auto; color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .moment[open], .moment-crescent { animation: none; } }
