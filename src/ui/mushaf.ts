@@ -112,7 +112,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   /** Font size so the widest line spans the page width; lines spread over the full height. */
   function fit(el: HTMLElement) {
     const lines = el.querySelectorAll<HTMLElement>('.mp-line');
-    const lh = Math.floor(el.clientHeight / 15);
+    const lh = Math.floor((el.clientHeight - 10) / 15); // inside the page's 5 px top/bottom padding
     el.style.setProperty('--lh', `${lh}px`);
     const base = 30;
     el.style.setProperty('--f', `${base}px`);

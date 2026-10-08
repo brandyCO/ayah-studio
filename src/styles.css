@@ -283,6 +283,7 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mushaf-page {
   --f: 24px; --lh: 40px;
   position: absolute; inset: 0; background: var(--paper);
+  padding: 5px 0; /* room for the surah frame's outer line when it is the first or last line */
   display: flex; flex-direction: column; justify-content: center;
   font-size: var(--f); line-height: 1;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -295,9 +296,12 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .mushaf-page.opening.measuring .mp-line.text { gap: .25em; }
 .mp-surah, .mp-basmala { justify-content: center; }
 .surah-frame {
-  width: 100%; height: calc(var(--lh) * 0.86); display: grid; place-items: center;
+  /* Inset (and a little slimmer than the line) so the outer line, 3.5 px outside the border, stays
+     inside the page — also when the header is the page's first line. */
+  box-sizing: border-box; width: calc(100% - 12px); margin: 0 auto;
+  height: calc(var(--lh) * 0.8); display: grid; place-items: center;
   border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent); border-radius: 999px;
-  outline: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 3px;
+  outline: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2.5px;
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 .surah-name { font-family: 'SuraNames'; font-size: calc(var(--lh) * 0.62); line-height: 1; color: var(--ink); }
