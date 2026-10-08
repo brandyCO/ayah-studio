@@ -273,14 +273,16 @@ button { font: inherit; color: inherit; }
 body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden; overscroll-behavior: none; }
 .screen-mushaf { max-width: none; padding: 0; }
 .mushaf {
-  position: fixed; inset: 0; touch-action: pan-y;
+  position: fixed; inset: 0; touch-action: pan-y; overflow: hidden;
   display: flex; flex-direction: column; align-items: center;
   padding: max(10px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
   background: var(--paper); color: var(--ink);
 }
+.mushaf-view { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 640px; overflow: hidden; }
+.mushaf-strip { position: absolute; inset: 0; will-change: transform; }
 .mushaf-page {
   --f: 24px; --lh: 40px;
-  flex: 1; min-height: 0; width: 100%; max-width: 640px;
+  position: absolute; inset: 0; background: var(--paper);
   display: flex; flex-direction: column; justify-content: center;
   font-size: var(--f); line-height: 1;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -301,10 +303,26 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 .surah-name { font-family: 'SuraNames'; font-size: calc(var(--lh) * 0.62); line-height: 1; color: var(--ink); }
 .mp-basmala svg { height: calc(var(--lh) * 0.8); width: auto; color: var(--ink); }
 .mp-num { flex: none; font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
-.mushaf-page.turn-next { animation: turn-next .22s ease-out; }
-.mushaf-page.turn-prev { animation: turn-prev .22s ease-out; }
-@keyframes turn-next { from { opacity: 0; transform: translateX(-24px); } }
-@keyframes turn-prev { from { opacity: 0; transform: translateX(24px); } }
+ /* While a page moves, the sheets cast a soft edge shadow (a page-like feel). */
+.mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.16); }
+@media (prefers-color-scheme: dark) { .mushaf-strip.moving .mushaf-page { box-shadow: 0 0 22px rgba(0,0,0,.6); } }
+/* listening: the ayah being recited is tinted, its word being recited coloured */
+.mp-line .w.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); border-radius: 0; }
+.mp-line .w.play-word { color: var(--accent); }
+body.listening .mushaf { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.player {
+  position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 9;
+  transform: translate(-50%, 160%); transition: transform .22s ease;
+  display: flex; align-items: center; gap: 2px; width: min(560px, calc(100% - 16px)); padding: 6px 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+}
+.player.show { transform: translate(-50%, 0); }
+body.has-selbar .player.show { transform: translate(-50%, 160%); } /* the selection bar takes its place */
+.player .icon-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.player .pl-play { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.pl-info { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 8px; }
+.pl-ref { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-reciter { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
 
 /* drop-down title bar */
 .mushaf-bar {

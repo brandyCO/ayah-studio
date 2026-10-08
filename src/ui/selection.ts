@@ -33,6 +33,9 @@ export interface SelectionOptions {
   onTap?(hit: { s: number; a: number } | null): void; // short tap while nothing is selected
   onTranslate?(sel: Sel): void; // adds a Translation button to the selection bar
   onSwipe?(dir: 1 | -1): void; // horizontal swipe: +1 = finger moved right
+  /** Horizontal drag that follows the finger (replaces onSwipe): dx in px, vx in px/ms at release. */
+  onPan?(phase: 'move' | 'end' | 'cancel', dx: number, vx: number): void;
+  onListen?(sel: Sel): void; // adds a ▶ button to the selection bar
 }
 
 export function selectionController(o: SelectionOptions) {
@@ -48,6 +51,7 @@ export function selectionController(o: SelectionOptions) {
   const bar = h('div', { class: 'selbar', 'aria-live': 'polite' },
     h('button', { class: 'icon-btn', 'aria-label': 'Clear selection', onclick: () => set(0, null, null) }, '✕'),
     label,
+    o.onListen && h('button', { class: 'icon-btn', 'aria-label': 'Listen', title: 'Listen from here', onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
     h('button', { class: 'primary', onclick: () => {
       const sel = current();
@@ -93,7 +97,8 @@ export function selectionController(o: SelectionOptions) {
 
   // --- gestures ---
   let timer = 0;
-  let down: { x: number; y: number; s: number; a: number; id: number; moved: boolean } | null = null;
+  let down: { x: number; y: number; s: number; a: number; id: number; moved: boolean; pan: boolean } | null = null;
+  let track: { x: number; t: number; vx: number } = { x: 0, t: 0, vx: 0 }; // for the release speed of a pan
   let dragging = false;
   let lastY = 0;
   let scrollRaf = 0;
@@ -114,7 +119,8 @@ export function selectionController(o: SelectionOptions) {
   function onDown(e: PointerEvent) {
     if (e.button !== 0 || !e.isPrimary) return;
     const hit = ayahAt(e.clientX, e.clientY);
-    down = { x: e.clientX, y: e.clientY, s: hit?.s ?? 0, a: hit?.a ?? 0, id: e.pointerId, moved: false };
+    down = { x: e.clientX, y: e.clientY, s: hit?.s ?? 0, a: hit?.a ?? 0, id: e.pointerId, moved: false, pan: false };
+    track = { x: e.clientX, t: e.timeStamp, vx: 0 };
     clearTimeout(timer);
     if (!hit) return;
     timer = window.setTimeout(() => {
@@ -130,9 +136,16 @@ export function selectionController(o: SelectionOptions) {
   function onMove(e: PointerEvent) {
     if (!down || e.pointerId !== down.id) return;
     if (!dragging) {
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > MOVE_TOLERANCE) {
+      const dx = e.clientX - down.x, dy = e.clientY - down.y;
+      if (!down.moved && Math.hypot(dx, dy) > MOVE_TOLERANCE) {
         clearTimeout(timer);
         down.moved = true; // a scroll or swipe, not a press
+        down.pan = !!o.onPan && Math.abs(dx) > Math.abs(dy); // the axis is decided once
+      }
+      if (down.pan) {
+        const dt = e.timeStamp - track.t;
+        if (dt > 0) track = { x: e.clientX, t: e.timeStamp, vx: 0.7 * ((e.clientX - track.x) / dt) + 0.3 * track.vx };
+        o.onPan!('move', dx, 0);
       }
       return;
     }
@@ -149,6 +162,11 @@ export function selectionController(o: SelectionOptions) {
     dragging = false;
     down = null;
     cancelAnimationFrame(scrollRaf);
+    if (d.pan) {
+      // A pause before lifting the finger means no fling.
+      o.onPan!(e.type === 'pointercancel' ? 'cancel' : 'end', e.clientX - d.x, e.timeStamp - track.t > 80 ? 0 : track.vx);
+      return;
+    }
     if (wasDrag || e.type === 'pointercancel') return;
     if (d.moved) {
       const dx = e.clientX - d.x, dy = e.clientY - d.y;
@@ -179,6 +197,8 @@ export function selectionController(o: SelectionOptions) {
     current,
     /** Re-apply the highlight after the view re-rendered (e.g. a page turn). */
     repaint: () => o.paint(current()),
+    /** Clear the selection. */
+    clear: () => set(0, null, null),
     /** Select a single ayah programmatically. */
     select: (s: number, a: number) => set(s, a, a),
     destroy() {

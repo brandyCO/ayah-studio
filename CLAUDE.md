@@ -208,6 +208,18 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       translation view, go to page, device check); swipe or ←→ keys turn pages
 - [x] Long-press / drag / tap-to-extend (also across pages) → bar with Translation + "Turn into reel"
 - [x] Translation card view kept as a toggle (remembered per device)
+- [x] Page swiping like Tarteel (owner request): the page follows the finger (`.mushaf-view` window
+      onto a `.mushaf-strip` holding the current page and its neighbours, the next page on the left),
+      then settles on the next page (past 22 % of the width or a fling) or springs back; soft sheet
+      shadows while moving; resistance at pages 1 and 604; arrow keys slide too. `selection.ts` reports
+      horizontal pans (`onPan`, axis decided once) besides long-press selection
+- [x] Listen while reading (owner request): ☰ → "Listen from this page", ▶ in the selection bar, or —
+      while listening — tap an ayah to play from it. `src/ui/player.ts` streams the reciter's QDC
+      full-surah MP3 (seeking by the verse timings), tints the ayah being recited and colours the word
+      (QDC word positions = `data-p` on the mushaf words, counted across page breaks by
+      `loadMushaf()`: `segStart`, `wordPage`), turns the page with the recitation, continues into the
+      next surah; bar: previous/next ayah, play/pause, reference, reciter (shared with the reel default),
+      stop; Media Session lock-screen controls. Needs internet (the stream is not cached)
 - [x] Launch (owner request): opening the app without an address of its own goes straight to the
       mushaf — Al-Fatiha the first time, afterwards the page the user left (`lastRead` in
       `src/ui/prefs.ts`, saved on every page turn); the surah list stays at `#/` (‹ or ☰ → All surahs)
