@@ -341,6 +341,9 @@ already shift ayat by offsets). Limit: 30 entries or 10 minutes per keepsake ree
 several reels. Guest text: max lengths enforced in rules, shown only to wall participants, never
 indexed.
 
+**As built (2026-10-08):** see CLAUDE.md → Phase 4 → T8. Guest entries are seen only by the host
+(and their author); the keepsake reel is made and exported on the host's device.
+
 **Done when:** 10 phones can join one wall in a room within a minute, the host screen updates live,
 hidden entries never appear in the reel, and the keepsake reel exports with correct references.
 
@@ -449,7 +452,7 @@ a year of data to recap.
 5. (T2b) Firebase project for push only: Android app with the same package + fingerprints,
    `google-services.json` as the repo secret `GOOGLE_SERVICES_JSON`, and a service-account key for
    FCM stored as a Supabase secret.
-6. (T3, optional) **Anonymous sign-ins** for gift replies from people without a Google account:
+6. (T3/T8, optional) **Anonymous sign-ins** for gift replies and wall guests without a Google account:
    Supabase → Authentication → Sign In / Providers → Anonymous sign-ins → on (keep the default rate
    limits). Nothing to change in the app; until then such a reply asks for Google sign-in.
 

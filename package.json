@@ -25,7 +25,9 @@
     "@capgo/capacitor-social-login": "^8.5.14",
     "@mediabunny/aac-encoder": "^1.61.3",
     "@supabase/supabase-js": "^2.117.3",
+    "@types/qrcode": "^1.5.5",
     "adhan": "^4.4.6",
-    "mediabunny": "^1.61.3"
+    "mediabunny": "^1.61.3",
+    "qrcode": "^1.5.4"
   }
 }

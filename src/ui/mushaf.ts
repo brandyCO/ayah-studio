@@ -484,6 +484,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, '✦  My memorisation'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, '☾  Ramadan'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, '🎁  Gifts'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./wall').then((m) => m.openWalls()); } }, '🏮  Ayah wall'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
