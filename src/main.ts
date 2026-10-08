@@ -1,5 +1,5 @@
 // Entry: hash router for the three Phase 0 screens.
-//   #/                 surah list
+//   #/                 surah list (the app itself opens on the mushaf: where the user left off, or Al-Fatiha)
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
@@ -7,7 +7,7 @@ import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
 import { showMushaf } from './ui/mushaf';
-import { readerMode } from './ui/prefs';
+import { lastRead, readerMode, setLastRead } from './ui/prefs';
 import { showReader } from './ui/reader';
 import { setupOffline } from './offline';
 import { showSurahList } from './ui/surahList';
@@ -28,6 +28,7 @@ async function route() {
   try {
     let c: () => void;
     if (view === 's' && Number(a)) {
+      setLastRead(location.hash);
       const show = readerMode() === 'mushaf' ? showMushaf : showReader;
       c = await show(screen, Number(a), Number(b) || undefined);
     } else if (view === 'reel' && Number(a) && b) {
@@ -52,6 +53,10 @@ async function route() {
         h('a', { href: '#/', class: 'chip' }, 'Back to surahs'))));
   }
 }
+
+// Opening the app (no address of its own) goes straight to the mushaf: where the user left off,
+// or Al-Fatiha the first time. The surah list stays one tap away ('‹' or ☰ → All surahs).
+if (!location.hash || location.hash === '#' || location.hash === '#/') history.replaceState(null, '', lastRead());
 
 window.addEventListener('hashchange', route);
 void route();

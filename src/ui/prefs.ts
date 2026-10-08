@@ -51,3 +51,24 @@ export function setReelLook(look: unknown) {
     /* ignore */
   }
 }
+
+/** Where the user was reading (`#/s/{surah}/{ayah}`): the app reopens there; Al-Fatiha the first time. */
+const READ = /^#\/s\/\d{1,3}(\/\d{1,3})?$/;
+export function lastRead(): string {
+  try {
+    const h = localStorage.getItem('lastRead');
+    if (h && READ.test(h)) return h;
+  } catch {
+    /* ignore */
+  }
+  return '#/s/1';
+}
+
+export function setLastRead(hash: string) {
+  if (!READ.test(hash)) return;
+  try {
+    localStorage.setItem('lastRead', hash);
+  } catch {
+    /* ignore */
+  }
+}

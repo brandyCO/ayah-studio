@@ -208,6 +208,9 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       translation view, go to page, device check); swipe or ←→ keys turn pages
 - [x] Long-press / drag / tap-to-extend (also across pages) → bar with Translation + "Turn into reel"
 - [x] Translation card view kept as a toggle (remembered per device)
+- [x] Launch (owner request): opening the app without an address of its own goes straight to the
+      mushaf — Al-Fatiha the first time, afterwards the page the user left (`lastRead` in
+      `src/ui/prefs.ts`, saved on every page turn); the surah list stays at `#/` (‹ or ☰ → All surahs)
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
