@@ -5,7 +5,8 @@
 //     pauses), drag the block to reorder
 //   - audio: drag an edge to trim silence from the start or end of the ayah (never a word), drag the
 //     block to add a pause before it
-// Drag the ruler to scrub, anywhere else to scroll; pinch, ctrl+wheel or −/+ to zoom.
+// Drag the ruler to scrub, anywhere else to scroll; pinch, ctrl+wheel or −/+ to zoom — down to
+// milliseconds (3000 px per second; the waveform has a peak every 2 ms; drag labels show ms).
 import { backgroundById } from '../engine/backgrounds';
 import type { ReelPlan } from '../engine/recitation';
 import { MIN_SCENE, sceneSpans, snapPoints, type Transition } from '../engine/scenes';
@@ -67,6 +68,10 @@ type Drag =
   | { kind: 'audio-move'; index: number; trim: AudioTrim; gap: number };
 
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+/** Ruler label: "00:03", or "00:03.2" between whole seconds when zoomed in. */
+const rulerLabel = (s: number, every: number) => (every >= 1 ? mmss(s) : `${mmss(s)}.${String(Math.round((s % 1) * 10) % 10)}`);
+const MAX_PPS = 3000;
+const ms = (x: number) => Math.round(x * 1000) / 1000;
 
 export function createSpine(o: SpineOptions) {
   const canvas = h('canvas', { class: 'spine-canvas' });
@@ -95,7 +100,7 @@ export function createSpine(o: SpineOptions) {
   };
   function zoom(f: number, at = Wc() / 2) {
     const s = T(at);
-    pps = Math.min(240, Math.max(8, pps * f));
+    pps = Math.min(MAX_PPS, Math.max(8, pps * f));
     left = s - (at - PAD) / pps;
     clampLeft();
     dirty = true;
@@ -123,19 +128,19 @@ export function createSpine(o: SpineOptions) {
   const ro = new ResizeObserver(resize);
   ro.observe(el);
 
-  /** Peak level per 1/50 s of the reel's audio, for the waveform. */
+  /** Peak level per 2 ms of the reel's audio, for the waveform (fine enough to trim to the millisecond). */
   function setAudio(buf: AudioBuffer | null) {
     peaks = null;
     dirty = true;
     if (!buf) return;
     const data = buf.getChannelData(0);
-    const step = Math.max(1, Math.round(buf.sampleRate / 50));
+    const step = Math.max(1, Math.round(buf.sampleRate / 500));
     peakRate = buf.sampleRate / step;
     const out = new Float32Array(Math.ceil(data.length / step));
     for (let i = 0; i < out.length; i++) {
       let m = 0;
       const end = Math.min(data.length, (i + 1) * step);
-      for (let k = i * step; k < end; k += 4) m = Math.max(m, Math.abs(data[k]));
+      for (let k = i * step; k < end; k += 2) m = Math.max(m, Math.abs(data[k]));
       out[i] = m;
     }
     let top = 0;
@@ -230,7 +235,7 @@ export function createSpine(o: SpineOptions) {
     ctx.fillStyle = '#8b929b';
     ctx.font = '10px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
-    const every = pps >= 45 ? 2 : pps >= 20 ? 5 : pps >= 10 ? 10 : 30;
+    const every = [0.1, 0.2, 0.5, 1, 2, 5, 10, 30].find((e) => e * pps >= 60) ?? 30;
     const dot = every / (pps * every >= 100 ? 4 : 2);
     const s0 = Math.max(0, Math.floor(T(0) / dot) * dot), s1 = Math.min(D + every, T(w));
     for (let s = s0; s <= s1 + 1e-9; s += dot) {
@@ -238,7 +243,7 @@ export function createSpine(o: SpineOptions) {
       const r = Math.round(s / dot) * dot;
       if (Math.abs(r / every - Math.round(r / every)) < 1e-6) {
         ctx.textAlign = r === 0 ? 'left' : 'center';
-        ctx.fillText(mmss(r), x, RULER / 2);
+        ctx.fillText(rulerLabel(r, every), x, RULER / 2);
       } else ctx.fillRect(x - 1, RULER / 2 - 1, 2, 2);
     }
     ctx.textAlign = 'left';
@@ -267,7 +272,8 @@ export function createSpine(o: SpineOptions) {
         const tw = (SCENES * img.naturalWidth) / img.naturalHeight;
         for (let x = x0; x < x1; x += tw) if (x + tw > 0 && x < w) ctx.drawImage(img, x, Y_SC, tw, SCENES);
       }
-      const label = `${(s.end - s.start).toFixed(1)}s`;
+      // More decimals as you zoom in or drag an edge (to the millisecond).
+      const label = `${(s.end - s.start).toFixed(drag?.kind === 'scene-edge' || pps >= 400 ? 3 : pps >= 60 ? 2 : 1)}s`;
       ctx.font = '600 10px system-ui, sans-serif';
       const lw = ctx.measureText(label).width + 8;
       const lx = Math.max(x0, 0) + 4 + (sel?.kind === 'scene' && sel.index === i ? HANDLE : 0);
@@ -329,10 +335,19 @@ export function createSpine(o: SpineOptions) {
         ctx.fillStyle = '#62d2b6';
         const mid = Y_AU + AUDIO / 2 + 6;
         for (let x = Math.max(0, Math.floor(x0)); x < Math.min(w, x1); x += 2) {
-          const v = peaks[Math.floor((T(x) - off) * peakRate)] ?? 0;
+          // The loudest peak under these 2 px (many peaks when zoomed out, part of one when zoomed in).
+          const k0 = Math.floor((T(x) - off) * peakRate), k1 = Math.max(k0 + 1, Math.floor((T(x + 2) - off) * peakRate));
+          let v = 0;
+          for (let k = Math.max(0, k0); k < Math.min(k1, peaks.length); k++) if (peaks[k] > v) v = peaks[k];
           const hh = Math.max(1, v * (AUDIO - 18));
           ctx.fillRect(x, mid - hh / 2, 1.5, hh);
         }
+      }
+      const ay = o.plan()?.ayat[i];
+      if (ay && sel?.kind === 'audio' && sel.index === i) {
+        // Where the words begin and end: trimming stops there (words are never cut).
+        ctx.fillStyle = 'rgba(255, 214, 110, .9)';
+        for (const at of [ay.start, ay.last]) ctx.fillRect(X(at + off) - 0.5, Y_AU + 16, 1, AUDIO - 18);
       }
       ctx.fillStyle = '#fff';
       ctx.font = '600 10px system-ui, sans-serif';
@@ -344,9 +359,11 @@ export function createSpine(o: SpineOptions) {
     });
     if (drag && (drag.kind === 'audio-head' || drag.kind === 'audio-tail' || drag.kind === 'audio-move')) {
       const bl = blocks[drag.index];
-      const msg = drag.kind === 'audio-move' ? `pause ${drag.gap.toFixed(1)} s`
-        : drag.kind === 'audio-head' ? `start trimmed ${drag.head.toFixed(2)} s${drag.head >= drag.trim.maxHead - 1e-3 ? ' · first word' : ''}`
-          : `end trimmed ${drag.tail.toFixed(2)} s${drag.tail >= drag.trim.maxTail - 1e-3 ? ' · last word' : ''}`;
+      // The silence left before the first word / after the last word (or the added pause), in ms.
+      const ay = o.plan()?.ayat[drag.index];
+      const msg = drag.kind === 'audio-move' ? `pause ${drag.gap.toFixed(3)} s`
+        : drag.kind === 'audio-head' ? `silence before words ${ay ? (ay.start - bl.a).toFixed(3) : '–'} s${drag.head >= drag.trim.maxHead - 1e-3 ? ' · first word' : ''}`
+          : `silence after words ${ay ? (bl.b - ay.last).toFixed(3) : '–'} s${drag.tail >= drag.trim.maxTail - 1e-3 ? ' · last word' : ''}`;
       ctx.font = '600 11px system-ui, sans-serif';
       ctx.textBaseline = 'top';
       const mw = ctx.measureText(msg).width + 12;
@@ -414,7 +431,7 @@ export function createSpine(o: SpineOptions) {
     if (pinch && pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const s = T(pinch.mid);
-      pps = Math.min(240, Math.max(8, pinch.pps0 * (Math.abs(a - b) / pinch.d0)));
+      pps = Math.min(MAX_PPS, Math.max(8, pinch.pps0 * (Math.abs(a - b) / pinch.d0)));
       left = s - (pinch.mid - PAD) / pps;
       clampLeft();
       dirty = true;
@@ -451,21 +468,21 @@ export function createSpine(o: SpineOptions) {
           for (const s of snapPoints(plan.ayat)) if (s >= lo && s <= hi && Math.abs(s - v) < best) [best, snapTo] = [Math.abs(s - v), s];
           v = snapTo;
         }
-        bs[k] = v;
-        o.seek(v);
+        bs[k] = ms(v);
+        o.seek(bs[k]);
         break;
       }
       case 'scene-move':
         drag.dt = dx;
         break;
       case 'audio-head':
-        drag.head = Math.min(Math.max(drag.trim.head + dx, 0), drag.trim.maxHead);
+        drag.head = ms(Math.min(Math.max(drag.trim.head + dx, 0), drag.trim.maxHead));
         break;
       case 'audio-tail':
-        drag.tail = Math.min(Math.max(drag.trim.tail - dx, 0), drag.trim.maxTail);
+        drag.tail = ms(Math.min(Math.max(drag.trim.tail - dx, 0), drag.trim.maxTail));
         break;
       case 'audio-move':
-        drag.gap = Math.min(Math.max(drag.trim.gap + dx, 0), 10);
+        drag.gap = ms(Math.min(Math.max(drag.trim.gap + dx, 0), 10));
         break;
     }
     dirty = true;

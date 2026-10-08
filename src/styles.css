@@ -553,3 +553,15 @@ section.sheet .sheet-head h2 { font-size: 15px; }
 /* scene video panel */
 .clip-time { font-variant-numeric: tabular-nums; font-size: 14px; }
 .clip-slider { width: 100%; margin: 10px 0 4px; accent-color: var(--accent); height: 28px; }
+/* fine-tune to the millisecond (silences, scene length) */
+.tune { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--card); }
+.tune-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.tune-row { display: grid; grid-template-columns: 1fr 1fr minmax(96px, 1.6fr) 1fr 1fr; gap: 6px; margin-top: 10px; align-items: center; }
+.tune-step { display: flex; align-items: center; justify-content: center; background: var(--bg); min-height: 40px; padding: 0 4px; font-variant-numeric: tabular-nums; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.tune-value { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+.tune-input { width: 100%; min-width: 0; border: 0; background: none; color: var(--text); font: 600 16px system-ui, sans-serif; text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.tune-input::-webkit-outer-spin-button, .tune-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.tune-input:focus { outline: none; }
+.tune-value:focus-within { border-color: var(--accent); }
+.tune-value span { color: var(--muted); font-size: 13px; }
+.tune-hint { margin: 8px 0 0; }

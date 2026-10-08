@@ -20,7 +20,7 @@ import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, audioSpans, LEAD_IN, planClipReel, planQdcReel, trimLimits, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
@@ -110,6 +110,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let ac: AudioContext | null = null;
   let src: AudioBufferSourceNode | null = null;
   let playing = false;
+  let stopAt = 0; // reel time where a short listen (playAround) pauses; 0: play on
   let t = 0;
   let startCtx = 0;
   let startT = 0;
@@ -346,6 +347,114 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     });
   }
 
+  // --- fine-tune to the millisecond (silences around an ayah, a scene's length) ---
+  /** A value in seconds with −100/−10/+10/+100 ms steps (hold to repeat) and a box to type it exactly.
+   *  The nodes stay while the panel redraws, so a held button keeps repeating and the keyboard stays open. */
+  function stepper(get: () => number, set: (v: number) => void, label: string) {
+    const input = h('input', { class: 'tune-input', type: 'number', inputMode: 'decimal', step: '0.001', min: '0', 'aria-label': `${label} in seconds` });
+    input.addEventListener('change', () => {
+      const v = Number(input.value.replace(',', '.'));
+      if (Number.isFinite(v) && !exporting) set(v);
+      update();
+    });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    const btn = (d: number, text: string) => {
+      const b = h('button', { class: 'chip tune-step', type: 'button', 'aria-label': `${d > 0 ? 'Longer' : 'Shorter'} by ${Math.abs(d * 1000)} ms` }, text);
+      let timer = 0;
+      const stop = () => { clearTimeout(timer); timer = 0; };
+      const step = () => { if (!exporting) set(get() + d); };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        stop();
+        let delay = 450;
+        const go = () => { step(); timer = window.setTimeout(go, delay); delay = Math.max(50, delay * 0.75); };
+        go();
+      });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stop);
+      b.addEventListener('click', (e) => { if ((e as MouseEvent).detail === 0) step(); }); // keyboard
+      return b;
+    };
+    const update = () => { if (document.activeElement !== input) input.value = get().toFixed(3); };
+    update();
+    const node = h('div', { class: 'tune-row' }, btn(-0.1, '−100'), btn(-0.01, '−10'),
+      h('label', { class: 'tune-value' }, input, h('span', {}, 's')), btn(0.01, '+10'), btn(0.1, '+100'));
+    return { node, update };
+  }
+  let tuneCache: { key: string; nodes: Node[]; update: () => void } | null = null;
+  function cachedTune(key: string, make: () => { nodes: Node[]; update: () => void }): Node[] {
+    if (tuneCache?.key !== key) tuneCache = { key, ...make() };
+    tuneCache.update();
+    return tuneCache.nodes;
+  }
+  const listenBtn = (around: () => [number, number] | null) =>
+    h('button', { class: 'chip', type: 'button', onclick: () => { const r = around(); if (r) playAround(r[0], r[1]); } }, '▶ Listen');
+
+  /** Selected ayah → the silence before it and after it, to the millisecond. */
+  function audioTune(i: number): Node[] {
+    const count = base?.plan.ayat.length ?? 0;
+    if (!base || i >= count) return [note('Loading the recitation…')];
+    const ref = (k: number) => `${n}:${ayahNo(k)}`;
+    return cachedTune(`audio:${i}:${from}-${to}:${count}`, () => {
+      const parts: { node: Node; update: () => void }[] = [];
+      const section = (title: string, get: () => number, set: (v: number) => void, range: () => [number, number], around: () => [number, number] | null) => {
+        const st = stepper(get, set, title);
+        const hint = h('p', { class: 'muted small tune-hint' });
+        parts.push({
+          node: h('div', { class: 'tune' }, h('div', { class: 'tune-head' }, h('b', {}, title), listenBtn(around)), st.node, hint),
+          update: () => {
+            st.update();
+            const [lo, hi] = range();
+            hint.textContent = hi < 29 ? `From ${lo.toFixed(3)} s to ${hi.toFixed(3)} s.` : `At least ${lo.toFixed(3)} s, so no word is cut.`;
+          },
+        });
+      };
+      // The silence between the words of two ayat, in the edited reel's time.
+      const gapAt = (k: number): [number, number] | null => (plan ? [plan.ayat[k - 1].last, plan.ayat[k].start] : null);
+      if (i === 0) section('Silence at the start', () => silenceBefore(0), (v) => setSilenceBefore(0, v), () => silenceBeforeRange(0), () => (plan ? [0, plan.ayat[0].start] : null));
+      else section(`Silence between ${ref(i - 1)} and ${ref(i)}`, () => silenceBefore(i), (v) => setSilenceBefore(i, v), () => silenceBeforeRange(i), () => gapAt(i));
+      if (i < count - 1) section(`Silence between ${ref(i)} and ${ref(i + 1)}`, () => silenceBefore(i + 1), (v) => setSilenceBefore(i + 1, v), () => silenceBeforeRange(i + 1), () => gapAt(i + 1));
+      else section('Silence at the end', silenceEnd, setSilenceEnd, silenceEndRange, () => (plan ? [plan.ayat[count - 1].last, plan.duration - (plan.outro ?? 0)] : null));
+      return {
+        nodes: [note('Set each silence to the millisecond: tap or hold the steps, or type the seconds. The text moves with its words, and words are never cut.'),
+          ...parts.map((x) => x.node)],
+        update: () => parts.forEach((x) => x.update()),
+      };
+    });
+  }
+
+  /** Selected scene → its exact length (the neighbour after it — or before the last one — gives way). */
+  function sceneTune(i: number): Node[] {
+    if (!tl || tl.scenes.length < 2) return [note('Add another scene to change lengths.')];
+    return cachedTune(`scene:${i}:${tl.scenes.length}`, () => {
+      const k = () => (i < (tl?.scenes.length ?? 0) - 1 ? i : i - 1); // the boundary that moves
+      const len = () => { const sc = tl!.scenes[i]; return sc ? sc.end - sc.start : 0; };
+      const set = (v: number) => {
+        if (!tl) return;
+        const bounds = tl.scenes.slice(1).map((x) => x.start);
+        const b = k(), lo = (b ? bounds[b - 1] : 0) + MIN_SCENE, hi = (b + 1 < bounds.length ? bounds[b + 1] : tl.duration) - MIN_SCENE;
+        const sc = tl.scenes[i];
+        // Lengthen/shorten from the end (or, for the last scene, from its start).
+        const at = b === i ? sc.start + v : sc.end - v;
+        bounds[b] = ms(Math.min(Math.max(at, lo), hi));
+        resizeScenes(bounds);
+      };
+      const st = stepper(len, set, 'Scene length');
+      const where = h('p', { class: 'muted small tune-hint' });
+      return {
+        nodes: [
+          h('div', { class: 'tune' }, h('div', { class: 'tune-head' }, h('b', {}, `Scene ${i + 1} length`),
+            listenBtn(() => { const sc = tl?.scenes[k()]; return sc ? [sc.end, sc.end] : null; })), st.node, where),
+          note(`At least ${MIN_SCENE} s per scene. Snap to pauses does not apply here.`),
+        ],
+        update: () => {
+          st.update();
+          const sc = tl?.scenes[k()];
+          where.textContent = sc ? `${i < (tl?.scenes.length ?? 0) - 1 ? 'Changes to the next scene' : 'Starts'} at ${sc.end.toFixed(3)} s.` : '';
+        },
+      };
+    });
+  }
+
   /** A scene's video: where it starts, and how a clip shorter than the scene fills it. */
   const secs = (x: number) => `${Math.floor(x / 60)}:${(x % 60).toFixed(1).padStart(4, '0')}`;
   function videoPanel(i: number): Node[] {
@@ -391,6 +500,16 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     ].filter(Boolean) as Node[];
   }
 
+  function resizeScenes(bounds: number[]) {
+    if (!tl || exporting) return;
+    toCustom();
+    const edges = [0, ...bounds, tl.duration];
+    project.sceneLengths = edges.slice(1).map((e, i) => e - edges[i]);
+    project.sceneMode = 'custom';
+    rebuild();
+    changed();
+  }
+
   // --- audio: trims (silence only), pauses, whole ayat at the ends ---
   const ayahNo = (i: number) => from + i;
   function audioTrim(i: number) {
@@ -402,14 +521,67 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : 0,
     };
   }
-  const round2 = (x: number) => Math.round(x * 100) / 100;
+  const ms = (x: number) => Math.round(x * 1000) / 1000; // edits are kept to the millisecond
   function trimAudio(i: number, head: number, tail: number) {
-    project.trims[ayahNo(i)] = [round2(head), round2(tail)];
+    project.trims[ayahNo(i)] = [ms(head), ms(tail)];
     arrange();
     changed();
   }
   function setGap(i: number, gap: number) {
-    project.gaps[ayahNo(i)] = round2(gap - project.pause);
+    project.gaps[ayahNo(i)] = ms(gap - project.pause);
+    arrange();
+    changed();
+  }
+
+  // Silences to the millisecond. The silence between two ayat = what is left after the previous
+  // ayah's last word + the pause added between them + what is left before this ayah's first word.
+  /** The recording's own silence around ayah i's words (before any trim): [before, after]. */
+  function natural(i: number): [number, number] {
+    const [a, b] = audioSpans(base!.plan)[i];
+    const A = base!.plan.ayat[i];
+    return [A.start - a, b - A.last];
+  }
+  /** Silence before ayah i's first word (from the previous ayah's last word; for the first ayah, from the start). */
+  function silenceBefore(i: number) {
+    const tr = audioTrim(i)!;
+    if (i === 0) return natural(0)[0] - tr.head;
+    return natural(i - 1)[1] - audioTrim(i - 1)!.tail + tr.gap + natural(i)[0] - tr.head;
+  }
+  const silenceEnd = () => { const k = base!.plan.ayat.length - 1; return natural(k)[1] - audioTrim(k)!.tail; };
+  /** The shortest silence before ayah i (every word kept whole) and the longest. */
+  function silenceBeforeRange(i: number): [number, number] {
+    const tr = audioTrim(i)!;
+    if (i === 0) return [natural(0)[0] - tr.maxHead, natural(0)[0]];
+    return [natural(i - 1)[1] - audioTrim(i - 1)!.maxTail + natural(i)[0] - tr.maxHead, 30];
+  }
+  const silenceEndRange = (): [number, number] => { const k = base!.plan.ayat.length - 1; return [natural(k)[1] - audioTrim(k)!.maxTail, natural(k)[1]]; };
+  /** Make the silence before ayah i exactly `v` seconds: trim the recording's silence (evenly from both
+   *  sides of the cut) when shorter than it, add a pause when longer. */
+  function setSilenceBefore(i: number, v: number) {
+    const [lo, hi] = silenceBeforeRange(i);
+    v = ms(Math.min(Math.max(v, lo), hi));
+    const tr = audioTrim(i)!;
+    if (i === 0) {
+      project.trims[ayahNo(0)] = [ms(natural(0)[0] - v), ms(tr.tail)];
+    } else {
+      const prev = audioTrim(i - 1)!;
+      const own = natural(i - 1)[1] + natural(i)[0];
+      let head = 0, tail = 0;
+      const cut = Math.max(0, own - v);
+      tail = Math.min(prev.maxTail, cut / 2);
+      head = Math.min(tr.maxHead, cut - tail);
+      tail = Math.min(prev.maxTail, cut - head);
+      project.trims[ayahNo(i - 1)] = [ms(prev.head), ms(tail)];
+      project.trims[ayahNo(i)] = [ms(head), ms(tr.tail)];
+      project.gaps[ayahNo(i)] = ms(Math.max(0, v - own) - project.pause);
+    }
+    arrange();
+    changed();
+  }
+  function setSilenceEnd(v: number) {
+    const k = base!.plan.ayat.length - 1;
+    const [lo, hi] = silenceEndRange();
+    project.trims[ayahNo(k)] = [ms(audioTrim(k)!.head), ms(natural(k)[1] - Math.min(Math.max(v, lo), hi))];
     arrange();
     changed();
   }
@@ -419,7 +591,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     for (let i = 0; i < base.plan.ayat.length; i++) {
       if (only !== undefined && i !== only) continue;
       const [mh, mt] = trimLimits(base.plan, i);
-      project.trims[ayahNo(i)] = [round2(mh), round2(mt)];
+      project.trims[ayahNo(i)] = [ms(mh), ms(mt)];
       if (only === undefined && i > 0) project.gaps[ayahNo(i)] = -project.pause;
     }
     if (only === undefined) project.pause = 0;
@@ -596,6 +768,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const count = tl?.scenes.length ?? 1;
       return [
         { id: 'split', icon: 'split', label: 'Split', action: () => splitScene(i) },
+        { id: 'length', icon: 'gap', label: 'Length', disabled: () => count < 2, panel: () => sceneTune(i) },
         { id: 'replace', icon: 'replace', label: 'Replace', panel: () => bgPicker(i) },
         { id: 'video', icon: 'clip', label: 'Video', disabled: () => !media[tl?.scenes[i]?.entry ?? -1]?.video, panel: () => videoPanel(i) },
         { id: 'left', icon: 'left', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
@@ -604,12 +777,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         { id: 'delete', icon: 'trash', label: 'Delete', disabled: () => count < 2, action: () => removeScene(i) },
       ];
     }
-    const out: Opt[] = [{ id: 'silence', icon: 'silence', label: 'Trim silence', action: () => removeSilences(i) }];
-    if (i > 0) {
-      const tr = () => audioTrim(i)!;
-      out.push({ id: 'less', icon: 'left', label: 'Pause −0.5s', disabled: () => tr().gap <= 0, action: () => setGap(i, Math.max(0, tr().gap - 0.5)) },
-        { id: 'more', icon: 'right', label: 'Pause +0.5s', action: () => setGap(i, tr().gap + 0.5) });
-    }
+    const out: Opt[] = [
+      { id: 'tune', icon: 'gap', label: 'Fine-tune', disabled: () => !base, panel: () => audioTune(i) },
+      { id: 'silence', icon: 'silence', label: 'Trim silence', action: () => removeSilences(i) },
+    ];
     out.push({ id: 'audio-reset', icon: 'reset', label: 'Reset', disabled: () => project.gaps[ayahNo(i)] === undefined && project.trims[ayahNo(i)] === undefined,
       action: () => { delete project.gaps[ayahNo(i)]; delete project.trims[ayahNo(i)]; arrange(); changed(); } });
     const last = i === (tl?.ayat.length ?? 1) - 1;
@@ -725,15 +896,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     select: (sel) => { if (!exporting) select(sel); },
     onScrubStart: () => pause(),
     seek: (x) => { t = x; dirty = true; },
-    resizeScenes: (bounds) => {
-      if (!tl || exporting) return;
-      toCustom();
-      const edges = [0, ...bounds, tl.duration];
-      project.sceneLengths = edges.slice(1).map((e, i) => e - edges[i]);
-      project.sceneMode = 'custom';
-      rebuild();
-      changed();
-    },
+    resizeScenes,
     moveScene: (a, b) => { if (!exporting) moveScene(a, b); },
     addScene: () => { if (!exporting) { tool = TOOLS.find((x) => x.id === 'scenes')!; selection = null; option = tool.options.find((o) => o.id === 'add')!; refreshUI(); } },
     audioTrim,
@@ -948,7 +1111,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     setPlayIcon();
   }
 
+  /** Play a moment around reel time a..b (e.g. a silence just edited), then stop. */
+  function playAround(a: number, b: number) {
+    if (!tl) return;
+    pause();
+    t = Math.max(0, a - 1.2);
+    stopAt = Math.min(tl.duration, b + 1.2);
+    void play();
+  }
+
   function pause() {
+    stopAt = 0;
     if (src) {
       src.onended = null;
       try { src.stop(); } catch { /* already stopped */ }
@@ -971,7 +1144,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (t >= tl.duration) {
         pause();
         t = tl.duration;
-      }
+      } else if (stopAt && t >= stopAt) pause();
       dirty = true;
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
