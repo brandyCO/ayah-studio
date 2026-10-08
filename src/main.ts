@@ -3,6 +3,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
+//   #/join/CODE        an invitation to a Khatm circle
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
@@ -38,6 +39,9 @@ async function route() {
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
+    } else if (view === 'join' && a) {
+      const { showJoin } = await import('./ui/circles');
+      c = await showJoin(screen, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -68,3 +72,4 @@ setupOffline();
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();
 void initAuth();
+void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in

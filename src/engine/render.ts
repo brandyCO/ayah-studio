@@ -104,7 +104,50 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
     ctx.font = i === 0 && intro ? `italic 36px ${FONT_EN}` : `500 32px ${FONT_UI}`;
     ctx.fillText(x, W / 2, cy + 125 + i * 54);
   });
+  if (!intro && project.closing) drawClosing(ctx, project.closing, cy + 125 + notes.length * 54 + 40, alpha);
   ctx.globalAlpha = 1;
+}
+
+/** Words → lines no wider than `max` (a single over-long word gets its own line). */
+function wrap(ctx: CanvasRenderingContext2D, words: string[], max: number, sep = ' '): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const w of words) {
+    const next = line ? `${line}${sep}${w}` : w;
+    if (line && ctx.measureText(next).width > max) {
+      lines.push(line);
+      line = w;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** The closing card's extra lines (Khatm reel): a title and the members' names, inside the title-safe
+ *  area (rule 6), getting smaller as needed but never below a legible 24 px. User text, UI font. */
+function drawClosing(ctx: CanvasRenderingContext2D, c: NonNullable<Project['closing']>, top: number, alpha: number) {
+  const max = W * 0.84;
+  const bottom = H * 0.95 - 20;
+  for (let size = 38; size >= 24; size -= 2) {
+    ctx.font = `italic ${size + 4}px ${FONT_EN}`;
+    const title = c.title ? wrap(ctx, c.title.split(' '), max) : [];
+    ctx.font = `500 ${size}px ${FONT_UI}`;
+    const lh = size * 1.45;
+    const fits = (names: string[]) => top + (title.length + names.length) * lh + (title.length && names.length ? lh * 0.5 : 0) <= bottom;
+    let names = wrap(ctx, c.names, max, '  ·  ');
+    if (!fits(names) && size > 24) continue;
+    // Still too many at the smallest size: as many names as fit, then "and N more".
+    for (let n = c.names.length - 1; !fits(names) && n > 0; n--) names = wrap(ctx, [...c.names.slice(0, n), `and ${c.names.length - n} more`], max, '  ·  ');
+    let y = top + lh / 2;
+    ctx.globalAlpha = alpha;
+    ctx.font = `italic ${size + 4}px ${FONT_EN}`;
+    for (const l of title) { ctx.fillText(l, W / 2, y); y += lh; }
+    if (title.length) y += lh * 0.5;
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.font = `500 ${size}px ${FONT_UI}`;
+    for (const l of names) { ctx.fillText(l, W / 2, y); y += lh; }
+    return;
+  }
 }
 
 /** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */

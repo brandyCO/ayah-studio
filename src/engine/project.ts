@@ -57,8 +57,21 @@ export interface Project {
   intro: boolean; // title card before the recitation
   outro: boolean; // closing reference card
   credit: boolean; // "Recited by …" (optional, off by default: owner decision)
+  /** Extra lines on the closing card (the Khatm reel: circle and member names). User text: drawn in
+   *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
+  closing?: Closing;
   watermark: boolean;
 }
+
+export interface Closing {
+  title: string; // ≤ 80 characters
+  names: string[]; // ≤ 60 names, ≤ 40 characters each
+}
+const validClosing = (c: unknown): c is Closing => {
+  const x = c as Closing;
+  return !!x && typeof x.title === 'string' && x.title.length <= 80 && Array.isArray(x.names) && x.names.length <= 60
+    && x.names.every((n) => typeof n === 'string' && n.length <= 40);
+};
 
 export const frameStyle = (p: Project): FrameStyle => ({
   translation: p.showTranslation,
@@ -204,4 +217,5 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (isNumRecord(d.gaps, finite)) p.gaps = { ...d.gaps! };
   if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
   if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
+  if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }

@@ -432,7 +432,25 @@ cloud. Build in this order:
       grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
       kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
       120 days), so nothing written on two devices is lost; in Export my data and the privacy page
-- [ ] T2 Khatm circles (30-juz ring, Khatm reel) + push foundation (evening digest)
+- [x] T2a Khatm circles (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
+      `circle_members`, `circle_parts`; members read, nobody writes directly: `create_circle`,
+      `join_circle` (8-char code), `take_part` (null = pick one), `set_part` (taken/done/free),
+      `new_round` (owner), `update_circle`, `leave_circle` (owner → next member; last one out deletes),
+      `delete_circle`, `circle_preview`; completion set once by a trigger; caps (10 owned, 20 joined,
+      60 members); `delete_my_account()` leaves circles first; Realtime publication; 40 pgTAP checks.
+      App: `src/together/circles.ts` (calls, device cache, live updates, pages read) +
+      `src/ui/circles.ts`: ☰ → Khatm circles (list, create, join with a code), the SVG ring of 30
+      (free outlined, taken in the member's colour + initial, done filled, light sweep for juz finished
+      since you last looked, a glow when complete), take/read/finish/give back, invite (share sheet or
+      copied link `#/join/{code}`; a web sign-in returns to the invitation), members, leave/delete.
+      Mushaf: thin gold edge on your juz's pages, a page open ≥ 20 s counts as read (this device),
+      Today card "Juz 14 · 6 pages left" and "Khatm complete". **Khatm reel**: editor draft of An-Nas
+      (114:1–6) with `project.closing` (title + member names, UI font, under the reference on the
+      closing card, shrinking to 24 px, then "and N more"). Deploy: `.github/workflows/supabase.yml`
+      job `deploy` runs `supabase db push` on main once the owner adds the secrets
+      `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` (or paste the SQL in the SQL editor)
+- [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
+      (§7 step 4)
 - [ ] T3 Gift an ayah (link opens a word-synced player, reply with an ayah)
 - [ ] T5 Revision lamps (604-page lamp grid; with Phase 2 flashcards)
 - [ ] T6 Memorise with a partner (shared plan lamps, gentle nudges)

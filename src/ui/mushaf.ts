@@ -13,6 +13,9 @@ import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMar
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, writtenOn } from './reflections';
+import { account } from '../cloud/auth';
+import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
+import { openCircle, openCircles, type CircleContext } from './circles';
 import { selectionController, type Sel } from './selection';
 
 type Seg = [number, number, string];
@@ -25,6 +28,24 @@ const bismillah = () =>
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: `Bookmark ${b.s}:${b.a}` })));
 registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: `You wrote here ${writtenOn(lastWritten(r))}` })));
+// Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
+let circleCtx: CircleContext | null = null;
+registerToday(async () => {
+  if (!account() || !circleCtx) return [];
+  const ctx = circleCtx;
+  const items = myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').map(({ state, part }) => {
+    const pages = ctx.juzPages(part.juz);
+    const left = pages.length - pages.filter((p) => pagesRead(part).has(p)).length;
+    return { icon: '◯', text: left ? `Juz ${part.juz} · ${left} ${left === 1 ? 'page' : 'pages'} left · ${state.circle.name}` : `You have read juz ${part.juz} — mark it finished?`, onClick: () => void openCircle(ctx, state.circle.id) };
+  });
+  for (const st of cachedCircles()) {
+    if (st.circle.status === 'complete' && st.circle.completed_at && Date.now() - Date.parse(st.circle.completed_at) < 7 * DAY) {
+      items.push({ icon: '☾', text: `Khatm complete · ${st.circle.name}`, onClick: () => void openCircle(ctx, st.circle.id) });
+    }
+  }
+  return items;
+});
+
 // A note's mark pulses once per app session when its page is visited again (not for today's notes).
 const pulsed = new Set<string>();
 const DAY = 86_400_000;
@@ -135,6 +156,34 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   root.append(bar, area, sel.bar, player.bar);
 
+  // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
+  const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
+  circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
+  const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
+  let portion = myPortion();
+  const decorate = () => {
+    portion = myPortion();
+    for (const [p, el] of built) el.classList.toggle('my-portion', portion.has(p));
+    startReadTimer();
+  };
+  window.addEventListener('circles-changed', decorate);
+  let readTimer = 0;
+  const startReadTimer = () => {
+    clearTimeout(readTimer);
+    const p = page;
+    if (portion.has(p)) readTimer = window.setTimeout(() => { if (p === page) markPageRead(p, juzPages); }, 20_000);
+  };
+  if (account() && navigator.onLine) void loadCircles().catch(() => {});
+  try {
+    const open = sessionStorage.getItem('openCircle');
+    if (open) {
+      sessionStorage.removeItem('openCircle');
+      window.setTimeout(() => void openCircle(circleCtx!, open, true), 300);
+    }
+  } catch {
+    /* ignore */
+  }
+
   // --- the living mushaf: margin marks, the time-of-day tint ---
   const onDownCapture = (e: PointerEvent) => { markTapped = !!(e.target as Element).closest?.('.mp-mark'); };
   area.addEventListener('pointerdown', onDownCapture, true);
@@ -220,6 +269,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const f = Math.min((base * width) / widest, lh * 0.72);
     el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
     el.dataset.fit = '1';
+    el.classList.toggle('my-portion', portion.has(Number(el.dataset.page)));
     paintMarks(el); // positions depend on the line heights just set
   }
   const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
@@ -260,6 +310,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     pageNum.replaceChildren(...(ramadanDay() ? [crescent()] : []), String(page));
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
+    startReadTimer();
   }
 
   // A page whose font is still downloading slides in as a placeholder, replaced when it is ready.
@@ -402,6 +453,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           go(mushaf.pageOf(s, a));
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, '✎  Reflections'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, '◯  Khatm circles'),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
@@ -462,6 +514,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
+    window.removeEventListener('circles-changed', decorate);
+    clearTimeout(readTimer);
+    circleCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
     clearTimeout(hintTimer);
     clearTimeout(resizeTimer);
