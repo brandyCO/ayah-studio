@@ -205,6 +205,9 @@ button { font: inherit; color: inherit; }
   border: 1px solid var(--line); background: var(--card); color: var(--text);
 }
 .chips.ideas { margin-bottom: 10px; }
+.stock-choices { gap: 6px; flex-wrap: nowrap; }
+.stock-choices .chip { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
+.chip-gap { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--line); }
 .chips.ideas .chip { padding: 5px 10px; font-size: 13px; }
 .chip.more { display: block; margin: 10px auto 0; }
 .picker-status { margin: 0 0 8px; color: var(--accent); font-weight: 600; }

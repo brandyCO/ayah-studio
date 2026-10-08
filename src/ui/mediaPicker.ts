@@ -1,13 +1,16 @@
-// Background picker: Presets · My media (uploads from the device, kept locally) · Pixabay (search
-// through the proxy, download into My media). The panel keeps its own state (tab, search, results)
-// while the editor redraws it.
+// Background picker: Presets · My media (uploads from the device, kept locally) · Free library
+// (Pixabay / Pexels through the proxy: curated collections and search; a pick is downloaded into My
+// media). The panel keeps its own state (tab, search, results) while the editor redraws it.
 import { BACKGROUNDS, backgroundById, libraryBackgrounds, type Background } from '../engine/backgrounds';
 import { deleteMedia, importFile, MAX_VIDEO_MB, storageUsed } from '../data/library';
-import { downloadHit, pixabayEnabled, pixabayId, searchPixabay, SUGGESTIONS, type PixabayHit } from '../data/pixabay';
+import {
+  downloadHit, searchStock, SOURCE_NAME, SOURCE_SITE, stockEnabled, stockId, stockSources, SUGGESTIONS,
+  type StockHit, type StockSource, type StockSources,
+} from '../data/stock';
 import { h, toast } from './dom';
 import { icon } from './icons';
 
-type Tab = 'presets' | 'mine' | 'pixabay';
+type Tab = 'presets' | 'mine' | 'stock';
 
 export interface PickerOptions {
   intro: string;
@@ -22,10 +25,13 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   let status = '';
   let working = false;
   let used: number | null = null;
-  // Pixabay search state
+  // Free library state
+  let avail: StockSources | null = null;
+  let source: StockSource = 'pixabay';
   let type: 'image' | 'video' = 'video';
   let query = '';
-  let hits: PixabayHit[] = [];
+  let collection: string | null = null; // a curated collection instead of a typed search
+  let hits: StockHit[] = [];
   let total = 0;
   let page = 0;
   let searching = false;
@@ -89,14 +95,16 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   }
 
   async function search(more = false) {
-    if (!query.trim()) return;
+    if (!collection && !query.trim()) return;
     const want = more ? page + 1 : 1;
+    const ask = { source, type, q: query, collection: collection ?? undefined, page: want };
     searching = true;
     searchError = '';
     if (!more) hits = [];
     draw();
     try {
-      const r = await searchPixabay(type, query, want);
+      const r = await searchStock(ask);
+      if (ask.source !== source || ask.type !== type || ask.q !== query || (ask.collection ?? null) !== collection) return; // changed meanwhile
       hits = more ? [...hits, ...r.hits] : r.hits;
       total = r.total;
       page = want;
@@ -107,7 +115,19 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
     draw();
   }
 
-  async function pickHit(hit: PixabayHit) {
+  /** Opens the library tab: learns what the proxy offers, then shows the first collection. */
+  async function openStock() {
+    if (avail || !stockEnabled()) return;
+    avail = await stockSources();
+    if (!avail.pixabay && avail.pexels) source = 'pexels';
+    if (!hits.length && !query && avail.collections.length) {
+      collection = avail.collections[0].id;
+      void search();
+    }
+    draw();
+  }
+
+  async function pickHit(hit: StockHit) {
     if (o.busy() || working || !opts) return;
     const target = opts;
     working = true;
@@ -155,47 +175,60 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
     ].filter(Boolean) as Node[];
   }
 
-  function pixabay(): Node[] {
-    if (!pixabayEnabled()) {
-      return [note('The Pixabay library is not set up in this build yet: it needs the small search proxy described in proxy/README.md.')];
+  function stock(): Node[] {
+    if (!stockEnabled()) {
+      return [note('The free library is not set up in this build yet: it needs the small search proxy described in proxy/README.md.')];
     }
+    if (!avail) return [note('Loading…')];
+    const both = avail.pixabay && avail.pexels;
+    const other: StockSource = source === 'pixabay' ? 'pexels' : 'pixabay';
+    const switchTo = (v: StockSource) => { source = v; hits = []; page = 0; void search(); };
+    // One row: library (when both are set up) · videos or photos.
+    const choices = h('div', { class: 'chips stock-choices' },
+      ...(both ? (['pixabay', 'pexels'] as const).map((v) =>
+        h('button', { class: `chip${source === v ? ' on' : ''}`, onclick: () => { if (source !== v) switchTo(v); } }, SOURCE_NAME[v])) : []),
+      both ? h('span', { class: 'chip-gap' }) : null,
+      ...([['video', 'Videos'], ['image', 'Photos']] as const).map(([v, l]) =>
+        h('button', { class: `chip${type === v ? ' on' : ''}`, onclick: () => { if (type !== v) { type = v; void search(); } } }, l)));
     const input = h('input', { class: 'search-input', type: 'search', placeholder: 'Search calm scenes…', value: query, enterKeyHint: 'search' });
     input.addEventListener('input', () => { query = input.value; });
-    const form = h('form', { class: 'search-row', onsubmit: (e: Event) => { e.preventDefault(); input.blur(); void search(); } },
+    const form = h('form', { class: 'search-row', onsubmit: (e: Event) => { e.preventDefault(); input.blur(); if (query.trim()) { collection = null; void search(); } } },
       input, h('button', { class: 'chip on', type: 'submit', disabled: searching }, 'Search'));
-    const typeChips = h('div', { class: 'chips' }, ...([['video', 'Videos'], ['image', 'Photos']] as const).map(([v, l]) =>
-      h('button', { class: `chip${type === v ? ' on' : ''}`, onclick: () => { if (type !== v) { type = v; void search(); draw(); } } }, l)));
-    const ideas = h('div', { class: 'chips ideas' }, ...SUGGESTIONS.map((s) =>
-      h('button', { class: 'chip', onclick: () => { query = s; void search(); } }, s)));
+    // Curated collections (from the proxy), or plain calm searches with an older proxy.
+    const ideas = h('div', { class: 'chips ideas' }, ...(avail.collections.length
+      ? avail.collections.map((c) => h('button', { class: `chip${collection === c.id ? ' on' : ''}`, onclick: () => { collection = c.id; query = ''; void search(); } }, c.label))
+      : SUGGESTIONS.map((x) => h('button', { class: 'chip', onclick: () => { collection = null; query = x; void search(); } }, x))));
     const owned = new Set(libraryBackgrounds().map((b) => b.id));
+    const name = SOURCE_NAME[source];
     const grid = hits.length ? h('div', { class: 'bg-grid' }, ...hits.map((x) =>
       h('div', { class: 'bg-cell' },
         h('button', {
-          class: `bg-thumb${opts?.current === pixabayId(x) ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
-          title: `${x.tags} · by ${x.user} on Pixabay`, onclick: () => void pickHit(x),
+          class: `bg-thumb${opts?.current === stockId(x) ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
+          title: `${x.tags} · by ${x.user} on ${name}`, onclick: () => void pickHit(x),
         }, h('span', {}, x.type === 'video' ? `▶ ${Math.round(x.duration ?? 0)} s` : x.user)),
-        owned.has(pixabayId(x)) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, 'Saved')) : null))) : null;
+        owned.has(stockId(x)) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, 'Saved')) : null))) : null;
     return [
-      typeChips, form, ideas,
+      choices, form, ideas,
       searchError ? note(searchError) : null,
+      searchError && both ? h('button', { class: 'chip more', onclick: () => switchTo(other) }, `Try ${SOURCE_NAME[other]}`) : null,
       searching && !hits.length ? note('Searching…') : null,
       !searching && page > 0 && !hits.length && !searchError ? note('Nothing found — try another word.') : null,
       grid,
       hits.length && hits.length < total ? h('button', { class: 'chip more', disabled: searching, onclick: () => void search(true) }, searching ? 'Loading…' : 'More') : null,
-      h('p', { class: 'muted small' }, 'Photos and videos from ', h('a', { href: 'https://pixabay.com/', target: '_blank', rel: 'noopener' }, 'Pixabay'),
+      h('p', { class: 'muted small' }, `${type === 'video' ? 'Videos' : 'Photos'} provided by `, h('a', { href: SOURCE_SITE[source], target: '_blank', rel: 'noopener' }, name),
         ' (free to use). A picked item is saved to My media; its creator is credited on the export page. Choose calm scenes without people.'),
     ].filter(Boolean) as Node[];
   }
 
   function draw() {
     if (!opts) return;
-    const tabs: [Tab, string][] = [['presets', 'Presets'], ['mine', 'My media'], ['pixabay', 'Pixabay']];
+    const tabs: [Tab, string][] = [['presets', 'Presets'], ['mine', 'My media'], ['stock', 'Free library']];
     wrap.replaceChildren(
       note(opts.intro),
       h('div', { class: 'tabs' }, ...tabs.map(([v, l]) =>
-        h('button', { class: `tab${tab === v ? ' on' : ''}`, onclick: () => { tab = v; if (v === 'mine') void refreshUsage(); draw(); } }, l))),
+        h('button', { class: `tab${tab === v ? ' on' : ''}`, onclick: () => { tab = v; if (v === 'mine') void refreshUsage(); if (v === 'stock') void openStock(); draw(); } }, l))),
       status ? h('p', { class: 'picker-status small' }, status) : '',
-      ...(tab === 'presets' ? presets() : tab === 'mine' ? mine() : pixabay()),
+      ...(tab === 'presets' ? presets() : tab === 'mine' ? mine() : stock()),
       fileInput,
     );
   }

@@ -262,7 +262,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     changed();
   }
   const sceneAtPlayhead = () => Math.max(0, tl?.scenes.findIndex((x) => t >= x.start && t < x.end) ?? 0);
-  /** Background picker (presets, the device's library, Pixabay): add a new scene (replace = null), or replace scene `replace`. */
+  /** Background picker (presets, the device's library, Pixabay / Pexels): add a new scene (replace = null), or replace scene `replace`. */
   const picker = createMediaPicker({
     busy: () => !!exporting,
     libraryChanged: () => { void loadScenes(); spine.invalidate(); },
@@ -863,7 +863,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- export ---
   let resultUrl = '';
-  /** Creators of the stock media in this reel (Pixabay), ready to paste into the post's caption. */
+  /** Creators of the stock media in this reel (Pixabay, Pexels), ready to paste into the post's caption. */
   function creditsBlock(): Node | null {
     const seen = new Map<string, Credit>();
     for (const id of project.scenes) {
