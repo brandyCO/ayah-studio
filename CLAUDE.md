@@ -284,8 +284,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       library (Pixabay 90/min, Pexels 180/h). App: `src/data/stock.ts` (was `pixabay.ts`); tab
       **Free library** with a Pixabay/Pexels switch and "Try the other library" when one is busy; ids
       `pe:image:…` / `pe:video:…`; credits name the source
-- [ ] Owner: paste the updated worker into Cloudflare; optionally add `PEXELS_KEY`; before a public
-      launch ask Pixabay and Pexels for higher limits (`proxy/README.md`)
+- [x] Owner: pasted the updated worker into Cloudflare (2026-10-08)
+- [ ] `PEXELS_KEY`: Pexels had paused new API keys (2026-10-08); add it when they reopen — the app shows
+      Pixabay only until then, no code change needed
+- [ ] Before a public launch: ask Pixabay (and Pexels) for higher limits (`proxy/README.md`)
 - [ ] Tested by the owner on their phone (upload from gallery, Pixabay pick, export)
 
 ### Phase 1c — app packaging
