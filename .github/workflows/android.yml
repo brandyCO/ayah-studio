@@ -1,7 +1,8 @@
 name: Android APK
 
 # Builds the Capacitor Android app (debug APK, sideloadable) as an artifact: Actions → this run →
-# Artifacts → ayah-studio-apk.
+# Artifacts → ayah-studio-apk. Signed with the app's key from the repo secrets
+# ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD (when set), so updates install over the old app.
 on:
   push:
     branches: [main]
@@ -18,6 +19,8 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,8 +38,15 @@ jobs:
           # Stock-library proxy (proxy/README.md); empty → the app hides the free library.
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
       - run: npx cap sync android
+      - name: Signing key
+        if: env.KEYSTORE_B64 != ''
+        run: |
+          printf %s "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/app.keystore"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/app.keystore" >> "$GITHUB_ENV"
       - run: ./gradlew assembleDebug --no-daemon
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: ayah-studio-apk
