@@ -451,7 +451,25 @@ cloud. Build in this order:
       `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` (or paste the SQL in the SQL editor)
 - [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
       (§7 step 4)
-- [ ] T3 Gift an ayah (link opens a word-synced player, reply with an ayah)
+- [x] T3 Gift an ayah (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
+      reciter, look, sender name ≤ 40, message ≤ 140, `reply_to`, opens); nobody reads or writes the
+      table: `send_gift` (checks surah/ayah against `ayah_count()`, ≤ 10 ayat, `valid_reciter()`, the look
+      with `valid_gift_look()` = `applyLook()`'s rules, built-in backgrounds only; 30 a day, anonymous
+      sessions 5 and replies only), `get_gift(id)` (granted to `anon`: no account needed, counts opens
+      by others, its author also gets the replies), `my_gifts()`, `delete_gift()`; 43 pgTAP checks.
+      App: `src/together/gifts.ts` + `src/ui/gift.ts`: selection bar **🎁 Gift** (mushaf + translation
+      view) and the editor's top bar (gift icon, the editor's look + reciter) → composer (reciter,
+      message + presets, name; own media replaced by a built-in background) → link + Share/Copy.
+      `#/gift/{id}`: sealed card "A gift from Aisha" → tap → the reel plays with the editor's engine
+      (`render()`; recitation via `src/ui/reelSource.ts` `loadReel()`, now shared with the editor),
+      message below in the UI font "— Aisha"; Reply with an ayah (pending reply in sessionStorage →
+      select in the mushaf → 🎁 Gift → `reply_to`), Make it a reel (draft), Read in the mushaf. The client
+      re-checks every gift (`strictLook()` in `project.ts`, reference, reciter) and never renders a forged
+      one. ☰ → Gifts: received on this device (localStorage) + sent with opens and replies, delete.
+      Replies without a Google account use `signInAnonymously()` — works once the owner turns on
+      Anonymous sign-ins; until then the composer asks for Google sign-in. Shared links from the Android
+      app point at the Pages site (`shareableLink()` in `src/native.ts`; circle invites too).
+      In Export my data and the privacy page
 - [ ] T5 Revision lamps (604-page lamp grid; with Phase 2 flashcards)
 - [ ] T6 Memorise with a partner (shared plan lamps, gentle nudges)
 - [ ] T7 Ramadan mode (daily portion, Maghrib reminder, nightly template, Eid recap)

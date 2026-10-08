@@ -7,6 +7,7 @@ import { bookmarkRecords } from '../data/bookmarks';
 import { listDrafts } from '../data/drafts';
 import { loadReflections, reflections } from '../data/reflections';
 import { isNative, shareTextFile } from '../native';
+import { received } from '../together/gifts';
 import { h, toast } from './dom';
 import { prefRecords } from './prefs';
 
@@ -114,15 +115,19 @@ async function exportData() {
   // Khatm circles you are in (names you gave and the juz you took); none if circles are not set up yet.
   const { data: circles } = await sb.from('circle_members').select('name,joined_at,circles(name,round,status)');
   const { data: parts } = await sb.from('circle_parts').select('circle_id,round,juz,status,taken_at,done_at').eq('user_id', a.id);
+  // Gifts you sent and the replies they received (references, names and messages only).
+  const { data: gifts } = await sb.rpc('my_gifts');
   const file = {
     exported: new Date().toISOString(),
     account: { name: a.name, email: a.email, created: profile?.created_at ?? null },
     synced: docs,
     circles: { memberships: circles ?? [], juz: parts ?? [] },
+    gifts: gifts ?? [],
     thisDevice: {
       bookmarks: bookmarkRecords(),
       reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),
       settings: prefRecords(),
+      giftsReceived: received(),
       drafts: (await listDrafts()).map((x) => ({ id: x.id, project: x.project, updated: x.updated })),
     },
   };

@@ -27,6 +27,7 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
       c.classList.toggle('sel-last', on && k === sel!.hi);
     }),
     onReflect: (x) => { sel.clear(); void openReflection(meta, x.surah, x.lo); },
+    onGift: (x) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[x.surah - 1], x.lo, x.hi)); },
   });
 
   root.append(

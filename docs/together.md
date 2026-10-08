@@ -221,6 +221,10 @@ validated with the same `applyLook()` checks as stored looks. Anonymous sign-in 
 people without an account. Link previews (title + reference, never Quran images that alter text)
 come with the custom-domain step (§8).
 
+**As built (2026-10-08):** see CLAUDE.md → Phase 4 → T3. Replies from people without an account
+use an anonymous Supabase session (only replies, 5 a day); until the owner enables Anonymous
+sign-ins (§7 step 6) the composer asks them to sign in with Google instead.
+
 **Done when:** a gift link opens on a phone that never had the app, plays in sync, the reply
 thread works, and a forged gift document with an invalid reference or look is rejected by the
 rules/validation and never renders.
@@ -440,6 +444,9 @@ a year of data to recap.
 5. (T2b) Firebase project for push only: Android app with the same package + fingerprints,
    `google-services.json` as the repo secret `GOOGLE_SERVICES_JSON`, and a service-account key for
    FCM stored as a Supabase secret.
+6. (T3, optional) **Anonymous sign-ins** for gift replies from people without a Google account:
+   Supabase → Authentication → Sign In / Providers → Anonymous sign-ins → on (keep the default rate
+   limits). Nothing to change in the app; until then such a reply asks for Google sign-in.
 
 
 ---

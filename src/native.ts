@@ -3,6 +3,7 @@
 // one huge string) to the public Movies folder, where the gallery shows it, and shared by its URI.
 // The plugins are loaded only inside the app; the web build never downloads them.
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { PUBLIC_URL } from './cloud/config';
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -77,3 +78,8 @@ export async function shareTextFile(name: string, text: string) {
   const { uri } = await Filesystem.writeFile({ directory: Directory.Cache, path: name, data: text, encoding: Encoding.UTF8 });
   await shareFile(uri, name);
 }
+
+/** A link to an app address (e.g. `#/gift/…`) that works for anyone: inside the Android app the page
+ *  lives at https://localhost, so shared links use the public web app instead. */
+export const shareableLink = (hash: string) =>
+  `${isNative() ? PUBLIC_URL : location.origin + location.pathname}${hash}`;

@@ -6,6 +6,7 @@
 // kept on this device only.
 import { account } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
+import { shareableLink } from '../native';
 
 export interface Circle {
   id: string;
@@ -140,7 +141,7 @@ export async function watchCircle(id: string, onChange: () => void): Promise<() 
   return () => { clearTimeout(timer); void sb.removeChannel(ch); };
 }
 
-export const inviteLink = (code: string) => `${location.origin}${location.pathname}#/join/${code}`;
+export const inviteLink = (code: string) => shareableLink(`#/join/${code}`);
 
 /** The user's own parts across their circles. */
 export function myParts(states = cachedCircles()): { state: CircleState; part: Part }[] {
