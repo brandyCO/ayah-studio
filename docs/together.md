@@ -234,8 +234,14 @@ rules/validation and never renders.
 when signed in. Search is local (all notes are small). Private: never shared, not even with
 circles. Included in data export and account deletion.
 
-**Done when:** notes survive offline edits on two devices (LWW + "(copy)" on conflict), search
-finds words in notes, and the pulse appears once per visit.
+**As built (2026-10-08):** one note per ayah (`user_docs` kind `reflection`, id `s:a`) whose
+paragraphs merge one by one — the newest edit of each wins and removals travel as tombstones — so
+two devices writing offline never conflict and no "(copy)" is needed. The pulse shows once per note
+per app session (not for notes written today). "Reflect" is in the selection bar of both reading
+views.
+
+**Done when:** notes survive offline edits on two devices, search finds words in notes, and the
+pulse appears once per visit.
 
 ### T5 — Revision lamps (memorisation garden)
 **Experience**

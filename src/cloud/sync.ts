@@ -2,15 +2,17 @@
 // device as before; when signed in, this mirrors it to Supabase `user_docs` and merges what other
 // devices wrote. Synced: bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
-// travel as tombstones). Thumbnails and own media never leave the device.
+// travel as tombstones) and reflections (one document per ayah's note, merged per paragraph: the
+// newest edit wins). Thumbnails and own media never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
+import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
 import type { Project } from '../engine/project';
 import { mergePrefs, prefRecords } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 
-type Kind = 'draft' | 'bookmark' | 'state' | 'setting';
+type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection';
 interface Row {
   user_id: string;
   kind: Kind;
@@ -77,12 +79,15 @@ function deviceId(): string {
 
 // --- merging what other devices wrote ---
 async function applyRemote(rows: Row[], meta: Meta) {
+  await loadReflections();
   for (const r of rows) {
     const key = `${r.kind}/${r.id}`;
     if (r.kind === 'state' && r.id === 'bookmarks') {
       mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
     } else if (r.kind === 'setting' && r.id === 'prefs') {
       if (mergePrefs(r.data.prefs)) window.dispatchEvent(new Event('prefs-synced'));
+    } else if (r.kind === 'reflection') {
+      mergeReflection(r.data); // merged per paragraph; the result is pushed back on this round
     } else if (r.kind === 'draft') {
       const updated = typeof r.data.updated === 'number' ? r.data.updated : 0;
       const local = await getDraft(r.id);
@@ -110,6 +115,11 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
   add('state', 'bookmarks', { items }, JSON.stringify(items));
   const prefs = prefRecords();
   add('setting', 'prefs', { prefs }, JSON.stringify(prefs));
+  await loadReflections();
+  for (const r of reflectionRecords()) {
+    const data = { s: r.s, a: r.a, entries: r.entries };
+    add('reflection', r.id, data, JSON.stringify(r.entries), r.entries.every((e) => e.deleted));
+  }
   for (const d of await listDrafts()) add('draft', d.id, { project: d.project, created: d.created, updated: d.updated }, String(d.updated));
   for (const [id, at] of Object.entries(deletedDrafts())) add('draft', id, { updated: at }, `deleted:${at}`, true);
   return out;
@@ -190,7 +200,7 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'prefs-changed', 'drafts-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'prefs-changed', 'drafts-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
   window.addEventListener('online', () => soon(500));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') soon(500);

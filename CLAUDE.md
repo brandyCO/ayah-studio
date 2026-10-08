@@ -350,7 +350,7 @@ save to gallery / share sheet; offline audio cache; settings.
       After the worker takes control, the data, fonts, editor and default backgrounds are loaded once
       in the background. Recitation audio: `src/data/audioCache.ts` keeps the exact MP3 byte ranges
       (and whole everyayah/VBR files) each reel downloaded in IndexedDB `audio` (newest 150), so reels
-      opened before work offline. Shared DB module `src/data/db.ts` (version 3: media, drafts, audio,
+      opened before work offline. Shared DB module `src/data/db.ts` (version 4: media, drafts, audio, reflections,
       timings)
 - [x] Android app (Capacitor 8): `capacitor.config.ts` (`com.brandyco.ayahstudio`, webDir `dist`,
       origin https://localhost), `android/` committed (copied web assets are git-ignored; `npx cap sync
@@ -423,7 +423,15 @@ cloud. Build in this order:
       `--tod`/`--tod-amt`, ☰ toggle `timeTint`); Ramadan (Umm al-Qura via `Intl`) → crescent by the
       page number + Today line; Today card in the drop-down bar (`registerToday()`: Ramadan day,
       recent bookmark < 7 days, reel draft edited < 3 days), hidden when empty
-- [ ] T4 Reflections journal
+- [x] T4 Reflections journal (`src/data/reflections.ts` + `src/ui/reflections.ts`): selection bar
+      **✎ Reflect** (mushaf and translation view) → paper-like sheet with the reference, the ayah's
+      translation and dated paragraphs (today's continues, earlier ones tap to edit; autosave; "Copy for
+      caption" — never onto the video; delete). IndexedDB store `reflections` (`db.ts` version 4), one
+      note per ayah; a soft dot in the margin (`registerMarks`); a page with an older note pulses its
+      dot once per app session with a "You wrote here on …" pill (tap → the note); ☰ → Reflections:
+      grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
+      kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
+      120 days), so nothing written on two devices is lost; in Export my data and the privacy page
 - [ ] T2 Khatm circles (30-juz ring, Khatm reel) + push foundation (evening digest)
 - [ ] T3 Gift an ayah (link opens a word-synced player, reply with an ayah)
 - [ ] T5 Revision lamps (604-page lamp grid; with Phase 2 flashcards)
