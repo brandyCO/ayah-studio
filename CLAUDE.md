@@ -253,6 +253,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       before it (`project.gaps`, ≥ 0), "Trim silence", add/remove a whole ayah at either end; Audio →
       "Remove silences" trims all of them at once. Not allowed: moving text away from its words
       (rule 8), reordering ayat or cutting audio inside an ayah (rule 1)
+- [x] Millisecond editing (owner request): the timeline zooms to 3000 px/s (ruler in tenths of a
+      second), the waveform has a peak every 2 ms, drags show ms ("silence before words 0.215 s") and
+      a selected ayah shows where its words begin/end; trims, pauses and scene edges are kept to the
+      ms. Selected ayah → **Fine-tune**: the silence before and after it (between two ayat = what is
+      left after the previous ayah's last word + the added pause + what is left before the first
+      word) set exactly with −100/−10/+10/+100 ms steps (hold to repeat) or typed seconds; shorter =
+      the recording's silence trimmed evenly on both sides of the cut (never below the safe minimum,
+      so no word is cut), longer = a pause added; ▶ Listen plays just around that silence.
+      Selected scene → **Length** (same stepper; the next scene — or for the last scene the previous
+      one — gives way, min 1 s)
 - [x] Studio layout (owner request, CapCut-style): top bar ✕ · quality (1080P/720P, device check) ·
       Export (full-screen progress page, then Save/Share); control row: time · play · undo · redo ·
       full screen; a fixed bottom area (timeline + tool bar) where panels slide up in place, so the
