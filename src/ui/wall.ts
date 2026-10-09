@@ -8,6 +8,7 @@
 //   #/wall/{id}/reel[/{start}]: the keepsake reel — every visible entry's ayat with its own reference,
 //     then a card with the guest's name and dua (UI fonts, attributed, never like the ayah), and the
 //     wall's title and date at the end; ≤ 30 entries or ~10 minutes per reel, more → the next part.
+import { reelTranslation } from '../data/translations';
 import QRCode from 'qrcode';
 import { account, onAccount } from '../cloud/auth';
 import { loadMeta, reference, surahText, type SurahMeta } from '../data/quran';
@@ -580,6 +581,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
     audio = reel.audio;
     media = scenes;
     tl = buildTimeline(document.createElement('canvas').getContext('2d')!, {
+      translation: reelTranslation(),
       surah: reel.surahs[0], reciter: r, plan: reel.plan, arabic: reel.arabic, english: reel.english, meanings: reel.meanings,
       mode: project.textMode, wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,

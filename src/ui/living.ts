@@ -3,6 +3,7 @@
 // Today lines through registerMarks() / registerToday(); everything here works without an account.
 import { ramadanNow } from '../data/ramadan';
 import { h } from './dom';
+import { t } from '../i18n';
 import { touchPref } from './prefs';
 
 // --- margin marks ---
@@ -132,5 +133,5 @@ export async function fillToday(card: HTMLElement, onPick: () => void) {
 
 registerToday(() => {
   const now = ramadanNow();
-  return now.day ? [{ icon: '☾', text: `Ramadan Mubarak · day ${now.day}${now.lastTen ? ' · the last ten nights' : ''}` }] : [];
+  return now.day ? [{ icon: '☾', text: t(now.lastTen ? 'today.ramadanLastTen' : 'today.ramadan', { day: now.day }) }] : [];
 });

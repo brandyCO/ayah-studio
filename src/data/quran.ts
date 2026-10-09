@@ -11,6 +11,8 @@ export interface SurahMeta {
   type: string;
 }
 
+import { currentTranslation, translationFile } from './translations';
+
 const base = import.meta.env.BASE_URL;
 const cache = new Map<string, Promise<unknown>>();
 
@@ -34,8 +36,9 @@ export async function surahText(n: number): Promise<string[]> {
   return d.surahs[n - 1];
 }
 
-export async function surahTranslation(n: number): Promise<string[]> {
-  const d = await load<{ surahs: string[][] }>('en-sahih.json');
+/** The translation of a surah, per ayah: the chosen one (src/data/translations.ts) unless `id` is given. */
+export async function surahTranslation(n: number, id = currentTranslation()): Promise<string[]> {
+  const d = await load<{ surahs: string[][] }>(translationFile(id));
   return d.surahs[n - 1];
 }
 
