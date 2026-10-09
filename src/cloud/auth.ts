@@ -93,7 +93,8 @@ export async function signIn(): Promise<void> {
   } else {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: location.origin + location.pathname },
+      // Always show Google's account chooser (someone with several accounts picks one).
+      options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } },
     });
     if (error) throw error;
   }
