@@ -1,9 +1,10 @@
 // The app's local database (IndexedDB, this device only): the media library, reel drafts and the
-// recitation audio and timings kept for offline use, and the reflections journal.
+// recitation audio and timings kept for offline use, the reflections journal, tafsir kept for a
+// week (G4) and Recite & Compare recordings (G6).
 const NAME = 'ayah-studio';
-const VERSION = 4;
+const VERSION = 5;
 
-export type StoreName = 'media' | 'drafts' | 'audio' | 'timings' | 'reflections';
+export type StoreName = 'media' | 'drafts' | 'audio' | 'timings' | 'reflections' | 'tafsir' | 'recordings';
 
 let dbp: Promise<IDBDatabase> | null = null;
 
@@ -18,6 +19,8 @@ function open(): Promise<IDBDatabase> {
         if (!d.objectStoreNames.contains('audio')) d.createObjectStore('audio', { keyPath: 'key' }).createIndex('used', 'used');
         if (!d.objectStoreNames.contains('timings')) d.createObjectStore('timings', { keyPath: 'key' }).createIndex('used', 'used');
         if (!d.objectStoreNames.contains('reflections')) d.createObjectStore('reflections', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('tafsir')) d.createObjectStore('tafsir', { keyPath: 'key' }).createIndex('used', 'used');
+        if (!d.objectStoreNames.contains('recordings')) d.createObjectStore('recordings', { keyPath: 'id' }).createIndex('ref', 'ref');
       };
       req.onsuccess = () => {
         // Another tab with a newer version wants to upgrade: let it.
@@ -45,7 +48,7 @@ export async function tx<T>(store: StoreName, mode: IDBTransactionMode, run: (s:
 }
 
 /** Drops the least recently used entries of a store with a `used` index beyond `max`. */
-export async function keepNewest(store: 'audio' | 'timings', max: number) {
+export async function keepNewest(store: 'audio' | 'timings' | 'tafsir', max: number) {
   const count = await tx<number>(store, 'readonly', (s) => s.count());
   if (count <= max) return;
   let extra = count - max;

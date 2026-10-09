@@ -368,6 +368,13 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tour.next': 'التالي',
   'tour.start': 'ابدأ القراءة',
   'menu.tour': 'جولة',
+
+  // tafsir (G4)
+  'tafsir.link': 'التفسير',
+  'tafsir.explains': 'يشرح {ref} معًا',
+  'tafsir.none': 'لا يوجد تفسير منفصل لهذه الآية؛ فهي مشروحة مع الآيات المحيطة بها.',
+  'tafsir.source': 'اقرأه على Quran.com',
+  'tafsir.failed': 'تعذّر تحميل التفسير — تحقّق من الاتصال',
 };
 
 export default ar;

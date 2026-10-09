@@ -1,4 +1,5 @@
 // Settings / debug panel: shows the device capability check and the chosen export path.
+import { feature, setFeature } from '../features';
 import { capabilities } from '../engine/capabilities';
 import { h } from './dom';
 
@@ -10,6 +11,9 @@ export function openDebugPanel() {
       h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => dialog.close() }, '✕')),
     h('p', { class: 'muted' }, 'Can this browser export the video on-device?'),
     table,
+    h('label', { class: 'sub-row flag-row' },
+      h('input', { type: 'checkbox', checked: feature('tafsir'), onchange: (e: Event) => setFeature('tafsir', (e.target as HTMLInputElement).checked) }),
+      h('span', {}, 'Tafsir beside the translation (preview: licence not confirmed yet)')),
     h('p', { class: 'muted small' }, `User agent: ${navigator.userAgent}`),
   );
   dialog.addEventListener('close', () => dialog.remove());

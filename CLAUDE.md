@@ -611,8 +611,17 @@ tafsir only from published, credited editions; UI strings only are translated by
       `tourSeen` in localStorage; shown by the mushaf on first launch, not to people who used the app
       before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
       ☰ → Tour)
-- [ ] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
+- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
       flag until the owner confirms the licence (`docs/grow.md` §0)
+      (built 2026-10-09, **off**: `src/features.ts` (`feature('tafsir')`, default false; testers: Device
+      check → "Tafsir beside the translation"). `src/data/tafsir.ts`: Ibn Kathir (abridged, id 169) per
+      ayah from api.quran.com (qurancdn second), IndexedDB store `tafsir` (`db.ts` version 5, which also
+      adds `recordings` for G6), refetched after 7 days, offline copy only within the week, newest 300;
+      `tafsirView()` keeps the text unchanged and reduces the markup to safe elements, Arabic quotes in
+      the Quran font. `src/ui/tafsir.ts`: "Tafsir ▾" under each ayah in the mushaf translation sheet and
+      the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
+      passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
+      names show in the Arabic interface. To ship: owner decision, then flip the default)
 - [ ] G5 Polish: faster first load (measured), "Export for WhatsApp Status" preset
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally
 

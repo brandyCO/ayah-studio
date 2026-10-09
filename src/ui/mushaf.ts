@@ -15,6 +15,7 @@ import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
 import { translationList } from './translationPicker';
 import { markTourSeen, showTour, tourSeen } from './tour';
+import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
@@ -481,6 +482,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const items = [];
     for (let a = s.lo; a <= s.hi; a++) {
       items.push(h('p', { class: 'sheet-text', lang: info.lang, dir: info.dir }, h('span', { class: 'ayah-num', dir: 'ltr' }, `${s.surah}:${a}`), tr[a - 1]));
+      const tf = tafsirToggle(s.surah, a);
+      if (tf) items.push(tf);
     }
     const d: HTMLDialogElement = sheet(sheetHead(reference(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));

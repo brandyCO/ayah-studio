@@ -329,6 +329,13 @@ const en = {
   'tour.next': 'Next',
   'tour.start': 'Start reading',
   'menu.tour': 'Tour',
+
+  // tafsir (G4)
+  'tafsir.link': 'Tafsir',
+  'tafsir.explains': 'Explains {ref} together',
+  'tafsir.none': 'No separate tafsir for this ayah; it is explained with the ayat around it.',
+  'tafsir.source': 'Read it on Quran.com',
+  'tafsir.failed': 'Could not load the tafsir — check your connection',
 };
 
 export type Key = keyof typeof en;
