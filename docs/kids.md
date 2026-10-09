@@ -162,7 +162,7 @@ across reloads; the path stays smooth while scrolling on the owner's phone.
 **Experience**
 - A lit lantern's surah screen shows **Make a keepsake** (behind the parent gate, since it opens the
   editor). One tap → an editor draft of that surah (≤ 10 ayat, see open question 4) in a kid mood
-  (K5; Dawn until K5 ships) with the closing card **"Maryam memorised Al-Ikhlas · 9 October 2026"**.
+  (K5: Pastel + Moon garden) with the closing card **"Maryam memorised Al-Ikhlas · 9 October 2026"**.
 - The parent exports and saves/shares it from the normal editor (leaving the Kids space is not
   needed: the editor opens on top; ✕ returns to the space).
 

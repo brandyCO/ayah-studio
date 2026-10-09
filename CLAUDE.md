@@ -565,10 +565,26 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       `src/data/kidsAudio.ts`: the whole MP3 kept in IndexedDB `audio` (`{url}|all`, shared with
       reels) the first time; parent sheet: reciter (Husary Muallim first), "Keep all for offline use";
       QDC timings kept: 120 surahs (was 60)
-- [ ] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
-- [ ] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
-- [ ] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
-      translation font; Arabic stays KFGQPC)
+- [x] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
+      (2026-10-09): `#/kids` is a dotted SVG path (a gentle wave, 112 px a stop) with 38 lantern
+      buttons — outline when unlit, filled with a flame and a warm glow when learned, the next one
+      ringed and breathing; "We learned it" lights it and the path blooms it once on return
+      (sessionStorage `kidsBloom`) and scrolls to it; the parent sheet lists lit lanterns to put out.
+      No counts or percentages; reduced motion → no breathing
+- [x] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
+      (2026-10-09): a learned surah's screen shows **Keepsake** → parent gate → `makeKeepsake()` in
+      `src/ui/kids.ts`: an editor draft of the surah (≤ `MAX_AYAT`, from ayah 1) in the reel look +
+      Dawn mood, `outro` on, closing card "Maryam memorised Al-Ikhlaas" + the date it was learned; a
+      one-time router pass (`#/reel/`, sessionStorage) lets the editor open over the space, and its ✕
+      returns to `#/kids`
+- [x] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
+      translation font; Arabic stays KFGQPC) (2026-10-09): `scripts/make-kid-backgrounds.py` →
+      **Moon garden** (`kid-moon`), **Desert dawn** (`kid-dunes`), **Soft clouds** loop (`kid-clouds`,
+      MP4 + WebM), no figures; moods **Moonlit** and **Pastel** (fade/rise, crossfade/white, strong
+      scrim, `enFont: 'round'`); **Nunito** 600 (OFL, `public/fonts/Nunito-*.woff2`, latin + latin-ext)
+      as the "Round" translation font (editor Text → font; loaded before drawing in the editor, gifts
+      and walls). Keepsake = Pastel + Moon garden. Migration `20261012000000_k5_kid_looks.sql`:
+      `valid_gift_look()` accepts `round` and the three backgrounds (pgTAP `kid_looks.test.sql`)
 - [ ] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)
 - [ ] Owner, before a store launch with the Kids space: the Families policy checklist in `docs/kids.md` §5
 
@@ -631,7 +647,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
 - [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
       < 16 MB) — postponed by the owner (2026-10-09)
-- [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally
+- [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ---
 

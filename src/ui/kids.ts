@@ -3,13 +3,13 @@
 // gate guards leaving, the settings and anything that leads out. No sign-in, no social features.
 //   #/kids          home: the surahs to listen to
 //   #/kids/{surah}  listen & repeat (src/ui/kidsListen.ts)
-import { cleanName, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings } from '../data/kids';
+import { cleanName, grantPass, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings, setLearned } from '../data/kids';
 import { keepAllOffline, keptCount } from '../data/kidsAudio';
 import { loadMeta } from '../data/quran';
 import { h, toast } from './dom';
 import { parentGate } from './kidsGate';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
-import { lastRead, reelReciter } from './prefs';
+import { lastRead, reelLook, reelReciter } from './prefs';
 
 const lockIcon = () => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -78,11 +78,21 @@ export async function openParent() {
       } }, 'Keep all for offline use (about 40 MB)'));
   };
   paintOffline();
+  const meta = await loadMeta();
+  const learnedList = h('div', { class: 'chips' });
+  const paintLearned = () => {
+    const lit = learned();
+    const list = KIDS_SURAHS.filter((n) => lit[n]);
+    learnedList.replaceChildren(...(list.length ? list.map((n) => h('button', { class: 'chip', onclick: () => { setLearned(n, false); paintLearned(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `${meta[n - 1].en} ✕`))
+      : [h('span', { class: 'muted small' }, 'None yet. "We learned it" at the end of a surah lights its lantern.')]));
+  };
+  paintLearned();
   const d = h('dialog', { class: 'sheet bottom kids-parent-sheet' },
     h('div', { class: 'sheet-head' }, h('h2', {}, 'For grown-ups'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
     h('label', { class: 'kids-field' }, h('span', {}, "Child's name"), name),
     h('div', { class: 'kids-field' }, h('span', {}, 'Show'), h('div', { class: 'chips' },
       toggle('English translation', k.translation, (v) => setKidsSettings({ translation: v })))),
+    h('div', { class: 'kids-field' }, h('span', {}, 'Learned surahs (lit lanterns) — tap to put one out'), learnedList),
     h('label', { class: 'kids-field' }, h('span', {}, 'Reciter'), reciterSelect),
     h('div', { class: 'kids-field' }, h('span', {}, 'Offline'), offline),
     h('button', { class: 'primary wide', onclick: () => { d.close(); leave(); } }, 'Leave the Kids space'),
@@ -94,6 +104,38 @@ export async function openParent() {
   document.body.append(d);
   d.showModal();
 }
+
+const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * "My first surah" keepsake (docs/kids.md K4), after the parent gate: an editor draft of the surah
+ * (up to MAX_AYAT ayat) in a calm mood, with "{name} memorised {surah}" and the date on the closing
+ * card (user text, drawn in the UI fonts by the closing-card code, inside the safe area).
+ */
+export async function makeKeepsake(n: number) {
+  if (!(await parentGate('Make a keepsake reel'))) return;
+  const [{ newProject, applyLook, MAX_AYAT }, { applyMood, MOODS }, drafts, meta] = await Promise.all([
+    import('../engine/project'), import('../engine/moods'), import('../data/drafts'), loadMeta()]);
+  const s = meta[n - 1];
+  const p = newProject(n, 1, Math.min(s.ayahs, MAX_AYAT), kidsReciter());
+  applyLook(p, reelLook(), () => true);
+  applyMood(p, MOODS.find((m) => m.id === KEEPSAKE_MOOD) ?? MOODS[0]);
+  p.scenes = [KEEPSAKE_BACKGROUND];
+  p.clips = [];
+  p.sceneMode = 'single';
+  p.sceneLengths = [];
+  p.outro = true;
+  const name = kidsSettings().name;
+  const when = learned()[n] ?? Date.now();
+  p.closing = { title: `${name ? `${name} memorised` : 'Memorised'} ${s.en}`.slice(0, 80), names: [dateFmt.format(when)] };
+  const id = drafts.newDraftId();
+  const now = Date.now();
+  await drafts.saveDraft({ id, project: p, created: now, updated: now });
+  grantPass('#/reel/');
+  location.hash = drafts.draftHash(p, id);
+}
+const KEEPSAKE_MOOD = 'pastel';
+const KEEPSAKE_BACKGROUND = 'kid-moon';
 
 /** The reciter of the space: the parent's pick, else the reel reciter. */
 export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;
@@ -109,20 +151,80 @@ const greeting = () => {
   return n ? `Assalamu alaikum, ${n}` : 'Assalamu alaikum';
 };
 
+/** A lantern (SVG): outline when unlit; filled with a flame when lit (shape, not only colour). */
+function lantern(): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 48 64');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = '<path class="l-frame" d="M19 9a5 5 0 0 1 10 0"/><rect class="l-frame" x="15" y="10" width="18" height="5" rx="2"/>'
+    + '<path class="l-body" d="M14 16h20l-2.5 32h-15z"/><rect class="l-frame" x="14.5" y="48" width="19" height="5" rx="2"/>'
+    + '<ellipse class="l-flame" cx="24" cy="34" rx="4.5" ry="7.5"/>';
+  return svg;
+}
+
+/** Remembers that a lantern was just lit, so the path can bloom it once when the child returns. */
+export function bloomNext(s: number) {
+  try {
+    sessionStorage.setItem('kidsBloom', String(s));
+  } catch {
+    /* ignore */
+  }
+}
+function takeBloom(): number {
+  try {
+    const v = Number(sessionStorage.getItem('kidsBloom'));
+    sessionStorage.removeItem('kidsBloom');
+    return v;
+  } catch {
+    return 0;
+  }
+}
+
+const STEP = 112; // px between lanterns
+/** Home of the space: a path winding down the sky through the short surahs, one lantern each. */
 export async function showKids(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
   const lit = learned();
+  const bloom = takeBloom();
   root.classList.add('kids');
-  const tiles = KIDS_SURAHS.map((n) => {
+  const next = KIDS_SURAHS.find((n) => !lit[n]);
+  // Lantern positions: x in % of the width (a gentle wave), y in px.
+  const pts = KIDS_SURAHS.map((_, i) => ({ x: 50 + 26 * Math.sin(i * 0.95), y: 64 + i * STEP }));
+  const height = pts[pts.length - 1].y + 80;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], my = (a.y + b.y) / 2;
+    d += ` C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`;
+  }
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'kids-path-line');
+  svg.setAttribute('viewBox', `0 0 100 ${height}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = `<path d="${d}" vector-effect="non-scaling-stroke"/>`;
+
+  let target: HTMLElement | null = null;
+  const stops = KIDS_SURAHS.map((n, i) => {
     const s = meta[n - 1];
-    return h('a', { class: `kids-tile${lit[n] ? ' lit' : ''}`, href: `#/kids/${n}`, 'aria-label': `${s.en}, ${s.ayahs} ayat${lit[n] ? ', learned' : ''}` },
-      h('span', { class: 'kids-tile-ar', lang: 'ar', dir: 'rtl' }, s.ar),
+    const { x, y } = pts[i];
+    const right = x < 50; // the label sits on the side with more room
+    const el = h('a', {
+      class: `kids-stop${lit[n] ? ' lit' : ''}${n === next ? ' next' : ''}${n === bloom && lit[n] ? ' bloom' : ''}${right ? '' : ' label-left'}`,
+      href: `#/kids/${n}`, style: `left: ${x}%; top: ${y}px`,
+      'aria-label': `${s.en}, ${s.ayahs} ayat${lit[n] ? ', learned' : ''}`,
+    },
+    h('span', { class: 'kids-lantern' }, lantern()),
+    h('span', { class: 'kids-stop-label' },
       h('strong', {}, s.en),
-      h('span', { class: 'kids-tile-sub' }, `${s.tr} · ${s.ayahs} ayat`));
+      h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
+      h('span', { class: 'kids-stop-sub' }, `${s.ayahs} ayat`)));
+    if (n === (bloom && lit[bloom] ? bloom : next)) target = el;
+    return el;
   });
   root.append(
     h('header', { class: 'kids-top' }, h('h1', { class: 'kids-hello' }, greeting()), parentButton()),
     h('p', { class: 'kids-lead' }, 'Which surah shall we listen to?'),
-    h('div', { class: 'kids-tiles' }, ...tiles));
+    h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops));
+  if (target) requestAnimationFrame(() => (target as HTMLElement).scrollIntoView({ block: 'center' }));
   return () => {};
 }

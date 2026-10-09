@@ -13,6 +13,8 @@ export const FONT_NAME = '"AmiriQuran", serif';
 export const FONT_EN = '"Noto Serif", Georgia, "Times New Roman", serif';
 export const FONT_EN_SANS = 'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 export const FONT_UI = 'system-ui, "Segoe UI", Roboto, sans-serif';
+/** Rounder translation font (kid-friendly moods); English only, never the Arabic (rule 5). */
+export const FONT_EN_ROUND = 'Nunito, "Varela Round", system-ui, sans-serif';
 
 export const AR_LINE = 1.8;
 export const EN_LINE = 1.4;
@@ -28,7 +30,7 @@ const AR_MIN = 64;
 const EN_MIN = 32;
 
 export type TextSize = 's' | 'm' | 'l';
-export type EnFont = 'serif' | 'sans';
+export type EnFont = 'serif' | 'sans' | 'round';
 const SIZE_SCALE: Record<TextSize, number> = { s: 0.88, m: 1, l: 1.14 };
 
 /**
@@ -125,7 +127,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     half: scaled(AR_SIZES.half, z, AR_MIN),
     words: scaled(AR_SIZES.words, z, AR_MIN),
   };
-  const enFont = st.enFont === 'sans' ? FONT_EN_SANS : FONT_EN;
+  const enFont = st.enFont === 'sans' ? FONT_EN_SANS : st.enFont === 'round' ? FONT_EN_ROUND : FONT_EN;
   return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: scaled(EN_SIZES, z, EN_MIN), enFont };
 }
 

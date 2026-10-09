@@ -281,7 +281,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     const arabic = allAr.slice(from - 1, to);
     const english = allEn.slice(from - 1, to);
     const meanings = arabic.map((text, i) => wordMeanings(allWbw[from - 1 + i], parseSpans(wordMap[`${n}:${from + i}`]), displayWords(text).length));
-    await Promise.all([document.fonts.load('80px "UthmanicHafs"', arabic[0]), document.fonts.load('54px "AmiriQuran"', s.ar)]).catch(() => {});
+    await Promise.all([document.fonts.load('80px "UthmanicHafs"', arabic[0]), document.fonts.load('54px "AmiriQuran"', s.ar), document.fonts.load('40px Nunito', 'Aa')]).catch(() => {});
     const r = reciterById(project.reciterId);
     const [reel, scenes] = await Promise.all([
       loadReel(r, n, from, arabic, wordMap, () => {}),

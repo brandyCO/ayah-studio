@@ -196,6 +196,7 @@ const en = {
   'ed.font': 'Font',
   'ed.serif': 'Serif',
   'ed.sans': 'Sans',
+  'ed.round': 'Round',
   'ed.layout': 'Layout',
   'ed.top': 'Top',
   'ed.below-the-ayah': 'Below the ayah',
