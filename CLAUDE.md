@@ -571,7 +571,12 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       ringed and breathing; "We learned it" lights it and the path blooms it once on return
       (sessionStorage `kidsBloom`) and scrolls to it; the parent sheet lists lit lanterns to put out.
       No counts or percentages; reduced motion → no breathing
-- [ ] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
+- [x] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
+      (2026-10-09): a learned surah's screen shows **Keepsake** → parent gate → `makeKeepsake()` in
+      `src/ui/kids.ts`: an editor draft of the surah (≤ `MAX_AYAT`, from ayah 1) in the reel look +
+      Dawn mood, `outro` on, closing card "Maryam memorised Al-Ikhlaas" + the date it was learned; a
+      one-time router pass (`#/reel/`, sessionStorage) lets the editor open over the space, and its ✕
+      returns to `#/kids`
 - [ ] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
       translation font; Arabic stays KFGQPC)
 - [ ] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)

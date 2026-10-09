@@ -14,7 +14,7 @@ import { everyayahUrl, reciterById } from '../data/reciters';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { h } from './dom';
 import { icon } from './icons';
-import { bloomNext, kidsReciter, parentButton } from './kids';
+import { bloomNext, kidsReciter, makeKeepsake, parentButton } from './kids';
 
 /** Where an ayah's recitation is: a span of the surah recording, or its own everyayah file (no word timings). */
 interface AyahAudio {
@@ -329,7 +329,8 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       h('h1', { class: 'kids-title' }, s.en),
       parentButton()),
     stage, done,
-    h('div', { class: 'kids-chips' }, speedBtn, repBtn),
+    h('div', { class: 'kids-chips' }, speedBtn, repBtn,
+      learned()[n] ? h('button', { class: 'kids-chip', 'aria-label': 'Make a keepsake reel (for grown-ups)', onclick: () => void makeKeepsake(n) }, 'Keepsake') : null),
     h('nav', { class: 'kids-controls' }, prev, playBtn, next),
     h('p', { class: 'kids-hint' }, 'Tap a word to hear it'));
 
