@@ -108,6 +108,10 @@ export interface TodayItem {
   text: string;
   href?: string;
   onClick?(): void;
+  /** A second line (e.g. the ayah of the day's translation), in its own language and direction. */
+  sub?: { text: string; lang?: string; dir?: 'ltr' | 'rtl' };
+  /** Quiet extra actions under the line. */
+  actions?: { label: string; href?: string; onClick?(): void }[];
 }
 type TodaySource = () => Promise<TodayItem[]> | TodayItem[];
 const todaySources: TodaySource[] = [];
@@ -123,10 +127,16 @@ export async function fillToday(card: HTMLElement, onPick: () => void) {
     }
   }))).flat();
   card.replaceChildren(...items.map((it) => {
-    const content = [h('span', { class: 'today-icon', 'aria-hidden': 'true' }, it.icon), h('span', {}, it.text)];
-    return it.href
+    const content = [h('span', { class: 'today-icon', 'aria-hidden': 'true' }, it.icon),
+      h('span', { class: 'today-text' }, it.text,
+        it.sub ? h('span', { class: 'today-sub', lang: it.sub.lang, dir: it.sub.dir }, it.sub.text) : null)];
+    const main = it.href
       ? h('a', { class: 'today-item', href: it.href, onclick: onPick }, ...content)
       : h('button', { class: 'today-item', onclick: () => { onPick(); it.onClick?.(); } }, ...content);
+    if (!it.actions?.length) return main;
+    return h('div', { class: 'today-block' }, main, h('div', { class: 'today-actions' }, ...it.actions.map((x) => x.href
+      ? h('a', { class: 'chip', href: x.href, onclick: onPick }, x.label)
+      : h('button', { class: 'chip', onclick: () => { onPick(); x.onClick?.(); } }, x.label))));
   }));
   card.hidden = !items.length;
 }

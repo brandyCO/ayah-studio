@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="daily_bg">#F7F2E8</color>
+    <color name="daily_text">#1F2A26</color>
+    <color name="daily_muted">#6B766F</color>
+    <color name="daily_accent">#0A6E55</color>
+    <string name="daily_widget_label">Ayah of the day</string>
+    <string name="daily_widget_description">A calm ayah each day, with its translation</string>
+</resources>

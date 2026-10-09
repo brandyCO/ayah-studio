@@ -4,6 +4,8 @@
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
+import { todaysAyah } from '../data/daily';
+import { isNative } from '../native';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
@@ -54,6 +56,22 @@ registerToday(async () => {
 // A note's mark pulses once per app session when its page is visited again (not for today's notes).
 const pulsed = new Set<string>();
 const DAY = 86_400_000;
+// The ayah of the day (G2): its reference and translation; Listen plays it here, or a reel of it.
+let listenHere: ((s: number, a: number) => void) | null = null;
+registerToday(async () => {
+  const [meta, d] = await Promise.all([loadMeta(), todaysAyah()]);
+  const info = translationInfo(currentTranslation());
+  const tr = await surahTranslation(d.s, info.id).catch(() => null);
+  const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
+  return [{
+    icon: '✧', text: t('today.ayah', { ref: reference(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
+    sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
+    actions: [
+      { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
+      { label: t('today.reel'), href: `#/reel/${d.s}/${d.from}-${d.to}` },
+    ],
+  }];
+});
 registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
@@ -153,6 +171,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
   }
 
+  listenHere = (s, a) => { noteAyah(s, a); void player.playFrom(s, a); };
   const sel = selectionController({
     meta,
     area,
@@ -481,6 +500,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       }, h('span', { class: 'tr-name' }, l.name), h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : '')))));
   }
 
+  const morning = () => { try { return JSON.parse(localStorage.getItem('morningAyah') ?? 'null') as { on?: boolean; time?: string } | null; } catch { return null; } };
+  const morningOn = () => !!morning()?.on;
+  const morningTime = () => morning()?.time ?? '';
+
   /** The first ayah that begins on the current page (or the one continuing onto it). */
   function firstAyahOnPage(): { s: number; a: number } {
     const segs = mushaf.pages[page - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
@@ -510,6 +533,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
+          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
@@ -582,6 +607,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(readTimer);
     circleCtx = null;
     openLampsHere = null;
+    listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
     clearTimeout(hintTimer);

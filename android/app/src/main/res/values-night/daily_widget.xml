@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="daily_bg">#0E1A16</color>
+    <color name="daily_text">#E9EEEC</color>
+    <color name="daily_muted">#8E9A95</color>
+    <color name="daily_accent">#3DD1AD</color>
+</resources>

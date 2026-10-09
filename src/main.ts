@@ -18,6 +18,7 @@ import { showReader } from './ui/reader';
 import { initAuth } from './cloud/auth';
 import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
+import { isNative } from './native';
 import { initI18n, t } from './i18n';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
@@ -107,6 +108,7 @@ setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();
+if (isNative()) void import('./ui/morning').then((m) => m.initDailyNative()); // widget + morning ayah (Android)
 void initAuth();
 void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
 try {
