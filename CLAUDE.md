@@ -577,8 +577,14 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       Dawn mood, `outro` on, closing card "Maryam memorised Al-Ikhlaas" + the date it was learned; a
       one-time router pass (`#/reel/`, sessionStorage) lets the editor open over the space, and its ✕
       returns to `#/kids`
-- [ ] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
-      translation font; Arabic stays KFGQPC)
+- [x] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
+      translation font; Arabic stays KFGQPC) (2026-10-09): `scripts/make-kid-backgrounds.py` →
+      **Moon garden** (`kid-moon`), **Desert dawn** (`kid-dunes`), **Soft clouds** loop (`kid-clouds`,
+      MP4 + WebM), no figures; moods **Moonlit** and **Pastel** (fade/rise, crossfade/white, strong
+      scrim, `enFont: 'round'`); **Nunito** 600 (OFL, `public/fonts/Nunito-*.woff2`, latin + latin-ext)
+      as the "Round" translation font (editor Text → font; loaded before drawing in the editor, gifts
+      and walls). Keepsake = Pastel + Moon garden. Migration `20261012000000_k5_kid_looks.sql`:
+      `valid_gift_look()` accepts `round` and the three backgrounds (pgTAP `kid_looks.test.sql`)
 - [ ] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)
 - [ ] Owner, before a store launch with the Kids space: the Families policy checklist in `docs/kids.md` §5
 

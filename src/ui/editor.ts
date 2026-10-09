@@ -738,7 +738,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
         note('Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.')] },
       { id: 'tr-font', icon: 'font', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
-        chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+        chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }, { value: 'round', label: 'Round' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
     { id: 'layout', icon: 'layout', label: 'Layout', options: [
       { id: 'title', icon: 'text', label: 'Surah name', panel: () => [
@@ -1071,6 +1071,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   await Promise.all([
     document.fonts.load('80px "UthmanicHafs"', arabic[0]),
     document.fonts.load('54px "AmiriQuran"', s.ar),
+    document.fonts.load('40px Nunito', 'Aa'),
   ]).catch(() => {});
   void loadAudio();
   void loadScenes();

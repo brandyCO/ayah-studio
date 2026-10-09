@@ -569,6 +569,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
 
   try {
     await document.fonts.load('80px "UthmanicHafs"', 'بِسْمِ').catch(() => {});
+    await document.fonts.load('40px Nunito', 'Aa').catch(() => {});
     const [reel, scenes] = await Promise.all([
       loadSegments(r, list.map((e) => ({ surah: e.surah, from: e.ayah_from, to: e.ayah_to, note: { name: e.name, dua: e.dua } })),
         { pause: project.pause, hold: project.gap === 'hold' }, OUTRO,

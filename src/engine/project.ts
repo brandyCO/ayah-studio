@@ -163,7 +163,7 @@ const ALLOWED: Partial<Record<keyof Look, readonly unknown[]>> = {
   scrim: ['light', 'normal', 'strong'],
   textSize: ['s', 'm', 'l'],
   textPos: ['upper', 'center', 'lower'],
-  enFont: ['serif', 'sans'],
+  enFont: ['serif', 'sans', 'round'],
   pause: PAUSES,
   gap: ['hold', 'clear'],
 };
