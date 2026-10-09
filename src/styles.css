@@ -889,3 +889,7 @@ body[data-view="wall"] { background: #07130f; }
 .keepsake-scrub { flex: 1; accent-color: var(--accent); }
 .keepsake-next { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .keepsake .primary { min-width: 160px; }
+
+/* Turnstile check before a guest (anonymous) sign-in (src/cloud/captcha.ts) */
+.captcha-sheet { width: min(360px, calc(100% - 32px)); text-align: center; }
+.captcha-box { display: flex; justify-content: center; min-height: 8px; }

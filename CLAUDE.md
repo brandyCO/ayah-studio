@@ -447,8 +447,8 @@ cloud. Build in this order:
       Today card "Juz 14 · 6 pages left" and "Khatm complete". **Khatm reel**: editor draft of An-Nas
       (114:1–6) with `project.closing` (title + member names, UI font, under the reference on the
       closing card, shrinking to 24 px, then "and N more"). Deploy: `.github/workflows/supabase.yml`
-      job `deploy` runs `supabase db push` on main once the owner adds the secrets
-      `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` (or paste the SQL in the SQL editor)
+      job `deploy` runs `supabase db push --db-url` through the session pooler on main (secrets
+      `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`, added 2026-10-09; all migrations applied live)
 - [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
       (§7 step 4)
 - [x] T3 Gift an ayah (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
@@ -528,7 +528,12 @@ cloud. Build in this order:
       `#/wall/{id}/reel[/{start}]` keepsake: visible entries in arrival order, preview + scrub +
       **Export** (`src/ui/reelExport.ts`, the editor's export page as a reusable overlay), "Next part"
       past 30 entries / ~10 min. In Export my data and the privacy page. Owner: paste the migration;
-      turn on Anonymous sign-ins so guests need no Google account
+      turn on Anonymous sign-ins so guests need no Google account (done 2026-10-09). Guest (anonymous) sign-ins
+      for walls and gift replies go through `signInGuest()` (`src/cloud/auth.ts`), which first runs a
+      Cloudflare **Turnstile** check (`src/cloud/captcha.ts`, invisible unless a tap is needed) when the
+      repo variable `TURNSTILE_SITE_KEY` is set (passed to the Pages + Android builds); Supabase checks
+      the token once CAPTCHA protection is on (Attack protection → Turnstile + secret key). Google
+      sign-in is not affected (Supabase skips the captcha for id-token / PKCE sign-ins)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 

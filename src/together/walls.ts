@@ -3,7 +3,7 @@
 // optional short dua in their own words. The database (supabase/migrations/20261011000000_t8_walls.sql)
 // lets the host read every entry and hide any; a guest reads only their own; nobody else sees
 // anything. The host's screen follows new entries live (Supabase Realtime).
-import { account } from '../cloud/auth';
+import { account, signInGuest } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import type { Look } from '../engine/project';
 import { shareableLink } from '../native';
@@ -117,10 +117,6 @@ export async function watchWall(id: string, onChange: () => void): Promise<() =>
  *  anonymous sign-ins are enabled in the Supabase project). */
 export async function ensureGuest(): Promise<'account' | 'anonymous' | null> {
   if (account()) return 'account';
-  const sb = await supabase();
-  const { data } = await sb.auth.getSession();
-  if (data.session?.user?.is_anonymous) return 'anonymous';
-  const { error } = await sb.auth.signInAnonymously();
-  if (error) return null; // anonymous sign-ins are off: Google sign-in is needed
-  return 'anonymous';
+  // Anonymous session (after a Turnstile check when set up); null → Google sign-in is needed.
+  return (await signInGuest()) ? 'anonymous' : null;
 }

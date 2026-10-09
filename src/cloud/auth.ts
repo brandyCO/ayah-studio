@@ -99,6 +99,29 @@ export async function signIn(): Promise<void> {
   }
 }
 
+/**
+ * An anonymous session for wall guests and gift replies (no Google account needed), after a
+ * Cloudflare Turnstile check when one is set up. False when anonymous sign-ins are off in the
+ * project or the check did not pass (the caller then offers Google sign-in).
+ */
+export async function signInGuest(): Promise<boolean> {
+  const sb = await supabase();
+  const { data } = await sb.auth.getSession();
+  if (data.session?.user?.is_anonymous) return true;
+  let captchaToken: string | undefined;
+  try {
+    const { captchaToken: check } = await import('./captcha');
+    captchaToken = await check();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg !== 'cancelled') void import('../ui/dom').then(({ toast }) => toast(msg));
+    return false;
+  }
+  const { error } = await sb.auth.signInAnonymously({ options: { captchaToken } });
+  if (error) console.warn('Guest sign-in failed', error.message);
+  return !error;
+}
+
 export async function signOut() {
   const sb = await supabase();
   await sb.auth.signOut({ scope: 'local' });

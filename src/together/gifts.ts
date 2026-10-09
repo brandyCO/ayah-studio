@@ -4,7 +4,7 @@
 // through send_gift(), which checks the reference, reciter, look and message. Only references are
 // stored — the Quran text always comes from the bundled data. Gifts received are remembered on this
 // device so they can be found again (☰ → Gifts).
-import { account } from '../cloud/auth';
+import { account, signInGuest } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import type { Look } from '../engine/project';
 import { shareableLink } from '../native';
@@ -63,12 +63,8 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 export async function ensureSender(reply: boolean): Promise<'account' | 'anonymous' | null> {
   if (account()) return 'account';
   if (!reply) return null;
-  const sb = await supabase();
-  const { data } = await sb.auth.getSession();
-  if (data.session?.user?.is_anonymous) return 'anonymous';
-  const { error } = await sb.auth.signInAnonymously();
-  if (error) return null; // anonymous sign-ins are off: Google sign-in is needed
-  return 'anonymous';
+  // Anonymous session (after a Turnstile check when set up); null → Google sign-in is needed.
+  return (await signInGuest()) ? 'anonymous' : null;
 }
 
 export function sendGift(g: { surah: number; from: number; to: number; reciter: number; look: Partial<Look>; name: string; message: string; replyTo: string | null }): Promise<string> {
