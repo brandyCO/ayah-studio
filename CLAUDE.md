@@ -637,11 +637,33 @@ tafsir only from published, credited editions; UI strings only are translated by
       same pick in Java, 30-min refresh) + `DailyPlugin.java` (`store`: the chosen translation's texts
       for the list; `takeLaunchHash`: the address a widget tap opened, read at start and on resume).
       Widget and notification only verifiable on the phone)
-- [ ] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
-- [ ] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
+- [x] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
+      (built 2026-10-09: `src/ui/tour.ts` — three cards over a soft blur with line drawings, dots,
+      Skip/Back/Next, swipe and arrow keys (RTL-aware), "Start reading" in the brand gradient;
+      `tourSeen` in localStorage; shown by the mushaf on first launch, not to people who used the app
+      before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
+      ☰ → Tour)
+- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
       flag until the owner confirms the licence (`docs/grow.md` §0)
-- [ ] G5 Polish: faster first load (measured), "Export for WhatsApp Status" preset
-- [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally
+      (built 2026-10-09, **off**: `src/features.ts` (`feature('tafsir')`, default false; testers: Device
+      check → "Tafsir beside the translation"). `src/data/tafsir.ts`: Ibn Kathir (abridged, id 169) per
+      ayah from api.quran.com (qurancdn second), IndexedDB store `tafsir` (`db.ts` version 5, which also
+      adds `recordings` for G6), refetched after 7 days, offline copy only within the week, newest 300;
+      `tafsirView()` keeps the text unchanged and reduces the markup to safe elements, Arabic quotes in
+      the Quran font. `src/ui/tafsir.ts`: "Tafsir ▾" under each ayah in the mushaf translation sheet and
+      the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
+      passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
+      names show in the Arabic interface. To ship: owner decision, then flip the default)
+- [x] G5a Faster first load (measured)
+      (2026-10-09, Playwright, 1.6 Mbps / 150 ms, mushaf page 1: FCP ≈ 1.55 s, page ready ≈ 2.2 s,
+      19 requests / 623 KB (was 22 / 670 KB on the G4 branch). The circles screens, tour, tafsir data
+      and translation picker load on first use (`import()`); the Arabic-mark fallback face `QuranMarks`
+      (index.html, `unicode-range` over the Arabic blocks) is fetched only when the system font cannot
+      draw a cluster, so English starts no longer download AmiriQuran. The rest of first load is the
+      page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
+- [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
+      < 16 MB) — postponed by the owner (2026-10-09)
+- [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ---
 

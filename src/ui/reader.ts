@@ -7,6 +7,7 @@ import { h } from './dom';
 import { setReaderMode } from './prefs';
 import { openReflection } from './reflections';
 import { selectionController } from './selection';
+import { tafsirToggle } from './tafsir';
 
 export async function showReader(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
   const info = translationInfo(currentTranslation());
@@ -16,7 +17,8 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
   const cards = arabic.map((text, i) =>
     h('article', { class: 'ayah', 'data-s': String(n), 'data-a': String(i + 1) },
       h('div', { class: 'ayah-ar', lang: 'ar', dir: 'rtl' }, text),
-      h('p', { class: 'ayah-en', lang: info.lang, dir: info.dir }, h('span', { class: 'ayah-num', dir: 'ltr' }, `${n}:${i + 1}`), english[i])));
+      h('p', { class: 'ayah-en', lang: info.lang, dir: info.dir }, h('span', { class: 'ayah-num', dir: 'ltr' }, `${n}:${i + 1}`), english[i]),
+      tafsirToggle(n, i + 1)));
   const listEl = h('main', { class: 'ayat' }, ...cards);
 
   const sel = selectionController({
