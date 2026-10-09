@@ -449,7 +449,13 @@ a year of data to recap.
    password if unknown). The "Database rules" workflow then applies new migrations after its tests
    pass on main. Without them: open the SQL editor, paste the new file from `supabase/migrations/`
    and Run.
-5. (T2b) Firebase project for push only: Android app with the same package + fingerprints,
+5. **Turnstile** (spam check before guest sign-ins, from T3/T8): Cloudflare dashboard → Turnstile →
+   Add widget "Ayah Studio", hostnames `brandyco.github.io` and `localhost` (the Android app),
+   mode Managed. Put the **site key** in the GitHub repo variable `TURNSTILE_SITE_KEY` (Settings →
+   Secrets and variables → Actions → Variables) and re-run the Pages + Android builds; only then
+   paste the **secret key** in Supabase → Authentication → Attack protection → Enable CAPTCHA →
+   Turnstile (in that order, or guest sign-ins fail until the app has the site key).
+6. (T2b) Firebase project for push only: Android app with the same package + fingerprints,
    `google-services.json` as the repo secret `GOOGLE_SERVICES_JSON`, and a service-account key for
    FCM stored as a Supabase secret.
 6. (T3/T8, optional) **Anonymous sign-ins** for gift replies and wall guests without a Google account:

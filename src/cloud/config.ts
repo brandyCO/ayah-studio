@@ -9,3 +9,7 @@ export const GOOGLE_WEB_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_WEB_CLIE
 
 /** The public web app (GitHub Pages): links shared from the Android app point here. */
 export const PUBLIC_URL = 'https://brandyco.github.io/ayah-studio/';
+
+/** Cloudflare Turnstile site key (public; the secret key lives only in Supabase → Attack protection).
+ *  Empty = no security check before anonymous sign-ins. */
+export const TURNSTILE_SITE_KEY: string = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';

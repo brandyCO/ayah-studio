@@ -37,6 +37,8 @@ jobs:
         env:
           # Stock-library proxy (proxy/README.md); empty → the app hides the free library.
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
+          # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
       - run: npx cap sync android
       - name: Signing key
         if: env.KEYSTORE_B64 != ''
