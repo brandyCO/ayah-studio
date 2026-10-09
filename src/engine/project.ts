@@ -1,6 +1,7 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import type { EnFont, FrameStyle, TextSize, TitlePos, TitleSize } from './layout';
+import { validTranslation } from '../data/translations';
 import { MAX_SCENES, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
 export type { SceneMode, TextEffect, Transition };
@@ -61,6 +62,9 @@ export interface Project {
    *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
   closing?: Closing;
   watermark: boolean;
+  /** The whole-ayah translation (an id from src/data/translationList.ts); missing = the reader's choice.
+   *  Kept with the draft, not with the remembered look (gifts carry looks only). */
+  translation?: string;
 }
 
 export interface Closing {
@@ -217,6 +221,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (isNumRecord(d.gaps, finite)) p.gaps = { ...d.gaps! };
   if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
   if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
+  if (typeof d.translation === 'string' && validTranslation(d.translation)) p.translation = d.translation;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }
 

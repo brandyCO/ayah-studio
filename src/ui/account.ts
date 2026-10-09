@@ -1,5 +1,6 @@
 // ☰ → Account: sign in with Google to sync bookmarks, settings and reel drafts between devices; see
 // the sync state; export or delete the account's data. Everything works without signing in.
+import { locale, t } from '../i18n';
 import { account, deleteAccount, onAccount, signIn, signInAvailable, signOut } from '../cloud/auth';
 import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/sync';
 import { supabase } from '../cloud/supabase';
@@ -15,28 +16,28 @@ import { prefRecords } from './prefs';
 /** The menu line for the account ("Sign in to sync" or the user's name). */
 export const accountLabel = () => {
   const a = account();
-  return a ? `👤  ${a.name} · synced` : '👤  Sign in to sync';
+  return a ? `👤  ${t('acc.synced', { name: a.name })}` : `👤  ${t('acc.signInToSync')}`;
 };
 
-const ago = (t: number) => {
-  const s = Math.round((Date.now() - t) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  return new Date(t).toLocaleDateString();
+const ago = (at: number) => {
+  const s = Math.round((Date.now() - at) / 1000);
+  if (s < 60) return t('acc.justNow');
+  if (s < 3600) return t('acc.minAgo', { n: Math.round(s / 60) });
+  if (s < 86400) return t('acc.hAgo', { n: Math.round(s / 3600) });
+  return new Date(at).toLocaleDateString(locale());
 };
 const statusText = (s: SyncStatus) =>
-  s.state === 'syncing' ? 'Syncing…'
-    : s.state === 'ok' && s.at ? `Synced ${ago(s.at)}`
-      : s.state === 'offline' ? 'Offline — will sync when you are back online'
-        : s.state === 'error' ? `Could not sync: ${s.error ?? 'unknown error'}`
+  s.state === 'syncing' ? t('acc.syncing')
+    : s.state === 'ok' && s.at ? t('acc.syncedAgo', { ago: ago(s.at) })
+      : s.state === 'offline' ? t('acc.offline')
+        : s.state === 'error' ? t('acc.syncFailed', { error: s.error ?? '?' })
           : '';
 
 export function openAccount() {
   const body = h('div', { class: 'account' });
   const close = () => d.close();
   const d = h('dialog', { class: 'sheet bottom' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, 'Account'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕')),
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('acc.title')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
     body);
   d.addEventListener('click', (e) => { if (e.target === d) close(); });
   let statusLine: HTMLElement | null = null;
@@ -46,8 +47,8 @@ export function openAccount() {
     if (!a) {
       statusLine = null;
       body.replaceChildren(
-        h('p', {}, 'Sign in to keep your bookmarks, reflections, settings and reel drafts the same on your phone, computer and the web.'),
-        h('p', { class: 'muted small' }, 'Everything keeps working without an account. Your own photos and videos stay on this device.'),
+        h('p', {}, t('acc.why')),
+        h('p', { class: 'muted small' }, t('acc.without')),
         signInAvailable()
           ? h('button', { class: 'primary google-btn', onclick: async (e: Event) => {
             const btn = e.currentTarget as HTMLButtonElement;
@@ -56,13 +57,13 @@ export function openAccount() {
               await signIn(); // on the web the page goes to Google and comes back
             } catch (err) {
               const msg = err instanceof Error ? err.message : String(err);
-              if (!/cancel/i.test(msg)) toast(`Sign-in failed: ${msg}`);
+              if (!/cancel/i.test(msg)) toast(t('acc.signInFailed', { msg }));
             } finally {
               btn.disabled = false;
             }
-          } }, 'Sign in with Google')
-          : h('p', { class: 'muted small' }, 'Sign-in is being set up — coming soon.'),
-        h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, 'Privacy')));
+          } }, t('acc.google'))
+          : h('p', { class: 'muted small' }, t('acc.soon')),
+        h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, t('acc.privacy'))));
       return;
     }
     statusLine = h('p', { class: 'muted small sync-status' });
@@ -72,28 +73,28 @@ export function openAccount() {
         h('div', {}, h('b', {}, a.name), h('div', { class: 'muted small' }, a.email))),
       statusLine,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => void syncNow() }, '⟳  Sync now'),
-        h('button', { class: 'menu-item', onclick: () => void exportData().catch((e) => toast(`Export failed: ${e instanceof Error ? e.message : e}`)) }, '⇩  Export my data'),
-        h('button', { class: 'menu-item', onclick: () => void signOut().then(() => toast('Signed out — your data stays on this device')) }, '↩  Sign out'),
-        h('button', { class: 'menu-item danger', onclick: () => confirmDelete() }, '✕  Delete account…')),
-      h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, 'Privacy')));
+        h('button', { class: 'menu-item', onclick: () => void syncNow() }, `⟳  ${t('acc.syncNow')}`),
+        h('button', { class: 'menu-item', onclick: () => void exportData().catch((e) => toast(t('acc.exportFailed', { msg: e instanceof Error ? e.message : String(e) }))) }, `⇩  ${t('acc.export')}`),
+        h('button', { class: 'menu-item', onclick: () => void signOut().then(() => toast(t('acc.signedOut'))) }, `↩  ${t('acc.signOut')}`),
+        h('button', { class: 'menu-item danger', onclick: () => confirmDelete() }, `✕  ${t('acc.deleteMenu')}`)),
+      h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, t('acc.privacy'))));
     statusLine.textContent = statusText(syncStatus());
   }
 
   function confirmDelete() {
     body.replaceChildren(
-      h('p', {}, 'Delete your account and everything synced to it? Bookmarks, reflections, settings and drafts on this device stay here.'),
+      h('p', {}, t('acc.deleteAsk')),
       h('div', { class: 'row' },
-        h('button', { class: 'chip', onclick: () => draw() }, 'Cancel'),
+        h('button', { class: 'chip', onclick: () => draw() }, t('common.cancel')),
         h('button', { class: 'primary danger', onclick: async () => {
           try {
             await deleteAccount();
-            toast('Account deleted');
+            toast(t('acc.deleted'));
           } catch (e) {
-            toast(`Could not delete: ${e instanceof Error ? e.message : e}`);
+            toast(t('acc.deleteFailed', { msg: e instanceof Error ? e.message : String(e) }));
             draw();
           }
-        } }, 'Delete account')));
+        } }, t('acc.delete'))));
   }
 
   // Redrawn when the account changes (e.g. signed in or out while the sheet is open).

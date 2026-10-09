@@ -9,11 +9,12 @@ import { DEFAULT_RECITER, reciterById } from '../data/reciters';
 import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
 import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
+import { t } from '../i18n';
 import { reelLook, reelReciter } from './prefs';
 
 const fmtLength = (sec: number) => {
   const s = Math.round(sec);
-  return s < 60 ? `~${s} s` : `~${Math.floor(s / 60)} min ${s % 60} s`;
+  return s < 60 ? t('sel.seconds', { s }) : t('sel.minutes', { m: Math.floor(s / 60), s: s % 60 });
 };
 
 const LONG_PRESS_MS = 420;
@@ -52,22 +53,22 @@ export function selectionController(o: SelectionOptions) {
   const label = h('span', { class: 'sel-label' });
   const estimate = h('span', { class: 'sel-est' });
   const bar = h('div', { class: 'selbar', 'aria-live': 'polite' },
-    h('button', { class: 'icon-btn', 'aria-label': 'Clear selection', onclick: () => set(0, null, null) }, '✕'),
+    h('button', { class: 'icon-btn', 'aria-label': t('sel.clear'), onclick: () => set(0, null, null) }, '✕'),
     label,
-    o.onListen && h('button', { class: 'icon-btn', 'aria-label': 'Listen', title: 'Listen from here', onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
-    o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': 'Bookmark', title: 'Bookmark this ayah', onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
-    o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, 'Translation'),
-    o.onReflect && h('button', { class: 'chip', title: 'A private note on this ayah', onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, '✎ Reflect'),
-    o.onGift && h('button', { class: 'chip', title: 'Send these ayat as a gift', onclick: () => { const sel = current(); if (sel) o.onGift!(sel); } }, '🎁 Gift'),
+    o.onListen && h('button', { class: 'icon-btn', 'aria-label': t('sel.listen'), title: t('sel.listenTitle'), onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
+    o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': t('sel.bookmark'), title: t('sel.bookmarkTitle'), onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
+    o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, t('sel.translation')),
+    o.onReflect && h('button', { class: 'chip', title: t('sel.reflectTitle'), onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, t('sel.reflect')),
+    o.onGift && h('button', { class: 'chip', title: t('sel.giftTitle'), onclick: () => { const sel = current(); if (sel) o.onGift!(sel); } }, t('sel.gift')),
     h('button', { class: 'primary brand-btn', onclick: () => {
       const sel = current();
       if (sel) location.hash = `#/reel/${sel.surah}/${sel.lo}-${sel.hi}`;
-    } }, '🎬 Turn into reel'));
+    } }, t('sel.reel')));
 
   function set(s: number, a: number | null, f: number | null) {
     if (a !== null && f !== null && Math.abs(f - a) + 1 > MAX_AYAT) {
       f = a + Math.sign(f - a) * (MAX_AYAT - 1);
-      toast(`Up to ${MAX_AYAT} ayat per reel for now`);
+      toast(t('sel.max', { n: MAX_AYAT }));
     }
     surah = s;
     anchor = a;
@@ -77,7 +78,7 @@ export function selectionController(o: SelectionOptions) {
     bar.classList.toggle('show', !!sel);
     document.body.classList.toggle('has-selbar', !!sel);
     if (sel) {
-      label.replaceChildren(`${reference(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${sel.hi - sel.lo + 1} ${sel.hi > sel.lo ? 'ayat' : 'ayah'}`, estimate);
+      label.replaceChildren(`${reference(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${t(sel.hi > sel.lo ? 'common.ayat' : 'common.ayah', { n: sel.hi - sel.lo + 1 })}`, estimate);
       void showEstimate(sel);
     }
   }

@@ -35,21 +35,24 @@ import { createMediaPicker } from './mediaPicker';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
+import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
+import { t as ui, tOr } from '../i18n';
+import { translationList } from './translationPicker';
 
 const MODES: { value: TextMode; label: string }[] = [
-  { value: 'ayah', label: 'Ayah' },
-  { value: 'line', label: 'Line' },
-  { value: 'half', label: 'Half line' },
-  { value: 'words', label: 'Words' },
+  { value: 'ayah', label: ui('ed.ayah') },
+  { value: 'line', label: ui('ed.line') },
+  { value: 'half', label: ui('ed.half-line') },
+  { value: 'words', label: ui('ed.words') },
 ];
 
 /** Text effects by kind, for the effect picker. */
 const EFFECT_GROUPS: { label: string; items: TextEffect[] }[] = [
-  { label: 'Fade & motion', items: ['fade', 'rise', 'descend', 'drift', 'still'] },
-  { label: 'Soft focus', items: ['blur-in', 'focus', 'mist', 'dissolve'] },
-  { label: 'Light', items: ['glow', 'sweep', 'bloom'] },
-  { label: 'Reveal', items: ['ink', 'lines'] },
-  { label: 'Scale', items: ['settle', 'zoom', 'push'] },
+  { label: ui('ed.fx.motion'), items: ['fade', 'rise', 'descend', 'drift', 'still'] },
+  { label: ui('ed.fx.focus'), items: ['blur-in', 'focus', 'mist', 'dissolve'] },
+  { label: ui('ed.fx.light'), items: ['glow', 'sweep', 'bloom'] },
+  { label: ui('ed.fx.reveal'), items: ['ink', 'lines'] },
+  { label: ui('ed.fx.scale'), items: ['settle', 'zoom', 'push'] },
 ];
 const TRANSITION_ICONS: Record<Transition, string> = {
   crossfade: '◐', blur: '◍', black: '●', white: '○', zoom: '⊕', leak: '☀', mist: '☁', parallax: '⇅', wipe: '⇠', iris: '◎', cut: '│',
@@ -76,7 +79,7 @@ const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${S
 
 /** `draftId`: reopen a saved draft (its ayat range comes from the address, which may have changed). */
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number, draftId?: string): Promise<() => void> {
-  const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap(), loadLibrary(),
+  const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n, currentTranslation()), surahWordMeanings(n), loadWordMap(), loadLibrary(),
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
@@ -88,7 +91,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const created = draft?.created ?? Date.now();
   let saveTimer = 0;
   const arabic = allAr.slice(from - 1, to);
-  const english = allEn.slice(from - 1, to);
+  // The whole-ayah translation: the draft's own, else the one chosen in the reader.
+  project.translation ??= currentTranslation();
+  const englishBy = new Map<string, string[]>([[currentTranslation(), allEn.slice(from - 1, to)]]);
+  let english = englishBy.get(project.translation) ?? englishBy.get(currentTranslation())!;
   // English meaning of each Arabic word on screen (synced translation).
   const meanings = arabic.map((text, i) =>
     wordMeanings(allWbw[from - 1 + i], parseSpans(wordMap[`${n}:${from + i}`]), displayWords(text).length));
@@ -110,7 +116,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startCtx = 0;
   let startT = 0;
   let dirty = true;
-  let syncText = 'Loading word timings…';
+  let syncText = ui('ed.loadingTimings');
   let quality: 1920 | 1280 = 1920;
   let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
 
@@ -118,14 +124,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': 'Play', onclick: () => (playing ? pause() : play()) }, icon('play', 26));
-  const timeLabel = h('span', { class: 'time' }, '00:00 / 00:00');
-  const undoBtn = h('button', { class: 'ctl', 'aria-label': 'Undo', disabled: true, onclick: () => undo() }, icon('undo'));
-  const redoBtn = h('button', { class: 'ctl', 'aria-label': 'Redo', disabled: true, onclick: () => redo() }, icon('redo'));
-  const fullBtn = h('button', { class: 'ctl', 'aria-label': 'Full screen', onclick: () => setFull(!studio.classList.contains('full')) }, icon('full'));
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : play()) }, icon('play', 26));
+  const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
+  const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
+  const redoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.redo'), disabled: true, onclick: () => redo() }, icon('redo'));
+  const fullBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.fullScreen'), onclick: () => setFull(!studio.classList.contains('full')) }, icon('full'));
   const setPlayIcon = () => {
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
-    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    playBtn.setAttribute('aria-label', ui(playing ? 'ed.pause' : 'ed.play'));
   };
   function setFull(on: boolean) {
     studio.classList.toggle('full', on);
@@ -299,7 +305,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function splitScene(i: number) {
     if (!tl) return;
     const sc = tl.scenes[i];
-    if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(`Move the playhead inside the scene (at least ${MIN_SCENE} s from its ends)`);
+    if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(ui('ed.splitWhere', { s: MIN_SCENE }));
     if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
     // The second part continues the video from the frame at the playhead.
     const v = media[sc.entry]?.video;
@@ -325,7 +331,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   });
   function bgPicker(replace: number | null): Node[] {
     return picker.panel({
-      intro: replace !== null ? `Pick a background for scene ${replace + 1}.` : 'Tap a background to add it as a new scene at the end.',
+      intro: replace !== null ? ui('ed.pickFor', { n: replace + 1 }) : ui('ed.pickAdd'),
       current: replace !== null ? project.scenes[tl?.scenes[replace]?.entry ?? replace] ?? null : null,
       multiple: replace === null,
       pick: (id) => {
@@ -387,7 +393,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   /** Selected ayah → the silence before it and after it, to the millisecond. */
   function audioTune(i: number): Node[] {
     const count = base?.plan.ayat.length ?? 0;
-    if (!base || i >= count) return [note('Loading the recitation…')];
+    if (!base || i >= count) return [note(ui('ed.loading-the-recitation'))];
     const ref = (k: number) => `${n}:${ayahNo(k)}`;
     return cachedTune(`audio:${i}:${from}-${to}:${count}`, () => {
       const parts: { node: Node; update: () => void }[] = [];
@@ -405,12 +411,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       };
       // The silence between the words of two ayat, in the edited reel's time.
       const gapAt = (k: number): [number, number] | null => (plan ? [plan.ayat[k - 1].last, plan.ayat[k].start] : null);
-      if (i === 0) section('Silence at the start', () => silenceBefore(0), (v) => setSilenceBefore(0, v), () => silenceBeforeRange(0), () => (plan ? [0, plan.ayat[0].start] : null));
-      else section(`Silence between ${ref(i - 1)} and ${ref(i)}`, () => silenceBefore(i), (v) => setSilenceBefore(i, v), () => silenceBeforeRange(i), () => gapAt(i));
-      if (i < count - 1) section(`Silence between ${ref(i)} and ${ref(i + 1)}`, () => silenceBefore(i + 1), (v) => setSilenceBefore(i + 1, v), () => silenceBeforeRange(i + 1), () => gapAt(i + 1));
-      else section('Silence at the end', silenceEnd, setSilenceEnd, silenceEndRange, () => (plan ? [plan.ayat[count - 1].last, plan.duration - (plan.outro ?? 0)] : null));
+      if (i === 0) section(ui('ed.silence-at-the-start'), () => silenceBefore(0), (v) => setSilenceBefore(0, v), () => silenceBeforeRange(0), () => (plan ? [0, plan.ayat[0].start] : null));
+      else section(ui('ed.silenceBetween', { a: ref(i - 1), b: ref(i) }), () => silenceBefore(i), (v) => setSilenceBefore(i, v), () => silenceBeforeRange(i), () => gapAt(i));
+      if (i < count - 1) section(ui('ed.silenceBetween', { a: ref(i), b: ref(i + 1) }), () => silenceBefore(i + 1), (v) => setSilenceBefore(i + 1, v), () => silenceBeforeRange(i + 1), () => gapAt(i + 1));
+      else section(ui('ed.silence-at-the-end'), silenceEnd, setSilenceEnd, silenceEndRange, () => (plan ? [plan.ayat[count - 1].last, plan.duration - (plan.outro ?? 0)] : null));
       return {
-        nodes: [note('Set each silence to the millisecond: tap or hold the steps, or type the seconds. The text moves with its words, and words are never cut.'),
+        nodes: [note(ui('ed.set-each-silence-to-the-millisecond-tap-')),
           ...parts.map((x) => x.node)],
         update: () => parts.forEach((x) => x.update()),
       };
@@ -419,7 +425,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   /** Selected scene → its exact length (the neighbour after it — or before the last one — gives way). */
   function sceneTune(i: number): Node[] {
-    if (!tl || tl.scenes.length < 2) return [note('Add another scene to change lengths.')];
+    if (!tl || tl.scenes.length < 2) return [note(ui('ed.add-another-scene-to-change-lengths'))];
     return cachedTune(`scene:${i}:${tl.scenes.length}`, () => {
       const k = () => (i < (tl?.scenes.length ?? 0) - 1 ? i : i - 1); // the boundary that moves
       const len = () => { const sc = tl!.scenes[i]; return sc ? sc.end - sc.start : 0; };
@@ -433,13 +439,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         bounds[b] = ms(Math.min(Math.max(at, lo), hi));
         resizeScenes(bounds);
       };
-      const st = stepper(len, set, 'Scene length');
+      const st = stepper(len, set, ui('ed.scene-length'));
       const where = h('p', { class: 'muted small tune-hint' });
       return {
         nodes: [
-          h('div', { class: 'tune' }, h('div', { class: 'tune-head' }, h('b', {}, `Scene ${i + 1} length`),
+          h('div', { class: 'tune' }, h('div', { class: 'tune-head' }, h('b', {}, ui('ed.sceneNLength', { n: i + 1 })),
             listenBtn(() => { const sc = tl?.scenes[k()]; return sc ? [sc.end, sc.end] : null; })), st.node, where),
-          note(`At least ${MIN_SCENE} s per scene. Snap to pauses does not apply here.`),
+          note(ui('ed.sceneMin', { s: MIN_SCENE })),
         ],
         update: () => {
           st.update();
@@ -455,7 +461,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function videoPanel(i: number): Node[] {
     const sc = tl?.scenes[i];
     const v = sc && media[sc.entry]?.video;
-    if (!tl || !sc || !v) return [note('This scene is a photo or a colour. Photos move slowly on their own.')];
+    if (!tl || !sc || !v) return [note(ui('ed.this-scene-is-a-photo-or-a-colour-photos'))];
     const span = sceneSpans(tl.scenes, project.transition)[i];
     const D = v.duration, slot = span.to - span.from;
     const clip = (): Clip => fitClips()[sc.entry] ?? { in: 0, fit: 'loop' };
@@ -486,12 +492,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     show();
     const short = D - start() < slot;
     return [
-      row('Start from', label),
+      row(ui('ed.start-from'), label),
       slider,
-      short ? row('Clip too short', chips<ClipFit>(CLIP_FITS, () => clip().fit, (f) => { fitClips()[sc.entry] = { ...clip(), fit: f }; })) : null,
+      short ? row(ui('ed.clip-too-short'), chips<ClipFit>(CLIP_FITS.map((c) => ({ ...c, label: tOr(`clip.${c.value}`, c.label) })), () => clip().fit, (f) => { fitClips()[sc.entry] = { ...clip(), fit: f }; })) : null,
       info,
-      project.sceneMode === 'ayah' && project.scenes.length < tl.scenes.length ? note('This video repeats in other scenes; they all use these settings.') : null,
-      note('Background videos play without their own sound.'),
+      project.sceneMode === 'ayah' && project.scenes.length < tl.scenes.length ? note(ui('ed.this-video-repeats-in-other-scenes-they-')) : null,
+      note(ui('ed.background-videos-play-without-their-own')),
     ].filter(Boolean) as Node[];
   }
 
@@ -592,7 +598,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (only === undefined) project.pause = 0;
     arrange();
     changed();
-    toast('Silences trimmed — every word kept');
+    toast(ui('ed.silencesTrimmed'));
   }
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
@@ -619,11 +625,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   const moodPanel = () => [
     h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
-      on: currentMood(project) === m.id, label: m.label,
+      on: currentMood(project) === m.id, label: tOr(`mood.${m.id}`, m.label),
       art: h('span', { class: `mood-art grade-${m.set.grade}` }, dot(m.set.colors.ar), dot(m.set.colors.en), dot(m.set.colors.title)),
       onclick: () => { applyMood(project, m); arrange(); changed(); previewText(); },
     }))),
-    note('A mood sets the text effect, transition, colours, colour grade, darkening and pacing. Adjust anything after.'),
+    note(ui('ed.a-mood-sets-the-text-effect-transition-c')),
   ];
 
   const effectPanel = () => {
@@ -633,18 +639,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       h('div', { class: 'tabs' }, ...EFFECT_GROUPS.map((g, i) =>
         h('button', { class: `tab${i === group ? ' on' : ''}`, onclick: () => { group = i; draw(); } }, g.label))),
       h('div', { class: 'tiles' }, ...EFFECT_GROUPS[group].items.map((fx) => tile({
-        on: project.textEffect === fx, label: TEXT_EFFECTS.find((e) => e.value === fx)!.label,
+        on: project.textEffect === fx, label: tOr(`fx.${fx}`, TEXT_EFFECTS.find((e) => e.value === fx)!.label),
         art: h('span', { class: `fx-sample fx-${fx}` }, 'آية'),
         onclick: () => { project.textEffect = fx; changed(false); draw(); previewText(); },
       }))));
     draw();
-    return [wrap, note('Calm effects only. Ink reveal and light sweep move right to left on the Arabic.')];
+    return [wrap, note(ui('ed.calm-effects-only-ink-reveal-and-light-s'))];
   };
 
   const transitionPanel = () => [
-    (tl?.scenes.length ?? 1) < 2 ? note('Transitions play between scenes: add a second scene (the + in the timeline) to see them.') : null,
+    (tl?.scenes.length ?? 1) < 2 ? note(ui('ed.transitions-play-between-scenes-add-a-se')) : null,
     h('div', { class: 'tiles' }, ...TRANSITIONS.map((tr) => tile({
-      on: project.transition === tr.value, label: tr.label, art: h('span', { class: 'glyph' }, TRANSITION_ICONS[tr.value]),
+      on: project.transition === tr.value, label: tOr(`tr.${tr.value}`, tr.label), art: h('span', { class: 'glyph' }, TRANSITION_ICONS[tr.value]),
       onclick: () => { project.transition = tr.value; changed(); previewTransition(); },
     }))),
   ].filter(Boolean) as Node[];
@@ -653,20 +659,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const colourPanel = (key: keyof TextColors, label: string) => () => [
     h('div', { class: 'colour-grid' },
       h('button', {
-        class: `swatch eyedropper${picking === key ? ' on' : ''}`, 'aria-label': `${label}: pick a colour from the video`, title: 'Pick from the video',
-        onclick: () => { picking = picking === key ? null : key; refreshUI(); if (picking) toast('Tap the video to pick a colour'); },
+        class: `swatch eyedropper${picking === key ? ' on' : ''}`, 'aria-label': `${label}: ${ui('ed.pickFromVideo')}`, title: ui('ed.pickFromVideo'),
+        onclick: () => { picking = picking === key ? null : key; refreshUI(); if (picking) toast(ui('ed.tapVideo')); },
       }, icon('eyedropper', 20)),
       ...COLOURS.map((c) => h('button', {
         class: `swatch${project.colors[key] === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${label}: ${c}`,
         onclick: () => { if (!exporting) { project.colors[key] = c; picking = null; changed(); } },
       }))),
-    note('A soft shadow keeps the text readable on any background.'),
+    note(ui('ed.a-soft-shadow-keeps-the-text-readable-on')),
   ];
 
   const sceneLayoutPanel = () => {
     const k = project.scenes.length, na = to - from + 1;
     return [
-      chips<SceneMode>([{ value: 'single', label: 'Single' }, { value: 'ayah', label: 'Per ayah' }, { value: 'even', label: 'Even split' }, { value: 'custom', label: 'Custom' }],
+      chips<SceneMode>([{ value: 'single', label: ui('ed.single') }, { value: 'ayah', label: ui('ed.per-ayah') }, { value: 'even', label: ui('ed.even-split') }, { value: 'custom', label: ui('ed.custom') }],
         () => project.sceneMode, (v) => {
           if (v !== 'single' && project.scenes.length < 2) {
             const i = BACKGROUNDS.findIndex((b) => b.id === project.scenes[0]);
@@ -678,81 +684,89 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           scenesChanged();
         }),
       note(project.sceneMode === 'ayah'
-        ? (na < 2 ? 'One ayah: use Even split or Custom for more than one scene.' : `Each ayah gets the next scene${k < na ? ' (the list repeats when there are fewer scenes than ayat)' : ''}; changes fall in the pause between ayat.`)
-        : project.sceneMode === 'even' ? 'The scenes share the length of the reel equally.'
-          : project.sceneMode === 'custom' ? 'Select a scene in the timeline: drag its edges to trim, drag it to reorder, or Split it at the playhead. Scenes always fill the reel (each at least 1 s).'
-            : 'One background for the whole reel. Tap + in the timeline to add more scenes.'),
+        ? (na < 2 ? ui('ed.sc.oneAyah') : ui(k < na ? 'ed.sc.perAyahRepeat' : 'ed.sc.perAyah'))
+        : project.sceneMode === 'even' ? ui('ed.sc.even')
+          : project.sceneMode === 'custom' ? ui('ed.sc.custom')
+            : ui('ed.sc.single')),
     ];
   };
 
   // --- tools (bottom bar) ---
   const TOOLS: Tool[] = [
-    { id: 'reciter', icon: 'mic', label: 'Reciter', options: [{ id: 'reciter', icon: 'mic', label: 'Reciter', panel: reciterPanel }] },
-    { id: 'audio', icon: 'audio', label: 'Audio', options: [
-      { id: 'silences', icon: 'silence', label: 'Remove silences', action: () => removeSilences() },
-      { id: 'pause', icon: 'gap', label: 'Pauses', panel: () => [
-        row('Between all ayat', chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : 'Natural' })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-        note('For one ayah: tap its audio in the timeline, then drag its edges to trim silence or drag it to add a pause. Words are never cut.')] },
-      { id: 'reset', icon: 'reset', label: 'Reset audio', disabled: () => !hasAudioEdits(), action: resetAudio },
+    { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), options: [{ id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel }] },
+    { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
+      { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
+      { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
+        row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+        note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
+      { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
-    { id: 'mood', icon: 'mood', label: 'Mood', options: [{ id: 'mood', icon: 'mood', label: 'Mood', panel: moodPanel }] },
-    { id: 'text', icon: 'text', label: 'Text', options: [
-      { id: 'mode', icon: 'mode', label: 'Text mode', panel: () => [
+    { id: 'mood', icon: 'mood', label: ui('ed.mood'), options: [{ id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel }] },
+    { id: 'text', icon: 'text', label: ui('ed.text'), options: [
+      { id: 'mode', icon: 'mode', label: ui('ed.text-mode'), panel: () => [
         chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
-        mode() === 'words' ? row('Per step', chips<'1' | '2' | '3'>([{ value: '1', label: '1 word' }, { value: '2', label: '2 words' }, { value: '3', label: '3 words' }],
+        mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
           () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
         note(syncText),
       ].filter(Boolean) as Node[] },
-      { id: 'size', icon: 'size', label: 'Size', panel: () => [chips<TextSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+      { id: 'size', icon: 'size', label: ui('ed.size'), panel: () => [chips<TextSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
         () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
-      { id: 'position', icon: 'position', label: 'Position', panel: () => [chips<TextPos>([{ value: 'upper', label: 'Higher' }, { value: 'center', label: 'Centre' }, { value: 'lower', label: 'Lower' }],
+      { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
         () => project.textPos, (v) => { project.textPos = v; })] },
-      { id: 'gap', icon: 'hold', label: 'Between ayat', panel: () => [
-        chips<GapText>([{ value: 'hold', label: 'Keep the ayah' }, { value: 'clear', label: 'Clear' }], () => project.gap, (v) => { project.gap = v; arrange(); }),
-        note('What the text does in the pause between ayat.')] },
+      { id: 'gap', icon: 'hold', label: ui('ed.between-ayat'), panel: () => [
+        chips<GapText>([{ value: 'hold', label: ui('ed.keep-the-ayah') }, { value: 'clear', label: ui('ed.clear') }], () => project.gap, (v) => { project.gap = v; arrange(); }),
+        note(ui('ed.what-the-text-does-in-the-pause-between-'))] },
     ] },
-    { id: 'effects', icon: 'effects', label: 'Effects', options: [
-      { id: 'text-effect', icon: 'effects', label: 'Text effect', panel: effectPanel },
-      { id: 'transition', icon: 'transition', label: 'Transition', panel: transitionPanel },
+    { id: 'effects', icon: 'effects', label: ui('ed.effects'), options: [
+      { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
+      { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
     ] },
-    { id: 'colours', icon: 'colours', label: 'Colours', options: [
-      { id: 'c-ar', icon: () => dot(project.colors.ar), label: 'Ayah', panel: colourPanel('ar', 'Ayah') },
-      { id: 'c-en', icon: () => dot(project.colors.en), label: 'Translation', panel: colourPanel('en', 'Translation') },
-      { id: 'c-title', icon: () => dot(project.colors.title), label: 'Surah name', panel: colourPanel('title', 'Surah name') },
+    { id: 'colours', icon: 'colours', label: ui('ed.colours'), options: [
+      { id: 'c-ar', icon: () => dot(project.colors.ar), label: ui('ed.ayah'), panel: colourPanel('ar', 'Ayah') },
+      { id: 'c-en', icon: () => dot(project.colors.en), label: ui('ed.translation'), panel: colourPanel('en', 'Translation') },
+      { id: 'c-title', icon: () => dot(project.colors.title), label: ui('ed.surah-name'), panel: colourPanel('title', 'Surah name') },
     ] },
-    { id: 'scenes', icon: 'scenes', label: 'Scenes', options: [
-      { id: 'add', icon: 'plus', label: 'Add', panel: () => bgPicker(null) },
-      { id: 'change', icon: 'replace', label: 'Change', panel: () => bgPicker(sceneAtPlayhead()) },
-      { id: 'layout', icon: 'layout', label: 'Arrange', panel: sceneLayoutPanel },
-      { id: 'grade', icon: 'grade', label: 'Grade', panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
-        on: project.grade === g, label: GRADES[g].label, art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
+    { id: 'scenes', icon: 'scenes', label: ui('ed.scenes'), options: [
+      { id: 'add', icon: 'plus', label: ui('ed.add'), panel: () => bgPicker(null) },
+      { id: 'change', icon: 'replace', label: ui('ed.change'), panel: () => bgPicker(sceneAtPlayhead()) },
+      { id: 'layout', icon: 'layout', label: ui('ed.arrange'), panel: sceneLayoutPanel },
+      { id: 'grade', icon: 'grade', label: ui('ed.grade'), panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
+        on: project.grade === g, label: tOr(`grade.${g}`, GRADES[g].label), art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
       })))] },
-      { id: 'scrim', icon: 'darken', label: 'Darken', panel: () => [chips<Scrim>([{ value: 'light', label: 'Light' }, { value: 'normal', label: 'Normal' }, { value: 'strong', label: 'Strong' }],
-        () => project.scrim, (v) => { project.scrim = v; }), note('Darkens the background behind the text so it stays readable.')] },
-      { id: 'snap', icon: 'magnet', label: 'Snap', toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
+        () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
+      { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
     ] },
-    { id: 'translation', icon: 'translation', label: 'Translation', options: [
-      { id: 'tr-show', icon: 'show', label: 'Show', toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
-      { id: 'tr-sync', icon: 'sync', label: 'Sync', disabled: () => !project.showTranslation, panel: () => [
-        chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
+    { id: 'translation', icon: 'translation', label: ui('ed.translation'), options: [
+      { id: 'tr-show', icon: 'show', label: ui('ed.show'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
+      { id: 'tr-sync', icon: 'sync', label: ui('ed.sync'), disabled: () => !project.showTranslation, panel: () => [
+        chips<TranslationMode>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }],
           () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
-        note('Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.')] },
-      { id: 'tr-font', icon: 'font', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
-        chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }, { value: 'round', label: 'Round' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+        note(`Synced: word-by-word meanings (Quran.com, English) of the Arabic on screen. Whole ayah: ${translationInfo(project.translation).translator}.`)] },
+      { id: 'tr-which', icon: 'translation', label: ui('tr.which'), disabled: () => !project.showTranslation, panel: () => [
+        translationList(() => project.translation ?? currentTranslation(), (id) => {
+          project.translation = id;
+          if (project.translationMode === 'words') project.translationMode = 'ayah'; // the user wants this translation on screen
+          setTranslation(id); // the reader follows, and the next reel starts with it
+          rebuild();
+          changed();
+        })] },
+      { id: 'tr-font', icon: 'font', label: ui('ed.font'), disabled: () => !project.showTranslation, panel: () => [
+        chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }, { value: 'round', label: ui('ed.round') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
-    { id: 'layout', icon: 'layout', label: 'Layout', options: [
-      { id: 'title', icon: 'text', label: 'Surah name', panel: () => [
-        row('Place', chips<TitlePos>([{ value: 'top', label: 'Top' }, { value: 'below', label: 'Below the ayah' }, { value: 'bottom', label: 'Bottom' }],
+    { id: 'layout', icon: 'layout', label: ui('ed.layout'), options: [
+      { id: 'title', icon: 'text', label: ui('ed.surah-name'), panel: () => [
+        row(ui('ed.place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
           () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
-        row('Size', chips<TitleSize>([{ value: 's', label: 'Small' }, { value: 'm', label: 'Medium' }, { value: 'l', label: 'Large' }],
+        row(ui('ed.size'), chips<TitleSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
           () => project.titleSize, (v) => { project.titleSize = v; rebuild(); })),
-        row('Surah name', chips<'show' | 'hide'>([{ value: 'show', label: 'Show' }, { value: 'hide', label: 'Hide' }],
+        row(ui('ed.surah-name'), chips<'show' | 'hide'>([{ value: 'show', label: ui('ed.show') }, { value: 'hide', label: ui('ed.hide') }],
           () => (project.surahName ? 'show' : 'hide'), (v) => { project.surahName = v === 'show'; rebuild(); })),
-        note('The reference (e.g. Al-Fatiha · 1:1) always stays on screen.')] },
-      { id: 'intro', icon: 'card', label: 'Intro card', toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
-      { id: 'outro', icon: 'card', label: 'End card', toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
-      { id: 'credit', icon: 'mic', label: 'Reciter name', toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
-      { id: 'watermark', icon: 'watermark', label: 'Watermark', toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
+        note(ui('ed.the-reference-e-g-al-fatiha-1-1-always-s'))] },
+      { id: 'intro', icon: 'card', label: ui('ed.intro-card'), toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
+      { id: 'outro', icon: 'card', label: ui('ed.end-card'), toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
+      { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
+      { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
     ] },
   ];
 
@@ -762,26 +776,26 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (sel.kind === 'scene') {
       const count = tl?.scenes.length ?? 1;
       return [
-        { id: 'split', icon: 'split', label: 'Split', action: () => splitScene(i) },
-        { id: 'length', icon: 'gap', label: 'Length', disabled: () => count < 2, panel: () => sceneTune(i) },
-        { id: 'replace', icon: 'replace', label: 'Replace', panel: () => bgPicker(i) },
-        { id: 'video', icon: 'clip', label: 'Video', disabled: () => !media[tl?.scenes[i]?.entry ?? -1]?.video, panel: () => videoPanel(i) },
-        { id: 'left', icon: 'left', label: 'Move left', disabled: () => i === 0, action: () => moveScene(i, i - 1) },
-        { id: 'right', icon: 'right', label: 'Move right', disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
-        { id: 'transition', icon: 'transition', label: 'Transition', panel: transitionPanel },
-        { id: 'delete', icon: 'trash', label: 'Delete', disabled: () => count < 2, action: () => removeScene(i) },
+        { id: 'split', icon: 'split', label: ui('ed.split'), action: () => splitScene(i) },
+        { id: 'length', icon: 'gap', label: ui('ed.length'), disabled: () => count < 2, panel: () => sceneTune(i) },
+        { id: 'replace', icon: 'replace', label: ui('ed.replace'), panel: () => bgPicker(i) },
+        { id: 'video', icon: 'clip', label: ui('ed.video'), disabled: () => !media[tl?.scenes[i]?.entry ?? -1]?.video, panel: () => videoPanel(i) },
+        { id: 'left', icon: 'left', label: ui('ed.move-left'), disabled: () => i === 0, action: () => moveScene(i, i - 1) },
+        { id: 'right', icon: 'right', label: ui('ed.move-right'), disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
+        { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
+        { id: 'delete', icon: 'trash', label: ui('ed.delete'), disabled: () => count < 2, action: () => removeScene(i) },
       ];
     }
     const out: Opt[] = [
-      { id: 'tune', icon: 'gap', label: 'Fine-tune', disabled: () => !base, panel: () => audioTune(i) },
-      { id: 'silence', icon: 'silence', label: 'Trim silence', action: () => removeSilences(i) },
+      { id: 'tune', icon: 'gap', label: ui('ed.fine-tune'), disabled: () => !base, panel: () => audioTune(i) },
+      { id: 'silence', icon: 'silence', label: ui('ed.trim-silence'), action: () => removeSilences(i) },
     ];
-    out.push({ id: 'audio-reset', icon: 'reset', label: 'Reset', disabled: () => project.gaps[ayahNo(i)] === undefined && project.trims[ayahNo(i)] === undefined,
+    out.push({ id: 'audio-reset', icon: 'reset', label: ui('ed.reset'), disabled: () => project.gaps[ayahNo(i)] === undefined && project.trims[ayahNo(i)] === undefined,
       action: () => { delete project.gaps[ayahNo(i)]; delete project.trims[ayahNo(i)]; arrange(); changed(); } });
     const last = i === (tl?.ayat.length ?? 1) - 1;
-    if (i === 0 && from > 1 && to - from + 1 < MAX_AYAT) out.push({ id: 'add-prev', icon: 'plus', label: `Add ${n}:${from - 1}`, action: () => goRange(from - 1, to) });
-    if (last && to < s.ayahs && to - from + 1 < MAX_AYAT) out.push({ id: 'add-next', icon: 'plus', label: `Add ${n}:${to + 1}`, action: () => goRange(from, to + 1) });
-    if ((i === 0 || last) && to > from) out.push({ id: 'remove', icon: 'trash', label: `Remove ${n}:${ayahNo(i)}`, action: () => (i === 0 ? goRange(from + 1, to) : goRange(from, to - 1)) });
+    if (i === 0 && from > 1 && to - from + 1 < MAX_AYAT) out.push({ id: 'add-prev', icon: 'plus', label: ui('ed.addAyah', { ref: `${n}:${from - 1}` }), action: () => goRange(from - 1, to) });
+    if (last && to < s.ayahs && to - from + 1 < MAX_AYAT) out.push({ id: 'add-next', icon: 'plus', label: ui('ed.addAyah', { ref: `${n}:${to + 1}` }), action: () => goRange(from, to + 1) });
+    if ((i === 0 || last) && to > from) out.push({ id: 'remove', icon: 'trash', label: ui('ed.removeAyah', { ref: `${n}:${ayahNo(i)}` }), action: () => (i === 0 ? goRange(from + 1, to) : goRange(from, to - 1)) });
     return out;
   }
 
@@ -793,9 +807,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const panelBody = h('div', { class: 'sheet-body panel' });
   const panel = h('section', { class: 'sheet', hidden: true },
     h('div', { class: 'sheet-head' }, panelTitle,
-      h('button', { class: 'icon-btn sheet-close', 'aria-label': 'Done', onclick: () => { picking = null; openOption(null); } }, icon('check'))),
+      h('button', { class: 'icon-btn sheet-close', 'aria-label': ui('common.done'), onclick: () => { picking = null; openOption(null); } }, icon('check'))),
     panelBody);
-  const bar = h('nav', { class: 'toolbar', 'aria-label': 'Tools' });
+  const bar = h('nav', { class: 'toolbar', 'aria-label': ui('ed.tools') });
 
   const iconOf = (o: Opt) => (typeof o.icon === 'function' ? o.icon() : icon(o.icon));
   function barButton(o: Opt, onclick: () => void) {
@@ -835,11 +849,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     refreshUI();
   }
   const back = (label: string, onclick: () => void) =>
-    h('button', { class: 'tool back', 'aria-label': 'Back', onclick }, h('span', { class: 'tool-icon' }, icon('back')), h('span', {}, label));
+    h('button', { class: 'tool back', 'aria-label': ui('common.back'), onclick }, h('span', { class: 'tool-icon' }, icon('back')), h('span', {}, label));
   function refreshUI() {
     // Bottom bar: a selected block's actions, a tool's options, or the tools.
     if (selection) {
-      bar.replaceChildren(back(selection.kind === 'scene' ? 'Scene' : 'Audio', () => select(null)),
+      bar.replaceChildren(back(ui(selection.kind === 'scene' ? 'ed.scene' : 'ed.audio'), () => select(null)),
         ...selectionOptions(selection).map((o) => barButton(o, () => runOption(o))));
     } else if (tool) {
       bar.replaceChildren(back(tool.label, () => openTool(null)), ...tool.options.map((o) => barButton(o, () => runOption(o))));
@@ -851,7 +865,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const content = option?.panel?.();
     panel.hidden = !content;
     studio.classList.toggle('panel-open', !!content);
-    panelTitle.textContent = option ? (option.id.startsWith('c-') ? `Colour · ${option.label}` : option.label) : '';
+    panelTitle.textContent = option ? (option.id.startsWith('c-') ? ui('ed.colourOf', { what: option.label }) : option.label) : '';
     // Keep the same nodes in place (a focused search box would lose the phone keyboard).
     const next = content ?? [];
     if (next.length !== panelBody.childNodes.length || next.some((x, i) => panelBody.childNodes[i] !== x)) panelBody.replaceChildren(...next);
@@ -914,27 +928,27 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const qualityLabel = h('span', {}, '1080P');
   const qualityMenu = h('div', { class: 'quality-menu', hidden: true });
   const drawQualityMenu = () => qualityMenu.replaceChildren(
-    ...([[1920, '1080P', 'Best for Instagram, TikTok and Shorts'], [1280, '720P', 'Smaller file, faster export']] as const).map(([q, l, d]) =>
+    ...([[1920, '1080P', ui('ed.q1080')], [1280, '720P', ui('ed.q720')]] as const).map(([q, l, d]) =>
       h('button', { class: `menu-item${quality === q ? ' on' : ''}`, onclick: () => { quality = q; qualityLabel.textContent = l; qualityMenu.hidden = true; } },
         h('b', {}, l), h('span', { class: 'muted small' }, d))),
-    h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, 'Device check'), h('span', { class: 'muted small' }, 'What this device can export')));
+    h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, ui('list.deviceCheck')), h('span', { class: 'muted small' }, ui('ed.deviceCheckSub'))));
   const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
-  const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => void doExport() }, 'Export');
-  const giftBtn = h('button', { class: 'ctl', 'aria-label': 'Send as a gift', title: 'Send as a gift', onclick: () => {
+  const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => void doExport() }, ui('ed.export'));
+  const giftBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.gift'), title: ui('ed.gift'), onclick: () => {
     pause();
     void import('./gift').then((m) => m.openGiftComposer(s, project.from, project.to, { look: lookOf(project), reciter: project.reciterId }));
   } }, icon('gift'));
   const exportPathLabel = h('p', { class: 'muted small' });
   const progressBar = h('div', { class: 'export-bar' }, h('div', {}));
   const progressText = h('div', { class: 'export-pct' }, '0%');
-  const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, 'Cancel');
-  const progressRow = h('div', { class: 'export-progress' }, progressText, progressBar, note('Keep this screen open while the video is made on your device.'), exportPathLabel, cancelBtn);
+  const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, ui('common.cancel'));
+  const progressRow = h('div', { class: 'export-progress' }, progressText, progressBar, note(ui('ed.keep-this-screen-open-while-the-video-is')), exportPathLabel, cancelBtn);
   const result = h('div', { class: 'export-result', hidden: true });
   const overlay = h('div', { class: 'export-overlay', hidden: true }, progressRow, result);
 
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
-      h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': 'Close the editor' }, icon('close')),
+      h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
       h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
     h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
@@ -947,7 +961,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     exportPathLabel.textContent = path ? describePath(path) : '';
     if (!path) {
       exportBtn.disabled = true;
-      exportBtn.title = 'This browser cannot export video (no WebCodecs). Try Chrome on Android or desktop.';
+      exportBtn.title = ui('ed.noExport');
     }
   });
 
@@ -988,7 +1002,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   function rebuild() {
     if (!plan) return;
+    const trId = project.translation ?? currentTranslation();
+    if (englishBy.has(trId)) english = englishBy.get(trId)!;
+    else {
+      // Another translation (picked, or restored by undo): load it, then lay the text out again.
+      void surahTranslation(n, trId).then((all) => { englishBy.set(trId, all.slice(from - 1, to)); if (alive) rebuild(); }, () => toast(ui('tr.failed')));
+    }
+    const info = translationInfo(trId);
     tl = buildTimeline(measure, {
+      translation: { credit: info.translator, dir: info.dir },
       surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
@@ -1012,8 +1034,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     spine.setAudio(null);
     base = null;
     tl = null;
-    setStatus('Loading recitation…');
-    syncText = 'Loading word timings…';
+    setStatus(ui('ed.loadingRecitation'));
+    syncText = ui('ed.loadingTimings');
     try {
       if (!reels.has(r.id)) {
         const p = loadReel(r, n, from, arabic, wordMap, (msg) => { if (req === audioReq) setStatus(msg); });
@@ -1028,17 +1050,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (reel.plan.onset === undefined) reel.plan.onset = voiceOnset(reel.audio.getChannelData(0), reel.audio.sampleRate, reel.plan.ayat[0].start);
       base = reel;
       syncText = base.plan.wordTimed
-        ? 'Text follows the reciter word by word.'
-        : `Word timings are not available for this reciter here, so only Ayah mode is offered${base.plan.source === 'everyayah' ? ' (audio: everyayah.com)' : ''}.`;
+        ? ui('ed.wordSynced')
+        : ui(base.plan.source === 'everyayah' ? 'ed.noTimingsEveryayah' : 'ed.noTimings');
       arrange();
       refreshUI();
-      setStatus(mediaReady ? '' : 'Loading background…');
+      setStatus(mediaReady ? '' : ui('ed.loadingBackground'));
     } catch (e) {
       if (req !== audioReq) return;
       setStatus(navigator.onLine
-        ? `${e instanceof Error ? e.message : e}. Check your connection and pick the reciter again.`
+        ? ui('ed.audioFailed', { msg: e instanceof Error ? e.message : String(e) })
         // Reels opened before keep their recitation on the device; this one was not downloaded yet.
-        : 'You are offline, and this recitation is not on your device yet. Connect once to download it; after that it works offline too.');
+        : ui('ed.offlineAudio'));
     }
   }
 
@@ -1052,7 +1074,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const k = pool.findIndex((m) => m.bg === b);
       if (k >= 0) return pool.splice(k, 1)[0];
       return loadBackground(b).catch((e) => {
-        toast(`Background failed to load: ${e instanceof Error ? e.message : e}`);
+        toast(ui('ed.bgFailed', { msg: e instanceof Error ? e.message : String(e) }));
         return { bg: backgroundById('charcoal') } as BackgroundMedia;
       });
     }));
@@ -1154,39 +1176,39 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return h('div', { class: 'export-credits' },
       h('p', { class: 'small' }, 'Background', list.length > 1 ? 's' : '', ' by ', ...list.flatMap((c, i) => [
         i ? ', ' : '', h('a', { href: c.url, target: '_blank', rel: 'noopener' }, c.author), ` on ${c.source}`])),
-      h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(text).then(() => toast('Credits copied'), () => toast(text)) }, 'Copy credits'));
+      h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(text).then(() => toast(ui('ed.creditsCopied')), () => toast(text)) }, ui('ed.copyCredits')));
   }
   /** Save / Share in the Android app: the file is written once, then shared by its URI. */
   function nativeActions(blob: Blob, name: string) {
     let saving: Promise<SavedFile> | null = null;
-    const saveBtn = h('button', { class: 'primary' }, icon('save', 18), 'Save to device');
+    const saveBtn = h('button', { class: 'primary' }, icon('save', 18), ui('ed.save'));
     const label = saveBtn.lastChild as Text;
     const save = () => {
-      saving ??= saveVideo(blob, name, (f) => { label.data = `Saving… ${Math.round(f * 100)}%`; }).then((r) => {
-        label.data = 'Saved';
-        toast(`Saved to ${r.where}`);
+      saving ??= saveVideo(blob, name, (f) => { label.data = ui('ed.saving', { p: Math.round(f * 100) }); }).then((r) => {
+        label.data = ui('ed.saved');
+        toast(ui('ed.savedTo', { where: r.where }));
         return r;
       }, (e) => {
         saving = null;
-        label.data = 'Save to device';
+        label.data = ui('ed.save');
         throw e;
       });
       return saving;
     };
     const fail = (what: string) => (e: unknown) => toast(`${what}: ${e instanceof Error ? e.message : e}`);
-    saveBtn.onclick = () => void save().catch(fail('Could not save'));
+    saveBtn.onclick = () => void save().catch(fail(ui('ed.saveFailed')));
     return h('div', { class: 'export-actions' }, saveBtn,
       h('button', {
         class: 'primary alt',
-        onclick: () => void save().then((r) => shareFile(r.uri, 'Share your reel').catch((e) => {
-          if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail('Could not share')(e);
-        }), fail('Could not save')),
-      }, icon('share', 18), 'Share'));
+        onclick: () => void save().then((r) => shareFile(r.uri, ui('ed.shareTitle')).catch((e) => {
+          if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail(ui('ed.shareFailed'))(e);
+        }), fail(ui('ed.saveFailed'))),
+      }, icon('share', 18), ui('ed.share')));
   }
   async function doExport() {
     const { path } = await capabilities();
     if (!path || !tl || !audio || !mediaReady) {
-      toast(path ? 'Still loading — try again in a moment' : 'Export is not supported in this browser');
+      toast(path ? ui('ed.stillLoading') : ui('ed.exportUnsupported'));
       return;
     }
     pause();
@@ -1223,20 +1245,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       progressRow.hidden = true;
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
-        h('p', { class: 'small' }, `✓ Made in ${secs} s · ${(blob.size / 1e6).toFixed(1)} MB · ${quality === 1920 ? '1080P' : '720P'}`),
+        h('p', { class: 'small' }, `✓ ${ui('ed.made', { s: secs, mb: (blob.size / 1e6).toFixed(1), q: quality === 1920 ? '1080P' : '720P' })}`),
         creditsBlock() ?? '',
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
-          h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), 'Save to device'),
-          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), 'Share')),
-        h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, 'Back to editing'),
+          h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
+          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+        h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, ui('ed.backToEditing')),
       );
       result.hidden = false;
     } catch (e) {
       overlay.hidden = true;
       if ((e as Error).name !== 'AbortError' && !exporting.signal.aborted) {
-        toast(`Export failed: ${e instanceof Error ? e.message : e}`);
+        toast(ui('ed.exportFailed', { msg: e instanceof Error ? e.message : String(e) }));
         console.error(e);
-      } else toast('Export cancelled');
+      } else toast(ui('ed.exportCancelled'));
     } finally {
       exporting = null;
       dirty = true;

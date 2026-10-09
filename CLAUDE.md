@@ -592,9 +592,23 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
 Full plan: **`docs/grow.md`** (open questions for the owner at its top, principles, architecture,
 each phase's experience + acceptance criteria). No AI-written religious content: translations and
 tafsir only from published, credited editions; UI strings only are translated by us.
-- [ ] G1 Languages: i18n foundation (`src/i18n/`), Arabic interface (RTL), translations (Urdu,
+- [x] G1 Languages: i18n foundation (`src/i18n/`), Arabic interface (RTL), translations (Urdu,
       Indonesian, Turkish, French, …; `scripts/fetch-translations.mjs`) with a picker in the reader
       and the reel editor, translator credited on the closing card
+      (built 2026-10-09: 14 more translations in 13 languages from the Tanzil collection via
+      api.alquran.cloud, verified 6236 ayat each, stored unmodified in `public/data/tr/{id}.json`
+      (licence note `public/data/tr/README.md`; list `src/data/translationList.ts`, generated);
+      fetched only when picked, then offline. `src/data/translations.ts`: chosen translation = synced
+      pref `translation`; ☰ → Translation (reader + mushaf sheet + reflections) and editor Translation →
+      Which translation (`project.translation`, kept with the draft, not the look; picking one switches
+      the reel to Whole ayah). Reels draw it in its own direction (Urdu RTL) and credit its translator on
+      the closing card (`Timeline.translation`); gifts/walls use the viewer's translation. Word-by-word
+      stays English. i18n: `t(key, vars)`, `tOr()` for engine names, `initI18n()` before the first
+      route, ☰ → Language (device default; reloads), `<html lang dir>`; Arabic (`src/i18n/ar.ts`, Western
+      digits) covers the mushaf, ☰ menu, bookmarks, Today card, selection bar, surah list, reader,
+      account sheet and the whole reel editor + export page; CSS moved to logical properties; the mushaf
+      strip, the reel canvas and the timeline keep their own direction. Still English in the Arabic
+      UI: circles, gifts, wall, Ramadan, lamps, reflections, drafts, media picker, device check)
 - [ ] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
 - [ ] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰

@@ -56,14 +56,23 @@ export interface Timeline {
    *  shows the reel's title instead of one surah's reference. */
   notes: TimedNote[];
   segmented: boolean;
+  /** The whole-ayah translation's translator (closing card credit) and writing direction. */
+  translation: ReelTranslation;
 }
+
+export interface ReelTranslation {
+  credit: string;
+  dir: 'ltr' | 'rtl';
+}
+export const SAHIH: ReelTranslation = { credit: 'Saheeh International', dir: 'ltr' };
 
 export interface TimelineInput {
   surah: SurahMeta;
   reciter: Reciter;
   plan: ReelPlan;
   arabic: string[];
-  english: string[]; // Sahih International, per ayah
+  english: string[]; // the chosen translation (Saheeh International by default), per ayah
+  translation?: ReelTranslation; // its credit + direction (default Saheeh International)
   meanings: string[][]; // English meaning per display word, per ayah (synced translation)
   mode: TextMode;
   wordsPerStep: number;
@@ -133,6 +142,7 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,
     intro: o.plan.intro ?? 0, outro: o.plan.outro ?? 0, notes: o.notes ?? [], segmented: !!o.surahs,
+    translation: o.translation ?? SAHIH,
     scenes: planScenes(o.sceneMode ?? 'single', o.sceneCount ?? 1, o.plan.duration, o.plan.ayat, o.sceneLengths),
   };
 }

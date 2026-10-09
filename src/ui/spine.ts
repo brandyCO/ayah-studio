@@ -77,7 +77,7 @@ export function createSpine(o: SpineOptions) {
   const canvas = h('canvas', { class: 'spine-canvas' });
   const zoomOut = h('button', { class: 'spine-zoom', 'aria-label': 'Zoom out', onclick: () => zoom(1 / 1.5) }, '−');
   const zoomIn = h('button', { class: 'spine-zoom', 'aria-label': 'Zoom in', onclick: () => zoom(1.5) }, '+');
-  const el = h('div', { class: 'spine', role: 'group', 'aria-label': 'Timeline' }, canvas, h('div', { class: 'spine-zooms' }, zoomOut, zoomIn));
+  const el = h('div', { class: 'spine', dir: 'ltr', role: 'group', 'aria-label': 'Timeline' }, canvas, h('div', { class: 'spine-zooms' }, zoomOut, zoomIn));
   const ctx = canvas.getContext('2d')!;
   let peaks: Float32Array | null = null;
   let peakRate = 50;

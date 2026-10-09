@@ -2,6 +2,7 @@
 // the reference and the date; writing saves itself. A note keeps dated paragraphs — today's is the
 // one being written, earlier ones can be tapped to edit. ☰ → Reflections lists and searches them.
 // The user's words are shown in the UI font, never styled like the ayah, and never put on a video.
+import { currentTranslation, translationInfo } from '../data/translations';
 import { account } from '../cloud/auth';
 import { reference, surahTranslation, type SurahMeta } from '../data/quran';
 import {
@@ -74,7 +75,10 @@ export async function openReflection(meta: SurahMeta[], s: number, a: number) {
   pending.push(today.flush);
 
   const translation = h('p', { class: 'rf-ayah muted small' });
-  void surahTranslation(s).then((tr) => { translation.textContent = `${tr[a - 1]} (Saheeh International)`; }).catch(() => {});
+  const info = translationInfo(currentTranslation());
+  translation.lang = info.lang;
+  translation.dir = info.dir;
+  void surahTranslation(s, info.id).then((tr) => { translation.textContent = `${tr[a - 1]} (${info.translator})`; }).catch(() => {});
 
   const del = h('button', { class: 'chip danger', onclick: () => {
     if (del.dataset.armed) {
