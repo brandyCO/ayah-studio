@@ -83,16 +83,19 @@ export async function openParent() {
   const paintLearned = () => {
     const lit = learned();
     const list = KIDS_SURAHS.filter((n) => lit[n]);
-    learnedList.replaceChildren(...(list.length ? list.map((n) => h('button', { class: 'chip', onclick: () => { setLearned(n, false); paintLearned(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `${meta[n - 1].en} ✕`))
+    learnedList.replaceChildren(...(list.length ? list.map((n) => h('button', { class: 'chip', onclick: () => { setLearned(n, false); unshare(n); paintLearned(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `${meta[n - 1].en} ✕`))
       : [h('span', { class: 'muted small' }, 'None yet. "We learned it" at the end of a surah lights its lantern.')]));
   };
   paintLearned();
+  const familyBox = h('div', {});
+  void import('./family').then((m) => familyBox.replaceChildren(m.familyLinkSection()));
   const d = h('dialog', { class: 'sheet bottom kids-parent-sheet' },
     h('div', { class: 'sheet-head' }, h('h2', {}, 'For grown-ups'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
     h('label', { class: 'kids-field' }, h('span', {}, "Child's name"), name),
     h('div', { class: 'kids-field' }, h('span', {}, 'Show'), h('div', { class: 'chips' },
       toggle('English translation', k.translation, (v) => setKidsSettings({ translation: v })))),
     h('div', { class: 'kids-field' }, h('span', {}, 'Learned surahs (lit lanterns) — tap to put one out'), learnedList),
+    h('div', { class: 'kids-field' }, h('span', {}, 'Family circle'), familyBox),
     h('label', { class: 'kids-field' }, h('span', {}, 'Reciter'), reciterSelect),
     h('div', { class: 'kids-field' }, h('span', {}, 'Offline'), offline),
     h('button', { class: 'primary wide', onclick: () => { d.close(); leave(); } }, 'Leave the Kids space'),
@@ -136,6 +139,36 @@ export async function makeKeepsake(n: number) {
 }
 const KEEPSAKE_MOOD = 'pastel';
 const KEEPSAKE_BACKGROUND = 'kid-moon';
+
+/** A lantern put out by the parent: also put out for the linked child in the family circle. */
+function unshare(n: number) {
+  if (!hasFamilyLink()) return;
+  void import('../together/family').then(async (f) => {
+    const l = f.kidsLink();
+    f.forgetPushed(n);
+    if (l) await f.setChildSurah(l.child, n, 'none').catch((e) => console.warn('Family not updated', e));
+  });
+}
+const hasFamilyLink = () => {
+  try {
+    return !!localStorage.getItem('kidsFamily');
+  } catch {
+    return false;
+  }
+};
+
+/** Linked to a family circle (K6) and signed in: share lit lanterns, then show unseen du'a notes. */
+function familyNotes() {
+  if (!hasFamilyLink()) return;
+  void Promise.all([import('../cloud/auth'), import('../together/family'), import('./family')]).then(([auth, f, ui]) => {
+    const off = auth.onAccount((a) => {
+      if (!a) return;
+      queueMicrotask(() => off());
+      const l = f.kidsLink();
+      if (l) void f.syncKidsFamily().then((notes) => { if (location.hash === '#/kids') ui.showNotes(notes, l.childName); });
+    });
+  });
+}
 
 /** The reciter of the space: the parent's pick, else the reel reciter. */
 export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;
@@ -226,5 +259,6 @@ export async function showKids(root: HTMLElement): Promise<() => void> {
     h('p', { class: 'kids-lead' }, 'Which surah shall we listen to?'),
     h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops));
   if (target) requestAnimationFrame(() => (target as HTMLElement).scrollIntoView({ block: 'center' }));
+  familyNotes();
   return () => {};
 }

@@ -17,6 +17,7 @@ export interface Circle {
   status: 'open' | 'complete';
   due_date: string | null;
   completed_at: string | null;
+  kind?: 'khatm' | 'family'; // family circles (docs/kids.md K6) have children instead of juz parts
 }
 export interface Member {
   circle_id: string;

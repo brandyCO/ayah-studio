@@ -1023,3 +1023,29 @@ body[data-view="kids"] {
 .kids-offline { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .kids-offline p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .kids-stage.turn .kids-ayah { animation: none; box-shadow: 0 0 0 4px var(--kids-word); } .kids-done-glow { animation: none; } }
+
+/* Family circles (docs/kids.md K6; src/ui/family.ts) */
+.fam-row-icon { display: grid; place-items: center; width: 44px; height: 44px; font-size: 24px; flex: none; }
+.fam-child { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.fam-child-head b { font-size: 17px; }
+.fam-surahs p { margin: 2px 0 0; }
+.fam-dots { display: flex; flex-wrap: wrap; gap: 5px; }
+.fam-dot { width: 12px; height: 16px; border-radius: 4px 4px 3px 3px; border: 1.5px solid var(--line); }
+.fam-dot.learning { border-color: #d39b2a; }
+.fam-dot.learned { background: #f0b54a; border-color: #d39b2a; box-shadow: 0 0 6px rgba(240, 181, 74, .55); }
+.fam-note { padding: 8px 12px; border-radius: 12px; background: var(--sel); }
+.fam-note p { margin: 0; }
+.fam-note-body { font-family: Georgia, 'Times New Roman', serif; font-style: italic; overflow-wrap: anywhere; }
+.fam-note-input { width: 100%; resize: vertical; font: inherit; }
+.kids-note {
+  width: min(400px, calc(100% - 32px)); border: 0; border-radius: 28px; padding: 28px 22px 22px; text-align: center;
+  background: #1b1d42; color: #eef0ff; display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.kids-note:not([open]) { display: none; }
+.kids-note[open] { animation: moment-in 1.2s cubic-bezier(.25,.1,.25,1) both; }
+.kids-note::backdrop { background: rgba(8, 10, 30, .55); }
+.kids-note-glow { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, #f3c46b 0%, rgba(243, 196, 107, .45) 38%, transparent 70%); }
+.kids-note-to { margin: 0; font-size: 15px; opacity: .8; }
+.kids-note-body { margin: 0; font-size: 22px; line-height: 1.45; font-family: Georgia, 'Times New Roman', serif; font-style: italic; overflow-wrap: anywhere; }
+.kids-note-from { margin: 0 0 8px; font-size: 16px; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .kids-note[open] { animation: none; } }
