@@ -96,7 +96,7 @@ async function route() {
 
 // Opening the app (no address of its own) goes straight to the mushaf: where the user left off,
 // or Al-Fatiha the first time. The surah list stays one tap away ('‹' or ☰ → All surahs).
-if (kidsOn()) history.replaceState(null, '', '#/kids');
+if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (!location.hash || location.hash === '#' || location.hash === '#/') history.replaceState(null, '', lastRead());
 
 window.addEventListener('hashchange', route);
