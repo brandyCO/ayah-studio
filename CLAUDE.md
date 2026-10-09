@@ -622,7 +622,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
       passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
       names show in the Arabic interface. To ship: owner decision, then flip the default)
-- [ ] G5 Polish: faster first load (measured), "Export for WhatsApp Status" preset
+- [x] G5a Faster first load (measured)
+      (2026-10-09, Playwright, 1.6 Mbps / 150 ms, mushaf page 1: FCP ≈ 1.55 s, page ready ≈ 2.2 s,
+      19 requests / 623 KB (was 22 / 670 KB on the G4 branch). The circles screens, tour, tafsir data
+      and translation picker load on first use (`import()`); the Arabic-mark fallback face `QuranMarks`
+      (index.html, `unicode-range` over the Arabic blocks) is fetched only when the system font cannot
+      draw a cluster, so English starts no longer download AmiriQuran. The rest of first load is the
+      page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
+- [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
+      < 16 MB) — postponed by the owner (2026-10-09)
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally
 
 ---

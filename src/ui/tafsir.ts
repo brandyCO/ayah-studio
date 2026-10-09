@@ -1,7 +1,6 @@
 // "Tafsir" under a translation (docs/grow.md, G4): a quiet link that opens the published tafsir of
 // the ayah, attributed, exactly as published. Only while the `tafsir` flag is on (licence pending).
 import { feature } from '../features';
-import { loadTafsir, TAFSIR, tafsirView } from '../data/tafsir';
 import { t } from '../i18n';
 import { h } from './dom';
 
@@ -15,7 +14,7 @@ const span = (v: string[]) => {
 /** The link + its panel for ayah s:a, or null while tafsir is off. */
 export function tafsirToggle(s: number, a: number): HTMLElement | null {
   if (!feature('tafsir')) return null;
-  const panel = h('div', { class: 'tafsir', hidden: true, lang: TAFSIR.lang, dir: 'ltr' });
+  const panel = h('div', { class: 'tafsir', hidden: true, lang: 'en', dir: 'ltr' });
   let loaded = false;
   const btn = h('button', { class: 'tafsir-link', 'aria-expanded': 'false', onclick: async (e: Event) => {
     e.stopPropagation();
@@ -25,6 +24,7 @@ export function tafsirToggle(s: number, a: number): HTMLElement | null {
     if (!open || loaded) return;
     panel.replaceChildren(h('p', { class: 'muted small' }, t('common.loading')));
     try {
+      const { loadTafsir, TAFSIR, tafsirView } = await import('../data/tafsir'); // only when opened
       const x = await loadTafsir(s, a);
       loaded = true;
       const nodes: Node[] = [h('p', { class: 'tafsir-source' }, h('b', {}, TAFSIR.name), ` · ${TAFSIR.by}`)];

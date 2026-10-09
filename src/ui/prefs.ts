@@ -143,3 +143,19 @@ export function setLastRead(hash: string) {
   }
   touchPref('lastRead');
 }
+
+/** The first-run tour (src/ui/tour.ts) was shown or skipped on this device. */
+export function tourSeen(): boolean {
+  try {
+    return !!localStorage.getItem('tourSeen');
+  } catch {
+    return true; // no storage: never nag
+  }
+}
+export function markTourSeen() {
+  try {
+    localStorage.setItem('tourSeen', '1');
+  } catch {
+    /* ignore */
+  }
+}

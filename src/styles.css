@@ -42,7 +42,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif, 'AmiriQuran'; /* the Quran font only for marks the system font lacks (surah names in the Arabic interface) */
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif, 'QuranMarks'; /* marks the system font lacks (index.html) */
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;

@@ -3,21 +3,7 @@
 // appears only on the last button (CLAUDE.md "App colours").
 import { t } from '../i18n';
 import { h } from './dom';
-
-export function tourSeen(): boolean {
-  try {
-    return !!localStorage.getItem('tourSeen');
-  } catch {
-    return true; // no storage: never nag
-  }
-}
-export function markTourSeen() {
-  try {
-    localStorage.setItem('tourSeen', '1');
-  } catch {
-    /* ignore */
-  }
-}
+import { markTourSeen } from './prefs';
 
 const svg = (body: string) => {
   const el = h('div', { class: 'tour-art', 'aria-hidden': 'true' });
