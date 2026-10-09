@@ -121,6 +121,9 @@ async function exportData() {
   const { data: gifts } = await sb.rpc('my_gifts');
   // Ayah walls you host (with every entry on them) and your own entries on other walls.
   const { data: walls } = await sb.from('walls').select('title,occasion,join_code,status,reciter,created_at,closed_at,wall_entries(name,dua,surah,ayah_from,ayah_to,hidden,created_at)').eq('host_id', a.id);
+  // Family circles (docs/kids.md K6): the children you added (with their surahs) and the notes you wrote.
+  const { data: children } = await sb.from('circle_children').select('name,created_at,circles(name),family_parts(surah,status,at)').eq('added_by', a.id);
+  const { data: notes } = await sb.from('family_notes').select('child_id,surah,from_name,body,created_at,seen_at').eq('from_id', a.id);
   const { data: entries } = await sb.from('wall_entries').select('wall_id,name,dua,surah,ayah_from,ayah_to,hidden,created_at').eq('user_id', a.id);
   const file = {
     exported: new Date().toISOString(),
@@ -129,6 +132,7 @@ async function exportData() {
     circles: { memberships: circles ?? [], juz: parts ?? [] },
     gifts: gifts ?? [],
     walls: { hosted: walls ?? [], myEntries: entries ?? [] },
+    family: { childrenYouAdded: children ?? [], notesYouWrote: notes ?? [] },
     thisDevice: {
       bookmarks: bookmarkRecords(),
       reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),

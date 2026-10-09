@@ -9,7 +9,7 @@ import { newDraftId, saveDraft, draftHash } from '../data/drafts';
 import { DEFAULT_RECITER, reciterById } from '../data/reciters';
 import { applyLook, newProject } from '../engine/project';
 import {
-  createCircle, deleteCircle, errorText, inviteLink, joinCircle, leaveCircle, loadCircle, loadCircles, MEMBER_COLORS,
+  cachedCircles, createCircle, deleteCircle, errorText, inviteLink, joinCircle, leaveCircle, loadCircle, loadCircles, MEMBER_COLORS,
   newRound, pagesRead, previewCircle, setPart, takePart, watchCircle, type CircleState, type Member, type Part,
 } from '../together/circles';
 import { openAccount } from './account';
@@ -74,6 +74,13 @@ export function openCircles(ctx: CircleContext) {
     const me = account()?.id;
     body.replaceChildren(
       ...list.map((st) => {
+        if (st.circle.kind === 'family') {
+          return h('button', { class: 'menu-item circle-row', onclick: () => { d.close(); void import('./family').then((m) => m.openFamily(st.circle.id)); } },
+            h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, '🏮'),
+            h('span', { class: 'circle-row-text' },
+              h('b', {}, st.circle.name),
+              h('span', { class: 'muted small' }, `Family circle · ${st.members.length} ${st.members.length === 1 ? 'member' : 'members'}`)));
+        }
         const done = st.parts.filter((p) => p.status === 'done').length;
         const mine = st.parts.filter((p) => p.user_id === me).map((p) => p.juz);
         return h('button', { class: 'menu-item circle-row', onclick: () => { d.close(); void openCircle(ctx, st.circle.id); } },
@@ -86,7 +93,8 @@ export function openCircles(ctx: CircleContext) {
       ...(list.length ? [] : [h('p', { class: 'muted' }, 'No circles yet. Start one and share the link with your family.')]),
       h('div', { class: 'row' },
         h('button', { class: 'primary', onclick: () => createForm() }, '+ New circle'),
-        h('button', { class: 'chip', onclick: () => joinForm() }, 'Join with a code')));
+        h('button', { class: 'chip', onclick: () => joinForm() }, 'Join with a code'),
+        h('button', { class: 'chip', onclick: () => void import('./family').then((m) => m.createFamilyForm((id) => { d.close(); void m.openFamily(id); })) }, '+ Family circle (children)')));
   }
 
   function createForm() {
@@ -181,6 +189,11 @@ function newlyDone(st: CircleState): Set<number> {
 
 /** One circle: the ring of 30 juz and what you can do. */
 export async function openCircle(ctx: CircleContext, id: string, justCreated = false) {
+  // A family circle (joined from an invite link) opens its own sheet.
+  const known = cachedCircles().find((c) => c.circle.id === id) ?? (await loadCircle(id).catch(() => null));
+  if (known?.circle.kind === 'family') {
+    return void import('./family').then((m) => m.openFamily(id));
+  }
   const body = h('div', { class: 'circle-view' });
   const title = h('h2', {}, 'Khatm circle');
   const d = sheet('circle-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')), body);

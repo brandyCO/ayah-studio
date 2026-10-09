@@ -585,7 +585,23 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       as the "Round" translation font (editor Text → font; loaded before drawing in the editor, gifts
       and walls). Keepsake = Pastel + Moon garden. Migration `20261012000000_k5_kid_looks.sql`:
       `valid_gift_look()` accepts `round` and the three backgrounds (pgTAP `kid_looks.test.sql`)
-- [ ] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)
+- [x] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)
+      (2026-10-09): migration `20261013000000_k6_family.sql` — `circles.kind` ('khatm' | 'family'),
+      `circle_children` (first name ≤ 24, `added_by`; ≤ 8 a circle), `family_parts` (child × surah 1 /
+      78–114: learning | learned), `family_notes` (≤ 140, author's circle name, optional surah, `seen_at`);
+      members read, writes only via `create_family_circle`, `add_child` / `rename_child` /
+      `remove_child` / `set_child_surah` (the child's adder or the owner), `leave_note` (any member, 3 a
+      day), `delete_note`, `mark_note_seen`; no anonymous sessions; joining uses the circle invite
+      link; 36 pgTAP checks (`family.test.sql`). App: `src/together/family.ts` + `src/ui/family.ts`:
+      ☰ → Khatm circles → "+ Family circle (children)"; the family sheet lists each child with 38 small
+      lanterns (lit / ringed), "Learning now", recent notes, "Leave a du'a note" (presets, ≤ 140,
+      optionally "when {surah} is learned"), Learning… (parent: learning / learned / clear, rename,
+      remove), invite, leave/delete. Kids space → For grown-ups → **Family circle**: link this device
+      to a child you added (only when signed in; otherwise a note to sign in outside the space). Then
+      lit lanterns are reported once each (`kidsFamilyPushed`, retried later offline), a put-out
+      lantern is cleared, and unseen notes (no surah, or for a lit surah) appear on the path as a soft
+      card "A du'a for Maryam … — from Grandma" → **Ameen** marks it seen. In Export my data and the
+      privacy page. Push for notes waits on T2b
 - [ ] Owner, before a store launch with the Kids space: the Families policy checklist in `docs/kids.md` §5
 
 ### Phase 6 — Reach & daily (owner-approved 2026-10-09)
