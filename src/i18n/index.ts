@@ -19,6 +19,9 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? fmtNum(vars[k]) : m)) : s;
 }
 
+/** A name defined elsewhere in English (an effect, a mood…) under `key` if this language has it. */
+export const tOr = (key: string, fallback: string): string => (dict as Record<string, string>)[key] ?? fallback;
+
 const fmtNum = (v: string | number) => (typeof v === 'number' ? numFmt().format(v) : v);
 let nf: Intl.NumberFormat | null = null;
 // Western digits in every language: references like 2:255 and times stay the same everywhere.

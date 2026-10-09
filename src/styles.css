@@ -908,3 +908,4 @@ body[data-view="wall"] { background: #07130f; }
 /* Arabic interface (G1): the layout runs right to left; the back chevron points the other way */
 [dir="rtl"] .back-btn { transform: scaleX(-1); }
 .selbar .chip { white-space: nowrap; }
+body[data-view="reel"] .menu-item:hover { background: rgba(255,255,255,.07); }
