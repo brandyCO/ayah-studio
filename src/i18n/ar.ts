@@ -337,6 +337,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'ed.backToEditing': 'العودة إلى التحرير',
   'ed.exportFailed': 'تعذّر التصدير: {msg}',
   'ed.exportCancelled': 'أُلغي التصدير',
+  'menu.kids': 'ركن الأطفال',
+  'list.kids': 'الأطفال',
 };
 
 export default ar;

@@ -298,6 +298,8 @@ const en = {
   'ed.backToEditing': 'Back to editing',
   'ed.exportFailed': 'Export failed: {msg}',
   'ed.exportCancelled': 'Export cancelled',
+  'menu.kids': 'Kids space',
+  'list.kids': 'Kids',
 };
 
 export type Key = keyof typeof en;

@@ -40,6 +40,7 @@ export async function showSurahList(root: HTMLElement): Promise<() => void> {
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, t('list.tagline'))),
       h('a', { class: 'chip', href: '#/drafts' }, t('list.drafts')),
+      h('button', { class: 'chip', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, t('list.kids')),
       h('button', { class: 'icon-btn', 'aria-label': t('list.deviceCheck'), title: t('list.deviceCheck'), onclick: openDebugPanel }, '⚙')),
     h('div', { class: 'search-wrap' }, search),
     list,
