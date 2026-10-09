@@ -565,8 +565,18 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       `src/data/kidsAudio.ts`: the whole MP3 kept in IndexedDB `audio` (`{url}|all`, shared with
       reels) the first time; parent sheet: reciter (Husary Muallim first), "Keep all for offline use";
       QDC timings kept: 120 surahs (was 60)
-- [ ] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
-- [ ] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
+- [x] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
+      (2026-10-09): `#/kids` is a dotted SVG path (a gentle wave, 112 px a stop) with 38 lantern
+      buttons — outline when unlit, filled with a flame and a warm glow when learned, the next one
+      ringed and breathing; "We learned it" lights it and the path blooms it once on return
+      (sessionStorage `kidsBloom`) and scrolls to it; the parent sheet lists lit lanterns to put out.
+      No counts or percentages; reduced motion → no breathing
+- [x] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
+      (2026-10-09): a learned surah's screen shows **Keepsake** → parent gate → `makeKeepsake()` in
+      `src/ui/kids.ts`: an editor draft of the surah (≤ `MAX_AYAT`, from ayah 1) in the reel look +
+      Dawn mood, `outro` on, closing card "Maryam memorised Al-Ikhlaas" + the date it was learned; a
+      one-time router pass (`#/reel/`, sessionStorage) lets the editor open over the space, and its ✕
+      returns to `#/kids`
 - [ ] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder
       translation font; Arabic stays KFGQPC)
 - [ ] K6 Family encouragement (family circles with children's short surahs, du'a notes; RLS + pgTAP)
