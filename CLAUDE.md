@@ -533,7 +533,10 @@ cloud. Build in this order:
       Cloudflare **Turnstile** check (`src/cloud/captcha.ts`, invisible unless a tap is needed) when the
       repo variable `TURNSTILE_SITE_KEY` is set (passed to the Pages + Android builds); Supabase checks
       the token once CAPTCHA protection is on (Attack protection → Turnstile + secret key). Google
-      sign-in is not affected (Supabase skips the captcha for id-token / PKCE sign-ins)
+      sign-in is not affected (Supabase skips the captcha for id-token / PKCE sign-ins). Set up and verified
+      2026-10-09: repo variable `TURNSTILE_SITE_KEY` + secret key in Supabase; a guest sign-in without a
+      token or with a fake one is refused, Google sign-in (web + id-token) unaffected, the check passed
+      on the owner's phone
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
