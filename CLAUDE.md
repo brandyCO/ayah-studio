@@ -605,7 +605,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       same pick in Java, 30-min refresh) + `DailyPlugin.java` (`store`: the chosen translation's texts
       for the list; `takeLaunchHash`: the address a widget tap opened, read at start and on resume).
       Widget and notification only verifiable on the phone)
-- [ ] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
+- [x] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
+      (built 2026-10-09: `src/ui/tour.ts` — three cards over a soft blur with line drawings, dots,
+      Skip/Back/Next, swipe and arrow keys (RTL-aware), "Start reading" in the brand gradient;
+      `tourSeen` in localStorage; shown by the mushaf on first launch, not to people who used the app
+      before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
+      ☰ → Tour)
 - [ ] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
       flag until the owner confirms the licence (`docs/grow.md` §0)
 - [ ] G5 Polish: faster first load (measured), "Export for WhatsApp Status" preset

@@ -355,6 +355,19 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'morning.denied': 'الإشعارات غير مسموح بها لتطبيق Ayah Studio',
   'morning.onToast': 'ستصلك آية اليوم في {time}',
   'morning.offToast': 'أُوقفت آية الصباح',
+
+  // first-run tour
+  'tour.label': 'مرحبًا بك في Ayah Studio',
+  'tour.read': 'اقرأ المصحف',
+  'tour.readText': 'اسحب لتقليب صفحات مصحف المدينة. المس الصفحة لفتح القائمة، واستمع إلى قارئ بينما تضيء الكلمات.',
+  'tour.reel': 'اصنع مقطعًا',
+  'tour.reelText': 'اضغط مطولًا على آية، وسّع التحديد، ثم «اصنع مقطعًا»: فيديو هادئ بمقاس 9:16 متزامن مع التلاوة، يُصنع على جهازك.',
+  'tour.together': 'معًا',
+  'tour.togetherText': 'حلقات الختمة والهدايا وجدار الآيات تجمع الأهل والأصدقاء. كلها اختيارية، وخاصة افتراضيًا.',
+  'tour.skip': 'تخطٍّ',
+  'tour.next': 'التالي',
+  'tour.start': 'ابدأ القراءة',
+  'menu.tour': 'جولة',
 };
 
 export default ar;

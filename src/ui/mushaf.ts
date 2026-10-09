@@ -14,6 +14,7 @@ import { h, toast } from './dom';
 import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
 import { translationList } from './translationPicker';
+import { markTourSeen, showTour, tourSeen } from './tour';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
@@ -546,6 +547,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           d.close();
           toast(timeTintOn() ? t('menu.timeTintOn') : t('menu.timeTintOff'));
         } }, `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); showTour(); } }, `✧  ${t('menu.tour')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, `⚙  ${t('menu.deviceCheck')}`)));
   }
 
@@ -587,12 +589,20 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
-  firstVisitHint();
+  // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
+  let touring = false;
+  if (!tourSeen()) {
+    let returning = false;
+    try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
+    if (returning) markTourSeen();
+    else { touring = true; showTour(firstVisitHint); }
+  } else firstVisitHint();
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
+  // Never over the tour: the moment waits for the next start.
   {
     const rn = ramadanNow();
     const rd = ramadanData(rn);
-    if ((rn.day && !rd.welcomed) || (rn.eid && !rd.recapSeen && (rd.days.length || rd.khatms))) {
+    if (touring) { /* next start */ } else if ((rn.day && !rd.welcomed) || (rn.eid && !rd.recapSeen && (rd.days.length || rd.khatms))) {
       window.setTimeout(() => void import('./ramadan').then((x) => (rn.day ? x.ramadanWelcome(ramadanCtx!) : x.openRecap())), 700);
     }
     if (rd.plan) void import('./ramadan').then((x) => x.scheduleReminders());

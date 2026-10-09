@@ -316,6 +316,19 @@ const en = {
   'morning.denied': 'Notifications are not allowed for Ayah Studio',
   'morning.onToast': 'The ayah of the day will arrive at {time}',
   'morning.offToast': 'Morning ayah turned off',
+
+  // first-run tour
+  'tour.label': 'Welcome to Ayah Studio',
+  'tour.read': 'Read the mushaf',
+  'tour.readText': 'Swipe to turn the pages of the Madinah mushaf. Tap the page for the menu, and listen to a reciter as the words light up.',
+  'tour.reel': 'Make a reel',
+  'tour.reelText': 'Long-press an ayah, extend the selection, then Turn into reel: a calm 9:16 video timed to the recitation, made on your device.',
+  'tour.together': 'Together',
+  'tour.togetherText': 'Khatm circles, gifts and the ayah wall bring family and friends in. All optional, and private by default.',
+  'tour.skip': 'Skip',
+  'tour.next': 'Next',
+  'tour.start': 'Start reading',
+  'menu.tour': 'Tour',
 };
 
 export type Key = keyof typeof en;
