@@ -8,6 +8,7 @@
 //   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
 //   #/w/CODE           a guest adds their ayah to a dua & ayah wall (from the QR code)
 //   #/wall/ID[/reel[/N]]  the host's wall screen / its keepsake reel (from entry N)
+//   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
@@ -18,6 +19,7 @@ import { initAuth } from './cloud/auth';
 import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
 import { showSurahList } from './ui/surahList';
+import { clearPass, kidsOn, usePass } from './data/kids';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -28,6 +30,12 @@ async function route() {
   cleanup?.();
   cleanup = null;
   const [view, a, b, c4] = location.hash.replace(/^#\/?/, '').split('/');
+  // The Kids space is on: only its own screens (and a page the parent opened through the gate).
+  if (kidsOn() && view !== 'kids' && !usePass(location.hash)) {
+    history.replaceState(null, '', '#/kids');
+    return void route();
+  }
+  if (view === 'kids') clearPass();
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
   document.body.dataset.view = view || 'home';
@@ -60,6 +68,14 @@ async function route() {
       const { ramadanTarget } = await import('./ui/ramadan');
       history.replaceState(null, '', await ramadanTarget());
       return void route();
+    } else if (view === 'kids') {
+      if (Number(a)) {
+        const { showKidsSurah } = await import('./ui/kidsListen');
+        c = await showKidsSurah(screen, Number(a));
+      } else {
+        const { showKids } = await import('./ui/kids');
+        c = await showKids(screen);
+      }
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -80,7 +96,8 @@ async function route() {
 
 // Opening the app (no address of its own) goes straight to the mushaf: where the user left off,
 // or Al-Fatiha the first time. The surah list stays one tap away ('‹' or ☰ → All surahs).
-if (!location.hash || location.hash === '#' || location.hash === '#/') history.replaceState(null, '', lastRead());
+if (kidsOn()) history.replaceState(null, '', '#/kids');
+else if (!location.hash || location.hash === '#' || location.hash === '#/') history.replaceState(null, '', lastRead());
 
 window.addEventListener('hashchange', route);
 void route();

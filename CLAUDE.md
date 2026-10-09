@@ -546,7 +546,14 @@ experience + build notes + acceptance criteria, Google Play Families pre-launch 
 space for children a parent switches on (☰ → Kids space), left only through a parent gate; big
 text, few buttons, offline, no account, no social features, no points/streaks/badges/confetti, no
 sound effects; only bundled verified data (no AI-written religious content). Build in this order:
-- [ ] K1 Kids space shell + parent gate
+- [x] K1 Kids space shell + parent gate (2026-10-09): `src/data/kids.ts` (localStorage, this device
+      only: `kidsOn`, settings, learned surahs, a one-time router pass), `src/ui/kidsGate.ts` (typed
+      sum of two numbers 11–19, a new one after a wrong answer), `src/ui/kids.ts` (☰ → 🌙 Kids space
+      in the mushaf menu, "Kids" chip on the surah list; first-time setup with the child's name;
+      `#/kids` home with a greeting and the 38 surahs; lock button → gate → parent sheet: name,
+      translation, Leave), `src/ui/kidsListen.ts` (`#/kids/{n}`: one ayah at a time, large KFGQPC,
+      reference, translation). `main.ts`: while the space is on, the app opens on `#/kids` and every
+      other address is replaced by it. Own sky palette (dawn / night) under `body[data-view="kids"]`
 - [ ] K2 Listen & repeat (0.75/1×, ×1/×3, word lit from the QDC timings) + tap a word (its slice +
       Quran.com word meaning; only where timings exist, rule 8)
 - [ ] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
