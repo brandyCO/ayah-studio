@@ -167,7 +167,7 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
   const notes: string[] = [];
   if (intro) notes.push(tl.surah.tr);
   if (project.credit) notes.push(`Recited by ${reciterCredit(tl.reciter)}`);
-  if (!intro && project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : 'Translation: Sahih International');
+  if (!intro && project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : `Translation: ${tl.translation.credit}`);
   ctx.globalAlpha = alpha * 0.85;
   notes.forEach((x, i) => {
     ctx.font = i === 0 && intro ? `italic 36px ${FONT_EN}` : `500 32px ${FONT_UI}`;
@@ -268,7 +268,9 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   if (en) {
     // Synced meanings move with their words; a whole-ayah translation turns pages on its own timing.
     setTextShadow(ctx, colors.en);
-    drawText(ctx, fx, en, t, { lines: en.lines, size: en.size, lh: EN_LINE, top: enTop, font: lay.enFont, dir: 'ltr', color: colors.en, opacity: 0.92 });
+    // Synced meanings are English; a whole-ayah translation runs in its own direction (e.g. Urdu).
+    const dir = project.translationMode === 'words' ? 'ltr' : tl.translation.dir;
+    drawText(ctx, fx, en, t, { lines: en.lines, size: en.size, lh: EN_LINE, top: enTop, font: lay.enFont, dir, color: colors.en, opacity: 0.92 });
   }
 
   // Intro / closing card; the surah name + reference make way for it (the card shows the reference).

@@ -7,6 +7,7 @@
 //   in the UI font, attributed — never on the video, never like the ayah. Then: Reply with an ayah
 //   (a gift back, linked to this one), Make it a reel, Read in the mushaf.
 //   ☰ → Gifts: gifts received on this device, and (signed in) gifts sent with their replies.
+import { reelTranslation } from '../data/translations';
 import { account, onAccount } from '../cloud/auth';
 import { arrangeAudio } from '../data/audio';
 import { newDraftId, saveDraft, draftHash } from '../data/drafts';
@@ -293,6 +294,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     audio = pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(reel.audio, plan.pieces!, plan.duration) : reel.audio;
     media = scenes;
     tl = buildTimeline(document.createElement('canvas').getContext('2d')!, {
+      translation: reelTranslation(),
       surah: s, reciter: r, plan, arabic, english, meanings,
       mode: plan.wordTimed ? project.textMode : 'ayah', // never guess sync (rule 8)
       wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,

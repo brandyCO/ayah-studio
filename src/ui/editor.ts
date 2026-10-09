@@ -35,6 +35,9 @@ import { createMediaPicker } from './mediaPicker';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
+import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
+import { t as ui } from '../i18n';
+import { translationList } from './translationPicker';
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: 'Ayah' },
@@ -76,7 +79,7 @@ const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${S
 
 /** `draftId`: reopen a saved draft (its ayat range comes from the address, which may have changed). */
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number, draftId?: string): Promise<() => void> {
-  const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n), surahWordMeanings(n), loadWordMap(), loadLibrary(),
+  const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n, currentTranslation()), surahWordMeanings(n), loadWordMap(), loadLibrary(),
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
@@ -88,7 +91,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const created = draft?.created ?? Date.now();
   let saveTimer = 0;
   const arabic = allAr.slice(from - 1, to);
-  const english = allEn.slice(from - 1, to);
+  // The whole-ayah translation: the draft's own, else the one chosen in the reader.
+  project.translation ??= currentTranslation();
+  const englishBy = new Map<string, string[]>([[currentTranslation(), allEn.slice(from - 1, to)]]);
+  let english = englishBy.get(project.translation) ?? englishBy.get(currentTranslation())!;
   // English meaning of each Arabic word on screen (synced translation).
   const meanings = arabic.map((text, i) =>
     wordMeanings(allWbw[from - 1 + i], parseSpans(wordMap[`${n}:${from + i}`]), displayWords(text).length));
@@ -736,7 +742,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'tr-sync', icon: 'sync', label: 'Sync', disabled: () => !project.showTranslation, panel: () => [
         chips<TranslationMode>([{ value: 'words', label: 'Synced to the words' }, { value: 'ayah', label: 'Whole ayah' }],
           () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
-        note('Synced: word-by-word meanings (Quran.com) of the Arabic on screen. Whole ayah: Sahih International.')] },
+        note(`Synced: word-by-word meanings (Quran.com, English) of the Arabic on screen. Whole ayah: ${translationInfo(project.translation).translator}.`)] },
+      { id: 'tr-which', icon: 'translation', label: ui('tr.which'), disabled: () => !project.showTranslation, panel: () => [
+        translationList(() => project.translation ?? currentTranslation(), (id) => {
+          project.translation = id;
+          if (project.translationMode === 'words') project.translationMode = 'ayah'; // the user wants this translation on screen
+          setTranslation(id); // the reader follows, and the next reel starts with it
+          rebuild();
+          changed();
+        })] },
       { id: 'tr-font', icon: 'font', label: 'Font', disabled: () => !project.showTranslation, panel: () => [
         chips<EnFont>([{ value: 'serif', label: 'Serif' }, { value: 'sans', label: 'Sans' }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
@@ -988,7 +1002,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   function rebuild() {
     if (!plan) return;
+    const trId = project.translation ?? currentTranslation();
+    if (englishBy.has(trId)) english = englishBy.get(trId)!;
+    else {
+      // Another translation (picked, or restored by undo): load it, then lay the text out again.
+      void surahTranslation(n, trId).then((all) => { englishBy.set(trId, all.slice(from - 1, to)); if (alive) rebuild(); }, () => toast(ui('tr.failed')));
+    }
+    const info = translationInfo(trId);
     tl = buildTimeline(measure, {
+      translation: { credit: info.translator, dir: info.dir },
       surah: s, reciter: reciterById(project.reciterId), plan, arabic, english,
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,

@@ -17,6 +17,7 @@ import { showReader } from './ui/reader';
 import { initAuth } from './cloud/auth';
 import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
+import { initI18n, t } from './i18n';
 import { showSurahList } from './ui/surahList';
 
 const app = document.getElementById('app')!;
@@ -70,11 +71,11 @@ async function route() {
     if (id !== routeId) return;
     console.error(e);
     screen.replaceChildren(h('div', { class: 'error' },
-      h('h2', {}, 'Something went wrong'),
+      h('h2', {}, t('common.wrong')),
       h('p', {}, e instanceof Error ? e.message : String(e)),
       h('div', { class: 'row center' },
-        h('button', { class: 'primary', onclick: () => location.reload() }, 'Reload'),
-        h('a', { href: '#/', class: 'chip' }, 'Back to surahs'))));
+        h('button', { class: 'primary', onclick: () => location.reload() }, t('common.reload')),
+        h('a', { href: '#/', class: 'chip' }, t('common.backToSurahs')))));
   }
 }
 
@@ -83,7 +84,7 @@ async function route() {
 if (!location.hash || location.hash === '#' || location.hash === '#/') history.replaceState(null, '', lastRead());
 
 window.addEventListener('hashchange', route);
-void route();
+void initI18n().then(route);
 void capabilities(); // warm up the device check
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
