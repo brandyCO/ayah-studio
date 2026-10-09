@@ -4,10 +4,12 @@
 //   #/kids          home: the surahs to listen to
 //   #/kids/{surah}  listen & repeat (src/ui/kidsListen.ts)
 import { cleanName, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings } from '../data/kids';
+import { keepAllOffline, keptCount } from '../data/kidsAudio';
 import { loadMeta } from '../data/quran';
 import { h, toast } from './dom';
 import { parentGate } from './kidsGate';
-import { lastRead } from './prefs';
+import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
+import { lastRead, reelReciter } from './prefs';
 
 const lockIcon = () => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -56,11 +58,33 @@ export async function openParent() {
     } }, label);
     return b;
   };
+  // Husary (Muallim) first: his slow teaching recitation suits repeating.
+  const current = kidsReciter();
+  const order = [...RECITERS.filter((r) => r.id === 12), ...RECITERS.filter((r) => r.id !== 12)];
+  const reciterSelect = h('select', { class: 'kids-name-input', onchange: () => { setKidsSettings({ reciter: Number(reciterSelect.value) }); paintOffline(); } },
+    ...order.map((r) => h('option', { value: String(r.id), selected: r.id === current }, `${reciterPickerLabel(r)}${r.id === 12 ? ' — slow, for learning' : ''}`)));
+  const offline = h('div', { class: 'kids-offline' });
+  const paintOffline = () => {
+    const id = kidsReciter();
+    const kept = keptCount(id);
+    offline.replaceChildren(h('p', { class: 'muted small' }, kept >= KIDS_SURAHS.length ? `All ${KIDS_SURAHS.length} surahs are kept on this device for ${reciterById(id).short}.`
+        : `${kept} of ${KIDS_SURAHS.length} surahs are kept on this device for ${reciterById(id).short}. A surah is kept once it has played.`));
+    if (kept < KIDS_SURAHS.length) offline.append(h('button', { class: 'chip', onclick: async (e: Event) => {
+        const b = e.currentTarget as HTMLButtonElement;
+        b.disabled = true;
+        const failed = await keepAllOffline(id, (n, t) => { b.textContent = `Downloading… ${n} / ${t}`; });
+        toast(failed ? `${failed} surahs could not be downloaded — try again online` : 'All short surahs are kept for offline use');
+        paintOffline();
+      } }, 'Keep all for offline use (about 40 MB)'));
+  };
+  paintOffline();
   const d = h('dialog', { class: 'sheet bottom kids-parent-sheet' },
     h('div', { class: 'sheet-head' }, h('h2', {}, 'For grown-ups'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
     h('label', { class: 'kids-field' }, h('span', {}, "Child's name"), name),
     h('div', { class: 'kids-field' }, h('span', {}, 'Show'), h('div', { class: 'chips' },
       toggle('English translation', k.translation, (v) => setKidsSettings({ translation: v })))),
+    h('label', { class: 'kids-field' }, h('span', {}, 'Reciter'), reciterSelect),
+    h('div', { class: 'kids-field' }, h('span', {}, 'Offline'), offline),
     h('button', { class: 'primary wide', onclick: () => { d.close(); leave(); } }, 'Leave the Kids space'),
     h('p', { class: 'muted small' }, 'Everything in the Kids space stays on this device. It never asks to sign in and has no ads.'));
   d.addEventListener('close', () => {
@@ -70,6 +94,9 @@ export async function openParent() {
   document.body.append(d);
   d.showModal();
 }
+
+/** The reciter of the space: the parent's pick, else the reel reciter. */
+export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;
 
 function leave() {
   setKidsOn(false);

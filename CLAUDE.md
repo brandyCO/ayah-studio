@@ -554,8 +554,17 @@ sound effects; only bundled verified data (no AI-written religious content). Bui
       translation, Leave), `src/ui/kidsListen.ts` (`#/kids/{n}`: one ayah at a time, large KFGQPC,
       reference, translation). `main.ts`: while the space is on, the app opens on `#/kids` and every
       other address is replaced by it. Own sky palette (dawn / night) under `body[data-view="kids"]`
-- [ ] K2 Listen & repeat (0.75/1×, ×1/×3, word lit from the QDC timings) + tap a word (its slice +
-      Quran.com word meaning; only where timings exist, rule 8)
+- [x] K2 Listen & repeat (0.75/1×, ×1/×3, word lit from the QDC timings) + tap a word (its slice +
+      Quran.com word meaning; only where timings exist, rule 8) (2026-10-09): `src/ui/kidsListen.ts` —
+      the ayah plays from the whole surah recording (span from the verse timings, rAF stop), the word
+      lit from `wordTimings().seq`, then "Your turn" (a breathing ring for the ayah's length / speed +
+      1.5 s), ×3 rounds, next ayah, "Well done!" → Listen again / We learned it. Speed via
+      `playbackRate` with `preservesPitch`. Tap a word: `start..end + 60 ms` of that word, only for
+      words covered by a real segment (others show the meaning only); meaning from `en-wbw.json`
+      through `word-map.json`. Missing ayah timing → that ayah's everyayah file, no word features.
+      `src/data/kidsAudio.ts`: the whole MP3 kept in IndexedDB `audio` (`{url}|all`, shared with
+      reels) the first time; parent sheet: reciter (Husary Muallim first), "Keep all for offline use";
+      QDC timings kept: 120 surahs (was 60)
 - [ ] K3 Juz 'Amma lantern path (Al-Fatiha + An-Nas → An-Naba; learned surahs light a lantern)
 - [ ] K4 "My first surah" keepsake reel (`project.closing`: "{name} memorised {surah} · {date}")
 - [ ] K5 Kid-friendly reel moods (generated pastel sky / moon / desert backgrounds, rounder

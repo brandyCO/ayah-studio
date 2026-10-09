@@ -18,7 +18,7 @@ interface AudioFilesResponse {
 
 const cache = new Map<string, Promise<QdcSurah>>();
 /** Timings kept on this device (IndexedDB) so reels opened before also work offline, in the app too. */
-const MAX_KEPT = 60;
+const MAX_KEPT = 120; // room for the Kids space's 38 surahs too
 
 async function fetchNetwork(path: string): Promise<AudioFilesResponse> {
   let lastErr: unknown;
