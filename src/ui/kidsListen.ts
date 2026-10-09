@@ -14,7 +14,7 @@ import { everyayahUrl, reciterById } from '../data/reciters';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { h } from './dom';
 import { icon } from './icons';
-import { kidsReciter, parentButton } from './kids';
+import { bloomNext, kidsReciter, parentButton } from './kids';
 
 /** Where an ayah's recitation is: a span of the surah recording, or its own everyayah file (no word timings). */
 interface AyahAudio {
@@ -316,7 +316,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       h('p', {}, isLit ? `You listened to ${s.en} again.` : `You listened to all of ${s.en}.`),
       h('div', { class: 'kids-done-actions' },
         h('button', { class: 'kids-btn', onclick: () => start() }, 'Listen again'),
-        !isLit && h('button', { class: 'kids-btn lamp', onclick: () => { setLearned(n, true); location.hash = '#/kids'; } }, 'We learned it')));
+        !isLit && h('button', { class: 'kids-btn lamp', onclick: () => { setLearned(n, true); bloomNext(n); location.hash = '#/kids'; } }, 'We learned it')));
     done.hidden = false;
     stage.hidden = true;
   }
