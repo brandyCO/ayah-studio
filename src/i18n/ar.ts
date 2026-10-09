@@ -235,6 +235,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'ed.font': 'الخط',
   'ed.serif': 'مذيّل',
   'ed.sans': 'بسيط',
+  'ed.round': 'مستدير',
   'ed.layout': 'التخطيط',
   'ed.top': 'أعلى',
   'ed.below-the-ayah': 'تحت الآية',

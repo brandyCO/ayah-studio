@@ -16,6 +16,10 @@ export const MOODS: Mood[] = [
   { id: 'night', label: 'Night', set: { textEffect: 'glow', transition: 'blur', colors: { ar: '#eef3ff', en: '#c9d6ea', title: '#c8d2e6' }, grade: 'cool', scrim: 'strong', enFont: 'serif', pause: 1, gap: 'hold' } },
   { id: 'gold', label: 'Gold', set: { textEffect: 'ink', transition: 'leak', colors: { ar: '#f8e7b9', en: '#f3ebdd', title: '#e8c77a' }, grade: 'golden', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
   { id: 'dusk', label: 'Dusk', set: { textEffect: 'mist', transition: 'mist', colors: { ar: '#fdf0f0', en: '#ecd9de', title: '#e9c3c9' }, grade: 'dusk', scrim: 'normal', enFont: 'serif', pause: 0.5, gap: 'hold' } },
+  // Kid-friendly (docs/kids.md K5): pastel text, gentle effects, a rounder translation font; the Arabic
+  // stays in the KFGQPC font with respectful effects only. A strong scrim keeps it legible on pastel skies.
+  { id: 'moonlit', label: 'Moonlit', set: { textEffect: 'fade', transition: 'crossfade', colors: { ar: '#ffffff', en: '#fff6e8', title: '#f6e3e6' }, grade: 'none', scrim: 'strong', enFont: 'round', pause: 0.5, gap: 'hold' } },
+  { id: 'pastel', label: 'Pastel', set: { textEffect: 'rise', transition: 'white', colors: { ar: '#ffffff', en: '#fdf0f0', title: '#f6e3cc' }, grade: 'none', scrim: 'strong', enFont: 'round', pause: 0.5, gap: 'hold' } },
   { id: 'minimal', label: 'Minimal', set: { textEffect: 'fade', transition: 'crossfade', colors: { ar: '#ffffff', en: '#ffffff', title: '#ffffff' }, grade: 'none', scrim: 'light', enFont: 'sans', pause: 0, gap: 'clear' } },
 ];
 

@@ -120,6 +120,10 @@ export async function makeKeepsake(n: number) {
   const p = newProject(n, 1, Math.min(s.ayahs, MAX_AYAT), kidsReciter());
   applyLook(p, reelLook(), () => true);
   applyMood(p, MOODS.find((m) => m.id === KEEPSAKE_MOOD) ?? MOODS[0]);
+  p.scenes = [KEEPSAKE_BACKGROUND];
+  p.clips = [];
+  p.sceneMode = 'single';
+  p.sceneLengths = [];
   p.outro = true;
   const name = kidsSettings().name;
   const when = learned()[n] ?? Date.now();
@@ -130,7 +134,8 @@ export async function makeKeepsake(n: number) {
   grantPass('#/reel/');
   location.hash = drafts.draftHash(p, id);
 }
-const KEEPSAKE_MOOD = 'dawn';
+const KEEPSAKE_MOOD = 'pastel';
+const KEEPSAKE_BACKGROUND = 'kid-moon';
 
 /** The reciter of the space: the parent's pick, else the reel reciter. */
 export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;

@@ -752,7 +752,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           changed();
         })] },
       { id: 'tr-font', icon: 'font', label: ui('ed.font'), disabled: () => !project.showTranslation, panel: () => [
-        chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+        chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }, { value: 'round', label: ui('ed.round') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
     { id: 'layout', icon: 'layout', label: ui('ed.layout'), options: [
       { id: 'title', icon: 'text', label: ui('ed.surah-name'), panel: () => [
@@ -1093,6 +1093,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   await Promise.all([
     document.fonts.load('80px "UthmanicHafs"', arabic[0]),
     document.fonts.load('54px "AmiriQuran"', s.ar),
+    document.fonts.load('40px Nunito', 'Aa'),
   ]).catch(() => {});
   void loadAudio();
   void loadScenes();
