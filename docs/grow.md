@@ -150,7 +150,7 @@ hope, patience, gratitude, trust, duas from the Quran, and descriptions of Allah
 rulings, no verses about punishment or battle out of context, no ayah that starts mid-sentence or
 answers a question asked in the previous ayah; translation of the run ≤ 60 words (so the widget
 never cuts it — the widget shows it whole, or only the reference if a font size makes it not fit).
-About 120 entries, so a year repeats each roughly three times. Pick: day number since 2026-01-01 in
+147 entries (as built), so each comes back about every five months. Pick: day number since 2026-01-01 in
 local time → an index into a fixed shuffle of the list (seeded, committed in `daily.json`), so every
 device shows the same ayah on the same date.
 

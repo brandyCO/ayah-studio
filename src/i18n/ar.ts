@@ -340,6 +340,22 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'ed.exportCancelled': 'أُلغي التصدير',
   'menu.kids': 'ركن الأطفال',
   'list.kids': 'الأطفال',
+  'today.ayah': 'آية اليوم · {ref}',
+  'today.listen': '▶ استمع',
+  'today.reel': 'اصنع مقطع اليوم',
+
+  // morning ayah (Android)
+  'morning.title': 'آية الصباح',
+  'morning.menu': 'آية الصباح: {state}',
+  'morning.note': 'إشعار هادئ واحد كل صباح بآية اليوم وترجمتها. متوقف ما لم تفعّله.',
+  'morning.time': 'الوقت',
+  'morning.turnOn': 'تفعيل',
+  'morning.turnOff': 'إيقاف',
+  'morning.save': 'حفظ',
+  'morning.quiet': 'اختر وقتًا بين 06:00 و22:00',
+  'morning.denied': 'الإشعارات غير مسموح بها لتطبيق Ayah Studio',
+  'morning.onToast': 'ستصلك آية اليوم في {time}',
+  'morning.offToast': 'أُوقفت آية الصباح',
 };
 
 export default ar;

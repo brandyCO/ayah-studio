@@ -25,6 +25,19 @@
 
         </activity>
 
+        <!-- Home-screen widget: ayah of the day (docs/grow.md, G2) -->
+        <receiver
+            android:name=".DailyAyahWidget"
+            android:label="@string/daily_widget_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daily_ayah_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

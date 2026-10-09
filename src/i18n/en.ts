@@ -301,6 +301,22 @@ const en = {
   'ed.exportCancelled': 'Export cancelled',
   'menu.kids': 'Kids space',
   'list.kids': 'Kids',
+  'today.ayah': 'Today\'s ayah · {ref}',
+  'today.listen': '▶ Listen',
+  'today.reel': 'Make today\'s reel',
+
+  // morning ayah (Android)
+  'morning.title': 'Morning ayah',
+  'morning.menu': 'Morning ayah: {state}',
+  'morning.note': 'One calm notification each morning with the ayah of the day and its translation. Off unless you turn it on.',
+  'morning.time': 'Time',
+  'morning.turnOn': 'Turn on',
+  'morning.turnOff': 'Turn off',
+  'morning.save': 'Save',
+  'morning.quiet': 'Pick a time between 06:00 and 22:00',
+  'morning.denied': 'Notifications are not allowed for Ayah Studio',
+  'morning.onToast': 'The ayah of the day will arrive at {time}',
+  'morning.offToast': 'Morning ayah turned off',
 };
 
 export type Key = keyof typeof en;
