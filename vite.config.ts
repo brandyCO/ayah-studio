@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { defineConfig } from 'vite';
 
 // Content hash of the bundled data files. The app requests them as `data/x.json?v=<hash>`, so after
 // a deploy new code can never be served a stale cached copy of old data.
 const hash = createHash('sha256');
-for (const f of readdirSync('public/data').sort()) hash.update(f).update(readFileSync(`public/data/${f}`));
+for (const f of (readdirSync('public/data', { recursive: true }) as string[]).sort()) {
+  if (statSync(`public/data/${f}`).isFile()) hash.update(f).update(readFileSync(`public/data/${f}`));
+}
 
 // Relative base so the same build works on GitHub Pages, Capacitor and Tauri.
 export default defineConfig({

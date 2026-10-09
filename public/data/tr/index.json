@@ -1,0 +1,152 @@
+[
+ {
+  "id": "en.sahih",
+  "lang": "en",
+  "langName": "English",
+  "langEn": "English",
+  "translator": "Saheeh International",
+  "dir": "ltr",
+  "file": "../en-sahih.json",
+  "bytes": 877796
+ },
+ {
+  "id": "en.pickthall",
+  "lang": "en",
+  "langName": "English",
+  "langEn": "English",
+  "translator": "Mohammed Marmaduke William Pickthall",
+  "dir": "ltr",
+  "file": "en.pickthall.json",
+  "bytes": 841484
+ },
+ {
+  "id": "en.yusufali",
+  "lang": "en",
+  "langName": "English",
+  "langEn": "English",
+  "translator": "Abdullah Yusuf Ali",
+  "dir": "ltr",
+  "file": "en.yusufali.json",
+  "bytes": 919861
+ },
+ {
+  "id": "ur.jalandhry",
+  "lang": "ur",
+  "langName": "اردو",
+  "langEn": "Urdu",
+  "translator": "Fateh Muhammad Jalandhry",
+  "dir": "ltr",
+  "file": "ur.jalandhry.json",
+  "bytes": 1426855
+ },
+ {
+  "id": "ur.junagarhi",
+  "lang": "ur",
+  "langName": "اردو",
+  "langEn": "Urdu",
+  "translator": "Muhammad Junagarhi",
+  "dir": "ltr",
+  "file": "ur.junagarhi.json",
+  "bytes": 1427720
+ },
+ {
+  "id": "id.indonesian",
+  "lang": "id",
+  "langName": "Bahasa Indonesia",
+  "langEn": "Indonesian",
+  "translator": "Kementerian Agama Republik Indonesia",
+  "dir": "ltr",
+  "file": "id.indonesian.json",
+  "bytes": 1139305
+ },
+ {
+  "id": "tr.diyanet",
+  "lang": "tr",
+  "langName": "Türkçe",
+  "langEn": "Turkish",
+  "translator": "Diyanet İşleri",
+  "dir": "ltr",
+  "file": "tr.diyanet.json",
+  "bytes": 994157
+ },
+ {
+  "id": "fr.hamidullah",
+  "lang": "fr",
+  "langName": "Français",
+  "langEn": "French",
+  "translator": "Muhammad Hamidullah",
+  "dir": "ltr",
+  "file": "fr.hamidullah.json",
+  "bytes": 924581
+ },
+ {
+  "id": "ms.basmeih",
+  "lang": "ms",
+  "langName": "Bahasa Melayu",
+  "langEn": "Malay",
+  "translator": "Abdullah Muhammad Basmeih",
+  "dir": "ltr",
+  "file": "ms.basmeih.json",
+  "bytes": 1469270
+ },
+ {
+  "id": "bn.bengali",
+  "lang": "bn",
+  "langName": "বাংলা",
+  "langEn": "Bengali",
+  "translator": "Muhiuddin Khan",
+  "dir": "ltr",
+  "file": "bn.bengali.json",
+  "bytes": 2133988
+ },
+ {
+  "id": "de.bubenheim",
+  "lang": "de",
+  "langName": "Deutsch",
+  "langEn": "German",
+  "translator": "A. S. F. Bubenheim & N. Elyas",
+  "dir": "ltr",
+  "file": "de.bubenheim.json",
+  "bytes": 961490
+ },
+ {
+  "id": "es.cortes",
+  "lang": "es",
+  "langName": "Español",
+  "langEn": "Spanish",
+  "translator": "Julio Cortés",
+  "dir": "ltr",
+  "file": "es.cortes.json",
+  "bytes": 780078
+ },
+ {
+  "id": "ru.kuliev",
+  "lang": "ru",
+  "langName": "Русский",
+  "langEn": "Russian",
+  "translator": "Elmir Kuliev",
+  "dir": "ltr",
+  "file": "ru.kuliev.json",
+  "bytes": 1430810
+ },
+ {
+  "id": "hi.hindi",
+  "lang": "hi",
+  "langName": "हिन्दी",
+  "langEn": "Hindi",
+  "translator": "Suhel Farooq Khan & Saifur Rahman Nadwi",
+  "dir": "ltr",
+  "file": "hi.hindi.json",
+  "bytes": 2389498
+ },
+ {
+  "id": "sw.barwani",
+  "lang": "sw",
+  "langName": "Kiswahili",
+  "langEn": "Swahili",
+  "translator": "Ali Muhsin Al-Barwani",
+  "dir": "ltr",
+  "file": "sw.barwani.json",
+  "bytes": 776905
+ }
+]

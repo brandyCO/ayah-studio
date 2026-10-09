@@ -9,6 +9,9 @@ import { lastWritten, loadReflections, reflectionAt, reflections } from '../data
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
+import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
+import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
+import { translationList } from './translationPicker';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
@@ -28,7 +31,7 @@ const bismillah = () =>
 
 // The living mushaf's first sources: bookmarks in the margin, and Today lines for a recent bookmark
 // and a reel draft still waiting.
-registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: `Bookmark ${b.s}:${b.a}` })));
+registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: t('mushaf.bookmarkMark', { ref: `${b.s}:${b.a}` }) })));
 registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: `You wrote here ${writtenOn(lastWritten(r))}` })));
 // Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
 let circleCtx: CircleContext | null = null;
@@ -38,11 +41,11 @@ registerToday(async () => {
   const items = myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').map(({ state, part }) => {
     const pages = ctx.juzPages(part.juz);
     const left = pages.length - pages.filter((p) => pagesRead(part).has(p)).length;
-    return { icon: '◯', text: left ? `Juz ${part.juz} · ${left} ${left === 1 ? 'page' : 'pages'} left · ${state.circle.name}` : `You have read juz ${part.juz} — mark it finished?`, onClick: () => void openCircle(ctx, state.circle.id) };
+    return { icon: '◯', text: left ? t(left === 1 ? 'today.juzLeft1' : 'today.juzLeft', { juz: part.juz, n: left, circle: state.circle.name }) : t('today.juzRead', { juz: part.juz }), onClick: () => void openCircle(ctx, state.circle.id) };
   });
   for (const st of cachedCircles()) {
     if (st.circle.status === 'complete' && st.circle.completed_at && Date.now() - Date.parse(st.circle.completed_at) < 7 * DAY) {
-      items.push({ icon: '☾', text: `Khatm complete · ${st.circle.name}`, onClick: () => void openCircle(ctx, st.circle.id) });
+      items.push({ icon: '☾', text: t('today.khatm', { circle: st.circle.name }), onClick: () => void openCircle(ctx, st.circle.id) });
     }
   }
   return items;
@@ -55,7 +58,7 @@ registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
   return b && Date.now() - b.at < 7 * DAY
-    ? [{ icon: '🔖', text: `Continue from your bookmark · ${reference(meta[b.s - 1], b.a, b.a)}`, href: `#/s/${b.s}/${b.a}` }]
+    ? [{ icon: '🔖', text: t('today.bookmark', { ref: reference(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
     : [];
 });
 registerToday(async () => {
@@ -63,7 +66,7 @@ registerToday(async () => {
   const d = drafts[0];
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
-  return [{ icon: '🎬', text: `Your reel ${reference(meta[p.surah - 1], p.from, p.to)} is waiting`, href: draftHash(p, d.id) }];
+  return [{ icon: '🎬', text: t('today.draft', { ref: reference(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
 });
 
 // Ramadan (T7): today's portion, tonight's ayah, Eid.
@@ -83,7 +86,7 @@ registerToday(async () => {
   const { count, surah } = await dimLamps();
   if (!count) return [];
   const open = openLampsHere;
-  return [{ icon: '✦', text: count === 1 ? `A lamp is getting dim in ${surah!.en}` : `${count} lamps are getting dim${surah ? ` in ${surah.en}` : ''}`, onClick: () => open() }];
+  return [{ icon: '✦', text: count === 1 ? t('today.lamp', { surah: surahName(surah!) }) : surah ? t('today.lampsIn', { n: count, surah: surahName(surah) }) : t('today.lamps', { n: count }), onClick: () => open() }];
 });
 
 function firstVisitHint() {
@@ -93,7 +96,7 @@ function firstVisitHint() {
   } catch {
     /* ignore */
   }
-  toast('Tap the page for the menu · long-press an ayah to make a reel');
+  toast(t('mushaf.hint'));
 }
 
 export async function showMushaf(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
@@ -105,11 +108,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // --- drop-down title bar + menu ---
   const title = h('h1', {});
   const sub = h('p', { class: 'muted' });
-  const today = h('nav', { class: 'today', 'aria-label': 'Today', hidden: true });
+  const today = h('nav', { class: 'today', 'aria-label': t('mushaf.today'), hidden: true });
   const bar = h('header', { class: 'mushaf-bar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'All surahs' }, '‹'),
+    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
-    h('button', { class: 'icon-btn', 'aria-label': 'Menu', onclick: () => openMenu() }, '☰'),
+    h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
     bar.classList.toggle('show', show);
@@ -171,7 +174,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       noteAyah(s.surah, s.lo);
       sel.clear();
       const on = toggleBookmark(s.surah, s.lo);
-      toast(on ? `Bookmarked ${reference(meta[s.surah - 1], s.lo, s.lo)}` : 'Bookmark removed');
+      toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
     onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
@@ -309,7 +312,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (!building.has(p)) {
       let fontOk = true;
       const pr = loadPageFont(p)
-        .catch(() => { fontOk = false; toast('Could not load the page font — check your connection'); })
+        .catch(() => { fontOk = false; toast(t('mushaf.fontFailed')); })
         .then(() => {
           const el = h('div', { class: `mushaf-page${p <= 2 ? ' opening' : ''}`, dir: 'rtl', lang: 'ar', 'data-page': String(p) });
           el.style.fontFamily = `qcf-p${p}`;
@@ -332,8 +335,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const pg = mushaf.pages[page - 1];
     const segs = pg.lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
     const [s, a] = segs[0];
-    title.textContent = `${s}. ${meta[s - 1].en}`;
-    sub.textContent = `Juz ${pg.juz} · Page ${page}`;
+    title.textContent = t('common.surahTitle', { n: s, name: surahName(meta[s - 1]) });
+    sub.textContent = t('common.juzPage', { juz: pg.juz, page });
     pageNum.replaceChildren(...(ramadanDay() ? [crescent()] : []), String(page));
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
@@ -345,7 +348,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const placeholder = (p: number) => {
     if (!placeholders.has(p)) {
       placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true' },
-        h('span', { class: 'spinner' }), h('span', { class: 'mp-loading' }, `Page ${p}`)));
+        h('span', { class: 'spinner' }), h('span', { class: 'mp-loading' }, t('common.page', { n: p }))));
     }
     return placeholders.get(p)!;
   };
@@ -450,14 +453,32 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     return dialog;
   }
   const sheetHead = (text: string, close: () => void) =>
-    h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
+    h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
 
   async function showTranslation(s: Sel) {
-    const tr = await surahTranslation(s.surah);
+    const info = translationInfo(currentTranslation());
+    const tr = await surahTranslation(s.surah, info.id);
     const items = [];
-    for (let a = s.lo; a <= s.hi; a++) items.push(h('p', { class: 'sheet-text' }, h('span', { class: 'ayah-num' }, `${s.surah}:${a}`), tr[a - 1]));
+    for (let a = s.lo; a <= s.hi; a++) {
+      items.push(h('p', { class: 'sheet-text', lang: info.lang, dir: info.dir }, h('span', { class: 'ayah-num', dir: 'ltr' }, `${s.surah}:${a}`), tr[a - 1]));
+    }
     const d: HTMLDialogElement = sheet(sheetHead(reference(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
-      h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small' }, 'Saheeh International'));
+      h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
+  }
+
+  function openTranslationPicker() {
+    const d: HTMLDialogElement = sheet(sheetHead(t('tr.title'), () => d.close()),
+      h('p', { class: 'muted small' }, t('tr.note')),
+      h('div', { class: 'sheet-scroll' }, translationList(currentTranslation, (id) => { setTranslation(id); d.close(); })));
+  }
+
+  function openLanguage() {
+    const d: HTMLDialogElement = sheet(sheetHead(t('lang.title'), () => d.close()),
+      h('p', { class: 'muted small' }, t('lang.note')),
+      h('div', { class: 'menu' }, ...LANGS.map((l) => h('button', {
+        class: `menu-item tr-item${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir,
+        onclick: () => { if (l.id !== lang()) setLang(l.id); else d.close(); },
+      }, h('span', { class: 'tr-name' }, l.name), h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : '')))));
   }
 
   /** The first ayah that begins on the current page (or the one continuing onto it). */
@@ -468,62 +489,64 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
 
   function openMenu() {
-    const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: `Page 1–${PAGE_COUNT}`, inputmode: 'numeric' });
-    const d: HTMLDialogElement = sheet(sheetHead('Menu', () => d.close()),
+    const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: t('menu.pagePlaceholder', { n: PAGE_COUNT }), inputmode: 'numeric' });
+    const d: HTMLDialogElement = sheet(sheetHead(t('mushaf.menu'), () => d.close()),
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, '🎧  Listen from this page'),
-        h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, '📖  All surahs'),
-        h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, '🎬  Drafts'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, '🔖  Bookmarks'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, `🎧  ${t('menu.listen')}`),
+        h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, `📖  ${t('menu.allSurahs')}`),
+        h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, `🎬  ${t('menu.drafts')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
           toggleBar(false);
           go(mushaf.pageOf(s, a));
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
-        }); } }, '✎  Reflections'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, '◯  Khatm circles'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, '✦  My memorisation'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, '☾  Ramadan'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, '🎁  Gifts'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./wall').then((m) => m.openWalls()); } }, '🏮  Ayah wall'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, '🌙  Kids space'),
+        }); } }, `✎  ${t('menu.reflections')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, `✦  ${t('menu.lamps')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, `🎁  ${t('menu.gifts')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./wall').then((m) => m.openWalls()); } }, `🏮  ${t('menu.wall')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, '🔤  Translation view'),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
           const p = Math.round(Number(input.value));
           if (valid(p)) { d.close(); toggleBar(false); go(p); }
-        } }, input, h('button', { class: 'chip', type: 'submit' }, 'Go to page')),
+        } }, input, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
         h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => {
           setTimeTint(!timeTintOn());
           d.close();
-          toast(timeTintOn() ? 'The page now follows the time of day' : 'Plain page colour');
-        } }, `🕰  Page follows the time of day: ${timeTintOn() ? 'on' : 'off'}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, '⚙  Device check')));
+          toast(timeTintOn() ? t('menu.timeTintOn') : t('menu.timeTintOff'));
+        } }, `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, `⚙  ${t('menu.deviceCheck')}`)));
   }
 
-  const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const dateFmt = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
   function openBookmarks() {
     const list = bookmarks();
     const rows = list.map((b) => {
       const row = h('div', { class: 'bm-row' },
         h('button', { class: 'menu-item bm-go', onclick: () => { d.close(); toggleBar(false); go(mushaf.pageOf(b.s, b.a)); } },
           h('span', {}, reference(meta[b.s - 1], b.a, b.a)),
-          h('span', { class: 'muted small' }, `Page ${mushaf.pageOf(b.s, b.a)} · ${dateFmt.format(b.at)}`)),
-        h('button', { class: 'icon-btn', 'aria-label': 'Remove bookmark', onclick: () => { removeBookmark(b.s, b.a); row.remove(); } }, '✕'));
+          h('span', { class: 'muted small' }, t('bm.pageDate', { page: mushaf.pageOf(b.s, b.a), date: dateFmt.format(b.at) }))),
+        h('button', { class: 'icon-btn', 'aria-label': t('bm.remove'), onclick: () => { removeBookmark(b.s, b.a); row.remove(); } }, '✕'));
       return row;
     });
-    const d: HTMLDialogElement = sheet(sheetHead('Bookmarks', () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(t('bm.title'), () => d.close()),
       rows.length ? h('div', { class: 'sheet-scroll' }, ...rows)
-        : h('p', { class: 'muted' }, 'Long-press an ayah, then tap 🔖 to bookmark it.'));
+        : h('p', { class: 'muted' }, t('bm.empty')));
   }
   function openBookmark(s: number, a: number) {
     const b = bookmarks().find((x) => x.s === s && x.a === a);
     const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${reference(meta[s - 1], a, a)}`, () => d.close()),
-      b ? h('p', { class: 'muted small' }, `Bookmarked on ${dateFmt.format(b.at)}`) : false,
+      b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void player.playFrom(s, a); } }, '🎧  Listen from here'),
-        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, '🎬  Turn into reel'),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast('Bookmark removed'); } }, '✕  Remove bookmark')));
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void player.playFrom(s, a); } }, `🎧  ${t('bm.listenHere')}`),
+        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, `🎬  ${t('bm.reel')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast(t('mushaf.bookmarkRemoved')); } }, `✕  ${t('bm.remove')}`)));
   }
 
   const onKey = (e: KeyboardEvent) => {
