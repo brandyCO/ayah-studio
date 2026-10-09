@@ -3,13 +3,13 @@
 // gate guards leaving, the settings and anything that leads out. No sign-in, no social features.
 //   #/kids          home: the surahs to listen to
 //   #/kids/{surah}  listen & repeat (src/ui/kidsListen.ts)
-import { cleanName, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings, setLearned } from '../data/kids';
+import { cleanName, grantPass, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings, setLearned } from '../data/kids';
 import { keepAllOffline, keptCount } from '../data/kidsAudio';
 import { loadMeta } from '../data/quran';
 import { h, toast } from './dom';
 import { parentGate } from './kidsGate';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
-import { lastRead, reelReciter } from './prefs';
+import { lastRead, reelLook, reelReciter } from './prefs';
 
 const lockIcon = () => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -104,6 +104,33 @@ export async function openParent() {
   document.body.append(d);
   d.showModal();
 }
+
+const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * "My first surah" keepsake (docs/kids.md K4), after the parent gate: an editor draft of the surah
+ * (up to MAX_AYAT ayat) in a calm mood, with "{name} memorised {surah}" and the date on the closing
+ * card (user text, drawn in the UI fonts by the closing-card code, inside the safe area).
+ */
+export async function makeKeepsake(n: number) {
+  if (!(await parentGate('Make a keepsake reel'))) return;
+  const [{ newProject, applyLook, MAX_AYAT }, { applyMood, MOODS }, drafts, meta] = await Promise.all([
+    import('../engine/project'), import('../engine/moods'), import('../data/drafts'), loadMeta()]);
+  const s = meta[n - 1];
+  const p = newProject(n, 1, Math.min(s.ayahs, MAX_AYAT), kidsReciter());
+  applyLook(p, reelLook(), () => true);
+  applyMood(p, MOODS.find((m) => m.id === KEEPSAKE_MOOD) ?? MOODS[0]);
+  p.outro = true;
+  const name = kidsSettings().name;
+  const when = learned()[n] ?? Date.now();
+  p.closing = { title: `${name ? `${name} memorised` : 'Memorised'} ${s.en}`.slice(0, 80), names: [dateFmt.format(when)] };
+  const id = drafts.newDraftId();
+  const now = Date.now();
+  await drafts.saveDraft({ id, project: p, created: now, updated: now });
+  grantPass('#/reel/');
+  location.hash = drafts.draftHash(p, id);
+}
+const KEEPSAKE_MOOD = 'dawn';
 
 /** The reciter of the space: the parent's pick, else the reel reciter. */
 export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;
