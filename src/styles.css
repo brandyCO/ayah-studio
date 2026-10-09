@@ -949,15 +949,33 @@ body[data-view="kids"] {
 .kids-back { width: 56px; height: 56px; color: var(--kids-ink); }
 .kids-parent svg { width: 20px; height: 20px; }
 .kids-lead { margin: 2px 0 16px; font-size: 18px; color: var(--kids-soft); }
-.kids-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.kids-tile {
-  display: flex; flex-direction: column; gap: 2px; min-height: 96px; padding: 12px 14px; border-radius: 20px;
-  background: var(--kids-card); border: 1px solid var(--kids-line); text-decoration: none; color: var(--kids-ink);
+.kids-path { position: relative; margin: 0 -16px; }
+.kids-path-line { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.kids-path-line path { fill: none; stroke: var(--kids-line); stroke-width: 3; stroke-dasharray: 2 9; stroke-linecap: round; }
+.kids-stop { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; text-decoration: none; color: var(--kids-ink); }
+.kids-lantern {
+  display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; flex: none;
+  background: var(--kids-card); border: 1px solid var(--kids-line);
 }
-.kids-tile strong { font-size: 18px; }
-.kids-tile-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 20px; text-align: right; opacity: .85; }
-.kids-tile-sub { font-size: 13px; color: var(--kids-soft); }
-.kids-tile.lit { border-color: var(--kids-lamp); box-shadow: 0 0 22px var(--kids-lamp-glow); }
+.kids-lantern svg { width: 40px; height: 52px; overflow: visible; }
+.kids-lantern .l-frame { fill: none; stroke: var(--kids-soft); stroke-width: 1.8; stroke-linejoin: round; }
+.kids-lantern .l-body { fill: none; stroke: var(--kids-soft); stroke-width: 1.8; stroke-linejoin: round; }
+.kids-lantern .l-flame { fill: none; }
+.kids-stop.lit .kids-lantern { background: radial-gradient(circle, var(--kids-lamp-glow) 0%, transparent 72%); border-color: transparent; }
+.kids-stop.lit .l-frame { stroke: var(--kids-lamp); }
+.kids-stop.lit .l-body { fill: var(--kids-lamp); fill-opacity: .55; stroke: var(--kids-lamp); }
+.kids-stop.lit .l-flame { fill: #fff6dc; filter: drop-shadow(0 0 6px #ffd98a); }
+.kids-stop.lit svg { filter: drop-shadow(0 0 10px var(--kids-lamp-glow)); }
+.kids-stop.next .kids-lantern { border: 2px solid var(--kids-lamp); animation: kids-next 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
+@keyframes kids-next { from { box-shadow: 0 0 0 0 var(--kids-lamp-glow); } to { box-shadow: 0 0 0 10px transparent, 0 0 24px var(--kids-lamp-glow); } }
+.kids-stop.bloom .kids-lantern { animation: kids-bloom 2.4s cubic-bezier(.25,.1,.25,1) both; }
+@keyframes kids-bloom { from { transform: scale(.85); box-shadow: 0 0 0 0 var(--kids-lamp-glow); } 50% { box-shadow: 0 0 60px 24px var(--kids-lamp-glow); } to { transform: scale(1); box-shadow: 0 0 0 0 transparent; } }
+.kids-stop-label { position: absolute; left: calc(100% + 10px); display: flex; flex-direction: column; line-height: 1.25; white-space: nowrap; }
+.kids-stop.label-left .kids-stop-label { left: auto; right: calc(100% + 10px); align-items: flex-end; text-align: right; }
+.kids-stop-label strong { font-size: 18px; }
+.kids-stop-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 17px; opacity: .8; }
+.kids-stop-sub { font-size: 13px; color: var(--kids-soft); }
+@media (prefers-reduced-motion: reduce) { .kids-stop.next .kids-lantern, .kids-stop.bloom .kids-lantern { animation: none; } }
 .kids-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 8px; padding: 12px 0; }
 .kids-ar {
   margin: 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(34px, 9.5vw, 54px); line-height: 2.1;
