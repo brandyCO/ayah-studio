@@ -603,8 +603,18 @@ tafsir only from published, credited editions; UI strings only are translated by
       account sheet and the whole reel editor + export page; CSS moved to logical properties; the mushaf
       strip, the reel canvas and the timeline keep their own direction. Still English in the Arabic
       UI: circles, gifts, wall, Ramadan, lamps, reflections, drafts, media picker, device check)
-- [ ] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
+- [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
+      (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,
+      English copied unaltered, ≤ 60 words, seeded shuffle; pick = whole local days since 2026-01-01
+      mod 147, `src/data/daily.ts`). Today card: "Today's ayah · ref" + the chosen translation, tap →
+      the page, ▶ Listen, Make today's reel (`#/reel/s/a-b` → draft in the current look). Android:
+      `src/ui/morning.ts` — ☰ → Morning ayah (off by default, time 06:00–21:59, the next 14 mornings,
+      ids 2000–2013, whole translation as the body, tap → the ayah); `DailyAyahWidget.java` (4×2,
+      resizable, system font, day/night colours, reads `public/data/daily.json` from the app assets,
+      same pick in Java, 30-min refresh) + `DailyPlugin.java` (`store`: the chosen translation's texts
+      for the list; `takeLaunchHash`: the address a widget tap opened, read at start and on resume).
+      Widget and notification only verifiable on the phone)
 - [ ] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
 - [ ] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
       flag until the owner confirms the licence (`docs/grow.md` §0)

@@ -1023,3 +1023,10 @@ body[data-view="kids"] {
 .kids-offline { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .kids-offline p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .kids-stage.turn .kids-ayah { animation: none; box-shadow: 0 0 0 4px var(--kids-word); } .kids-done-glow { animation: none; } }
+
+/* ayah of the day on the Today card (G2) */
+.today-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.today-sub { font-size: 13.5px; line-height: 1.5; color: var(--muted); font-family: "Noto Serif", Georgia, serif; }
+.today-block { display: flex; flex-direction: column; }
+.today-actions { display: flex; gap: 6px; padding-block: 2px 6px; padding-inline-start: calc(1.2em + 18px); }
+.today-actions .chip { font-size: 13px; padding: 4px 10px; }
