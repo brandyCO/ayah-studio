@@ -171,22 +171,30 @@ export function moteField(seed: number, count: number, center: Vector3, half: Ve
     uniforms: {
       uTime: { value: 0 }, uBreath: { value: 0 }, uScale: { value: 400 }, uAlpha: { value: 1 },
       uMinY: { value: center.y - half.y }, uSpanY: { value: half.y * 2 }, uColor: { value: col(color) },
+      // Optional wrap in depth around the camera, so a camera can fly through the field for ever.
+      uCamZ: { value: 0 }, uSpanZ: { value: 0 },
     },
     vertexShader: /* glsl */ `
       attribute float aSize; attribute float aPhase;
-      uniform float uTime, uBreath, uScale, uAlpha, uMinY, uSpanY;
+      uniform float uTime, uBreath, uScale, uAlpha, uMinY, uSpanY, uCamZ, uSpanZ;
       varying float vA;
       void main() {
         float ph = aPhase * 6.2831;
         vec3 p = position + vec3(sin(uTime * 0.07 + ph) * 0.9, uTime * (0.025 + aPhase * 0.03) + sin(uTime * 0.05 + ph * 2.0) * 0.3, cos(uTime * 0.06 + ph * 1.5) * 0.9);
         float f = mod(p.y - uMinY, uSpanY) / uSpanY;
         p.y = uMinY + f * uSpanY;
+        float fz = 1.0;
+        if (uSpanZ > 0.0) {
+          float zz = mod(p.z - uCamZ, uSpanZ) / uSpanZ; // 0 far … 1 at the camera
+          p.z = uCamZ - uSpanZ + zz * uSpanZ;
+          fz = smoothstep(0.0, 0.15, zz) * smoothstep(1.0, 0.9, zz);
+        }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
         float swell = 1.0 + uBreath * (0.35 + 0.5 * fract(aPhase * 13.7));
         gl_PointSize = aSize * swell * uScale / max(0.5, -mv.z);
         float edge = smoothstep(0.0, 0.12, f) * smoothstep(1.0, 0.85, f);
-        vA = uAlpha * edge * (0.35 + 0.65 * fract(aPhase * 7.31)) * (0.65 + 0.35 * uBreath) * (0.8 + 0.2 * sin(uTime * 0.9 + ph * 3.0));
+        vA = uAlpha * edge * fz * (0.35 + 0.65 * fract(aPhase * 7.31)) * (0.65 + 0.35 * uBreath) * (0.8 + 0.2 * sin(uTime * 0.9 + ph * 3.0));
       }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
@@ -202,10 +210,12 @@ export function moteField(seed: number, count: number, center: Vector3, half: Ve
   return {
     object: pts,
     setCount: (n: number) => geo.setDrawRange(0, Math.min(count, n)),
-    update(t: number, breath: number, scale: number) {
+    update(t: number, breath: number, scale: number, camZ?: number, spanZ = 0) {
       mat.uniforms.uTime.value = t;
       mat.uniforms.uBreath.value = breath;
       mat.uniforms.uScale.value = scale;
+      mat.uniforms.uCamZ.value = camZ ?? 0;
+      mat.uniforms.uSpanZ.value = spanZ;
     },
     material: mat,
   };

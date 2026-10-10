@@ -1,12 +1,13 @@
 // Moments (docs/light.md, L5): short full-screen scenes and calm backdrops, each a pure function of
 // t. lift — a gift's light lifts off the clouds and becomes a star; bloom — a lantern glows and
 // blooms open into the reel; horizon — lanterns rising over a night horizon (the ayah wall);
-// crescent — Ramadan's first night: a crescent rising over the cloud sea; eid — dawn over the clouds
+// crescent — Ramadan's first night: the sky filling with stars over the cloud sea, under the
+// moment's crescent; eid — dawn over the clouds
 // with lanterns drifting up.
 import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
 import type { LightScene } from '../engine';
 import type { Quality } from '../support';
-import { cloudSea, glowSprite, lanternField, moon, moteField, noor, skyDome, starField, water } from '../parts';
+import { cloudSea, glowSprite, lanternField, moteField, noor, skyDome, starField, water } from '../parts';
 
 const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -74,7 +75,7 @@ export function liftScene(seed = 1): LightScene {
   return wrap({
     scene: n.scene, camera: n.camera, far: [n.sky, n.stars.object],
     pose(t, _s, px) {
-      n.camera.position.set(0, 3, 0);
+      n.camera.position.set(0, 3 + ease(clamp01(t / 4)) * 0.8, -ease(clamp01(t / 4)) * 2);
       n.camera.rotation.set(0.1 + ease(clamp01((t - 0.5) / 3)) * 0.18, 0, 0);
       n.stars.update(t, px);
       n.clouds.update(t, n.camera.position);
@@ -100,12 +101,14 @@ export function bloomScene(seed = 1): LightScene {
   return wrap({
     scene: n.scene, camera: n.camera, far: [n.sky, n.stars.object],
     pose(t, scale, px) {
-      n.camera.position.set(0, 3, 0);
-      n.camera.rotation.set(0.08, 0, 0);
+      // The camera eases in towards the lantern as it blooms, so the light comes to you.
+      const dolly = ease(clamp01(t / 3));
+      n.camera.position.set(Math.sin(t * 0.4) * 0.15 * (1 - dolly), 3 + dolly * 0.6, -dolly * 3);
+      n.camera.rotation.set(0.08 + dolly * 0.06, 0, 0);
       n.stars.update(t, px);
       n.clouds.update(t, n.camera.position);
       const rise = ease(clamp01(t / 1.4));
-      const p = new Vector3(0, 1.4 + rise * 1.6 + Math.sin(t * 1.3) * 0.05, -6);
+      const p = new Vector3(0, 3.2 + rise * 1.4 + Math.sin(t * 1.3) * 0.05, -7);
       lantern.position.copy(p);
       inner.position.copy(p);
       wide.position.copy(p).add(new Vector3(0, 0, 0.5));
@@ -148,12 +151,12 @@ export function horizonScene(seed = 1): LightScene {
   });
 }
 
-/** Ramadan's first night: a crescent rising slowly into place over the cloud sea, Noor nearby. */
+/** Ramadan's first night: the night sky over the cloud sea slowly filling with stars, Noor nearby.
+ *  The crescent itself is the moment's own (flat) crescent above the greeting, so it never sits
+ *  behind the text; the sky glows softly where it hangs. */
 export function crescentScene(seed = 1): LightScene {
-  const dir = new Vector3(0.05, 0.36, -1);
+  const dir = new Vector3(0.0, 0.5, -1);
   const n = nightSea(seed, dir);
-  const lunar = moon(dir, 700);
-  n.scene.add(lunar);
   const companion = noor(seed + 3);
   companion.object.position.set(1.4, -1.6, -5);
   n.camera.add(companion.object);
@@ -161,9 +164,7 @@ export function crescentScene(seed = 1): LightScene {
     scene: n.scene, camera: n.camera, far: [n.sky, n.stars.object],
     pose(t, _s, px) {
       n.camera.position.set(Math.sin(t * 0.02) * 0.8, 3.6, -t * 0.08);
-      n.camera.rotation.set(0.12, 0, 0);
-      // The crescent rises from behind the clouds over the first 4 s.
-      lunar.position.copy(n.camera.position).add(new Vector3(0, -260 * (1 - ease(clamp01(t / 4))), 0));
+      n.camera.rotation.set(0.12 + 0.04 * ease(clamp01(t / 5)), 0, 0);
       n.stars.update(t, px);
       n.stars.material.uniforms.uAlpha.value = 0.3 + 0.7 * ease(clamp01(t / 3));
       n.clouds.update(t, n.camera.position);

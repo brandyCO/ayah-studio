@@ -9,7 +9,7 @@ import {
 } from 'three';
 import type { LightScene } from '../engine';
 import type { Quality } from '../support';
-import { col, glowSprite, glowTexture, mistLayer, noor, skyDome, starField } from '../parts';
+import { col, glowSprite, glowTexture, mistLayer, moteField, noor, skyDome, starField } from '../parts';
 
 export interface StarState {
   juz: number;
@@ -72,7 +72,8 @@ export function constellationScene(seed = 1): LightScene & { input: Constellatio
   const stars = starField(seed, 1600, { spread: 1.1 });
   skyGroup.add(sky, stars.object);
   const mist = mistLayer(seed + 3, { z: -14, y: -9, width: 60, height: 9, color: '#3a3570', opacity: 0.7, speed: 0.7 });
-  scene.add(skyGroup, mist.object);
+  const dust = moteField(seed + 4, 90, new Vector3(0, 0, -7), new Vector3(7, 6, 3), '#c9c3e6');
+  scene.add(skyGroup, mist.object, dust.object);
 
   // The ring: 30 stars (core + halo), a soft path through them, and a halo for the picked one.
   const ring = new Group();
@@ -111,7 +112,7 @@ export function constellationScene(seed = 1): LightScene & { input: Constellatio
 
   const input: ConstellationInput = { stars: [], celebrateAt: null, openedAt: 0 };
   let lastKey = '';
-  let px = 1;
+  let px = 1, scale = 400;
   const tmp = new Vector3();
 
   function relink() {
@@ -138,7 +139,13 @@ export function constellationScene(seed = 1): LightScene & { input: Constellatio
       relink();
       // A gentle wobble (≤ 4°), never a spin: the SVG ring above stays aligned for taps.
       ring.rotation.set(Math.sin(t * 0.21) * 0.06, Math.sin(t * 0.17 + 1) * 0.07, 0);
-      skyGroup.rotation.y = Math.sin(t * 0.01) * 0.05;
+      // Depth: the camera stays still (taps line up with the SVG ring), but the layers behind move
+      // against the ring's wobble at their own depths: drifting motes, mist, then the far sky.
+      skyGroup.rotation.y = Math.sin(t * 0.01) * 0.05 - ring.rotation.y * 0.5;
+      skyGroup.rotation.x = -0.6 - ring.rotation.x * 0.5;
+      dust.object.position.set(-ring.rotation.y * 9, ring.rotation.x * 9, 0);
+      dust.update(t, 0, scale);
+      mist.object.position.x = -ring.rotation.y * 14;
       stars.update(t, px);
       mist.update(t);
 
@@ -193,6 +200,7 @@ export function constellationScene(seed = 1): LightScene & { input: Constellatio
     },
     resize(h) {
       px = Math.max(0.8, h / 700);
+      scale = h / (2 * Math.tan((camera.fov * Math.PI) / 360));
     },
     dispose() {
       scene.traverse((o) => {
