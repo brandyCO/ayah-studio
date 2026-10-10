@@ -15,6 +15,7 @@ import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming }
 import { h } from './dom';
 import { icon } from './icons';
 import { bloomNext, kidsReciter, makeKeepsake, parentButton } from './kids';
+import { dir, surahName, t } from '../i18n';
 
 /** Where an ayah's recitation is: a span of the surah recording, or its own everyayah file (no word timings). */
 interface AyahAudio {
@@ -57,6 +58,9 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   (audio as HTMLAudioElement & { preservesPitch: boolean }).preservesPitch = true;
 
   // --- screen ---
+  // Arrows follow the interface direction (previous points back: left in English, right in Arabic).
+  const back = dir() === 'rtl' ? 'right' : 'left';
+  const fwd = dir() === 'rtl' ? 'left' : 'right';
   const wordEls: HTMLElement[] = [];
   const ar = h('p', { class: 'kids-ar', lang: 'ar', dir: 'rtl' });
   const ref = h('p', { class: 'kids-ref' });
@@ -64,28 +68,28 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   const meaning = h('p', { class: 'kids-meaning', 'aria-live': 'polite' });
   const status = h('p', { class: 'kids-status', 'aria-live': 'polite' });
   const stage = h('main', { class: 'kids-stage' }, h('div', { class: 'kids-ayah' }, ar), ref, meaning, en, status);
-  const playBtn = h('button', { class: 'kids-btn main', 'aria-label': 'Listen', onclick: () => (state === 'idle' || state === 'done' || state === 'word' ? start() : stop()) });
-  const prev = h('button', { class: 'kids-btn', 'aria-label': 'Previous ayah', onclick: () => goAyah(ayah - 1) }, icon('left', 28));
-  const next = h('button', { class: 'kids-btn', 'aria-label': 'Next ayah', onclick: () => goAyah(ayah + 1) }, icon('right', 28));
+  const playBtn = h('button', { class: 'kids-btn main', 'aria-label': t('kids.listen'), onclick: () => (state === 'idle' || state === 'done' || state === 'word' ? start() : stop()) });
+  const prev = h('button', { class: 'kids-btn', 'aria-label': t('kids.prevAyah'), onclick: () => goAyah(ayah - 1) }, icon(back, 28));
+  const next = h('button', { class: 'kids-btn', 'aria-label': t('kids.nextAyah'), onclick: () => goAyah(ayah + 1) }, icon(fwd, 28));
   const speedBtn = h('button', { class: 'kids-chip', onclick: () => { setKidsSettings({ speed: kidsSettings().speed === 1 ? 0.75 : 1 }); paintChips(); } });
   const repBtn = h('button', { class: 'kids-chip', onclick: () => { setKidsSettings({ repeats: kidsSettings().repeats === 1 ? 3 : 1 }); paintChips(); } });
   const done = h('section', { class: 'kids-done', hidden: true });
 
   function paintChips() {
     const k = kidsSettings();
-    speedBtn.textContent = k.speed === 1 ? 'Normal speed' : 'Slow';
-    speedBtn.setAttribute('aria-label', `Speed: ${k.speed === 1 ? 'normal' : 'slow'} (tap to change)`);
-    repBtn.textContent = k.repeats === 1 ? 'Once' : '3 times';
-    repBtn.setAttribute('aria-label', `Each ayah ${k.repeats === 1 ? 'once' : 'three times'} (tap to change)`);
+    speedBtn.textContent = k.speed === 1 ? t('kids.normalSpeed') : t('kids.slow');
+    speedBtn.setAttribute('aria-label', k.speed === 1 ? t('kids.speedNormalAria') : t('kids.speedSlowAria'));
+    repBtn.textContent = k.repeats === 1 ? t('kids.once') : t('kids.thrice');
+    repBtn.setAttribute('aria-label', k.repeats === 1 ? t('kids.onceAria') : t('kids.thriceAria'));
   }
 
   function paint() {
     playBtn.replaceChildren(state === 'loading' ? h('span', { class: 'spinner' })
       : icon(state === 'playing' || state === 'turn' ? 'pause' : 'play', 34));
-    playBtn.setAttribute('aria-label', state === 'playing' || state === 'turn' ? 'Pause' : 'Listen');
+    playBtn.setAttribute('aria-label', state === 'playing' || state === 'turn' ? t('kids.pause') : t('kids.listen'));
     stage.classList.toggle('turn', state === 'turn');
     const reps = kidsSettings().repeats;
-    status.textContent = state === 'turn' ? 'Your turn' : state === 'playing' && reps > 1 ? `Listen · ${round} of ${reps}` : state === 'playing' ? 'Listen' : loadErr;
+    status.textContent = state === 'turn' ? t('kids.yourTurn') : state === 'playing' && reps > 1 ? t('kids.listenRound', { round, reps }) : state === 'playing' ? t('kids.listen') : loadErr;
     prev.disabled = ayah === 1;
     next.disabled = ayah === s.ayahs;
   }
@@ -98,7 +102,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       const el = h('span', { class: `kids-word${heard?.[i] ? ' tap' : ''}`, onclick: () => tapWord(i) }, w);
       if (heard?.[i]) {
         el.setAttribute('role', 'button');
-        el.setAttribute('aria-label', `Hear this word${meaningOf(ayah, i) ? `: ${meaningOf(ayah, i)}` : ''}`);
+        el.setAttribute('aria-label', `${t('kids.hearWord')}${meaningOf(ayah, i) ? `: ${meaningOf(ayah, i)}` : ''}`);
       }
       wordEls.push(el);
       return [i ? ' ' : '', el];
@@ -149,7 +153,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       console.warn('Kids recitation (QDC) failed, using per-ayah files', e);
       if (!alive) return false;
       if (!navigator.onLine) {
-        loadErr = 'This surah needs the internet the first time.';
+        loadErr = t('kids.needsInternet');
         state = 'idle';
         paint();
         return false;
@@ -162,18 +166,18 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   }
   const everyayah = (a: number): AyahAudio => ({ src: everyayahUrl(reciter, n, a), from: 0, to: Infinity, words: null, heard: words[a - 1].map(() => false) });
 
-  async function seek(src: string, t: number) {
+  async function seek(src: string, at: number) {
     if (audio.src !== src) {
       audio.src = src;
       await new Promise<void>((resolve, reject) => {
         const ok = () => { off(); resolve(); };
-        const bad = () => { off(); reject(new Error('The recitation could not be loaded')); };
+        const bad = () => { off(); reject(new Error(t('kids.loadFailed'))); };
         const off = () => { audio.removeEventListener('loadedmetadata', ok); audio.removeEventListener('error', bad); };
         audio.addEventListener('loadedmetadata', ok);
         audio.addEventListener('error', bad);
       });
     }
-    audio.currentTime = t;
+    audio.currentTime = at;
   }
 
   async function playSpan(x: AyahAudio, from: number, to: number, rate: number) {
@@ -216,7 +220,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       await playSpan(x, x.from, x.to, kidsSettings().speed);
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      loadErr = navigator.onLine ? 'The recitation could not be played.' : 'This surah needs the internet the first time.';
+      loadErr = navigator.onLine ? t('kids.playFailed') : t('kids.needsInternet');
       state = 'idle';
       paint();
       return;
@@ -312,11 +316,11 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
     const isLit = !!learned()[n];
     done.replaceChildren(
       h('div', { class: 'kids-done-glow', 'aria-hidden': 'true' }),
-      h('h2', {}, 'Well done!'),
-      h('p', {}, isLit ? `You listened to ${s.en} again.` : `You listened to all of ${s.en}.`),
+      h('h2', {}, t('kids.wellDone')),
+      h('p', {}, isLit ? t('kids.listenedAgain', { surah: surahName(s) }) : t('kids.listenedAll', { surah: surahName(s) })),
       h('div', { class: 'kids-done-actions' },
-        h('button', { class: 'kids-btn', onclick: () => start() }, 'Listen again'),
-        !isLit && h('button', { class: 'kids-btn lamp', onclick: () => { setLearned(n, true); bloomNext(n); location.hash = '#/kids'; } }, 'We learned it')));
+        h('button', { class: 'kids-btn', onclick: () => start() }, t('kids.listenAgain')),
+        !isLit && h('button', { class: 'kids-btn lamp', onclick: () => { setLearned(n, true); bloomNext(n); location.hash = '#/kids'; } }, t('kids.weLearned'))));
     done.hidden = false;
     stage.hidden = true;
   }
@@ -325,14 +329,14 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   showAyah(1);
   root.append(
     h('header', { class: 'kids-top' },
-      h('a', { class: 'kids-back', href: '#/kids', 'aria-label': 'All surahs' }, icon('left', 26)),
-      h('h1', { class: 'kids-title' }, s.en),
+      h('a', { class: 'kids-back', href: '#/kids', 'aria-label': t('mushaf.allSurahs') }, icon(back, 26)),
+      h('h1', { class: 'kids-title' }, surahName(s)),
       parentButton()),
     stage, done,
     h('div', { class: 'kids-chips' }, speedBtn, repBtn,
-      learned()[n] ? h('button', { class: 'kids-chip', 'aria-label': 'Make a keepsake reel (for grown-ups)', onclick: () => void makeKeepsake(n) }, 'Keepsake') : null),
+      learned()[n] ? h('button', { class: 'kids-chip', 'aria-label': t('kids.keepsakeAria'), onclick: () => void makeKeepsake(n) }, t('kids.keepsake')) : null),
     h('nav', { class: 'kids-controls' }, prev, playBtn, next),
-    h('p', { class: 'kids-hint' }, 'Tap a word to hear it'));
+    h('p', { class: 'kids-hint' }, t('kids.tapWord')));
 
   return () => {
     alive = false;

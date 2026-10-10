@@ -33,8 +33,13 @@ export function showTour(done?: () => void) {
     overlay.classList.add('out');
     window.setTimeout(() => overlay.remove(), 400);
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', onRoute);
     done?.();
   };
+  // Leaving the mushaf for another screen (surah list, Kids space…) counts as skipping the tour.
+  const view = (h: string) => h.replace(/^#\/?/, '').split('/')[0];
+  const from = view(location.hash);
+  const onRoute = () => { if (view(location.hash) !== from) close(); };
   const go = (k: number) => {
     i = Math.max(0, Math.min(steps.length - 1, k));
     draw();
@@ -72,6 +77,7 @@ export function showTour(done?: () => void) {
     go(forward ? i + 1 : i - 1);
   });
   document.addEventListener('keydown', onKey);
+  window.addEventListener('hashchange', onRoute);
   document.body.append(overlay);
   draw();
 }
