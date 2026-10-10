@@ -28,6 +28,8 @@ export interface StageOptions {
   onFallback?: () => void;
   /** Called before each frame (feed inputs such as the recitation's breath). */
   beforeFrame?: (t: number) => void;
+  /** Called after each frame (e.g. place DOM labels at the posed camera's projections). */
+  afterFrame?: (t: number) => void;
 }
 
 export class LightStage {
@@ -88,6 +90,7 @@ export class LightStage {
     this.o.beforeFrame?.(t);
     this.light.update(t);
     this.renderer.render(this.light.scene, this.light.camera);
+    this.o.afterFrame?.(t);
   }
 
   start() {

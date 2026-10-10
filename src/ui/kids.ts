@@ -94,7 +94,8 @@ export async function openParent() {
     h('div', { class: 'sheet-head' }, h('h2', {}, t('kids.grownUps')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
     h('label', { class: 'kids-field' }, h('span', {}, t('kids.childName')), name),
     h('div', { class: 'kids-field' }, h('span', {}, t('kids.show')), h('div', { class: 'chips' },
-      toggle(t('kids.translation'), k.translation, (v) => setKidsSettings({ translation: v })))),
+      toggle(t('kids.translation'), k.translation, (v) => setKidsSettings({ translation: v })),
+      toggle(t('kids.sky3d'), k.sky3d, (v) => { setKidsSettings({ sky3d: v }); if (location.hash === '#/kids') window.dispatchEvent(new HashChangeEvent('hashchange')); }))),
     h('div', { class: 'kids-field' }, h('span', {}, t('kids.learnedList')), learnedList),
     h('div', { class: 'kids-field' }, h('span', {}, t('kids.family')), familyBox),
     h('label', { class: 'kids-field' }, h('span', {}, t('kids.reciter')), reciterSelect),
@@ -261,5 +262,12 @@ export async function showKids(root: HTMLElement): Promise<() => void> {
     h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops));
   if (target) requestAnimationFrame(() => (target as HTMLElement).scrollIntoView({ block: 'center' }));
   familyNotes();
-  return () => {};
+  // The same path as floating lanterns in 3D behind the stops (L7); the 2D path stays as it is.
+  let off = () => {};
+  let gone = false;
+  if (kidsSettings().sky3d) {
+    void import('./kidsSky').then((m) => m.mountKidsSky(root, stops, KIDS_SURAHS.map((n) => !!lit[n]), next ? KIDS_SURAHS.indexOf(next) : -1,
+      bloom && lit[bloom] ? KIDS_SURAHS.indexOf(bloom) : -1)).then((f) => { if (gone) f(); else off = f; }).catch(() => {});
+  }
+  return () => { gone = true; off(); };
 }

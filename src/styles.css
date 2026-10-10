@@ -1251,3 +1251,19 @@ body:has(.wall-sky.has-light) .wall-host { background: transparent; }
 .home-sky-juz { font: 500 12px/1.3 system-ui, sans-serif; letter-spacing: .08em; color: rgba(201, 195, 230, .75); }
 .home-sky-hint { margin-top: 6px; font: 13px/1.3 system-ui, sans-serif; color: rgba(246, 239, 226, .6); transition: opacity 1.5s ease; }
 .home-sky-hint.gone { opacity: 0; }
+
+/* ---- Kids path in 3D (docs/light.md, L7): the scene fills the screen; the stops (links + names)
+   are placed on their lanterns by src/ui/kidsSky.ts and swiping glides along the path ---- */
+.kids-sky-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+.screen.kids.kids-3d { touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+.screen.kids.kids-3d > :not(.kids-sky-canvas) { position: relative; z-index: 1; }
+.kids-3d .kids-path { height: 0 !important; }
+.kids-3d .kids-path-line { display: none; }
+.kids-3d .kids-stop { position: fixed; transform-origin: 0 0; will-change: transform; -webkit-user-drag: none; }
+.kids-3d .kids-lantern, .kids-3d .kids-stop.lit .kids-lantern, .kids-3d .kids-stop.next .kids-lantern {
+  background: none; border-color: transparent; box-shadow: none; animation: none;
+}
+.kids-3d .kids-lantern svg { opacity: 0; }
+.kids-3d .kids-stop-label { text-shadow: 0 0 12px var(--kids-card), 0 0 3px var(--kids-card); transition: opacity .8s ease; }
+.kids-3d .kids-stop.kids-far .kids-stop-label { opacity: 0; }
+.kids-3d .kids-top, .kids-3d .kids-lead { text-shadow: 0 0 12px var(--kids-card); }

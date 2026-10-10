@@ -391,6 +391,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'sky.hint': 'اضغط على نجمة لتفتح صفحتها',
   'today.sky': 'سماؤك · نجوم هذا الشهر: {n}',
   'today.sky1': 'سماؤك · نجمة واحدة هذا الشهر',
+  'kids.sky3d': 'فوانيس ثلاثية الأبعاد',
   'night.open': 'استماع ليلي',
   'night.close': 'إنهاء الاستماع الليلي',
   'night.sleep': 'مؤقّت النوم',
