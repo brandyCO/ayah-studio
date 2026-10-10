@@ -338,6 +338,8 @@ const en = {
   'tafsir.source': 'Read it on Quran.com',
   'tafsir.failed': 'Could not load the tafsir — check your connection',
   // night listening (docs/light.md, L1)
+  'lamp.gridView': 'Grid',
+  'lamp.fieldView': 'Lanterns',
   'night.open': 'Night listening',
   'night.close': 'Leave night listening',
   'night.sleep': 'Sleep',

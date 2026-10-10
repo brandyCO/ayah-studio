@@ -9,6 +9,8 @@ import { forget, glow, INTERVALS, lamps, memorise, revise, type Lamp } from '../
 import { loadMushaf, PAGE_COUNT, type Mushaf } from '../data/mushaf';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { h, toast } from './dom';
+import { lightQuality } from '../light/support';
+import { mountLampField, type LampField } from './lampField';
 import { surahName, t } from '../i18n';
 
 const DAY = 86_400_000;
@@ -63,9 +65,12 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
   const ctx = canvas.getContext('2d')!;
   const panel = h('div', { class: 'lamp-panel', 'aria-live': 'polite' });
   const markForm = h('div', { class: 'lamp-mark' });
+  // The lantern field (3D, docs/light.md L4) or the grid; the grid is always one tap away.
+  const fieldBox = h('div', { class: 'lamp-field-box' });
+  const viewBtn = h('button', { class: 'chip lamp-view-btn', hidden: true, onclick: () => setView(view === 'field' ? 'grid' : 'field') });
   const d = h('dialog', { class: 'sheet bottom lamps-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, t('lamp.title')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
-    summary, canvas, panel, markForm,
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('lamp.title')), viewBtn, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+    summary, fieldBox, canvas, panel, markForm,
     h('p', { class: 'muted small' }, t('lamp.about', { days: INTERVALS.join(', ') })));
   document.body.append(d);
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
@@ -156,6 +161,47 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
     else bloom = null;
   }
 
+  // --- the lantern field ---
+  const quality = await lightQuality();
+  const juzOfPage = [0, ...m.pages.map((pg) => pg.juz)];
+  let field: LampField | null = null;
+  let view: 'field' | 'grid' = 'grid';
+  const savedView = () => { try { return localStorage.getItem('lampsView'); } catch { return null; } };
+  function setView(v: 'field' | 'grid', remember = true) {
+    view = v;
+    if (remember) try { localStorage.setItem('lampsView', v); } catch { /* storage blocked */ }
+    viewBtn.textContent = v === 'field' ? t('lamp.gridView') : t('lamp.fieldView');
+    canvas.hidden = v === 'field';
+    fieldBox.hidden = v !== 'field';
+    if (v === 'field' && !field) {
+      void mountLampField({
+        quality, juzOfPage,
+        onPick: (p) => { selected = p; refresh(); },
+        onFallback: () => { field = null; viewBtn.hidden = true; setView('grid', false); },
+      }).then((f) => {
+        if (!f) { viewBtn.hidden = true; return setView('grid', false); }
+        if (!d.open) return f.dispose();
+        field = f;
+        fieldBox.append(f.el);
+        refresh();
+      });
+    }
+    if (v === 'grid') requestAnimationFrame(() => size());
+  }
+  if (quality !== 'flat') {
+    viewBtn.hidden = false;
+    setView(savedView() === 'grid' ? 'grid' : 'field', false);
+  }
+  const lampStates = () => {
+    const all = lamps(), now = Date.now();
+    return Array.from({ length: PAGE_COUNT + 1 }, (_, p) => {
+      const l = all[p];
+      if (!l) return undefined;
+      const g = glow(l, now);
+      return { light: g.light, due: g.due };
+    });
+  };
+
   canvas.addEventListener('click', (e) => {
     const b = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - b.left - LABEL) / cell), y = Math.floor((e.clientY - b.top - 2) / cell);
@@ -189,11 +235,12 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
         h('button', { class: 'icon-btn', 'aria-label': t('lamp.nextPage'), onclick: () => step(1) }, '›')),
       h('div', { class: 'row' },
         h('button', { class: 'chip', onclick: () => { d.close(); goToPage(selected); } }, t('lamp.openPage')),
-        l ? h('button', { class: 'primary brand-btn', onclick: () => { revise(selected, true); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.revisedToday')) : '',
+        l ? h('button', { class: 'primary brand-btn', onclick: () => { revise(selected, true); bloom = { page: selected, t0: Date.now() }; field?.rise(selected); refresh(); } }, t('lamp.revisedToday')) : '',
         l ? h('button', { class: 'chip', title: t('lamp.backDaily'), onclick: () => { revise(selected, false); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.needsWork')) : '',
         l ? h('button', { class: 'chip', onclick: () => { forget([selected]); refresh(); } }, t('fam.remove'))
-          : h('button', { class: 'primary brand-btn', onclick: () => { memorise([selected]); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.mark'))));
-    draw();
+          : h('button', { class: 'primary brand-btn', onclick: () => { memorise([selected]); bloom = { page: selected, t0: Date.now() }; field?.rise(selected); refresh(); } }, t('lamp.mark'))));
+    field?.set(lampStates(), selected);
+    if (view === 'grid') draw();
   }
 
   // --- marking several pages ---
@@ -237,7 +284,7 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
   const ro = new ResizeObserver(() => size());
   const onChange = () => refresh(); // another device's lamps arrived
   window.addEventListener('lamps-changed', onChange);
-  d.addEventListener('close', () => { ro.disconnect(); window.removeEventListener('lamps-changed', onChange); d.remove(); });
+  d.addEventListener('close', () => { field?.dispose(); field = null; ro.disconnect(); window.removeEventListener('lamps-changed', onChange); d.remove(); });
   d.showModal();
   ro.observe(canvas);
   refresh();
