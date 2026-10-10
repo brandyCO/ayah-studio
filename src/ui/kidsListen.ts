@@ -9,6 +9,7 @@
 // No sound effects: the end of a turn and of the surah are shown, never heard (rule 3).
 import { isKidsSurah, kidsSettings, learned, setKidsSettings, setLearned } from '../data/kids';
 import { kidsRecitation } from '../data/kidsAudio';
+import { currentTranslation, translationInfo } from '../data/translations';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { everyayahUrl, reciterById } from '../data/reciters';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
@@ -63,8 +64,10 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   const fwd = dir() === 'rtl' ? 'left' : 'right';
   const wordEls: HTMLElement[] = [];
   const ar = h('p', { class: 'kids-ar', lang: 'ar', dir: 'rtl' });
-  const ref = h('p', { class: 'kids-ref' });
-  const en = h('p', { class: 'kids-en' });
+  // The user's chosen translation, in its own language and direction.
+  const tInfo = translationInfo(currentTranslation());
+  const en = h('p', { class: 'kids-en', lang: tInfo.lang, dir: tInfo.dir });
+  const ref = h('p', { class: 'kids-ref', dir: 'ltr' });
   const meaning = h('p', { class: 'kids-meaning', 'aria-live': 'polite' });
   const status = h('p', { class: 'kids-status', 'aria-live': 'polite' });
   const stage = h('main', { class: 'kids-stage' }, h('div', { class: 'kids-ayah' }, ar), ref, meaning, en, status);
