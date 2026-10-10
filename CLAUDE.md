@@ -715,7 +715,18 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       Migration `20261014100000_l2_light_looks.sql` (`valid_gift_look()` accepts the 5 ids + 2
       transitions; pgTAP `light_looks.test.sql`, 9 checks). The service worker warm-up also fetches the
       three.js chunks and the light thumbnails)
-- [ ] L3 Khatm circle as a constellation (SVG ring = fallback)
+- [x] L3 Khatm circle as a constellation (SVG ring = fallback)
+      (built 2026-10-10: `src/light/scenes/constellation.ts` — the 30 juz as stars on a ring floating
+      in a night sky (sky turned upwards, star field, mist below, Noor at the lower right), facing the
+      viewer with a ≤ 4° wobble and each star drifting a little in depth; free = faint lilac points on a
+      dotted path, taken = the member's colour with a halo, done = bright warm-white core in the member's
+      halo, yours pulses, the picked one has a soft ring, juz finished since you last looked brighten
+      once in turn, lines join neighbouring lit stars. Completion: all lights drift into one point
+      (1.6 s), it brightens, blooms open (Noor brightens with it) and the stars return; the centre (date)
+      and the names fade in after the bloom. Camera distance set so each star projects exactly onto
+      the SVG segment's centre (checked), so the SVG ring stays on top, transparent, for taps, keyboard
+      focus, aria labels and the labels (moved inside the ring). `src/ui/constellation.ts` mounts it
+      (lazy three.js); flat quality, no WebGL, or the fps watchdog falling back → the SVG ring as before)
 - [ ] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
 - [ ] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
