@@ -727,7 +727,17 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       the SVG segment's centre (checked), so the SVG ring stays on top, transparent, for taps, keyboard
       focus, aria labels and the labels (moved inside the ring). `src/ui/constellation.ts` mounts it
       (lazy three.js); flat quality, no WebGL, or the fps watchdog falling back → the SVG ring as before)
-- [ ] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
+- [x] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
+      (built 2026-10-10: `src/light/scenes/lampField.ts` — all 604 pages as paper lanterns (one
+      instanced mesh + one glow point each, two draw calls, plus the same mirrored under the water),
+      one cluster per juz along a shore (juz 1 on the right, later juz to the left, 5 per row, front
+      row first), dusk sky with stars and Noor. Memorised = lit from inside, dimmer as the interval
+      passes; would-like-a-visit = a soft flicker; not memorised = pale unlit paper. Revised today /
+      Mark memorised → the lantern rises ~0.55 and brightens over 6 s, then settles. `src/ui/lampField.ts`:
+      drag to glide along the shore (soft ease; wheel too), pinch / ctrl+wheel to come closer or see more,
+      tap → the nearest lantern on screen (≤ 30 px) becomes the page; "Juz N" label; the camera opens at
+      the page and glides to a newly picked page's juz. `src/ui/lamps.ts`: a **Grid / Lanterns** chip
+      (remembered as `lampsView`); flat quality, no WebGL or the fps watchdog → the canvas grid as before)
 - [ ] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
 - [ ] L6 Home sky (pages read this month as stars, circles as constellations, Noor)

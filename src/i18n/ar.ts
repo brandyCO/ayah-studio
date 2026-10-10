@@ -379,6 +379,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tafsir.source': 'اقرأه على Quran.com',
   'tafsir.failed': 'تعذّر تحميل التفسير — تحقّق من الاتصال',
   // night listening
+  'lamp.gridView': 'شبكة',
+  'lamp.fieldView': 'فوانيس',
   'night.open': 'استماع ليلي',
   'night.close': 'إنهاء الاستماع الليلي',
   'night.sleep': 'مؤقّت النوم',
