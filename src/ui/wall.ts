@@ -31,11 +31,15 @@ import { giftLook } from './gift';
 import { icon } from './icons';
 import { reelLook, reelReciter } from './prefs';
 import { loadSegments } from './reelSource';
+import { locale, t as tr, tOr } from '../i18n';
 
 const BUILT_IN = new Set(BACKGROUNDS.map((b) => b.id));
 const builtIn = (id: string) => BUILT_IN.has(id);
-const longDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
-const shortDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+// Built on use: the interface language is known only after start-up.
+const longDate = { format: (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d) };
+const shortDate = { format: (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(d) };
+const occasionText = (o: string) => tOr(`wall.occ.${o}`, occasionLabel(o));
+const entryCount = (n: number) => tr(n === 1 ? 'wall.entry1' : 'wall.entries', { n });
 /** An entry's Arabic is shown on the host's screen only when short enough to read from across a room
  *  (never cut: rule 1); longer ones show their reference, and the full text plays in the reel. */
 const LANTERN_WORDS = 28;
@@ -63,8 +67,8 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   return d;
 }
 const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
-const offline = (e: unknown) => (navigator.onLine ? errorText(e) : 'You are offline — try again when you are back online.');
+  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: close }, '✕'));
+const offline = (e: unknown) => (navigator.onLine ? errorText(e) : tr('gift.offlineTry'));
 
 /** The keepsake's look and reciter: the user's current reel look (built-in backgrounds only). */
 function currentLook() {
@@ -73,23 +77,23 @@ function currentLook() {
   return { look: giftLook(lookOf(p)), reciter: p.reciterId };
 }
 
-const occasionSelect = (value: Occasion) => h('select', { class: 'search', 'aria-label': 'Occasion' },
-  ...OCCASIONS.map(([k, l]) => h('option', { value: k, selected: k === value }, l)));
-const reciterSelect = (value: number) => h('select', { class: 'search', 'aria-label': 'Reciter' },
+const occasionSelect = (value: Occasion) => h('select', { class: 'search', 'aria-label': tr('wall.occasion') },
+  ...OCCASIONS.map(([k]) => h('option', { value: k, selected: k === value }, occasionText(k))));
+const reciterSelect = (value: number) => h('select', { class: 'search', 'aria-label': tr('kids.reciter') },
   ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === value }, reciterPickerLabel(r))));
 
 // --- ☰ → Ayah wall ---
 export function openWalls() {
   const body = h('div', { class: 'walls' });
-  const d = sheet('walls-sheet', head('Ayah wall', () => d.close()), body);
+  const d = sheet('walls-sheet', head(tr('wall.title'), () => d.close()), body);
   const off = onAccount(() => void draw());
   d.addEventListener('close', off);
 
   async function draw() {
-    const intro = h('p', { class: 'muted small' }, 'For a wedding, Eid or a family gathering: guests scan a code with their phone and add an ayah, their name and a short dua. Your screen shows them as they arrive, and at the end it all becomes one keepsake reel.');
+    const intro = h('p', { class: 'muted small' }, tr('wall.intro'));
     if (!account()) {
-      body.replaceChildren(intro, h('p', { class: 'small' }, 'Sign in with Google to host a wall — guests need no app.'),
-        h('button', { class: 'primary', onclick: () => openAccount() }, 'Sign in with Google'));
+      body.replaceChildren(intro, h('p', { class: 'small' }, tr('wall.signInHost')),
+        h('button', { class: 'primary', onclick: () => openAccount() }, tr('circ.signIn')));
       return;
     }
     body.replaceChildren(intro, h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading…'));
@@ -101,22 +105,22 @@ export function openWalls() {
       return;
     }
     body.replaceChildren(intro,
-      h('button', { class: 'primary brand-btn', onclick: () => create() }, '＋ New wall'),
-      ...(list.length ? [h('p', { class: 'circle-sub' }, 'Your walls'), h('div', { class: 'gift-list' }, ...list.map((w) =>
+      h('button', { class: 'primary brand-btn', onclick: () => create() }, tr('wall.new')),
+      ...(list.length ? [h('p', { class: 'circle-sub' }, tr('wall.yours')), h('div', { class: 'gift-list' }, ...list.map((w) =>
         h('a', { class: 'gift-row wall-row', href: `#/wall/${w.id}`, onclick: () => d.close() },
           h('b', {}, w.title),
-          h('span', { class: 'muted small' }, `${occasionLabel(w.occasion)} · ${shortDate.format(new Date(w.created_at))} · ${w.entries} ${w.entries === 1 ? 'entry' : 'entries'}${w.status === 'closed' ? ' · closed' : ''}`))))] : []));
+          h('span', { class: 'muted small' }, `${occasionText(w.occasion)} · ${shortDate.format(new Date(w.created_at))} · ${entryCount(w.entries)}${w.status === 'closed' ? ` · ${tr('wall.closed')}` : ''}`))))] : []));
   }
 
   function create() {
     const src = currentLook();
-    const title = h('input', { class: 'search', maxlength: TITLE_MAX, placeholder: 'Yusuf & Maryam’s wedding', 'aria-label': 'Title' });
+    const title = h('input', { class: 'search', maxlength: TITLE_MAX, placeholder: tr('wall.titlePh'), 'aria-label': tr('wall.titleLabel') });
     const occasion = occasionSelect('wedding');
     const reciter = reciterSelect(src.reciter);
-    const btn = h('button', { class: 'primary brand-btn', type: 'submit' }, 'Open the wall');
+    const btn = h('button', { class: 'primary brand-btn', type: 'submit' }, tr('wall.open'));
     body.replaceChildren(h('form', { class: 'circle-form', onsubmit: async (e: Event) => {
       e.preventDefault();
-      if (!title.value.trim()) return toast('Please give the wall a title');
+      if (!title.value.trim()) return toast(tr('wall.needTitle'));
       btn.disabled = true;
       try {
         const w = await createWall(title.value, occasion.value as Occasion, src.look, Number(reciter.value));
@@ -127,11 +131,11 @@ export function openWalls() {
         btn.disabled = false;
       }
     } },
-    h('label', {}, 'Title', title),
-    h('label', {}, 'Occasion', occasion),
-    h('label', {}, 'Reciter for the keepsake reel', reciter),
-    h('p', { class: 'muted small' }, 'The keepsake reel uses your current reel look (built-in backgrounds only). Guests’ names and duas are seen only by you and in the reel you make.'),
-    btn, h('button', { type: 'button', class: 'chip', onclick: () => void draw() }, 'Back')));
+    h('label', {}, tr('wall.titleLabel'), title),
+    h('label', {}, tr('wall.occasion'), occasion),
+    h('label', {}, tr('wall.reciter'), reciter),
+    h('p', { class: 'muted small' }, tr('wall.lookNote')),
+    btn, h('button', { type: 'button', class: 'chip', onclick: () => void draw() }, tr('common.back'))));
     title.focus();
   }
 }
@@ -152,10 +156,10 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
   const texts = new Map<string, string | null>(); // entry id → its Arabic (short ones), loaded once
 
   const message = (...nodes: (Node | string)[]) => page.replaceChildren(h('div', { class: 'wall-message' },
-    ...nodes, h('a', { class: 'chip', href: '#/' }, 'Go to the app')));
+    ...nodes, h('a', { class: 'chip', href: '#/' }, tr('circ.goToApp'))));
 
   const offAccount = onAccount((a) => {
-    if (!a) message(h('p', {}, 'Sign in with Google to open your wall.'), h('button', { class: 'primary', onclick: () => openAccount() }, 'Sign in with Google'));
+    if (!a) message(h('p', {}, tr('wall.signInOpen')), h('button', { class: 'primary', onclick: () => openAccount() }, tr('circ.signIn')));
     else void load();
   });
 
@@ -169,7 +173,7 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
       return;
     }
     if (!alive) return;
-    if (!got) return message(h('p', {}, 'This wall is not there any more, or it belongs to another account.'));
+    if (!got) return message(h('p', {}, tr('wall.goneOrOther')));
     const key = JSON.stringify(got);
     if (key === lastKey) return; // nothing new (a quiet refresh)
     lastKey = key;
@@ -210,7 +214,7 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
       const el = h('button', {
         class: `lantern${fresh ? ' arrive' : ''}${e === newest && entries.length > 1 ? ' newest' : ''}${e.hidden ? ' hidden-entry' : ''}`,
         onclick: () => entryMenu(e),
-        'aria-label': `${e.name}: ${reference(s, e.ayah_from, e.ayah_to)}${e.hidden ? ' (hidden)' : ''}`,
+        'aria-label': `${e.name}: ${reference(s, e.ayah_from, e.ayah_to)}${e.hidden ? ` (${tr('wall.hidden')})` : ''}`,
       },
       h('span', { class: 'lantern-ref' }, reference(s, e.ayah_from, e.ayah_to)),
       ar ? h('span', { class: 'lantern-ar', dir: 'rtl', lang: 'ar' }, ar) : '',
@@ -220,25 +224,25 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
     };
     page.replaceChildren(
       h('header', { class: 'wall-top' },
-        h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'Back to the app' }, '‹'),
+        h('a', { class: 'icon-btn', href: '#/', 'aria-label': tr('wall.backToApp') }, '‹'),
         h('div', { class: 'wall-title' }, h('h1', {}, w.title),
-          h('p', {}, `${occasionLabel(w.occasion)} · ${longDate.format(new Date(w.created_at))} · ${visible.length} ${visible.length === 1 ? 'entry' : 'entries'}${w.status === 'closed' ? ' · closed' : ''}`)),
+          h('p', {}, `${occasionText(w.occasion)} · ${longDate.format(new Date(w.created_at))} · ${entryCount(visible.length)}${w.status === 'closed' ? ` · ${tr('wall.closed')}` : ''}`)),
         h('div', { class: 'wall-tools' },
           h('a', { class: `chip${visible.length ? '' : ' disabled'}`, href: visible.length ? `#/wall/${w.id}/reel` : undefined,
-            onclick: (ev: Event) => { if (!visible.length) { ev.preventDefault(); toast('The keepsake reel is made from the entries — none yet'); } } }, '🎬 Keepsake reel'),
-          h('button', { class: 'chip', onclick: () => void toggleOpen() }, w.status === 'open' ? 'Close the wall' : 'Reopen'),
-          h('button', { class: 'icon-btn', 'aria-label': 'Full screen', onclick: () => fullScreen() }, icon('full', 20)),
-          h('button', { class: 'icon-btn', 'aria-label': 'Wall settings', onclick: () => settings() }, '⋯'))),
+            onclick: (ev: Event) => { if (!visible.length) { ev.preventDefault(); toast(tr('wall.noEntriesYet')); } } }, tr('wall.keepsakeBtn')),
+          h('button', { class: 'chip', onclick: () => void toggleOpen() }, w.status === 'open' ? tr('wall.close') : tr('wall.reopen')),
+          h('button', { class: 'icon-btn', 'aria-label': tr('wall.fullScreen'), onclick: () => fullScreen() }, icon('full', 20)),
+          h('button', { class: 'icon-btn', 'aria-label': tr('wall.settings'), onclick: () => settings() }, '⋯'))),
       h('div', { class: 'wall-body' },
         h('aside', { class: `wall-join${w.status === 'closed' ? ' closed' : ''}` },
           ...(w.status === 'open'
-            ? [qr, h('p', { class: 'wall-scan' }, 'Scan to add your ayah'), h('p', { class: 'wall-code' }, w.join_code),
+            ? [qr, h('p', { class: 'wall-scan' }, tr('wall.scan')), h('p', { class: 'wall-code' }, w.join_code),
               h('p', { class: 'wall-url' }, url.replace(/^https?:\/\//, ''))]
-            : [h('p', { class: 'wall-scan' }, 'This wall is closed. Thank you all.')])),
+            : [h('p', { class: 'wall-scan' }, tr('wall.closedThanks'))])),
         h('section', { class: 'wall-grid', 'aria-live': 'polite' },
-          ...(visible.length ? visible.map(lantern) : [h('p', { class: 'wall-empty' }, 'The first ayah will appear here.')]),
+          ...(visible.length ? visible.map(lantern) : [h('p', { class: 'wall-empty' }, tr('wall.firstHere'))]),
           ...(hidden.length ? [h('div', { class: 'wall-hidden-row' },
-            h('button', { class: 'link-btn', onclick: () => { showHidden = !showHidden; draw(); } }, `${showHidden ? 'Hide' : 'Show'} the ${hidden.length} hidden ${hidden.length === 1 ? 'entry' : 'entries'}`),
+            h('button', { class: 'link-btn', onclick: () => { showHidden = !showHidden; draw(); } }, showHidden ? tr('wall.hideHidden', { n: hidden.length }) : tr('wall.showHidden', { n: hidden.length })),
             ...(showHidden ? hidden.map(lantern) : []))] : []))));
     for (const e of entries) seen.add(e.id);
     first = false;
@@ -246,14 +250,14 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
 
   function entryMenu(e: WallEntry) {
     const d = sheet('wall-entry-sheet', head(e.name, () => d.close()),
-      h('p', { class: 'muted small' }, e.hidden ? 'Hidden: not on the wall and never in the keepsake reel.' : 'Hiding takes it off the wall and out of the keepsake reel. You can show it again.'),
+      h('p', { class: 'muted small' }, e.hidden ? tr('wall.hiddenNote') : tr('wall.hideNote')),
       h('button', { class: 'primary', onclick: async () => {
         d.close();
         try {
           await hideEntry(e.id, !e.hidden);
           await load();
         } catch (err) { toast(offline(err)); }
-      } }, e.hidden ? 'Show it again' : 'Hide this entry'));
+      } }, e.hidden ? tr('wall.showAgain') : tr('wall.hideEntry')));
   }
 
   async function toggleOpen() {
@@ -267,11 +271,11 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
   function settings() {
     if (!wall) return;
     const w = wall;
-    const title = h('input', { class: 'search', maxlength: TITLE_MAX, value: w.title, 'aria-label': 'Title' });
+    const title = h('input', { class: 'search', maxlength: TITLE_MAX, value: w.title, 'aria-label': tr('wall.titleLabel') });
     const occasion = occasionSelect(w.occasion);
     const reciter = reciterSelect(w.reciter);
     const useLook = h('input', { type: 'checkbox' });
-    const d = sheet('wall-settings', head('Wall settings', () => d.close()),
+    const d = sheet('wall-settings', head(tr('wall.settings'), () => d.close()),
       h('form', { class: 'circle-form', onsubmit: async (e: Event) => {
         e.preventDefault();
         try {
@@ -280,24 +284,24 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
           await load();
         } catch (err) { toast(offline(err)); }
       } },
-      h('label', {}, 'Title', title),
-      h('label', {}, 'Occasion', occasion),
-      h('label', {}, 'Reciter for the keepsake reel', reciter),
+      h('label', {}, tr('wall.titleLabel'), title),
+      h('label', {}, tr('wall.occasion'), occasion),
+      h('label', {}, tr('wall.reciter'), reciter),
       h('label', { class: 'check-row' }, useLook, ' Use my current reel look'),
-      h('button', { class: 'primary', type: 'submit' }, 'Save'),
+      h('button', { class: 'primary', type: 'submit' }, tr('morning.save')),
       h('button', { type: 'button', class: 'chip danger', onclick: async () => {
-        if (!confirm('Delete this wall and every entry on it? This cannot be undone.')) return;
+        if (!confirm(tr('wall.confirmDelete'))) return;
         try {
           await deleteWall(w.id);
           d.close();
           location.hash = '#/';
         } catch (err) { toast(offline(err)); }
-      } }, 'Delete the wall')));
+      } }, tr('wall.delete'))));
   }
 
   function fullScreen() {
     if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen?.().catch(() => toast('Full screen is not available here'));
+    else void document.documentElement.requestFullscreen?.().catch(() => toast(tr('wall.noFullScreen')));
   }
 
   // A TV screen stays on while the wall is open (where the browser allows it).
@@ -342,11 +346,11 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
   const code = rawCode.toUpperCase();
   const body = h('div', { class: 'wall-join-page' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'Home' }, '‹'),
-    h('div', { class: 'brand' }, h('h1', {}, 'Ayah wall'), h('p', { class: 'muted' }, 'Ayah Studio'))), body);
-  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: '#/' }, 'Go to the app')));
+    h('a', { class: 'icon-btn', href: '#/', 'aria-label': tr('circ.home') }, '‹'),
+    h('div', { class: 'brand' }, h('h1', {}, tr('wall.title')), h('p', { class: 'muted' }, 'Ayah Studio'))), body);
+  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: '#/' }, tr('circ.goToApp'))));
   if (!validCode(code)) {
-    fail('This wall code is not valid. Check the code on the screen.');
+    fail(tr('wall.badCode'));
     return () => {};
   }
   body.replaceChildren(h('p', { class: 'muted center' }, h('span', { class: 'spinner' }), ' Opening…'));
@@ -360,7 +364,7 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
     return () => {};
   }
   if (!info) {
-    fail('There is no wall with this code. Check the code on the screen.');
+    fail(tr('wall.noWall'));
     return () => {};
   }
   let pending: PendingForm | null = null;
@@ -378,21 +382,21 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
       h('div', { class: 'join-card wall-card' }, h('p', { class: 'muted small' }, occasionLabel(wallInfo.occasion)), h('h2', {}, wallInfo.title)),
       h('div', { class: 'wall-done' },
         h('div', { class: 'wall-lamp', 'aria-hidden': 'true' }),
-        h('h3', {}, entry.hidden ? 'Your entry is not shown on the wall' : 'Your ayah is on the wall'),
+        h('h3', {}, entry.hidden ? tr('wall.entryHidden') : tr('wall.entryOn')),
         h('p', {}, h('b', {}, reference(s, entry.ayah_from, entry.ayah_to))),
         entry.dua ? h('p', { class: 'wall-own-dua' }, `“${entry.dua}”`, h('br'), h('span', { class: 'muted small' }, `— ${entry.name}`)) : h('p', { class: 'muted small' }, `— ${entry.name}`),
         h('div', { class: 'row center' },
-          wallInfo.open ? h('button', { class: 'chip', onclick: () => form(entry) }, 'Change') : '',
+          wallInfo.open ? h('button', { class: 'chip', onclick: () => form(entry) }, tr('wall.change')) : '',
           h('button', { class: 'chip', onclick: async () => {
-            if (!confirm('Take your entry off the wall?')) return;
+            if (!confirm(tr('wall.confirmRemove'))) return;
             try {
               await removeEntry(entry.id);
               wallInfo.entry = null;
-              if (wallInfo.open) form(null); else fail('Your entry was removed. This wall is closed now.');
+              if (wallInfo.open) form(null); else fail(tr('wall.removedClosed'));
             } catch (e) { toast(offline(e)); }
-          } }, 'Remove'),
-          h('a', { class: 'chip', href: `#/s/${entry.surah}/${entry.ayah_from}` }, 'Read in the mushaf'))),
-      h('p', { class: 'muted small center' }, 'Your name and dua are seen only by the host and in the keepsake reel they make.'));
+          } }, tr('fam.remove')),
+          h('a', { class: 'chip', href: `#/s/${entry.surah}/${entry.ayah_from}` }, tr('gift.read')))),
+      h('p', { class: 'muted small center' }, tr('wall.privacy')));
   }
 
   function form(prev: WallPreview['entry'] | PendingForm | null) {
@@ -400,17 +404,17 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
     const startS = p?.surah ?? SUGGESTIONS[wallInfo.occasion][0][0];
     const startA = p?.ayah_from ?? p?.from ?? SUGGESTIONS[wallInfo.occasion][0][1];
     const startB = p?.ayah_to ?? p?.to ?? SUGGESTIONS[wallInfo.occasion][0][2];
-    const name = h('input', { class: 'search', maxlength: NAME_MAX, value: p?.name ?? (account()?.name ?? '').split(' ')[0].slice(0, NAME_MAX), 'aria-label': 'Your name', autocomplete: 'given-name' });
-    const surah = h('select', { class: 'search', 'aria-label': 'Surah' },
+    const name = h('input', { class: 'search', maxlength: NAME_MAX, value: p?.name ?? (account()?.name ?? '').split(' ')[0].slice(0, NAME_MAX), 'aria-label': tr('gift.yourName'), autocomplete: 'given-name' });
+    const surah = h('select', { class: 'search', 'aria-label': tr('fam.surah') },
       ...meta.map((s) => h('option', { value: String(s.n), selected: s.n === startS }, `${s.n}. ${s.tr} · ${s.ar}`)));
-    const from = h('select', { class: 'search', 'aria-label': 'From ayah' });
-    const to = h('select', { class: 'search', 'aria-label': 'To ayah' });
+    const from = h('select', { class: 'search', 'aria-label': tr('wall.fromAyah') });
+    const to = h('select', { class: 'search', 'aria-label': tr('wall.toAyah') });
     const preview = h('div', { class: 'wall-preview' });
-    const dua = h('textarea', { class: 'search gift-msg', maxlength: DUA_MAX, rows: 2, placeholder: 'A short dua, in your own words (optional)', 'aria-label': 'Dua' });
+    const dua = h('textarea', { class: 'search gift-msg', maxlength: DUA_MAX, rows: 2, placeholder: tr('wall.duaPh'), 'aria-label': tr('wall.dua') });
     dua.value = p?.dua ?? '';
     const count = h('span', { class: 'muted small gift-count' }, `${dua.value.length}/${DUA_MAX}`);
     dua.addEventListener('input', () => (count.textContent = `${dua.value.length}/${DUA_MAX}`));
-    const btn = h('button', { class: 'primary brand-btn', type: 'submit' }, prev && 'id' in prev ? 'Save my entry' : 'Add to the wall');
+    const btn = h('button', { class: 'primary brand-btn', type: 'submit' }, prev && 'id' in prev ? tr('wall.saveEntry') : tr('wall.add'));
     const signInNote = h('div', { class: 'gift-signin', hidden: true });
 
     const sm = () => meta[Number(surah.value) - 1];
@@ -437,21 +441,21 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
 
     body.replaceChildren(
       h('div', { class: 'join-card wall-card' }, h('p', { class: 'muted small' }, occasionLabel(wallInfo.occasion)), h('h2', {}, wallInfo.title),
-        h('p', { class: 'muted small' }, 'Add an ayah for the wall, with your name and — if you like — a short dua.')),
+        h('p', { class: 'muted small' }, tr('wall.addIntro'))),
       h('form', { class: 'circle-form', onsubmit: (e: Event) => { e.preventDefault(); void send(); } },
-        h('label', {}, 'Your name', name),
-        h('label', {}, 'Surah', surah),
-        h('div', { class: 'wall-range' }, h('label', {}, 'From ayah', from), h('label', {}, 'To ayah', to)),
-        h('p', { class: 'muted small' }, 'Up to three ayat. Some to start from:'), suggest,
+        h('label', {}, tr('gift.yourName'), name),
+        h('label', {}, tr('fam.surah'), surah),
+        h('div', { class: 'wall-range' }, h('label', {}, tr('wall.fromAyah'), from), h('label', {}, tr('wall.toAyah'), to)),
+        h('p', { class: 'muted small' }, tr('wall.upTo3')), suggest,
         preview,
-        h('label', {}, h('span', { class: 'gift-label-row' }, 'Your dua', count), dua),
-        h('p', { class: 'muted small' }, 'Shown as your own words, with your name — never as Quran.'),
+        h('label', {}, h('span', { class: 'gift-label-row' }, tr('wall.yourDua'), count), dua),
+        h('p', { class: 'muted small' }, tr('wall.ownWords')),
         signInNote,
         btn));
     void refresh(startA, startB);
 
     async function send() {
-      if (!name.value.trim()) return toast('Please write your name');
+      if (!name.value.trim()) return toast(tr('circ.writeName'));
       const entry = { name: name.value, dua: dua.value, surah: Number(surah.value), from: Number(from.value), to: Number(to.value) };
       btn.disabled = true;
       try {
@@ -463,8 +467,8 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
             /* ignore */
           }
           signInNote.hidden = false;
-          signInNote.replaceChildren(h('p', { class: 'small' }, 'Sign in with Google to add your ayah — it takes a moment, and you come right back here.'),
-            h('button', { type: 'button', class: 'chip', onclick: () => openAccount() }, 'Sign in with Google'));
+          signInNote.replaceChildren(h('p', { class: 'small' }, tr('wall.signInAdd')),
+            h('button', { type: 'button', class: 'chip', onclick: () => openAccount() }, tr('circ.signIn')));
           return;
         }
         await addEntry(code, entry);
@@ -488,7 +492,7 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
   }
 
   if (info.entry) done(info.entry);
-  else if (!info.open) fail(`“${info.title}” is closed — thank you for coming.`);
+  else if (!info.open) fail(tr('wall.isClosed', { title: info.title }));
   else form(pending);
   // Signing in with Google from this page: show the own entry (if any) once signed in.
   const off = onAccount((a) => {
@@ -510,12 +514,12 @@ export async function showWallJoin(root: HTMLElement, rawCode: string): Promise<
 export async function showKeepsake(root: HTMLElement, id: string, start = 0): Promise<() => void> {
   const body = h('div', { class: 'gift-page keepsake' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: `#/wall/${id}`, 'aria-label': 'Back to the wall' }, '‹'),
-    h('div', { class: 'brand' }, h('h1', {}, 'Keepsake reel'), h('p', { class: 'muted' }, 'Ayah wall'))), body);
-  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: `#/wall/${id}` }, 'Back to the wall')));
+    h('a', { class: 'icon-btn', href: `#/wall/${id}`, 'aria-label': tr('wall.backToWall') }, '‹'),
+    h('div', { class: 'brand' }, h('h1', {}, tr('wall.keepsake')), h('p', { class: 'muted' }, tr('wall.title')))), body);
+  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: `#/wall/${id}` }, tr('wall.backToWall'))));
   body.replaceChildren(h('p', { class: 'muted center' }, h('span', { class: 'spinner' }), ' Opening…'));
   if (!account()) {
-    fail('Sign in with Google to make the keepsake reel of your wall.');
+    fail(tr('wall.signInReel'));
     await new Promise<void>((resolve) => {
       let off: (() => void) | null = null;
       off = onAccount((a) => { if (a) { off?.(); resolve(); } });
@@ -529,7 +533,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
     return () => {};
   }
   if (!got) {
-    fail('This wall is not there any more.');
+    fail(tr('wall.gone'));
     return () => {};
   }
   const { wall } = got;
@@ -537,7 +541,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
   const all = got.entries.filter((e) => !e.hidden);
   const list = all.slice(start);
   if (!list.length || !strictLook(wall.look, builtIn) || !RECITERS.some((r) => r.id === wall.reciter)) {
-    fail(list.length ? 'This wall’s look cannot be used.' : 'There are no entries for a reel yet.');
+    fail(list.length ? tr('wall.badLook') : tr('wall.noEntries'));
     return () => {};
   }
   const project: Project = newProject(list[0].surah, list[0].ayah_from, list[0].ayah_to, wall.reciter);
@@ -549,14 +553,14 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
 
   const canvas = h('canvas', { class: 'gift-canvas', width: 540, height: 960 });
   const ctx = canvas.getContext('2d', { alpha: false })!;
-  const status = h('div', { class: 'stage-status' }, 'Loading recitation…');
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': 'Play', disabled: true }, icon('play', 26));
-  const scrub = h('input', { type: 'range', class: 'keepsake-scrub', min: 0, max: 1, step: 0.01, value: 0, 'aria-label': 'Position', disabled: true });
-  const exportBtn = h('button', { class: 'primary brand-btn', disabled: true }, 'Export');
+  const status = h('div', { class: 'stage-status' }, tr('ed.loadingRecitation'));
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': tr('gift.play'), disabled: true }, icon('play', 26));
+  const scrub = h('input', { type: 'range', class: 'keepsake-scrub', min: 0, max: 1, step: 0.01, value: 0, 'aria-label': tr('wall.position'), disabled: true });
+  const exportBtn = h('button', { class: 'primary brand-btn', disabled: true }, tr('ed.export'));
   const info = h('p', { class: 'muted small center' });
   const nextPart = h('div', { class: 'keepsake-next' });
   body.replaceChildren(h('div', { class: 'gift-stage' }, canvas, status), h('div', { class: 'gift-controls keepsake-controls' }, playBtn, scrub), exportBtn, info, nextPart,
-    h('p', { class: 'muted small center' }, `Recited by ${reciterPickerLabel(r)} · hidden entries are never in the reel. Change the reciter or look in the wall’s settings (⋯).`));
+    h('p', { class: 'muted small center' }, tr('wall.reelNote', { reciter: reciterPickerLabel(r) })));
 
   let alive = true;
   let tl: Timeline | null = null;
@@ -574,7 +578,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
     const [reel, scenes] = await Promise.all([
       loadSegments(r, list.map((e) => ({ surah: e.surah, from: e.ayah_from, to: e.ayah_to, note: { name: e.name, dua: e.dua } })),
         { pause: project.pause, hold: project.gap === 'hold' }, OUTRO,
-        (done, total) => { status.textContent = `Loading recitation… ${done}/${total}`; }, () => alive),
+        (done, total) => { status.textContent = `${tr('ed.loadingRecitation')} ${done}/${total}`; }, () => alive),
       Promise.all(project.scenes.map((sid) => loadBackground(backgroundById(sid)).catch(() => ({ bg: backgroundById('charcoal') }) as BackgroundMedia))),
     ]);
     if (!alive) return () => {};
@@ -595,14 +599,14 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
     scrub.max = String(tl.duration);
     const end = start + reel.used;
     const mins = Math.floor(tl.duration / 60), secs = Math.round(tl.duration % 60);
-    info.textContent = `${all.length > reel.used ? `Entries ${start + 1}–${end} of ${all.length}` : `${reel.used} ${reel.used === 1 ? 'entry' : 'entries'}`} · ${mins}:${String(secs).padStart(2, '0')}`;
-    if (start > 0) nextPart.append(h('a', { class: 'chip', href: `#/wall/${id}/reel/${Math.max(0, start - 30)}` }, '‹ Earlier entries'));
-    if (end < all.length) nextPart.append(h('a', { class: 'chip', href: `#/wall/${id}/reel/${end}` }, `Next part: entries ${end + 1}–${Math.min(all.length, end + 30)} ›`));
+    info.textContent = `${all.length > reel.used ? tr('wall.entriesRange', { a: start + 1, b: end, n: all.length }) : entryCount(reel.used)} · ${mins}:${String(secs).padStart(2, '0')}`;
+    if (start > 0) nextPart.append(h('a', { class: 'chip', href: `#/wall/${id}/reel/${Math.max(0, start - 30)}` }, tr('wall.earlier')));
+    if (end < all.length) nextPart.append(h('a', { class: 'chip', href: `#/wall/${id}/reel/${end}` }, tr('wall.nextPart', { a: end + 1, b: Math.min(all.length, end + 30) })));
     dirty = true;
   } catch (e) {
     if (!alive) return () => {};
     console.error(e);
-    status.textContent = navigator.onLine ? `The recitation could not be loaded: ${e instanceof Error ? e.message : e}` : 'You are offline — the recitation needs the internet.';
+    status.textContent = navigator.onLine ? tr('wall.recFailed', { msg: e instanceof Error ? e.message : String(e) }) : tr('wall.recOffline');
   }
 
   async function play() {
@@ -632,7 +636,7 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
   }
   const setPlayIcon = () => {
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
-    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    playBtn.setAttribute('aria-label', playing ? tr('kids.pause') : tr('gift.play'));
   };
   playBtn.onclick = () => (playing ? pause() : void play());
   scrub.oninput = () => {
