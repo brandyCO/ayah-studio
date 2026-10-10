@@ -27,6 +27,7 @@ import {
 } from '../together/gifts';
 import { openAccount } from './account';
 import { h, toast } from './dom';
+import { playMoment } from './moment';
 import { icon } from './icons';
 import { reelLook, reelReciter } from './prefs';
 import { loadReel } from './reelSource';
@@ -159,6 +160,8 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
   }
 
   function done(id: string) {
+    // The gift's light lifts off the clouds and becomes a star (docs/light.md, L5).
+    void playMoment('lift', { parent: d, seconds: 4.2, caption: tr('light.giftSent') });
     const url = giftLink(id);
     const text = tr('gift.shareText', { ref: reference(s, lo, hi), name: name.value.trim() });
     body.replaceChildren(
@@ -346,6 +349,8 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     void ac.resume();
     seal.classList.add('open');
     setTimeout(() => seal.remove(), 900);
+    // A lantern blooms open into the reel while the recitation loads.
+    void playMoment('bloom', { parent: stage, inline: true, seconds: 3.2 });
     playBtn.hidden = false;
     actions.hidden = false;
     wantPlay = true;

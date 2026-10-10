@@ -7,6 +7,7 @@ import type { Project } from '../engine/project';
 import type { Timeline } from '../engine/timeline';
 import { isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { h, toast } from './dom';
+import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
 
 export interface ExportJob {
@@ -53,9 +54,9 @@ export async function exportReel(job: ExportJob): Promise<void> {
   if (!path) return void toast('Export is not supported in this browser');
   const height = job.height ?? 1920;
   const ac = new AbortController();
-  const bar = h('div', { class: 'export-bar' }, h('div', {}));
+  const bar = lanternProgress(); // a lantern filling with light (docs/light.md, L5)
   const pct = h('div', { class: 'export-pct' }, '0%');
-  const progress = h('div', { class: 'export-progress' }, pct, bar,
+  const progress = h('div', { class: 'export-progress' }, bar.el, pct,
     h('p', { class: 'muted small' }, 'Keep this screen open while the video is made on your device.'),
     h('button', { class: 'chip', onclick: () => ac.abort() }, 'Cancel'));
   const result = h('div', { class: 'export-result', hidden: true });
@@ -70,7 +71,7 @@ export async function exportReel(job: ExportJob): Promise<void> {
   const leave = () => { ac.abort(); close(); };
   window.addEventListener('hashchange', leave);
   const setProgress = (f: number) => {
-    (bar.firstChild as HTMLElement).style.width = `${Math.round(f * 100)}%`;
+    bar.set(f);
     pct.textContent = `${Math.round(f * 100)}%`;
   };
   const started = performance.now();
