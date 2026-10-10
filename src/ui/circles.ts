@@ -13,7 +13,9 @@ import {
   newRound, pagesRead, previewCircle, setPart, takePart, watchCircle, type CircleState, type Member, type Part,
 } from '../together/circles';
 import { openAccount } from './account';
+import { mountConstellation, type Constellation } from './constellation';
 import { h, toast } from './dom';
+import { lightQuality } from '../light/support';
 import { lastRead, reelLook, reelReciter } from './prefs';
 import { locale, t } from '../i18n';
 
@@ -204,7 +206,11 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
   let picked: number | null = null; // juz whose actions are shown
   let celebrated = false;
   let stopWatch: (() => void) | null = null;
-  d.addEventListener('close', () => stopWatch?.());
+  // The ring as a 3D constellation behind the SVG ring (docs/light.md, L3); the SVG alone without it.
+  let sky: Constellation | null = null;
+  let skyGone = false;
+  const quality = await lightQuality();
+  d.addEventListener('close', () => { stopWatch?.(); sky?.dispose(); skyGone = true; });
 
   async function refresh() {
     try {
@@ -252,7 +258,8 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       g.style.setProperty('--c', color);
       g.append(svg('path', { d: arcPath(150, 150, 142, 100, a0, a1), class: 'seg' }));
       const mid = (a0 + a1) / 2;
-      const label = svg('text', { x: (150 + 121 * Math.cos(mid)).toFixed(1), y: (150 + 121 * Math.sin(mid)).toFixed(1), class: 'seg-label' });
+      const lr = sky ? 92 : 121; // with the stars on the ring, the labels sit just inside it
+      const label = svg('text', { x: (150 + lr * Math.cos(mid)).toFixed(1), y: (150 + lr * Math.sin(mid)).toFixed(1), class: 'seg-label' });
       label.textContent = p.status === 'free' ? String(p.juz) : (m?.name ?? '?').slice(0, 1).toUpperCase();
       g.append(label);
       const pick = () => { picked = picked === p.juz ? null : p.juz; draw(); };
@@ -264,7 +271,11 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       h('b', {}, complete ? t('circ.complete') : t('circ.of30', { n: done })),
       h('span', { class: 'muted small' }, complete ? dateFmt.format(new Date(circle.completed_at!)) : t('circ.finishedRound', { round: circle.round })),
       circle.due_date && !complete ? h('span', { class: 'muted small' }, t('circ.by', { date: dateFmt.format(new Date(circle.due_date)) })) : false);
-    const ringBox = h('div', { class: 'ring-box' }, ring, centre);
+    const ringBox = h('div', { class: `ring-box${sky ? ' ring-3d' : ''}` }, ...(sky ? [sky.canvas] : []), ring, centre);
+    sky?.set(parts.map((p) => {
+      const m = p.user_id ? byId.get(p.user_id) : undefined;
+      return { juz: p.juz, status: p.status, color: m ? MEMBER_COLORS[m.color % MEMBER_COLORS.length] : '', mine: p.user_id === me, picked: picked === p.juz, sweep: sweep.has(p.juz) };
+    }));
 
     // --- what you can do with the juz you tapped ---
     const panel = h('div', { class: 'circle-panel' });
@@ -310,9 +321,15 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       h('div', { class: 'row circle-foot' }, invite, leave, owner && members.length > 1 && del),
       h('p', { class: 'muted small' }, t('circ.inviteCode', { code: circle.invite_code })));
 
-    if (complete && !celebrated) {
+    // (with 3D on the way, the moment waits for the constellation)
+    if (complete && !celebrated && (sky || quality === 'flat' || skyGone)) {
       celebrated = true;
-      ring.classList.add('glow');
+      if (sky) {
+        // All lights drift together into one point that opens into the date and the names.
+        sky.celebrate();
+        ringBox.classList.add('celebrating');
+        panel.classList.add('after-bloom');
+      } else ring.classList.add('glow');
     }
   }
 
@@ -357,6 +374,14 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
   }
 
   body.append(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading…'));
+  if (quality !== 'flat') {
+    void mountConstellation(quality, () => { sky = null; skyGone = true; draw(); }).then((c) => {
+      if (!c) { skyGone = true; draw(); return; }
+      if (skyGone) return c.dispose();
+      sky = c;
+      draw();
+    });
+  }
   await refresh();
   if (justCreated && st) void share(st);
   try {
