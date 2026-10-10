@@ -665,6 +665,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       < 16 MB) — postponed by the owner (2026-10-09)
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
+### Phase 7 — Noor (owner-approved idea 2026-10-10; plan only, nothing built)
+Full plan: **`docs/light.md`** (owner decisions at its top). Noor = a faceless light depicting the
+Noor of Iman: the app's character, 3D intro scene, guide, helper and friend; the user tends it (reading,
+listening, revising…), it dims to an ember but never dies; it sends the morning ayah / hadith
+notifications. **Not in the Studio or exported reels.** Hadith only from a verified, credited source
+(never generated). Behind `feature('noor')` until a scholar/imam read and the owner confirm.
+- [ ] L1 Intro scene (3D) + Noor on the mushaf · L2 Guide + notifications (ayah, verified hadith)
+- [ ] L3 Reading companion · L4 Tending & radiance · L5 Together · L6 Lamps & Ramadan · L7 Kids · L7b Brand · L8 Help & polish
+
 ---
 
 ## Repository layout (target)
