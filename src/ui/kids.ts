@@ -10,6 +10,7 @@ import { h, toast } from './dom';
 import { parentGate } from './kidsGate';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
 import { lastRead, reelLook, reelReciter } from './prefs';
+import { lang, locale, surahName, t } from '../i18n';
 
 const lockIcon = () => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -21,19 +22,19 @@ const lockIcon = () => {
 
 /** The parent button in the corner of every Kids screen. */
 export const parentButton = () =>
-  h('button', { class: 'kids-parent', 'aria-label': 'For grown-ups', onclick: () => void openParent() }, lockIcon());
+  h('button', { class: 'kids-parent', 'aria-label': t('kids.grownUps'), onclick: () => void openParent() }, lockIcon());
 
 /** ☰ → Kids space: the first time a short setup for the parent, then the space opens. */
 export function openKidsSpace() {
   document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((x) => x.close());
   if (kidsSetUp()) return enter();
-  const name = h('input', { class: 'kids-name-input', type: 'text', maxLength: NAME_MAX, placeholder: "Child's name (optional)", autocomplete: 'off', 'aria-label': "Child's name" });
+  const name = h('input', { class: 'kids-name-input', type: 'text', maxLength: NAME_MAX, placeholder: t('kids.nameOptional'), autocomplete: 'off', 'aria-label': t('kids.childName') });
   const d = h('dialog', { class: 'sheet bottom kids-setup' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, 'Kids space'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-    h('p', {}, 'A calm place for children to listen to and repeat the short surahs. Big text, few buttons, no sign-in, works offline.'),
-    h('p', { class: 'muted small' }, 'Leaving the Kids space, its settings and anything that leads out of it ask a grown-up to answer a small sum.'),
-    h('label', { class: 'kids-field' }, h('span', {}, "Your child's name — used in greetings and on their keepsake reel. Stays on this device."), name),
-    h('button', { class: 'primary wide', onclick: () => { setKidsSettings({ name: name.value }); d.close(); enter(); } }, 'Open the Kids space'));
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('menu.kids')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+    h('p', {}, t('kids.intro')),
+    h('p', { class: 'muted small' }, t('kids.gateNote')),
+    h('label', { class: 'kids-field' }, h('span', {}, t('kids.nameNote')), name),
+    h('button', { class: 'primary wide', onclick: () => { setKidsSettings({ name: name.value }); d.close(); enter(); } }, t('kids.open')));
   d.addEventListener('close', () => d.remove());
   document.body.append(d);
   d.showModal();
@@ -62,20 +63,20 @@ export async function openParent() {
   const current = kidsReciter();
   const order = [...RECITERS.filter((r) => r.id === 12), ...RECITERS.filter((r) => r.id !== 12)];
   const reciterSelect = h('select', { class: 'kids-name-input', onchange: () => { setKidsSettings({ reciter: Number(reciterSelect.value) }); paintOffline(); } },
-    ...order.map((r) => h('option', { value: String(r.id), selected: r.id === current }, `${reciterPickerLabel(r)}${r.id === 12 ? ' — slow, for learning' : ''}`)));
+    ...order.map((r) => h('option', { value: String(r.id), selected: r.id === current }, `${reciterPickerLabel(r)}${r.id === 12 ? t('kids.slowForLearning') : ''}`)));
   const offline = h('div', { class: 'kids-offline' });
   const paintOffline = () => {
     const id = kidsReciter();
     const kept = keptCount(id);
-    offline.replaceChildren(h('p', { class: 'muted small' }, kept >= KIDS_SURAHS.length ? `All ${KIDS_SURAHS.length} surahs are kept on this device for ${reciterById(id).short}.`
-        : `${kept} of ${KIDS_SURAHS.length} surahs are kept on this device for ${reciterById(id).short}. A surah is kept once it has played.`));
+    offline.replaceChildren(h('p', { class: 'muted small' }, kept >= KIDS_SURAHS.length ? t('kids.keptAll', { n: KIDS_SURAHS.length, reciter: reciterById(id).short })
+        : t('kids.kept', { kept, n: KIDS_SURAHS.length, reciter: reciterById(id).short })));
     if (kept < KIDS_SURAHS.length) offline.append(h('button', { class: 'chip', onclick: async (e: Event) => {
         const b = e.currentTarget as HTMLButtonElement;
         b.disabled = true;
-        const failed = await keepAllOffline(id, (n, t) => { b.textContent = `Downloading… ${n} / ${t}`; });
-        toast(failed ? `${failed} surahs could not be downloaded — try again online` : 'All short surahs are kept for offline use');
+        const failed = await keepAllOffline(id, (n, total) => { b.textContent = t('kids.downloading', { n, total }); });
+        toast(failed ? t('kids.downloadFailed', { n: failed }) : t('kids.downloadDone'));
         paintOffline();
-      } }, 'Keep all for offline use (about 40 MB)'));
+      } }, t('kids.keepAll')));
   };
   paintOffline();
   const meta = await loadMeta();
@@ -83,23 +84,23 @@ export async function openParent() {
   const paintLearned = () => {
     const lit = learned();
     const list = KIDS_SURAHS.filter((n) => lit[n]);
-    learnedList.replaceChildren(...(list.length ? list.map((n) => h('button', { class: 'chip', onclick: () => { setLearned(n, false); unshare(n); paintLearned(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `${meta[n - 1].en} ✕`))
-      : [h('span', { class: 'muted small' }, 'None yet. "We learned it" at the end of a surah lights its lantern.')]));
+    learnedList.replaceChildren(...(list.length ? list.map((n) => h('button', { class: 'chip', onclick: () => { setLearned(n, false); unshare(n); paintLearned(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `${surahName(meta[n - 1])} ✕`))
+      : [h('span', { class: 'muted small' }, t('kids.noneLearned'))]));
   };
   paintLearned();
   const familyBox = h('div', {});
   void import('./family').then((m) => familyBox.replaceChildren(m.familyLinkSection()));
   const d = h('dialog', { class: 'sheet bottom kids-parent-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, 'For grown-ups'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-    h('label', { class: 'kids-field' }, h('span', {}, "Child's name"), name),
-    h('div', { class: 'kids-field' }, h('span', {}, 'Show'), h('div', { class: 'chips' },
-      toggle('English translation', k.translation, (v) => setKidsSettings({ translation: v })))),
-    h('div', { class: 'kids-field' }, h('span', {}, 'Learned surahs (lit lanterns) — tap to put one out'), learnedList),
-    h('div', { class: 'kids-field' }, h('span', {}, 'Family circle'), familyBox),
-    h('label', { class: 'kids-field' }, h('span', {}, 'Reciter'), reciterSelect),
-    h('div', { class: 'kids-field' }, h('span', {}, 'Offline'), offline),
-    h('button', { class: 'primary wide', onclick: () => { d.close(); leave(); } }, 'Leave the Kids space'),
-    h('p', { class: 'muted small' }, 'Everything in the Kids space stays on this device. It never asks to sign in and has no ads.'));
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('kids.grownUps')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+    h('label', { class: 'kids-field' }, h('span', {}, t('kids.childName')), name),
+    h('div', { class: 'kids-field' }, h('span', {}, t('kids.show')), h('div', { class: 'chips' },
+      toggle(t('kids.translation'), k.translation, (v) => setKidsSettings({ translation: v })))),
+    h('div', { class: 'kids-field' }, h('span', {}, t('kids.learnedList')), learnedList),
+    h('div', { class: 'kids-field' }, h('span', {}, t('kids.family')), familyBox),
+    h('label', { class: 'kids-field' }, h('span', {}, t('kids.reciter')), reciterSelect),
+    h('div', { class: 'kids-field' }, h('span', {}, t('kids.offline')), offline),
+    h('button', { class: 'primary wide', onclick: () => { d.close(); leave(); } }, t('kids.leave')),
+    h('p', { class: 'muted small' }, t('kids.privacy')));
   d.addEventListener('close', () => {
     if (cleanName(name.value) !== k.name) setKidsSettings({ name: name.value });
     d.remove();
@@ -108,7 +109,7 @@ export async function openParent() {
   d.showModal();
 }
 
-const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateFmt = new Intl.DateTimeFormat(locale() ?? 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
  * "My first surah" keepsake (docs/kids.md K4), after the parent gate: an editor draft of the surah
@@ -116,7 +117,7 @@ const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long'
  * card (user text, drawn in the UI fonts by the closing-card code, inside the safe area).
  */
 export async function makeKeepsake(n: number) {
-  if (!(await parentGate('Make a keepsake reel'))) return;
+  if (!(await parentGate(t('kids.keepsakeGate')))) return;
   const [{ newProject, applyLook, MAX_AYAT }, { applyMood, MOODS }, drafts, meta] = await Promise.all([
     import('../engine/project'), import('../engine/moods'), import('../data/drafts'), loadMeta()]);
   const s = meta[n - 1];
@@ -130,7 +131,7 @@ export async function makeKeepsake(n: number) {
   p.outro = true;
   const name = kidsSettings().name;
   const when = learned()[n] ?? Date.now();
-  p.closing = { title: `${name ? `${name} memorised` : 'Memorised'} ${s.en}`.slice(0, 80), names: [dateFmt.format(when)] };
+  p.closing = { title: (name ? t('kids.keepsakeTitle', { name, surah: surahName(s) }) : t('kids.keepsakeTitleNoName', { surah: surahName(s) })).slice(0, 80), names: [dateFmt.format(when)] };
   const id = drafts.newDraftId();
   const now = Date.now();
   await drafts.saveDraft({ id, project: p, created: now, updated: now });
@@ -175,13 +176,13 @@ export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelRecit
 
 function leave() {
   setKidsOn(false);
-  toast('Kids space closed');
+  toast(t('kids.closed'));
   location.hash = lastRead();
 }
 
 const greeting = () => {
   const n = kidsSettings().name;
-  return n ? `Assalamu alaikum, ${n}` : 'Assalamu alaikum';
+  return n ? t('kids.helloName', { name: n }) : t('kids.hello');
 };
 
 /** A lantern (SVG): outline when unlit; filled with a flame when lit (shape, not only colour). */
@@ -244,19 +245,19 @@ export async function showKids(root: HTMLElement): Promise<() => void> {
     const el = h('a', {
       class: `kids-stop${lit[n] ? ' lit' : ''}${n === next ? ' next' : ''}${n === bloom && lit[n] ? ' bloom' : ''}${right ? '' : ' label-left'}`,
       href: `#/kids/${n}`, style: `left: ${x}%; top: ${y}px`,
-      'aria-label': `${s.en}, ${s.ayahs} ayat${lit[n] ? ', learned' : ''}`,
+      'aria-label': `${surahName(s)}, ${t('common.ayat', { n: s.ayahs })}${lit[n] ? t('kids.learnedAria') : ''}`,
     },
     h('span', { class: 'kids-lantern' }, lantern()),
     h('span', { class: 'kids-stop-label' },
-      h('strong', {}, s.en),
-      h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
-      h('span', { class: 'kids-stop-sub' }, `${s.ayahs} ayat`)));
+      h('strong', lang() === 'ar' ? { class: 'kids-stop-ar', lang: 'ar' } : {}, surahName(s)),
+      lang() === 'ar' ? h('span', { class: 'kids-stop-sub', lang: 'en', dir: 'ltr' }, s.en) : h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
+      h('span', { class: 'kids-stop-sub' }, t('common.ayat', { n: s.ayahs }))));
     if (n === (bloom && lit[bloom] ? bloom : next)) target = el;
     return el;
   });
   root.append(
     h('header', { class: 'kids-top' }, h('h1', { class: 'kids-hello' }, greeting()), parentButton()),
-    h('p', { class: 'kids-lead' }, 'Which surah shall we listen to?'),
+    h('p', { class: 'kids-lead' }, t('kids.which')),
     h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops));
   if (target) requestAnimationFrame(() => (target as HTMLElement).scrollIntoView({ block: 'center' }));
   familyNotes();

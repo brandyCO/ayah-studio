@@ -10,11 +10,14 @@ import {
   type Entry, type Reflection,
 } from '../data/reflections';
 import { h, toast } from './dom';
+import { locale, surahName, t as tr } from '../i18n';
 
-const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-const shortDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+// Built on use: the interface language is known only after start-up.
+const dateFmt = { format: (d: number) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(d) };
+const shortDate = { format: (d: number) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(d) };
 const sameDay = (t: number, d = new Date()) => new Date(t).toDateString() === d.toDateString();
-export const writtenOn = (t: number) => (sameDay(t) ? 'today' : `on ${shortDate.format(t)}`);
+/** "You wrote here today" / "You wrote here on 12 Oct". */
+export const wroteHere = (t: number) => (sameDay(t) ? tr('rf.wroteToday') : tr('rf.wroteOn', { date: shortDate.format(t) }));
 
 function sheet(cls: string, ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `sheet bottom ${cls}` }, ...content);
@@ -25,7 +28,7 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   return d;
 }
 const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
+  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: close }, '✕'));
 
 /** A textarea that grows with its text and saves itself (debounced, and when the sheet closes). */
 function editor(value: string, placeholder: string, save: (text: string) => void) {
@@ -45,11 +48,11 @@ export async function openReflection(meta: SurahMeta[], s: number, a: number) {
   const ref = reference(meta[s - 1], a, a);
   const pending: (() => void)[] = []; // savers to run when the sheet closes
   const status = h('span', { class: 'rf-status muted small' });
-  const saved = () => { status.textContent = account() ? 'Saved · synced to your account' : 'Saved on this device'; };
+  const saved = () => { status.textContent = account() ? tr('rf.savedSynced') : tr('rf.savedDevice'); };
 
   const paragraph = (e: Entry) => {
     const box = h('div', { class: 'rf-entry' }, h('div', { class: 'rf-date' }, dateFmt.format(e.at)));
-    const text = h('p', { class: 'rf-text', tabindex: 0, title: 'Tap to edit' }, e.text);
+    const text = h('p', { class: 'rf-text', tabindex: 0, title: tr('rf.tapEdit') }, e.text);
     const edit = () => {
       let id: string | null = e.id;
       const ed = editor(e.text, '', (t) => { id = writeEntry(s, a, id, t); saved(); });
@@ -68,7 +71,7 @@ export async function openReflection(meta: SurahMeta[], s: number, a: number) {
   // Today's paragraph: continued if one was started today, else a new one.
   const todays = entries.at(-1) && sameDay(entries.at(-1)!.at) ? entries.at(-1)! : null;
   let todayId: string | null = todays?.id ?? null;
-  const today = editor(todays?.text ?? '', entries.length ? 'Add to it…' : 'What does this ayah say to you?', (t) => {
+  const today = editor(todays?.text ?? '', entries.length ? tr('rf.addTo') : tr('rf.prompt'), (t) => {
     todayId = writeEntry(s, a, todayId, t);
     saved();
   });
@@ -85,31 +88,31 @@ export async function openReflection(meta: SurahMeta[], s: number, a: number) {
       pending.length = 0;
       deleteReflection(s, a);
       d.close();
-      toast('Reflection deleted');
+      toast(tr('rf.deleted'));
       return;
     }
     del.dataset.armed = '1';
-    del.textContent = 'Tap again to delete';
-    window.setTimeout(() => { delete del.dataset.armed; del.textContent = 'Delete'; }, 3000);
-  } }, 'Delete');
+    del.textContent = tr('rf.tapAgainDelete');
+    window.setTimeout(() => { delete del.dataset.armed; del.textContent = tr('rf.delete'); }, 3000);
+  } }, tr('rf.delete'));
 
   const d = sheet('reflect-sheet',
     head(`✎ ${ref}`, () => d.close()),
     translation,
     h('div', { class: 'rf-body' },
       ...entries.filter((e) => e !== todays).map(paragraph),
-      h('div', { class: 'rf-entry' }, h('div', { class: 'rf-date' }, `Today · ${dateFmt.format(Date.now())}`), today.el)),
+      h('div', { class: 'rf-entry' }, h('div', { class: 'rf-date' }, `${tr('mushaf.today')} · ${dateFmt.format(Date.now())}`), today.el)),
     h('div', { class: 'rf-foot' },
       status,
-      h('button', { class: 'chip', title: 'Copy the text for your post’s caption (it is never put on the video)', onclick: () => {
+      h('button', { class: 'chip', title: tr('rf.copyTitle'), onclick: () => {
         for (const f of pending) f();
         const r = reflectionAt(s, a);
         const text = r ? liveEntries(r).map((e) => e.text.trim()).join('\n\n') : '';
-        if (!text) return toast('Write something first');
-        void navigator.clipboard.writeText(`${text}\n\n— ${ref}`).then(() => toast('Copied for your caption'), () => toast('Could not copy'));
-      } }, 'Copy for caption'),
+        if (!text) return toast(tr('rf.writeFirst'));
+        void navigator.clipboard.writeText(`${text}\n\n— ${ref}`).then(() => toast(tr('rf.copied')), () => toast(tr('rf.copyFailed')));
+      } }, tr('rf.copy')),
       entries.length ? del : false));
-  status.textContent = 'Private — only you can read this';
+  status.textContent = tr('rf.private');
   d.addEventListener('close', () => { for (const f of pending) f(); });
   if (!entries.length) today.el.focus();
 }
@@ -128,7 +131,7 @@ function snippet(text: string, q: string): (Node | string)[] {
 /** ☰ → Reflections: every note, grouped by surah, with a search box. */
 export async function openReflections(meta: SurahMeta[], onGo: (s: number, a: number) => void) {
   await loadReflections();
-  const input = h('input', { type: 'search', class: 'search', placeholder: 'Search your reflections', 'aria-label': 'Search your reflections' });
+  const input = h('input', { type: 'search', class: 'search', placeholder: tr('rf.search'), 'aria-label': tr('rf.search') });
   const list = h('div', { class: 'sheet-scroll rf-list' });
 
   function draw() {
@@ -143,11 +146,11 @@ export async function openReflections(meta: SurahMeta[], onGo: (s: number, a: nu
     };
     const found = notes.map(match).filter((x): x is { r: Reflection; text: string } => !!x);
     if (!notes.length) {
-      list.replaceChildren(h('p', { class: 'muted' }, 'Long-press an ayah, then tap ✎ Reflect to write a private note. Only you can read it.'));
+      list.replaceChildren(h('p', { class: 'muted' }, tr('rf.none')));
       return;
     }
     if (!found.length) {
-      list.replaceChildren(h('p', { class: 'muted' }, `Nothing found for “${input.value.trim()}”.`));
+      list.replaceChildren(h('p', { class: 'muted' }, tr('rf.nothingFound', { q: input.value.trim() })));
       return;
     }
     const out: Node[] = [];
@@ -155,7 +158,7 @@ export async function openReflections(meta: SurahMeta[], onGo: (s: number, a: nu
     for (const { r, text } of found) {
       if (r.s !== surah) {
         surah = r.s;
-        out.push(h('h3', { class: 'rf-group' }, `${r.s}. ${meta[r.s - 1].en}`));
+        out.push(h('h3', { class: 'rf-group' }, `${r.s}. ${surahName(meta[r.s - 1])}`));
       }
       out.push(h('button', { class: 'menu-item rf-row', onclick: () => { d.close(); onGo(r.s, r.a); } },
         h('span', { class: 'rf-row-head' }, h('b', {}, `${r.s}:${r.a}`), h('span', { class: 'muted small' }, dateFmt.format(lastWritten(r)))),
@@ -165,6 +168,6 @@ export async function openReflections(meta: SurahMeta[], onGo: (s: number, a: nu
   }
   input.addEventListener('input', draw);
   draw();
-  const d = sheet('reflections-sheet', head('Reflections', () => d.close()), input, list,
-    h('p', { class: 'muted small' }, 'Private: only you can read your reflections.'));
+  const d = sheet('reflections-sheet', head(tr('rf.title'), () => d.close()), input, list,
+    h('p', { class: 'muted small' }, tr('rf.privateAll')));
 }

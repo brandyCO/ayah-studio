@@ -15,6 +15,7 @@ import {
 import { openAccount } from './account';
 import { h, toast } from './dom';
 import { lastRead, reelLook, reelReciter } from './prefs';
+import { locale, t } from '../i18n';
 
 export interface CircleContext {
   /** Pages of a juz in the mushaf (1-based page numbers). */
@@ -23,7 +24,9 @@ export interface CircleContext {
   goToPage(page: number): void;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+// Built on use: the interface language is known only after start-up.
+const dateFmt = { format: (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(d) };
+const members = (n: number) => t(n === 1 ? 'circ.member1' : 'circ.members', { n });
 const SVG = 'http://www.w3.org/2000/svg';
 const svg = (tag: string, attrs: Record<string, string | number>) => {
   const el = document.createElementNS(SVG, tag);
@@ -40,7 +43,7 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   return d;
 }
 const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
+  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
 
 const firstName = () => (account()?.name ?? '').split(' ')[0].slice(0, 40);
 
@@ -49,26 +52,26 @@ function needAccount(body: HTMLElement, why: string): boolean {
   if (account()) return false;
   body.replaceChildren(
     h('p', {}, why),
-    h('p', { class: 'muted small' }, 'Your own reading, bookmarks and reflections keep working without an account.'),
-    h('button', { class: 'primary', onclick: () => openAccount() }, 'Sign in with Google'));
+    h('p', { class: 'muted small' }, t('circ.noAccountNote')),
+    h('button', { class: 'primary', onclick: () => openAccount() }, t('circ.signIn')));
   return true;
 }
 
 /** ☰ → Khatm circles. */
 export function openCircles(ctx: CircleContext) {
   const body = h('div', { class: 'circles' });
-  const d = sheet('circles-sheet', head('Khatm circles', () => d.close()), body);
+  const d = sheet('circles-sheet', head(t('circ.title'), () => d.close()), body);
   const off = onAccount(() => void draw());
   d.addEventListener('close', off);
 
   async function draw() {
-    if (needAccount(body, 'Read the whole Quran together with family or friends: everyone takes a juz, and the circle completes a Khatm.')) return;
+    if (needAccount(body, t('circ.why'))) return;
     body.replaceChildren(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading your circles…'));
     let list: CircleState[];
     try {
       list = await loadCircles();
     } catch (e) {
-      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? `Could not load your circles: ${errorText(e)}` : 'Circles need the internet — you are offline.'));
+      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? t('circ.loadAllFailed', { msg: errorText(e) }) : t('circ.offline')));
       return;
     }
     const me = account()?.id;
@@ -79,7 +82,7 @@ export function openCircles(ctx: CircleContext) {
             h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, '🏮'),
             h('span', { class: 'circle-row-text' },
               h('b', {}, st.circle.name),
-              h('span', { class: 'muted small' }, `Family circle · ${st.members.length} ${st.members.length === 1 ? 'member' : 'members'}`)));
+              h('span', { class: 'muted small' }, t('fam.rowSub', { n: st.members.length }))));
         }
         const done = st.parts.filter((p) => p.status === 'done').length;
         const mine = st.parts.filter((p) => p.user_id === me).map((p) => p.juz);
@@ -87,24 +90,24 @@ export function openCircles(ctx: CircleContext) {
           miniRing(st),
           h('span', { class: 'circle-row-text' },
             h('b', {}, st.circle.name),
-            h('span', { class: 'muted small' }, st.circle.status === 'complete' ? `Khatm complete · round ${st.circle.round}`
-              : `${done} of 30 finished · ${st.members.length} ${st.members.length === 1 ? 'member' : 'members'}${mine.length ? ` · your juz ${mine.join(', ')}` : ''}`)));
+            h('span', { class: 'muted small' }, st.circle.status === 'complete' ? t('circ.completeRound', { round: st.circle.round })
+              : `${t('circ.finishedOf30', { n: done })} · ${members(st.members.length)}${mine.length ? ` · ${t('circ.yourJuz', { list: mine.join(', ') })}` : ''}`)));
       }),
-      ...(list.length ? [] : [h('p', { class: 'muted' }, 'No circles yet. Start one and share the link with your family.')]),
+      ...(list.length ? [] : [h('p', { class: 'muted' }, t('circ.none'))]),
       h('div', { class: 'row' },
-        h('button', { class: 'primary', onclick: () => createForm() }, '+ New circle'),
-        h('button', { class: 'chip', onclick: () => joinForm() }, 'Join with a code'),
-        h('button', { class: 'chip', onclick: () => void import('./family').then((m) => m.createFamilyForm((id) => { d.close(); void m.openFamily(id); })) }, '+ Family circle (children)')));
+        h('button', { class: 'primary', onclick: () => createForm() }, t('circ.new')),
+        h('button', { class: 'chip', onclick: () => joinForm() }, t('circ.joinCode')),
+        h('button', { class: 'chip', onclick: () => void import('./family').then((m) => m.createFamilyForm((id) => { d.close(); void m.openFamily(id); })) }, t('fam.familyChip'))));
   }
 
   function createForm() {
-    const name = h('input', { class: 'search', maxlength: 60, placeholder: 'e.g. Family Ramadan Khatm', 'aria-label': 'Circle name' });
-    const me = h('input', { class: 'search', maxlength: 40, value: firstName(), 'aria-label': 'Your name in the circle' });
-    const due = h('input', { class: 'search', type: 'date', 'aria-label': 'Finish by (optional)' });
-    const go = h('button', { class: 'primary', type: 'submit' }, 'Create circle');
+    const name = h('input', { class: 'search', maxlength: 60, placeholder: t('circ.namePh'), 'aria-label': t('circ.nameAria') });
+    const me = h('input', { class: 'search', maxlength: 40, value: firstName(), 'aria-label': t('fam.meAria') });
+    const due = h('input', { class: 'search', type: 'date', 'aria-label': t('circ.due') });
+    const go = h('button', { class: 'primary', type: 'submit' }, t('circ.create'));
     body.replaceChildren(h('form', { class: 'circle-form', onsubmit: async (e: Event) => {
       e.preventDefault();
-      if (!name.value.trim() || !me.value.trim()) return toast('Please fill in both names');
+      if (!name.value.trim() || !me.value.trim()) return toast(t('fam.bothNames'));
       go.disabled = true;
       try {
         const id = await createCircle(name.value, me.value, due.value || null);
@@ -115,24 +118,24 @@ export function openCircles(ctx: CircleContext) {
         go.disabled = false;
       }
     } },
-    h('label', {}, 'Name of the circle', name),
-    h('label', {}, 'Your name, as the others will see it', me),
-    h('label', {}, 'Finish by (optional)', due),
-    h('div', { class: 'row' }, h('button', { class: 'chip', type: 'button', onclick: () => void draw() }, 'Back'), go)));
+    h('label', {}, t('fam.circleName'), name),
+    h('label', {}, t('circ.yourName'), me),
+    h('label', {}, t('circ.due'), due),
+    h('div', { class: 'row' }, h('button', { class: 'chip', type: 'button', onclick: () => void draw() }, t('common.back')), go)));
     name.focus();
   }
 
   function joinForm() {
-    const code = h('input', { class: 'search', maxlength: 60, placeholder: 'Invite code or link', 'aria-label': 'Invite code or link' });
+    const code = h('input', { class: 'search', maxlength: 60, placeholder: t('circ.codePh'), 'aria-label': t('circ.codePh') });
     body.replaceChildren(h('form', { class: 'circle-form', onsubmit: (e: Event) => {
       e.preventDefault();
       const c = code.value.trim().split('/').pop()!.toUpperCase();
-      if (!/^[A-HJ-NP-Z2-9]{8}$/.test(c)) return toast('That code does not look right (8 letters and numbers)');
+      if (!/^[A-HJ-NP-Z2-9]{8}$/.test(c)) return toast(t('circ.badCode'));
       d.close();
       location.hash = `#/join/${c}`;
     } },
-    h('label', {}, 'Invite code (from the link you were sent)', code),
-    h('div', { class: 'row' }, h('button', { class: 'chip', type: 'button', onclick: () => void draw() }, 'Back'), h('button', { class: 'primary', type: 'submit' }, 'Continue'))));
+    h('label', {}, t('circ.codeLabel'), code),
+    h('div', { class: 'row' }, h('button', { class: 'chip', type: 'button', onclick: () => void draw() }, t('common.back')), h('button', { class: 'primary', type: 'submit' }, t('gate.continue')))));
     code.focus();
   }
 
@@ -195,8 +198,8 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     return void import('./family').then((m) => m.openFamily(id));
   }
   const body = h('div', { class: 'circle-view' });
-  const title = h('h2', {}, 'Khatm circle');
-  const d = sheet('circle-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')), body);
+  const title = h('h2', {}, t('circ.one'));
+  const d = sheet('circle-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')), body);
   let st: CircleState | null = null;
   let picked: number | null = null; // juz whose actions are shown
   let celebrated = false;
@@ -207,11 +210,11 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     try {
       st = await loadCircle(id);
     } catch (e) {
-      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? `Could not load the circle: ${errorText(e)}` : 'Circles need the internet — you are offline.'));
+      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? t('fam.loadFailed', { msg: errorText(e) }) : t('circ.offline')));
       return;
     }
     if (!st) {
-      body.replaceChildren(h('p', { class: 'muted' }, 'You are no longer in this circle.'));
+      body.replaceChildren(h('p', { class: 'muted' }, t('circ.notMember')));
       return;
     }
     draw();
@@ -238,14 +241,14 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     if (complete && !celebrated) picked = null; // the moment: names and the reel, not one juz
 
     // --- the ring ---
-    const ring = svg('svg', { viewBox: '0 0 300 300', class: `ring${complete ? ' complete' : ''}`, role: 'group', 'aria-label': `${done} of 30 juz finished` });
+    const ring = svg('svg', { viewBox: '0 0 300 300', class: `ring${complete ? ' complete' : ''}`, role: 'group', 'aria-label': t('circ.ringAria', { n: done }) });
     for (const p of parts) {
       const a0 = ((p.juz - 1) / 30) * Math.PI * 2 - Math.PI / 2 + 0.012;
       const a1 = (p.juz / 30) * Math.PI * 2 - Math.PI / 2 - 0.012;
       const m = p.user_id ? byId.get(p.user_id) : undefined;
       const color = m ? MEMBER_COLORS[m.color % MEMBER_COLORS.length] : 'transparent';
       const g = svg('g', { class: `seg-g ${p.status}${p.user_id === me ? ' mine' : ''}${picked === p.juz ? ' picked' : ''}${sweep.has(p.juz) ? ' sweep' : ''}`, tabindex: 0, role: 'button',
-        'aria-label': `Juz ${p.juz}: ${p.status === 'free' ? 'free' : `${m?.name ?? 'someone'}, ${p.status === 'done' ? 'finished' : 'reading'}`}` });
+        'aria-label': `${t('circ.juz', { n: p.juz })}: ${p.status === 'free' ? t('circ.free') : `${m?.name ?? t('circ.someone')}, ${p.status === 'done' ? t('circ.finished') : t('circ.reading')}`}` });
       g.style.setProperty('--c', color);
       g.append(svg('path', { d: arcPath(150, 150, 142, 100, a0, a1), class: 'seg' }));
       const mid = (a0 + a1) / 2;
@@ -258,9 +261,9 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       ring.append(g);
     }
     const centre = h('div', { class: 'ring-centre' },
-      h('b', {}, complete ? 'Khatm complete' : `${done} of 30`),
-      h('span', { class: 'muted small' }, complete ? dateFmt.format(new Date(circle.completed_at!)) : `finished · round ${circle.round}`),
-      circle.due_date && !complete ? h('span', { class: 'muted small' }, `by ${dateFmt.format(new Date(circle.due_date))}`) : false);
+      h('b', {}, complete ? t('circ.complete') : t('circ.of30', { n: done })),
+      h('span', { class: 'muted small' }, complete ? dateFmt.format(new Date(circle.completed_at!)) : t('circ.finishedRound', { round: circle.round })),
+      circle.due_date && !complete ? h('span', { class: 'muted small' }, t('circ.by', { date: dateFmt.format(new Date(circle.due_date)) })) : false);
     const ringBox = h('div', { class: 'ring-box' }, ring, centre);
 
     // --- what you can do with the juz you tapped ---
@@ -270,8 +273,8 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     else if (complete) panel.append(...completeView(members));
     else {
       const free = parts.filter((p) => p.status === 'free').length;
-      panel.append(h('p', { class: 'muted small' }, free ? 'Tap a free juz to take it.' : 'Every juz is taken.'));
-      if (free) panel.append(h('button', { class: 'chip', onclick: () => void act(async () => { picked = await takePart(id, null); }, 'A juz is yours — may Allah make it easy') }, 'Pick one for me'));
+      panel.append(h('p', { class: 'muted small' }, free ? t('circ.tapFree') : t('circ.allTaken')));
+      if (free) panel.append(h('button', { class: 'chip', onclick: () => void act(async () => { picked = await takePart(id, null); }, t('circ.yoursToast')) }, t('circ.pickForMe')));
     }
 
     // --- members and invite ---
@@ -281,31 +284,31 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       return h('span', { class: 'member' },
         h('span', { class: 'member-dot', style: `--c:${MEMBER_COLORS[m.color % MEMBER_COLORS.length]}` }, m.name.slice(0, 1).toUpperCase()),
         h('span', {}, m.name + (m.user_id === circle.owner_id ? ' (started it)' : '')),
-        theirs.length ? h('span', { class: 'muted small' }, `juz ${ranges(theirs.map((p) => p.juz))}${finished ? ` · ${finished === theirs.length ? 'finished' : `${finished} finished`}` : ''}`) : false);
+        theirs.length ? h('span', { class: 'muted small' }, `${t('circ.juzList', { list: ranges(theirs.map((p) => p.juz)) })}${finished ? ` · ${finished === theirs.length ? t('circ.finished') : t('circ.nFinished', { n: finished })}` : ''}`) : false);
     }));
-    const invite = h('button', { class: 'primary', onclick: () => void share(st!) }, 'Invite');
+    const invite = h('button', { class: 'primary', onclick: () => void share(st!) }, t('circ.invite'));
     const owner = circle.owner_id === me;
     const leave = h('button', { class: 'chip', onclick: () => {
       if (!leave.dataset.armed) {
         leave.dataset.armed = '1';
-        leave.textContent = owner && members.length === 1 ? 'Tap again: delete the circle' : 'Tap again to leave';
+        leave.textContent = owner && members.length === 1 ? t('circ.tapAgainDelete') : t('circ.tapAgainLeave');
         return;
       }
-      void leaveCircle(id).then(() => { d.close(); toast('You left the circle'); void loadCircles().catch(() => {}); }, (e) => toast(errorText(e)));
-    } }, 'Leave circle');
+      void leaveCircle(id).then(() => { d.close(); toast(t('circ.left')); void loadCircles().catch(() => {}); }, (e) => toast(errorText(e)));
+    } }, t('fam.leave'));
     const del: HTMLButtonElement = h('button', { class: 'chip danger', onclick: () => {
       if (!del.dataset.armed) {
         del.dataset.armed = '1';
-        del.textContent = 'Tap again: delete for everyone';
+        del.textContent = t('circ.tapAgainDeleteAll');
         return;
       }
-      void deleteCircle(id).then(() => { d.close(); toast('Circle deleted'); void loadCircles().catch(() => {}); }, (e) => toast(errorText(e)));
-    } }, 'Delete circle');
+      void deleteCircle(id).then(() => { d.close(); toast(t('circ.deleted')); void loadCircles().catch(() => {}); }, (e) => toast(errorText(e)));
+    } }, t('fam.delete'));
 
     body.replaceChildren(ringBox, panel,
-      h('h3', { class: 'circle-sub' }, 'Members'), people,
+      h('h3', { class: 'circle-sub' }, t('circ.membersTitle')), people,
       h('div', { class: 'row circle-foot' }, invite, leave, owner && members.length > 1 && del),
-      h('p', { class: 'muted small' }, `Invite code ${circle.invite_code}`));
+      h('p', { class: 'muted small' }, t('circ.inviteCode', { code: circle.invite_code })));
 
     if (complete && !celebrated) {
       celebrated = true;
@@ -315,32 +318,32 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
 
   function partActions(p: Part, m: Member | undefined, me: string | undefined): Node[] {
     const pages = ctx.juzPages(p.juz);
-    const range = `pages ${pages[0]}–${pages[pages.length - 1]}`;
-    const headLine = h('p', {}, h('b', {}, `Juz ${p.juz}`), ` · ${range}`);
+    const range = t('circ.pages', { a: pages[0], b: pages[pages.length - 1] });
+    const headLine = h('p', {}, h('b', {}, t('circ.juz', { n: p.juz })), ` · ${range}`);
     if (p.status === 'free') {
       return [headLine, st!.circle.status === 'open'
-        ? h('button', { class: 'primary', onclick: () => void act(() => takePart(id, p.juz), `Juz ${p.juz} is yours — may Allah make it easy`) }, `Take juz ${p.juz}`)
-        : h('p', { class: 'muted small' }, 'This round is complete.')];
+        ? h('button', { class: 'primary', onclick: () => void act(() => takePart(id, p.juz), t('circ.juzYours', { n: p.juz })) }, t('circ.take', { n: p.juz }))
+        : h('p', { class: 'muted small' }, t('circ.roundComplete'))];
     }
     if (p.user_id !== me) {
-      return [headLine, h('p', { class: 'muted' }, `${m?.name ?? 'Someone'} ${p.status === 'done' ? `finished it${p.done_at ? ` on ${dateFmt.format(new Date(p.done_at))}` : ''}` : 'is reading it'}.`)];
+      return [headLine, h('p', { class: 'muted' }, p.status === 'done' ? (p.done_at ? t('circ.finishedOn', { name: m?.name ?? t('circ.someone'), date: dateFmt.format(new Date(p.done_at)) }) : t('circ.finishedIt', { name: m?.name ?? t('circ.someone') })) : t('circ.readingIt', { name: m?.name ?? t('circ.someone') }))];
     }
     const read = pagesRead(p);
     const next = pages.find((pg) => !read.has(pg)) ?? pages[0];
     const readNow = h('button', { class: 'primary', onclick: () => {
       d.close();
       ctx.goToPage(next);
-    } }, read.size ? `Continue · page ${next}` : 'Read now');
+    } }, read.size ? t('circ.continuePage', { n: next }) : t('circ.readNow'));
     if (p.status === 'done') {
-      return [headLine, h('p', { class: 'muted' }, 'You finished this juz. May Allah accept it.'),
-        st!.circle.status === 'open' ? h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'taken')) }, 'Not finished yet') : false].filter(Boolean) as Node[];
+      return [headLine, h('p', { class: 'muted' }, t('circ.youFinished')),
+        st!.circle.status === 'open' ? h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'taken')) }, t('circ.notFinished')) : false].filter(Boolean) as Node[];
     }
     return [headLine,
-      h('p', { class: 'muted small' }, `${pages.length - pages.filter((pg) => read.has(pg)).length} of ${pages.length} pages left (read on this device)`),
+      h('p', { class: 'muted small' }, t('circ.pagesLeft', { n: pages.length - pages.filter((pg) => read.has(pg)).length, total: pages.length })),
       h('div', { class: 'row' },
         readNow,
-        h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'done'), 'May Allah accept it') }, 'I finished it'),
-        h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'free'), 'Juz given back') }, 'Give it back'))];
+        h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'done'), t('circ.accept')) }, t('circ.iFinished')),
+        h('button', { class: 'chip', onclick: () => void act(() => setPart(id, p.juz, 'free'), t('circ.givenBack')) }, t('circ.giveBack')))];
   }
 
   function completeView(members: Member[]): Node[] {
@@ -348,8 +351,8 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     return [
       h('p', { class: 'khatm-names' }, members.map((m) => m.name).join('  ·  ')),
       h('div', { class: 'row' },
-        h('button', { class: 'primary', onclick: () => void makeKhatmReel(st!) }, '🎬 Make the Khatm reel'),
-        c.owner_id === account()?.id ? h('button', { class: 'chip', onclick: () => void act(() => newRound(id), 'A new round has begun') }, 'Start another round') : false),
+        h('button', { class: 'primary', onclick: () => void makeKhatmReel(st!) }, t('circ.makeReel')),
+        c.owner_id === account()?.id ? h('button', { class: 'chip', onclick: () => void act(() => newRound(id), t('circ.newRoundToast')) }, t('circ.newRound')) : false),
     ];
   }
 
@@ -366,7 +369,7 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
 
 async function share(st: CircleState) {
   const url = inviteLink(st.circle.invite_code);
-  const text = `Join our Khatm circle “${st.circle.name}” on Ayah Studio — take a juz and we read the whole Quran together.`;
+  const text = t('circ.inviteText', { name: st.circle.name });
   try {
     if (navigator.share) return await navigator.share({ title: st.circle.name, text, url });
   } catch (e) {
@@ -374,7 +377,7 @@ async function share(st: CircleState) {
   }
   try {
     await navigator.clipboard.writeText(`${text}\n${url}`);
-    toast('Invite link copied');
+    toast(t('fam.linkCopied'));
   } catch {
     toast(url);
   }
@@ -386,7 +389,7 @@ export async function makeKhatmReel(st: CircleState) {
   applyLook(p, reelLook(), () => true);
   p.outro = true;
   const when = st.circle.completed_at ? new Date(st.circle.completed_at) : new Date();
-  p.closing = { title: `Khatm complete · ${st.circle.name} · ${dateFmt.format(when).replace(/ /g, '\u00a0')}`.slice(0, 80), names: st.members.map((m) => m.name).slice(0, 60) };
+  p.closing = { title: t('circ.reelTitle', { name: st.circle.name, date: dateFmt.format(when).replace(/ /g, '\u00a0') }).slice(0, 80), names: st.members.map((m) => m.name).slice(0, 60) };
   const id = newDraftId();
   const now = Date.now();
   await saveDraft({ id, project: p, created: now, updated: now });
@@ -420,8 +423,8 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
   code = code.toUpperCase();
   const body = h('div', { class: 'join' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'Home' }, '‹'),
-    h('div', { class: 'brand' }, h('h1', {}, 'Khatm circle'), h('p', { class: 'muted' }, 'An invitation'))), body);
+    h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('circ.home') }, '‹'),
+    h('div', { class: 'brand' }, h('h1', {}, t('circ.one')), h('p', { class: 'muted' }, t('circ.invitation')))), body);
 
   async function draw() {
     if (!account()) {
@@ -430,7 +433,7 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
       } catch {
         /* ignore */
       }
-      needAccount(body, 'You have been invited to a Khatm circle: everyone takes a juz and together the circle reads the whole Quran. Sign in to see the circle and join.');
+      needAccount(body, t('circ.invitedWhy'));
       return;
     }
     body.replaceChildren(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading…'));
@@ -438,22 +441,22 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
     try {
       info = await previewCircle(code);
     } catch (e) {
-      body.replaceChildren(h('p', {}, navigator.onLine ? `Could not open the invitation: ${errorText(e)}` : 'You are offline — open the link again when you are back online.'));
+      body.replaceChildren(h('p', {}, navigator.onLine ? t('circ.inviteFailed', { msg: errorText(e) }) : t('circ.inviteOffline')));
       return;
     }
     if (!info) {
-      body.replaceChildren(h('p', {}, 'This invite link is not valid any more. Ask for a new one.'), h('a', { class: 'chip', href: '#/' }, 'Go to the app'));
+      body.replaceChildren(h('p', {}, t('circ.inviteInvalid')), h('a', { class: 'chip', href: '#/' }, t('circ.goToApp')));
       return;
     }
-    const name = h('input', { class: 'search', maxlength: 40, value: firstName(), 'aria-label': 'Your name in the circle' });
-    const btn = h('button', { class: 'primary', type: 'submit' }, 'Join the circle');
+    const name = h('input', { class: 'search', maxlength: 40, value: firstName(), 'aria-label': t('fam.meAria') });
+    const btn = h('button', { class: 'primary', type: 'submit' }, t('circ.join'));
     body.replaceChildren(
       h('div', { class: 'join-card' },
         h('h2', {}, info.name),
-        h('p', { class: 'muted' }, `${info.members} ${info.members === 1 ? 'member' : 'members'} · round ${info.round}${info.status === 'complete' ? ' · Khatm complete' : ''}`)),
+        h('p', { class: 'muted' }, `${members(info.members)} · ${t('circ.round', { n: info.round })}${info.status === 'complete' ? ` · ${t('circ.complete')}` : ''}`)),
       h('form', { class: 'circle-form', onsubmit: async (e: Event) => {
         e.preventDefault();
-        if (!name.value.trim()) return toast('Please write your name');
+        if (!name.value.trim()) return toast(t('circ.writeName'));
         btn.disabled = true;
         try {
           const id = await joinCircle(code, name.value);
@@ -467,7 +470,7 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
           toast(errorText(err));
           btn.disabled = false;
         }
-      } }, h('label', {}, 'Your name, as the others will see it', name), btn));
+      } }, h('label', {}, t('circ.yourName'), name), btn));
   }
   const off = onAccount(() => void draw());
   return () => off();
