@@ -4,11 +4,13 @@
 // work exactly as before. Swipe up/down (or the wheel) glides the camera along the path; focusing
 // a stop glides to it. three.js loads only here. Flat quality (reduced motion, battery saver, no
 // WebGL), the parent's switch, or a device too slow for the scene → the 2D path, untouched.
+import type { KidsPathState } from '../data/kidsPath';
 import type { LightStage } from '../light/engine';
 import { lightQuality } from '../light/support';
 import { h } from './dom';
 
-export async function mountKidsSky(root: HTMLElement, stops: HTMLElement[], lit: boolean[], next: number, bloom: number): Promise<() => void> {
+export async function mountKidsSky(root: HTMLElement, stops: HTMLElement[], path: KidsPathState, ayahs: number[]): Promise<() => void> {
+  const { lit, next, bloom } = path;
   const quality = await lightQuality();
   if (quality === 'flat' || !root.isConnected || !stops.length) return () => {};
   let stage: LightStage | null = null;
@@ -29,9 +31,9 @@ export async function mountKidsSky(root: HTMLElement, stops: HTMLElement[], lit:
     const [{ LightStage }, { kidsPathScene }, { Vector3 }] = await Promise.all([import('../light/engine'), import('../light/scenes/kidsPath'), import('three')]);
     if (!root.isConnected) return () => {};
     const night = matchMedia('(prefers-color-scheme: dark)').matches;
-    const sc = kidsPathScene(stops.length, night);
+    const sc = kidsPathScene(stops.length, night, path.surahs, ayahs);
     const last = stops.length - 1;
-    const start = bloom >= 0 ? bloom : next >= 0 ? next : last;
+    const start = Math.min(last, path.focus);
     Object.assign(sc.input, { focus: start, lit, next, bloom });
     let target = start;
     let vel = 0;

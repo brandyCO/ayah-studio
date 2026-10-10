@@ -802,6 +802,22 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       `LightStage` gained `afterFrame`. Parent sheet → Show → **Lanterns in 3D** (`kidsSettings().sky3d`,
       on by default). Flat quality (reduced motion, battery saver, no WebGL), the switch off, or the
       fps watchdog → the 2D path, unchanged)
+- [x] L7b Kids path data + Noor in 2D + surah constellations (2026-10-10): `src/data/kidsPath.ts`
+      (no drawing, no three) holds the path for both versions — order (`KIDS_SURAHS`), `kidsPathState()`
+      (lit / next / just-lit bloom / focus), the wave (`wave()`, `pathPoint()`), `bloomNext()` /
+      `takeBloom()` and `constellation(surah, ayahs)`: one star per ayah, ayah 1 in the middle, a
+      loosened sunflower spread, each star joined to the nearest earlier one (seeded per surah). 2D path
+      (`showKids()`): the same layout as before; a learned lantern has its constellation (SVG) up and
+      away from its name, whose stars come out in ayah order when it blooms; **Noor** (`src/ui/kidsNoor.ts`,
+      CSS only: warm core + soft halo + a 4-light trail shown only while gliding; no face/body; silent)
+      rests beside the next lantern (above the last lit one when all are lit) and, after "We learned it",
+      brightens beside the lit lantern and glides over to the next (3.2 s). Listen & repeat: Noor in the
+      corner of the controls row (never near the Arabic) — breathing at rest, a soft swell on each word
+      start from the timings while the reciter plays, warmer and slower on "Your turn", brighter ~2 s on
+      "Well done" and on "We learned it" (the path opens 1.4 s later). Reduced motion: no breathing,
+      swells or star stagger; a glide becomes a fade out and in. 3D path: the same constellations as
+      glow points + soft lines beside each lit lantern (`kidsPathScene(count, night, surahs, ayahs)`,
+      built on first light, drawn star by star on a bloom); the 2D Noor and SVG stars are hidden there
 
 ---
 
