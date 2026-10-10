@@ -623,8 +623,13 @@ tafsir only from published, credited editions; UI strings only are translated by
       route, ☰ → Language (device default; reloads), `<html lang dir>`; Arabic (`src/i18n/ar.ts`, Western
       digits) covers the mushaf, ☰ menu, bookmarks, Today card, selection bar, surah list, reader,
       account sheet and the whole reel editor + export page; CSS moved to logical properties; the mushaf
-      strip, the reel canvas and the timeline keep their own direction. Still English in the Arabic
-      UI: circles, gifts, wall, Ramadan, lamps, reflections, drafts, media picker, device check)
+      strip, the reel canvas and the timeline keep their own direction. 2026-10-10: the Kids space
+      (incl. parent gate, keepsake card title), family circles, Khatm circles, gifts (+ message presets),
+      ayah wall (+ occasions), Ramadan (+ reminders), memorisation lamps, reflections and drafts are now
+      in Arabic too (keys `kids.*`, `gate.*`, `fam.*`, `circ.*`, `gift.*`, `wall.*`, `ram.*`, `lamp.*`,
+      `rf.*`, `dr.*`; module-level date formats built on use so they follow the language). Still
+      English in the Arabic UI: the media picker and device check, and the small labels the reel
+      engine draws on note/closing cards ("Word meanings: Quran.com", "a dua in X's own words"))
 - [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
       (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,
@@ -640,7 +645,7 @@ tafsir only from published, credited editions; UI strings only are translated by
 - [x] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
       (built 2026-10-09: `src/ui/tour.ts` — three cards over a soft blur with line drawings, dots,
       Skip/Back/Next, swipe and arrow keys (RTL-aware), "Start reading" in the brand gradient;
-      `tourSeen` in localStorage; shown by the mushaf on first launch, not to people who used the app
+      `tourSeen` in localStorage (leaving the mushaf for another screen counts as skipping); shown by the mushaf on first launch, not to people who used the app
       before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
       ☰ → Tour)
 - [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`

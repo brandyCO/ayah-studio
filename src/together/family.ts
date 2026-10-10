@@ -42,14 +42,6 @@ export interface FamilyState {
   notes: FamilyNote[];
 }
 
-/** Gentle presets for a du'a note (the members' own words; never presented as Quran or hadith). */
-export const NOTE_PRESETS = [
-  'May Allah make the Quran the light of your heart',
-  'So proud of you — keep going!',
-  'May Allah bless you and make it easy for you',
-  'I love hearing you recite',
-];
-
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const sb = await supabase();
   const { data, error } = await sb.rpc(fn, args);

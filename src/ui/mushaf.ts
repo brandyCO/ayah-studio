@@ -19,7 +19,7 @@ import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
-import { openReflection, openReflections, writtenOn } from './reflections';
+import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { lamps } from '../data/lamps';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
@@ -39,7 +39,7 @@ const bismillah = () =>
 // The living mushaf's first sources: bookmarks in the margin, and Today lines for a recent bookmark
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: t('mushaf.bookmarkMark', { ref: `${b.s}:${b.a}` }) })));
-registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: `You wrote here ${writtenOn(lastWritten(r))}` })));
+registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: wroteHere(lastWritten(r)) })));
 // Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
 let circleCtx: CircleContext | null = null;
 registerToday(async () => {
@@ -273,7 +273,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     if (!first) return;
     const { s, a, at } = first;
-    hint.textContent = `✎ You wrote here ${writtenOn(at)}`;
+    hint.textContent = `✎ ${wroteHere(at)}`;
     hint.onclick = () => { hint.hidden = true; void openReflection(meta, s, a); };
     hint.hidden = false;
     hint.classList.remove('show');
