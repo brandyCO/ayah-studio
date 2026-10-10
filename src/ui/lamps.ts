@@ -9,6 +9,7 @@ import { forget, glow, INTERVALS, lamps, memorise, revise, type Lamp } from '../
 import { loadMushaf, PAGE_COUNT, type Mushaf } from '../data/mushaf';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { h, toast } from './dom';
+import { surahName, t } from '../i18n';
 
 const DAY = 86_400_000;
 
@@ -38,11 +39,11 @@ export async function dimLamps(): Promise<{ count: number; surah: SurahMeta | nu
 
 const ago = (ms: number) => {
   const d = Math.floor(ms / DAY);
-  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
+  return d <= 0 ? t('lamp.today') : d === 1 ? t('lamp.yesterday') : t('lamp.daysAgo', { n: d });
 };
 const inDays = (ms: number) => {
   const d = Math.ceil(ms / DAY);
-  return d <= 0 ? 'now' : d === 1 ? 'tomorrow' : `in ${d} days`;
+  return d <= 0 ? t('lamp.now') : d === 1 ? t('lamp.tomorrow') : t('lamp.inDays', { n: d });
 };
 
 export async function openLamps(current: number, goToPage: (page: number) => void) {
@@ -58,14 +59,14 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
   let bloom: { page: number; t0: number } | null = null;
 
   const summary = h('p', { class: 'muted small lamps-summary' });
-  const canvas = h('canvas', { class: 'lamps-grid', role: 'img', 'aria-label': 'Your memorised pages as lamps, one row per juz' });
+  const canvas = h('canvas', { class: 'lamps-grid', role: 'img', 'aria-label': t('lamp.gridAria') });
   const ctx = canvas.getContext('2d')!;
   const panel = h('div', { class: 'lamp-panel', 'aria-live': 'polite' });
   const markForm = h('div', { class: 'lamp-mark' });
   const d = h('dialog', { class: 'sheet bottom lamps-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, 'My memorisation'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('lamp.title')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
     summary, canvas, panel, markForm,
-    h('p', { class: 'muted small' }, `A lamp glows after you revise its page and slowly dims until it would like another visit (after ${INTERVALS.join(', ')} days as it settles). Kept on this device and synced when you are signed in.`));
+    h('p', { class: 'muted small' }, t('lamp.about', { days: INTERVALS.join(', ') })));
   document.body.append(d);
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
 
@@ -170,40 +171,40 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
     const n = Object.keys(all).length;
     const due = Object.values(all).filter((l) => glow(l).due).length;
     summary.textContent = n
-      ? `${n} ${n === 1 ? 'page' : 'pages'} memorised${due ? ` · ${due} would like a visit` : ' · all glowing'}`
-      : 'Mark the pages you know by heart, and they become lamps.';
+      ? `${t(n === 1 ? 'lamp.page1' : 'lamp.pages', { n })}${due ? ` · ${t('lamp.dueN', { n: due })}` : ` · ${t('lamp.allGlowing')}`}`
+      : t('lamp.empty');
     const s = meta[surahOfPage(m, meta, selected) - 1];
     const l: Lamp | undefined = all[selected];
     const step = (k: number) => { selected = Math.min(PAGE_COUNT, Math.max(1, selected + k)); refresh(); };
     const info = l
       ? (() => {
         const g = glow(l);
-        return `Revised ${ago(Date.now() - l.at)} · ${g.due ? 'would like a visit' : `next visit ${inDays(g.nextIn)}`}`;
+        return `${t('lamp.revised', { when: ago(Date.now() - l.at) })} · ${g.due ? t('lamp.wouldLike') : t('lamp.nextVisit', { when: inDays(g.nextIn) })}`;
       })()
-      : 'Not marked as memorised';
+      : t('lamp.notMarked');
     panel.replaceChildren(
       h('div', { class: 'lamp-head' },
-        h('button', { class: 'icon-btn', 'aria-label': 'Previous page', onclick: () => step(-1) }, '‹'),
-        h('div', {}, h('b', {}, `Page ${selected}`), h('span', { class: 'muted small' }, ` · ${s.en} · Juz ${m.pages[selected - 1].juz}`), h('div', { class: 'muted small' }, info)),
-        h('button', { class: 'icon-btn', 'aria-label': 'Next page', onclick: () => step(1) }, '›')),
+        h('button', { class: 'icon-btn', 'aria-label': t('lamp.prevPage'), onclick: () => step(-1) }, '‹'),
+        h('div', {}, h('b', {}, t('common.page', { n: selected })), h('span', { class: 'muted small' }, ` · ${surahName(s)} · ${t('circ.juz', { n: m.pages[selected - 1].juz })}`), h('div', { class: 'muted small' }, info)),
+        h('button', { class: 'icon-btn', 'aria-label': t('lamp.nextPage'), onclick: () => step(1) }, '›')),
       h('div', { class: 'row' },
-        h('button', { class: 'chip', onclick: () => { d.close(); goToPage(selected); } }, 'Open page'),
-        l ? h('button', { class: 'primary brand-btn', onclick: () => { revise(selected, true); bloom = { page: selected, t0: Date.now() }; refresh(); } }, '✦ Revised today') : '',
-        l ? h('button', { class: 'chip', title: 'Back to daily visits', onclick: () => { revise(selected, false); bloom = { page: selected, t0: Date.now() }; refresh(); } }, 'Needs work') : '',
-        l ? h('button', { class: 'chip', onclick: () => { forget([selected]); refresh(); } }, 'Remove')
-          : h('button', { class: 'primary brand-btn', onclick: () => { memorise([selected]); bloom = { page: selected, t0: Date.now() }; refresh(); } }, 'Mark memorised')));
+        h('button', { class: 'chip', onclick: () => { d.close(); goToPage(selected); } }, t('lamp.openPage')),
+        l ? h('button', { class: 'primary brand-btn', onclick: () => { revise(selected, true); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.revisedToday')) : '',
+        l ? h('button', { class: 'chip', title: t('lamp.backDaily'), onclick: () => { revise(selected, false); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.needsWork')) : '',
+        l ? h('button', { class: 'chip', onclick: () => { forget([selected]); refresh(); } }, t('fam.remove'))
+          : h('button', { class: 'primary brand-btn', onclick: () => { memorise([selected]); bloom = { page: selected, t0: Date.now() }; refresh(); } }, t('lamp.mark'))));
     draw();
   }
 
   // --- marking several pages ---
-  const kind = h('select', { class: 'search', 'aria-label': 'What to mark' },
-    h('option', { value: 'surah' }, 'A surah'), h('option', { value: 'juz' }, 'A juz'), h('option', { value: 'range' }, 'Pages'));
-  const surahSel = h('select', { class: 'search', 'aria-label': 'Surah' }, ...meta.map((s) => h('option', { value: String(s.n) }, `${s.n}. ${s.en}`)));
+  const kind = h('select', { class: 'search', 'aria-label': t('lamp.whatToMark') },
+    h('option', { value: 'surah' }, t('lamp.aSurah')), h('option', { value: 'juz' }, t('lamp.aJuz')), h('option', { value: 'range' }, t('lamp.pagesOpt')));
+  const surahSel = h('select', { class: 'search', 'aria-label': t('fam.surah') }, ...meta.map((s) => h('option', { value: String(s.n) }, `${s.n}. ${surahName(s)}`)));
   surahSel.value = String(surahOfPage(m, meta, selected));
-  const juzSel = h('select', { class: 'search', 'aria-label': 'Juz', hidden: true }, ...Array.from({ length: 30 }, (_, i) => h('option', { value: String(i + 1) }, `Juz ${i + 1}`)));
+  const juzSel = h('select', { class: 'search', 'aria-label': t('lamp.juz'), hidden: true }, ...Array.from({ length: 30 }, (_, i) => h('option', { value: String(i + 1) }, t('circ.juz', { n: i + 1 }))));
   juzSel.value = String(m.pages[selected - 1].juz);
-  const pFrom = h('input', { class: 'search', type: 'number', min: 1, max: PAGE_COUNT, value: String(selected), 'aria-label': 'From page' });
-  const pTo = h('input', { class: 'search', type: 'number', min: 1, max: PAGE_COUNT, value: String(selected), 'aria-label': 'To page' });
+  const pFrom = h('input', { class: 'search', type: 'number', min: 1, max: PAGE_COUNT, value: String(selected), 'aria-label': t('lamp.fromPage') });
+  const pTo = h('input', { class: 'search', type: 'number', min: 1, max: PAGE_COUNT, value: String(selected), 'aria-label': t('lamp.toPage') });
   const range = h('span', { class: 'lamp-range', hidden: true }, pFrom, '–', pTo);
   kind.onchange = () => {
     surahSel.hidden = kind.value !== 'surah';
@@ -221,17 +222,17 @@ export async function openLamps(current: number, goToPage: (page: number) => voi
     return Array.from({ length: Math.abs(b - a) + 1 }, (_, i) => Math.min(a, b) + i);
   };
   markForm.append(
-    h('p', { class: 'circle-sub' }, 'Mark several pages'),
+    h('p', { class: 'circle-sub' }, t('lamp.markSeveral')),
     h('div', { class: 'row lamp-mark-row' }, kind, surahSel, juzSel, range),
     h('div', { class: 'row' },
-      h('button', { class: 'chip', onclick: () => { const p = pagesOf(); memorise(p); toast(`${p.length} ${p.length === 1 ? 'page' : 'pages'} marked as memorised`); refresh(); } }, 'Mark memorised'),
+      h('button', { class: 'chip', onclick: () => { const p = pagesOf(); memorise(p); toast(t(p.length === 1 ? 'lamp.marked1' : 'lamp.markedN', { n: p.length })); refresh(); } }, t('lamp.mark')),
       h('button', { class: 'chip', onclick: () => {
         const p = pagesOf().filter((x) => lamps()[x]);
-        if (!p.length) return toast('None of these pages are marked');
-        if (!confirm(`Remove ${p.length} ${p.length === 1 ? 'lamp' : 'lamps'}?`)) return;
+        if (!p.length) return toast(t('lamp.noneMarked'));
+        if (!confirm(t(p.length === 1 ? 'lamp.remove1' : 'lamp.removeN', { n: p.length }))) return;
         forget(p);
         refresh();
-      } }, 'Remove')));
+      } }, t('fam.remove'))));
 
   const ro = new ResizeObserver(() => size());
   const onChange = () => refresh(); // another device's lamps arrived

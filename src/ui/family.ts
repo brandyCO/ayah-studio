@@ -9,10 +9,11 @@ import { KIDS_SURAHS } from '../data/kids';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { errorText, inviteLink, leaveCircle, deleteCircle, loadCircles } from '../together/circles';
 import {
-  addChild, canManage, createFamily, deleteNote, kidsLink, leaveNote, loadFamily, markNoteSeen, NOTE_PRESETS, removeChild,
+  addChild, canManage, createFamily, deleteNote, kidsLink, leaveNote, loadFamily, markNoteSeen, removeChild,
   renameChild, setChildSurah, setKidsLink, type Child, type FamilyNote, type FamilyState,
 } from '../together/family';
 import { h, toast } from './dom';
+import { surahName, t } from '../i18n';
 
 function sheet(cls: string, ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `sheet bottom ${cls}` }, ...content);
@@ -23,19 +24,23 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   return d;
 }
 const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
+  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
+const sep = ' · ';
+const status = (s: 'learning' | 'learned') => (s === 'learned' ? t('fam.stLearned') : t('fam.stLearning'));
+/** Note presets in the interface language (the member's own words once sent). */
+const presets = () => [t('fam.p1'), t('fam.p2'), t('fam.p3'), t('fam.p4')];
 const firstName = () => (account()?.name ?? '').split(' ')[0].slice(0, 40);
 
 /** The form for a new family circle (from ☰ → Khatm circles). */
 export function createFamilyForm(onCreated: (id: string) => void) {
-  const name = h('input', { class: 'search', maxLength: 60, placeholder: 'e.g. Our family', 'aria-label': 'Family circle name' });
-  const me = h('input', { class: 'search', maxLength: 40, value: firstName(), placeholder: 'e.g. Mum, Grandma', 'aria-label': 'Your name in the circle' });
-  const btn = h('button', { class: 'primary', type: 'submit' }, 'Create');
-  const d = sheet('circles-sheet', head('New family circle', () => d.close()),
-    h('p', { class: 'muted small' }, 'Children learning the short surahs, encouraged by the family. Add each child by first name (children have no accounts); grandparents and relatives join with the invite link and can leave a short du\'a note for a child.'),
+  const name = h('input', { class: 'search', maxLength: 60, placeholder: t('fam.namePh'), 'aria-label': t('fam.nameAria') });
+  const me = h('input', { class: 'search', maxLength: 40, value: firstName(), placeholder: t('fam.mePh'), 'aria-label': t('fam.meAria') });
+  const btn = h('button', { class: 'primary', type: 'submit' }, t('fam.create'));
+  const d = sheet('circles-sheet', head(t('fam.new'), () => d.close()),
+    h('p', { class: 'muted small' }, t('fam.intro')),
     h('form', { class: 'circle-form', onsubmit: async (e: Event) => {
       e.preventDefault();
-      if (!name.value.trim() || !me.value.trim()) return toast('Please fill in both names');
+      if (!name.value.trim() || !me.value.trim()) return toast(t('fam.bothNames'));
       btn.disabled = true;
       try {
         const id = await createFamily(name.value, me.value);
@@ -45,37 +50,37 @@ export function createFamilyForm(onCreated: (id: string) => void) {
         toast(errorText(err));
         btn.disabled = false;
       }
-    } }, h('label', {}, 'Name of the circle', name), h('label', {}, 'Your name, as the family will see it', me), btn));
+    } }, h('label', {}, t('fam.circleName'), name), h('label', {}, t('fam.yourName'), me), btn));
 }
 
 /** Small lanterns for the 38 surahs of a child (lit = learned, ringed = learning). */
 function surahDots(st: FamilyState, ch: Child, meta: SurahMeta[]) {
   const by = new Map(st.parts.filter((p) => p.child_id === ch.id).map((p) => [p.surah, p.status]));
-  const learnedNames = KIDS_SURAHS.filter((s) => by.get(s) === 'learned').map((s) => meta[s - 1].en);
-  const learning = KIDS_SURAHS.filter((s) => by.get(s) === 'learning').map((s) => meta[s - 1].en);
+  const learnedNames = KIDS_SURAHS.filter((s) => by.get(s) === 'learned').map((s) => surahName(meta[s - 1]));
+  const learning = KIDS_SURAHS.filter((s) => by.get(s) === 'learning').map((s) => surahName(meta[s - 1]));
   return h('div', { class: 'fam-surahs' },
-    h('div', { class: 'fam-dots', role: 'img', 'aria-label': `${learnedNames.length ? `Learned: ${learnedNames.join(', ')}` : 'No surah learned yet'}${learning.length ? `. Learning: ${learning.join(', ')}` : ''}` },
-      ...KIDS_SURAHS.map((s) => h('span', { class: `fam-dot ${by.get(s) ?? ''}`, title: `${meta[s - 1].en}${by.get(s) ? ` · ${by.get(s)}` : ''}` }))),
-    learning.length ? h('p', { class: 'small' }, `Learning now: ${learning.join(', ')}`) : false,
-    learnedNames.length ? h('p', { class: 'muted small' }, `Learned: ${learnedNames.join(', ')}`) : false);
+    h('div', { class: 'fam-dots', role: 'img', 'aria-label': `${learnedNames.length ? t('fam.learned', { list: learnedNames.join(sep) }) : t('fam.noneLearned')}${learning.length ? `. ${t('fam.learningNow', { list: learning.join(sep) })}` : ''}` },
+      ...KIDS_SURAHS.map((s) => h('span', { class: `fam-dot ${by.get(s) ?? ''}`, title: `${surahName(meta[s - 1])}${by.get(s) ? ` · ${status(by.get(s)!)}` : ''}` }))),
+    learning.length ? h('p', { class: 'small' }, t('fam.learningNow', { list: learning.join(sep) })) : false,
+    learnedNames.length ? h('p', { class: 'muted small' }, t('fam.learned', { list: learnedNames.join(sep) })) : false);
 }
 
 export async function openFamily(id: string) {
   const meta = await loadMeta();
   const body = h('div', { class: 'circles fam' }, h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading…'));
-  const title = h('h2', {}, 'Family circle');
-  const d = sheet('circles-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')), body);
+  const title = h('h2', {}, t('kids.family'));
+  const d = sheet('circles-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')), body);
   let st: FamilyState | null = null;
 
   async function refresh() {
     try {
       st = await loadFamily(id);
     } catch (e) {
-      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? `Could not load the circle: ${errorText(e)}` : 'Family circles need the internet — you are offline.'));
+      body.replaceChildren(h('p', { class: 'muted' }, navigator.onLine ? t('fam.loadFailed', { msg: errorText(e) }) : t('fam.offline')));
       return;
     }
     if (!st) {
-      body.replaceChildren(h('p', {}, 'This circle is not available any more.'));
+      body.replaceChildren(h('p', {}, t('fam.gone')));
       return;
     }
     draw();
@@ -101,22 +106,22 @@ export async function openFamily(id: string) {
       ...s.children.map((ch) => h('section', { class: 'fam-child' },
         h('div', { class: 'fam-child-head' },
           h('b', {}, ch.name),
-          link?.child === ch.id ? h('span', { class: 'muted small' }, ' · Kids space on this device') : false),
+          link?.child === ch.id ? h('span', { class: 'muted small' }, t('fam.onThisDevice')) : false),
         surahDots(s, ch, meta),
         ...s.notes.filter((n) => n.child_id === ch.id).slice(0, 3).map((n) => noteRow(n, ch)),
         h('div', { class: 'row' },
-          h('button', { class: 'chip', onclick: () => composeNote(ch) }, '✎ Leave a du\'a note'),
-          canManage(s, ch) ? h('button', { class: 'chip', onclick: () => manageChild(ch) }, 'Learning…') : false))),
-      ...(s.children.length ? [] : [h('p', { class: 'muted' }, 'No children yet. Add your child by first name, then share the invite link with the family.')]),
+          h('button', { class: 'chip', onclick: () => composeNote(ch) }, t('fam.leaveNote')),
+          canManage(s, ch) ? h('button', { class: 'chip', onclick: () => manageChild(ch) }, t('fam.learningBtn')) : false))),
+      ...(s.children.length ? [] : [h('p', { class: 'muted' }, t('fam.noChildren'))]),
       h('div', { class: 'row' },
-        h('button', { class: 'primary', onclick: () => addChildForm() }, '+ Add a child'),
-        h('button', { class: 'chip', onclick: () => void share() }, 'Invite family')),
-      h('p', { class: 'muted small' }, 'In the Kids space on this device: For grown-ups → Family circle, to link it to a child. Lit lanterns then appear here, and notes appear for the child.'),
+        h('button', { class: 'primary', onclick: () => addChildForm() }, t('fam.addChild')),
+        h('button', { class: 'chip', onclick: () => void share() }, t('fam.invite'))),
+      h('p', { class: 'muted small' }, t('fam.linkHint')),
       h('div', { class: 'row' },
         h('button', { class: 'chip danger', onclick: () => {
-          if (!confirm(s.circle.owner_id === me ? 'Delete this family circle for everyone?' : 'Leave this family circle?')) return;
-          void (s.circle.owner_id === me ? deleteCircle(id) : leaveCircle(id)).then(() => { d.close(); toast('Done'); void loadCircles().catch(() => {}); }).catch((e) => toast(errorText(e)));
-        } }, s.circle.owner_id === me ? 'Delete circle' : 'Leave circle')));
+          if (!confirm(s.circle.owner_id === me ? t('fam.confirmDelete') : t('fam.confirmLeave'))) return;
+          void (s.circle.owner_id === me ? deleteCircle(id) : leaveCircle(id)).then(() => { d.close(); toast(t('common.done')); void loadCircles().catch(() => {}); }).catch((e) => toast(errorText(e)));
+        } }, s.circle.owner_id === me ? t('fam.delete') : t('fam.leave'))));
   }
 
   function noteRow(n: FamilyNote, ch: Child) {
@@ -124,65 +129,65 @@ export async function openFamily(id: string) {
     const mine = n.from_id === account()?.id;
     return h('div', { class: 'fam-note' },
       h('p', { class: 'fam-note-body' }, `“${n.body}”`),
-      h('p', { class: 'muted small' }, `— ${n.from_name}${n.surah ? ` · for ${meta[n.surah - 1].en}` : ''}${n.seen_at ? ' · seen' : ''}`,
-        mine || canManage(s, ch) ? h('button', { class: 'link-btn', onclick: () => void act(() => deleteNote(n.id), 'Note deleted') }, ' delete') : false));
+      h('p', { class: 'muted small' }, `— ${n.from_name}${n.surah ? ` · ${t('fam.forSurah', { surah: surahName(meta[n.surah - 1]) })}` : ''}${n.seen_at ? ` · ${t('fam.seen')}` : ''}`,
+        mine || canManage(s, ch) ? h('button', { class: 'link-btn', onclick: () => void act(() => deleteNote(n.id), t('fam.noteDeleted')) }, ` ${t('fam.deleteNote')}`) : false));
   }
 
   function addChildForm() {
-    const name = h('input', { class: 'search', maxLength: 24, placeholder: 'First name or nickname', 'aria-label': "Child's name" });
-    const f = sheet('circles-sheet', head('Add a child', () => f.close()),
-      h('p', { class: 'muted small' }, 'Only a first name or nickname; the family in this circle will see it.'),
+    const name = h('input', { class: 'search', maxLength: 24, placeholder: t('fam.childPh'), 'aria-label': t('kids.childName') });
+    const f = sheet('circles-sheet', head(t('fam.addChildTitle'), () => f.close()),
+      h('p', { class: 'muted small' }, t('fam.childNote')),
       h('form', { class: 'circle-form', onsubmit: (e: Event) => {
         e.preventDefault();
         if (!name.value.trim()) return;
         f.close();
-        void act(() => addChild(id, name.value), 'Child added');
-      } }, name, h('button', { class: 'primary', type: 'submit' }, 'Add')));
+        void act(() => addChild(id, name.value), t('fam.childAdded'));
+      } }, name, h('button', { class: 'primary', type: 'submit' }, t('fam.add'))));
   }
 
   function manageChild(ch: Child) {
     const s = st!;
     const by = new Map(s.parts.filter((p) => p.child_id === ch.id).map((p) => [p.surah, p.status]));
-    const pick = h('select', { class: 'search', 'aria-label': 'Surah' }, ...KIDS_SURAHS.map((n) => h('option', { value: String(n) }, `${meta[n - 1].en}${by.get(n) ? ` (${by.get(n)})` : ''}`)));
-    const name = h('input', { class: 'search', maxLength: 24, value: ch.name, 'aria-label': "Child's name" });
+    const pick = h('select', { class: 'search', 'aria-label': t('fam.surah') }, ...KIDS_SURAHS.map((n) => h('option', { value: String(n) }, `${surahName(meta[n - 1])}${by.get(n) ? ` (${status(by.get(n)!)})` : ''}`)));
+    const name = h('input', { class: 'search', maxLength: 24, value: ch.name, 'aria-label': t('kids.childName') });
     const f = sheet('circles-sheet', head(ch.name, () => f.close()),
-      h('label', {}, 'Surah', pick),
+      h('label', {}, t('fam.surah'), pick),
       h('div', { class: 'row' },
-        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'learning'), 'Marked as learning'); } }, 'Learning now'),
-        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'learned'), 'Lantern lit'); } }, 'Learned'),
-        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'none')); } }, 'Clear')),
-      h('label', {}, 'Name', name),
+        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'learning'), t('fam.markedLearning')); } }, t('fam.learningNowBtn')),
+        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'learned'), t('fam.lanternLit')); } }, t('fam.learnedBtn')),
+        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => setChildSurah(ch.id, Number(pick.value), 'none')); } }, t('fam.clear'))),
+      h('label', {}, t('fam.name'), name),
       h('div', { class: 'row' },
-        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => renameChild(ch.id, name.value), 'Renamed'); } }, 'Rename'),
+        h('button', { class: 'chip', onclick: () => { f.close(); void act(() => renameChild(ch.id, name.value), t('fam.renamed')); } }, t('fam.rename')),
         h('button', { class: 'chip danger', onclick: () => {
-          if (!confirm(`Remove ${ch.name} from the circle? Their lanterns and notes here are deleted.`)) return;
+          if (!confirm(t('fam.confirmRemove', { name: ch.name }))) return;
           f.close();
           if (kidsLink()?.child === ch.id) setKidsLink(null);
-          void act(() => removeChild(ch.id), 'Removed');
-        } }, 'Remove')));
+          void act(() => removeChild(ch.id), t('fam.removed'));
+        } }, t('fam.remove'))));
   }
 
   function composeNote(ch: Child) {
-    const text = h('textarea', { class: 'search fam-note-input', maxLength: 140, rows: 3, placeholder: `A short du'a for ${ch.name}`, 'aria-label': 'Note' });
+    const text = h('textarea', { class: 'search fam-note-input', maxLength: 140, rows: 3, placeholder: t('fam.notePh', { name: ch.name }), 'aria-label': t('fam.note') });
     const count = h('span', { class: 'muted small' }, '0 / 140');
     text.addEventListener('input', () => { count.textContent = `${text.value.length} / 140`; });
-    const surah = h('select', { class: 'search', 'aria-label': 'Show it when this surah is learned' },
-      h('option', { value: '' }, 'Show it next time'), ...KIDS_SURAHS.map((n) => h('option', { value: String(n) }, `When ${meta[n - 1].en} is learned`)));
-    const f = sheet('circles-sheet', head(`A note for ${ch.name}`, () => f.close()),
-      h('div', { class: 'chips' }, ...NOTE_PRESETS.map((p) => h('button', { class: 'chip', onclick: () => { text.value = p; count.textContent = `${p.length} / 140`; } }, p))),
+    const surah = h('select', { class: 'search', 'aria-label': t('fam.whenAria') },
+      h('option', { value: '' }, t('fam.nextTime')), ...KIDS_SURAHS.map((n) => h('option', { value: String(n) }, t('fam.whenLearned', { surah: surahName(meta[n - 1]) }))));
+    const f = sheet('circles-sheet', head(t('fam.noteFor', { name: ch.name }), () => f.close()),
+      h('div', { class: 'chips' }, ...presets().map((p) => h('button', { class: 'chip', onclick: () => { text.value = p; count.textContent = `${p.length} / 140`; } }, p))),
       text, count, surah,
-      h('p', { class: 'muted small' }, 'Shown to the child in the Kids space as your own words, with your name. Up to 3 notes a day.'),
+      h('p', { class: 'muted small' }, t('fam.noteInfo')),
       h('button', { class: 'primary', onclick: () => {
-        if (!text.value.trim()) return toast('Please write a note');
+        if (!text.value.trim()) return toast(t('fam.writeNote'));
         f.close();
-        void act(() => leaveNote(ch.id, surah.value ? Number(surah.value) : null, text.value), 'Note left — jazakAllahu khayran');
-      } }, 'Leave the note'));
+        void act(() => leaveNote(ch.id, surah.value ? Number(surah.value) : null, text.value), t('fam.noteLeft'));
+      } }, t('fam.leaveTheNote')));
   }
 
   async function share() {
     const s = st!;
     const url = inviteLink(s.circle.invite_code);
-    const text = `Join our family circle “${s.circle.name}” on Ayah Studio — follow the children's short surahs and leave them a du'a.`;
+    const text = t('fam.inviteText', { name: s.circle.name });
     try {
       if (navigator.share) return await navigator.share({ title: s.circle.name, text, url });
     } catch (e) {
@@ -190,7 +195,7 @@ export async function openFamily(id: string) {
     }
     try {
       await navigator.clipboard.writeText(`${text}\n${url}`);
-      toast('Invite link copied');
+      toast(t('fam.linkCopied'));
     } catch {
       toast(url);
     }
@@ -206,13 +211,13 @@ export function familyLinkSection(): HTMLElement {
   const box = h('div', { class: 'kids-offline' });
   async function paint() {
     if (!account()) {
-      box.replaceChildren(h('p', { class: 'muted small' }, 'To share lit lanterns with family and receive their du\'a notes: leave the Kids space, sign in (☰ → Account) and create a family circle (☰ → Khatm circles). The Kids space itself never asks to sign in.'));
+      box.replaceChildren(h('p', { class: 'muted small' }, t('fam.signInHint')));
       return;
     }
     const l = kidsLink();
     if (l) {
-      box.replaceChildren(h('p', { class: 'small' }, `Linked to ${l.childName} in “${l.circleName}”.`),
-        h('button', { class: 'chip', onclick: () => { setKidsLink(null); void paint(); } }, 'Unlink'));
+      box.replaceChildren(h('p', { class: 'small' }, t('fam.linked', { child: l.childName, circle: l.circleName })),
+        h('button', { class: 'chip', onclick: () => { setKidsLink(null); void paint(); } }, t('fam.unlink')));
       return;
     }
     box.replaceChildren(h('p', { class: 'muted small' }, h('span', { class: 'spinner' }), ' Loading your family circles…'));
@@ -224,15 +229,15 @@ export function familyLinkSection(): HTMLElement {
         for (const ch of st?.children ?? []) if (st && canManage(st, ch)) options.push({ circle: c.circle.id, circleName: c.circle.name, child: ch.id, childName: ch.name });
       }
     } catch (e) {
-      box.replaceChildren(h('p', { class: 'muted small' }, navigator.onLine ? `Could not load family circles: ${errorText(e)}` : 'Linking needs the internet.'));
+      box.replaceChildren(h('p', { class: 'muted small' }, navigator.onLine ? t('fam.loadAllFailed', { msg: errorText(e) }) : t('fam.linkOffline')));
       return;
     }
     if (!options.length) {
-      box.replaceChildren(h('p', { class: 'muted small' }, 'No family circle with a child you added yet. Create one outside the Kids space: ☰ → Khatm circles → New family circle.'));
+      box.replaceChildren(h('p', { class: 'muted small' }, t('fam.noneToLink')));
       return;
     }
-    box.replaceChildren(h('p', { class: 'muted small' }, 'Which child uses the Kids space on this device?'),
-      h('div', { class: 'chips' }, ...options.map((o) => h('button', { class: 'chip', onclick: () => { setKidsLink(o); toast(`Linked to ${o.childName}`); void paint(); } }, `${o.childName} · ${o.circleName}`))));
+    box.replaceChildren(h('p', { class: 'muted small' }, t('fam.whichChild')),
+      h('div', { class: 'chips' }, ...options.map((o) => h('button', { class: 'chip', onclick: () => { setKidsLink(o); toast(t('fam.linkedToast', { child: o.childName })); void paint(); } }, `${o.childName} · ${o.circleName}`))));
   }
   void paint();
   return box;
@@ -244,10 +249,10 @@ export function showNotes(notes: FamilyNote[], childName: string) {
   if (!n) return;
   const d = h('dialog', { class: 'kids-note' },
     h('div', { class: 'kids-note-glow', 'aria-hidden': 'true' }),
-    h('p', { class: 'kids-note-to' }, `A du'a for ${childName}`),
+    h('p', { class: 'kids-note-to' }, t('fam.duaFor', { name: childName })),
     h('p', { class: 'kids-note-body' }, `“${n.body}”`),
-    h('p', { class: 'kids-note-from' }, `— from ${n.from_name}`),
-    h('button', { class: 'kids-btn lamp', onclick: () => d.close() }, 'Ameen'));
+    h('p', { class: 'kids-note-from' }, t('fam.from', { name: n.from_name })),
+    h('button', { class: 'kids-btn lamp', onclick: () => d.close() }, t('fam.ameen')));
   d.addEventListener('close', () => {
     d.remove();
     void markNoteSeen(n.id).catch((e) => console.warn('Note not marked as seen', e));

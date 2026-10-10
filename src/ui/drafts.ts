@@ -3,14 +3,15 @@ import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
 import { loadMeta, reference } from '../data/quran';
 import { reciterById } from '../data/reciters';
 import { h, toast } from './dom';
+import { locale, t } from '../i18n';
 
-function ago(t: number) {
-  const s = (Date.now() - t) / 1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  if (s < 7 * 86400) return `${Math.floor(s / 86400)} d ago`;
-  return new Date(t).toLocaleDateString();
+function ago(at: number) {
+  const s = (Date.now() - at) / 1000;
+  if (s < 60) return t('dr.justNow');
+  if (s < 3600) return t('dr.minAgo', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('dr.hAgo', { n: Math.floor(s / 3600) });
+  if (s < 7 * 86400) return t('dr.dAgo', { n: Math.floor(s / 86400) });
+  return new Date(at).toLocaleDateString(locale());
 }
 
 export async function showDrafts(root: HTMLElement): Promise<() => void> {
@@ -28,23 +29,23 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
         h('strong', {}, s ? reference(s, d.project.from, d.project.to) : `${d.project.surah}:${d.project.from}`),
         h('span', { class: 'muted small' }, `${reciterById(d.project.reciterId).short} · ${ago(d.updated)}`)),
       h('button', {
-        class: 'bg-del draft-del', 'aria-label': 'Delete draft', title: 'Delete draft',
+        class: 'bg-del draft-del', 'aria-label': t('dr.delete'), title: t('dr.delete'),
         onclick: async () => {
-          if (!confirm('Delete this draft? This cannot be undone.')) return;
-          await deleteDraft(d.id).catch((e) => toast(`Could not delete: ${e instanceof Error ? e.message : e}`));
+          if (!confirm(t('dr.confirmDelete'))) return;
+          await deleteDraft(d.id).catch((e) => toast(t('dr.deleteFailed', { msg: e instanceof Error ? e.message : String(e) })));
           el.remove();
           if (!grid.childElementCount) grid.replaceWith(empty());
         },
       }, '✕'));
     return el;
   };
-  const empty = () => h('p', { class: 'muted empty empty-glow' }, 'No drafts yet. Open a surah, long-press an ayah and tap “Turn into reel” — your reel is saved here as you edit it.');
+  const empty = () => h('p', { class: 'muted empty empty-glow' }, t('dr.empty'));
 
   grid.append(...drafts.map(card));
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'All surahs' }, '‹'),
-      h('div', { class: 'brand' }, h('h1', {}, 'Drafts'), h('p', { class: 'muted' }, 'Reels you started, saved on this device'))),
+      h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+      h('div', { class: 'brand' }, h('h1', {}, t('list.drafts')), h('p', { class: 'muted' }, t('dr.sub')))),
     drafts.length ? grid : empty(),
   );
   return () => urls.forEach((u) => URL.revokeObjectURL(u));
