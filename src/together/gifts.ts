@@ -45,7 +45,6 @@ export interface MyGift extends GiftSummary {
 
 export const MESSAGE_MAX = 140;
 export const NAME_MAX = 40;
-/** Ready-made messages (the sender can also write their own). */
 
 export const giftLink = (id: string) => shareableLink(`#/gift/${id}`);
 export const validGiftId = (id: string) => /^[a-hj-km-np-z2-9]{12}$/.test(id);
