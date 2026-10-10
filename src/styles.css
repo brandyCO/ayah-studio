@@ -1149,3 +1149,7 @@ body[data-view="kids"] {
 .night .chip.on { background: var(--brand-fill); border-color: transparent; color: #fff; }
 @media (prefers-reduced-motion: reduce) { .night, .night.out { animation: none; } .night-block { transition: opacity .3s; } }
 .night-en.scrolls { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); padding: 10px 0; }
+/* Light scene tiles drift slowly, like the scenes themselves (docs/light.md, L2) */
+.bg-thumb.light-tile { background-size: 130% auto; animation: light-tile 14s ease-in-out infinite alternate; }
+@keyframes light-tile { from { background-position: 30% 40%; } to { background-position: 70% 60%; } }
+@media (prefers-reduced-motion: reduce) { .bg-thumb.light-tile { animation: none; background-position: center; } }

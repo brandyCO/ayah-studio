@@ -23,9 +23,11 @@ async function warmUp() {
   for (const u of urls) await fetch(u).catch(() => {});
   try {
     await import('./ui/editor'); // the editor and video engine
-    const { BACKGROUNDS } = await import('./engine/backgrounds');
-    for (const b of BACKGROUNDS) {
+    await import('./light/reel'); // three.js + the light scenes (Night listening, light backgrounds)
+    const { BUILT_IN_BACKGROUNDS } = await import('./engine/backgrounds');
+    for (const b of BUILT_IN_BACKGROUNDS) {
       if (b.kind === 'color') continue;
+      if (b.kind === 'light') { await fetch(b.thumb).catch(() => {}); continue; }
       for (const u of [b.src, b.thumb, b.kind === 'video' ? b.alt : undefined]) if (typeof u === 'string') await fetch(u).catch(() => {});
     }
   } catch {

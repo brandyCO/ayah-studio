@@ -1,7 +1,7 @@
 // Background picker: Presets · My media (uploads from the device, kept locally) · Free library
 // (Pixabay / Pexels through the proxy: curated collections and search; a pick is downloaded into My
 // media). The panel keeps its own state (tab, search, results) while the editor redraws it.
-import { BACKGROUNDS, backgroundById, libraryBackgrounds, type Background } from '../engine/backgrounds';
+import { BACKGROUNDS, LIGHT_BACKGROUNDS, backgroundById, libraryBackgrounds, type Background } from '../engine/backgrounds';
 import { deleteMedia, importFile, MAX_VIDEO_MB, storageUsed } from '../data/library';
 import {
   downloadHit, searchStock, SOURCE_NAME, SOURCE_SITE, stockEnabled, stockId, stockSources, SUGGESTIONS,
@@ -10,7 +10,7 @@ import {
 import { h, toast } from './dom';
 import { icon } from './icons';
 
-type Tab = 'presets' | 'mine' | 'stock';
+type Tab = 'presets' | 'light' | 'mine' | 'stock';
 const MAX_DOWNLOADS = 4;
 
 export interface PickerOptions {
@@ -63,7 +63,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   const note = (text: string) => h('p', { class: 'muted small' }, text);
   const setStatus = (s: string) => { status = s; draw(); };
   const thumbStyle = (b: Background) => (b.kind === 'color' ? `background:${b.color}` : `background-image:url("${b.thumb}")`);
-  const label = (b: Background) => (b.kind === 'video' ? `▶ ${b.label}` : b.label);
+  const label = (b: Background) => (b.kind === 'video' ? `▶ ${b.label}` : b.kind === 'light' ? `✦ ${b.label}` : b.label);
 
   function choose(id: string) {
     if (o.busy() || working || !opts) return;
@@ -181,14 +181,22 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
   const tile = (b: Background, extra?: Node | null) =>
     h('div', { class: 'bg-cell' },
       h('button', {
-        class: `bg-thumb${opts?.current === b.id ? ' on' : ''}`, style: thumbStyle(b),
-        title: b.kind !== 'color' && b.credit ? `${b.label} · by ${b.credit.author} on ${b.credit.source}` : b.label,
+        class: `bg-thumb${b.kind === 'light' ? ' light-tile' : ''}${opts?.current === b.id ? ' on' : ''}`, style: thumbStyle(b),
+        title: (b.kind === 'image' || b.kind === 'video') && b.credit ? `${b.label} · by ${b.credit.author} on ${b.credit.source}` : b.label,
         onclick: () => choose(b.id),
       }, h('span', {}, label(b))),
       extra ?? null);
 
   function presets(): Node[] {
     return [h('div', { class: 'bg-grid' }, ...BACKGROUNDS.map((b) => tile(b)))];
+  }
+
+  /** Light scenes (docs/light.md): rendered live from time, so they preview and export alike. */
+  function light(): Node[] {
+    return [
+      h('div', { class: 'bg-grid' }, ...LIGHT_BACKGROUNDS.map((b) => tile(b))),
+      note('Calm scenes of light, drawn live on this device (3D where the device allows). The text, scrim and reference always stay on top.'),
+    ];
   }
 
   function mine(): Node[] {
@@ -199,7 +207,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
           h('button', { class: 'bg-thumb bg-add', disabled: working, onclick: () => fileInput.click() },
             icon('plus', 26), h('span', {}, 'From device'))),
         ...items.map((b) => tile(b, h('div', { class: 'bg-tags' },
-          b.kind !== 'color' && b.credit ? h('span', { class: 'bg-badge' }, b.credit.source) : null,
+          (b.kind === 'image' || b.kind === 'video') && b.credit ? h('span', { class: 'bg-badge' }, b.credit.source) : null,
           h('button', { class: 'bg-del', 'aria-label': `Remove ${b.label}`, title: 'Remove from this device', onclick: () => void remove(b) }, '✕'))))),
       items.length ? null : note('Add your own photos and videos (calm scenes, no faces). They stay on this device and are never uploaded.'),
       note(`Videos play without their own sound: the recitation is the only audio. Videos up to ${MAX_VIDEO_MB} MB.${used ? ` Using ${used < 1e6 ? 'under 1' : (used / 1e6).toFixed(0)} MB on this device.` : ''}`),
@@ -258,13 +266,13 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
 
   function draw() {
     if (!opts) return;
-    const tabs: [Tab, string][] = [['presets', 'Presets'], ['mine', 'My media'], ['stock', 'Free library']];
+    const tabs: [Tab, string][] = [['presets', 'Presets'], ['light', 'Light'], ['mine', 'My media'], ['stock', 'Free library']];
     const nodes = [
       note(opts.intro),
       h('div', { class: 'tabs' }, ...tabs.map(([v, l]) =>
         h('button', { class: `tab${tab === v ? ' on' : ''}`, onclick: () => { tab = v; if (v === 'mine') void refreshUsage(); if (v === 'stock') void openStock(); draw(); } }, l))),
       status ? h('p', { class: 'picker-status small' }, status) : null,
-      ...(tab === 'presets' ? presets() : tab === 'mine' ? mine() : stock()),
+      ...(tab === 'presets' ? presets() : tab === 'light' ? light() : tab === 'mine' ? mine() : stock()),
       fileInput,
     ].filter((x): x is Node => !!x);
     // Replace everything except the nodes kept between redraws (search form, file input), which
@@ -282,7 +290,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
     /** The panel content for the editor (redrawn in place on every call). */
     panel(p: PickerOptions): Node[] {
       // A newly opened picker starts on the tab holding the background being replaced.
-      if (p.intro !== opts?.intro && p.current && backgroundById(p.current).id === p.current) tab = p.current.includes(':') ? 'mine' : 'presets';
+      if (p.intro !== opts?.intro && p.current && backgroundById(p.current).id === p.current) tab = p.current.startsWith('light:') ? 'light' : p.current.includes(':') ? 'mine' : 'presets';
       opts = p;
       draw();
       return [wrap];

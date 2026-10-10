@@ -1,6 +1,7 @@
 // Scenes (backgrounds) fill the recitation exactly, and calm transitions between them (~1–2 s, soft
 // easing). Scene boundaries partition [0, duration]; a transition is centred on its boundary.
-import type { BackgroundMedia } from './backgrounds';
+import { lightRes, type BackgroundMedia } from './backgrounds';
+import { paintLightFlat } from '../light/flatReel';
 import { pxScale } from './effects';
 import { H, W } from './layout';
 
@@ -23,7 +24,7 @@ export const CLIP_FITS: { value: ClipFit; label: string }[] = [
 ];
 /** Slowest playback for "Slow down" (slower would look frozen); beyond it the slowed clip loops. */
 export const MIN_RATE = 0.25;
-export type Transition = 'crossfade' | 'blur' | 'black' | 'white' | 'zoom' | 'leak' | 'mist' | 'parallax' | 'wipe' | 'iris' | 'cut';
+export type Transition = 'crossfade' | 'blur' | 'black' | 'white' | 'zoom' | 'leak' | 'mist' | 'parallax' | 'wipe' | 'iris' | 'lightbloom' | 'clouddrift' | 'cut';
 
 export const TRANSITIONS: { value: Transition; label: string }[] = [
   { value: 'crossfade', label: 'Crossfade' },
@@ -36,12 +37,20 @@ export const TRANSITIONS: { value: Transition; label: string }[] = [
   { value: 'parallax', label: 'Slow parallax' },
   { value: 'wipe', label: 'Soft wipe' },
   { value: 'iris', label: 'Soft iris' },
+  { value: 'lightbloom', label: 'Light bloom' },
+  { value: 'clouddrift', label: 'Drift through clouds' },
   { value: 'cut', label: 'Cut' },
+];
+
+/** Cloud puffs for "Drift through clouds": [x, y offset, radius (× W), vertical squash]. */
+const CLOUDS: [number, number, number, number][] = [
+  [0.15, 0.05, 0.5, 0.55], [0.6, -0.08, 0.6, 0.5], [0.95, 0.1, 0.5, 0.6], [0.35, 0.28, 0.55, 0.5], [0.8, 0.35, 0.45, 0.55],
+  [0.05, 0.45, 0.45, 0.5], [0.5, 0.55, 0.65, 0.45], [0.25, -0.25, 0.5, 0.5], [0.75, -0.3, 0.55, 0.55], [0.45, 0.8, 0.5, 0.5],
 ];
 
 /** Seconds per transition (shortened to half of a short neighbouring scene). */
 const DUR: Record<Transition, number> = {
-  crossfade: 1.2, blur: 1.4, black: 1.4, white: 1.4, zoom: 1.2, leak: 1.6, mist: 1.8, parallax: 1.6, wipe: 1.4, iris: 1.4, cut: 0,
+  crossfade: 1.2, blur: 1.4, black: 1.4, white: 1.4, zoom: 1.2, leak: 1.6, mist: 1.8, parallax: 1.6, wipe: 1.4, iris: 1.4, lightbloom: 1.8, clouddrift: 2, cut: 0,
 };
 
 export const MAX_SCENES = 10;
@@ -193,6 +202,22 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
   } else if (b?.kind === 'video' && m!.video) {
     const c = m!.video.canvas;
     cover(ctx, c, c.width, c.height, zoom, dy, dx);
+  } else if (b?.kind === 'light') {
+    // A light scene, rendered for the reel time t at the output's pixel size (capped for the preview).
+    if (m!.light) {
+      const k = Math.min(Math.abs(ctx.getTransform().a), lightRes.cap / W);
+      const c = m!.light.frame(t, Math.max(2, Math.round(W * k)), Math.max(2, Math.round(H * k)));
+      cover(ctx, c, c.width, c.height, zoom, dy, dx);
+    } else {
+      ctx.save();
+      if (zoom !== 1 || dx || dy) {
+        ctx.translate(W / 2 + dx, H / 2 + dy);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-W / 2, -H / 2);
+      }
+      paintLightFlat(ctx, b.scene, t);
+      ctx.restore();
+    }
   } else if (b?.kind === 'color') {
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 100, W / 2, H * 0.45, H * 0.75);
     g.addColorStop(0, 'rgba(255,255,255,0.07)');
@@ -306,6 +331,34 @@ export function drawScenes(ctx: CanvasRenderingContext2D, t: number, spans: Scen
     g.addColorStop(1, 'rgba(255,120,60,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  } else if (tr === 'lightbloom') {
+    // A warm glow swells over the change and settles (docs/light.md, L2).
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, H * 0.8);
+    g.addColorStop(0, `rgba(255,236,196,${(0.75 * bump).toFixed(3)})`);
+    g.addColorStop(0.4, `rgba(255,200,130,${(0.35 * bump).toFixed(3)})`);
+    g.addColorStop(1, 'rgba(255,184,92,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  } else if (tr === 'clouddrift') {
+    // Soft clouds rise past the view, thickest at the change, as if flying up through them.
+    ctx.save();
+    for (const [x, y0, r, sy] of CLOUDS) {
+      const cy = H * (y0 + 0.9 - 1.8 * p);
+      ctx.save();
+      ctx.translate(W * x, cy);
+      ctx.scale(1, sy);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, W * r);
+      g.addColorStop(0, `rgba(240,234,246,${(0.85 * bump).toFixed(3)})`);
+      g.addColorStop(0.6, `rgba(225,216,238,${(0.45 * bump).toFixed(3)})`);
+      g.addColorStop(1, 'rgba(225,216,238,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-W * r, -W * r, W * r * 2, W * r * 2);
+      ctx.restore();
+    }
     ctx.restore();
   } else if (tr === 'mist') {
     // Soft banks of mist pass through as the scenes change.

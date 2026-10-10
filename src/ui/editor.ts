@@ -8,7 +8,7 @@ import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings 
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
-import { BACKGROUNDS, backgroundById, isBackground, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
+import { BACKGROUNDS, backgroundById, isBackground, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
@@ -55,7 +55,7 @@ const EFFECT_GROUPS: { label: string; items: TextEffect[] }[] = [
   { label: ui('ed.fx.scale'), items: ['settle', 'zoom', 'push'] },
 ];
 const TRANSITION_ICONS: Record<Transition, string> = {
-  crossfade: '◐', blur: '◍', black: '●', white: '○', zoom: '⊕', leak: '☀', mist: '☁', parallax: '⇅', wipe: '⇠', iris: '◎', cut: '│',
+  crossfade: '◐', blur: '◍', black: '●', white: '○', zoom: '⊕', leak: '☀', mist: '☁', parallax: '⇅', wipe: '⇠', iris: '◎', lightbloom: '✺', clouddrift: '☁', cut: '│',
 };
 
 /** An entry of a bar: opens a panel, flips a setting, or runs an action. */
@@ -1079,10 +1079,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       });
     }));
     if (req !== bgReq || !alive) {
-      for (const m of next) if (!media.includes(m)) m.video?.dispose();
+      for (const m of next) if (!media.includes(m)) disposeMedia(m);
       return;
     }
-    for (const m of media) if (!next.includes(m)) m.video?.dispose();
+    for (const m of media) if (!next.includes(m)) disposeMedia(m);
     media = next;
     mediaReady = true;
     if (tl) setStatus('');
@@ -1168,7 +1168,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const seen = new Map<string, Credit>();
     for (const id of project.scenes) {
       const b = backgroundById(id);
-      if (b.kind !== 'color' && b.credit) seen.set(b.credit.url, b.credit);
+      if ((b.kind === 'image' || b.kind === 'video') && b.credit) seen.set(b.credit.url, b.credit);
     }
     if (!seen.size) return null;
     const list = [...seen.values()];
@@ -1275,7 +1275,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     exporting?.abort();
     pause();
     void ac?.close();
-    for (const m of media) m.video?.dispose();
+    for (const m of media) disposeMedia(m);
     URL.revokeObjectURL(resultUrl);
   };
 }
