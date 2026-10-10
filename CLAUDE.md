@@ -697,8 +697,24 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       breath = a swell at each word start from the QDC timings; Noor brightens when a surah ends;
       tap → controls (✕, play/pause, sleep Off/15/30/60: fades to black over the last minute, then
       pauses and releases the wake lock); Esc/back closes; Device check → Light scenes: step + Reset)
-- [ ] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
+- [x] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
       Light bloom, Drift through clouds; gifts/walls allow-list (migration + pgTAP)
+      (built 2026-10-10: background kind `light` in `src/engine/backgrounds.ts` (`LIGHT_BACKGROUNDS`,
+      `BUILT_IN_BACKGROUNDS` = presets + light, used by gifts/walls; `disposeMedia()`); `loadBackground()`
+      lazy-loads `src/light/reel.ts` (`LightReel`: one shared WebGL renderer, `frame(t, w, h)`), and
+      `drawScene()` copies the frame in before the grade, scrim and text; `lightRes.cap` = 720 px wide in
+      the preview, 1080 while exporting (`export.ts`). Scenes in `src/light/scenes/reel.ts`: Dawn cloud
+      sea (rose/gold sky over the fbm cloud sea), Starfield drift (sky turning ≈ 1.4°/10 s, a diagonal
+      star band with faint rose/violet glows), Aurora (fbm curtains in gold/rose/violet over still water
+      with their reflection), Lantern field (140 instanced paper lanterns lit from inside, rising over
+      water, mirrored under it), Light rays (beams through three mist layers, motes). New parts:
+      `lanternField`, `water`, `aurora`, `rays`, `mistLayer`. Same t → same pixels (checked for all five).
+      No WebGL → `src/light/flatReel.ts` (2D, pure in t). Scene picker → **Light** tab (thumbnails by
+      `scripts/make-light-thumbs.mjs`, slowly drifting tiles). Transitions `lightbloom` (warm glow swells
+      over the change) and `clouddrift` (soft clouds rise past the view), 2D in `drawScenes()`.
+      Migration `20261014100000_l2_light_looks.sql` (`valid_gift_look()` accepts the 5 ids + 2
+      transitions; pgTAP `light_looks.test.sql`, 9 checks). The service worker warm-up also fetches the
+      three.js chunks and the light thumbnails)
 - [ ] L3 Khatm circle as a constellation (SVG ring = fallback)
 - [ ] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
 - [ ] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
