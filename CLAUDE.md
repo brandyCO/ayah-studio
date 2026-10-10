@@ -727,6 +727,13 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       the SVG segment's centre (checked), so the SVG ring stays on top, transparent, for taps, keyboard
       focus, aria labels and the labels (moved inside the ring). `src/ui/constellation.ts` mounts it
       (lazy three.js); flat quality, no WebGL, or the fps watchdog falling back → the SVG ring as before)
+      Depth pass (2026-10-10, owner: "make it premium"): the ring now lies back in the sky like a halo
+      (tilt ≈ 57°), turning slowly so the near juz pass in front, larger and brighter, and the far side
+      dims in the haze; each star floats at its own height, lines follow in 3D; opening flies in from
+      far and edge-on (3.2 s); a sideways drag turns it with a soft glide (mouse also tilts). The SVG
+      ring stays in the page (invisible) for keyboard focus and screen readers — focusing a juz rings its
+      star — while the canvas takes the taps (nearest star ≤ 34 px → the same juz sheet) and DOM labels
+      (numbers / initials) follow their stars, scaled by depth (`src/ui/constellation.ts`, `afterFrame`)
 - [x] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
       (built 2026-10-10: `src/light/scenes/lampField.ts` — all 604 pages as paper lanterns (one
       instanced mesh + one glow point each, two draw calls, plus the same mirrored under the water),
@@ -772,6 +779,13 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       tap = nearest lit star ≤ 30 px (any page ≤ 14 px) → that page, a ring or its name → the circle;
       "Juz N" of the view. Flat (`src/light/flatSky.ts`): the same stars, threads and rings as a still
       2D picture, redrawn only when panned; fps watchdog → flat. Family circles are not shown)
+      Depth pass (2026-10-10): the sky became a place to fly through — each juz a spiral thread of
+      stars rising out of the cloud sea, 30 threads standing to alternate sides of a winding avenue
+      (`pagePositions()`), stars sized by distance and fading into haze, circle rings tilted above the
+      avenue; the sky opens with a fly-in from high above down to the juz read most recently; swipe
+      up/down (wheel, ↑↓) travels along the avenue, sideways swings round it, with a soft glide; labels
+      for circles follow their rings. `cloudSea()` (shared) now dissolves its far edge into the sky dome
+      (no hard horizon line in any scene). Flat version unchanged (the 2D dome picture)
 - [x] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
       (built 2026-10-10: `src/light/scenes/kidsPath.ts` — the 38 surah lanterns (round paper, thin caps)
       float over a soft cloud sea and wind away into the distance in the 2D path's own wave

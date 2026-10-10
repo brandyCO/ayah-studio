@@ -1,13 +1,16 @@
-// Home sky (docs/light.md, L6): ☰ → Sky (and the Today card). A full-screen night sky where the
-// pages read this month are stars, the Khatm circles hang as small rings and Noor floats near the
-// viewer. Drag to look around (soft, with a gentle glide after letting go), tap a star → that page,
-// tap a ring → that circle. Calm text only: the month and how many pages lit up — no streaks, no
-// comparison. three.js loads only here; reduced motion / no WebGL / a slow device → the flat picture.
+// Home sky (docs/light.md, L6): ☰ → Sky (and the Today card). A full-screen night where the pages
+// read this month are stars on 30 threads (one per juz) rising out of a cloud sea along a winding
+// avenue, the Khatm circles float above as rings and Noor keeps the viewer company. The sky opens
+// with a fly-in down to the juz read most recently. Swipe up/down (wheel, ↑↓) to travel along the
+// avenue, sideways (←→) to swing round it — soft, with a gentle glide after letting go. Tap a star
+// → that page, a ring or its name → that circle. Calm text only: the month and how many pages lit
+// up — no streaks, no comparison. three.js loads only here; reduced motion / no WebGL / a slow
+// device → the flat picture (src/light/flatSky.ts), panned sideways.
 import { loadMushaf } from '../data/mushaf';
 import { monthReads } from '../data/readLog';
 import { locale, t } from '../i18n';
 import { flatProject, paintSkyFlat, type FlatCircle, type FlatStar } from '../light/flatSky';
-import { circleSpot, CIRCLE_R, JUZ_STEP, juzOff, LOOK_MAX, pageSpots, starLook, type Spot } from '../light/skyLayout';
+import { circleSpot, CIRCLE_R as FLAT_CIRCLE_R, JUZ_STEP, LOOK_MAX, pageSpots, starLook, type Spot } from '../light/skyLayout';
 import { lightQuality } from '../light/support';
 import { cachedCircles, MEMBER_COLORS } from '../together/circles';
 import { h } from './dom';
@@ -22,7 +25,7 @@ export interface SkyContext {
 
 let open: (() => void) | null = null;
 
-const PITCH_MIN = 0.05, PITCH_MAX = 0.75;
+const YAW_MAX = 0.75;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
 /** Pages read this month (for the Today card). */
@@ -38,12 +41,17 @@ export async function openSky(ctx: SkyContext) {
   const reads = monthReads(now);
   const today = now.getDate();
   const stars = [...reads].map(([page, r]) => ({ page, ...starLook(r.days, r.last, today) }));
-  // Open facing the page read most recently this month (or the page the mushaf shows).
+  const lit = new Set(reads.keys());
+  // Open at the page read most recently this month (or the page the mushaf shows).
   let face = ctx.current, faceDay = -1;
   for (const [p, r] of reads) if (r.last > faceDay || (r.last === faceDay && p > face)) { face = p; faceDay = r.last; }
-  let look = clamp(spots[face]?.off ?? juzOff(1), -LOOK_MAX, LOOK_MAX);
-  let pitch = 0.3;
-  let target = { look, pitch };
+  const faceJuz = juzOfPage[face] ?? 1;
+
+  // View state: 3D travels along the avenue (focus in juz) and swings round it (yaw); flat pans (look).
+  const view = { focus: faceJuz, yaw: 0, look: clamp(spots[face]?.off ?? 0, -LOOK_MAX, LOOK_MAX) };
+  const target = { ...view };
+  let vel = { focus: 0, yaw: 0 };
+  let dragging = false;
 
   const circles = cachedCircles().filter((s) => s.circle.kind !== 'family').slice(0, 8);
   const skyCircles = circles.map((s, i) => {
@@ -55,7 +63,8 @@ export async function openSky(ctx: SkyContext) {
     return {
       id: s.circle.id,
       name: s.circle.name,
-      spot: circleSpot(i, circles.length, look),
+      spot: circleSpot(i, circles.length, view.look),
+      at: clamp(faceJuz + 0.6 + (i - (circles.length - 1) / 2) * 2.2, 1, 30),
       stars: Array.from({ length: 30 }, (_, j) => {
         const p = byJuz.get(j + 1);
         return { status: p?.status ?? 'free' as const, color: color(p?.user_id ?? null) };
@@ -86,17 +95,16 @@ export async function openSky(ctx: SkyContext) {
     h('div', { class: 'home-sky-foot' }, juzLabel, hint));
   document.body.append(root);
   document.body.classList.add('home-sky-open');
-  window.setTimeout(() => hint.classList.add('gone'), 6000);
+  window.setTimeout(() => hint.classList.add('gone'), 7000);
 
   // --- 3D, or the flat picture ---
-  type Sc = ReturnType<typeof import('../light/scenes/homeSky').homeSkyScene>;
+  type Mod = typeof import('../light/scenes/homeSky');
   let stage: import('../light/engine').LightStage | null = null;
-  let sc: Sc | null = null;
-  let spotDir: typeof import('../light/scenes/homeSky').spotDir | null = null;
-  let SKY_R = 100;
+  let sc: ReturnType<Mod['homeSkyScene']> | null = null;
+  let positions: import('three').Vector3[] = [];
+  let V: import('three').Vector3 | null = null;
   const flatStars: FlatStar[] = [];
   const flatCircles: FlatCircle[] = skyCircles;
-  const lit = new Set(reads.keys());
   for (let p = 1; p < spots.length; p++) {
     const s = stars.find((x) => x.page === p);
     flatStars.push({
@@ -105,13 +113,11 @@ export async function openSky(ctx: SkyContext) {
     });
   }
   let flatRaf = 0;
-  let vel = { look: 0, pitch: 0 };
-  let dragging = false;
   const paintFlat = () => {
     cancelAnimationFrame(flatRaf);
     flatRaf = requestAnimationFrame(() => {
-      look = target.look;
-      paintSkyFlat(canvas, look, flatStars, flatCircles);
+      view.look = target.look;
+      paintSkyFlat(canvas, view.look, flatStars, flatCircles);
       placeLabels();
     });
   };
@@ -127,84 +133,94 @@ export async function openSky(ctx: SkyContext) {
     paintFlat();
   };
 
-  // --- looking around: drag (soft), a glide after letting go, wheel and arrow keys ---
+  /** Each frame (3D): the glide after letting go, then ease the view towards its target. */
   function glide() {
     if (!sc) return;
     if (!dragging) {
-      target.look = clamp(target.look + vel.look, -LOOK_MAX, LOOK_MAX);
-      target.pitch = clamp(target.pitch + vel.pitch, PITCH_MIN, PITCH_MAX);
-      vel = { look: vel.look * 0.9, pitch: vel.pitch * 0.9 };
+      target.focus = clamp(target.focus + vel.focus, 1, 30);
+      target.yaw = clamp(target.yaw + vel.yaw, -YAW_MAX, YAW_MAX);
+      vel = { focus: vel.focus * 0.92, yaw: vel.yaw * 0.9 };
     }
-    const k = dragging ? 0.22 : 0.08;
-    look += (target.look - look) * k;
-    pitch += (target.pitch - pitch) * k;
-    sc.input.look = look;
-    sc.input.pitch = pitch;
-    placeLabels();
+    const k = dragging ? 0.16 : 0.06;
+    view.focus += (target.focus - view.focus) * k;
+    view.yaw += (target.yaw - view.yaw) * k;
+    sc.input.focus = view.focus;
+    sc.input.yaw = view.yaw;
   }
-  const radPerPx = () => (sc ? (2 * Math.atan(Math.tan((sc.camera.fov * Math.PI) / 360) * sc.camera.aspect)) / Math.max(1, canvas.clientWidth) : 0.95 / (canvas.clientHeight * 0.66));
 
   function bindPointer() {
-    let start = { x: 0, y: 0, look: 0, pitch: 0, moved: false, at: 0 };
+    let start = { x: 0, y: 0, focus: 0, yaw: 0, look: 0, moved: false };
     let last = { x: 0, y: 0, at: 0 };
     canvas.addEventListener('pointerdown', (e) => {
       canvas.setPointerCapture(e.pointerId);
       dragging = true;
-      vel = { look: 0, pitch: 0 };
-      start = { x: e.clientX, y: e.clientY, look: target.look, pitch: target.pitch, moved: false, at: performance.now() };
-      last = { x: e.clientX, y: e.clientY, at: start.at };
+      vel = { focus: 0, yaw: 0 };
+      start = { x: e.clientX, y: e.clientY, focus: target.focus, yaw: target.yaw, look: target.look, moved: false };
+      last = { x: e.clientX, y: e.clientY, at: performance.now() };
     });
     canvas.addEventListener('pointermove', (e) => {
       if (!dragging) return;
       const dx = e.clientX - start.x, dy = e.clientY - start.y;
       if (Math.hypot(dx, dy) > 6) start.moved = true;
-      const k = radPerPx();
-      target.look = clamp(start.look - dx * k, -LOOK_MAX, LOOK_MAX);
-      target.pitch = clamp(start.pitch + dy * k, PITCH_MIN, PITCH_MAX);
       const now = performance.now(), dt = Math.max(8, now - last.at);
-      // Per-frame glide speed from the last movement (≈ 16 ms a frame), kept gentle.
-      vel = { look: clamp((-(e.clientX - last.x) * k * 16) / dt, -0.012, 0.012), pitch: clamp(((e.clientY - last.y) * k * 16) / dt, -0.008, 0.008) };
+      if (sc) {
+        // Swipe up = onwards (later juz); sideways = swing round the avenue.
+        target.focus = clamp(start.focus - dy / 110, 1, 30);
+        target.yaw = clamp(start.yaw - dx * 0.0045, -YAW_MAX, YAW_MAX);
+        vel = { focus: clamp((-(e.clientY - last.y) / 110) * (16 / dt), -0.06, 0.06), yaw: clamp(-(e.clientX - last.x) * 0.0045 * (16 / dt), -0.012, 0.012) };
+      } else {
+        const k = 0.95 / (canvas.clientHeight * 0.66);
+        target.look = clamp(start.look - dx * k, -LOOK_MAX, LOOK_MAX);
+        paintFlat();
+      }
       last = { x: e.clientX, y: e.clientY, at: now };
-      if (!sc) paintFlat();
     });
     const up = (e: PointerEvent) => {
       if (!dragging) return;
       dragging = false;
-      if (performance.now() - last.at > 80) vel = { look: 0, pitch: 0 };
-      if (!sc) vel = { look: 0, pitch: 0 };
+      if (performance.now() - last.at > 80 || !sc) vel = { focus: 0, yaw: 0 };
       if (!start.moved) pickAt(e.clientX, e.clientY);
     };
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', () => { dragging = false; });
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      target.look = clamp(target.look + (e.deltaX || e.deltaY) * radPerPx(), -LOOK_MAX, LOOK_MAX);
-      if (!sc) paintFlat();
+      if (sc) target.focus = clamp(target.focus + e.deltaY / 260, 1, 30);
+      else {
+        target.look = clamp(target.look + (e.deltaX || e.deltaY) * (0.95 / (canvas.clientHeight * 0.66)), -LOOK_MAX, LOOK_MAX);
+        paintFlat();
+      }
     }, { passive: false });
   }
 
-  // --- where a sky spot is on screen (null: behind the viewer) ---
-  const v = { x: 0, y: 0 };
-  function screenOf(s: Spot): { x: number; y: number } | null {
-    const W = canvas.clientWidth, H = canvas.clientHeight;
-    if (!sc || !spotDir) return flatProject(s, look, W, H);
-    const d = spotDir(s).multiplyScalar(SKY_R).add(sc.camera.position).project(sc.camera);
-    if (d.z > 1) return null;
-    v.x = ((d.x + 1) / 2) * W;
-    v.y = ((1 - d.y) / 2) * H;
-    return v;
+  // --- where things are on screen (null: behind the viewer) ---
+  const pt = { x: 0, y: 0 };
+  function project(v: import('three').Vector3): { x: number; y: number } | null {
+    const p = v.project(sc!.camera);
+    if (p.z > 1) return null;
+    pt.x = ((p.x + 1) / 2) * canvas.clientWidth;
+    pt.y = ((1 - p.y) / 2) * canvas.clientHeight;
+    return pt;
+  }
+  const pageScreen = (p: number) => (sc ? project(V!.copy(positions[p])) : flatProject(spots[p], view.look, canvas.clientWidth, canvas.clientHeight));
+  function circleScreen(i: number, below: boolean) {
+    const c = skyCircles[i];
+    if (!sc) return flatProject({ off: c.spot.off, el: c.spot.el - (below ? FLAT_CIRCLE_R + 0.025 : 0) } as Spot, view.look, canvas.clientWidth, canvas.clientHeight);
+    sc.circleAt(i, V!);
+    if (below) V!.y -= 2.0;
+    return project(V!);
   }
 
   let shownJuz = 0;
   function placeLabels() {
     if (sc) sc.camera.updateMatrixWorld();
-    skyCircles.forEach((c, i) => {
-      const p = screenOf({ off: c.spot.off, el: c.spot.el - CIRCLE_R - 0.025 });
+    skyCircles.forEach((_, i) => {
+      const p = circleScreen(i, true);
       const el = circleLabels[i];
-      el.hidden = !p || p.x < -60 || p.x > canvas.clientWidth + 60;
+      el.hidden = !p || p.x < -60 || p.x > canvas.clientWidth + 60 || p.y < 60 || p.y > canvas.clientHeight;
       if (p) el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, 0)`;
     });
-    const j = clamp(Math.round(15.5 - look / JUZ_STEP), 1, 30);
+    const j = sc ? clamp(Math.round(view.focus), 1, 30) : clamp(Math.round(15.5 - view.look / JUZ_STEP), 1, 30);
     if (j !== shownJuz) { shownJuz = j; juzLabel.textContent = t('circ.juz', { n: j }); }
   }
 
@@ -215,40 +231,47 @@ export async function openSky(ctx: SkyContext) {
     if (sc) sc.camera.updateMatrixWorld();
     let best = 0, bestD = Infinity;
     for (let p = 1; p < spots.length; p++) {
-      const s = screenOf(spots[p]);
+      const s = pageScreen(p);
       if (!s) continue;
       const d = Math.hypot(s.x - x, s.y - y) - (lit.has(p) ? 16 : 0);
       if (d < bestD && d < 14) { bestD = d; best = p; }
     }
     if (best) { close(); ctx.goToPage(best); return; }
-    for (const c of skyCircles) {
-      const s = screenOf(c.spot);
-      const edge = screenOf({ off: c.spot.off, el: c.spot.el + CIRCLE_R });
-      if (!s || !edge) continue;
-      const cxs = s.x, cys = s.y, rr = Math.abs(edge.y - cys) + 18;
-      if (Math.hypot(cxs - x, cys - y) < rr) { close(); ctx.openCircle(c.id); return; }
+    for (let i = 0; i < skyCircles.length; i++) {
+      const s = circleScreen(i, false);
+      if (!s) continue;
+      const sx = s.x, sy = s.y;
+      let rr = 60;
+      if (sc) {
+        sc.circleAt(i, V!);
+        V!.x += 2.3;
+        const e = project(V!);
+        if (e) rr = Math.abs(e.x - sx) + 18;
+      }
+      if (Math.hypot(sx - x, sy - y) < rr) { close(); ctx.openCircle(skyCircles[i].id); return; }
     }
   }
 
   if (quality === 'flat') flat();
   else {
     try {
-      const [{ LightStage }, mod] = await Promise.all([import('../light/engine'), import('../light/scenes/homeSky')]);
+      const [{ LightStage }, mod, three] = await Promise.all([import('../light/engine'), import('../light/scenes/homeSky'), import('three')]);
       if (!root.isConnected) return;
-      sc = mod.homeSkyScene(spots);
-      spotDir = mod.spotDir;
-      SKY_R = mod.SKY_R;
+      V = new three.Vector3();
+      positions = mod.pagePositions(juzOfPage);
+      sc = mod.homeSkyScene(positions);
       sc.setStars(stars);
       sc.setCircles(skyCircles);
-      sc.input.look = look;
-      sc.input.pitch = pitch;
+      sc.input.focus = view.focus;
       const t0 = performance.now();
       stage = new LightStage(canvas, sc, {
         quality,
         clock: () => (performance.now() - t0) / 1000 + 20,
         beforeFrame: () => glide(),
+        afterFrame: () => placeLabels(),
         onFallback: () => { console.warn('Home sky: too slow for 3D, flat version'); flat(); },
       });
+      sc.input.openedAt = stage.now();
       bindPointer();
       stage.start();
     } catch (e) {
@@ -258,10 +281,16 @@ export async function openSky(ctx: SkyContext) {
   }
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') close();
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      target.look = clamp(target.look + (e.key === 'ArrowLeft' ? -1 : 1) * JUZ_STEP, -LOOK_MAX, LOOK_MAX);
-      if (!sc) paintFlat();
+    if (e.key === 'Escape') return close();
+    const d = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+    const f = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0;
+    if (!d && !f) return;
+    if (sc) {
+      target.focus = clamp(target.focus + f, 1, 30);
+      target.yaw = clamp(target.yaw + d * 0.2, -YAW_MAX, YAW_MAX);
+    } else if (d) {
+      target.look = clamp(target.look + d * JUZ_STEP, -LOOK_MAX, LOOK_MAX);
+      paintFlat();
     }
   };
   const onResize = () => { if (!sc) paintFlat(); };
