@@ -22,6 +22,7 @@ import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { lamps } from '../data/lamps';
+import { logPageRead, monthReads } from '../data/readLog';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
 import type { CircleContext } from './circles';
@@ -110,6 +111,15 @@ registerToday(async () => {
   if (!count) return [];
   const open = openLampsHere;
   return [{ icon: '✦', text: count === 1 ? t('today.lamp', { surah: surahName(surah!) }) : surah ? t('today.lampsIn', { n: count, surah: surahName(surah) }) : t('today.lamps', { n: count }), onClick: () => open() }];
+});
+
+// Home sky (L6): pages read this month as stars.
+let openSkyHere: (() => void) | null = null;
+registerToday(() => {
+  const n = monthReads().size;
+  if (!openSkyHere || !n) return [];
+  const open = openSkyHere;
+  return [{ icon: '✶', text: n === 1 ? t('today.sky1') : t('today.sky', { n }), onClick: () => open() }];
 });
 
 function firstVisitHint() {
@@ -211,6 +221,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
   circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
+  openSkyHere = () => void import('./sky').then((x) => x.openSky({
+    current: page,
+    goToPage: (p) => { toggleBar(false); go(p); },
+    openCircle: (id) => void openCircle(circleCtx!, id),
+  }));
   openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
   const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
   let portion = myPortion();
@@ -225,7 +240,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    if (portion.has(p) || ramadan) readTimer = window.setTimeout(() => { if (p !== page) return; markPageRead(p, juzPages); markRamadanRead(p); }, 20_000);
+    // Every page open ≥ 20 s lights a star in the Home sky; circles and Ramadan count it too.
+    readTimer = window.setTimeout(() => {
+      if (p !== page) return;
+      logPageRead(p);
+      if (portion.has(p) || ramadan) { markPageRead(p, juzPages); markRamadanRead(p); }
+    }, 20_000);
   };
   if (account() && navigator.onLine) void loadCircles().catch(() => {});
   try {
@@ -534,6 +554,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         }); } }, `✎  ${t('menu.reflections')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, `✦  ${t('menu.lamps')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openSkyHere?.(); } }, `✶  ${t('menu.sky')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, `🎁  ${t('menu.gifts')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./wall').then((m) => m.openWalls()); } }, `🏮  ${t('menu.wall')}`),
@@ -624,6 +645,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(readTimer);
     circleCtx = null;
     openLampsHere = null;
+    openSkyHere = null;
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
