@@ -23,13 +23,14 @@ import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import {
   deleteGift, ensureSender, errorText, forgetReceived, getGift, giftLink, MESSAGE_MAX, myGifts, NAME_MAX, pendingReply,
-  PRESETS, received, rememberReceived, sendGift, setPendingReply, validGiftId, type Gift, type MyGift,
+  received, rememberReceived, sendGift, setPendingReply, validGiftId, type Gift, type MyGift,
 } from '../together/gifts';
 import { openAccount } from './account';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelLook, reelReciter } from './prefs';
 import { loadReel } from './reelSource';
+import { locale, t as tr } from '../i18n';
 
 const BUILT_IN = new Set(BACKGROUNDS.map((b) => b.id));
 const builtIn = (id: string) => BUILT_IN.has(id);
@@ -51,7 +52,9 @@ export function giftLook(look: Look): Partial<Look> {
 }
 const usesOwnMedia = (look: Look) => look.scenes.some((id) => !BUILT_IN.has(id));
 
-const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const dateFmt = { format: (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(d) };
+/** Message presets in the interface language (the sender's own words once sent). */
+const presetTexts = () => [tr('gift.p1'), tr('gift.p2'), tr('gift.p3'), tr('gift.p4'), tr('gift.p5'), tr('gift.p6')];
 
 function sheet(cls: string, ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `sheet bottom ${cls}` }, ...content);
@@ -62,17 +65,17 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   return d;
 }
 const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, '✕'));
+  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: close }, '✕'));
 
 async function shareLink(url: string, text: string) {
   try {
-    if (navigator.share) return await navigator.share({ title: 'A gift from Ayah Studio', text, url });
+    if (navigator.share) return await navigator.share({ title: tr('gift.shareTitle'), text, url });
   } catch (e) {
     if ((e as Error).name === 'AbortError') return;
   }
   try {
     await navigator.clipboard.writeText(`${text}\n${url}`);
-    toast('Link copied');
+    toast(tr('gift.linkCopied'));
   } catch {
     toast(url);
   }
@@ -96,50 +99,50 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
   const source = src ?? defaultSource(s, lo, hi);
   let reply = pendingReply();
   const body = h('div', { class: 'gift-compose' });
-  const d = sheet('gift-sheet', head('Gift an ayah', () => d.close()), body);
+  const d = sheet('gift-sheet', head(tr('gift.title'), () => d.close()), body);
 
-  const reciter = h('select', { class: 'search', 'aria-label': 'Reciter' },
+  const reciter = h('select', { class: 'search', 'aria-label': tr('kids.reciter') },
     ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === source.reciter }, reciterPickerLabel(r))));
-  const message = h('textarea', { class: 'search gift-msg', maxlength: MESSAGE_MAX, rows: 2, placeholder: 'A few words (optional)', 'aria-label': 'Message' });
+  const message = h('textarea', { class: 'search gift-msg', maxlength: MESSAGE_MAX, rows: 2, placeholder: tr('gift.msgPh'), 'aria-label': tr('gift.message') });
   const count = h('span', { class: 'muted small gift-count' }, `0/${MESSAGE_MAX}`);
   message.addEventListener('input', () => (count.textContent = `${message.value.length}/${MESSAGE_MAX}`));
-  const presets = h('div', { class: 'gift-presets' }, ...PRESETS.map((p) => h('button', { type: 'button', class: 'chip', onclick: () => {
+  const presets = h('div', { class: 'gift-presets' }, ...presetTexts().map((p) => h('button', { type: 'button', class: 'chip', onclick: () => {
     message.value = p;
     count.textContent = `${p.length}/${MESSAGE_MAX}`;
   } }, p)));
-  const name = h('input', { class: 'search', maxlength: NAME_MAX, value: (account()?.name ?? '').split(' ')[0].slice(0, NAME_MAX), 'aria-label': 'Your name' });
-  const sendBtn = h('button', { class: 'primary brand-btn', type: 'submit' }, '🎁 Create the gift link');
+  const name = h('input', { class: 'search', maxlength: NAME_MAX, value: (account()?.name ?? '').split(' ')[0].slice(0, NAME_MAX), 'aria-label': tr('gift.yourName') });
+  const sendBtn = h('button', { class: 'primary brand-btn', type: 'submit' }, tr('gift.create'));
   const signInNote = h('div', { class: 'gift-signin', hidden: true });
 
   function draw() {
     const replyRow = reply
-      ? h('p', { class: 'gift-reply-to' }, `A reply to ${reply.to}’s gift `,
-        h('button', { type: 'button', class: 'link-btn', onclick: () => { reply = null; setPendingReply(null); draw(); } }, 'not a reply'))
+      ? h('p', { class: 'gift-reply-to' }, `${tr('gift.replyTo', { name: reply.to })} `,
+        h('button', { type: 'button', class: 'link-btn', onclick: () => { reply = null; setPendingReply(null); draw(); } }, tr('gift.notReply')))
       : null;
     body.replaceChildren(
-      h('div', { class: 'gift-ref' }, h('b', {}, reference(s, lo, hi)), h('span', { class: 'muted small' }, `${hi - lo + 1} ${hi > lo ? 'ayat' : 'ayah'} · plays in your reel look`)),
+      h('div', { class: 'gift-ref' }, h('b', {}, reference(s, lo, hi)), h('span', { class: 'muted small' }, `${tr(hi > lo ? 'common.ayat' : 'common.ayah', { n: hi - lo + 1 })} · ${tr('gift.playsInLook')}`)),
       ...(replyRow ? [replyRow] : []),
-      usesOwnMedia(source.look) ? h('p', { class: 'muted small' }, 'Your own photos and videos stay on your device — the gift uses a built-in background instead.') : '',
+      usesOwnMedia(source.look) ? h('p', { class: 'muted small' }, tr('gift.ownMedia')) : '',
       h('form', { class: 'circle-form', onsubmit: (e: Event) => { e.preventDefault(); void send(); } },
-        h('label', {}, 'Reciter', reciter),
-        h('label', {}, h('span', { class: 'gift-label-row' }, 'Message', count), message),
+        h('label', {}, tr('kids.reciter'), reciter),
+        h('label', {}, h('span', { class: 'gift-label-row' }, tr('gift.message'), count), message),
         presets,
-        h('label', {}, 'From (your name, as they will see it)', name),
+        h('label', {}, tr('gift.from'), name),
         signInNote,
         sendBtn),
-      h('p', { class: 'muted small' }, 'Anyone with the link can open the gift — no app or account needed. Only the reference, reciter, look, your name and message are stored; the ayat come from the app’s verified text.'));
+      h('p', { class: 'muted small' }, tr('gift.privacy')));
   }
 
   async function send() {
-    if (!name.value.trim()) return toast('Please write your name');
+    if (!name.value.trim()) return toast(tr('circ.writeName'));
     sendBtn.disabled = true;
     try {
       const who = await ensureSender(!!reply);
       if (!who) {
         signInNote.hidden = false;
         signInNote.replaceChildren(
-          h('p', { class: 'small' }, reply ? 'Sign in with Google to reply with a gift.' : 'Sign in with Google to send gifts — opening them needs no account.'),
-          h('button', { type: 'button', class: 'chip', onclick: () => openAccount() }, 'Sign in with Google'));
+          h('p', { class: 'small' }, reply ? tr('gift.signInReply') : tr('gift.signInSend')),
+          h('button', { type: 'button', class: 'chip', onclick: () => openAccount() }, tr('circ.signIn')));
         return;
       }
       const id = await sendGift({
@@ -149,7 +152,7 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
       if (reply) setPendingReply(null);
       done(id);
     } catch (e) {
-      toast(navigator.onLine ? errorText(e) : 'You are offline — try again when you are back online.');
+      toast(navigator.onLine ? errorText(e) : tr('gift.offlineTry'));
     } finally {
       sendBtn.disabled = false;
     }
@@ -157,19 +160,19 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
 
   function done(id: string) {
     const url = giftLink(id);
-    const text = `A gift for you: ${reference(s, lo, hi)} — from ${name.value.trim()}`;
+    const text = tr('gift.shareText', { ref: reference(s, lo, hi), name: name.value.trim() });
     body.replaceChildren(
       h('div', { class: 'gift-done' },
         h('div', { class: 'gift-seal small-seal', 'aria-hidden': 'true' }, '🎁'),
-        h('h3', {}, 'Your gift is ready'),
-        h('p', { class: 'muted small' }, 'Send the link — it opens in the app or in any browser.'),
+        h('h3', {}, tr('gift.ready')),
+        h('p', { class: 'muted small' }, tr('gift.sendLink')),
         h('input', { class: 'search gift-url', readonly: true, value: url, onfocus: (e: Event) => (e.target as HTMLInputElement).select() }),
         h('div', { class: 'row center' },
-          h('button', { class: 'primary brand-btn', onclick: () => void shareLink(url, text) }, 'Share'),
+          h('button', { class: 'primary brand-btn', onclick: () => void shareLink(url, text) }, tr('ed.share')),
           h('button', { class: 'chip', onclick: async () => {
-            try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast(url); }
-          } }, 'Copy link'),
-          h('a', { class: 'chip', href: `#/gift/${id}`, onclick: () => d.close() }, 'Preview'))));
+            try { await navigator.clipboard.writeText(url); toast(tr('gift.linkCopied')); } catch { toast(url); }
+          } }, tr('gift.copyLink')),
+          h('a', { class: 'chip', href: `#/gift/${id}`, onclick: () => d.close() }, tr('gift.preview')))));
   }
 
   const off = onAccount(() => {
@@ -188,25 +191,25 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
 
 /** The gift, checked like the database does: a forged document never renders. */
 function checkGift(g: Gift | null, meta: SurahMeta[]): string | null {
-  if (!g) return 'This gift link is not valid any more.';
+  if (!g) return tr('gift.invalidAnyMore');
   const s = meta[g.surah - 1];
   const ok = !!s && Number.isInteger(g.ayah_from) && Number.isInteger(g.ayah_to) && g.ayah_from >= 1 && g.ayah_to >= g.ayah_from
     && g.ayah_to <= s.ayahs && g.ayah_to - g.ayah_from < MAX_AYAT && RECITERS.some((r) => r.id === g.reciter)
     && typeof g.from_name === 'string' && g.from_name.length <= NAME_MAX && (g.message === null || (typeof g.message === 'string' && g.message.length <= MESSAGE_MAX))
     && strictLook(g.look, builtIn);
-  return ok ? null : 'This gift cannot be opened.';
+  return ok ? null : tr('gift.cannotOpen');
 }
 
 export async function showGift(root: HTMLElement, id: string): Promise<() => void> {
   const body = h('div', { class: 'gift-page' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': 'Home' }, '‹'),
-    h('div', { class: 'brand' }, h('h1', {}, 'A gift'), h('p', { class: 'muted' }, 'Ayah Studio'))), body);
+    h('a', { class: 'icon-btn', href: '#/', 'aria-label': tr('circ.home') }, '‹'),
+    h('div', { class: 'brand' }, h('h1', {}, tr('gift.aGift')), h('p', { class: 'muted' }, 'Ayah Studio'))), body);
   body.replaceChildren(h('p', { class: 'muted center' }, h('span', { class: 'spinner' }), ' Opening…'));
-  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: '#/' }, 'Go to the app')));
+  const fail = (msg: string) => body.replaceChildren(h('div', { class: 'gift-error' }, h('p', {}, msg), h('a', { class: 'chip', href: '#/' }, tr('circ.goToApp'))));
 
   if (!validGiftId(id)) {
-    fail('This gift link is not valid.');
+    fail(tr('gift.invalid'));
     return () => {};
   }
   let g: Gift | null;
@@ -214,12 +217,12 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
   try {
     g = await getGift(id);
   } catch (e) {
-    fail(navigator.onLine ? `Could not open the gift: ${errorText(e)}` : 'You are offline — open the link again when you are back online.');
+    fail(navigator.onLine ? tr('gift.openFailed', { msg: errorText(e) }) : tr('circ.inviteOffline'));
     return () => {};
   }
   const bad = checkGift(g, meta);
   if (bad || !g) {
-    fail(bad ?? 'This gift cannot be opened.');
+    fail(bad ?? tr('gift.cannotOpen'));
     return () => {};
   }
   const gift = g;
@@ -233,27 +236,27 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
   const canvas = h('canvas', { class: 'gift-canvas', width: 540, height: 960 });
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const status = h('div', { class: 'stage-status', hidden: true });
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': 'Play', hidden: true }, icon('play', 26));
-  const seal = h('button', { class: 'gift-sealed', 'aria-label': `Open the gift from ${gift.from_name}` },
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': tr('gift.play'), hidden: true }, icon('play', 26));
+  const seal = h('button', { class: 'gift-sealed', 'aria-label': tr('gift.openFrom', { name: gift.from_name }) },
     h('span', { class: 'gift-seal', 'aria-hidden': 'true' }, '🎁'),
-    h('span', { class: 'gift-from' }, gift.mine ? 'Your gift' : `A gift from ${gift.from_name}`),
+    h('span', { class: 'gift-from' }, gift.mine ? tr('gift.yours') : tr('gift.giftFrom', { name: gift.from_name })),
     h('span', { class: 'gift-sealed-ref' }, ref),
-    h('span', { class: 'gift-tap' }, 'Tap to open'));
+    h('span', { class: 'gift-tap' }, tr('gift.tapOpen')));
   const stage = h('div', { class: 'gift-stage' }, canvas, status, seal);
   const note = gift.message
     ? h('figure', { class: 'gift-note' }, h('blockquote', {}, gift.message), h('figcaption', {}, `— ${gift.from_name}`))
-    : h('p', { class: 'gift-note muted' }, `From ${gift.from_name}`);
+    : h('p', { class: 'gift-note muted' }, tr('gift.fromName', { name: gift.from_name }));
   const actions = h('div', { class: 'gift-actions', hidden: true },
-    h('button', { class: 'primary brand-btn', onclick: () => replyWithAyah() }, '🎁 Reply with an ayah'),
-    h('button', { class: 'chip', onclick: () => void makeReel() }, '🎬 Make it a reel'),
-    h('a', { class: 'chip', href: `#/s/${gift.surah}/${gift.ayah_from}` }, 'Read in the mushaf'));
+    h('button', { class: 'primary brand-btn', onclick: () => replyWithAyah() }, tr('gift.reply')),
+    h('button', { class: 'chip', onclick: () => void makeReel() }, tr('gift.makeReel')),
+    h('a', { class: 'chip', href: `#/s/${gift.surah}/${gift.ayah_from}` }, tr('gift.read')));
   const extra = h('div', { class: 'gift-extra' });
-  if (gift.reply_to) extra.append(h('p', { class: 'muted small' }, 'A reply to a gift · ', h('a', { href: `#/gift/${gift.reply_to}` }, 'see the gift it answers')));
+  if (gift.reply_to) extra.append(h('p', { class: 'muted small' }, `${tr('gift.aReply')} · `, h('a', { href: `#/gift/${gift.reply_to}` }, tr('gift.seeAnswered'))));
   if (gift.mine) {
-    extra.append(h('p', { class: 'muted small' }, `Opened ${gift.opens ?? 0} ${gift.opens === 1 ? 'time' : 'times'} · `,
-      h('button', { class: 'link-btn', onclick: () => void shareLink(giftLink(gift.id), `A gift for you: ${ref} — from ${gift.from_name}`) }, 'share again')));
+    extra.append(h('p', { class: 'muted small' }, `${tr(gift.opens === 1 ? 'gift.opened1' : 'gift.opened', { n: gift.opens ?? 0 })} · `,
+      h('button', { class: 'link-btn', onclick: () => void shareLink(giftLink(gift.id), tr('gift.shareText', { ref, name: gift.from_name })) }, tr('gift.shareAgain'))));
     if (gift.replies?.length) {
-      extra.append(h('p', { class: 'circle-sub' }, 'Replies'), ...gift.replies.map((r) =>
+      extra.append(h('p', { class: 'circle-sub' }, tr('gift.replies')), ...gift.replies.map((r) =>
         h('a', { class: 'gift-row', href: `#/gift/${r.id}` }, h('b', {}, r.from_name), h('span', { class: 'muted small' }, `${reference(meta[r.surah - 1], r.ayah_from, r.ayah_to)} · ${dateFmt.format(new Date(r.created_at))}`))));
     }
   }
@@ -304,8 +307,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
   })();
   ready.catch((e) => {
     console.error(e);
-    setStatus(navigator.onLine ? 'The recitation could not be loaded. Check your connection and open the link again.'
-      : 'You are offline — open the link again when you are back online.');
+    setStatus(navigator.onLine ? tr('gift.recitationFailed') : tr('circ.inviteOffline'));
   });
 
   async function play() {
@@ -334,7 +336,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
   }
   const setPlayIcon = () => {
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
-    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    playBtn.setAttribute('aria-label', playing ? tr('kids.pause') : tr('gift.play'));
   };
   playBtn.onclick = () => (playing ? pause() : void play());
 
@@ -347,7 +349,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     playBtn.hidden = false;
     actions.hidden = false;
     wantPlay = true;
-    if (!tl) setStatus('Loading recitation…');
+    if (!tl) setStatus(tr('ed.loadingRecitation'));
     await ready.catch(() => {});
     if (!alive || !tl) return;
     setStatus('');
@@ -389,7 +391,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     setPendingReply({ id: gift.id, to: gift.from_name });
     pause();
     location.hash = `#/s/${gift.surah}/${gift.ayah_from}`;
-    setTimeout(() => toast('Long-press an ayah to choose your reply, then tap 🎁 Gift'), 400);
+    setTimeout(() => toast(tr('gift.replyHint')), 400);
   }
 
   async function makeReel() {
@@ -413,45 +415,45 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
 export async function openGifts() {
   const meta = await loadMeta();
   const body = h('div', { class: 'gifts' });
-  const d = sheet('gifts-sheet', head('Gifts', () => d.close()), body);
+  const d = sheet('gifts-sheet', head(tr('gift.gifts'), () => d.close()), body);
   const ref = (x: { surah: number; ayah_from: number; ayah_to: number }) => reference(meta[x.surah - 1], x.ayah_from, x.ayah_to);
   const go = (id: string) => { d.close(); location.hash = `#/gift/${id}`; };
 
   async function draw() {
     const got = received();
     const parts: Node[] = [
-      h('p', { class: 'muted small' }, 'Long-press an ayah in the mushaf and tap 🎁 Gift to send one.'),
-      h('p', { class: 'circle-sub' }, 'Received on this device'),
+      h('p', { class: 'muted small' }, tr('gift.howToSend')),
+      h('p', { class: 'circle-sub' }, tr('gift.received')),
       got.length
         ? h('div', { class: 'gift-list' }, ...got.map((x) => h('div', { class: 'gift-row' },
           h('button', { class: 'gift-row-main', onclick: () => go(x.id) }, h('b', {}, x.from), h('span', { class: 'muted small' }, `${ref(x)} · ${dateFmt.format(new Date(x.at))}`)),
-          h('button', { class: 'icon-btn', 'aria-label': 'Remove from this list', onclick: () => { forgetReceived(x.id); void draw(); } }, '✕'))))
-        : h('p', { class: 'muted small' }, 'Gifts you open appear here.'),
+          h('button', { class: 'icon-btn', 'aria-label': tr('gift.removeFromList'), onclick: () => { forgetReceived(x.id); void draw(); } }, '✕'))))
+        : h('p', { class: 'muted small' }, tr('gift.openedAppear')),
     ];
     body.replaceChildren(...parts);
     if (!account()) {
-      body.append(h('p', { class: 'circle-sub' }, 'Sent'), h('p', { class: 'muted small' }, 'Sign in to send gifts and see who replied.'),
-        h('button', { class: 'chip', onclick: () => openAccount() }, 'Sign in with Google'));
+      body.append(h('p', { class: 'circle-sub' }, tr('gift.sent')), h('p', { class: 'muted small' }, tr('gift.signInSee')),
+        h('button', { class: 'chip', onclick: () => openAccount() }, tr('circ.signIn')));
       return;
     }
     const sent = h('div', { class: 'gift-list' }, h('p', { class: 'muted small' }, h('span', { class: 'spinner' }), ' Loading…'));
-    body.append(h('p', { class: 'circle-sub' }, 'Sent and replies'), sent);
+    body.append(h('p', { class: 'circle-sub' }, tr('gift.sentReplies')), sent);
     let mine: MyGift[];
     try {
       mine = await myGifts();
     } catch (e) {
-      sent.replaceChildren(h('p', { class: 'muted small' }, navigator.onLine ? errorText(e) : 'You are offline.'));
+      sent.replaceChildren(h('p', { class: 'muted small' }, navigator.onLine ? errorText(e) : tr('gift.youOffline')));
       return;
     }
-    if (!mine.length) return sent.replaceChildren(h('p', { class: 'muted small' }, 'Nothing sent yet.'));
+    if (!mine.length) return sent.replaceChildren(h('p', { class: 'muted small' }, tr('gift.nothingSent')));
     sent.replaceChildren(...mine.map((x) => h('div', { class: 'gift-row' },
       h('button', { class: 'gift-row-main', onclick: () => go(x.id) },
-        h('b', {}, x.kind === 'reply' ? `${x.from_name} replied` : ref(x)),
+        h('b', {}, x.kind === 'reply' ? tr('gift.replied', { name: x.from_name }) : ref(x)),
         h('span', { class: 'muted small' }, x.kind === 'reply'
           ? `${ref(x)} · ${dateFmt.format(new Date(x.created_at))}`
-          : `${dateFmt.format(new Date(x.created_at))} · opened ${x.opens ?? 0}× ${x.replies ? `· ${x.replies} ${x.replies === 1 ? 'reply' : 'replies'}` : ''}`)),
-      x.kind === 'sent' ? h('button', { class: 'icon-btn', 'aria-label': 'Delete this gift', onclick: async () => {
-        if (!confirm('Delete this gift? Its link will stop working.')) return;
+          : `${dateFmt.format(new Date(x.created_at))} · ${tr('gift.openedX', { n: x.opens ?? 0 })} ${x.replies ? `· ${tr(x.replies === 1 ? 'gift.reply1' : 'gift.repliesN', { n: x.replies })}` : ''}`)),
+      x.kind === 'sent' ? h('button', { class: 'icon-btn', 'aria-label': tr('gift.delete'), onclick: async () => {
+        if (!confirm(tr('gift.confirmDelete'))) return;
         try { await deleteGift(x.id); void draw(); } catch (e) { toast(errorText(e)); }
       } }, '✕') : '')));
   }
