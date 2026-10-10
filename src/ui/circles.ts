@@ -235,6 +235,11 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
     await refresh();
   };
 
+  function pickJuz(juz: number) {
+    picked = picked === juz ? null : juz;
+    draw();
+  }
+
   function draw() {
     if (!st) return;
     const { circle, members, parts } = st;
@@ -262,8 +267,10 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       const label = svg('text', { x: (150 + lr * Math.cos(mid)).toFixed(1), y: (150 + lr * Math.sin(mid)).toFixed(1), class: 'seg-label' });
       label.textContent = p.status === 'free' ? String(p.juz) : (m?.name ?? '?').slice(0, 1).toUpperCase();
       g.append(label);
-      const pick = () => { picked = picked === p.juz ? null : p.juz; draw(); };
+      const pick = () => pickJuz(p.juz);
       g.addEventListener('click', pick);
+      g.addEventListener('focus', () => sky?.focus(p.juz));
+      g.addEventListener('blur', () => sky?.focus(0));
       g.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') pick(); });
       ring.append(g);
     }
@@ -271,11 +278,11 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
       h('b', {}, complete ? t('circ.complete') : t('circ.of30', { n: done })),
       h('span', { class: 'muted small' }, complete ? dateFmt.format(new Date(circle.completed_at!)) : t('circ.finishedRound', { round: circle.round })),
       circle.due_date && !complete ? h('span', { class: 'muted small' }, t('circ.by', { date: dateFmt.format(new Date(circle.due_date)) })) : false);
-    const ringBox = h('div', { class: `ring-box${sky ? ' ring-3d' : ''}` }, ...(sky ? [sky.canvas] : []), ring, centre);
+    const ringBox = h('div', { class: `ring-box${sky ? ' ring-3d' : ''}` }, ...(sky ? [sky.canvas] : []), ring, ...(sky ? [sky.labels] : []), centre);
     sky?.set(parts.map((p) => {
       const m = p.user_id ? byId.get(p.user_id) : undefined;
       return { juz: p.juz, status: p.status, color: m ? MEMBER_COLORS[m.color % MEMBER_COLORS.length] : '', mine: p.user_id === me, picked: picked === p.juz, sweep: sweep.has(p.juz) };
-    }));
+    }), parts.map((p) => (p.status === 'free' ? String(p.juz) : ((p.user_id ? byId.get(p.user_id)?.name : '') || '?').slice(0, 1).toUpperCase())));
 
     // --- what you can do with the juz you tapped ---
     const panel = h('div', { class: 'circle-panel' });
@@ -375,7 +382,7 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
 
   body.append(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), ' Loading…'));
   if (quality !== 'flat') {
-    void mountConstellation(quality, () => { sky = null; skyGone = true; draw(); }).then((c) => {
+    void mountConstellation(quality, () => { sky = null; skyGone = true; draw(); }, (juz) => pickJuz(juz)).then((c) => {
       if (!c) { skyGone = true; draw(); return; }
       if (skyGone) return c.dispose();
       sky = c;

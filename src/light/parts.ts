@@ -229,7 +229,7 @@ export function cloudSea(c: CloudColors, glowDir: Vector3, opts: { y?: number; s
   geo.rotateX(-Math.PI / 2);
   const g2 = new Vector2(glowDir.x, glowDir.z).normalize();
   const mat = new ShaderMaterial({
-    depthWrite: true,
+    depthWrite: true, transparent: true,
     uniforms: {
       uTime: { value: 0 }, uCam: { value: new Vector3() }, uGlow: { value: g2 }, uSpeed: { value: opts.speed ?? 1 }, uScale: { value: opts.scale ?? 0.045 },
       uDeep: { value: col(c.deep) }, uMid: { value: col(c.mid) }, uTop: { value: col(c.top) }, uFog: { value: col(c.fog) }, uGlint: { value: col(c.glint) },
@@ -258,11 +258,13 @@ export function cloudSea(c: CloudColors, glowDir: Vector3, opts: { y?: number; s
         c += uGlint * glint * (0.25 + 0.6 * puff) * (0.55 + 0.1 * uBreath);
         vec3 fog = uFog + uSkyGlow * pow(max(dot(vec3(dir.x, 0.0, dir.y), uGlow3), 0.0), 5.0) * 0.55;
         c = mix(c, fog, smoothstep(10.0, 200.0, dist));
-        gl_FragColor = vec4(c, 1.0);
+        // The plane's far edge dissolves into the sky dome behind it (no hard line at the horizon).
+        gl_FragColor = vec4(c, 1.0 - smoothstep(140.0, 560.0, dist));
       }`,
   });
   const mesh = new Mesh(geo, mat);
   mesh.position.y = opts.y ?? 0;
+  mesh.renderOrder = -5; // first of the transparent things, right after the sky dome
   return {
     object: mesh,
     /** The plane follows the camera (the noise is in world space, so the clouds stay put). */

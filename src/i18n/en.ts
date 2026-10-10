@@ -347,7 +347,7 @@ const en = {
   'sky.count': '{n} pages read this month',
   'sky.count1': '1 page read this month',
   'sky.empty': 'Pages you read for 20 seconds or more light up here as stars.',
-  'sky.hint': 'Tap a star to open its page',
+  'sky.hint': 'Swipe to travel · tap a star to open its page',
   'today.sky': 'Your sky · {n} stars this month',
   'today.sky1': 'Your sky · 1 star this month',
   'kids.sky3d': 'Lanterns in 3D',

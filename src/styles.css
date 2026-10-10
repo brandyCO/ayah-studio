@@ -1157,9 +1157,20 @@ body[data-view="kids"] {
 /* Khatm circle as a constellation (docs/light.md, L3): the 3D sky behind a see-through SVG ring */
 .ring-box.ring-3d { width: min(340px, 90vw); border-radius: 18px; overflow: hidden; background: #04071c; }
 .ring-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.ring-3d .ring { position: relative; }
+/* The ring lies back in 3D: the flat SVG keeps focus + screen readers, the canvas takes the taps and
+   the labels follow their stars (src/ui/constellation.ts). */
+.ring-3d .ring { position: relative; pointer-events: none; }
+.ring-3d .ring-centre { pointer-events: none; }
+.ring-3d .seg-label { opacity: 0; }
+.ring-sky { touch-action: pan-y; cursor: grab; }
+.ring-sky-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.ring-sky-label {
+  position: absolute; left: 0; top: 0; transform-origin: 50% 0; will-change: transform;
+  font: 600 10px/1 system-ui, sans-serif; color: rgba(246, 239, 226, .75); text-shadow: 0 0 6px rgba(4, 7, 28, .9);
+}
+.ring-sky-label.mine { color: #fff1d6; }
 .ring-3d .seg-g .seg, .ring-3d .seg-g.taken .seg, .ring-3d .seg-g.done .seg { fill: transparent; stroke: none; }
-.ring-3d .seg-g.picked .seg, .ring-3d .seg-g:focus-visible .seg { stroke: rgba(255, 241, 214, .35); stroke-width: 1.5; }
+.ring-3d .seg-g.picked .seg, .ring-3d .seg-g:focus-visible .seg { stroke: none; }
 .ring-3d .seg-label, .ring-3d .seg-g.taken .seg-label, .ring-3d .seg-g.done .seg-label { fill: rgba(246, 239, 226, .55); font-size: 10px; }
 .ring-3d .seg-g.mine .seg-label { fill: #fff1d6; }
 .ring-3d .ring-centre { color: #f6efe2; text-shadow: 0 1px 10px rgba(4, 7, 28, .9); }
