@@ -680,8 +680,23 @@ text is never in the 3D scene (always flat, still, KFGQPC / QCF, drawn on top); 
 companions, angels, the unseen, people, animals); no music/sfx; the mushaf page stays clean; slow,
 soft, dim, skippable, with a flat 2D fallback (reduced motion, battery saver, no WebGL, slow GPU);
 no AI-written religious content. Every scene is a pure function of (t, seed), so preview = export.
-- [ ] L1 Light engine (`src/light/`) + Night listening (full-screen night sky over a cloud sea from
+- [x] L1 Light engine (`src/light/`) + Night listening (full-screen night sky over a cloud sea from
       the player; the ayah flat in the middle; motes breathe with the word timings; sleep timer)
+      (built 2026-10-10: `three` 0.186.1 (exact), only via `import()` — its chunks (~134 KB gzip) load
+      when Night listening opens in 3D; entry +1.9 KB, editor unchanged. `src/light/support.ts`
+      (no three: WebGL, reduced motion, battery < 20 % not charging, saved step `lightQuality`),
+      `engine.ts` `LightStage` (colours used as written, dpr cap 1.5/1/0.75 per step high/medium/low,
+      pause while hidden, context-loss → flat, fps watchdog: mean frame > 40 ms over ~3 s → step
+      down, lowest → `onFallback`; < 18 ms for 12 s on medium → high), `noise.ts` (seeded PRNG + GLSL
+      fbm), `parts.ts` (sky dome, star field, motes, fbm cloud sea that meets the horizon glow,
+      crescent, Noor: core + halo + short trail, no figure), `scenes/night.ts` (pure in t + breath),
+      `flat.ts` (2D still version). `src/ui/night.ts`: moon button in the player bar → full-screen;
+      the ayah in KFGQPC (DOM, flat, never in the scene) with the chosen translation + reference,
+      crossfading per ayah; long ayat paged between words (27 px minimum), the page holding the
+      recited word (word-map aware; swipe to turn by hand), the translation fades/scrolls along;
+      breath = a swell at each word start from the QDC timings; Noor brightens when a surah ends;
+      tap → controls (✕, play/pause, sleep Off/15/30/60: fades to black over the last minute, then
+      pauses and releases the wake lock); Esc/back closes; Device check → Light scenes: step + Reset)
 - [ ] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
       Light bloom, Drift through clouds; gifts/walls allow-list (migration + pgTAP)
 - [ ] L3 Khatm circle as a constellation (SVG ring = fallback)

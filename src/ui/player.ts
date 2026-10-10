@@ -7,6 +7,8 @@ import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../d
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
+import { t } from '../i18n';
+import type { NightSource } from './night';
 
 interface Verse {
   a: number;
@@ -34,6 +36,8 @@ export function createPlayer(o: PlayerHooks) {
   let last = '';
   let cur: { s: number; a: number; w: number | null } | null = null;
   let req = 0;
+  const listeners = new Set<(pos: { s: number; a: number; w: number | null } | null) => void>();
+  const tell = (pos: typeof cur) => { o.onPosition(pos); for (const f of listeners) f(pos); };
 
   const reciter = () => reciterById(reelReciter(DEFAULT_RECITER));
 
@@ -46,6 +50,8 @@ export function createPlayer(o: PlayerHooks) {
     playBtn,
     h('button', { class: 'icon-btn', 'aria-label': 'Next ayah', onclick: () => step(1) }, icon('right', 20)),
     h('div', { class: 'pl-info' }, label, who),
+    // Night listening (docs/light.md, L1): loaded only when opened.
+    h('button', { class: 'icon-btn', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
 
   // Starting or buffering: a spinner on the play button and "Loading…" (the recording streams).
@@ -146,7 +152,7 @@ export function createPlayer(o: PlayerHooks) {
     cancelAnimationFrame(raf);
     cur = null;
     last = '';
-    o.onPosition(null);
+    tell(null);
     show(false);
   }
 
@@ -168,7 +174,7 @@ export function createPlayer(o: PlayerHooks) {
     if (key === last) return;
     last = key;
     cur = { s: surah, a: v.a, w };
-    o.onPosition(cur);
+    tell(cur);
     paint();
   }
 
@@ -208,6 +214,20 @@ export function createPlayer(o: PlayerHooks) {
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();
+  }
+
+  /** What Night listening reads: the recitation clock, the word timings and the controls. */
+  const night: NightSource = {
+    meta: o.meta,
+    position: () => cur,
+    ms: () => audio.currentTime * 1000,
+    playing: () => !audio.paused,
+    words: (s, a) => (s === surah ? verses.find((v) => v.a === a)?.words ?? null : null),
+    toggle: () => toggle(),
+    subscribe(f) { listeners.add(f); return () => listeners.delete(f); },
+  };
+  function openNightView() {
+    void import('./night').then((m) => m.openNight(night)).catch(() => toast(t('common.wrong')));
   }
 
   return {

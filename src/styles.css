@@ -1093,3 +1093,59 @@ body[data-view="kids"] {
 .tafsir-text p { margin: 6px 0; }
 .tafsir-text .tf-ar { font-family: "AmiriQuran", "UthmanicHafs", serif; font-size: 1.15em; line-height: 1.9; }
 .flag-row { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
+
+/* ---- Night listening (docs/light.md, L1): 3D sky behind, the ayah flat and still on top ---- */
+.night {
+  position: fixed; inset: 0; z-index: 40; background: #05081a; color: #f6efe2;
+  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  animation: night-in 1.2s ease both;
+}
+.night.out { animation: night-out .6s ease both; }
+@keyframes night-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes night-out { to { opacity: 0; } }
+.night-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.night-text-layer { position: absolute; inset: 0; pointer-events: none; }
+.night-block {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  width: min(640px, calc(100% - 40px)); text-align: center;
+  opacity: 0; transition: opacity 1.3s ease;
+  text-shadow: 0 1px 14px rgba(5, 8, 26, .9), 0 0 2px rgba(5, 8, 26, .8);
+}
+.night-block::before { /* legibility scrim: a soft dark pool under the text */
+  content: ''; position: absolute; inset: -18% -12%; z-index: -1;
+  background: radial-gradient(closest-side, rgba(5, 8, 26, .55), rgba(5, 8, 26, 0));
+}
+.night-block.in { opacity: 1; }
+.night-ar, .night-measure {
+  margin: 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; line-height: 2.05; direction: rtl;
+  color: #fff8ec; transition: opacity .45s ease;
+}
+.night-ar.turn { opacity: 0; }
+.night-measure { position: absolute; visibility: hidden; left: 0; top: 0; pointer-events: none; }
+.night-en {
+  margin: 14px auto 0; max-height: 24vh; overflow: hidden; font-family: var(--font-en, 'Noto Serif', Georgia, serif);
+  font-size: 16px; line-height: 1.55; color: rgba(246, 239, 226, .86);
+}
+.night-ref { margin: 14px 0 0; font: 500 13px/1.3 system-ui, sans-serif; letter-spacing: .04em; color: rgba(246, 239, 226, .7); }
+.night-more { margin-top: 8px; font: 12px system-ui, sans-serif; color: rgba(246, 239, 226, .45); }
+.night-dark { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 1s linear; }
+.night-asleep {
+  position: absolute; left: 0; right: 0; bottom: 18%; text-align: center; font: 14px system-ui, sans-serif;
+  color: rgba(246, 239, 226, .4); opacity: 0; transition: opacity 2s ease; pointer-events: none;
+}
+.night.is-asleep .night-asleep { opacity: 1; }
+.night-controls {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  background: linear-gradient(rgba(5, 8, 26, .65), rgba(5, 8, 26, 0));
+  opacity: 0; transform: translateY(-8px); transition: opacity .5s ease, transform .5s ease; pointer-events: none;
+}
+.night.show-ctl .night-controls { opacity: 1; transform: none; pointer-events: auto; }
+.night-spacer { flex: 1; }
+.night-btn { color: #f6efe2; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .14); }
+.night-sleep { flex: 1 0 100%; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.night-sleep-label { display: inline-flex; align-items: center; gap: 4px; font: 12px system-ui, sans-serif; color: rgba(246, 239, 226, .7); }
+.night .chip { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .16); color: #f6efe2; padding: 4px 10px; font-size: 12px; }
+.night .chip.on { background: var(--brand-fill); border-color: transparent; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .night, .night.out { animation: none; } .night-block { transition: opacity .3s; } }
+.night-en.scrolls { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); padding: 10px 0; }
