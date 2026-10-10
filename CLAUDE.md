@@ -757,7 +757,21 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
       its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
       depths)
-- [ ] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
+- [x] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
+      (built 2026-10-10: `src/data/readLog.ts` — a local reading log (localStorage `readLog`, day →
+      pages, this device only, ~13 months kept for T9); the mushaf's 20 s read timer now always runs and
+      logs the page (circle portions and Ramadan as before). `src/light/skyLayout.ts` (no three): every
+      page has a fixed place — each juz a thread of stars climbing the sky, juz 1 on the right, a juz's
+      first page low; circles as small rings of 30 above. `src/light/scenes/homeSky.ts`: night sky over
+      a slow cloud sea, read pages lit (brighter when read recently, larger and warmer when returned to
+      on several days), the rest faint points, fine threads between neighbouring read pages, circle
+      rings (free faint, taken in the member's colour, done bright), motes, Noor near the viewer (a
+      camera child); camera drifts very slowly around where you look. `src/ui/sky.ts`: ☰ → **Sky** and
+      the Today line "Your sky · N stars this month" (only when > 0) → full screen; month + "N pages read
+      this month" (no streaks, no comparison); drag to look (eased, short gentle glide), wheel / ←→;
+      tap = nearest lit star ≤ 30 px (any page ≤ 14 px) → that page, a ring or its name → the circle;
+      "Juz N" of the view. Flat (`src/light/flatSky.ts`): the same stars, threads and rings as a still
+      2D picture, redrawn only when panned; fps watchdog → flat. Family circles are not shown)
 - [ ] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
 
 ---
