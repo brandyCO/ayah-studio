@@ -5,7 +5,7 @@
 import type { User } from '@supabase/supabase-js';
 import { isNative } from '../native';
 import { GOOGLE_WEB_CLIENT_ID } from './config';
-import { hasStoredSession, returningFromSignIn, supabase } from './supabase';
+import { hasStoredSession, returningFromSignIn, storedUser, supabase } from './supabase';
 
 export interface Account {
   id: string;
@@ -14,6 +14,8 @@ export interface Account {
   avatar: string | null;
 }
 
+// Known at once from the session stored on this device, so no screen asks a signed-in user to
+// sign in while the client is still loading (it confirms or corrects this a moment later).
 let current: Account | null = null;
 const cameBack = returningFromSignIn(); // checked at load: the client removes the code from the address
 let attached: Promise<void> | null = null;
@@ -41,6 +43,8 @@ function toAccount(u: User | null | undefined): Account | null {
   };
 }
 
+current = toAccount(storedUser());
+
 function set(a: Account | null) {
   if (a?.id === current?.id && a?.name === current?.name) return;
   if (a && !current && cameBack) void import('../ui/dom').then(({ toast }) => toast(`Signed in as ${a.name} — syncing`));
@@ -51,9 +55,14 @@ function set(a: Account | null) {
 /** Connects to the auth session (loads the client). */
 function attach(): Promise<void> {
   attached ??= supabase().then(async (sb) => {
-    sb.auth.onAuthStateChange((_event, session) => set(toAccount(session?.user)));
+    // Signed out only when the session is really gone (signed out, deleted or revoked): a refresh
+    // that fails because the device is offline keeps the stored session, and so the account.
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session?.user) set(toAccount(session.user));
+      else set(event === 'SIGNED_OUT' ? null : toAccount(storedUser()));
+    });
     const { data } = await sb.auth.getSession();
-    set(toAccount(data.session?.user));
+    set(toAccount(data.session?.user ?? storedUser()));
   });
   attached.catch(() => (attached = null));
   return attached;
@@ -109,6 +118,12 @@ export async function signInGuest(): Promise<boolean> {
   const sb = await supabase();
   const { data } = await sb.auth.getSession();
   if (data.session?.user?.is_anonymous) return true;
+  // Never replace a Google sign-in with a guest session (even one that could not refresh offline).
+  const real = toAccount(data.session?.user ?? storedUser());
+  if (real) {
+    set(real);
+    return true;
+  }
   let captchaToken: string | undefined;
   try {
     const { captchaToken: check } = await import('./captcha');
