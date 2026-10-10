@@ -29,6 +29,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tr.zoom': 'عبور بالتقريب',
   'tr.leak': 'تسرّب ضوء',
   'tr.mist': 'ضباب',
+  'tr.lightbloom': 'إشراقة ضوء',
+  'tr.clouddrift': 'عبر الغيوم',
   'tr.parallax': 'منظور بطيء',
   'tr.wipe': 'مسح ناعم',
   'tr.iris': 'قزحية ناعمة',

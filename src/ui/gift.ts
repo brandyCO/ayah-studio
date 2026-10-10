@@ -13,7 +13,7 @@ import { arrangeAudio } from '../data/audio';
 import { newDraftId, saveDraft, draftHash } from '../data/drafts';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings, type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
-import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
+import { BUILT_IN_BACKGROUNDS, backgroundById, disposeMedia, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
 import { H, W } from '../engine/layout';
 import { applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, strictLook, type Look, type Project } from '../engine/project';
 import { arrangeReel, voiceOnset } from '../engine/recitation';
@@ -32,7 +32,7 @@ import { reelLook, reelReciter } from './prefs';
 import { loadReel } from './reelSource';
 import { locale, t as tr } from '../i18n';
 
-const BUILT_IN = new Set(BACKGROUNDS.map((b) => b.id));
+const BUILT_IN = new Set(BUILT_IN_BACKGROUNDS.map((b) => b.id)); // presets + light scenes
 const builtIn = (id: string) => BUILT_IN.has(id);
 /** The look as sent: the receiver does not have the sender's own media, so only the built-in
  *  backgrounds travel (with their clip settings); without any, the default background. */
@@ -407,7 +407,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     ro.disconnect();
     pause();
     void ac?.close();
-    for (const m of media) m.video?.dispose();
+    for (const m of media) disposeMedia(m);
   };
 }
 

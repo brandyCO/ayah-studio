@@ -13,7 +13,7 @@ import QRCode from 'qrcode';
 import { account, onAccount } from '../cloud/auth';
 import { loadMeta, reference, surahText, type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
-import { BACKGROUNDS, backgroundById, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
+import { BUILT_IN_BACKGROUNDS, backgroundById, disposeMedia, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
 import { H, W } from '../engine/layout';
 import { applyLook, frameStyle, lookOf, newProject, OUTRO, strictLook, type Project } from '../engine/project';
 import { render } from '../engine/render';
@@ -33,7 +33,7 @@ import { reelLook, reelReciter } from './prefs';
 import { loadSegments } from './reelSource';
 import { locale, t as tr, tOr } from '../i18n';
 
-const BUILT_IN = new Set(BACKGROUNDS.map((b) => b.id));
+const BUILT_IN = new Set(BUILT_IN_BACKGROUNDS.map((b) => b.id)); // presets + light scenes
 const builtIn = (id: string) => BUILT_IN.has(id);
 // Built on use: the interface language is known only after start-up.
 const longDate = { format: (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d) };
@@ -688,6 +688,6 @@ export async function showKeepsake(root: HTMLElement, id: string, start = 0): Pr
     ro.disconnect();
     pause();
     void ac?.close();
-    for (const m of media) m.video?.dispose();
+    for (const m of media) disposeMedia(m);
   };
 }

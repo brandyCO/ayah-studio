@@ -1,6 +1,8 @@
 // Background presets and their decoded media. Video loops are decoded frame-accurately with
 // Mediabunny (never by seeking a <video> element), so preview and export see the same frames.
 // User media (uploads, Pixabay downloads) comes from the local library as blobs: see src/data/library.ts.
+import type { LightId } from '../light/scenes/reel';
+import { hasWebGL } from '../light/support';
 import { ALL_FORMATS, BlobSource, CanvasSink, Input, UrlSource, type InputVideoTrack, type WrappedCanvas } from 'mediabunny';
 
 /** Who made a library item and where it came from (shown in the picker and on the export page). */
@@ -13,7 +15,9 @@ export interface Credit {
 export type Background =
   | { id: string; label: string; kind: 'image'; src: string | Blob; thumb: string; credit?: Credit }
   | { id: string; label: string; kind: 'video'; src: string | Blob; alt?: string; thumb: string; credit?: Credit }
-  | { id: string; label: string; kind: 'color'; color: string };
+  | { id: string; label: string; kind: 'color'; color: string }
+  // Real-time light scenes (docs/light.md, L2), rendered from time t: src/light/reel.ts.
+  | { id: string; label: string; kind: 'light'; scene: LightId; thumb: string };
 
 const bg = (f: string) => `${import.meta.env.BASE_URL}backgrounds/${f}`;
 
@@ -31,6 +35,14 @@ export const BACKGROUNDS: Background[] = [
   { id: 'charcoal', label: 'Charcoal', kind: 'color', color: '#1d1d22' },
 ];
 
+/** Light scenes (three.js, loaded only when one is used); ids `light:…`, accepted in gifts and walls. */
+export const LIGHT_BACKGROUNDS: Background[] = ([
+  ['dawn', 'Dawn cloud sea'], ['stars', 'Starfield drift'], ['aurora', 'Aurora'], ['lanterns', 'Lantern field'], ['rays', 'Light rays'],
+] as [LightId, string][]).map(([scene, label]) => ({ id: `light:${scene}`, label, kind: 'light', scene, thumb: bg(`light-${scene}-thumb.jpg`) }));
+
+/** Built-in backgrounds (presets + light scenes): the ones a shared look (gift, wall) may use. */
+export const BUILT_IN_BACKGROUNDS = [...BACKGROUNDS, ...LIGHT_BACKGROUNDS];
+
 /** Backgrounds from the user's library (registered by src/data/library.ts), in library order. */
 const library = new Map<string, Background>();
 export const libraryBackgrounds = () => [...library.values()];
@@ -41,10 +53,10 @@ export function unregisterBackground(id: string) {
   library.delete(id);
 }
 
-export const isBackground = (id: string) => library.has(id) || BACKGROUNDS.some((b) => b.id === id);
+export const isBackground = (id: string) => library.has(id) || BUILT_IN_BACKGROUNDS.some((b) => b.id === id);
 /** A scene whose media was deleted from the library shows a calm colour instead. */
 export const backgroundById = (id: string) =>
-  library.get(id) ?? BACKGROUNDS.find((b) => b.id === id) ?? (id.includes(':') ? BACKGROUNDS.find((b) => b.id === 'charcoal')! : BACKGROUNDS[0]);
+  library.get(id) ?? BUILT_IN_BACKGROUNDS.find((b) => b.id === id) ?? (id.includes(':') ? BACKGROUNDS.find((b) => b.id === 'charcoal')! : BACKGROUNDS[0]);
 
 /** A seamlessly looping video whose current frame is copied into `canvas` by `prepare(t)`. */
 export class VideoLoop {
@@ -125,7 +137,17 @@ export interface BackgroundMedia {
   bg: Background;
   image?: ImageBitmap;
   video?: VideoLoop;
+  /** A light scene's frame at time t (WebGL); without it the scene's flat 2D version is drawn. */
+  light?: { frame(t: number, w: number, h: number): HTMLCanvasElement; dispose(): void };
 }
+
+export function disposeMedia(m: BackgroundMedia) {
+  m.video?.dispose();
+  m.light?.dispose();
+}
+
+/** Largest width a light scene renders at: lower for the live preview, full while exporting. */
+export const lightRes = { cap: 720 };
 
 const images = new Map<string | Blob, Promise<ImageBitmap>>();
 
@@ -140,5 +162,11 @@ export async function loadBackground(b: Background): Promise<BackgroundMedia> {
     return { bg: b, image: await images.get(src)! };
   }
   if (b.kind === 'video') return { bg: b, video: await VideoLoop.open(...(b.alt ? [b.src, b.alt] : [b.src])) };
+  if (b.kind === 'light' && hasWebGL()) {
+    try {
+      const { LightReel } = await import('../light/reel');
+      return { bg: b, light: new LightReel(b.scene) };
+    } catch { /* drawn flat */ }
+  }
   return { bg: b };
 }
