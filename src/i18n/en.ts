@@ -340,6 +340,7 @@ const en = {
   // night listening (docs/light.md, L1)
   'lamp.gridView': 'Grid',
   'lamp.fieldView': 'Lanterns',
+  'light.giftSent': 'Your gift is on its way',
   'night.open': 'Night listening',
   'night.close': 'Leave night listening',
   'night.sleep': 'Sleep',

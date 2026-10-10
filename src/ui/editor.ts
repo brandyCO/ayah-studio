@@ -30,6 +30,7 @@ import { displayWords, parseSpans, wordMeanings } from '../engine/words';
 import { isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
+import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
 import { createMediaPicker } from './mediaPicker';
 import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
@@ -939,10 +940,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     void import('./gift').then((m) => m.openGiftComposer(s, project.from, project.to, { look: lookOf(project), reciter: project.reciterId }));
   } }, icon('gift'));
   const exportPathLabel = h('p', { class: 'muted small' });
-  const progressBar = h('div', { class: 'export-bar' }, h('div', {}));
+  const progressBar = lanternProgress(); // a lantern filling with light (docs/light.md, L5)
   const progressText = h('div', { class: 'export-pct' }, '0%');
   const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, ui('common.cancel'));
-  const progressRow = h('div', { class: 'export-progress' }, progressText, progressBar, note(ui('ed.keep-this-screen-open-while-the-video-is')), exportPathLabel, cancelBtn);
+  const progressRow = h('div', { class: 'export-progress' }, progressBar.el, progressText, note(ui('ed.keep-this-screen-open-while-the-video-is')), exportPathLabel, cancelBtn);
   const result = h('div', { class: 'export-result', hidden: true });
   const overlay = h('div', { class: 'export-overlay', hidden: true }, progressRow, result);
 
@@ -1218,7 +1219,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     progressRow.hidden = false;
     result.hidden = true;
     const setProgress = (f: number) => {
-      (progressBar.firstChild as HTMLElement).style.width = `${Math.round(f * 100)}%`;
+      progressBar.set(f);
       progressText.textContent = `${Math.round(f * 100)}%`;
     };
     setProgress(0);

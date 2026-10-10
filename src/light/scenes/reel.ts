@@ -72,7 +72,8 @@ export function dawnScene(seed = 1): LightScene {
   });
 }
 
-/** Starfield drift: a deep night sky slowly turning, with a faint band of stars across it. */
+/** Starfield drift: floating forward through fine dust under a deep night sky that slowly turns,
+ *  with a faint band of stars across it. */
 export function starsScene(seed = 1): LightScene {
   const { scene, camera } = base(60);
   const glow = new Vector3(0.3, 0.1, -1);
@@ -89,12 +90,16 @@ export function starsScene(seed = 1): LightScene {
     g.position.set(Math.cos(-Math.PI / 2 + off) * k * 780, y * 780, Math.sin(-Math.PI / 2 + off) * k * 780);
     nebula.add(g);
   }
-  scene.add(sky, nebula, stars.object, band.object);
+  // Fine dust near the camera, which it floats through (the far sky stays infinitely far).
+  const dust = moteField(seed + 11, 220, new Vector3(0, 6, 0), new Vector3(9, 6, 15), '#e6e2ff');
+  scene.add(sky, nebula, stars.object, band.object, dust.object);
   return wrap({
     scene, camera, far: [sky, stars.object, band.object, nebula],
-    pose(t, _scale, px) {
-      camera.position.set(0, 2, 0);
-      camera.rotation.set(0.42, Math.sin(t * 0.01) * 0.04, 0);
+    pose(t, scale, px) {
+      // Floating forward through the dust (0.4 units/s), looking slowly across the band.
+      camera.position.set(Math.sin(t * 0.021) * 1.2, 2 + Math.sin(t * 0.027) * 0.4, -t * 0.4);
+      camera.rotation.set(0.42 + Math.sin(t * 0.017) * 0.05, Math.sin(t * 0.013) * 0.12, Math.sin(t * 0.011) * 0.02);
+      dust.update(t, 0, scale, camera.position.z, 30);
       // The whole sky turns very slowly about a tilted axis (≈ 1.4° per 10 s).
       stars.object.rotation.set(0.25, t * 0.0025, 0.1);
       band.object.rotation.set(0.25, t * 0.0025, 0.1);
@@ -105,6 +110,7 @@ export function starsScene(seed = 1): LightScene {
     counts(q) {
       stars.setCount(q === 'high' ? 2600 : q === 'medium' ? 1800 : 1000);
       band.setCount(q === 'high' ? 3000 : q === 'medium' ? 2000 : 1000);
+      dust.setCount(q === 'high' ? 220 : q === 'medium' ? 150 : 80);
     },
   });
 }

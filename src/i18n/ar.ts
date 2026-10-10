@@ -381,6 +381,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   // night listening
   'lamp.gridView': 'شبكة',
   'lamp.fieldView': 'فوانيس',
+  'light.giftSent': 'هديتك في طريقها',
   'night.open': 'استماع ليلي',
   'night.close': 'إنهاء الاستماع الليلي',
   'night.sleep': 'مؤقّت النوم',

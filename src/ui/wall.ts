@@ -27,6 +27,7 @@ import {
 } from '../together/walls';
 import { openAccount } from './account';
 import { h, toast } from './dom';
+import { lightBackdrop } from './moment';
 import { giftLook } from './gift';
 import { icon } from './icons';
 import { reelLook, reelReciter } from './prefs';
@@ -144,6 +145,10 @@ export function openWalls() {
 export async function showWallHost(root: HTMLElement, id: string): Promise<() => void> {
   const page = h('div', { class: 'wall-host' });
   root.append(page);
+  // Lanterns rising over a night horizon behind the wall (docs/light.md, L5).
+  const sky = h('div', { class: 'wall-sky' });
+  root.append(sky);
+  const stopSky = lightBackdrop(sky, 'horizon');
   const meta = await loadMeta();
   let alive = true;
   let stopWatch: (() => void) | null = null;
@@ -314,6 +319,7 @@ export async function showWallHost(root: HTMLElement, id: string): Promise<() =>
 
   return () => {
     alive = false;
+    stopSky();
     clearInterval(poll);
     offAccount();
     stopWatch?.();

@@ -738,8 +738,25 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       tap → the nearest lantern on screen (≤ 30 px) becomes the page; "Juz N" label; the camera opens at
       the page and glides to a newly picked page's juz. `src/ui/lamps.ts`: a **Grid / Lanterns** chip
       (remembered as `lampsView`); flat quality, no WebGL or the fps watchdog → the canvas grid as before)
-- [ ] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
+- [x] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
+      (built 2026-10-10: `src/light/scenes/moments.ts` (pure in t) + `src/ui/moment.ts`: `playMoment()`
+      (full-screen or inline, tap/back skips, flat → a short CSS glow) and `lightBackdrop()` (a 3D scene
+      behind a screen's content). **lift** — a gift sent: a warm light lifts off the cloud sea with a
+      trail and settles as a new star while the camera tilts and rises after it ("Your gift is on its
+      way", in the composer dialog); **bloom** — a gift opened: over the stage a lantern rises, glows
+      and blooms open while the camera eases in towards it, during the recitation load; **horizon** —
+      the ayah wall host: 160 lanterns rising over a night horizon and still water behind the wall
+      (`.wall-sky`); **crescent** — Ramadan's first-night moment: the sky fills with stars over the cloud
+      sea under the moment's own crescent (no 3D moon behind the text), Noor nearby; **eid** — the Eid
+      recap: dawn over the cloud sea with lanterns drifting up. Export (editor + wall keepsake): a paper
+      lantern (`src/ui/lanternProgress.ts`) fills with light and glows as it fills, the % beside it.
+      Opening (`src/ui/opening.ts`): on a launch (no address of its own) one band of light sweeps across
+      the logo on the splash colour, ≤ 1.2 s, the app loading underneath; tap ends it; reduced motion →
+      none. Camera moves added to the still scenes: Starfield drift floats forward through fine dust
+      (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
+      its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
+      depths)
 - [ ] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
 - [ ] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
 

@@ -20,6 +20,7 @@ import { MOODS, applyMood } from '../engine/moods';
 import { applyLook, newProject } from '../engine/project';
 import { isNative } from '../native';
 import { h, toast } from './dom';
+import { lightBackdrop } from './moment';
 import { lastRead, reelLook, reelReciter } from './prefs';
 import { locale, t as tr } from '../i18n';
 
@@ -114,9 +115,11 @@ async function tonightsReel() {
 }
 
 // --- full-screen moments ---
-function moment(cls: string, ...content: (Node | string | false)[]) {
+function moment(cls: string, scene: 'crescent' | 'eid', ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `moment ${cls}` }, ...content);
-  d.addEventListener('close', () => d.remove());
+  // The crescent rising over the cloud sea / Eid's dawn behind the moment (docs/light.md, L5).
+  const stop = lightBackdrop(d, scene);
+  d.addEventListener('close', () => { stop(); d.remove(); });
   document.body.append(d);
   d.showModal();
   return d;
@@ -130,7 +133,7 @@ export function ramadanWelcome(ctx: RamadanContext) {
     void scheduleReminders();
     void portionLabel().then((l) => toast(plan === 'company' ? tr('ram.companyToast') : l ? tr('ram.today', { text: l.text }) : tr('ram.mubarak')));
   };
-  const d = moment('ramadan-welcome',
+  const d = moment('ramadan-welcome', 'crescent',
     crescentBig(),
     h('h2', {}, tr('ram.mubarak')),
     h('p', { class: 'moment-sub' }, tr('ram.how')),
@@ -176,7 +179,7 @@ export async function openRecap() {
       listen);
   }
   const days = d.days.length;
-  const dlg = moment('ramadan-recap',
+  const dlg = moment('ramadan-recap', 'eid',
     crescentBig(),
     h('h2', {}, tr('ram.yours')),
     h('p', { class: 'recap-line' }, days ? tr(days === 1 ? 'ram.days1' : 'ram.days', { n: days }) : tr('ram.eid')),
