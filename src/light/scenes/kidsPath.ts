@@ -6,10 +6,11 @@
 // the next lantern and, after a lantern was lit, flies slowly over to it. Dawn by day, night in dark
 // mode. Bigger, softer, slower than the grown-up scenes. Posed from (t, input) only.
 import {
-  AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, CatmullRomCurve3, CylinderGeometry, DoubleSide, Fog, Group, LatheGeometry,
+  AdditiveBlending, BufferAttribute, LineBasicMaterial, LineSegments, BufferGeometry, CanvasTexture, CatmullRomCurve3, CylinderGeometry, DoubleSide, Fog, Group, LatheGeometry,
   Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Points, PointsMaterial, Scene, Sprite, SpriteMaterial, Vector2, Vector3,
   type Texture,
 } from 'three';
+import { constellation, wave } from '../../data/kidsPath';
 import type { LightScene } from '../engine';
 import type { Quality } from '../support';
 import { cloudSea, col, glowSprite, glowTexture, moteField, noor, skyDome, starField } from '../parts';
@@ -28,7 +29,7 @@ export interface KidsPathInput {
 }
 
 /** Lantern i's resting place: the 2D path's wave (sin(i·0.95)), stretched away from the viewer. */
-export const lanternAt = (i: number, out = new Vector3()) => out.set(Math.sin(i * 0.95) * 1.15, 1.5 + Math.sin(i * 0.6) * 0.25, -i * STEP);
+export const lanternAt = (i: number, out = new Vector3()) => out.set(wave(i) * 1.15, 1.5 + Math.sin(i * 0.6) * 0.25, -i * STEP);
 
 let ringTex: Texture | null = null;
 function ringTexture(): Texture {
@@ -48,7 +49,7 @@ function ringTexture(): Texture {
 
 const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
-export function kidsPathScene(count: number, night: boolean, seed = 21): LightScene & { input: KidsPathInput; lanterns: Group[] } {
+export function kidsPathScene(count: number, night: boolean, surahs: number[] = [], ayahs: number[] = [], seed = 21): LightScene & { input: KidsPathInput; lanterns: Group[] } {
   const scene = new Scene();
   const camera = new PerspectiveCamera(FOV, 1, 0.1, 2000);
   scene.add(camera);
@@ -112,6 +113,33 @@ export function kidsPathScene(count: number, night: boolean, seed = 21): LightSc
     scene.add(g);
     return { g, body, glow, flame, cap };
   });
+  // A learned surah's constellation: one star per ayah, joined softly, beside its lantern on the side
+  // away from its name (the same shape as the 2D path, src/data/kidsPath.ts). Built on first light.
+  const STAR = 0.06; // world units between two stars
+  const starColor = col(night ? '#fff3d6' : '#d6953a');
+  const blend = night ? AdditiveBlending : NormalBlending;
+  const consts: ({ g: Group; stars: Points; line: LineSegments | null; n: number } | null)[] = lanterns.map(() => null);
+  const constAt = (i: number) => {
+    if (consts[i] || !surahs[i] || !ayahs[i]) return consts[i];
+    const c = constellation(surahs[i], ayahs[i]);
+    const xyz = (q: { x: number; y: number }) => [q.x * STAR, -q.y * STAR, 0];
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new BufferAttribute(new Float32Array(c.stars.flatMap(xyz)), 3));
+    const g = new Group();
+    const stars = new Points(geo, new PointsMaterial({ color: starColor, map: glowTexture(), size: 0.15, transparent: true, opacity: 0, depthWrite: false, blending: blend }));
+    g.add(stars);
+    let line: LineSegments | null = null;
+    if (c.links.length) {
+      // Link k joins star k + 1 to an earlier one, so the first n − 1 links belong to the first n stars.
+      const lg = new BufferGeometry();
+      lg.setAttribute('position', new BufferAttribute(new Float32Array(c.links.flatMap(([a, b]) => [...xyz(c.stars[a]), ...xyz(c.stars[b])])), 3));
+      line = new LineSegments(lg, new LineBasicMaterial({ color: starColor, transparent: true, opacity: 0, depthWrite: false, blending: blend }));
+      g.add(line);
+    }
+    scene.add(g);
+    return (consts[i] = { g, stars, line, n: c.stars.length });
+  };
+
   // On the light dawn sky additive light vanishes: there the ring and Noor are painted warm.
   const ring = new Sprite(new SpriteMaterial({ map: ringTexture(), color: col(night ? '#ffd58a' : '#e3a043'), transparent: true, opacity: 0, blending: night ? AdditiveBlending : NormalBlending, depthWrite: false }));
   scene.add(ring);
@@ -171,6 +199,19 @@ export function kidsPathScene(count: number, night: boolean, seed = 21): LightSc
         L.glow.scale.setScalar(1.4 * (1 + bloom * 0.8));
         L.flame.material.opacity = (lit ? 0.95 : 0) * fade;
         L.flame.scale.setScalar(0.24 * (0.92 + 0.08 * Math.sin(t * 2.3 + i * 3)));
+        const c = lit && fade > 0 ? constAt(i) : consts[i];
+        if (c) {
+          c.g.visible = lit && fade > 0;
+          if (c.g.visible) {
+            // Beside the lantern, away from the path's middle; the stars come out in ayah order on a bloom.
+            c.g.position.set(L.g.position.x + Math.sign(wave(i) || 1) * 0.68, L.g.position.y + 0.18, L.g.position.z - 0.05);
+            const shown = i === input.bloom && bt < 4 ? Math.ceil(c.n * ease((bt - 0.6) / 2.2)) : c.n;
+            c.stars.geometry.setDrawRange(0, shown);
+            c.line?.geometry.setDrawRange(0, Math.max(0, shown - 1) * 2);
+            (c.stars.material as PointsMaterial).opacity = (night ? 0.95 : 0.85) * fade;
+            if (c.line) (c.line.material as LineBasicMaterial).opacity = (night ? 0.3 : 0.4) * fade;
+          }
+        }
       }
       const n = input.next >= 0 ? lanterns[input.next] : null;
       if (n) {

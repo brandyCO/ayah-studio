@@ -15,7 +15,9 @@ import { everyayahUrl, reciterById } from '../data/reciters';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { h } from './dom';
 import { icon } from './icons';
-import { bloomNext, kidsReciter, makeKeepsake, parentButton } from './kids';
+import { bloomNext } from '../data/kidsPath';
+import { kidsReciter, makeKeepsake, parentButton } from './kids';
+import { kidsNoor } from './kidsNoor';
 import { dir, surahName, t } from '../i18n';
 
 /** Where an ayah's recitation is: a span of the surah recording, or its own everyayah file (no word timings). */
@@ -53,6 +55,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   let timer = 0;
   let stopAt = Infinity;
   let alive = true;
+  let litT = 0;
 
   const audio = new Audio();
   audio.preload = 'auto';
@@ -77,6 +80,10 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   const speedBtn = h('button', { class: 'kids-chip', onclick: () => { setKidsSettings({ speed: kidsSettings().speed === 1 ? 0.75 : 1 }); paintChips(); } });
   const repBtn = h('button', { class: 'kids-chip', onclick: () => { setKidsSettings({ repeats: kidsSettings().repeats === 1 ? 3 : 1 }); paintChips(); } });
   const done = h('section', { class: 'kids-done', hidden: true });
+  // Noor in the corner of the controls, away from the Arabic: flickers with the words, warmer on
+  // the child's turn, brighter when a lantern is lit.
+  const noor = kidsNoor('kids-noor-corner');
+  let lastWord: number | null = null;
 
   function paintChips() {
     const k = kidsSettings();
@@ -91,6 +98,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       : icon(state === 'playing' || state === 'turn' ? 'pause' : 'play', 34));
     playBtn.setAttribute('aria-label', state === 'playing' || state === 'turn' ? t('kids.pause') : t('kids.listen'));
     stage.classList.toggle('turn', state === 'turn');
+    noor.mood(state === 'playing' || state === 'word' ? 'listen' : state === 'turn' ? 'turn' : 'rest');
     const reps = kidsSettings().repeats;
     status.textContent = state === 'turn' ? t('kids.yourTurn') : state === 'playing' && reps > 1 ? t('kids.listenRound', { round, reps }) : state === 'playing' ? t('kids.listen') : loadErr;
     prev.disabled = ayah === 1;
@@ -239,6 +247,8 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
     if (state === 'playing' && x.words) {
       let w: number | null = null;
       for (const [i, a, b] of x.words.seq) if (a <= t && t < b) w = i;
+      if (w !== null && w !== lastWord) noor.pulse();
+      lastWord = w;
       if (w !== null) lightWord(w);
     }
     if (t >= stopAt || audio.ended) ended();
@@ -323,9 +333,17 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       h('p', {}, isLit ? t('kids.listenedAgain', { surah: surahName(s) }) : t('kids.listenedAll', { surah: surahName(s) })),
       h('div', { class: 'kids-done-actions' },
         h('button', { class: 'kids-btn', onclick: () => start() }, t('kids.listenAgain')),
-        !isLit && h('button', { class: 'kids-btn lamp', onclick: () => { setLearned(n, true); bloomNext(n); location.hash = '#/kids'; } }, t('kids.weLearned'))));
+        !isLit && h('button', { class: 'kids-btn lamp', onclick: (e: Event) => {
+          // The lantern is lit: Noor brightens for a moment, then the path blooms it.
+          (e.currentTarget as HTMLButtonElement).disabled = true;
+          setLearned(n, true);
+          bloomNext(n);
+          noor.brighten();
+          litT = window.setTimeout(() => { if (alive) location.hash = '#/kids'; }, 1400);
+        } }, t('kids.weLearned'))));
     done.hidden = false;
     stage.hidden = true;
+    noor.brighten();
   }
 
   paintChips();
@@ -338,12 +356,14 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
     stage, done,
     h('div', { class: 'kids-chips' }, speedBtn, repBtn,
       learned()[n] ? h('button', { class: 'kids-chip', 'aria-label': t('kids.keepsakeAria'), onclick: () => void makeKeepsake(n) }, t('kids.keepsake')) : null),
-    h('nav', { class: 'kids-controls' }, prev, playBtn, next),
+    h('nav', { class: 'kids-controls' }, prev, playBtn, next, noor.el),
     h('p', { class: 'kids-hint' }, t('kids.tapWord')));
 
   return () => {
     alive = false;
     cancel();
+    clearTimeout(litT);
+    noor.dispose();
     clearTimeout(fade);
     audio.removeAttribute('src');
     audio.load();

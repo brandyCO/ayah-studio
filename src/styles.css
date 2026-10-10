@@ -920,6 +920,10 @@ body[data-view="kids"] {
   --kids-lamp: #f0b54a;
   --kids-lamp-glow: rgba(240, 181, 74, .5);
   --kids-word: rgba(240, 181, 74, .34);
+  --kids-noor-core: #ffd58a;
+  --kids-noor-halo: rgba(240, 165, 70, .5);
+  --kids-noor-warm: rgba(238, 138, 58, .58);
+  --kids-star: #d6953a;
   background: var(--kids-sky), #e6e4f2; background-attachment: fixed; color: var(--kids-ink);
 }
 @media (prefers-color-scheme: dark) {
@@ -935,6 +939,10 @@ body[data-view="kids"] {
     --kids-lamp: #f3c46b;
     --kids-lamp-glow: rgba(243, 196, 107, .45);
     --kids-word: rgba(243, 196, 107, .28);
+    --kids-noor-core: #ffe3a8;
+    --kids-noor-halo: rgba(255, 201, 119, .42);
+    --kids-noor-warm: rgba(255, 178, 88, .55);
+    --kids-star: #fff3d6;
     background-color: #131737;
   }
 }
@@ -1278,3 +1286,43 @@ body:has(.wall-sky.has-light) .wall-host { background: transparent; }
 .kids-3d .kids-stop-label { text-shadow: 0 0 12px var(--kids-card), 0 0 3px var(--kids-card); transition: opacity .8s ease; }
 .kids-3d .kids-stop.kids-far .kids-stop-label { opacity: 0; }
 .kids-3d .kids-top, .kids-3d .kids-lead { text-shadow: 0 0 12px var(--kids-card); }
+
+/* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
+   while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */
+.kids-noor { position: absolute; inset: 0; pointer-events: none; z-index: 2; transition: opacity .9s ease; }
+.kids-noor.away { opacity: 0; }
+.kids-noor > span {
+  position: absolute; left: var(--nx, 50%); top: var(--ny, 50%); transform: translate(-50%, -50%); border-radius: 50%;
+  transition: left 3.2s cubic-bezier(.45, 0, .55, 1), top 3.2s cubic-bezier(.45, 0, .55, 1), opacity 1s ease, width 1s ease, height 1s ease, box-shadow 1s ease;
+}
+.kids-noor.still > span { transition: none; }
+.kids-noor-halo { width: 58px; height: 58px; opacity: .85; background: radial-gradient(circle, var(--kids-noor-halo) 0%, transparent 70%); animation: kids-noor-breathe 4s ease-in-out infinite alternate; }
+.kids-noor-core { width: 14px; height: 14px; background: radial-gradient(circle, #fffaf0 0 30%, var(--kids-noor-core) 72%, transparent 100%); box-shadow: 0 0 10px 3px var(--kids-noor-halo); }
+.kids-noor-trail {
+  width: calc(11px - var(--k) * 1.6px); height: calc(11px - var(--k) * 1.6px); opacity: 0;
+  background: radial-gradient(circle, var(--kids-noor-core) 0%, transparent 72%); transition-delay: calc(var(--k) * 110ms) !important;
+}
+.kids-noor.gliding .kids-noor-trail { opacity: calc(.62 - var(--k) * .12); }
+@keyframes kids-noor-breathe { from { transform: translate(-50%, -50%) scale(.93); } to { transform: translate(-50%, -50%) scale(1.07); } }
+.kids-noor.m-listen .kids-noor-halo { opacity: .95; }
+.kids-noor.m-turn .kids-noor-halo { width: 70px; height: 70px; opacity: 1; background: radial-gradient(circle, var(--kids-noor-warm) 0%, transparent 70%); animation-duration: 2.4s; }
+.kids-noor.m-turn .kids-noor-core { box-shadow: 0 0 14px 4px var(--kids-noor-warm); }
+.kids-noor.bright .kids-noor-halo { width: 92px; height: 92px; opacity: 1; background: radial-gradient(circle, var(--kids-noor-warm) 0%, var(--kids-noor-halo) 35%, transparent 70%); }
+.kids-noor.bright .kids-noor-core { width: 18px; height: 18px; box-shadow: 0 0 20px 7px var(--kids-noor-warm); }
+.kids-controls { position: relative; }
+.kids-noor.kids-noor-corner { inset: 0 0 0 auto; width: 52px; }
+[dir="rtl"] .kids-noor.kids-noor-corner { inset: 0 auto 0 0; }
+.kids-const { position: absolute; overflow: visible; pointer-events: none; filter: drop-shadow(0 0 2px var(--kids-lamp-glow)); }
+.kids-const circle { fill: var(--kids-star); }
+.kids-const path { fill: none; stroke: var(--kids-star); stroke-opacity: .38; stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; }
+.kids-stop.bloom .kids-const circle { animation: kids-star-in 1.2s ease-out both; animation-delay: var(--d); }
+.kids-stop.bloom .kids-const path { stroke-dasharray: 1; animation: kids-const-draw 2.4s ease-in-out both; animation-delay: var(--d); }
+@keyframes kids-star-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kids-const-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.kids-3d .kids-const, .kids-3d .kids-path .kids-noor { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .kids-noor > span { transition: opacity 1s ease; }
+  .kids-noor-halo { animation: none; }
+  .kids-stop.bloom .kids-const circle, .kids-stop.bloom .kids-const path { animation: none; }
+  .kids-stop.bloom .kids-const { animation: kids-star-in 1.6s ease both .6s; }
+}

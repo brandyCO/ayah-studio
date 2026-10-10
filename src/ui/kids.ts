@@ -4,6 +4,9 @@
 //   #/kids          home: the surahs to listen to
 //   #/kids/{surah}  listen & repeat (src/ui/kidsListen.ts)
 import { cleanName, grantPass, kidsSettings, KIDS_SURAHS, kidsSetUp, learned, NAME_MAX, setKidsOn, setKidsSettings, setLearned } from '../data/kids';
+import { constellation, kidsPathState, outerSide, pathHeight, pathPoint, takeBloom } from '../data/kidsPath';
+import { reducedMotion } from '../light/support';
+import { kidsNoor, NOOR_GLIDE_MS } from './kidsNoor';
 import { keepAllOffline, keptCount } from '../data/kidsAudio';
 import { loadMeta } from '../data/quran';
 import { h, toast } from './dom';
@@ -197,35 +200,41 @@ function lantern(): SVGSVGElement {
   return svg;
 }
 
-/** Remembers that a lantern was just lit, so the path can bloom it once when the child returns. */
-export function bloomNext(s: number) {
-  try {
-    sessionStorage.setItem('kidsBloom', String(s));
-  } catch {
-    /* ignore */
-  }
-}
-function takeBloom(): number {
-  try {
-    const v = Number(sessionStorage.getItem('kidsBloom'));
-    sessionStorage.removeItem('kidsBloom');
-    return v;
-  } catch {
-    return 0;
-  }
+const STAR_PX = 6; // px between two stars of a constellation
+/**
+ * A learned surah's constellation (one star per ayah, joined softly in ayah order) beside its
+ * lantern, on the side away from its name. Positioned in the stop's own box (the 72 px lantern).
+ */
+function constellationSvg(i: number, surah: number, ayahs: number): SVGSVGElement {
+  const c = constellation(surah, ayahs);
+  const pts = c.stars.map((p) => ({ x: p.x * STAR_PX, y: p.y * STAR_PX }));
+  const minX = Math.min(...pts.map((p) => p.x)), maxX = Math.max(...pts.map((p) => p.x));
+  const minY = Math.min(...pts.map((p) => p.y)), maxY = Math.max(...pts.map((p) => p.y));
+  const pad = 3, w = maxX - minX + pad * 2, hgt = maxY - minY + pad * 2;
+  // Its centre: up and out from the lantern's circle (r 36), clear of it and of the screen edge.
+  const out = outerSide(i);
+  const cx = 36 + out * (30 + w * 0.3), cy = 36 - (26 + hgt * 0.25);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'kids-const');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('viewBox', `${(minX - pad).toFixed(1)} ${(minY - pad).toFixed(1)} ${w.toFixed(1)} ${hgt.toFixed(1)}`);
+  svg.setAttribute('style', `left:${(cx - w / 2).toFixed(1)}px;top:${(cy - hgt / 2).toFixed(1)}px;width:${w.toFixed(1)}px;height:${hgt.toFixed(1)}px`);
+  const step = Math.min(70, 2000 / ayahs); // the stars come out in ayah order within ~2 s when it blooms
+  const xy = (k: number) => `${pts[k].x.toFixed(1)} ${pts[k].y.toFixed(1)}`;
+  const line = c.links.length ? `<path pathLength="1" style="--d:600ms" d="${c.links.map(([a, b]) => `M${xy(a)}L${xy(b)}`).join('')}"/>` : '';
+  svg.innerHTML = line + pts.map((p, k) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${k === 0 ? 1.6 : 1.15}" style="--d:${Math.round(600 + step * k)}ms"/>`).join('');
+  return svg;
 }
 
-const STEP = 112; // px between lanterns
 /** Home of the space: a path winding down the sky through the short surahs, one lantern each. */
 export async function showKids(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
-  const lit = learned();
-  const bloom = takeBloom();
+  const path = kidsPathState(learned(), takeBloom());
+  const { lit, next, bloom } = path;
   root.classList.add('kids');
-  const next = KIDS_SURAHS.find((n) => !lit[n]);
   // Lantern positions: x in % of the width (a gentle wave), y in px.
-  const pts = KIDS_SURAHS.map((_, i) => ({ x: 50 + 26 * Math.sin(i * 0.95), y: 64 + i * STEP }));
-  const height = pts[pts.length - 1].y + 80;
+  const pts = path.surahs.map((_, i) => pathPoint(i));
+  const height = pathHeight(pts.length);
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i], my = (a.y + b.y) / 2;
@@ -239,35 +248,57 @@ export async function showKids(root: HTMLElement): Promise<() => void> {
   svg.innerHTML = `<path d="${d}" vector-effect="non-scaling-stroke"/>`;
 
   let target: HTMLElement | null = null;
-  const stops = KIDS_SURAHS.map((n, i) => {
+  const stops = path.surahs.map((n, i) => {
     const s = meta[n - 1];
     const { x, y } = pts[i];
     const right = x < 50; // the label sits on the side with more room
     const el = h('a', {
-      class: `kids-stop${lit[n] ? ' lit' : ''}${n === next ? ' next' : ''}${n === bloom && lit[n] ? ' bloom' : ''}${right ? '' : ' label-left'}`,
+      class: `kids-stop${lit[i] ? ' lit' : ''}${i === next ? ' next' : ''}${i === bloom ? ' bloom' : ''}${right ? '' : ' label-left'}`,
       href: `#/kids/${n}`, style: `left: ${x}%; top: ${y}px`,
-      'aria-label': `${surahName(s)}, ${t('common.ayat', { n: s.ayahs })}${lit[n] ? t('kids.learnedAria') : ''}`,
+      'aria-label': `${surahName(s)}, ${t('common.ayat', { n: s.ayahs })}${lit[i] ? t('kids.learnedAria') : ''}`,
     },
     h('span', { class: 'kids-lantern' }, lantern()),
     h('span', { class: 'kids-stop-label' },
       h('strong', lang() === 'ar' ? { class: 'kids-stop-ar', lang: 'ar' } : {}, surahName(s)),
       lang() === 'ar' ? h('span', { class: 'kids-stop-sub', lang: 'en', dir: 'ltr' }, s.en) : h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
       h('span', { class: 'kids-stop-sub' }, t('common.ayat', { n: s.ayahs }))));
-    if (n === (bloom && lit[bloom] ? bloom : next)) target = el;
+    if (lit[i]) el.append(constellationSvg(i, n, s.ayahs));
+    if (i === (bloom >= 0 ? bloom : next)) target = el;
     return el;
   });
+  const noor = kidsNoor();
+  const noorAt = (i: number, glide = false) => {
+    const { x, y } = pts[i];
+    // Beside the next lantern, on the side away from its name; above a lit one (its stars are beside it).
+    const out = outerSide(i);
+    noor.place(lit[i] ? `${x}%` : `calc(${x}% + ${out * 54}px)`, `${y - (lit[i] ? 58 : 30)}px`, glide);
+  };
+  const home = next >= 0 ? next : lit.lastIndexOf(true);
+  let glideT = 0;
+  if (bloom >= 0 && home >= 0 && home !== bloom) {
+    // The lantern just lit: Noor brightens beside it, then glides over to the next one.
+    noorAt(bloom);
+    noor.brighten();
+    glideT = window.setTimeout(() => {
+      noorAt(home, true);
+      glideT = window.setTimeout(() => stops[home].scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' }), NOOR_GLIDE_MS);
+    }, 1600);
+  } else if (home >= 0) {
+    noorAt(home);
+    if (bloom >= 0) noor.brighten();
+  }
   root.append(
     h('header', { class: 'kids-top' }, h('h1', { class: 'kids-hello' }, greeting()), parentButton()),
     h('p', { class: 'kids-lead' }, t('kids.which')),
-    h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops));
+    h('div', { class: 'kids-path', style: `height: ${height}px` }, svg, ...stops, noor.el));
   if (target) requestAnimationFrame(() => (target as HTMLElement).scrollIntoView({ block: 'center' }));
   familyNotes();
   // The same path as floating lanterns in 3D behind the stops (L7); the 2D path stays as it is.
   let off = () => {};
   let gone = false;
   if (kidsSettings().sky3d) {
-    void import('./kidsSky').then((m) => m.mountKidsSky(root, stops, KIDS_SURAHS.map((n) => !!lit[n]), next ? KIDS_SURAHS.indexOf(next) : -1,
-      bloom && lit[bloom] ? KIDS_SURAHS.indexOf(bloom) : -1)).then((f) => { if (gone) f(); else off = f; }).catch(() => {});
+    void import('./kidsSky').then((m) => m.mountKidsSky(root, stops, path, path.surahs.map((n) => meta[n - 1].ayahs)))
+      .then((f) => { if (gone) f(); else off = f; }).catch(() => {});
   }
-  return () => { gone = true; off(); };
+  return () => { gone = true; clearTimeout(glideT); noor.dispose(); off(); };
 }
