@@ -21,6 +21,7 @@ import { applyLook, newProject } from '../engine/project';
 import { isNative } from '../native';
 import { h, toast } from './dom';
 import { lastRead, reelLook, reelReciter } from './prefs';
+import { locale, t as tr } from '../i18n';
 
 export interface RamadanContext {
   goToPage(page: number): void;
@@ -33,10 +34,10 @@ const crescentBig = () => {
   el.innerHTML = CRESCENT;
   return el;
 };
-const PLANS: { value: Plan; label: string; note: string }[] = [
-  { value: 'one', label: 'One Khatm', note: 'About 20 pages a day' },
-  { value: 'two', label: 'Two Khatms', note: 'About 40 pages a day' },
-  { value: 'company', label: 'Just keep me company', note: 'No portions — a gentle reminder and tonight’s ayah' },
+const plans = (): { value: Plan; label: string; note: string }[] => [
+  { value: 'one', label: tr('ram.one'), note: tr('ram.oneNote') },
+  { value: 'two', label: tr('ram.two'), note: tr('ram.twoNote') },
+  { value: 'company', label: tr('ram.company'), note: tr('ram.companyNote') },
 ];
 
 type Seg = [number, number, string];
@@ -62,8 +63,8 @@ export async function portionLabel(): Promise<{ text: string; page: number | nul
   if (!p || !p.pages.length) return null;
   const m = await loadMushaf();
   const juz = [...new Set(p.pages.map((x) => m.pages[x - 1].juz))];
-  if (!p.left.length) return { text: 'Today’s portion is read', page: null };
-  return { text: `Juz ${juz.join(' & ')} · pages ${ranges(p.pages)} · ${p.left.length} left`, page: p.left[0] };
+  if (!p.left.length) return { text: tr('ram.portionRead'), page: null };
+  return { text: tr('ram.portion', { juz: juz.join(' & '), pages: ranges(p.pages), n: p.left.length }), page: p.left[0] };
 }
 
 /** Today card lines (registered by the mushaf). */
@@ -73,15 +74,15 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
   const items: { icon: string; text: string; onClick?(): void }[] = [];
   if (now.day && d.plan && d.plan !== 'company') {
     const l = await portionLabel();
-    if (l) items.push({ icon: '☾', text: `Today’s portion · ${l.text}`, onClick: () => (l.page ? ctx.goToPage(l.page) : openRamadan(ctx)) });
+    if (l) items.push({ icon: '☾', text: tr('ram.todaysPortion', { text: l.text }), onClick: () => (l.page ? ctx.goToPage(l.page) : openRamadan(ctx)) });
   }
-  if (now.day && !d.plan) items.push({ icon: '☾', text: 'Choose how to read this Ramadan', onClick: () => openRamadan(ctx) });
+  if (now.day && !d.plan) items.push({ icon: '☾', text: tr('ram.choose'), onClick: () => openRamadan(ctx) });
   if (now.day && new Date().getHours() >= 16) {
     const t = await tonightsAyah();
     const meta = await loadMeta();
-    items.push({ icon: '✧', text: `Tonight’s ayah · ${reference(meta[t.s - 1], t.a, t.a)} — make a reel`, onClick: () => void tonightsReel() });
+    items.push({ icon: '✧', text: tr('ram.tonight', { ref: reference(meta[t.s - 1], t.a, t.a) }), onClick: () => void tonightsReel() });
   }
-  if (now.eid && (d.days.length || d.khatms)) items.push({ icon: '☾', text: 'Eid Mubarak · Your Ramadan', onClick: () => void openRecap() });
+  if (now.eid && (d.days.length || d.khatms)) items.push({ icon: '☾', text: tr('ram.eidYours'), onClick: () => void openRecap() });
   return items;
 }
 
@@ -127,15 +128,15 @@ export function ramadanWelcome(ctx: RamadanContext) {
     setPlan(plan);
     d.close();
     void scheduleReminders();
-    void portionLabel().then((l) => toast(plan === 'company' ? 'Ramadan Mubarak — we’ll keep you company' : l ? `Today: ${l.text}` : 'Ramadan Mubarak'));
+    void portionLabel().then((l) => toast(plan === 'company' ? tr('ram.companyToast') : l ? tr('ram.today', { text: l.text }) : tr('ram.mubarak')));
   };
   const d = moment('ramadan-welcome',
     crescentBig(),
-    h('h2', {}, 'Ramadan Mubarak'),
-    h('p', { class: 'moment-sub' }, 'How would you like to read this month?'),
-    h('div', { class: 'moment-choices' }, ...PLANS.map((p) => h('button', { class: 'moment-choice', onclick: () => pick(p.value) }, h('b', {}, p.label), h('span', {}, p.note)))),
-    h('button', { class: 'link-btn moment-link', onclick: () => { setWelcomed(); d.close(); ctx.openCircles(); } }, 'Read together with a Khatm circle'),
-    h('button', { class: 'link-btn moment-skip', onclick: () => { setWelcomed(); d.close(); } }, 'Not now'));
+    h('h2', {}, tr('ram.mubarak')),
+    h('p', { class: 'moment-sub' }, tr('ram.how')),
+    h('div', { class: 'moment-choices' }, ...plans().map((p) => h('button', { class: 'moment-choice', onclick: () => pick(p.value) }, h('b', {}, p.label), h('span', {}, p.note)))),
+    h('button', { class: 'link-btn moment-link', onclick: () => { setWelcomed(); d.close(); ctx.openCircles(); } }, tr('ram.together')),
+    h('button', { class: 'link-btn moment-skip', onclick: () => { setWelcomed(); d.close(); } }, tr('ram.notNow')));
 }
 
 /** Eid: Your Ramadan. */
@@ -152,7 +153,7 @@ export async function openRecap() {
     const text = (await surahText(s))[a - 1];
     const listen = h('button', { class: 'chip', onclick: async () => {
       if (audio) { audio.src.stop(); audio = null; listen.textContent = '▶ Listen'; return; }
-      listen.textContent = 'Loading…';
+      listen.textContent = tr('common.loading');
       try {
         const buf = await ayahAudio(reciterById(reelReciter(DEFAULT_RECITER)), s, a);
         const ctx = new AudioContext();
@@ -165,11 +166,11 @@ export async function openRecap() {
         listen.textContent = '■ Stop';
       } catch {
         listen.textContent = '▶ Listen';
-        toast('The recitation could not be loaded');
+        toast(tr('kids.loadFailed'));
       }
-    } }, '▶ Listen');
+    } }, tr('today.listen'));
     ayahBlock = h('div', { class: 'recap-ayah' },
-      h('p', { class: 'moment-sub' }, 'The ayah you returned to most'),
+      h('p', { class: 'moment-sub' }, tr('ram.returnedMost')),
       h('p', { class: 'recap-ar', dir: 'rtl', lang: 'ar' }, text),
       h('p', { class: 'muted' }, reference(meta[s - 1], a, a)),
       listen);
@@ -177,9 +178,9 @@ export async function openRecap() {
   const days = d.days.length;
   const dlg = moment('ramadan-recap',
     crescentBig(),
-    h('h2', {}, 'Your Ramadan'),
-    h('p', { class: 'recap-line' }, days ? `You opened the Quran on ${days} ${days === 1 ? 'day' : 'days'} this month` : 'Eid Mubarak'),
-    d.khatms ? h('p', { class: 'recap-line' }, d.khatms === 1 ? 'One Khatm, complete' : `${d.khatms} Khatms, complete`) : '',
+    h('h2', {}, tr('ram.yours')),
+    h('p', { class: 'recap-line' }, days ? tr(days === 1 ? 'ram.days1' : 'ram.days', { n: days }) : tr('ram.eid')),
+    d.khatms ? h('p', { class: 'recap-line' }, d.khatms === 1 ? tr('ram.khatm1Complete') : tr('ram.khatmsComplete', { n: d.khatms })) : '',
     ayahBlock,
     h('div', { class: 'moment-actions' },
       most ? h('button', { class: 'primary brand-btn', onclick: () => {
@@ -187,11 +188,11 @@ export async function openRecap() {
         void newReel(s, a, (p) => {
           applyMood(p, MOODS.find((m) => m.id === 'gold')!);
           p.outro = true;
-          const lines = [days ? `${days} ${days === 1 ? 'day' : 'days'} with the Quran` : '', d.khatms ? (d.khatms === 1 ? 'One Khatm' : `${d.khatms} Khatms`) : ''].filter(Boolean);
-          p.closing = { title: `My Ramadan ${now.year} AH`.slice(0, 80), names: lines };
+          const lines = [days ? tr(days === 1 ? 'ram.reelDays1' : 'ram.reelDays', { n: days }) : '', d.khatms ? (d.khatms === 1 ? tr('ram.one') : tr('ram.khatms', { n: d.khatms })) : ''].filter(Boolean);
+          p.closing = { title: tr('ram.reelTitle', { year: now.year }).slice(0, 80), names: lines };
         });
-      } }, '🎬 Make my Ramadan reel') : '',
-      h('button', { class: 'chip', onclick: () => dlg.close() }, 'Close')));
+      } }, tr('ram.makeReel')) : '',
+      h('button', { class: 'chip', onclick: () => dlg.close() }, tr('common.close'))));
   dlg.addEventListener('close', () => { if (audio) { audio.src.stop(); void audio.ctx.close(); } });
 }
 
@@ -199,7 +200,7 @@ export async function openRecap() {
 export function openRamadan(ctx: RamadanContext) {
   const body = h('div', { class: 'ramadan' });
   const d = h('dialog', { class: 'sheet bottom ramadan-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, '☾ Ramadan'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')), body);
+    h('div', { class: 'sheet-head' }, h('h2', {}, `☾ ${tr('ram.ramadan')}`), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: () => d.close() }, '✕')), body);
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   document.body.append(d);
 
@@ -208,31 +209,31 @@ export function openRamadan(ctx: RamadanContext) {
     const data = ramadanData(now);
     const st = ramadanSettings();
     const status = now.day
-      ? `Ramadan Mubarak · day ${now.day} of ${now.length}${now.lastTen ? ' · the last ten nights' : ''}`
-      : now.eid ? 'Eid Mubarak' : (() => { const n = daysToRamadan(); return n ? `Ramadan begins in about ${n} days, in shā’ Allāh` : 'Ramadan mode'; })();
+      ? `${tr('ram.dayOf', { day: now.day, n: now.length })}${now.lastTen ? ` · ${tr('ram.lastTen')}` : ''}`
+      : now.eid ? tr('ram.eid') : (() => { const n = daysToRamadan(); return n ? tr('ram.beginsIn', { n }) : tr('ram.mode'); })();
     const portion = await portionLabel();
     const total = planPages(data.plan);
     const done = data.khatms * PAGES + data.read.length;
     const nodes: (Node | string)[] = [
       h('p', { class: 'ramadan-status' }, status),
-      h('p', { class: 'circle-sub' }, 'Your plan'),
-      h('div', { class: 'ramadan-plans' }, ...PLANS.map((p) => h('button', {
+      h('p', { class: 'circle-sub' }, tr('ram.plan')),
+      h('div', { class: 'ramadan-plans' }, ...plans().map((p) => h('button', {
         class: `chip${data.plan === p.value ? ' on' : ''}`, 'aria-pressed': String(data.plan === p.value),
         onclick: () => { setPlan(data.plan === p.value ? null : p.value); void scheduleReminders(); void draw(); },
       }, p.label))),
     ];
     if (now.day && portion) {
       nodes.push(h('div', { class: 'ramadan-today' },
-        h('div', {}, h('b', {}, 'Today'), h('div', { class: 'muted small' }, portion.text)),
-        portion.page ? h('button', { class: 'primary brand-btn', onclick: () => { d.close(); ctx.goToPage(portion.page!); } }, 'Open') : ''));
+        h('div', {}, h('b', {}, tr('mushaf.today')), h('div', { class: 'muted small' }, portion.text)),
+        portion.page ? h('button', { class: 'primary brand-btn', onclick: () => { d.close(); ctx.goToPage(portion.page!); } }, tr('ram.open')) : ''));
     }
-    if (total) nodes.push(h('p', { class: 'muted small' }, `${Math.min(done, total)} of ${total} pages read this Ramadan — pages count once they stay open for 20 seconds. A missed day simply spreads the rest over the days left.`));
-    nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); ctx.openCircles(); } }, '◯ Read together with a Khatm circle'));
+    if (total) nodes.push(h('p', { class: 'muted small' }, tr('ram.pagesRead', { n: Math.min(done, total), total })));
+    nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); ctx.openCircles(); } }, `◯ ${tr('ram.together')}`));
 
     // Reminder before Maghrib (Android app: local notifications).
-    nodes.push(h('p', { class: 'circle-sub' }, 'Reminder before Maghrib'));
+    nodes.push(h('p', { class: 'circle-sub' }, tr('ram.reminder')));
     if (!isNative()) {
-      nodes.push(h('p', { class: 'muted small' }, 'Reminders work in the Android app. Here, the Today card shows your portion.'));
+      nodes.push(h('p', { class: 'muted small' }, tr('ram.reminderWeb')));
     } else {
       const r = st.reminder;
       const save = (patch: Partial<typeof r>) => {
@@ -240,36 +241,36 @@ export function openRamadan(ctx: RamadanContext) {
         void scheduleReminders().then((msg) => { if (msg) toast(msg); });
         void draw();
       };
-      const time = h('input', { type: 'time', class: 'search', value: r.time, 'aria-label': 'Maghrib time', onchange: (e: Event) => save({ time: (e.target as HTMLInputElement).value || '18:00', lat: null, lng: null }) });
+      const time = h('input', { type: 'time', class: 'search', value: r.time, 'aria-label': tr('ram.maghribTime'), onchange: (e: Event) => save({ time: (e.target as HTMLInputElement).value || '18:00', lat: null, lng: null }) });
       nodes.push(
         h('label', { class: 'ramadan-switch' }, h('input', { type: 'checkbox', checked: r.on, onchange: async (e: Event) => {
           const on = (e.target as HTMLInputElement).checked;
-          if (on && !(await notificationsAllowed())) { toast('Allow notifications for Ayah Studio to get the reminder'); return void draw(); }
+          if (on && !(await notificationsAllowed())) { toast(tr('ram.allowNotif')); return void draw(); }
           save({ on });
-        } }), ' Remind me before Maghrib'),
+        } }), ` ${tr('ram.remindMe')}`),
         r.on ? h('div', { class: 'ramadan-reminder' },
-          h('p', { class: 'small' }, r.lat !== null ? 'Maghrib from your location' : `Maghrib at ${r.time} (your time)`),
+          h('p', { class: 'small' }, r.lat !== null ? tr('ram.fromLocation') : tr('ram.maghribAt', { time: r.time })),
           h('div', { class: 'row' },
-            h('button', { class: 'chip', onclick: () => locate(save) }, '⌖ Use my location'),
+            h('button', { class: 'chip', onclick: () => locate(save) }, `⌖ ${tr('ram.useLocation')}`),
             time,
-            h('select', { class: 'search', 'aria-label': 'How long before', onchange: (e: Event) => save({ before: Number((e.target as HTMLSelectElement).value) }) },
-              ...[10, 15, 30, 60].map((m) => h('option', { value: String(m), selected: r.before === m }, `${m} min before`))))) : '');
+            h('select', { class: 'search', 'aria-label': tr('ram.howLong'), onchange: (e: Event) => save({ before: Number((e.target as HTMLSelectElement).value) }) },
+              ...[10, 15, 30, 60].map((m) => h('option', { value: String(m), selected: r.before === m }, tr('ram.minBefore', { n: m })))))) : '');
     }
 
     // Moon sighting and a preview to try the mode out of season.
-    nodes.push(h('p', { class: 'circle-sub' }, 'Dates'),
+    nodes.push(h('p', { class: 'circle-sub' }, tr('ram.dates')),
       h('div', { class: 'row' },
-        h('span', { class: 'small muted' }, 'Moon sighting where you are:'),
+        h('span', { class: 'small muted' }, tr('ram.moon')),
         ...([-1, 0, 1] as const).map((k) => h('button', { class: `chip${st.shift === k ? ' on' : ''}`, onclick: () => { setRamadanSettings({ ...ramadanSettings(), shift: k }); void scheduleReminders(); void draw(); } },
-          k === 0 ? 'Umm al-Qura' : k < 0 ? 'a day earlier' : 'a day later'))),
-      h('label', { class: 'small muted ramadan-preview' }, 'Try Ramadan mode now (preview): ',
+          k === 0 ? tr('ram.ummAlQura') : k < 0 ? tr('ram.dayEarlier') : tr('ram.dayLater')))),
+      h('label', { class: 'small muted ramadan-preview' }, `${tr('ram.preview')} `,
         h('select', { class: 'search', onchange: (e: Event) => {
           const v = (e.target as HTMLSelectElement).value;
           setRamadanSettings({ ...ramadanSettings(), preview: v === 'off' ? null : v === 'eid' ? 'eid' : Number(v) });
           void draw();
-        } }, ...[['off', 'Off'], ['1', 'Night 1'], ['10', 'Day 10'], ['27', 'Night 27'], ['eid', 'Eid']].map(([v, l]) =>
+        } }, ...[['off', tr('ram.pvOff')], ['1', tr('ram.pvNight', { n: 1 })], ['10', tr('ram.pvDay', { n: 10 })], ['27', tr('ram.pvNight', { n: 27 })], ['eid', tr('ram.pvEid')]].map(([v, l]) =>
           h('option', { value: v, selected: String(st.preview ?? 'off') === v }, l)))));
-    if (now.eid) nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); void openRecap(); } }, '☾ Your Ramadan'));
+    if (now.eid) nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); void openRecap(); } }, `☾ ${tr('ram.yours')}`));
     body.replaceChildren(...nodes);
   }
   const onChange = () => void draw();
@@ -279,12 +280,12 @@ export function openRamadan(ctx: RamadanContext) {
 }
 
 function locate(save: (p: { lat: number; lng: number }) => void) {
-  if (!navigator.geolocation) return toast('Location is not available — set the time yourself');
-  toast('Finding your location…');
+  if (!navigator.geolocation) return toast(tr('ram.noLocation'));
+  toast(tr('ram.finding'));
   navigator.geolocation.getCurrentPosition(
     // Rounded: the reminder needs the town, not the street.
     (pos) => save({ lat: Math.round(pos.coords.latitude * 100) / 100, lng: Math.round(pos.coords.longitude * 100) / 100 }),
-    () => toast('Location was not allowed — set the time yourself'),
+    () => toast(tr('ram.locationDenied')),
     { maximumAge: 6 * 3600_000, timeout: 15_000 });
 }
 
@@ -342,16 +343,16 @@ export async function scheduleReminders(): Promise<string | null> {
       if (at.getTime() < Date.now() + 60_000) continue;
       const isToday = day === now.day;
       list.push({
-        id: IDS[day], title: `Ramadan · day ${day}`,
-        body: data.plan === 'company' ? 'A few quiet moments with the Quran before Maghrib'
-          : isToday && portion?.page ? `Today’s portion: ${portion.text}` : 'Your portion for today is waiting',
+        id: IDS[day], title: tr('ram.notifTitle', { day }),
+        body: data.plan === 'company' ? tr('ram.notifCompany')
+          : isToday && portion?.page ? tr('ram.notifPortion', { text: portion.text }) : tr('ram.notifWaiting'),
         schedule: { at, allowWhileIdle: true }, extra: { hash: '#/ramadan' },
       });
     }
     if (!list.length) return null;
     await LocalNotifications.schedule({ notifications: list });
     const next = list[0].schedule.at;
-    return `Next reminder ${next.toDateString() === today.toDateString() ? 'today' : next.toLocaleDateString(undefined, { weekday: 'long' })} at ${next.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    return tr('ram.nextReminder', { day: next.toDateString() === today.toDateString() ? tr('ram.todayWord') : next.toLocaleDateString(locale(), { weekday: 'long' }), time: next.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) });
   } catch (e) {
     console.warn('Ramadan reminders could not be scheduled', e);
     return null;
