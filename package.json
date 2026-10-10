@@ -12,6 +12,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
     "@types/node": "^26.6.4",
+    "@types/three": "0.186.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.3"
   },
@@ -28,6 +29,7 @@
     "@types/qrcode": "^1.5.5",
     "adhan": "^4.4.6",
     "mediabunny": "^1.61.3",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "three": "0.186.1"
   }
 }

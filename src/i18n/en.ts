@@ -337,6 +337,15 @@ const en = {
   'tafsir.none': 'No separate tafsir for this ayah; it is explained with the ayat around it.',
   'tafsir.source': 'Read it on Quran.com',
   'tafsir.failed': 'Could not load the tafsir — check your connection',
+  // night listening (docs/light.md, L1)
+  'night.open': 'Night listening',
+  'night.close': 'Leave night listening',
+  'night.sleep': 'Sleep',
+  'night.off': 'Off',
+  'night.min': '{n} min',
+  'night.left': '{n} min left',
+  'night.asleep': 'Recitation paused · tap to return',
+  'night.swipe': 'Swipe for more of this ayah',
 };
 
 export type Key = keyof typeof en;

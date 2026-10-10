@@ -376,6 +376,15 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tafsir.none': 'لا يوجد تفسير منفصل لهذه الآية؛ فهي مشروحة مع الآيات المحيطة بها.',
   'tafsir.source': 'اقرأه على Quran.com',
   'tafsir.failed': 'تعذّر تحميل التفسير — تحقّق من الاتصال',
+  // night listening
+  'night.open': 'استماع ليلي',
+  'night.close': 'إنهاء الاستماع الليلي',
+  'night.sleep': 'مؤقّت النوم',
+  'night.off': 'إيقاف',
+  'night.min': '{n} دقيقة',
+  'night.left': 'بقي {n} دقيقة',
+  'night.asleep': 'توقّفت التلاوة · المس للعودة',
+  'night.swipe': 'اسحب لبقية الآية',
 };
 
 export default ar;
