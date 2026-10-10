@@ -350,6 +350,7 @@ const en = {
   'sky.hint': 'Tap a star to open its page',
   'today.sky': 'Your sky · {n} stars this month',
   'today.sky1': 'Your sky · 1 star this month',
+  'kids.sky3d': 'Lanterns in 3D',
   'night.open': 'Night listening',
   'night.close': 'Leave night listening',
   'night.sleep': 'Sleep',

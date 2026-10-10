@@ -772,7 +772,22 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       tap = nearest lit star ≤ 30 px (any page ≤ 14 px) → that page, a ring or its name → the circle;
       "Juz N" of the view. Flat (`src/light/flatSky.ts`): the same stars, threads and rings as a still
       2D picture, redrawn only when panned; fps watchdog → flat. Family circles are not shown)
-- [ ] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
+- [x] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
+      (built 2026-10-10: `src/light/scenes/kidsPath.ts` — the 38 surah lanterns (round paper, thin caps)
+      float over a soft cloud sea and wind away into the distance in the 2D path's own wave
+      (`lanternAt(i)`), soft dots between them, haze (fog) far off, motes; dawn palette by day, night
+      with stars in dark mode. Learned = lit from inside with a warm glow and flame; next = a breathing
+      ring; lanterns the camera has passed fade out. The camera glides along the path behind and above
+      the lantern in focus, looking ahead. Noor rests beside the next lantern; when a lantern was just
+      lit (`kidsBloom`) it blooms, Noor arcs over to the next one and the camera follows. On the light
+      dawn sky the ring and Noor are painted warm (additive light would vanish). `src/ui/kidsSky.ts`
+      mounts it over the Kids home: the 2D path's own stops (links + surah names) are placed every frame
+      on their lantern's projection and scaled by distance (labels hidden when far), so taps, keyboard
+      focus and screen readers work as before; swipe up/down or the wheel glides along the path (soft
+      glide after letting go; a swipe never opens a lantern), focusing a stop glides to it.
+      `LightStage` gained `afterFrame`. Parent sheet → Show → **Lanterns in 3D** (`kidsSettings().sky3d`,
+      on by default). Flat quality (reduced motion, battery saver, no WebGL), the switch off, or the
+      fps watchdog → the 2D path, unchanged)
 
 ---
 
