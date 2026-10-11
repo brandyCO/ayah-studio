@@ -200,7 +200,7 @@ function lantern(): SVGSVGElement {
   return svg;
 }
 
-const STAR_PX = 6; // px between two stars of a constellation
+const STAR_PX = 15; // px between two stars of a constellation
 /**
  * A learned surah's constellation (one star per ayah, joined softly in ayah order) beside its
  * lantern, on the side away from its name. Positioned in the stop's own box (the 72 px lantern).
@@ -213,7 +213,7 @@ function constellationSvg(i: number, surah: number, ayahs: number): SVGSVGElemen
   const pad = 3, w = maxX - minX + pad * 2, hgt = maxY - minY + pad * 2;
   // Its centre: up and out from the lantern's circle (r 36), clear of it and of the screen edge.
   const out = outerSide(i);
-  const cx = 36 + out * (30 + w * 0.3), cy = 36 - (26 + hgt * 0.25);
+  const cx = 36 + out * (46 + w * 0.42), cy = 36 - (10 + hgt * 0.12);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'kids-const');
   svg.setAttribute('aria-hidden', 'true');
@@ -222,7 +222,7 @@ function constellationSvg(i: number, surah: number, ayahs: number): SVGSVGElemen
   const step = Math.min(70, 2000 / ayahs); // the stars come out in ayah order within ~2 s when it blooms
   const xy = (k: number) => `${pts[k].x.toFixed(1)} ${pts[k].y.toFixed(1)}`;
   const line = c.links.length ? `<path pathLength="1" style="--d:600ms" d="${c.links.map(([a, b]) => `M${xy(a)}L${xy(b)}`).join('')}"/>` : '';
-  svg.innerHTML = line + pts.map((p, k) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${k === 0 ? 1.6 : 1.15}" style="--d:${Math.round(600 + step * k)}ms"/>`).join('');
+  svg.innerHTML = line + pts.map((p, k) => `<circle class="halo" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${k === 0 ? 7 : 5.5}" style="--d:${Math.round(600 + step * k)}ms"/>`).join('') + pts.map((p, k) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${k === 0 ? 3 : 2.2}" style="--d:${Math.round(600 + step * k)}ms"/>`).join('');
   return svg;
 }
 

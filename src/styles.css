@@ -1314,7 +1314,8 @@ body:has(.wall-sky.has-light) .wall-host { background: transparent; }
 [dir="rtl"] .kids-noor.kids-noor-corner { inset: 0 auto 0 0; }
 .kids-const { position: absolute; overflow: visible; pointer-events: none; filter: drop-shadow(0 0 2px var(--kids-lamp-glow)); }
 .kids-const circle { fill: var(--kids-star); }
-.kids-const path { fill: none; stroke: var(--kids-star); stroke-opacity: .38; stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; }
+.kids-const circle.halo { fill: var(--kids-lamp-glow); opacity: .55; }
+.kids-const path { fill: none; stroke: var(--kids-star); stroke-opacity: .5; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
 .kids-stop.bloom .kids-const circle { animation: kids-star-in 1.2s ease-out both; animation-delay: var(--d); }
 .kids-stop.bloom .kids-const path { stroke-dasharray: 1; animation: kids-const-draw 2.4s ease-in-out both; animation-delay: var(--d); }
 @keyframes kids-star-in { from { opacity: 0; } to { opacity: 1; } }

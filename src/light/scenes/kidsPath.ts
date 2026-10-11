@@ -199,17 +199,22 @@ export function kidsPathScene(count: number, night: boolean, surahs: number[] = 
         L.glow.scale.setScalar(1.4 * (1 + bloom * 0.8));
         L.flame.material.opacity = (lit ? 0.95 : 0) * fade;
         L.flame.scale.setScalar(0.24 * (0.92 + 0.08 * Math.sin(t * 2.3 + i * 3)));
-        const c = lit && fade > 0 ? constAt(i) : consts[i];
+        const c = lit ? constAt(i) : consts[i];
         if (c) {
-          c.g.visible = lit && fade > 0;
+          c.g.visible = lit;
           if (c.g.visible) {
             // Beside the lantern, away from the path's middle; the stars come out in ayah order on a bloom.
-            c.g.position.set(L.g.position.x + Math.sign(wave(i) || 1) * 0.68, L.g.position.y + 0.18, L.g.position.z - 0.05);
+            // PROTOTYPE: the learned surahs' constellations hang large in the sky ahead, in path order.
+            const order = input.lit.slice(0, i).filter(Boolean).length, m = input.lit.filter(Boolean).length;
+            const per = 4, row = Math.floor(order / per), col = order % per, inRow = Math.min(per, m - row * per);
+            c.g.scale.setScalar(4.2);
+            c.g.position.set(camera.position.x + (col - (inRow - 1) / 2) * 2.4 + (row % 2) * 0.6, camera.position.y + 1.0 - row * 1.5, camera.position.z - 20);
+            (c.stars.material as PointsMaterial).size = 0.55;
             const shown = i === input.bloom && bt < 4 ? Math.ceil(c.n * ease((bt - 0.6) / 2.2)) : c.n;
             c.stars.geometry.setDrawRange(0, shown);
             c.line?.geometry.setDrawRange(0, Math.max(0, shown - 1) * 2);
-            (c.stars.material as PointsMaterial).opacity = (night ? 0.95 : 0.85) * fade;
-            if (c.line) (c.line.material as LineBasicMaterial).opacity = (night ? 0.3 : 0.4) * fade;
+            (c.stars.material as PointsMaterial).opacity = night ? 0.95 : 0.85;
+            if (c.line) (c.line.material as LineBasicMaterial).opacity = night ? 0.45 : 0.5;
           }
         }
       }
