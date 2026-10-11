@@ -822,6 +822,10 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       swells or star stagger; a glide becomes a fade out and in. 3D path: the same constellations as
       glow points + soft lines beside each lit lantern (`kidsPathScene(count, night, surahs, ayahs)`,
       built on first light, drawn star by star on a bloom); the 2D Noor and SVG stars are hidden there
+      Fix (2026-10-11, owner: stuck on the last ayah): a surah's last timing runs past the end of its
+      recording (e.g. An-Nas 40.91 s of 40.0 s), and the phone never reported the end, so listen &
+      repeat waited for ever. Now the last ayah stops 0.8 s after its last word, and a playhead that
+      stops moving within 1 s of the last word (or for 4 s anywhere in the kept recording) also ends it
 
 ---
 
