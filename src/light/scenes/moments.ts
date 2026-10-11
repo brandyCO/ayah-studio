@@ -1,13 +1,13 @@
 // Moments (docs/light.md, L5): short full-screen scenes and calm backdrops, each a pure function of
 // t. lift — a gift's light lifts off the clouds and becomes a star; bloom — a lantern glows and
-// blooms open into the reel; horizon — lanterns rising over a night horizon (the ayah wall);
+// blooms open into the reel;
 // crescent — Ramadan's first night: the sky filling with stars over the cloud sea, under the
 // moment's crescent; eid — dawn over the clouds
 // with lanterns drifting up.
 import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
 import type { LightScene } from '../engine';
 import type { Quality } from '../support';
-import { cloudSea, glowSprite, lanternField, moteField, noor, skyDome, starField, water } from '../parts';
+import { cloudSea, glowSprite, lanternField, moteField, noor, skyDome, starField } from '../parts';
 
 const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -122,35 +122,6 @@ export function bloomScene(seed = 1): LightScene {
   });
 }
 
-/** The ayah wall's backdrop: lanterns rising slowly over a night horizon and still water. */
-export function horizonScene(seed = 1): LightScene {
-  const { scene, camera } = base();
-  const glowDir = new Vector3(0, 0.04, -1);
-  const sky = skyDome({ zenith: '#04071c', mid: '#0f1440', horizon: '#3d2f5c', glow: '#c88a7a' }, glowDir);
-  const stars = starField(seed, 1500, { spread: 1.3 });
-  const area = { area: new Vector3(40, 9, 40), center: new Vector3(0, 9.5, -55), rise: 0.22 };
-  const field = lanternField(seed + 1, 160, area);
-  const refl = lanternField(seed + 1, 160, { ...area, mirror: true });
-  const sea = water({ deep: '#05081c', sheen: '#ffb85c', fog: '#3d2f5c' }, glowDir, { opacity: 0.75 });
-  scene.add(sky, stars.object, refl.object, sea.object, field.object);
-  return wrap({
-    scene, camera, far: [sky, stars.object],
-    pose(t, scale, px) {
-      camera.position.set(Math.sin(t * 0.01) * 2, 1.8, 0);
-      camera.rotation.set(0.16, Math.sin(t * 0.008) * 0.04, 0);
-      stars.update(t, px);
-      field.update(t, scale);
-      refl.update(t, scale);
-      sea.update(t, camera.position);
-    },
-    counts(q) {
-      const k = q === 'high' ? 160 : q === 'medium' ? 110 : 70;
-      field.setCount(k);
-      refl.setCount(k);
-    },
-  });
-}
-
 /** Ramadan's first night: the night sky over the cloud sea slowly filling with stars, Noor nearby.
  *  The crescent itself is the moment's own (flat) crescent above the greeting, so it never sits
  *  behind the text; the sky glows softly where it hangs. */
@@ -193,5 +164,5 @@ export function eidScene(seed = 1): LightScene {
   });
 }
 
-export const MOMENTS = { lift: liftScene, bloom: bloomScene, horizon: horizonScene, crescent: crescentScene, eid: eidScene };
+export const MOMENTS = { lift: liftScene, bloom: bloomScene, crescent: crescentScene, eid: eidScene };
 export type MomentId = keyof typeof MOMENTS;
