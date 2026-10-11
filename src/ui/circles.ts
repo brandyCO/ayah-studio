@@ -201,7 +201,13 @@ export async function openCircle(ctx: CircleContext, id: string, justCreated = f
   }
   const body = h('div', { class: 'circle-view' });
   const title = h('h2', {}, t('circ.one'));
-  const d = sheet('circle-sheet', h('div', { class: 'sheet-head' }, title, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')), body);
+  // Full screen (owner request 2026-10-11): the circle's sky fills the screen, the actions below it.
+  const d = h('dialog', { class: 'circle-full' },
+    h('div', { class: 'circle-full-head' }, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕'), title),
+    body);
+  d.addEventListener('close', () => d.remove());
+  document.body.append(d);
+  d.showModal();
   let st: CircleState | null = null;
   let picked: number | null = null; // juz whose actions are shown
   let celebrated = false;

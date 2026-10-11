@@ -499,7 +499,13 @@ cloud. Build in this order:
       (`adhan`, Umm al-Qura method, from the rounded location or the user's own time; 10–60 min before;
       rescheduled whenever the mushaf opens; small icon `ic_stat_crescent`; tap → `#/ramadan` → the next
       page of today's portion); web: Today card only
-- [x] T8 Multi-segment reels + Dua & ayah wall (2026-10-08): engine `src/engine/segments.ts` —
+- [x] T8 Multi-segment reels + Dua & ayah wall — **the wall was removed by the owner on 2026-10-11**
+      (`src/ui/wall.ts`, `src/together/walls.ts`, `src/ui/reelExport.ts`, `loadSegments()`, the
+      `#/w/…` and `#/wall/…` routes, ☰ → Ayah wall, its styles and `wall.*` strings are gone; the
+      database tables `walls` / `wall_entries` and their functions stay untouched (existing entries remain
+      in Export my data; no drop migration without the owner's go-ahead); the multi-segment engine
+      (`src/engine/segments.ts`, note cards in `render()`) stays for T9). As built before the removal:
+      (2026-10-08): engine `src/engine/segments.ts` —
       `joinSegments()` places N arranged one-range plans (each its own surah, word timings, audio slice,
       pause/hold; `PlannedAyah.surah`) one after another, each optionally followed by a **note card**
       (`TimedNote`: name + dua, `noteLength()` 3–8 s), then the closing card; `loadSegments()` in
@@ -734,17 +740,15 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       ring stays in the page (invisible) for keyboard focus and screen readers — focusing a juz rings its
       star — while the canvas takes the taps (nearest star ≤ 34 px → the same juz sheet) and DOM labels
       (numbers / initials) follow their stars, scaled by depth (`src/ui/constellation.ts`, `afterFrame`)
-- [x] L4 Revision lamps as a lantern field over still water (canvas grid = fallback)
-      (built 2026-10-10: `src/light/scenes/lampField.ts` — all 604 pages as paper lanterns (one
-      instanced mesh + one glow point each, two draw calls, plus the same mirrored under the water),
-      one cluster per juz along a shore (juz 1 on the right, later juz to the left, 5 per row, front
-      row first), dusk sky with stars and Noor. Memorised = lit from inside, dimmer as the interval
-      passes; would-like-a-visit = a soft flicker; not memorised = pale unlit paper. Revised today /
-      Mark memorised → the lantern rises ~0.55 and brightens over 6 s, then settles. `src/ui/lampField.ts`:
-      drag to glide along the shore (soft ease; wheel too), pinch / ctrl+wheel to come closer or see more,
-      tap → the nearest lantern on screen (≤ 30 px) becomes the page; "Juz N" label; the camera opens at
-      the page and glides to a newly picked page's juz. `src/ui/lamps.ts`: a **Grid / Lanterns** chip
-      (remembered as `lampsView`); flat quality, no WebGL or the fps watchdog → the canvas grid as before)
+      Full screen (owner request 2026-10-11): a circle opens as a full-screen night view
+      (`dialog.circle-full`: ✕ + name in a sticky top bar, the 3D ring ~64 % of the screen height edge to
+      edge, the juz actions, members and invite below on soft glass cards; the flat SVG ring large on the
+      same night background), no longer a bottom sheet
+- [x] ~~L4 Revision lamps as a lantern field~~ — **removed by the owner on 2026-10-11** ("people need to
+      be reminded to revise, not to search for a surah or juz"): `src/light/scenes/lampField.ts`,
+      `src/ui/lampField.ts`, the Grid / Lanterns chip and `lampsView` are gone; ☰ → My memorisation is
+      the canvas grid as before, with the Today card reminder ("3 lamps are getting dim in …"). Proper
+      revision reminders belong to T5b (a dim lamp opens a revision session; local notifications)
 - [x] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
       (built 2026-10-10: `src/light/scenes/moments.ts` (pure in t) + `src/ui/moment.ts`: `playMoment()`
@@ -760,7 +764,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       lantern (`src/ui/lanternProgress.ts`) fills with light and glows as it fills, the % beside it.
       Opening (`src/ui/opening.ts`): on a launch (no address of its own) one band of light sweeps across
       the logo on the splash colour, ≤ 1.2 s, the app loading underneath; tap ends it; reduced motion →
-      none. Camera moves added to the still scenes: Starfield drift floats forward through fine dust
+      none. (The wall's **horizon** backdrop was removed with the wall, 2026-10-11.) Camera moves added to the still scenes: Starfield drift floats forward through fine dust
       (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
       its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
       depths)

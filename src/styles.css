@@ -816,79 +816,7 @@ a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
 .ramadan-preview .search { width: auto; color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .moment[open], .moment-crescent { animation: none; } }
 
-/* T8 Dua & ayah wall: the host's screen (dark, calm, readable across a room), the guest page, the keepsake */
-body[data-view="wall"] { background: #07130f; }
-.wall-host {
-  min-height: 100vh; min-height: 100dvh; color: #eef1ec; display: flex; flex-direction: column;
-  background: radial-gradient(ellipse at 50% 0%, rgba(34, 179, 160, .10), transparent 60%), #07130f;
-  padding: 0 0 env(safe-area-inset-bottom);
-}
-.wall-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
-.wall-host .icon-btn { color: #eef1ec; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); flex: none; }
-.wall-title { flex: 1; min-width: 0; }
-.wall-title h1 { margin: 0; font-size: clamp(20px, 3vw, 34px); font-weight: 600; font-family: Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
-.wall-title p { margin: 2px 0 0; font-size: 13px; opacity: .7; }
-.wall-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-.wall-host .chip { color: #eef1ec; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); }
-.wall-host .chip.disabled { opacity: .5; }
-.wall-host .link-btn { color: #e8cf96; }
-.wall-body { flex: 1; display: grid; grid-template-columns: minmax(240px, 30%) 1fr; gap: 24px; padding: 8px 24px 24px; align-items: start; }
-.wall-join { position: sticky; top: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
-.wall-qr { width: min(100%, 320px); aspect-ratio: 1; background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 0 40px rgba(232, 207, 150, .15); }
-.wall-qr svg { display: block; width: 100%; height: 100%; }
-.wall-scan { margin: 8px 0 0; font-size: 18px; opacity: .85; }
-.wall-code { margin: 0; font-size: clamp(34px, 5vw, 56px); font-weight: 700; letter-spacing: .18em; color: #e8cf96; font-variant-numeric: tabular-nums; }
-.wall-url { margin: 0; font-size: 12px; opacity: .55; overflow-wrap: anywhere; }
-.wall-join.closed { padding-top: 40px; }
-.wall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px; align-content: start; }
-.wall-empty { grid-column: 1 / -1; text-align: center; opacity: .6; font-size: 18px; padding: 40px 0; }
-.lantern {
-  display: flex; flex-direction: column; gap: 8px; text-align: center; padding: 18px 16px; border-radius: 18px; cursor: pointer;
-  color: inherit; font: inherit; border: 1px solid rgba(232, 207, 150, .22);
-  background: radial-gradient(ellipse at 50% 0%, rgba(232, 207, 150, .14), rgba(255, 255, 255, .03) 70%);
-  box-shadow: 0 0 24px rgba(232, 207, 150, .06);
-}
-.lantern-ref { font-size: 13px; letter-spacing: .04em; color: #e8cf96; }
-.lantern-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 26px; line-height: 1.9; }
-.lantern-dua { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 17px; opacity: .92; overflow-wrap: anywhere; }
-.lantern-name { font-size: 15px; font-weight: 600; opacity: .85; overflow-wrap: anywhere; }
-.lantern.arrive { animation: lantern-in 1.6s cubic-bezier(.25,.1,.25,1) both; }
-.lantern.newest { animation: lantern-in 1.6s cubic-bezier(.25,.1,.25,1) both, lantern-glow 2.4s cubic-bezier(.25,.1,.25,1) 1.6s 3 alternate; }
-.lantern:not(.arrive).newest { animation: lantern-glow 2.4s cubic-bezier(.25,.1,.25,1) 3 alternate; }
-.lantern.hidden-entry { opacity: .45; border-style: dashed; }
-@keyframes lantern-in { from { opacity: 0; transform: translateY(40px) scale(.96); filter: blur(4px); } }
-@keyframes lantern-glow { to { box-shadow: 0 0 46px rgba(232, 207, 150, .32); border-color: rgba(232, 207, 150, .6); } }
-.wall-hidden-row { grid-column: 1 / -1; display: grid; grid-template-columns: inherit; gap: 16px; }
-.wall-hidden-row .link-btn { justify-self: start; }
-.wall-message { padding: 60px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-@media (max-width: 720px) {
-  .wall-top { flex-wrap: wrap; }
-  .wall-tools { width: 100%; justify-content: flex-start; }
-  .wall-body { grid-template-columns: 1fr; padding: 4px 16px 24px; gap: 16px; }
-  .wall-join { position: static; }
-  .wall-qr { width: min(60vw, 240px); }
-  .wall-tools .chip { font-size: 12px; padding: 6px 10px; }
-}
-@media (prefers-reduced-motion: reduce) { .lantern.arrive, .lantern.newest { animation: lantern-fade 1.2s both; } }
-@keyframes lantern-fade { from { opacity: 0; } }
-.wall-join-page { max-width: 520px; margin: 0 auto; padding: 10px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
-.wall-card h2 { margin: 2px 0 4px; font-family: Georgia, 'Times New Roman', serif; font-weight: 600; overflow-wrap: anywhere; }
-.wall-card p { margin: 0; }
-.wall-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.wall-preview { padding: 12px 14px; border-radius: 12px; background: var(--sel); text-align: center; }
-.wall-preview-ref { margin: 0; font-size: 13px; color: var(--muted); }
-.wall-preview-ar { margin: 6px 0 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 24px; line-height: 1.9; }
-.wall-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 16px 0; }
-.wall-done h3 { margin: 10px 0 2px; }
-.wall-done p { margin: 4px 0; }
-.wall-own-dua { font-family: Georgia, 'Times New Roman', serif; font-style: italic; overflow-wrap: anywhere; }
-.wall-lamp { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle, #f3e3bc 0%, rgba(232, 207, 150, .5) 35%, transparent 70%); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
-.check-row { display: flex; align-items: center; gap: 8px; flex-direction: row !important; }
 .chip.danger { color: #c0392b; }
-.keepsake-controls { gap: 12px; align-items: center; width: min(420px, 100%); }
-.keepsake-scrub { flex: 1; accent-color: var(--accent); }
-.keepsake-next { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.keepsake .primary { min-width: 160px; }
 
 /* Turnstile check before a guest (anonymous) sign-in (src/cloud/captcha.ts) */
 .captcha-sheet { width: min(360px, calc(100% - 32px)); text-align: center; }
@@ -1187,15 +1115,6 @@ body[data-view="kids"] {
 @keyframes after-bloom { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .ring-3d.celebrating .ring-centre, .circle-panel.after-bloom { animation: none; } }
 
-/* Revision lamps as a lantern field (docs/light.md, L4) */
-.lamp-field { position: relative; height: min(46vh, 380px); border-radius: 16px; overflow: hidden; background: #060a24; margin: 6px 0; }
-.lamp-field-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
-.lamp-field-label {
-  position: absolute; top: 10px; inset-inline-start: 12px; font: 600 13px system-ui, sans-serif; letter-spacing: .03em;
-  color: rgba(246, 239, 226, .8); text-shadow: 0 1px 8px rgba(6, 10, 36, .9); pointer-events: none;
-}
-.lamp-view-btn { margin-inline-start: auto; }
-
 /* Light moments (docs/light.md, L5) */
 .light-moment { position: fixed; inset: 0; z-index: 60; background: #060a22; animation: night-in .8s ease both; cursor: pointer; }
 .light-moment.inline { position: absolute; z-index: 5; border-radius: inherit; }
@@ -1209,9 +1128,6 @@ body[data-view="kids"] {
 }
 .light-backdrop { z-index: 0; pointer-events: none; }
 .moment.has-light > :not(.light-backdrop) { position: relative; z-index: 1; }
-.wall-sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.wall-host { position: relative; z-index: 1; }
-body:has(.wall-sky.has-light) .wall-host { background: transparent; }
 @media (prefers-reduced-motion: reduce) { .light-moment, .light-moment.out, .light-moment-caption { animation: none; } }
 
 /* Export progress: a lantern filling with light */
@@ -1326,3 +1242,29 @@ body:has(.wall-sky.has-light) .wall-host { background: transparent; }
   .kids-stop.bloom .kids-const circle, .kids-stop.bloom .kids-const path { animation: none; }
   .kids-stop.bloom .kids-const { animation: kids-star-in 1.6s ease both .6s; }
 }
+
+/* Khatm circle, full screen (owner request 2026-10-11): a night sky with the ring large, actions below */
+dialog.circle-full {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  overflow-y: auto; overscroll-behavior: contain; color: #f6efe2;
+  background: radial-gradient(ellipse at 50% 20%, #151c4c, #070b26 55%, #04071c);
+  --text: #f6efe2; --muted: rgba(246, 239, 226, .66); --line: rgba(246, 239, 226, .2); --card: rgba(255, 255, 255, .06); --accent: #e8cf96; --accent-ink: #1a1405;
+}
+dialog.circle-full[open] { animation: night-in .5s ease both; }
+dialog.circle-full::backdrop { background: #04071c; }
+.circle-full-head {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: linear-gradient(#04071c, rgba(4, 7, 28, 0));
+}
+.circle-full-head h2 { margin: 0; font-size: 19px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.circle-full .icon-btn { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .18); flex: none; }
+.circle-full .circle-view { padding: 0 16px max(24px, env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+.circle-full .ring-box { width: min(420px, 92vw); margin: 0 auto 8px; }
+.circle-full .ring-box.ring-3d { width: calc(100% + 32px); max-width: none; margin: 0 -16px 8px; height: min(64vh, 135vw); aspect-ratio: auto; border-radius: 0; background: transparent;
+  -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+.circle-full .circle-panel { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.circle-full .chip { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .2); }
+.circle-full .primary { background: #e8cf96; color: #1a1405; border-color: transparent; }
+.circle-full .ring-box:not(.ring-3d) .seg-g .seg { stroke: rgba(246, 239, 226, .3); }
+.circle-full .ring-box:not(.ring-3d) .seg-label { fill: rgba(246, 239, 226, .7); }
+@media (prefers-reduced-motion: reduce) { dialog.circle-full[open] { animation: none; } }
