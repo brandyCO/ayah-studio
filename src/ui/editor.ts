@@ -26,7 +26,7 @@ import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, Q
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
 import {
-  CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
+  CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, SLOWMO, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
 } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
@@ -91,7 +91,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
-  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; project.cinema = localStorage.getItem('cinema') !== '0'; } catch { /* private window: on */ }
+  else try {
+    project.tightStart = localStorage.getItem('tightStart') !== '0';
+    project.cinema = localStorage.getItem('cinema') !== '0';
+    const sm = Number(localStorage.getItem('slowmo'));
+    project.slowmo = (SLOWMO as readonly number[]).includes(sm) ? sm : 1;
+  } catch { /* private window: on */ }
   // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
   const draftKey = draft?.id ?? draftId ?? newDraftId();
   const created = draft?.created ?? Date.now();
@@ -331,7 +336,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // The second part continues the video from the frame at the playhead.
     const v = media[sc.entry]?.video;
     const clip = fitClips()[sc.entry];
-    const second: Clip | null = v ? { in: videoTime(sceneSpans(tl.scenes, project.transition)[i], t, clip, v.duration), fit: clip?.fit ?? 'loop' } : clip;
+    const second: Clip | null = v ? { in: videoTime(sceneSpans(tl.scenes, project.transition)[i], t, clip, v.duration, project.slowmo ?? 1), fit: clip?.fit ?? 'loop' } : clip;
     toCustom();
     if (project.sceneMode === 'single') {
       project.sceneLengths = [tl.duration];
@@ -633,6 +638,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.cinema = on;
     try { localStorage.setItem('cinema', on ? '1' : '0'); } catch { /* private window */ }
   }
+  /** Slow motion for the background videos (never the recitation); remembered on this device. */
+  function setSlowmo(v: number) {
+    project.slowmo = v;
+    try { localStorage.setItem('slowmo', String(v)); } catch { /* private window */ }
+    changed();
+  }
+  const slowmoRow = () => row(ui('ed.slowmo'), chips<string>(SLOWMO.map((v) => ({ value: String(v), label: v === 1 ? ui('ed.off') : ui(v === 0.75 ? 'ed.slowmo-slow' : 'ed.slowmo-very') })),
+    () => String(project.slowmo ?? 1), (v) => setSlowmo(Number(v))));
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
   /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
@@ -839,6 +852,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         quick.clips.length > 1 ? row(ui('qr.clips-change'), chips<'ayah' | 'even'>([{ value: 'ayah', label: ui('qr.split-ayah') }, { value: 'even', label: ui('qr.split-even') }],
           () => quick.split, (v) => { quick.split = v; savePref('quickSplit', v); applyClips(); scenesChanged(); changed(); })) : null,
         quick.clips.length > 1 ? note(ui(quick.split === 'ayah' ? 'qr.split-note-ayah' : 'qr.split-note-even')) : null,
+        quick.clips.length ? slowmoRow() : null,
+        quick.clips.length ? note(ui('ed.slowmo-note')) : null,
         quick.hits.length ? note(ui('qr.footage-credit')) : null,
       ];
     } else if (quick.step === 'style') {
@@ -1062,6 +1077,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
         () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
       { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'slowmo', icon: 'hold', label: ui('ed.slowmo'), panel: () => [slowmoRow(), note(ui('ed.slowmo-note'))] },
       { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
       { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
       { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
@@ -1489,7 +1505,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       dirty = true;
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
-    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true)?.then(() => (dirty = true));
+    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true, project.slowmo ?? 1)?.then(() => (dirty = true));
     spine.frame();
     if (!dirty) return;
     dirty = false;

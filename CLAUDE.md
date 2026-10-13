@@ -342,7 +342,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       → **Finish** (Cinematic, Start on the first word, Ayah Studio mark Off / Small, Export). Footage: up
       to 4 clips, numbered in tap order (tap again to take one out), changing **with each ayah** or
       **evenly** (`quickSplit`). Text/Layout choices are kept when a vibe or style is tapped afterwards
-      (`keepOwn()`; per device `quickOwn`). Owner request 2026-10-13 (second pass). The studio preview's
+      (`keepOwn()`; per device `quickOwn`). **Slow motion** (Off / Slow 0.75× / Very slow 0.5×; `project.slowmo`, per device
+      pref `slowmo`, not in the look): background videos only, in `videoTime(…, speed)`; also Scenes → Slow
+      motion. The recitation is never slowed. Owner request 2026-10-13 (second pass). The studio preview's
       height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
       stretches it
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
