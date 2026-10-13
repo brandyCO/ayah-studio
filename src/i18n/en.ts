@@ -215,6 +215,8 @@ const en = {
   'qr.mark-small': 'Small',
   'qr.mark-note': 'Pixabay clips carry no watermark. The surah reference always stays on the video.',
   'qr.finish-note': 'Everything stays adjustable in the other tools before you export.',
+  'ed.text-size': "Quran text size",
+  'ed.text-size-note': "0 % is the smallest size that stays easy to read on a phone; Medium is {m} %. Long ayat wrap onto more lines instead of shrinking further.",
   'ed.slowmo': "Slow motion",
   'ed.slowmo-slow': "Slow",
   'ed.slowmo-very': "Very slow",

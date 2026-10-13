@@ -73,7 +73,8 @@ const SELECTIONS = [[2, 255, 255], [2, 282, 282], [2, 1, 5], [2, 72, 72], [2, 18
 const MODES = [['ayah', 1], ['line', 1], ['half', 1], ['words', 1], ['words', 2], ['words', 3]];
 const STYLE = { titlePos: 'top', titleSize: 'm', credit: false, watermark: true };
 const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true }, { titlePos: 'bottom', titleSize: 's', credit: true, watermark: false }, { titlePos: 'bottom', titleSize: 'l', credit: false, watermark: true },
-  { ...STYLE, textSize: 'l', enFont: 'sans' }, { titlePos: 'below', titleSize: 'm', credit: false, watermark: true, textSize: 's' }];
+  { ...STYLE, textSize: 'l', enFont: 'sans' }, { titlePos: 'below', titleSize: 'm', credit: false, watermark: true, textSize: 's' },
+  { ...STYLE, arSize: 52 }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, arSize: 92 }, { titlePos: 'below', titleSize: 's', credit: false, watermark: false, arSize: 75 }];
 const surah = (n) => meta[n - 1];
 const reciter = { id: 0, name: 'Test', short: 'Test', everyayah: '' };
 const norm = (x) => x.split(/\s+/).filter(Boolean).join(' ');
@@ -119,7 +120,7 @@ function checkTimeline(tl, label, texts, plan, meanings, synced) {
       assert(Number.isFinite(e.start) && Number.isFinite(e.end), `${label} ${a.ayah}: finite times`);
       if (k > 0) assert(e.start >= a.events[k - 1].start && Math.abs(a.events[k - 1].end - e.start) < 1e-9, `${label} ${a.ayah}: events follow each other`);
       if (e.start < a.end) assert(e.start >= a.start - 1e-9, `${label} ${a.ayah}: event inside its ayah`);
-      assert(e.ar.size >= 64 && fitsBox(e.ar, layout.AR_LINE, lay.ar), `${label} ${a.ayah}: Arabic fits, legible size`);
+      assert(e.ar.size >= layout.AR_SIZE_MIN && e.ar.size >= Math.min(...Object.values(lay.arSizes).flat()) && fitsBox(e.ar, layout.AR_LINE, lay.ar), `${label} ${a.ayah}: Arabic fits, legible size`);
       if (e.en) assert(fitsBox(e.en, layout.EN_LINE, lay.en), `${label} ${a.ayah}: translation fits`);
       ctx.font = `${e.ar.size}px x`;
       assert(e.ar.lines.every((l) => ctx.measureText(l).width <= layout.TEXT_W + 1), `${label} ${a.ayah}: lines fit the width`);
@@ -268,7 +269,7 @@ for (const r of RECITERS) {
     for (const style of r === 7 ? STYLES : [STYLE]) {
       for (const [mode, n] of MODES) {
         for (const tr of ['words', 'ayah', 'off']) {
-          const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''} en:${tr} title:${style.titlePos}/${style.titleSize}${style.credit ? '+credit' : ''}${style.textSize ? ` size:${style.textSize}` : ''}`;
+          const label = `reciter ${r} ${s}:${from}-${to} ${mode}${mode === 'words' ? n : ''} en:${tr} title:${style.titlePos}/${style.titleSize}${style.credit ? '+credit' : ''}${style.textSize ? ` size:${style.textSize}` : ''}${style.arSize ? ` ar:${style.arSize}` : ''}`;
           try {
             const tl = build(s, from, texts, plan, mode, n, tr, style);
             stats.timelines++;

@@ -344,7 +344,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       **evenly** (`quickSplit`). Text/Layout choices are kept when a vibe or style is tapped afterwards
       (`keepOwn()`; per device `quickOwn`). **Slow motion** (Off / Slow 0.75× / Very slow 0.5×; `project.slowmo`, per device
       pref `slowmo`, not in the look): background videos only, in `videoTime(…, speed)`; also Scenes → Slow
-      motion. The recitation is never slowed. Owner request 2026-10-13 (second pass). The studio preview's
+      motion. The recitation is never slowed.
+      **Quran text size slider** (owner decision 2026-10-13: 52–92 px for a whole ayah on the 1080 px frame,
+      Medium 80 = 70 %; `project.arSize`, per device pref `arSize`, not in the look — `textSize` follows the
+      nearest S/M/L for gifts): Quick reel → Layout and Text → Size. The legible floor is now 52 px when the
+      user picks it (else long text still shrinks to 64 px); bigger settings keep Medium's steps, so a long
+      ayah is never smaller than at Medium Owner request 2026-10-13 (second pass). The studio preview's
       height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
       stretches it
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):

@@ -13,7 +13,7 @@ import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
+import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
@@ -94,6 +94,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   else try {
     project.tightStart = localStorage.getItem('tightStart') !== '0';
     project.cinema = localStorage.getItem('cinema') !== '0';
+    const az = Number(localStorage.getItem('arSize'));
+    if (az) project.arSize = clampArSize(az);
     const sm = Number(localStorage.getItem('slowmo'));
     project.slowmo = (SLOWMO as readonly number[]).includes(sm) ? sm : 1;
   } catch { /* private window: on */ }
@@ -644,6 +646,28 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     try { localStorage.setItem('slowmo', String(v)); } catch { /* private window */ }
     changed();
   }
+  /** Arabic text size: a slider from the smallest readable size to the largest (0–100 %). */
+  const sizePct = (v: number) => Math.round(((v - AR_SIZE_MIN) / (AR_SIZE_MAX - AR_SIZE_MIN)) * 100);
+  const sizeSlider = (): Node[] => {
+    const cur = () => project.arSize ?? ({ s: 70, m: AR_SIZE_MEDIUM, l: 92 } as const)[project.textSize];
+    const label = h('span', { class: 'clip-time' }, `${sizePct(cur())} %`);
+    const slider = h('input', { class: 'clip-slider', type: 'range', min: String(AR_SIZE_MIN), max: String(AR_SIZE_MAX), step: '1', value: String(cur()), 'aria-label': ui('ed.text-size') });
+    let raf = 0;
+    const set = (save: boolean) => {
+      if (exporting) return;
+      const v = clampArSize(Number(slider.value));
+      project.arSize = v;
+      project.textSize = nearestTextSize(v); // what gifts (S / M / L only) get
+      label.textContent = `${sizePct(v)} %`;
+      if (save) try { localStorage.setItem('arSize', String(v)); } catch { /* private window */ }
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { rebuild(); previewText(); });
+      changed(false); // keep the slider while dragging
+    };
+    slider.addEventListener('input', () => set(false));
+    slider.addEventListener('change', () => set(true));
+    return [row(ui('ed.text-size'), label), slider, note(ui('ed.text-size-note', { m: sizePct(AR_SIZE_MEDIUM) }))];
+  };
   const slowmoRow = () => row(ui('ed.slowmo'), chips<string>(SLOWMO.map((v) => ({ value: String(v), label: v === 1 ? ui('ed.off') : ui(v === 0.75 ? 'ed.slowmo-slow' : 'ed.slowmo-very') })),
     () => String(project.slowmo ?? 1), (v) => setSlowmo(Number(v))));
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
@@ -920,6 +944,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       ];
     } else if (quick.step === 'layout') {
       body = [
+        ...sizeSlider(),
         row(ui('qr.name-place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
           () => project.titlePos, (v) => { own('layout'); project.titlePos = v; rebuild(); changed(); })),
         row(ui('qr.ar-name'), chips<'show' | 'hide'>([{ value: 'show', label: ui('ed.show') }, { value: 'hide', label: ui('ed.hide') }],
@@ -1050,8 +1075,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(syncText),
       ].filter(Boolean) as Node[] },
       { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
-      { id: 'size', icon: 'size', label: ui('ed.size'), panel: () => [chips<TextSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
-        () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
+      { id: 'size', icon: 'size', label: ui('ed.size'), panel: sizeSlider },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
         () => project.textPos, (v) => { project.textPos = v; })] },
       { id: 'gap', icon: 'hold', label: ui('ed.between-ayat'), panel: () => [

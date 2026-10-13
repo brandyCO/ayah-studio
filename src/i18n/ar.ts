@@ -256,6 +256,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'qr.mark-small': 'صغيرة',
   'qr.mark-note': 'مقاطع Pixabay بلا علامة مائية. مرجع السورة يبقى دائمًا على الفيديو.',
   'qr.finish-note': 'كل شيء يبقى قابلًا للتعديل في الأدوات الأخرى قبل التصدير.',
+  'ed.text-size': "حجم نص القرآن",
+  'ed.text-size-note': "0 % أصغر حجم يبقى سهل القراءة على الهاتف؛ المتوسط {m} %. الآيات الطويلة تلتف على أسطر أكثر بدل أن تصغر أكثر.",
   'ed.slowmo': "حركة بطيئة",
   'ed.slowmo-slow': "بطيئة",
   'ed.slowmo-very': "بطيئة جدًا",
