@@ -1,3 +1,4 @@
+import type { Breath } from './cinema';
 // Timeline derived from the recitation: the reel plan says when each ayah and word is recited; the
 // text mode turns that into text events — groups of whole words on screen, shown again when the
 // reciter repeats them (pure apart from text measuring).
@@ -38,6 +39,9 @@ export interface TimedAyah {
   events: TimedEvent[];
   /** Whole-ayah translation pages when it does not follow the words (Line/Half/Words + "whole ayah"). */
   enPages: TimedText[];
+  /** The ayah's display words, and when each is recited (reel time; null without word timings). */
+  words: string[];
+  seq: Recited[] | null;
 }
 
 export interface Timeline {
@@ -58,6 +62,8 @@ export interface Timeline {
   segmented: boolean;
   /** The whole-ayah translation's translator (closing card credit) and writing direction. */
   translation: ReelTranslation;
+  /** The recitation's loudness (set by the player once the audio is known; cinema breath). */
+  breath?: Breath;
 }
 
 export interface ReelTranslation {
@@ -137,7 +143,7 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
       if (e.ar.lines.join(' ') !== words.slice(e.first, e.last + 1).join(' ')) throw new Error('Text grouping altered the ayah text');
     }
     const surah = o.surahs?.[i] ?? o.surah;
-    return { ayah: p.ayah, surah, ref: reference(surah, p.ayah), start: p.start, end: p.end, events, enPages };
+    return { ayah: p.ayah, surah, ref: reference(surah, p.ayah), start: p.start, end: p.end, events, enPages, words, seq: p.seq };
   });
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,

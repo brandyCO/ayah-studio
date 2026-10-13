@@ -3,7 +3,7 @@
 // them and turn the page. Continues into the next surah. Lock-screen controls via Media Session.
 import { qdcSurah } from '../data/qdc';
 import type { SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
+import { DEFAULT_RECITER, TIMED_RECITERS, timedReciterById, reciterPickerLabel } from '../data/reciters';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -39,7 +39,7 @@ export function createPlayer(o: PlayerHooks) {
   const listeners = new Set<(pos: { s: number; a: number; w: number | null } | null) => void>();
   const tell = (pos: typeof cur) => { o.onPosition(pos); for (const f of listeners) f(pos); };
 
-  const reciter = () => reciterById(reelReciter(DEFAULT_RECITER));
+  const reciter = () => timedReciterById(reelReciter(DEFAULT_RECITER));
 
   // --- bar ---
   const playBtn = h('button', { class: 'icon-btn pl-play', 'aria-label': 'Play', onclick: () => toggle() });
@@ -198,7 +198,7 @@ export function createPlayer(o: PlayerHooks) {
   function pickReciter() {
     const d = h('dialog', { class: 'sheet bottom' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...RECITERS.map((r) => h('button', {
+      h('div', { class: 'menu' }, ...TIMED_RECITERS.map((r) => h('button', {
         class: `menu-item${r.id === reciter().id ? ' on' : ''}`,
         onclick: () => {
           d.close();

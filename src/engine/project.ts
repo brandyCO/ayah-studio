@@ -22,6 +22,7 @@ export interface TextColors {
   ar: string; // #rrggbb
   en: string;
   title: string; // surah name + reference
+  hl: string; // the word being recited (word highlight)
 }
 
 export interface Project {
@@ -62,9 +63,20 @@ export interface Project {
    *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
   closing?: Closing;
   watermark: boolean;
+  /** Word highlight: the word being recited turns `colors.hl` (only with word timings: rule 8). */
+  highlight: boolean;
+  /** Finishing touches over the background (never over the text). */
+  grain: boolean;
+  vignette: boolean;
   /** The whole-ayah translation (an id from src/data/translationList.ts); missing = the reader's choice.
    *  Kept with the draft, not with the remembered look (gifts carry looks only). */
   translation?: string;
+  /** The reel opens on the voice: the silence before the first word is trimmed to the safe minimum
+   *  (MIN_LEAD before the sound found in the audio). Only the start; the pauses between ayat stay. */
+  tightStart?: boolean;
+  /** Cinematic touches (src/engine/cinema.ts): breathing glow, open/close from black, slow drift,
+   *  depth. Per device like tightStart (not part of the look, so gifts are unchanged). */
+  cinema?: boolean;
 }
 
 export interface Closing {
@@ -94,7 +106,7 @@ export const OUTRO = 3; // seconds of the closing reference card
 export const PAUSES = [0, 0.5, 1, 2];
 
 /** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to'>>) => {
+export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart'>>) => {
   const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
   return {
     pause: p.pause,
@@ -102,7 +114,8 @@ export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & P
     intro: p.intro ? INTRO : 0,
     outro: p.outro ? OUTRO : 0,
     gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
-    trims: ayat.map((a): [number, number] => p.trims?.[a] ?? [0, 0]),
+    // Start on the first word: as much of the opening silence as is safe (arrangeReel clamps it).
+    trims: ayat.map((a, i): [number, number] => (i === 0 && p.tightStart ? [Infinity, p.trims?.[a]?.[1] ?? 0] : p.trims?.[a] ?? [0, 0])),
     holds: ayat.map((a) => p.holds?.[a] ?? null),
   };
 };
@@ -131,7 +144,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     holds: {},
     transition: 'crossfade',
     textEffect: 'rise',
-    colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' },
+    colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc', hl: '#f2c46b' },
     grade: 'none',
     scrim: 'normal',
     textSize: 'm',
@@ -142,7 +155,12 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     intro: false,
     outro: false,
     credit: false,
-    watermark: true,
+    watermark: false,
+    highlight: false,
+    grain: false,
+    vignette: false,
+    tightStart: true,
+    cinema: true,
   };
 }
 
@@ -150,7 +168,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 export const LOOK_KEYS = [
   'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes', 'clips',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
-  'credit', 'watermark',
+  'credit', 'watermark', 'highlight', 'grain', 'vignette',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
 
@@ -184,7 +202,7 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
     const v = l[k];
     if (k === 'colors') {
       const c = v as Partial<TextColors> | undefined;
-      if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
+      if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title', 'hl'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
     } else if (k === 'scenes') {
       const idx = Array.isArray(v) ? v.map((x, i) => (typeof x === 'string' && validBackground(x) ? i : -1)).filter((i) => i >= 0).slice(0, MAX_SCENES) : [];
       if (idx.length) {
@@ -222,6 +240,8 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
   if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
   if (typeof d.translation === 'string' && validTranslation(d.translation)) p.translation = d.translation;
+  p.tightStart = d.tightStart === true;
+  p.cinema = d.cinema === true; // drafts from before the setting keep their own start
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }
 
@@ -237,7 +257,7 @@ export function strictLook(look: unknown, validBackground: (id: string) => boole
   const l = look as Record<string, unknown>;
   if (!Object.keys(l).every((k) => (LOOK_KEYS as readonly string[]).includes(k))) return false;
   if ('scenes' in l && (!Array.isArray(l.scenes) || !l.scenes.length)) return false;
-  if ('colors' in l && (!l.colors || typeof l.colors !== 'object' || !Object.keys(l.colors).every((k) => ['ar', 'en', 'title'].includes(k)))) return false;
+  if ('colors' in l && (!l.colors || typeof l.colors !== 'object' || !Object.keys(l.colors).every((k) => ['ar', 'en', 'title', 'hl'].includes(k)))) return false;
   const p = newProject(1, 1, 1, 0);
   applyLook(p, l, validBackground);
   return Object.keys(l).every((k) => {

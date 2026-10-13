@@ -89,6 +89,7 @@ export function selectionController(o: SelectionOptions) {
     const req = ++estReq;
     estimate.textContent = '';
     const r = reciterById(reelReciter(DEFAULT_RECITER));
+    if (r.qdc === false) return; // no timings to estimate from
     try {
       const q = await qdcSurah(r.id, sel.surah);
       const clip = clipBounds(q.timings, sel.surah, sel.lo, sel.hi);

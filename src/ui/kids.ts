@@ -11,7 +11,7 @@ import { keepAllOffline, keptCount } from '../data/kidsAudio';
 import { loadMeta } from '../data/quran';
 import { h, toast } from './dom';
 import { parentGate } from './kidsGate';
-import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
+import { DEFAULT_RECITER, TIMED_RECITERS, reciterById, reciterPickerLabel, timedReciterById } from '../data/reciters';
 import { lastRead, reelLook, reelReciter } from './prefs';
 import { lang, locale, surahName, t } from '../i18n';
 
@@ -64,7 +64,7 @@ export async function openParent() {
   };
   // Husary (Muallim) first: his slow teaching recitation suits repeating.
   const current = kidsReciter();
-  const order = [...RECITERS.filter((r) => r.id === 12), ...RECITERS.filter((r) => r.id !== 12)];
+  const order = [...TIMED_RECITERS.filter((r) => r.id === 12), ...TIMED_RECITERS.filter((r) => r.id !== 12)];
   const reciterSelect = h('select', { class: 'kids-name-input', onchange: () => { setKidsSettings({ reciter: Number(reciterSelect.value) }); paintOffline(); } },
     ...order.map((r) => h('option', { value: String(r.id), selected: r.id === current }, `${reciterPickerLabel(r)}${r.id === 12 ? t('kids.slowForLearning') : ''}`)));
   const offline = h('div', { class: 'kids-offline' });
@@ -176,7 +176,7 @@ function familyNotes() {
 }
 
 /** The reciter of the space: the parent's pick, else the reel reciter. */
-export const kidsReciter = () => kidsSettings().reciter ?? reciterById(reelReciter(DEFAULT_RECITER)).id;
+export const kidsReciter = () => timedReciterById(kidsSettings().reciter ?? reelReciter(DEFAULT_RECITER)).id;
 
 function leave() {
   setKidsOn(false);

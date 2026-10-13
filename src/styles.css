@@ -1268,3 +1268,37 @@ dialog.circle-full::backdrop { background: #04071c; }
 .circle-full .ring-box:not(.ring-3d) .seg-g .seg { stroke: rgba(246, 239, 226, .3); }
 .circle-full .ring-box:not(.ring-3d) .seg-label { fill: rgba(246, 239, 226, .7); }
 @media (prefers-reduced-motion: reduce) { dialog.circle-full[open] { animation: none; } }
+
+/* Studio styles: moving tiles (background drifting slowly, three "words" lighting up in turn) */
+.style-art {
+  position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: #1d1d22 center / cover no-repeat; animation: style-drift 9s ease-in-out infinite alternate;
+}
+.style-art.vignette::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, transparent 45%, rgba(0,0,0,.55)); }
+.style-art.grain::before {
+  content: ''; position: absolute; inset: 0; opacity: .25; mix-blend-mode: overlay;
+  background-image: radial-gradient(rgba(255,255,255,.7) .5px, transparent .6px); background-size: 3px 3px;
+}
+.style-words { position: relative; z-index: 1; display: flex; flex-direction: row-reverse; gap: 4px; }
+.style-words i { width: 13px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.85); box-shadow: 0 0 4px rgba(0,0,0,.5); }
+.style-words.lit i { animation: style-word 2.4s infinite; }
+.style-words.lit i:nth-child(2) { animation-delay: .8s; }
+.style-words.lit i:nth-child(3) { animation-delay: 1.6s; }
+@keyframes style-drift { from { background-size: 110%; background-position: 40% 45%; } to { background-size: 125%; background-position: 60% 55%; } }
+@keyframes style-word { 0%, 30% { background: var(--hl); box-shadow: 0 0 8px var(--hl); } 34%, 100% { background: rgba(255,255,255,.85); } }
+@media (prefers-reduced-motion: reduce) { .style-art, .style-words.lit i { animation: none; } }
+.list-item .pill { margin-inline-start: 8px; padding: 1px 8px; border-radius: 999px; background: var(--brand-fill); color: #fff; font-size: 11px; }
+.list-item .block { display: block; margin-top: 2px; }
+
+/* Quick reel (editor → Styles → Quick reel): numbered steps, Back / Next, an Export button at the end */
+.quick-steps { margin-bottom: 8px; }
+.quick-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.quick-export { width: 100%; margin-top: 12px; }
+.style-art.rec { background-color: #0b1424; background-size: cover; background-position: center; }
+
+/* Watching (editor): Play fades the tools away and the preview fills the screen; a tap brings them back */
+.studio.watching .transport { opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+.studio.watching .stage { cursor: pointer; animation: watch-in .9s ease both; }
+@keyframes watch-in { from { opacity: .55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .studio.watching .stage { animation: none; } }
+.quick-why { margin: 2px 0 10px; color: var(--text); font-size: .95rem; line-height: 1.4; }

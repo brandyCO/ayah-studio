@@ -44,6 +44,18 @@ export interface TextBlock {
   dir: 'rtl' | 'ltr';
   color: string;
   opacity: number;
+  /** Word highlight: the word being recited, drawn again over its place in `color` with a soft glow. */
+  hl?: Highlight | null;
+  /** 0..1: a soft halo that swells with the reciter's voice (cinema). Light only, no motion. */
+  breath?: number;
+}
+
+export interface Highlight {
+  line: number; // index in lines
+  before: string; // the words before it on that line (reading order), joined with spaces
+  word: string;
+  color: string;
+  alpha: number; // 0…1: comes in softly when the word starts
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -142,6 +154,14 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
   const top = b.top + dy;
   if (blur > 0.05) ctx.filter = `blur(${(blur * px).toFixed(2)}px)`;
 
+  if (b.breath && b.breath > 0.02) {
+    // Breath: a halo in the text colour, as strong as the voice is loud.
+    ctx.save();
+    ctx.shadowColor = rgba(b.color, 0.55 * b.breath);
+    ctx.shadowBlur = (12 + 30 * b.breath) * px;
+    fillLines(ctx, b, top);
+    ctx.restore();
+  }
   if (glow > 0.01) {
     // A soft halo in the text colour under the text, then the text itself.
     ctx.save();
@@ -181,6 +201,23 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
     });
   } else {
     fillLines(ctx, b, top);
+  }
+
+  if (b.hl && (ink === null || ink >= 1)) {
+    // The recited word in the highlight colour, exactly over its place on the line: only its colour
+    // changes (rule 7), with a soft glow in the same colour.
+    const hl = b.hl;
+    const lineW = ctx.measureText(b.lines[hl.line]).width;
+    const pre = hl.before ? ctx.measureText(`${hl.before} `).width : 0;
+    const x = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
+    ctx.save();
+    ctx.textAlign = b.dir === 'rtl' ? 'right' : 'left';
+    ctx.fillStyle = hl.color;
+    ctx.shadowColor = rgba(hl.color, 0.55);
+    ctx.shadowBlur = 18 * px;
+    ctx.globalAlpha = alpha * b.opacity * hl.alpha;
+    ctx.fillText(hl.word, x, top + b.size * b.lh * (hl.line + 0.5));
+    ctx.restore();
   }
 
   if (sweep !== null && sweep > 0 && sweep < 1) {

@@ -8,7 +8,7 @@ import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings 
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
-import { BACKGROUNDS, backgroundById, isBackground, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
+import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
@@ -21,6 +21,10 @@ import {
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
+import { breathOf } from '../engine/cinema';
+import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
+import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
+import { recordReel, popularReciters } from '../data/popular';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
@@ -87,6 +91,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
+  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; project.cinema = localStorage.getItem('cinema') !== '0'; } catch { /* private window: on */ }
   // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
   const draftKey = draft?.id ?? draftId ?? newDraftId();
   const created = draft?.created ?? Date.now();
@@ -125,15 +130,30 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : play()) }, icon('play', 26));
+  const stage = h('div', { class: 'stage' }, canvas, status);
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play().then(() => { if (playing) watch(true); })) }, icon('play', 26));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
   const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
   const redoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.redo'), disabled: true, onclick: () => redo() }, icon('redo'));
   const fullBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.fullScreen'), onclick: () => setFull(!studio.classList.contains('full')) }, icon('full'));
   const setPlayIcon = () => {
+    if (!playing) watch(false);
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
     playBtn.setAttribute('aria-label', ui(playing ? 'ed.pause' : 'ed.play'));
   };
+  // Watching: Play (the button) fades the tools away and the preview fills the screen; a tap on the
+  // preview, Esc or the end of the reel brings them back (and pauses).
+  let wasFull = false;
+  let built = false; // the studio exists (pause() can run while the reel is still loading)
+  function watch(on: boolean) {
+    if (!built || on === studio.classList.contains('watching')) return;
+    if (on) { wasFull = studio.classList.contains('full'); setFull(true); }
+    studio.classList.toggle('watching', on);
+    if (!on) setFull(wasFull);
+  }
+  stage.addEventListener('click', () => { if (studio.classList.contains('watching')) pause(); });
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && studio.classList.contains('watching')) pause(); };
+  document.addEventListener('keydown', onKey);
   function setFull(on: boolean) {
     studio.classList.toggle('full', on);
     fullBtn.replaceChildren(icon(on ? 'unfull' : 'full'));
@@ -519,12 +539,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const [maxHead, maxTail] = trimLimits(base.plan, i);
     const [head, tail] = project.trims[ayahNo(i)] ?? [0, 0];
     return {
-      head: Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
+      head: i === 0 && project.tightStart ? maxHead : Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
       gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : 0,
     };
   }
   const ms = (x: number) => Math.round(x * 1000) / 1000; // edits are kept to the millisecond
   function trimAudio(i: number, head: number, tail: number) {
+    if (i === 0 && project.tightStart && Math.abs(head - audioTrim(0)!.maxHead) > 0.0005) setTightStart(false); // set by hand from now on
     project.trims[ayahNo(i)] = [ms(head), ms(tail)];
     arrange();
     changed();
@@ -564,6 +585,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     v = ms(Math.min(Math.max(v, lo), hi));
     const tr = audioTrim(i)!;
     if (i === 0) {
+      setTightStart(false);
       project.trims[ayahNo(0)] = [ms(natural(0)[0] - v), ms(tr.tail)];
     } else {
       const prev = audioTrim(i - 1)!;
@@ -601,6 +623,16 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     changed();
     toast(ui('ed.silencesTrimmed'));
   }
+  /** Start on the first word (only the reel's start); remembered on this device for the next reel. */
+  function setTightStart(on: boolean) {
+    project.tightStart = on;
+    try { localStorage.setItem('tightStart', on ? '1' : '0'); } catch { /* private window */ }
+  }
+  /** Cinematic touches; remembered on this device for the next reel. */
+  function setCinema(on: boolean) {
+    project.cinema = on;
+    try { localStorage.setItem('cinema', on ? '1' : '0'); } catch { /* private window */ }
+  }
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
   /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
@@ -612,7 +644,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   // --- panels ---
-  const reciterPanel = () => [h('div', { class: 'list' }, ...RECITERS.map((r) =>
+  const reciterButton = (r: Reciter, tag?: string) =>
     h('button', {
       class: `list-item${r.id === project.reciterId ? ' on' : ''}`,
       onclick: () => {
@@ -622,7 +654,214 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         changed();
         void loadAudio();
       },
-    }, h('span', {}, reciterPickerLabel(r)), r.id === project.reciterId ? icon('check', 18) : null)))];
+    }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
+      r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+    r.id === project.reciterId ? icon('check', 18) : null);
+  let popular: { id: number; trending: boolean }[] = [];
+  void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
+  const reciterPanel = () => {
+    const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id), trending: p.trending })).filter((x) => x.r).slice(0, 3);
+    return [
+      top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
+      top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
+      top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
+      h('div', { class: 'list' }, ...RECITERS.map((r) => reciterButton(r))),
+    ].filter(Boolean) as Node[];
+  };
+
+  /** One-tap styles: a finished look (background, mood, text mode, highlight, finishing touches). */
+  const stylePanel = () => [
+    h('div', { class: 'tiles' }, ...STYLES.map((st) => {
+      const b = backgroundById(st.scene);
+      const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
+      return tile({
+        on: currentStyle(project) === st.id, label: tOr(`style.${st.id}`, st.label),
+        art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: bgCss },
+          h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+        onclick: () => {
+          applyStyle(project, st);
+          fitClips();
+          arrange();
+          void loadScenes();
+          changed();
+          previewText();
+        },
+      });
+    })),
+    note(ui('ed.styles-note')),
+  ];
+
+  // --- Quick reel: footage by preference → the recommended style first → text motion → finish ---
+  type QuickStep = 'footage' | 'style' | 'motion' | 'finish';
+  const quick = {
+    step: 'footage' as QuickStep,
+    pref: (() => { try { return localStorage.getItem('quickFootage'); } catch { return null; } })(),
+    hits: [] as StockHit[],
+    searching: false,
+    error: '',
+    loading: null as string | null, // a clip being downloaded
+    pct: 0,
+    footage: null as string | null, // the clip picked here (kept when a style is applied)
+    styled: false, // a vibe or style was applied in the Quick reel
+    auto: false, // ...by the recommendation (not by a tap)
+  };
+  /** The vibe for this moment: the footage picked in this reel, else the local hour. */
+  const quickRecommendation = () => recommendVibe(quick.footage ? quick.pref : null, new Date().getHours());
+  /** Words recited per second (from the word timings), null without them. */
+  function recitedPace(): number | null {
+    const A = (base?.plan ?? plan)?.ayat.filter((a) => a.seq?.length) ?? [];
+    const words = A.reduce((n, a) => n + a.seq!.length, 0);
+    const secs = A.reduce((n, a) => n + Math.max(0, a.last - a.start), 0);
+    return words && secs > 0.5 ? words / secs : null;
+  }
+  const quickRefresh = () => { if (option?.id === 'quick') refreshUI(); };
+  async function quickSearch(pref: string) {
+    quick.pref = pref;
+    try { localStorage.setItem('quickFootage', pref); } catch { /* private window */ }
+    const f = FOOTAGE.find((x) => x.id === pref);
+    if (!f || !stockEnabled()) return quickRefresh();
+    quick.searching = true;
+    quick.error = '';
+    quick.hits = [];
+    quickRefresh();
+    try {
+      const src = await stockSources();
+      const r = await searchStock({ source: src.pixabay ? 'pixabay' : 'pexels', type: 'video', q: f.q, page: 1 });
+      if (quick.pref === pref) quick.hits = r.hits.filter((x) => (x.duration ?? 0) >= 5).slice(0, 6);
+    } catch (e) {
+      quick.error = e instanceof Error ? e.message : String(e);
+    }
+    quick.searching = false;
+    quickRefresh();
+  }
+  async function quickPick(hit: StockHit) {
+    if (exporting || quick.loading) return;
+    quick.loading = stockId(hit);
+    quick.pct = 0;
+    quickRefresh();
+    try {
+      const id = await downloadHit(hit, (f) => { const p = Math.round(f * 100); if (p !== quick.pct) { quick.pct = p; quickRefresh(); } });
+      if (!alive) return;
+      quick.footage = id;
+      project.scenes = [id];
+      project.clips = [];
+      project.sceneMode = 'single';
+      project.sceneLengths = [];
+      fitClips();
+      scenesChanged();
+      changed();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    }
+    quick.loading = null;
+    quickRefresh();
+  }
+  const quickPanel = (): Node[] => {
+    const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['finish', ui('qr.finish')]];
+    const at = steps.findIndex(([v]) => v === quick.step);
+    const go = (v: QuickStep) => {
+      // The recommended vibe is applied the first time the Style step opens (any tap changes it).
+      // It follows the footage until the user picks a vibe or style themselves.
+      if (v === 'style' && (!quick.styled || quick.auto)) {
+        quick.styled = true;
+        quick.auto = true;
+        const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
+        applyVibe(project, quickRecommendation().vibe, keep, pacedMode(recitedPace()));
+        fitClips(); arrange(); void loadScenes(); changed();
+      }
+      quick.step = v; quickRefresh(); panel.scrollTop = 0; panelBody.scrollTop = 0;
+    };
+    const nav = h('div', { class: 'quick-nav' },
+      at > 0 ? h('button', { class: 'chip', onclick: () => go(steps[at - 1][0]) }, ui('common.back')) : h('span', {}),
+      at < steps.length - 1 ? h('button', { class: 'chip on', onclick: () => go(steps[at + 1][0]) }, ui('qr.next')) : null);
+    const head = h('div', { class: 'tabs quick-steps' }, ...steps.map(([v, l], i) =>
+      h('button', { class: `tab${v === quick.step ? ' on' : ''}`, onclick: () => go(v) }, `${i + 1} ${l}`)));
+    let body: (Node | null)[] = [];
+    if (quick.step === 'footage') {
+      const owned = new Set(libraryBackgrounds().map((b) => b.id));
+      body = [
+        note(ui('qr.footage-note')),
+        h('div', { class: 'chips' }, ...FOOTAGE.map((f) => h('button', {
+          class: `chip${quick.pref === f.id ? ' on' : ''}`, disabled: !!quick.loading,
+          onclick: () => void quickSearch(f.id),
+        }, tOr(`qr.f.${f.id}`, f.label)))),
+        !stockEnabled() ? note(ui('qr.no-library')) : null,
+        quick.error ? note(quick.error) : null,
+        quick.searching ? note(ui('qr.searching')) : null,
+        quick.hits.length ? h('div', { class: 'bg-grid' }, ...quick.hits.map((x) => {
+          const id = stockId(x);
+          const busy = quick.loading === id;
+          return h('div', { class: `bg-cell${busy ? ' loading' : ''}` },
+            h('button', {
+              class: `bg-thumb${project.scenes[0] === id ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
+              title: `${x.tags} · ${x.user}`, onclick: () => void quickPick(x),
+            }, h('span', {}, `▶ ${Math.round(x.duration ?? 0)} s`)),
+            busy ? h('div', { class: 'bg-progress', role: 'progressbar', 'aria-valuenow': String(quick.pct) },
+              h('span', { class: 'spinner' }), h('b', {}, `${quick.pct}%`), h('i', { style: `width:${quick.pct}%` })) : null,
+            !busy && owned.has(id) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, ui('qr.saved'))) : null);
+        })) : null,
+        quick.hits.length ? note(ui('qr.footage-credit')) : null,
+      ];
+    } else if (quick.step === 'style') {
+      const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
+      const rec = quickRecommendation();
+      const now = currentVibe(project);
+      const pickStyle = (fn: () => void) => { quick.styled = true; quick.auto = false; fn(); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      const vibeTile = (v: Vibe, recommended: boolean) => tile({
+        on: now === v.id, label: recommended ? `${tOr(`vibe.${v.id}`, v.label)} · ${ui('qr.recommended')}` : tOr(`vibe.${v.id}`, v.label),
+        art: h('span', { class: `style-art${v.grain ? ' grain' : ''}${v.vignette ? ' vignette' : ''}${recommended ? ' rec' : ''}`, style: `background-image:url(${(backgroundById(v.scene) as { thumb?: string }).thumb ?? ''})` },
+          h('span', { class: `style-words${v.highlight ? ' lit' : ''}`, style: `--hl:${v.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+        onclick: () => pickStyle(() => applyVibe(project, v, keep, pacedMode(recitedPace()))),
+      });
+      body = [
+        h('p', { class: 'quick-why' }, ui('qr.why', { when: ui(`qr.when-${rec.why}`, { footage: ui(`qr.f.${quick.pref ?? 'sky'}` as 'qr.f.sky').toLowerCase() }), feel: ui(`qr.feel-${rec.vibe.id}` as 'qr.feel-fajr') })),
+        h('div', { class: 'tiles' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
+        note(ui(keep ? 'qr.vibe-note-footage' : 'qr.vibe-note')),
+        h('p', { class: 'muted small' }, ui('qr.more-looks')),
+        h('div', { class: 'tiles' }, ...STYLES.map((st) => tile({
+          on: !now && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
+          art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
+            h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+          onclick: () => pickStyle(() => { applyStyle(project, st); if (keep) project.scenes = [keep]; }),
+        }))),
+      ];
+    } else if (quick.step === 'motion') {
+      body = [
+        h('div', { class: 'tiles' }, ...QUICK_MOTIONS.map((fx) => tile({
+          on: project.textEffect === fx, label: tOr(`fx.${fx}`, TEXT_EFFECTS.find((e) => e.value === fx)!.label),
+          art: h('span', { class: `fx-sample fx-${fx}` }, 'آية'),
+          onclick: () => { project.textEffect = fx; changed(false); quickRefresh(); previewText(); },
+        }))),
+        note(ui('qr.motion-note')),
+      ];
+    } else {
+      body = [
+        row(ui('ed.cinema'), chips<'on' | 'off'>([{ value: 'on', label: ui('qr.on') }, { value: 'off', label: ui('ed.off') }],
+          () => (project.cinema ? 'on' : 'off'), (v) => setCinema(v === 'on'))),
+        note(ui('ed.cinema-note')),
+        row(ui('ed.tight-start'), chips<'on' | 'off'>([{ value: 'on', label: ui('qr.on') }, { value: 'off', label: ui('ed.off') }],
+          () => (project.tightStart ? 'on' : 'off'), (v) => { setTightStart(v === 'on'); arrange(); })),
+        note(ui('ed.tight-note')),
+        row(ui('qr.mark'), chips<'off' | 'on'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.mark-small') }],
+          () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
+        note(ui('qr.mark-note')),
+        h('button', { class: 'primary brand-btn quick-export', disabled: exportBtn.disabled, onclick: () => void doExport() }, ui('ed.export')),
+        note(ui('qr.finish-note')),
+      ];
+    }
+    return [head, ...body.filter((x): x is Node => !!x), nav];
+  };
+
+  const highlightPanel = () => [
+    chips<'on' | 'off'>([{ value: 'on', label: ui('ed.highlight-on') }, { value: 'off', label: ui('ed.off') }],
+      () => (project.highlight ? 'on' : 'off'), (v) => { project.highlight = v === 'on'; if (project.highlight) previewText(); }, (v) => v === 'off' || wordTimed()),
+    h('div', { class: 'colour-grid' }, ...['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'].map((c) =>
+      h('button', {
+        class: `swatch${project.colors.hl === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${ui('ed.highlight')}: ${c}`,
+        onclick: () => { if (!exporting) { project.colors.hl = c; project.highlight = true; changed(); previewText(); } },
+      }))),
+    note(wordTimed() ? ui('ed.highlight-note') : ui('ed.highlight-needs-timings')),
+  ];
 
   const moodPanel = () => [
     h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
@@ -694,12 +933,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- tools (bottom bar) ---
   const TOOLS: Tool[] = [
+    { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [
+      { id: 'quick', icon: 'sparkle', label: ui('qr.title'), panel: quickPanel },
+      { id: 'styles', icon: 'mood', label: ui('ed.styles'), panel: stylePanel },
+    ] },
     { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), options: [{ id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel }] },
     { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
       { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
       { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
         row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
         note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
+      { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
       { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
     { id: 'mood', icon: 'mood', label: ui('ed.mood'), options: [{ id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel }] },
@@ -710,6 +954,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
         note(syncText),
       ].filter(Boolean) as Node[] },
+      { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
       { id: 'size', icon: 'size', label: ui('ed.size'), panel: () => [chips<TextSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
         () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
@@ -737,6 +982,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
         () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
       { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
+      { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
+      { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
     ] },
     { id: 'translation', icon: 'translation', label: ui('ed.translation'), options: [
       { id: 'tr-show', icon: 'show', label: ui('ed.show'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
@@ -951,11 +1199,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
       h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
-    h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
+    h('div', { class: 'studio-stage' }, stage),
     h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
     overlay);
   root.append(studio);
+  built = true;
+  // A new reel opens on the styles: one tap for a finished look, then Export.
+  if (!draft) {
+    tool = TOOLS[0];
+    option = tool.options[0];
+  }
   refreshUI();
 
   capabilities().then(({ path }) => {
@@ -978,6 +1232,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
     dirty = true;
   };
+
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
   window.visualViewport?.addEventListener('resize', resize);
@@ -995,7 +1250,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const was = playing; // keep watching while editing
     pause();
     plan = arrangeReel(base.plan, pc);
-    audio = pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    audio = plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
     spine.setAudio(audio);
     rebuild();
     if (was) void play();
@@ -1016,6 +1271,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
+    if (audio) tl.breath = breathOf(audio);
     spine.invalidate();
     if (t > tl.duration) t = 0;
     if (selection?.kind === 'scene' && selection.index >= tl.scenes.length) selection = null;
@@ -1244,6 +1500,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const canShare = !!navigator.canShare?.({ files: [file] });
       const secs = ((performance.now() - started) / 1000).toFixed(1);
       progressRow.hidden = true;
+      void recordReel(project.reciterId, n, from, to);
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
         h('p', { class: 'small' }, `✓ ${ui('ed.made', { s: secs, mb: (blob.size / 1e6).toFixed(1), q: quality === 1920 ? '1080P' : '720P' })}`),
@@ -1269,6 +1526,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   return () => {
     if (saveTimer) void saveNow(); // an edit not yet saved
     alive = false;
+    document.removeEventListener('keydown', onKey);
     cancelAnimationFrame(raf);
     ro.disconnect();
     window.visualViewport?.removeEventListener('resize', resize);

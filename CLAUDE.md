@@ -308,6 +308,51 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Hide surah name (owner request): `project.surahName` (remembered with the look); the layout
       shrinks the title block to the reference line, which always stays (rule 2)
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
+- [x] Studio styles + popular reciters (owner request 2026-10-13, "head to it instead of CapCut"):
+      **word highlight** (`project.highlight`, colour `colors.hl`): the word being recited is drawn again
+      over its place in the highlight colour with a soft glow (`highlightAt()` in `render.ts`, line
+      word counts `Fit.counts`; only with word timings, rule 8; colour change only, rule 7); finishing
+      touches `grain` (fixed noise tile, moved 12×/s, pure in t) and `vignette`, over the background
+      only. **Styles** (`src/engine/styles.ts`, 7 one-tap looks: mood + background + text mode +
+      highlight + touches; first tool, opened by itself on a new reel; moving tiles). **Reciters**
+      without word timings (everyayah only, Ayah mode; `qdc: false`, ids 1001–1006: Muaiqly, Qatami,
+      Ghamdi, Ajamy, Abbad, Juhany; never in the mushaf player or Kids space: `TIMED_RECITERS`).
+      **Popular this week** (`src/data/popular.ts`): an exported reel adds an anonymous daily count
+      per reciter and ayah range (migration `20261015000000_studio_styles_popular.sql`: `reel_counts`,
+      no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
+      `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
+      and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
+      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi / Raad Al Kurdi:
+      no verified source with CORS (not on everyayah or QDC), so not added
+- [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
+      reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
+      localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
+      tapped, becomes the single scene) → **Style**: five **vibes** (`VIBES` in `src/engine/styles.ts`:
+      Tahajjud, Fajr, After rain, Golden hour, Stillness — mood + scene + highlight + effect + pauses),
+      the recommended one first with a line saying why ("Recommended for tonight: slow and quiet…"):
+      `recommendVibe()` = the footage picked in this reel (Night → Tahajjud, Sky/Light → Fajr,
+      Rain/Sea/Forest → After rain, Desert/Mountains → Golden hour), else the local hour (20–4 Tahajjud,
+      4–8 Fajr, 16–20 Golden hour, else After rain); text mode from the reciter's pace (`pacedMode()`:
+      > 1.7 words/s → Line, else Ayah). Applied by itself when the step opens and follows the footage until
+      the user taps a vibe; the others and "More looks" (the 7 styles) are one tap away; footage kept.
+      Never chosen from an ayah's meaning (no interpretation of the Quran) → **Text** (Fade, Rise, Ink
+      reveal, Glow) → **Finish** (Cinematic, Start on the first word, Ayah Studio mark Off / Small, Export)
+- [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
+      `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
+      `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`
+      before the voice found by `voiceOnset()`); the pauses between ayat are untouched. Switch in Quick
+      reel → Finish and Audio → Start on voice; trimming the start by hand turns it off. The editor now
+      rearranges the audio whenever any piece moves (trims alone used to leave it unarranged)
+- [x] Cinematic (owner request 2026-10-13, "premium, emotional"): `project.cinema` (new reels on;
+      per-device pref `cinema`; not in the look, so gifts are unchanged), `src/engine/cinema.ts`, all pure
+      in t: **breath** — the Arabic's halo swells with the reciter's loudness (`breathOf(audio)`: 50 Hz
+      RMS, scaled to a full voice, smoothed both ways; set on `Timeline.breath` by the editor; light
+      only, rule 7); **open/close** — the background rises out of black (1.4 s) and settles to 85 % black
+      over the last 1.6 s, drawn under the text and the reference (rule 2); **drift** — the background
+      scales 1 → 1.07 over the reel; **depth** — a 1/10-size copy of the background laid over it while
+      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
+      button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
+      the end pauses and brings them back
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
