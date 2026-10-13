@@ -1,6 +1,6 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
 import { TEXT_EFFECTS, type TextEffect } from './effects';
-import { clampArSize, type EnFont, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
+import { clampArSize, isFormat, type EnFont, type Format, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
 import { validTranslation } from '../data/translations';
 import { MAX_SCENES, SLOWMO, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
@@ -91,6 +91,8 @@ export interface Project {
   series?: { part: number; of: number };
   /** Learning reel: the synced word meanings drawn large under the words (Words mode, word timings only). */
   learn?: boolean;
+  /** Video format (default 9:16). Per device like cinema (not in the look, so gifts stay 9:16). */
+  format?: Format;
 }
 
 export interface Closing {
@@ -116,6 +118,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   watermark: p.watermark,
   textSize: p.textSize,
   arSize: p.arSize,
+  format: p.format,
   learn: !!p.learn && p.textMode === 'words' && p.showTranslation && p.translationMode === 'words',
   enFont: p.enFont,
 });
@@ -265,6 +268,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (typeof d.arSize === 'number' && Number.isFinite(d.arSize)) p.arSize = clampArSize(d.arSize);
   p.tajweed = d.tajweed === true;
   p.learn = d.learn === true;
+  if (isFormat(d.format)) p.format = d.format;
   const sr = d.series;
   if (sr && Number.isInteger(sr.part) && Number.isInteger(sr.of) && sr.part >= 1 && sr.part <= sr.of && sr.of <= 200) p.series = { part: sr.part, of: sr.of };
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;

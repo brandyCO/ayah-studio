@@ -1,6 +1,5 @@
 // Startup capability check: which export path can this device use?
 import { SAMPLE_RATE } from '../data/audio';
-import { H, W } from './layout';
 
 export interface ExportPath {
   container: 'mp4' | 'webm';
@@ -24,7 +23,7 @@ const AVC = [
 const VP9 = 'vp09.00.40.08';
 
 async function videoSupport(codec: string): Promise<'hardware' | 'software' | null> {
-  const cfg: VideoEncoderConfig = { codec, width: W, height: H, framerate: 30, bitrate: 8_000_000 };
+  const cfg: VideoEncoderConfig = { codec, width: 1080, height: 1920, framerate: 30, bitrate: 8_000_000 };
   const hw = await VideoEncoder.isConfigSupported({ ...cfg, hardwareAcceleration: 'prefer-hardware' }).catch(() => null);
   if (hw?.supported) return 'hardware';
   const any = await VideoEncoder.isConfigSupported(cfg).catch(() => null);

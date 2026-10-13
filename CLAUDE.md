@@ -388,6 +388,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `MAX_AYAT`, lengths from the reciter's QDC timings, else ~0.55 s a word) → one draft per part with this
       reel's look, `project.series {part, of}` and the closing card on (this reel becomes part 1; ≤ 30 parts),
       then `#/drafts`. "Part k of N" on the intro/closing card, in the caption and in the drafts list
+- [x] Formats (owner request 2026-10-13): `project.format` 9:16 (default) / 1:1 (1080×1080) / 16:9
+      (1920×1080); per-device pref `format`, not in the look (gifts stay 9:16). `W`, `H`, `SAFE`, `TEXT_W` in
+      `layout.ts` are live bindings set by `setFrame()`, which `frameLayout()` and `render()` call with the
+      reel's format, so every layout and drawing follows it (text width capped at 1400 on 16:9). Export keeps
+      the short side (1080 / 720). Quick reel → Layout and Layout → Format; the preview stage takes the
+      format's shape. `npm run check` covers square and wide layouts
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
       `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
       `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`

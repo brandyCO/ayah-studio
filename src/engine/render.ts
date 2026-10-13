@@ -6,7 +6,7 @@ import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
 import { tajweedLines } from './tajweed';
 import { breathAt, darken, drift, shade, soften } from './cinema';
-import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
+import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, setFrame, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
 import { reference } from '../data/quran';
@@ -284,6 +284,7 @@ function drawClosing(ctx: CanvasRenderingContext2D, c: NonNullable<Project['clos
 
 /** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */
 export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: (BackgroundMedia | undefined)[]) {
+  setFrame(project.format);
   ctx.save();
   const cine = !!project.cinema;
   const spans = sceneSpans(tl.scenes, project.transition);

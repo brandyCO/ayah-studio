@@ -14,7 +14,7 @@ import { newDraftId, saveDraft, draftHash } from '../data/drafts';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings, type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
 import { BUILT_IN_BACKGROUNDS, backgroundById, disposeMedia, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
-import { H, W } from '../engine/layout';
+import { H, setFrame, W } from '../engine/layout';
 import { applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, strictLook, type Look, type Project } from '../engine/project';
 import { arrangeReel, voiceOnset } from '../engine/recitation';
 import { render } from '../engine/render';
@@ -364,6 +364,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
   // Canvas size: one pixel per screen pixel, never more than the export's 1080.
   const resize = () => {
     const w = Math.min(1080, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1))) || 540;
+    setFrame(); // gifts are always 9:16
     canvas.width = w;
     canvas.height = Math.round((w * H) / W);
     ctx.setTransform(w / W, 0, 0, w / W, 0, 0);
