@@ -15,7 +15,7 @@ import {
   daysToRamadan, mostReturned, PAGES, planPages, ramadanData, ramadanNow, ramadanSettings, setPlan, setRamadanSettings, setRecapSeen,
   setWelcomed, todayPortion, type Plan,
 } from '../data/ramadan';
-import { DEFAULT_RECITER, reciterById } from '../data/reciters';
+import { DEFAULT_RECITER, reciterById, reciterFor } from '../data/reciters';
 import { MOODS, applyMood } from '../engine/moods';
 import { applyLook, newProject } from '../engine/project';
 import { isNative } from '../native';
@@ -100,7 +100,7 @@ async function tonightsAyah(): Promise<{ s: number; a: number }> {
 }
 
 async function newReel(s: number, a: number, setup: (p: ReturnType<typeof newProject>) => void) {
-  const p = newProject(s, a, a, reciterById(reelReciter(DEFAULT_RECITER)).id);
+  const p = newProject(s, a, a, reciterFor(reelReciter(DEFAULT_RECITER), s).id);
   applyLook(p, reelLook(), () => true);
   setup(p);
   const id = newDraftId();

@@ -6,7 +6,7 @@
 // Names are user text: shown in the UI font, never like the ayah. Calm: no scores, no ranking.
 import { account, onAccount } from '../cloud/auth';
 import { newDraftId, saveDraft, draftHash } from '../data/drafts';
-import { DEFAULT_RECITER, reciterById } from '../data/reciters';
+import { DEFAULT_RECITER, reciterById, reciterFor } from '../data/reciters';
 import { applyLook, newProject } from '../engine/project';
 import {
   cachedCircles, createCircle, deleteCircle, errorText, inviteLink, joinCircle, leaveCircle, loadCircle, loadCircles, MEMBER_COLORS,
@@ -423,7 +423,7 @@ async function share(st: CircleState) {
 
 /** Opens the editor on the closing ayat (An-Nas) with the circle and its members on the closing card. */
 export async function makeKhatmReel(st: CircleState) {
-  const p = newProject(114, 1, 6, reciterById(reelReciter(DEFAULT_RECITER)).id);
+  const p = newProject(114, 1, 6, reciterFor(reelReciter(DEFAULT_RECITER), 114).id);
   applyLook(p, reelLook(), () => true);
   p.outro = true;
   const when = st.circle.completed_at ? new Date(st.circle.completed_at) : new Date();

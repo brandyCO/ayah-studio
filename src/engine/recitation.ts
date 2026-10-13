@@ -28,12 +28,12 @@ export interface PlannedAyah {
 }
 
 export interface ReelPlan {
-  source: 'qdc' | 'everyayah';
+  source: 'qdc' | 'everyayah' | 'mp3quran';
   duration: number;
   ayat: PlannedAyah[];
   /** Every ayah has word timings, so all text modes are offered. */
   wordTimed: boolean;
-  /** qdc: the slice of the surah recording (file seconds) placed at LEAD_IN. */
+  /** qdc, mp3quran: the slice of the surah recording (file seconds) placed at LEAD_IN. */
   clip?: [number, number];
   /** everyayah: reel offset of each ayah's clip. */
   offsets?: number[];

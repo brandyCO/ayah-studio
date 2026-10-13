@@ -12,7 +12,8 @@ import { account, onAccount } from '../cloud/auth';
 import { arrangeAudio } from '../data/audio';
 import { newDraftId, saveDraft, draftHash } from '../data/drafts';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings, type SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel } from '../data/reciters';
+import { UncheckedRange } from '../data/mp3quran';
+import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterFor, reciterPickerLabel } from '../data/reciters';
 import { BUILT_IN_BACKGROUNDS, backgroundById, disposeMedia, loadBackground, type BackgroundMedia } from '../engine/backgrounds';
 import { H, setFrame, W } from '../engine/layout';
 import { applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, strictLook, type Look, type Project } from '../engine/project';
@@ -90,7 +91,7 @@ export interface GiftSource {
   reciter: number;
 }
 function defaultSource(s: SurahMeta, lo: number, hi: number): GiftSource {
-  const p = newProject(s.n, lo, hi, reciterById(reelReciter(DEFAULT_RECITER)).id);
+  const p = newProject(s.n, lo, hi, reciterFor(reelReciter(DEFAULT_RECITER), s.n).id);
   applyLook(p, reelLook(), () => true);
   return { look: lookOf(p), reciter: p.reciterId };
 }
@@ -103,7 +104,7 @@ export function openGiftComposer(s: SurahMeta, lo: number, hi: number, src?: Gif
   const d = sheet('gift-sheet', head(tr('gift.title'), () => d.close()), body);
 
   const reciter = h('select', { class: 'search', 'aria-label': tr('kids.reciter') },
-    ...RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === source.reciter }, reciterPickerLabel(r))));
+    ...RECITERS.filter((r) => covers(r, s.n)).map((r) => h('option', { value: String(r.id), selected: r.id === source.reciter }, reciterPickerLabel(r))));
   const message = h('textarea', { class: 'search gift-msg', maxlength: MESSAGE_MAX, rows: 2, placeholder: tr('gift.msgPh'), 'aria-label': tr('gift.message') });
   const count = h('span', { class: 'muted small gift-count' }, `0/${MESSAGE_MAX}`);
   message.addEventListener('input', () => (count.textContent = `${message.value.length}/${MESSAGE_MAX}`));
@@ -288,9 +289,14 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
     const english = allEn.slice(from - 1, to);
     const meanings = arabic.map((text, i) => wordMeanings(allWbw[from - 1 + i], parseSpans(wordMap[`${n}:${from + i}`]), displayWords(text).length));
     await Promise.all([document.fonts.load('80px "UthmanicHafs"', arabic[0]), document.fonts.load('54px "AmiriQuran"', s.ar), document.fonts.load('40px Nunito', 'Aa')]).catch(() => {});
-    const r = reciterById(project.reciterId);
+    let r = reciterFor(project.reciterId, n);
     const [reel, scenes] = await Promise.all([
-      loadReel(r, n, from, arabic, wordMap, () => {}),
+      loadReel(r, n, from, arabic, wordMap, () => {}).catch((e) => {
+        // An mp3quran recording not verified for these ayat: the default reciter instead (and its credit).
+        if (!(e instanceof UncheckedRange)) throw e;
+        r = reciterById(DEFAULT_RECITER);
+        return loadReel(r, n, from, arabic, wordMap, () => {});
+      }),
       Promise.all(project.scenes.map((sid) => loadBackground(backgroundById(sid)).catch(() => ({ bg: backgroundById('charcoal') }) as BackgroundMedia))),
     ]);
     if (!alive) return;

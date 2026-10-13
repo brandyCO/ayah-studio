@@ -11,7 +11,7 @@ select ok(not valid_gift_look('{"highlight":"yes"}'), 'highlight must be a boole
 select ok(not valid_gift_look('{"colors":{"hl":"gold"}}'), 'the highlight colour must be #rrggbb');
 select ok(valid_gift_look('{"transition":"lightbloom","scenes":["light:dawn"]}'), 'earlier looks still pass');
 select ok(valid_reciter(1001) and valid_reciter(1006) and valid_reciter(7), 'the new reciters and the earlier ones are known');
-select ok(valid_reciter(1026) and not valid_reciter(1027), 'the everyayah reciters are known, an unknown one is rejected');
+select ok(valid_reciter(1026) and valid_reciter(1036) and not valid_reciter(1037) and not valid_reciter(1000), 'the everyayah and mp3quran reciters are known, an unknown one is rejected');
 
 select is((popular_this_week() -> 'reciters'), '[]'::jsonb, 'nothing is shown before 20 reels');
 select throws_ok($$ select record_reel(9999, 1, 1, 7) $$, '22023', 'Unknown reciter', 'an unknown reciter is refused');

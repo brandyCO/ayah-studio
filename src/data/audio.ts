@@ -2,7 +2,7 @@
 // fetched and trimmed by its timings. Fallback: everyayah.com per-ayah files (no word timings).
 import { cachedBytes } from './audioCache';
 import { decodeMp3Span, VbrError, type DecodedSpan } from './mp3';
-import { everyayahUrl, type Reciter } from './reciters';
+import { DEFAULT_RECITER, everyayahUrl, reciterById, type Reciter } from './reciters';
 import type { AudioPiece } from '../engine/recitation';
 
 export const SAMPLE_RATE = 48_000;
@@ -23,8 +23,10 @@ async function download(url: string): Promise<ArrayBuffer> {
   return bytes.slice().buffer;
 }
 
-/** One ayah from everyayah.com (cached in memory; the HTTP cache keeps the MP3). */
+/** One ayah from everyayah.com (cached in memory; the HTTP cache keeps the MP3). A reciter who is not
+ *  on everyayah (mp3quran only) is replaced by the default one. */
 export function ayahAudio(r: Reciter, surah: number, ayah: number): Promise<AudioBuffer> {
+  if (!r.everyayah) r = reciterById(DEFAULT_RECITER);
   const key = `${r.everyayah}/${surah}/${ayah}`;
   if (!decoded.has(key)) {
     const p = download(everyayahUrl(r, surah, ayah)).then(decode);
