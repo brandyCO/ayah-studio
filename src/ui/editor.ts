@@ -22,7 +22,7 @@ import {
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import { breathOf } from '../engine/cinema';
-import { applyRecommended, applyStyle, isRecommended, currentStyle, FOOTAGE, QUICK_MOTIONS, RECOMMENDED, STYLES } from '../engine/styles';
+import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
 import {
@@ -702,7 +702,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     loading: null as string | null, // a clip being downloaded
     pct: 0,
     footage: null as string | null, // the clip picked here (kept when a style is applied)
+    styled: false, // a vibe or style was applied in the Quick reel
+    auto: false, // ...by the recommendation (not by a tap)
   };
+  /** The vibe for this moment: the footage picked in this reel, else the local hour. */
+  const quickRecommendation = () => recommendVibe(quick.footage ? quick.pref : null, new Date().getHours());
+  /** Words recited per second (from the word timings), null without them. */
+  function recitedPace(): number | null {
+    const A = (base?.plan ?? plan)?.ayat.filter((a) => a.seq?.length) ?? [];
+    const words = A.reduce((n, a) => n + a.seq!.length, 0);
+    const secs = A.reduce((n, a) => n + Math.max(0, a.last - a.start), 0);
+    return words && secs > 0.5 ? words / secs : null;
+  }
   const quickRefresh = () => { if (option?.id === 'quick') refreshUI(); };
   async function quickSearch(pref: string) {
     quick.pref = pref;
@@ -748,7 +759,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const quickPanel = (): Node[] => {
     const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['finish', ui('qr.finish')]];
     const at = steps.findIndex(([v]) => v === quick.step);
-    const go = (v: QuickStep) => { quick.step = v; quickRefresh(); panel.scrollTop = 0; panelBody.scrollTop = 0; };
+    const go = (v: QuickStep) => {
+      // The recommended vibe is applied the first time the Style step opens (any tap changes it).
+      // It follows the footage until the user picks a vibe or style themselves.
+      if (v === 'style' && (!quick.styled || quick.auto)) {
+        quick.styled = true;
+        quick.auto = true;
+        const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
+        applyVibe(project, quickRecommendation().vibe, keep, pacedMode(recitedPace()));
+        fitClips(); arrange(); void loadScenes(); changed();
+      }
+      quick.step = v; quickRefresh(); panel.scrollTop = 0; panelBody.scrollTop = 0;
+    };
     const nav = h('div', { class: 'quick-nav' },
       at > 0 ? h('button', { class: 'chip', onclick: () => go(steps[at - 1][0]) }, ui('common.back')) : h('span', {}),
       at < steps.length - 1 ? h('button', { class: 'chip on', onclick: () => go(steps[at + 1][0]) }, ui('qr.next')) : null);
@@ -782,22 +804,26 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       ];
     } else if (quick.step === 'style') {
       const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
-      const pickStyle = (fn: () => void) => { fn(); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      const rec = quickRecommendation();
+      const now = currentVibe(project);
+      const pickStyle = (fn: () => void) => { quick.styled = true; quick.auto = false; fn(); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      const vibeTile = (v: Vibe, recommended: boolean) => tile({
+        on: now === v.id, label: recommended ? `${tOr(`vibe.${v.id}`, v.label)} · ${ui('qr.recommended')}` : tOr(`vibe.${v.id}`, v.label),
+        art: h('span', { class: `style-art${v.grain ? ' grain' : ''}${v.vignette ? ' vignette' : ''}${recommended ? ' rec' : ''}`, style: `background-image:url(${(backgroundById(v.scene) as { thumb?: string }).thumb ?? ''})` },
+          h('span', { class: `style-words${v.highlight ? ' lit' : ''}`, style: `--hl:${v.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+        onclick: () => pickStyle(() => applyVibe(project, v, keep, pacedMode(recitedPace()))),
+      });
       body = [
-        h('div', { class: 'tiles' },
-          tile({
-            on: isRecommended(project), label: ui('qr.recommended'),
-            art: h('span', { class: 'style-art grain vignette rec', style: `background-image:url(${(backgroundById(keep ?? RECOMMENDED.scene) as { thumb?: string }).thumb ?? ''})` },
-              h('span', { class: 'style-words lit', style: `--hl:${RECOMMENDED.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
-            onclick: () => pickStyle(() => applyRecommended(project, keep)),
-          }),
-          ...STYLES.filter((st) => st !== RECOMMENDED).map((st) => tile({
-            on: !isRecommended(project) && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
-            art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
-              h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
-            onclick: () => pickStyle(() => { applyStyle(project, st); if (keep) project.scenes = [keep]; }),
-          }))),
-        note(ui(keep ? 'qr.style-note-footage' : 'qr.style-note')),
+        h('p', { class: 'quick-why' }, ui('qr.why', { when: ui(`qr.when-${rec.why}`, { footage: ui(`qr.f.${quick.pref ?? 'sky'}` as 'qr.f.sky').toLowerCase() }), feel: ui(`qr.feel-${rec.vibe.id}` as 'qr.feel-fajr') })),
+        h('div', { class: 'tiles' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
+        note(ui(keep ? 'qr.vibe-note-footage' : 'qr.vibe-note')),
+        h('p', { class: 'muted small' }, ui('qr.more-looks')),
+        h('div', { class: 'tiles' }, ...STYLES.map((st) => tile({
+          on: !now && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
+          art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
+            h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+          onclick: () => pickStyle(() => { applyStyle(project, st); if (keep) project.scenes = [keep]; }),
+        }))),
       ];
     } else if (quick.step === 'motion') {
       body = [

@@ -327,10 +327,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
-      tapped, becomes the single scene) → **Style** (**Recommended** first = Gold words + fade + 0.5 s
-      pause, `applyRecommended()` in `src/engine/styles.ts`; the picked footage is kept) → **Text** (Fade,
-      Rise, Ink reveal, Glow) → **Finish** (Ayah Studio mark Off / Small, Export). "Recommended" is a curated
-      default, not ranked by data yet
+      tapped, becomes the single scene) → **Style**: five **vibes** (`VIBES` in `src/engine/styles.ts`:
+      Tahajjud, Fajr, After rain, Golden hour, Stillness — mood + scene + highlight + effect + pauses),
+      the recommended one first with a line saying why ("Recommended for tonight: slow and quiet…"):
+      `recommendVibe()` = the footage picked in this reel (Night → Tahajjud, Sky/Light → Fajr,
+      Rain/Sea/Forest → After rain, Desert/Mountains → Golden hour), else the local hour (20–4 Tahajjud,
+      4–8 Fajr, 16–20 Golden hour, else After rain); text mode from the reciter's pace (`pacedMode()`:
+      > 1.7 words/s → Line, else Ayah). Applied by itself when the step opens and follows the footage until
+      the user taps a vibe; the others and "More looks" (the 7 styles) are one tap away; footage kept.
+      Never chosen from an ayah's meaning (no interpretation of the Quran) → **Text** (Fade, Rise, Ink
+      reveal, Glow) → **Finish** (Cinematic, Start on the first word, Ayah Studio mark Off / Small, Export)
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
       `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
       `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`
