@@ -99,3 +99,35 @@ export function arrangeAudio(src: AudioBuffer, pieces: AudioPiece[], duration: n
   }
   return out;
 }
+
+/**
+ * The finished recitation, as platforms like it: brought to one steady loudness (speech around
+ * -18 dBFS RMS, peaks kept under -1 dBFS) with a soft fade at the very start and end. Nothing is added
+ * (rule 3); the words are untouched. Same input → same output, so preview = export.
+ */
+export function polishAudio(src: AudioBuffer): AudioBuffer {
+  const R = src.sampleRate, n = src.length, chs = Math.min(2, src.numberOfChannels);
+  const data = Array.from({ length: chs }, (_, c) => src.getChannelData(c));
+  // Speech loudness: mean power of 50 ms windows above a -45 dBFS gate (silences don't count).
+  const win = Math.max(1, Math.round(0.05 * R));
+  let sum = 0, count = 0, peak = 0;
+  for (let i = 0; i < n; i += win) {
+    let p = 0;
+    const e = Math.min(n, i + win);
+    for (let c = 0; c < chs; c++) for (let j = i; j < e; j++) { const v = data[c][j]; p += v * v; if (Math.abs(v) > peak) peak = Math.abs(v); }
+    p /= (e - i) * chs;
+    if (p > 3.2e-5) { sum += p; count++; }
+  }
+  const rms = count ? Math.sqrt(sum / count) : 0;
+  const gain = rms > 0 ? Math.min(8, Math.max(0.25, 0.126 / rms), peak > 0 ? 0.89 / peak : 8) : 1;
+  const out = new AudioBuffer({ length: n, numberOfChannels: 2, sampleRate: R });
+  const fin = Math.min(n, Math.round(0.03 * R)), fout = Math.min(n, Math.round(0.35 * R));
+  for (let c = 0; c < 2; c++) {
+    const seg = data[Math.min(c, chs - 1)].slice();
+    for (let i = 0; i < n; i++) seg[i] *= gain;
+    for (let i = 0; i < fin; i++) seg[i] *= Math.sin((Math.PI / 2) * (i / fin));
+    for (let i = 0; i < fout; i++) seg[n - 1 - i] *= Math.sin((Math.PI / 2) * (i / fout));
+    out.copyToChannel(seg, c);
+  }
+  return out;
+}

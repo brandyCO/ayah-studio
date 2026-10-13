@@ -233,7 +233,8 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
     ctx.font = i === 0 && intro ? `italic 36px ${FONT_EN}` : `500 32px ${FONT_UI}`;
     ctx.fillText(x, W / 2, cy + 125 + i * 54);
   });
-  if (!intro && project.closing) drawClosing(ctx, project.closing, cy + 125 + notes.length * 54 + 40, alpha);
+  const closing = project.closing ?? (project.dedication ? { title: project.dedication, names: [] } : null);
+  if (!intro && closing) drawClosing(ctx, closing, cy + 125 + notes.length * 54 + 40, alpha);
   ctx.globalAlpha = 1;
 }
 

@@ -65,6 +65,9 @@ export interface Project {
   /** Extra lines on the closing card (the Khatm reel: circle and member names). User text: drawn in
    *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
   closing?: Closing;
+  /** A dedication in the user's own words ("For my mother"), on the closing card in the UI font, never
+   *  near the ayah. Not in the look (each reel its own). */
+  dedication?: string;
   watermark: boolean;
   /** Word highlight: the word being recited turns `colors.hl` (only with word timings: rule 8). */
   highlight: boolean;
@@ -88,6 +91,10 @@ export interface Closing {
   title: string; // ≤ 80 characters
   names: string[]; // ≤ 60 names, ≤ 40 characters each
 }
+/** A dedication as the user typed it, without control characters, at most DEDICATION_MAX characters. */
+export const DEDICATION_MAX = 60;
+export const cleanDedication = (x: string) => x.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, DEDICATION_MAX);
+
 const validClosing = (c: unknown): c is Closing => {
   const x = c as Closing;
   return !!x && typeof x.title === 'string' && x.title.length <= 80 && Array.isArray(x.names) && x.names.length <= 60
@@ -251,6 +258,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (typeof d.arSize === 'number' && Number.isFinite(d.arSize)) p.arSize = clampArSize(d.arSize);
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
+  if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
 }
 
 /** JSON with object keys sorted (the database may store them in another order). */

@@ -18,6 +18,8 @@ const P: Record<string, string> = {
   translation: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
   layout: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/>',
   back: '<path d="M15 6l-6 6 6 6"/>',
+  restart: '<path d="M6 5v14"/><path d="M19 5v14l-10-7z" fill="currentColor" stroke="none"/>',
+  dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor"/><circle cx="15" cy="15" r="1.2" fill="currentColor"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/><circle cx="9" cy="15" r="1.2" fill="currentColor"/>',
   left: '<path d="M15 6l-6 6 6 6"/>',
   right: '<path d="M9 6l6 6-6 6"/>',
   clip: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M10.5 9.5v5l4-2.5z"/>',

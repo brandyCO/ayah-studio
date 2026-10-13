@@ -507,8 +507,8 @@ section.sheet .sheet-head h2 { font-size: 15px; }
 
 /* export page */
 .export-overlay {
-  position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; align-items: center; justify-content: center;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: safe center;
+  overflow-y: auto; padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
 }
 .export-progress { width: min(360px, 100%); text-align: center; }
 .export-pct { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1311,3 +1311,35 @@ dialog.circle-full::backdrop { background: #04071c; }
 }
 .swatch-off { background: none; border: 1px dashed var(--muted); color: var(--muted); font-size: 11px; }
 .swatch:disabled { opacity: .35; cursor: default; }
+/* Transport: back to the start beside Play */
+.play-group { display: flex; align-items: center; gap: 4px; }
+/* Premiere: Export plays the reel full screen first; this bar renders it or goes back */
+.premiere-bar {
+  display: none; position: fixed; inset-inline: 12px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 30;
+  max-width: 460px; margin: 0 auto; padding: 12px 14px; border-radius: 16px;
+  background: rgba(8, 14, 12, .72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  color: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); align-items: center; justify-content: space-between; gap: 10px;
+}
+.studio.premiere .premiere-bar { display: flex; animation: premiere-in .6s ease both; }
+.premiere-title { margin: 0; font-weight: 650; }
+.premiere-actions { display: flex; gap: 8px; align-items: center; }
+.premiere-actions .primary { padding: 8px 16px; }
+@keyframes premiere-in { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .studio.premiere .premiere-bar { animation: none; } }
+/* Export page: trust line, caption, make another */
+.share-extras { width: min(520px, 100%); margin: 14px auto 0; display: grid; gap: 10px; }
+.trust-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 13px; color: var(--accent); }
+.trust-line svg { flex: none; margin-top: 2px; }
+.caption-box { display: grid; gap: 6px; }
+.caption-box p { margin: 0; }
+.caption-text { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: 13px/1.45 system-ui, sans-serif; resize: vertical; }
+.caption-box .chip { justify-self: start; }
+.make-another { margin-top: 10px; }
+.make-another p { margin: 0 0 6px; }
+.quick-try .chip { display: inline-flex; align-items: center; gap: 6px; }
+/* Vibe tiles over the user's own footage: each vibe's colour grade as a soft filter */
+.style-art.tint-warm { filter: sepia(.3) saturate(1.1); }
+.style-art.tint-golden { filter: sepia(.5) saturate(1.3) hue-rotate(-8deg); }
+.style-art.tint-cool { filter: saturate(.8) hue-rotate(12deg) brightness(.92); }
+.style-art.tint-dusk { filter: hue-rotate(-22deg) saturate(1.1) brightness(.9); }
+.style-art.tint-mono { filter: grayscale(1); }

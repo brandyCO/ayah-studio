@@ -349,7 +349,24 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Medium 80 = 70 %; `project.arSize`, per device pref `arSize`, not in the look — `textSize` follows the
       nearest S/M/L for gifts): Quick reel → Layout and Text → Size. The legible floor is now 52 px when the
       user picks it (else long text still shrinks to 64 px); bigger settings keep Medium's steps, so a long
-      ayah is never smaller than at Medium Owner request 2026-10-13 (second pass). The studio preview's
+      ayah is never smaller than at Medium
+- [x] Studio love pass (owner request 2026-10-13): **⏮ back to the start** beside Play; **premiere** —
+      the first Export of a version plays the whole reel full screen from the start with a bar (Keep
+      editing / Export), unchanged since → Export goes straight on; **first reel** — the first reel on a
+      device starts with the recommended vibe and plays as a premiere by itself (pref `studioSeen`);
+      **polished sound** — `polishAudio()` (`src/data/audio.ts`): speech brought to ≈ −18 dBFS RMS (gain
+      0.25–8×, peaks ≤ −1 dBFS), 30 ms fade in / 350 ms fade out, preview = export, nothing added (rule 3);
+      **export page** while the video is made: a trust line ("Quran text exact … words synced to {reciter}"
+      or "whole ayat … no timing guessed") and an editable **caption** (dedication, reference, the whole-ayah
+      translation only when it fits whole (≤ 1400 chars; never cut), translator, reciter, background
+      credits, #Quran #QuranRecitation #Surah #Reciter) + Copy; Android: a local notification "Your reel
+      is ready" when it finishes in the background; **Make another like this** (result page: Next ayat /
+      Choose other ayat; sessionStorage `reelKeepLook` → the new reel keeps the look and opens on Finish);
+      **dedication** (`project.dedication` ≤ 60 chars, user text in the UI font on the closing card under
+      the reference via `drawClosing`, turns the card on; Quick reel → Finish and Layout → Dedication);
+      Quick reel → Style: **Try another** (a random other vibe + motion, own choices and footage kept;
+      Previous goes back) and, with footage picked, vibe tiles show **their own clip** tinted by each
+      vibe's grade Owner request 2026-10-13 (second pass). The studio preview's
       height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
       stretches it
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
