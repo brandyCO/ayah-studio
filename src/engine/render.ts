@@ -2,7 +2,7 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import type { BackgroundMedia } from './backgrounds';
-import { drawText, setTextShadow } from './effects';
+import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
 import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { GRADES, SCRIM_STRENGTH } from './moods';
@@ -10,7 +10,7 @@ import type { Project } from './project';
 import { reference } from '../data/quran';
 import { reciterCredit } from '../data/reciters';
 import type { TimedNote } from './segments';
-import type { Timeline, TimedAyah } from './timeline';
+import type { Timeline, TimedAyah, TimedEvent } from './timeline';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeOut = (x: number) => 1 - (1 - x) ** 3;
@@ -41,6 +41,65 @@ function drawScrim(ctx: CanvasRenderingContext2D, k: number) {
   g.addColorStop(1, a(0.5));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
+}
+
+/** Vignette: the frame's edges darken softly (over the background, under the text). */
+function drawVignette(ctx: CanvasRenderingContext2D) {
+  const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) / 2);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/** Film grain: a fixed noise tile moved to a new place 12 times a second (pure in t, so preview = export). */
+let grainTile: HTMLCanvasElement | null = null;
+function drawGrain(ctx: CanvasRenderingContext2D, t: number) {
+  if (!grainTile) {
+    grainTile = document.createElement('canvas');
+    grainTile.width = grainTile.height = 256;
+    const g = grainTile.getContext('2d')!;
+    const img = g.createImageData(256, 256);
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = rnd() * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  }
+  const step = Math.floor(t * 12);
+  const ox = -((step * 97) % 256), oy = -((step * 57) % 256);
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = 0.07;
+  const pat = ctx.createPattern(grainTile, 'repeat')!;
+  ctx.translate(ox, oy);
+  ctx.fillStyle = pat;
+  ctx.fillRect(-ox, -oy, W, H);
+  ctx.restore();
+}
+
+/** The word being recited at t inside event ev, placed on its line (null between words or without timings: rule 8). */
+function highlightAt(a: TimedAyah, ev: TimedEvent, t: number, color: string): Highlight | null {
+  if (!a.seq || !ev.ar.counts) return null;
+  let cur: [number, number, number] | null = null;
+  for (const r of a.seq) {
+    if (r[1] > t) break;
+    cur = r;
+  }
+  // A word stays lit through a short breath after it, then goes out until the next word.
+  if (!cur || cur[0] < ev.first || cur[0] > ev.last || (cur[2] > cur[1] && t > cur[2] + 0.35)) return null;
+  let at = ev.first;
+  for (let line = 0; line < ev.ar.counts.length; line++) {
+    const n = ev.ar.counts[line];
+    if (cur[0] < at + n) {
+      return { line, before: a.words.slice(at, cur[0]).join(' '), word: a.words[cur[0]], color, alpha: Math.min(1, (t - cur[1]) / 0.12) };
+    }
+    at += n;
+  }
+  return null;
 }
 
 function ayahAt(tl: Timeline, t: number): TimedAyah | null {
@@ -224,6 +283,8 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   ctx.save();
   drawScenes(ctx, t, sceneSpans(tl.scenes, project.transition), project.transition, media);
   drawGrade(ctx, project.grade);
+  if (project.vignette) drawVignette(ctx);
+  if (project.grain) drawGrain(ctx, t);
   drawScrim(ctx, SCRIM_STRENGTH[project.scrim] ?? 1);
 
   ctx.textAlign = 'center';
@@ -263,7 +324,8 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   // Ayah text: each event shows from its first recited word until the next (word-timed).
   if (ev) {
     setTextShadow(ctx, colors.ar);
-    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1 });
+    const hl = project.highlight && ayah ? highlightAt(ayah, ev, t, colors.hl ?? '#f2c46b') : null;
+    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1, hl });
   }
   if (en) {
     // Synced meanings move with their words; a whole-ayah translation turns pages on its own timing.

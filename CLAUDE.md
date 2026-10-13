@@ -308,6 +308,22 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Hide surah name (owner request): `project.surahName` (remembered with the look); the layout
       shrinks the title block to the reference line, which always stays (rule 2)
 - [ ] Export verified on the owner's phone (gallery playback + Instagram/TikTok upload)
+- [x] Studio styles + popular reciters (owner request 2026-10-13, "head to it instead of CapCut"):
+      **word highlight** (`project.highlight`, colour `colors.hl`): the word being recited is drawn again
+      over its place in the highlight colour with a soft glow (`highlightAt()` in `render.ts`, line
+      word counts `Fit.counts`; only with word timings, rule 8; colour change only, rule 7); finishing
+      touches `grain` (fixed noise tile, moved 12×/s, pure in t) and `vignette`, over the background
+      only. **Styles** (`src/engine/styles.ts`, 7 one-tap looks: mood + background + text mode +
+      highlight + touches; first tool, opened by itself on a new reel; moving tiles). **Reciters**
+      without word timings (everyayah only, Ayah mode; `qdc: false`, ids 1001–1006: Muaiqly, Qatami,
+      Ghamdi, Ajamy, Abbad, Juhany; never in the mushaf player or Kids space: `TIMED_RECITERS`).
+      **Popular this week** (`src/data/popular.ts`): an exported reel adds an anonymous daily count
+      per reciter and ayah range (migration `20261015000000_studio_styles_popular.sql`: `reel_counts`,
+      no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
+      `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
+      and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
+      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi / Raad Al Kurdi:
+      no verified source with CORS (not on everyayah or QDC), so not added
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

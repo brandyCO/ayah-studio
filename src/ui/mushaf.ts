@@ -5,6 +5,7 @@ import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
+import { loadPopular } from '../data/popular';
 import { isNative } from '../native';
 import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
@@ -76,6 +77,16 @@ registerToday(async () => {
       { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
       { label: t('today.reel'), href: `#/reel/${d.s}/${d.from}-${d.to}` },
     ],
+  }];
+});
+// Popular this week: the ayat people made reels of most (or the owner's weekly pick), one tap to a reel.
+registerToday(async () => {
+  const [meta, p] = await Promise.all([loadMeta(), loadPopular()]);
+  const a = p.ayat[0];
+  if (!a) return [];
+  return [{
+    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: reference(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
+    actions: [{ label: t('today.popularReel'), href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
   }];
 });
 registerToday(async () => {

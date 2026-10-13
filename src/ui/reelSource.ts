@@ -13,7 +13,7 @@ export interface Reel {
 
 export async function loadReel(r: Reciter, n: number, from: number, arabic: string[], wordMap: Record<string, string>,
   progress: (msg: string) => void): Promise<Reel> {
-  try {
+  if (r.qdc !== false) try {
     const q = await qdcSurah(r.id, n);
     const p = planQdcReel(q.timings, n, from, arabic, wordMap);
     if (p) {

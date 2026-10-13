@@ -22,6 +22,7 @@ export interface TextColors {
   ar: string; // #rrggbb
   en: string;
   title: string; // surah name + reference
+  hl: string; // the word being recited (word highlight)
 }
 
 export interface Project {
@@ -62,6 +63,11 @@ export interface Project {
    *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
   closing?: Closing;
   watermark: boolean;
+  /** Word highlight: the word being recited turns `colors.hl` (only with word timings: rule 8). */
+  highlight: boolean;
+  /** Finishing touches over the background (never over the text). */
+  grain: boolean;
+  vignette: boolean;
   /** The whole-ayah translation (an id from src/data/translationList.ts); missing = the reader's choice.
    *  Kept with the draft, not with the remembered look (gifts carry looks only). */
   translation?: string;
@@ -131,7 +137,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     holds: {},
     transition: 'crossfade',
     textEffect: 'rise',
-    colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc' },
+    colors: { ar: '#ffffff', en: '#f1ece2', title: '#f3e3bc', hl: '#f2c46b' },
     grade: 'none',
     scrim: 'normal',
     textSize: 'm',
@@ -142,7 +148,10 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     intro: false,
     outro: false,
     credit: false,
-    watermark: true,
+    watermark: false,
+    highlight: false,
+    grain: false,
+    vignette: false,
   };
 }
 
@@ -150,7 +159,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
 export const LOOK_KEYS = [
   'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes', 'clips',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
-  'credit', 'watermark',
+  'credit', 'watermark', 'highlight', 'grain', 'vignette',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
 
@@ -184,7 +193,7 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
     const v = l[k];
     if (k === 'colors') {
       const c = v as Partial<TextColors> | undefined;
-      if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
+      if (c && typeof c === 'object') for (const x of ['ar', 'en', 'title', 'hl'] as const) if (typeof c[x] === 'string' && HEX.test(c[x]!)) p.colors[x] = c[x]!.toLowerCase();
     } else if (k === 'scenes') {
       const idx = Array.isArray(v) ? v.map((x, i) => (typeof x === 'string' && validBackground(x) ? i : -1)).filter((i) => i >= 0).slice(0, MAX_SCENES) : [];
       if (idx.length) {
@@ -237,7 +246,7 @@ export function strictLook(look: unknown, validBackground: (id: string) => boole
   const l = look as Record<string, unknown>;
   if (!Object.keys(l).every((k) => (LOOK_KEYS as readonly string[]).includes(k))) return false;
   if ('scenes' in l && (!Array.isArray(l.scenes) || !l.scenes.length)) return false;
-  if ('colors' in l && (!l.colors || typeof l.colors !== 'object' || !Object.keys(l.colors).every((k) => ['ar', 'en', 'title'].includes(k)))) return false;
+  if ('colors' in l && (!l.colors || typeof l.colors !== 'object' || !Object.keys(l.colors).every((k) => ['ar', 'en', 'title', 'hl'].includes(k)))) return false;
   const p = newProject(1, 1, 1, 0);
   applyLook(p, l, validBackground);
   return Object.keys(l).every((k) => {

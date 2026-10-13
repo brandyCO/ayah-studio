@@ -134,6 +134,8 @@ export function frameLayout(st: FrameStyle): FrameLayout {
 export interface Fit {
   size: number;
   lines: string[];
+  /** Words on each line (Arabic): where the word being recited sits, for the word highlight. */
+  counts?: number[];
 }
 
 /** Greedy line wrap: the number of words on each line (a single over-long word gets its own line). */
@@ -155,11 +157,6 @@ function wrapCounts(ctx: TextCtx, words: string[], maxW: number): number[] {
   return counts;
 }
 
-function wrap(ctx: TextCtx, words: string[], maxW: number): string[] {
-  let at = 0;
-  return wrapCounts(ctx, words, maxW).map((c) => words.slice(at, (at += c)).join(' '));
-}
-
 function chunk<T>(items: T[], n: number): T[][] {
   return Array.from({ length: n }, (_, i) =>
     items.slice(Math.round((i * items.length) / n), Math.round(((i + 1) * items.length) / n)),
@@ -170,10 +167,14 @@ function chunk<T>(items: T[], n: number): T[][] {
 function fitAll(ctx: TextCtx, pages: string[][], sizes: readonly number[], font: string, lh: number, box: Box): Fit[] | null {
   for (const size of sizes) {
     ctx.font = `${size}px ${font}`;
-    const wrapped = pages.map((p) => wrap(ctx, p, TEXT_W));
+    const counts = pages.map((p) => wrapCounts(ctx, p, TEXT_W));
+    const wrapped = pages.map((p, k) => {
+      let at = 0;
+      return counts[k].map((c) => p.slice(at, (at += c)).join(' '));
+    });
     const ok = wrapped.every((lines) => lines.every((l) => ctx.measureText(l).width <= TEXT_W + 1)
       && lines.length * size * lh <= box.bottom - box.top);
-    if (ok) return wrapped.map((lines) => ({ size, lines }));
+    if (ok) return wrapped.map((lines, k) => ({ size, lines, counts: counts[k] }));
   }
   return null;
 }

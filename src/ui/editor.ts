@@ -21,6 +21,8 @@ import {
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
+import { applyStyle, currentStyle, STYLES } from '../engine/styles';
+import { recordReel, popularReciters } from '../data/popular';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
@@ -125,6 +127,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
+  const stage = h('div', { class: 'stage' }, canvas, status);
   const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : play()) }, icon('play', 26));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
   const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
@@ -612,7 +615,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   // --- panels ---
-  const reciterPanel = () => [h('div', { class: 'list' }, ...RECITERS.map((r) =>
+  const reciterButton = (r: Reciter, tag?: string) =>
     h('button', {
       class: `list-item${r.id === project.reciterId ? ' on' : ''}`,
       onclick: () => {
@@ -622,7 +625,53 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         changed();
         void loadAudio();
       },
-    }, h('span', {}, reciterPickerLabel(r)), r.id === project.reciterId ? icon('check', 18) : null)))];
+    }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
+      r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+    r.id === project.reciterId ? icon('check', 18) : null);
+  let popular: { id: number; trending: boolean }[] = [];
+  void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
+  const reciterPanel = () => {
+    const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id), trending: p.trending })).filter((x) => x.r).slice(0, 3);
+    return [
+      top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
+      top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
+      top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
+      h('div', { class: 'list' }, ...RECITERS.map((r) => reciterButton(r))),
+    ].filter(Boolean) as Node[];
+  };
+
+  /** One-tap styles: a finished look (background, mood, text mode, highlight, finishing touches). */
+  const stylePanel = () => [
+    h('div', { class: 'tiles' }, ...STYLES.map((st) => {
+      const b = backgroundById(st.scene);
+      const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
+      return tile({
+        on: currentStyle(project) === st.id, label: tOr(`style.${st.id}`, st.label),
+        art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: bgCss },
+          h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+        onclick: () => {
+          applyStyle(project, st);
+          fitClips();
+          arrange();
+          void loadScenes();
+          changed();
+          previewText();
+        },
+      });
+    })),
+    note(ui('ed.styles-note')),
+  ];
+
+  const highlightPanel = () => [
+    chips<'on' | 'off'>([{ value: 'on', label: ui('ed.highlight-on') }, { value: 'off', label: ui('ed.off') }],
+      () => (project.highlight ? 'on' : 'off'), (v) => { project.highlight = v === 'on'; if (project.highlight) previewText(); }, (v) => v === 'off' || wordTimed()),
+    h('div', { class: 'colour-grid' }, ...['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'].map((c) =>
+      h('button', {
+        class: `swatch${project.colors.hl === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${ui('ed.highlight')}: ${c}`,
+        onclick: () => { if (!exporting) { project.colors.hl = c; project.highlight = true; changed(); previewText(); } },
+      }))),
+    note(wordTimed() ? ui('ed.highlight-note') : ui('ed.highlight-needs-timings')),
+  ];
 
   const moodPanel = () => [
     h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
@@ -694,6 +743,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- tools (bottom bar) ---
   const TOOLS: Tool[] = [
+    { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [{ id: 'styles', icon: 'sparkle', label: ui('ed.styles'), panel: stylePanel }] },
     { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), options: [{ id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel }] },
     { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
       { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
@@ -710,6 +760,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
         note(syncText),
       ].filter(Boolean) as Node[] },
+      { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
       { id: 'size', icon: 'size', label: ui('ed.size'), panel: () => [chips<TextSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
         () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
@@ -737,6 +788,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
         () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
       { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
+      { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
     ] },
     { id: 'translation', icon: 'translation', label: ui('ed.translation'), options: [
       { id: 'tr-show', icon: 'show', label: ui('ed.show'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
@@ -951,11 +1004,16 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
       h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
-    h('div', { class: 'studio-stage' }, h('div', { class: 'stage' }, canvas, status)),
+    h('div', { class: 'studio-stage' }, stage),
     h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
     overlay);
   root.append(studio);
+  // A new reel opens on the styles: one tap for a finished look, then Export.
+  if (!draft) {
+    tool = TOOLS[0];
+    option = tool.options[0];
+  }
   refreshUI();
 
   capabilities().then(({ path }) => {
@@ -978,6 +1036,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
     dirty = true;
   };
+
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
   window.visualViewport?.addEventListener('resize', resize);
@@ -1244,6 +1303,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const canShare = !!navigator.canShare?.({ files: [file] });
       const secs = ((performance.now() - started) / 1000).toFixed(1);
       progressRow.hidden = true;
+      void recordReel(project.reciterId, n, from, to);
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
         h('p', { class: 'small' }, `✓ ${ui('ed.made', { s: secs, mb: (blob.size / 1e6).toFixed(1), q: quality === 1920 ? '1080P' : '720P' })}`),

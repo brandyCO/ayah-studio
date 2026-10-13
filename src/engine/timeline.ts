@@ -38,6 +38,9 @@ export interface TimedAyah {
   events: TimedEvent[];
   /** Whole-ayah translation pages when it does not follow the words (Line/Half/Words + "whole ayah"). */
   enPages: TimedText[];
+  /** The ayah's display words, and when each is recited (reel time; null without word timings). */
+  words: string[];
+  seq: Recited[] | null;
 }
 
 export interface Timeline {
@@ -137,7 +140,7 @@ export function buildTimeline(ctx: TextCtx, o: TimelineInput): Timeline {
       if (e.ar.lines.join(' ') !== words.slice(e.first, e.last + 1).join(' ')) throw new Error('Text grouping altered the ayah text');
     }
     const surah = o.surahs?.[i] ?? o.surah;
-    return { ayah: p.ayah, surah, ref: reference(surah, p.ayah), start: p.start, end: p.end, events, enPages };
+    return { ayah: p.ayah, surah, ref: reference(surah, p.ayah), start: p.start, end: p.end, events, enPages, words, seq: p.seq };
   });
   return {
     duration: o.plan.duration, surah: o.surah, reciter: o.reciter, mode: o.mode, layout: lay, ayat,

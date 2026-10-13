@@ -2,7 +2,7 @@
 // pacing. Everything stays adjustable afterwards; a mood shows as picked while its settings match.
 import type { Project } from './project';
 
-type MoodSettings = Pick<Project, 'textEffect' | 'transition' | 'colors' | 'grade' | 'scrim' | 'enFont' | 'pause' | 'gap'>;
+type MoodSettings = Pick<Project, 'textEffect' | 'transition' | 'grade' | 'scrim' | 'enFont' | 'pause' | 'gap'> & { colors: Omit<Project['colors'], 'hl'> };
 
 export interface Mood {
   id: string;
@@ -24,7 +24,9 @@ export const MOODS: Mood[] = [
 ];
 
 export function applyMood(p: Project, m: Mood) {
-  Object.assign(p, structuredClone(m.set));
+  const { colors, ...rest } = structuredClone(m.set);
+  Object.assign(p, rest);
+  p.colors = { ...p.colors, ...colors }; // the highlight colour is not part of a mood
 }
 
 /** The mood whose settings the project still has, if any. */
