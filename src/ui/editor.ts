@@ -3,9 +3,9 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
-import { arrangeAudio } from '../data/audio';
-import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { arrangeAudio, polishAudio } from '../data/audio';
+import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
@@ -16,7 +16,7 @@ import { H, W } from '../engine/layout';
 import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
-  applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
+  applyLook, cleanDedication, DEDICATION_MAX, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
@@ -139,6 +139,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const status = h('div', { class: 'stage-status' });
   const stage = h('div', { class: 'stage' }, canvas, status);
   const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play().then(() => { if (playing) watch(true); })) }, icon('play', 26));
+  const restartBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.restart'), title: ui('ed.restart'), onclick: () => restart() }, icon('restart'));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
   const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
   const redoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.redo'), disabled: true, onclick: () => redo() }, icon('redo'));
@@ -752,6 +753,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     styled: false, // a vibe or style was applied in the Quick reel
     auto: false, // ...by the recommendation (not by a tap)
     picked: null as string | null, // 'vibe:id' / 'style:id' last applied here
+    tries: [] as string[], // project snapshots before each "Try another" (Previous goes back)
     // Text and layout choices made here (per device, so the next reel keeps them too)
     own: new Set(((readPref('quickOwn') ?? '').split(',')).filter((x): x is QuickOwn => x in OWN_KEYS)),
   };
@@ -827,6 +829,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     quick.loading = null;
     quickRefresh();
   }
+  /** "Try another": a different calm look (vibe + motion), footage and the user's own choices kept.
+   *  Chosen from the looks only, never from what the ayah means. */
+  function tryAnother(pickStyle: (id: string, fn: () => void) => void) {
+    quick.tries.push(JSON.stringify(project));
+    if (quick.tries.length > 20) quick.tries.shift();
+    const cur = quick.picked?.startsWith('vibe:') ? quick.picked.slice(5) : currentVibe(project);
+    const pool = VIBES.filter((v) => v.id !== cur);
+    const v = pool[Math.floor(Math.random() * pool.length)];
+    const fx = QUICK_MOTIONS[Math.floor(Math.random() * QUICK_MOTIONS.length)];
+    pickStyle(`vibe:${v.id}`, () => { applyVibe(project, v, undefined, pacedMode(recitedPace())); project.textEffect = fx; });
+  }
   const quickPanel = (): Node[] => {
     const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['layout', ui('qr.layout')], ['finish', ui('qr.finish')]];
     const at = steps.findIndex(([v]) => v === quick.step);
@@ -887,14 +900,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const now = quick.picked?.startsWith('vibe:') ? quick.picked.slice(5) : quick.picked ? null : currentVibe(project);
       const nowStyle = quick.picked?.startsWith('style:') ? quick.picked.slice(6) : null;
       const pickStyle = (id: string, fn: () => void) => { quick.styled = true; quick.auto = false; quick.picked = id; keepOwn(fn); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      // With footage picked, each tile previews it in that vibe's colour grade.
+      const own0 = keep ? (backgroundById(quick.clips[0]) as { thumb?: string }).thumb : undefined;
+      const gradeOf = (v: Vibe) => v.grade ?? MOODS.find((m) => m.id === v.mood)?.set.grade ?? 'none';
       const vibeTile = (v: Vibe, recommended: boolean) => tile({
         on: now === v.id, label: recommended ? `${tOr(`vibe.${v.id}`, v.label)} · ${ui('qr.recommended')}` : tOr(`vibe.${v.id}`, v.label),
-        art: h('span', { class: `style-art${v.grain ? ' grain' : ''}${v.vignette ? ' vignette' : ''}${recommended ? ' rec' : ''}`, style: `background-image:url(${(backgroundById(v.scene) as { thumb?: string }).thumb ?? ''})` },
+        art: h('span', { class: `style-art${v.grain ? ' grain' : ''}${v.vignette ? ' vignette' : ''}${recommended ? ' rec' : ''}${own0 ? ` tint-${gradeOf(v)}` : ''}`, style: `background-image:url(${own0 ?? (backgroundById(v.scene) as { thumb?: string }).thumb ?? ''})` },
           h('span', { class: `style-words${v.highlight ? ' lit' : ''}`, style: `--hl:${v.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
         onclick: () => pickStyle(`vibe:${v.id}`, () => applyVibe(project, v, undefined, pacedMode(recitedPace()))),
       });
       body = [
         h('p', { class: 'quick-why' }, ui('qr.why', { when: ui(`qr.when-${rec.why}`, { footage: ui(`qr.f.${quick.pref ?? 'sky'}` as 'qr.f.sky').toLowerCase() }), feel: ui(`qr.feel-${rec.vibe.id}` as 'qr.feel-fajr') })),
+        h('div', { class: 'chips quick-try' },
+          h('button', { class: 'chip', onclick: () => tryAnother(pickStyle) }, icon('dice', 16), ui('qr.try')),
+          quick.tries.length ? h('button', { class: 'chip', onclick: () => { const p = quick.tries.pop(); if (p) { const o = option; restore(p); option = o; quick.picked = null; changed(); } } }, icon('undo', 16), ui('qr.previous')) : null),
         h('div', { class: 'tiles' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
         note(ui(keep ? 'qr.vibe-note-footage' : 'qr.vibe-note')),
         quick.own.size ? note(ui('qr.own-kept')) : null,
@@ -964,12 +983,29 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         row(ui('qr.mark'), chips<'off' | 'on'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.mark-small') }],
           () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
         note(ui('qr.mark-note')),
-        h('button', { class: 'primary brand-btn quick-export', disabled: exportBtn.disabled, onclick: () => void doExport() }, ui('ed.export')),
+        ...dedicationField(),
+        h('button', { class: 'primary brand-btn quick-export', disabled: exportBtn.disabled, onclick: () => exportTapped() }, ui('ed.export')),
         note(ui('qr.finish-note')),
       ];
     }
     return [head, ...body.filter((x): x is Node => !!x), nav];
   };
+
+  /** A dedication in the user's own words on the closing card (which it turns on). */
+  function dedicationField(): Node[] {
+    const input = h('input', { class: 'search', type: 'text', maxlength: String(DEDICATION_MAX), placeholder: ui('ed.dedication-ph'), value: project.dedication ?? '', 'aria-label': ui('ed.dedication') });
+    input.addEventListener('change', () => {
+      if (exporting) return;
+      const v = cleanDedication(input.value);
+      input.value = v;
+      if ((project.dedication ?? '') === v) return;
+      project.dedication = v || undefined;
+      if (v && !project.outro) { project.outro = true; arrange(); }
+      changed(false);
+      if (v && tl) { pause(); t = Math.max(0, tl.duration - 2); dirty = true; } // show it on the closing card
+    });
+    return [row(ui('ed.dedication'), h('span', {})), input, note(ui('ed.dedication-note'))];
+  }
 
   const HL_COLOURS = ['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'];
   const highlightPanel = () => [
@@ -1136,6 +1172,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'outro', icon: 'card', label: ui('ed.end-card'), toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
       { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
       { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
+      { id: 'dedication', icon: 'card', label: ui('ed.dedication'), panel: dedicationField },
     ] },
   ];
 
@@ -1302,7 +1339,35 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('b', {}, l), h('span', { class: 'muted small' }, d))),
     h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, ui('list.deviceCheck')), h('span', { class: 'muted small' }, ui('ed.deviceCheckSub'))));
   const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
-  const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => void doExport() }, ui('ed.export'));
+  const exportBtn = h('button', { class: 'primary brand-btn export-open', onclick: () => exportTapped() }, ui('ed.export'));
+  // Premiere: the first Export of a version plays the whole reel full screen from the start, then
+  // Export renders it (or Keep editing goes back). Once seen unchanged, Export goes straight on.
+  let premiered = '';
+  const premiereTitle = h('p', { class: 'premiere-title' }, ui('ed.premiere'));
+  const premiereBar = h('div', { class: 'premiere-bar' },
+    premiereTitle,
+    h('div', { class: 'premiere-actions' },
+      h('button', { class: 'chip', onclick: () => endPremiere() }, ui('ed.keep-editing')),
+      h('button', { class: 'primary brand-btn', onclick: () => { premiered = JSON.stringify(project); endPremiere(); void doExport(); } }, ui('ed.export'))));
+  function exportTapped() {
+    if (exportBtn.disabled) return;
+    if (premiered === JSON.stringify(project)) return void doExport();
+    void startPremiere(ui('ed.premiere'));
+  }
+  async function startPremiere(title: string) {
+    if (!audio || !tl || !mediaReady) return toast(ui('ed.stillLoading'));
+    pause();
+    t = 0;
+    premiereTitle.textContent = title;
+    studio.classList.add('premiere');
+    await play();
+    if (!playing || ac?.state !== 'running') { pause(); return; } // no sound allowed yet: the bar stays, Play starts it
+    watch(true);
+  }
+  function endPremiere() {
+    studio.classList.remove('premiere');
+    pause();
+  }
   const giftBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.gift'), title: ui('ed.gift'), onclick: () => {
     pause();
     void import('./gift').then((m) => m.openGiftComposer(s, project.from, project.to, { look: lookOf(project), reciter: project.reciterId }));
@@ -1313,22 +1378,38 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const cancelBtn = h('button', { class: 'chip', onclick: () => exporting?.abort() }, ui('common.cancel'));
   const progressRow = h('div', { class: 'export-progress' }, progressBar.el, progressText, note(ui('ed.keep-this-screen-open-while-the-video-is')), exportPathLabel, cancelBtn);
   const result = h('div', { class: 'export-result', hidden: true });
-  const overlay = h('div', { class: 'export-overlay', hidden: true }, progressRow, result);
+  const shareExtras = h('div', { class: 'share-extras' }); // trust line + caption, ready while the video is made
+  const overlay = h('div', { class: 'export-overlay', hidden: true }, progressRow, result, shareExtras);
 
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
       h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, stage),
-    h('div', { class: 'transport' }, timeLabel, playBtn, h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
+    h('div', { class: 'transport' }, timeLabel, h('div', { class: 'play-group' }, restartBtn, playBtn), h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
+    premiereBar,
     overlay);
   root.append(studio);
   built = true;
   // A new reel opens on the styles: one tap for a finished look, then Export.
+  let firstReel = false; // the first reel on this device: it starts finished and plays by itself
   if (!draft) {
     tool = TOOLS[0];
     option = tool.options[0];
+    let keepLook = false;
+    try { keepLook = sessionStorage.getItem('reelKeepLook') === '1'; sessionStorage.removeItem('reelKeepLook'); } catch { /* private window */ }
+    if (keepLook) { quick.styled = true; quick.step = 'finish'; } // "Make another like this": the look as it was, ready to export
+    else if (!readPref('studioSeen')) {
+      savePref('studioSeen', '1');
+      firstReel = true;
+      const v = quickRecommendation().vibe;
+      quick.styled = true;
+      quick.auto = true;
+      quick.picked = `vibe:${v.id}`;
+      keepOwn(() => applyVibe(project, v));
+      fitClips();
+    }
   }
   refreshUI();
 
@@ -1370,7 +1451,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const was = playing; // keep watching while editing
     pause();
     plan = arrangeReel(base.plan, pc);
-    audio = plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    // Steady loudness + soft edges, the same for preview and export (polishAudio).
+    audio = polishAudio(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio);
     spine.setAudio(audio);
     rebuild();
     if (was) void play();
@@ -1492,6 +1574,16 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     setPlayIcon();
   }
 
+  /** Back to the first frame (keeps playing if it was). */
+  function restart() {
+    const was = playing;
+    pause();
+    t = 0;
+    spine.reveal(0);
+    dirty = true;
+    if (was) void play();
+  }
+
   /** Play a moment around reel time a..b (e.g. a silence just edited), then stop. */
   function playAround(a: number, b: number) {
     if (!tl) return;
@@ -1520,6 +1612,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function frame() {
     raf = requestAnimationFrame(frame);
     if (exporting || !tl || !mediaReady) return;
+    if (firstReel && audio) { firstReel = false; void startPremiere(ui('ed.first-reel')); }
     if (playing && ac) {
       t = startT + ac.currentTime - startCtx;
       if (t >= tl.duration) {
@@ -1554,6 +1647,70 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       h('p', { class: 'small' }, 'Background', list.length > 1 ? 's' : '', ' by ', ...list.flatMap((c, i) => [
         i ? ', ' : '', h('a', { href: c.url, target: '_blank', rel: 'noopener' }, c.author), ` on ${c.source}`])),
       h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(text).then(() => toast(ui('ed.creditsCopied')), () => toast(text)) }, ui('ed.copyCredits')));
+  }
+  /** What the reel promises: the exact text, and timing from the reciter's own words (or none guessed). */
+  function trustLine(): Node {
+    const r = reciterById(project.reciterId);
+    return h('p', { class: 'trust-line' }, icon('check', 16),
+      ui(wordTimed() ? 'ed.trust-timed' : 'ed.trust-ayah', { r: reciterCredit(r) }));
+  }
+  /** A caption ready to paste: dedication, reference, the whole-ayah translation (only when it fits whole;
+   *  never cut, rule 1), reciter, background credits and a few calm hashtags. Editable before copying. */
+  function captionText(): string {
+    const r = reciterById(project.reciterId);
+    const ref = reference(s, from, to);
+    const lines: string[] = [];
+    if (project.dedication) lines.push(project.dedication, '');
+    lines.push(ref);
+    const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
+    const by = translationInfo(project.translation ?? currentTranslation()).translator;
+    if (tr.length <= 1400) lines.push('', tr, `— ${by}`);
+    lines.push('', ui('ed.cap-recited', { r: reciterCredit(r) }));
+    const credits = new Map<string, Credit>();
+    for (const id of project.scenes) {
+      const b = backgroundById(id);
+      if ((b.kind === 'image' || b.kind === 'video') && b.credit) credits.set(b.credit.url, b.credit);
+    }
+    if (credits.size) lines.push(`${ui('ed.cap-background')}: ${[...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ')}`);
+    const tag = (x: string) => '#' + x.normalize('NFKD').replace(/[^A-Za-z0-9]/g, '');
+    lines.push('', ['#Quran', '#QuranRecitation', tag(s.en), tag(r.short ?? r.name)].filter((x) => x.length > 2).join(' '));
+    return lines.join('\n');
+  }
+  function captionBlock(): Node {
+    const box = h('textarea', { class: 'caption-text', rows: '7', 'aria-label': ui('ed.caption') });
+    box.value = captionText();
+    return h('div', { class: 'caption-box' },
+      h('p', { class: 'small muted' }, ui('ed.caption-note')),
+      box,
+      h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(box.value).then(() => toast(ui('ed.caption-copied')), () => { box.select(); }) }, ui('ed.caption-copy')));
+  }
+  /** The same look on the next ayat (or ayat picked in the reader). */
+  function makeAnother(): Node {
+    const len = to - from;
+    const a = to + 1, b = Math.min(s.ayahs, to + 1 + len);
+    const go = (hash: string) => { try { sessionStorage.setItem('reelKeepLook', '1'); } catch { /* private window */ } location.hash = hash; };
+    return h('div', { class: 'make-another' },
+      h('p', { class: 'small' }, ui('ed.another')),
+      h('div', { class: 'chips' },
+        a <= s.ayahs ? h('button', { class: 'chip on', onclick: () => go(`#/reel/${n}/${a}-${b}`) }, ui('ed.another-next', { ref: `${n}:${a}${b > a ? `–${b}` : ''}` })) : null,
+        h('button', { class: 'chip', onclick: () => go(`#/s/${n}/${Math.min(s.ayahs, to + 1)}`) }, ui('ed.another-pick'))));
+  }
+  /** Android: a notification when the reel is ready while the app is in the background. */
+  async function askToNotify() {
+    if (!isNative()) return;
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const p = await LocalNotifications.checkPermissions();
+      if (p.display === 'prompt' || p.display === 'prompt-with-rationale') await LocalNotifications.requestPermissions();
+    } catch { /* no plugin: fine */ }
+  }
+  async function notifyReady() {
+    if (!isNative()) return;
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
+      await LocalNotifications.schedule({ notifications: [{ id: 7300, title: ui('ed.ready-title'), body: reference(s, from, to), smallIcon: 'ic_stat_crescent' }] });
+    } catch { /* fine */ }
   }
   /** Save / Share in the Android app: the file is written once, then shared by its URI. */
   function nativeActions(blob: Blob, name: string) {
@@ -1594,6 +1751,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     overlay.hidden = false;
     progressRow.hidden = false;
     result.hidden = true;
+    shareExtras.replaceChildren(trustLine(), captionBlock());
+    void askToNotify();
     const setProgress = (f: number) => {
       progressBar.set(f);
       progressText.textContent = `${Math.round(f * 100)}%`;
@@ -1620,6 +1779,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const canShare = !!navigator.canShare?.({ files: [file] });
       const secs = ((performance.now() - started) / 1000).toFixed(1);
       progressRow.hidden = true;
+      if (document.hidden) void notifyReady();
       void recordReel(project.reciterId, n, from, to);
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
@@ -1628,6 +1788,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
           canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+        makeAnother(),
         h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, ui('ed.backToEditing')),
       );
       result.hidden = false;
