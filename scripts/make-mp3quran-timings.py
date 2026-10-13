@@ -71,11 +71,13 @@ def seek_table(path):
   return dict(n=SEEK_EVERY, d=[offs[0]] + [y - x for x, y in zip(offs, offs[1:])])
 
 
-def surah(name, folder, s, text, max_min):
+def analyse(name, folder, s, text, max_min=1e9):
+  """Align one surah's recording → raw results (ayah and word spans in s, confidence, cut points in ms, file
+  size, seek table), or (None, reason). Nothing is judged here (see `judge`), so results can be kept and
+  judged again without the audio."""
   url = '%s%03d.mp3' % (folder, s)
   path = os.path.join(CACHE, name, '%03d.mp3' % s)
   hd, why = vf.header(url)
-  vbr = None
   if not hd:
     if why != 'VBR': return None, why
     b, h = vf.get(url, (0, 0)); size = int(h['Content-Range'].split('/')[-1])
@@ -87,17 +89,9 @@ def surah(name, folder, s, text, max_min):
     open(path, 'wb').write(data)
   x = al.load(path)
   dur = len(x) / al.SR
-  if not hd: vbr = seek_table(path)
-  # With and without the isti'adha before the first ayah (some reciters say it): the better path wins.
-  base = [] if s in (1, 9) else [BASMALA]
-  best = None
-  # Recited before ayah 1: basmala or not, isti'adha or not (some recordings start straight with the ayah).
-  for pre in ((base, [ISTIADHA] + base, [], [ISTIADHA]) if base else (base, [ISTIADHA])):
-    ay, _ = al.align(x, text, pre)
-    if best is None or al.LAST_SCORE > best[0]: best = (al.LAST_SCORE, ay, al.LAST_CONF)
-  _, ay, conf = best
-  low = [k + 1 for k, c in enumerate(conf) if c < MIN_CONF]
-  if low: return None, 'text not clearly heard in ayah %s' % low[:5]
+  # Recited before ayah 1 (basmala, isti'adha, either, both or neither): heard, not assumed.
+  ay, wd = al.align(x, text, al.opening(x, s, text[0], BASMALA, ISTIADHA))
+  conf = al.LAST_CONF
   db = envelope(x)
   speech = float(np.percentile(db, 90))
   n = len(ay)
@@ -106,16 +100,41 @@ def surah(name, folder, s, text, max_min):
     cuts.append(quietest(db, speech, ay[k][1] - 0.1, ay[k + 1][0] + 0.1))
   last = quietest(db, speech, ay[-1][1] - 0.1, ay[-1][1] + 1.5)
   cuts.append(last if last is not None or ay[-1][1] + 1.5 < dur else round(dur * 1000))
+  raw = dict(size=size, ay=[[round(a * 1000), round(b * 1000)] for a, b in ay], conf=[round(c, 3) for c in conf],
+             w=word_spans(text, wd), c=cuts)
+  if not hd: raw['seek'] = seek_table(path)
+  return raw, None
+
+
+def word_spans(text, wd):
+  """Per ayah [[word number (1-based, our words), startMs, endMs], ...]; words without letters have none."""
+  out = []
+  for a, ws in zip(text, wd):
+    idx = [j + 1 for j, w in enumerate(al.words_of(a)) if al.letters(w)]
+    out.append([[j, round(s * 1000), round(e * 1000)] for j, (s, e) in zip(idx, ws)])
+  return out
+
+
+def judge(raw, text):
+  """The checks → ([entry for the json, pace per ayah], note) or (None, reason)."""
+  low = [k + 1 for k, c in enumerate(raw['conf']) if c < MIN_CONF]
+  if low: return None, 'text not clearly heard in ayah %s' % low[:5]
+  cuts = raw['c']
   fails = sum(c is None for c in cuts)
   # Times made by alignment are checked by their confidence, so a cut without a pause only means the reciter
   # joined those ayat (wasl): reels cannot start or end there. More than half joined → left out.
   if fails > len(cuts) // 2: return None, '%d of %d cuts not in a pause' % (fails, len(cuts))
   if any(a is not None and b is not None and b - a < 300 for a, b in zip(cuts, cuts[1:])):
     return None, 'pauses too close together'
-  rates = [vf.letters(text[k]) / max(0.05, b - a) for k, (a, b) in enumerate(ay)]
-  out = dict(size=size, c=cuts, aligned=True)
-  if vbr: out['seek'] = vbr
+  rates = [vf.letters(text[k]) / max(0.05, (b - a) / 1000) for k, (a, b) in enumerate(raw['ay'])]
+  out = dict(size=raw['size'], c=cuts, aligned=True)
+  if 'seek' in raw: out['seek'] = raw['seek']
   return [out, rates], ('%d cuts unchecked' % fails if fails else None)
+
+
+def surah(name, folder, s, text, max_min):
+  raw, why = analyse(name, folder, s, text, max_min)
+  return judge(raw, text) if raw else (None, why)
 
 
 def main():

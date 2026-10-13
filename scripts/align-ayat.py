@@ -158,6 +158,21 @@ def align(x, ayat, preamble=()):
   return ay, wd
 
 
+def opening(x, surah, first, basmala, istiadha):
+  """What is recited before the first ayah, heard (greedy read-back of the first 25 s), not guessed from
+  alignment scores: free audio and CTC blanks would let ayah 1's words hide inside a basmala they resemble.
+  `first`: the first ayah's text (Al-Falaq / An-Nas begin with "qul a'udhu" themselves)."""
+  global LAST_EM, _EM_OF
+  if globals().get('_EM_OF') is not x: LAST_EM, _EM_OF = emissions(x), x
+  heard = ''.join(read_back(0, 25)).replace('أ', 'ا').replace('إ', 'ا')
+  own = ''.join(c for w in words_of(first)[:2] for c in letters(w)).replace('أ', 'ا').replace('إ', 'ا')
+  pre = []
+  k = heard.find('عوذ')
+  if k >= 0 and not (own.endswith('عوذ') and heard.find(own) == k + 3 - len(own)): pre.append(istiadha)
+  if surah not in (1, 9) and 'بسم' in heard[:60]: pre.append(basmala)
+  return pre
+
+
 def read_back(t0, t1):
   """Letters the model hears between t0 and t1 seconds of the last aligned audio (greedy, letters only)."""
   inv = {v: k for k, v in VOCAB.items()}
