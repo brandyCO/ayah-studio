@@ -26,7 +26,8 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
     const el = h('div', { class: 'draft' },
       h('a', { class: 'draft-open', href: draftHash(d.project, d.id) },
         h('span', { class: 'draft-thumb', style: thumb ? `background-image:url("${thumb}")` : '' }),
-        h('strong', {}, s ? reference(s, d.project.from, d.project.to) : `${d.project.surah}:${d.project.from}`),
+        h('strong', {}, s ? reference(s, d.project.from, d.project.to) : `${d.project.surah}:${d.project.from}`,
+          d.project.series ? h('span', { class: 'muted small' }, ` · ${t('ed.series-part', { k: d.project.series.part, n: d.project.series.of })}`) : null),
         h('span', { class: 'muted small' }, `${reciterById(d.project.reciterId).short} · ${ago(d.updated)}`)),
       h('button', {
         class: 'bg-del draft-del', 'aria-label': t('dr.delete'), title: t('dr.delete'),

@@ -31,7 +31,9 @@ import {
   type Clip, type ClipFit, type SceneMode, type Transition,
 } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
-import { displayWords, parseSpans, wordMeanings } from '../engine/words';
+import { displayWords, parseSpans, recitedSpan, wordMeanings } from '../engine/words';
+import { ayahLength, planSeries } from '../engine/series';
+import { qdcSurah } from '../data/qdc';
 import { isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
@@ -653,6 +655,25 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   const tajweedRow = () => row(ui('ed.tajweed'), chips<'on' | 'off'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.on') }],
     () => (project.tajweed ? 'on' : 'off'), (v) => setTajweed(v === 'on')));
+  /** Learning reel: one word at a time with its meaning large under it (needs word timings, rule 8). */
+  function setLearn(on: boolean) {
+    project.learn = on;
+    if (on) {
+      project.textMode = 'words';
+      project.wordsPerStep = 1;
+      project.showTranslation = true;
+      project.translationMode = 'words';
+    }
+    rebuild();
+    changed();
+    if (on) previewText();
+  }
+  const learning = () => !!project.learn && frameStyle(project).learn === true;
+  const learnRow = () => [
+    row(ui('ed.learn'), chips<'on' | 'off'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.on') }],
+      () => (learning() ? 'on' : 'off'), (v) => { if (v === 'on') { own('text'); own('tr'); } setLearn(v === 'on'); }, (v) => v === 'off' || wordTimed())),
+    note(ui(wordTimed() ? 'ed.learn-note' : 'ed.learn-needs-timings')),
+  ];
   const tajweedLegend = () => h('div', { class: 'tajweed-legend' }, ...TAJWEED_LEGEND.map((x) =>
     h('span', {}, h('i', { style: `background:${x.color}` }), ui(`tj.${x.group}` as 'tj.madd2'))));
   /** Slow motion for the background videos (never the recitation); remembered on this device. */
@@ -966,6 +987,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
             onclick: () => { if (exporting || !timed) return; own('hl'); project.colors.hl = c; project.highlight = true; changed(); quickRefresh(); previewText(); },
           }))),
         timed ? null : note(ui('ed.highlight-needs-timings')),
+        ...learnRow(),
         tajweedRow(),
         project.tajweed ? tajweedLegend() : null,
         h('p', { class: 'muted small' }, ui('qr.motion-label')),
@@ -1000,6 +1022,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
         note(ui('qr.mark-note')),
         ...dedicationField(),
+        ...seriesField(),
         h('button', { class: 'primary brand-btn quick-export', disabled: exportBtn.disabled, onclick: () => exportTapped() }, ui('ed.export')),
         note(ui('qr.finish-note')),
       ];
@@ -1021,6 +1044,75 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (v && tl) { pause(); t = Math.max(0, tl.duration - 2); dirty = true; } // show it on the closing card
     });
     return [row(ui('ed.dedication'), h('span', {})), input, note(ui('ed.dedication-note'))];
+  }
+
+  /** Series mode: the passage from this reel's first ayah to a later one, split into reels of about the
+   *  same length (never inside an ayah), saved as drafts "Part 1 of N"… with this reel's look. */
+  const series = { until: 0, target: 60 }; // kept while the panel redraws
+  function seriesField(): Node[] {
+    const max = Math.min(s.ayahs, from + 199);
+    series.until ||= Math.min(max, Math.max(to, from + 19));
+    const until = h('input', { class: 'search series-until', type: 'number', min: String(from), max: String(max), value: String(series.until), 'aria-label': ui('ed.series-until') });
+    let parts: [number, number][] = [];
+    const info = h('p', { class: 'muted small' }, '…');
+    const make = h('button', { class: 'chip', disabled: true, onclick: () => void makeSeries() }, ui('ed.series-make', { n: 0 }));
+    const targetChips = h('div', { class: 'chips' });
+    let seq = 0;
+    async function plan() {
+      const b = Math.max(from, Math.min(max, Math.round(Number(until.value)) || from));
+      series.until = b;
+      const my = ++seq;
+      const r = reciterById(project.reciterId);
+      const timings = r.qdc === false ? null : await qdcSurah(r.id, n).then((x) => x.timings, () => null);
+      if (my !== seq || !alive) return;
+      const lengths: number[] = [];
+      for (let a = from; a <= b; a++) {
+        const v = timings?.get(`${n}:${a}`);
+        lengths.push(ayahLength(v ? recitedSpan(v) : null, displayWords(allAr[a - 1]).length) + project.pause);
+      }
+      const card = (project.intro ? 3 : 0) + 3; // each part ends on the closing card
+      parts = planSeries(from, lengths, Math.max(10, series.target - card), MAX_AYAT);
+      const big = parts.length > 30;
+      info.textContent = big ? ui('ed.series-too-many') : ui('ed.series-info', { n: parts.length, list: parts.slice(0, 4).map(([x, y]) => (x === y ? `${x}` : `${x}–${y}`)).join(', ') + (parts.length > 4 ? ', …' : '') });
+      make.textContent = ui('ed.series-make', { n: parts.length });
+      make.disabled = big || parts.length < 2;
+    }
+    const drawTargets = () => targetChips.replaceChildren(...['30', '60', '90'].map((v) => h('button', {
+      class: `chip${String(series.target) === v ? ' on' : ''}`,
+      onclick: () => { series.target = Number(v); drawTargets(); void plan(); },
+    }, `~${v} s`)));
+    drawTargets();
+    until.addEventListener('change', () => void plan());
+    void plan();
+    async function makeSeries() {
+      if (exporting || parts.length < 2) return;
+      make.disabled = true;
+      const thumb = await previewThumb().catch(() => undefined);
+      const now = Date.now();
+      const of = parts.length;
+      try {
+        for (let k = 0; k < of; k++) {
+          const p = structuredClone(project);
+          [p.from, p.to] = parts[k];
+          p.series = { part: k + 1, of };
+          p.outro = true;
+          p.trims = {};
+          p.gaps = {};
+          p.holds = {};
+          if (k === 0) Object.assign(project, structuredClone(p)); // this reel becomes part 1 (saved on leaving too)
+          // Earlier parts first in the drafts list (newest first).
+          await saveDraft({ id: k === 0 ? draftKey : newDraftId(), project: p, created: now, updated: now - k, thumb });
+        }
+      } catch (e) {
+        console.warn('Series not saved', e);
+        toast(ui('ed.series-failed'));
+        make.disabled = false;
+        return;
+      }
+      toast(ui('ed.series-made', { n: of }));
+      location.hash = '#/drafts';
+    }
+    return [row(ui('ed.series'), h('span', {})), note(ui('ed.series-note')), row(ui('ed.series-until'), until), row(ui('ed.series-length'), targetChips), info, make];
   }
 
   const HL_COLOURS = ['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'];
@@ -1127,6 +1219,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(syncText),
       ].filter(Boolean) as Node[] },
       { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
+      { id: 'learn', icon: 'mode', label: ui('ed.learn'), panel: learnRow },
       { id: 'tajweed', icon: 'colours', label: ui('ed.tajweed'), panel: () => [tajweedRow(), tajweedLegend(), note(ui('ed.tajweed-note'))] },
       { id: 'size', icon: 'size', label: ui('ed.size'), panel: sizeSlider },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
@@ -1694,7 +1787,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const ref = reference(s, from, to);
     const lines: string[] = [];
     if (project.dedication) lines.push(project.dedication, '');
-    lines.push(ref);
+    lines.push(project.series ? `${ref} · ${ui('ed.series-part', { k: project.series.part, n: project.series.of })}` : ref);
     const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
     const by = translationInfo(project.translation ?? currentTranslation()).translator;
     if (tr.length <= 1400) lines.push('', tr, `— ${by}`);

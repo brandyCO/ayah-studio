@@ -227,6 +227,7 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
   ctx.fillText(ref, W / 2, cy + 60);
   const notes: string[] = [];
   if (intro) notes.push(tl.surah.tr);
+  if (project.series) notes.push(`Part ${project.series.part} of ${project.series.of}`);
   if (project.credit) notes.push(`Recited by ${reciterCredit(tl.reciter)}`);
   if (!intro && project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : `Translation: ${tl.translation.credit}`);
   ctx.globalAlpha = alpha * 0.85;
