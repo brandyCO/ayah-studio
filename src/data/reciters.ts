@@ -7,7 +7,9 @@
 // (1001+) are ours, not QDC's; they never reach the mushaf player or the Kids space (those need timings).
 // Reciters with `mp3quran` play slices of mp3quran.net full-surah recordings, cut at the pauses that
 // `scripts/verify-mp3quran.py` measured (public/data/mp3quran/{read}.json), only for the surahs whose
-// ayah times it verified against the audio (Ayah mode only).
+// ayah times it verified against the audio (Ayah mode only). A recording with no ayah times at all (or
+// a surah whose times were wrong) can get them from `scripts/make-mp3quran-timings.py`: forced alignment
+// of the audio with our own text, then the same pause and pace checks (its file is named, not numbered).
 
 export interface Reciter {
   id: number; // QDC recitation id
@@ -17,9 +19,9 @@ export interface Reciter {
   note?: string; // picker only
   everyayah?: string;
   qdc?: false; // no QDC recording or word timings: Ayah mode only
-  /** mp3quran.net recitation (read id) and the surahs whose ayah times passed
-   *  `scripts/verify-mp3quran.py` ("1-3,5"); only those surahs are offered. Ayah mode only. */
-  mp3quran?: { read: number; surahs: string };
+  /** mp3quran.net recitation (read id, or the name of an aligned recording) and the surahs whose ayah
+   *  times passed the checks ("1-3,5"); only those surahs are offered. Ayah mode only. */
+  mp3quran?: { read: number | string; surahs: string };
 }
 
 export const RECITERS: Reciter[] = [
@@ -75,6 +77,8 @@ export const RECITERS: Reciter[] = [
   { id: 1034, name: 'Mansour Al-Salimi', short: 'Al-Salimi', qdc: false, mp3quran: { read: 245, surahs: '1-90,93-112,114' } },
   { id: 1035, name: 'Abdulrahman Al-Majed', short: 'Al-Majed', qdc: false, mp3quran: { read: 236, surahs: '2-52,54-68,70-95,97-112,114' } },
   { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '2-3,5-6,8,12,16,21-22,24,26-32,34-35,37,39,41-42,44,47,67,87-88,93-94,98,103,110' } },
+  // mp3quran.net without ayah times: made by alignment and checked (scripts/make-mp3quran-timings.py).
+  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1,13-15,19,31-32,34-36,41-42,44-46,50-51,53,55-56,58-69,71,73,77,81-85,88-90,94-95,97-98,102-103,105,107,109-114' } },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */

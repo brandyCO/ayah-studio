@@ -155,7 +155,7 @@ LETTERS = re.compile('[ء-يٱ]')
 
 
 def letters(s):
-  return len(LETTERS.findall(s.split('\xa0')[0]))
+  return len(LETTERS.findall(s.rsplit('\xa0', 1)[0]))
 
 
 def check_surah(read, folder, s, text):

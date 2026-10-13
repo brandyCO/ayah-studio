@@ -20,7 +20,7 @@ export async function loadReel(r: Reciter, n: number, from: number, arabic: stri
     const p = planQdcReel(m.timings, n, from, arabic, {});
     if (!p) throw new UncheckedRange(`${r.short}: ${n}:${from}-${from + arabic.length - 1} is not verified`);
     progress('Loading recitation…');
-    return { plan: { ...p, source: 'mp3quran' }, audio: await sliceAudio(m.audioUrl, p.clip!, LEAD_IN, p.duration, null) };
+    return { plan: { ...p, source: 'mp3quran' }, audio: await sliceAudio(m.audioUrl, p.clip!, LEAD_IN, p.duration, m.fileDuration) };
   }
   if (r.qdc !== false) try {
     const q = await qdcSurah(r.id, n);

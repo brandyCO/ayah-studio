@@ -9,3 +9,4 @@ Thumbs.db
 android/app/build/
 android/.gradle/
 src-tauri/target/
+__pycache__/

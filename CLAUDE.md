@@ -341,8 +341,19 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       changed, and `UncheckedRange` for ayat touching a null cut → the editor (and gift player) switch to the
       default reciter with a toast; the picker hides a reciter for surahs/ayat it is not verified for
       (`covers()`, `mp3quranRange()`), new reels fall back by `reciterFor()`. Migration
-      `20261017000000_mp3quran_reciters.sql` (`valid_reciter()`: 1001–1036). Islam Sobhi: not on mp3quran's
-      timed list
+      `20261017000000_mp3quran_reciters.sql` (`valid_reciter()`: 1001–1036). **Islam Sobhi** (id 1037,
+      owner request "cant we make ayah times"): mp3quran.net has his recording but no ayah times, so we make
+      them by forced alignment (`scripts/align-ayat.py`: CTC with the Quran-trained wav2vec2
+      `rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final`, Apache-2.0, run offline; our own text only
+      reduced to letters; free audio allowed at both ends; with and without the isti'adha, the better path
+      wins). Checked first on Alafasy's everyayah files (known boundaries): 86 of 86 in the right gap.
+      `scripts/make-mp3quran-timings.py NAME FOLDER` then cuts at the quietest moment in each aligned gap
+      and applies the verifier's rules (pause ≥ 12 dB under speech or null, ≤ 10 % null, pace) plus a
+      confidence check (mean log-probability per ayah ≥ −1.5); `public/data/mp3quran/islam-sobhi.json`
+      (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
+      57 surahs so far; still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
+      ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
+      99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

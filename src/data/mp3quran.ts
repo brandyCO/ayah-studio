@@ -9,12 +9,13 @@ import { covers, type Reciter } from './reciters';
 
 interface Checked {
   folder: string;
-  surahs: Record<string, { size: number; c: (number | null)[] }>;
+  /** `vbr`: a variable-bitrate file (seconds long), decoded whole; `aligned`: times made by alignment. */
+  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; aligned?: boolean }>;
 }
 
-const files = new Map<number, Promise<Checked>>();
+const files = new Map<number | string, Promise<Checked>>();
 
-function checked(read: number): Promise<Checked> {
+function checked(read: number | string): Promise<Checked> {
   if (!files.has(read)) {
     const p = fetch(`./data/mp3quran/${read}.json`).then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -52,6 +53,8 @@ export interface Mp3QuranSurah {
   audioUrl: string;
   /** Per ayah: from the pause before it to the pause after it (ms, file time), as QDC-style timings without words. */
   timings: Map<string, VerseTiming>;
+  /** Seconds, for a variable-bitrate file (it cannot be Range-sliced, so it is decoded whole). */
+  fileDuration: number | null;
 }
 
 export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3QuranSurah> {
@@ -67,5 +70,5 @@ export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3Quran
     const a = s.c[k - 1], b = s.c[k];
     if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b });
   }
-  return { audioUrl, timings };
+  return { audioUrl, timings, fileDuration: s.vbr ?? null };
 }
