@@ -1289,3 +1289,9 @@ dialog.circle-full::backdrop { background: #04071c; }
 @media (prefers-reduced-motion: reduce) { .style-art, .style-words.lit i { animation: none; } }
 .list-item .pill { margin-inline-start: 8px; padding: 1px 8px; border-radius: 999px; background: var(--brand-fill); color: #fff; font-size: 11px; }
 .list-item .block { display: block; margin-top: 2px; }
+
+/* Quick reel (editor → Styles → Quick reel): numbered steps, Back / Next, an Export button at the end */
+.quick-steps { margin-bottom: 8px; }
+.quick-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.quick-export { width: 100%; margin-top: 12px; }
+.style-art.rec { background-color: #0b1424; background-size: cover; background-position: center; }

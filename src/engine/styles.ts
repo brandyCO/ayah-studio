@@ -45,3 +45,37 @@ export function currentStyle(p: Project): string | null {
   return STYLES.find((s) => p.scenes.length === 1 && p.scenes[0] === s.scene && currentMood(p) === s.mood && p.textMode === s.textMode
     && p.highlight === s.highlight && p.grain === s.grain && p.vignette === s.vignette && (!s.highlight || p.colors.hl === s.hl))?.id ?? null;
 }
+
+/** Quick reel: the pick shown first — gold word highlight, a slow fade, the Night grade, a vignette
+ *  and a half-second breath between ayat. A curated default, kept on the footage the user chose. */
+export const RECOMMENDED: Style = STYLES[0];
+export function applyRecommended(p: Project, keepScene?: string) {
+  applyStyle(p, RECOMMENDED);
+  p.textEffect = 'fade';
+  p.pause = 0.5;
+  if (keepScene) p.scenes = [keepScene];
+}
+
+/** Quick reel footage preferences → calm searches (rule 4: nature and light only, no people). */
+export const FOOTAGE: { id: string; label: string; q: string }[] = [
+  { id: 'sky', label: 'Sky', q: 'clouds sky' },
+  { id: 'sea', label: 'Sea', q: 'ocean waves' },
+  { id: 'rain', label: 'Rain', q: 'rain drops' },
+  { id: 'mountains', label: 'Mountains', q: 'mountains mist' },
+  { id: 'forest', label: 'Forest', q: 'forest trees' },
+  { id: 'desert', label: 'Desert', q: 'desert dunes' },
+  { id: 'night', label: 'Night', q: 'night sky stars' },
+  { id: 'light', label: 'Light', q: 'sunlight rays' },
+];
+
+/** Text motions offered in the Quick reel (all from the calm set, rule 7). */
+export const QUICK_MOTIONS = ['fade', 'rise', 'ink', 'glow'] as const;
+
+/** Whether the project still has the Recommended look (on any single background). */
+export function isRecommended(p: Project): boolean {
+  if (p.scenes.length !== 1) return false;
+  const q = structuredClone(p);
+  applyRecommended(q, p.scenes[0]);
+  const keys = ['textEffect', 'transition', 'colors', 'grade', 'scrim', 'enFont', 'pause', 'gap', 'textMode', 'highlight', 'grain', 'vignette', 'sceneMode'] as const;
+  return keys.every((k) => JSON.stringify(q[k]) === JSON.stringify(p[k]));
+}

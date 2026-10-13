@@ -8,7 +8,7 @@ import { loadWordMap, surahMeta, surahText, surahTranslation, surahWordMeanings 
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
-import { BACKGROUNDS, backgroundById, isBackground, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
+import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
@@ -21,7 +21,8 @@ import {
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
-import { applyStyle, currentStyle, STYLES } from '../engine/styles';
+import { applyRecommended, applyStyle, isRecommended, currentStyle, FOOTAGE, QUICK_MOTIONS, RECOMMENDED, STYLES } from '../engine/styles';
+import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
@@ -662,6 +663,135 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     note(ui('ed.styles-note')),
   ];
 
+  // --- Quick reel: footage by preference → the recommended style first → text motion → finish ---
+  type QuickStep = 'footage' | 'style' | 'motion' | 'finish';
+  const quick = {
+    step: 'footage' as QuickStep,
+    pref: (() => { try { return localStorage.getItem('quickFootage'); } catch { return null; } })(),
+    hits: [] as StockHit[],
+    searching: false,
+    error: '',
+    loading: null as string | null, // a clip being downloaded
+    pct: 0,
+    footage: null as string | null, // the clip picked here (kept when a style is applied)
+  };
+  const quickRefresh = () => { if (option?.id === 'quick') refreshUI(); };
+  async function quickSearch(pref: string) {
+    quick.pref = pref;
+    try { localStorage.setItem('quickFootage', pref); } catch { /* private window */ }
+    const f = FOOTAGE.find((x) => x.id === pref);
+    if (!f || !stockEnabled()) return quickRefresh();
+    quick.searching = true;
+    quick.error = '';
+    quick.hits = [];
+    quickRefresh();
+    try {
+      const src = await stockSources();
+      const r = await searchStock({ source: src.pixabay ? 'pixabay' : 'pexels', type: 'video', q: f.q, page: 1 });
+      if (quick.pref === pref) quick.hits = r.hits.filter((x) => (x.duration ?? 0) >= 5).slice(0, 6);
+    } catch (e) {
+      quick.error = e instanceof Error ? e.message : String(e);
+    }
+    quick.searching = false;
+    quickRefresh();
+  }
+  async function quickPick(hit: StockHit) {
+    if (exporting || quick.loading) return;
+    quick.loading = stockId(hit);
+    quick.pct = 0;
+    quickRefresh();
+    try {
+      const id = await downloadHit(hit, (f) => { const p = Math.round(f * 100); if (p !== quick.pct) { quick.pct = p; quickRefresh(); } });
+      if (!alive) return;
+      quick.footage = id;
+      project.scenes = [id];
+      project.clips = [];
+      project.sceneMode = 'single';
+      project.sceneLengths = [];
+      fitClips();
+      scenesChanged();
+      changed();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    }
+    quick.loading = null;
+    quickRefresh();
+  }
+  const quickPanel = (): Node[] => {
+    const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['finish', ui('qr.finish')]];
+    const at = steps.findIndex(([v]) => v === quick.step);
+    const go = (v: QuickStep) => { quick.step = v; quickRefresh(); panel.scrollTop = 0; panelBody.scrollTop = 0; };
+    const nav = h('div', { class: 'quick-nav' },
+      at > 0 ? h('button', { class: 'chip', onclick: () => go(steps[at - 1][0]) }, ui('common.back')) : h('span', {}),
+      at < steps.length - 1 ? h('button', { class: 'chip on', onclick: () => go(steps[at + 1][0]) }, ui('qr.next')) : null);
+    const head = h('div', { class: 'tabs quick-steps' }, ...steps.map(([v, l], i) =>
+      h('button', { class: `tab${v === quick.step ? ' on' : ''}`, onclick: () => go(v) }, `${i + 1} ${l}`)));
+    let body: (Node | null)[] = [];
+    if (quick.step === 'footage') {
+      const owned = new Set(libraryBackgrounds().map((b) => b.id));
+      body = [
+        note(ui('qr.footage-note')),
+        h('div', { class: 'chips' }, ...FOOTAGE.map((f) => h('button', {
+          class: `chip${quick.pref === f.id ? ' on' : ''}`, disabled: !!quick.loading,
+          onclick: () => void quickSearch(f.id),
+        }, tOr(`qr.f.${f.id}`, f.label)))),
+        !stockEnabled() ? note(ui('qr.no-library')) : null,
+        quick.error ? note(quick.error) : null,
+        quick.searching ? note(ui('qr.searching')) : null,
+        quick.hits.length ? h('div', { class: 'bg-grid' }, ...quick.hits.map((x) => {
+          const id = stockId(x);
+          const busy = quick.loading === id;
+          return h('div', { class: `bg-cell${busy ? ' loading' : ''}` },
+            h('button', {
+              class: `bg-thumb${project.scenes[0] === id ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
+              title: `${x.tags} · ${x.user}`, onclick: () => void quickPick(x),
+            }, h('span', {}, `▶ ${Math.round(x.duration ?? 0)} s`)),
+            busy ? h('div', { class: 'bg-progress', role: 'progressbar', 'aria-valuenow': String(quick.pct) },
+              h('span', { class: 'spinner' }), h('b', {}, `${quick.pct}%`), h('i', { style: `width:${quick.pct}%` })) : null,
+            !busy && owned.has(id) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, ui('qr.saved'))) : null);
+        })) : null,
+        quick.hits.length ? note(ui('qr.footage-credit')) : null,
+      ];
+    } else if (quick.step === 'style') {
+      const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
+      const pickStyle = (fn: () => void) => { fn(); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      body = [
+        h('div', { class: 'tiles' },
+          tile({
+            on: isRecommended(project), label: ui('qr.recommended'),
+            art: h('span', { class: 'style-art grain vignette rec', style: `background-image:url(${(backgroundById(keep ?? RECOMMENDED.scene) as { thumb?: string }).thumb ?? ''})` },
+              h('span', { class: 'style-words lit', style: `--hl:${RECOMMENDED.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+            onclick: () => pickStyle(() => applyRecommended(project, keep)),
+          }),
+          ...STYLES.filter((st) => st !== RECOMMENDED).map((st) => tile({
+            on: !isRecommended(project) && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
+            art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
+              h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
+            onclick: () => pickStyle(() => { applyStyle(project, st); if (keep) project.scenes = [keep]; }),
+          }))),
+        note(ui(keep ? 'qr.style-note-footage' : 'qr.style-note')),
+      ];
+    } else if (quick.step === 'motion') {
+      body = [
+        h('div', { class: 'tiles' }, ...QUICK_MOTIONS.map((fx) => tile({
+          on: project.textEffect === fx, label: tOr(`fx.${fx}`, TEXT_EFFECTS.find((e) => e.value === fx)!.label),
+          art: h('span', { class: `fx-sample fx-${fx}` }, 'آية'),
+          onclick: () => { project.textEffect = fx; changed(false); quickRefresh(); previewText(); },
+        }))),
+        note(ui('qr.motion-note')),
+      ];
+    } else {
+      body = [
+        row(ui('qr.mark'), chips<'off' | 'on'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.mark-small') }],
+          () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
+        note(ui('qr.mark-note')),
+        h('button', { class: 'primary brand-btn quick-export', disabled: exportBtn.disabled, onclick: () => void doExport() }, ui('ed.export')),
+        note(ui('qr.finish-note')),
+      ];
+    }
+    return [head, ...body.filter((x): x is Node => !!x), nav];
+  };
+
   const highlightPanel = () => [
     chips<'on' | 'off'>([{ value: 'on', label: ui('ed.highlight-on') }, { value: 'off', label: ui('ed.off') }],
       () => (project.highlight ? 'on' : 'off'), (v) => { project.highlight = v === 'on'; if (project.highlight) previewText(); }, (v) => v === 'off' || wordTimed()),
@@ -743,7 +873,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // --- tools (bottom bar) ---
   const TOOLS: Tool[] = [
-    { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [{ id: 'styles', icon: 'sparkle', label: ui('ed.styles'), panel: stylePanel }] },
+    { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [
+      { id: 'quick', icon: 'sparkle', label: ui('qr.title'), panel: quickPanel },
+      { id: 'styles', icon: 'mood', label: ui('ed.styles'), panel: stylePanel },
+    ] },
     { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), options: [{ id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel }] },
     { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
       { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },

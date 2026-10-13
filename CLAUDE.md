@@ -324,6 +324,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
       "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi / Raad Al Kurdi:
       no verified source with CORS (not on everyayah or QDC), so not added
+- [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
+      reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
+      localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
+      tapped, becomes the single scene) → **Style** (**Recommended** first = Gold words + fade + 0.5 s
+      pause, `applyRecommended()` in `src/engine/styles.ts`; the picked footage is kept) → **Text** (Fade,
+      Rise, Ink reveal, Glow) → **Finish** (Ayah Studio mark Off / Small, Export). "Recommended" is a curated
+      default, not ranked by data yet
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
