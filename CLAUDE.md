@@ -322,13 +322,27 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
       `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
-      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi / Raad Al Kurdi:
+      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
       no verified source with CORS (not on everyayah or QDC), so not added. 2026-10-13: 20 more everyayah
       reciters (ids 1007–1026: Hudhaify, Ayyoub, Jibreel, Budair, Qahtani, Bukhatir, Basfar, Matroud, Salamah,
       Husary + Minshawi Mujawwad, Tablawi, Ali Jaber, Muhsin Al-Qasim, Neana, Alaqimy, Sowaid, Alili, Sahl
       Yassin, AbdulKareem; Hafs, ≥ 64 kbps, first + last ayah of every surah checked; Warsh folders left
       out, the text is Hafs); migration `20261016000000_more_reciters.sql` (`valid_reciter()`); a search box
-      in the reciter picker
+      in the reciter picker. **mp3quran.net reciters** (owner request, "Yes, verify"): 10 Hafs voices (ids 1027–1036:
+      Nufais, Abkar, Raad Al-Kurdi, Al-Jaleel, Baleela, Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed, Al-Asiri),
+      Ayah mode only. Their ayah times are often wrong, so `scripts/verify-mp3quran.py` (ffmpeg) checks each
+      surah against the audio: CBR file, ayat 1..n in order inside the file, every boundary in a pause
+      (≥ 12 dB under the speech level, 0.45 s before / 0.25 s after; decoded from Range windows only), and a
+      plausible pace per ayah (letters/s against the reciter's median; catches shifted labels). It writes
+      `public/data/mp3quran/{read}.json` (file size + the quietest moment of each pause = the cut points,
+      null where there is no pause; a surah with > 10 % unchecked boundaries is left out) and the verified
+      surahs go into `reciters.ts` (`mp3quran.surahs`, 33–111 surahs each; Nufais 88: not 1 (shifted labels)
+      or 2 (VBR)). `src/data/mp3quran.ts` builds ayah timings from the cuts, refuses a file whose size
+      changed, and `UncheckedRange` for ayat touching a null cut → the editor (and gift player) switch to the
+      default reciter with a toast; the picker hides a reciter for surahs/ayat it is not verified for
+      (`covers()`, `mp3quranRange()`), new reels fall back by `reciterFor()`. Migration
+      `20261017000000_mp3quran_reciters.sql` (`valid_reciter()`: 1001–1036). Islam Sobhi: not on mp3quran's
+      timed list
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

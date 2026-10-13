@@ -5,7 +5,8 @@
 // live in the preview, even while playing, and can be undone.
 import { arrangeAudio, polishAudio } from '../data/audio';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
@@ -91,9 +92,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
-  const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
+  const project = newProject(n, from, to, reciterFor(reelReciter(DEFAULT_RECITER), n).id);
   applyLook(project, reelLook(), isBackground);
-  if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
+  if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id && covers(r, n)));
   else try {
     project.tightStart = localStorage.getItem('tightStart') !== '0';
     project.cinema = localStorage.getItem('cinema') !== '0';
@@ -748,6 +749,21 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
       r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
     r.id === project.reciterId ? icon('check', 18) : null);
+  /** mp3quran reciters whose recording is not verified for this reel's ayat (filled when the picker opens). */
+  const unchecked = new Set<number>();
+  let rangesChecked = false;
+  const offered = (r: Reciter) => covers(r, n) && !unchecked.has(r.id);
+  const checkRanges = () => {
+    if (rangesChecked) return;
+    rangesChecked = true;
+    for (const r of RECITERS) if (r.mp3quran && covers(r, n)) {
+      void mp3quranRange(r, n, from, to).then((ok) => {
+        if (ok || unchecked.has(r.id)) return;
+        unchecked.add(r.id);
+        if (option?.id === 'reciter') refreshUI();
+      }, () => {});
+    }
+  };
   let popular: { id: number; trending: boolean }[] = [];
   void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
   /** Filters the list below it by name (there are ~40 reciters). */
@@ -761,13 +777,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return input;
   };
   const reciterPanel = () => {
-    const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id), trending: p.trending })).filter((x) => x.r).slice(0, 3);
+    checkRanges();
+    const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id && offered(x)), trending: p.trending })).filter((x) => x.r).slice(0, 3);
     return [
       top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
       reciterSearch(),
-      h('div', { class: 'list reciter-list' }, ...RECITERS.map((r) => reciterButton(r))),
+      h('div', { class: 'list reciter-list' }, ...RECITERS.filter(offered).map((r) => reciterButton(r))),
     ].filter(Boolean) as Node[];
   };
 
@@ -1093,7 +1110,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       series.until = b;
       const my = ++seq;
       const r = reciterById(project.reciterId);
-      const timings = r.qdc === false ? null : await qdcSurah(r.id, n).then((x) => x.timings, () => null);
+      const timings = await (r.mp3quran ? mp3quranSurah(r, n) : r.qdc === false ? Promise.reject() : qdcSurah(r.id, n)).then((x) => x.timings, () => null);
       if (my !== seq || !alive) return;
       const lengths: number[] = [];
       for (let a = from; a <= b; a++) {
@@ -1680,12 +1697,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       base = reel;
       syncText = base.plan.wordTimed
         ? ui('ed.wordSynced')
-        : ui(base.plan.source === 'everyayah' ? 'ed.noTimingsEveryayah' : 'ed.noTimings');
+        : ui(base.plan.source === 'everyayah' ? 'ed.noTimingsEveryayah' : base.plan.source === 'mp3quran' ? 'ed.noTimingsMp3quran' : 'ed.noTimings');
       arrange();
       refreshUI();
       setStatus(mediaReady ? '' : ui('ed.loadingBackground'));
     } catch (e) {
       if (req !== audioReq) return;
+      if (e instanceof UncheckedRange) {
+        // This reciter's recording is not verified for these ayat (joined or unchecked): use the default.
+        unchecked.add(r.id);
+        project.reciterId = DEFAULT_RECITER;
+        toast(ui('ed.reciter-unchecked', { name: r.short }));
+        changed();
+        return loadAudio();
+      }
       setStatus(navigator.onLine
         ? ui('ed.audioFailed', { msg: e instanceof Error ? e.message : String(e) })
         // Reels opened before keep their recitation on the device; this one was not downloaded yet.

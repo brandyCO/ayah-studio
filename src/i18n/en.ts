@@ -414,6 +414,8 @@ const en = {
   'ed.wordSynced': 'Text follows the reciter word by word.',
   'ed.noTimings': 'Word timings are not available for this reciter here, so only Ayah mode is offered.',
   'ed.noTimingsEveryayah': 'Word timings are not available for this reciter here, so only Ayah mode is offered (audio: everyayah.com).',
+  'ed.noTimingsMp3quran': 'Word timings are not available for this reciter, so only Ayah mode is offered (audio: mp3quran.net, ayah times checked against the recording).',
+  'ed.reciter-unchecked': '{name}’s recording is not verified for these ayat, so the default reciter is used',
   'ed.loadingBackground': 'Loading background…',
   'ed.audioFailed': '{msg}. Check your connection and pick the reciter again.',
   'ed.offlineAudio': 'You are offline, and this recitation is not on your device yet. Connect once to download it; after that it works offline too.',
