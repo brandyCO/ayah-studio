@@ -2,13 +2,14 @@
 """Ayah times for mp3quran.net recordings that have none (Islam Sobhi) or wrong ones, made by forced
 alignment of the audio with our own text (`align-ayat.py`), then held to the same checks as
 `verify-mp3quran.py`: every cut in a pause (≥ 12 dB under the speech level, else null: ayat joined in one
-breath), plausible pace per ayah, at most a tenth of the cuts unchecked. Tested first on Alafasy's
+breath), plausible pace per ayah, at most half of the cuts unchecked, every ayah clearly heard. Tested first on Alafasy's
 everyayah files, whose ayah boundaries are known: all 86 boundaries of 6 surahs fell in the right gap.
 
 Writes the verified surahs into public/data/mp3quran/{name}.json (same format; "aligned": true per surah;
-"vbr": seconds for a variable-bitrate file, which the app decodes whole, so only files ≤ 4 min).
+"seek" for a variable-bitrate file: byte offsets of every 50th frame, so the app can still Range-fetch a span).
+Long recordings are aligned in ~8 min windows (`align-ayat.py`); results identical to one pass where tested.
 
-  python3 scripts/make-mp3quran-timings.py NAME FOLDER_URL [--surahs 1,112] [--max-min 20]
+  python3 scripts/make-mp3quran-timings.py NAME FOLDER_URL [--surahs 1,112] [--max-min 200]
 """
 import importlib.util, json, math, os, sys, time
 import numpy as np
@@ -25,7 +26,7 @@ def mod(name, file):
 al = mod('align', 'align-ayat.py')
 vf = mod('verify', 'verify-mp3quran.py')
 CACHE = os.environ.get('MP3_CACHE', os.path.join(ROOT, '.cache', 'mp3quran'))
-QUIET_DB, VBR_MAX = 12, 240
+QUIET_DB = 12
 MIN_CONF = -1.5  # mean log-probability over an ayah; clearly recited ayat score -0.3..-0.9
 BASMALA = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
 ISTIADHA = 'أَعُوذُ بِٱللَّهِ مِنَ ٱلشَّيۡطَٰنِ ٱلرَّجِيمِ'
@@ -45,6 +46,31 @@ def quietest(db, speech, lo, hi):
   return round((k + 0.5) * 50) if db[k] <= speech - QUIET_DB else None
 
 
+SEEK_EVERY = 50  # frames (~1.3 s): a VBR file's seek table, so the app can Range-fetch any span exactly
+
+
+def seek_table(path):
+  """Byte offsets of every SEEK_EVERY-th audio frame (frame 0 = the first after a Xing/Info frame, as the app
+  counts), stored as the first offset then differences."""
+  b = open(path, 'rb').read()
+  i = 0
+  while b[i:i + 3] == b'ID3':
+    i += 10 + ((b[i + 6] & 0x7f) << 21 | (b[i + 7] & 0x7f) << 14 | (b[i + 8] & 0x7f) << 7 | (b[i + 9] & 0x7f)) + (10 if b[i + 5] & 0x10 else 0)
+  i = vf.sync(b, i)
+  f = vf.frame(b, i)
+  mono = (b[i + 3] >> 6) == 3
+  side = (17 if mono else 32) if f['spf'] == 1152 else (9 if mono else 17)
+  if b[i + 4 + side:i + 8 + side] in (b'Xing', b'Info'): i += f['len']
+  offs, k = [], 0
+  while i >= 0 and i + 4 <= len(b):
+    f = vf.frame(b, i)
+    if not f:
+      i = vf.sync(b, i + 1); continue
+    if k % SEEK_EVERY == 0: offs.append(i)
+    i += f['len']; k += 1
+  return dict(n=SEEK_EVERY, d=[offs[0]] + [y - x for x, y in zip(offs, offs[1:])])
+
+
 def surah(name, folder, s, text, max_min):
   url = '%s%03d.mp3' % (folder, s)
   path = os.path.join(CACHE, name, '%03d.mp3' % s)
@@ -61,13 +87,12 @@ def surah(name, folder, s, text, max_min):
     open(path, 'wb').write(data)
   x = al.load(path)
   dur = len(x) / al.SR
-  if not hd:
-    if dur > VBR_MAX: return None, 'VBR and longer than 4 min'
-    vbr = round(dur, 3)
+  if not hd: vbr = seek_table(path)
   # With and without the isti'adha before the first ayah (some reciters say it): the better path wins.
   base = [] if s in (1, 9) else [BASMALA]
   best = None
-  for pre in (base, [ISTIADHA] + base):
+  # Recited before ayah 1: basmala or not, isti'adha or not (some recordings start straight with the ayah).
+  for pre in ((base, [ISTIADHA] + base, [], [ISTIADHA]) if base else (base, [ISTIADHA])):
     ay, _ = al.align(x, text, pre)
     if best is None or al.LAST_SCORE > best[0]: best = (al.LAST_SCORE, ay, al.LAST_CONF)
   _, ay, conf = best
@@ -82,18 +107,20 @@ def surah(name, folder, s, text, max_min):
   last = quietest(db, speech, ay[-1][1] - 0.1, ay[-1][1] + 1.5)
   cuts.append(last if last is not None or ay[-1][1] + 1.5 < dur else round(dur * 1000))
   fails = sum(c is None for c in cuts)
-  if fails > max(1, len(cuts) // 10): return None, '%d of %d cuts not in a pause' % (fails, len(cuts))
+  # Times made by alignment are checked by their confidence, so a cut without a pause only means the reciter
+  # joined those ayat (wasl): reels cannot start or end there. More than half joined → left out.
+  if fails > len(cuts) // 2: return None, '%d of %d cuts not in a pause' % (fails, len(cuts))
   if any(a is not None and b is not None and b - a < 300 for a, b in zip(cuts, cuts[1:])):
     return None, 'pauses too close together'
   rates = [vf.letters(text[k]) / max(0.05, b - a) for k, (a, b) in enumerate(ay)]
   out = dict(size=size, c=cuts, aligned=True)
-  if vbr: out['vbr'] = vbr
+  if vbr: out['seek'] = vbr
   return [out, rates], ('%d cuts unchecked' % fails if fails else None)
 
 
 def main():
   args = sys.argv[1:]
-  surahs, max_min = list(range(1, 115)), 20
+  surahs, max_min = list(range(1, 115)), 200
   if '--surahs' in args:
     k = args.index('--surahs'); surahs = [int(x) for x in args[k + 1].split(',')]; del args[k:k + 2]
   if '--max-min' in args:

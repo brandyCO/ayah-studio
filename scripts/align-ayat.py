@@ -73,12 +73,9 @@ def words_of(ayah):
   return ayah.rsplit('\xa0', 1)[0].replace('\xa0', ' ').split(' ')
 
 
-def align(x, ayat, preamble=()):
-  """Frames → (per ayah [start, end] seconds, per ayah per word [start, end]).
-  `preamble`: texts recited before the first ayah (the basmala); free audio (a star) is allowed at both ends."""
-  global LAST_EM, _EM_OF
-  if globals().get('_EM_OF') is not x: LAST_EM, _EM_OF = emissions(x), x  # same audio again: reuse
-  em = LAST_EM
+def _align_em(em, ayat, preamble):
+  """One forced alignment over these frames → (ayah spans, word spans, total score, confidence per ayah),
+  in seconds from the first frame."""
   T = em.shape[0]
   blank = VOCAB['<pad>']
   sep = VOCAB['|']
@@ -100,8 +97,6 @@ def align(x, ayat, preamble=()):
   if len(tokens) * 1 > T: raise ValueError('audio too short for the text')
   path, sc = torchaudio.functional.forced_align(em2[None], torch.tensor([tokens], dtype=torch.int32), blank=blank)
   path, sc = path[0].tolist(), sc[0]
-  global LAST_SCORE
-  LAST_SCORE = float(sc.sum())
   # Frame spans per token (merging repeats), in token order.
   spans, k, prev = [], -1, blank
   for t, tok in enumerate(path):
@@ -121,9 +116,46 @@ def align(x, ayat, preamble=()):
            for i, a in enumerate(ayat)]
   spans_a = [[w[0][0], w[-1][1]] for w in words]
   # Confidence per ayah: mean log-probability of the path over the ayah's frames (≈ 0 = clearly heard).
-  global LAST_CONF
-  LAST_CONF = [float(sc[int(a / sec):int(b / sec)].mean()) for a, b in spans_a]
-  return spans_a, words
+  conf = [float(sc[int(a / sec):int(b / sec)].mean()) for a, b in spans_a]
+  return spans_a, words, float(sc.sum()), conf
+
+
+WINDOW = 480  # seconds: longer recordings are aligned window by window
+
+
+def align(x, ayat, preamble=()):
+  """Audio → (per ayah [start, end] seconds, per ayah per word [start, end]); also sets LAST_SCORE, LAST_CONF.
+  `preamble`: texts recited before the first ayah (the basmala); free audio (a star) is allowed at both ends.
+  A long recording is aligned in windows of ~8 min: each takes the ayat that should fit in ~70 % of it (at the
+  surah's own pace), keeps all but the last, and the next window starts just after the last one kept."""
+  global LAST_EM, _EM_OF, LAST_SCORE, LAST_CONF
+  if globals().get('_EM_OF') is not x: LAST_EM, _EM_OF = emissions(x), x  # same audio again: reuse
+  em = LAST_EM
+  T, fps = em.shape[0], SR / HOP
+  if T <= WINDOW * fps * 1.3:
+    ay, wd, LAST_SCORE, LAST_CONF = _align_em(em, ayat, preamble)
+    return ay, wd
+  size = [sum(len(letters(w)) for w in words_of(a)) for a in ayat]
+  rate = sum(size) / (T / fps)  # letters per second of recording, pauses included
+  ay, wd, conf, score = [], [], [], 0.0
+  i, f0, pre = 0, 0, list(preamble)
+  while i < len(ayat):
+    last = T - f0 <= WINDOW * fps * 1.3
+    if last: j, f1 = len(ayat), T
+    else:
+      j, budget = i, 0.7 * WINDOW * rate
+      while j < len(ayat) and (j < i + 2 or budget >= size[j]): budget -= size[j]; j += 1
+      f1 = f0 + int(WINDOW * fps)
+    a, w, sc, c = _align_em(em[f0:f1], ayat[i:j], pre)
+    keep = j - i if last or j == len(ayat) else max(1, j - i - 1)
+    off = f0 / fps
+    ay += [[s + off, e + off] for s, e in a[:keep]]
+    wd += [[[s + off, e + off] for s, e in ws] for ws in w[:keep]]
+    conf += c[:keep]; score += sc
+    i += keep; pre = []
+    f0 = int((ay[-1][1] - 0.1) * fps)  # just before the end of the last ayah kept: the star takes the rest
+  LAST_SCORE, LAST_CONF = score, conf
+  return ay, wd
 
 
 def read_back(t0, t1):
