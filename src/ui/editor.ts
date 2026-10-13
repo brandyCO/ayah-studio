@@ -12,7 +12,7 @@ import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeM
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
-import { H, W } from '../engine/layout';
+import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout';
 import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
@@ -98,6 +98,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.tightStart = localStorage.getItem('tightStart') !== '0';
     project.cinema = localStorage.getItem('cinema') !== '0';
     project.tajweed = localStorage.getItem('tajweed') === '1';
+    const fm = localStorage.getItem('format');
+    if (isFormat(fm) && fm !== '9:16') project.format = fm;
     const az = Number(localStorage.getItem('arSize'));
     if (az) project.arSize = clampArSize(az);
     const sm = Number(localStorage.getItem('slowmo'));
@@ -142,6 +144,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
   const stage = h('div', { class: 'stage' }, canvas, status);
+  let shownFormat = ''; // the format the stage is shaped for (fitStage)
   const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play().then(() => { if (playing) watch(true); })) }, icon('play', 26));
   const restartBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.restart'), title: ui('ed.restart'), onclick: () => restart() }, icon('restart'));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
@@ -197,7 +200,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const c = document.createElement('canvas');
     c.width = 135;
     c.height = 240;
-    c.getContext('2d')!.drawImage(canvas, 0, 0, c.width, c.height);
+    // Other formats: the middle of the frame, cropped to the drafts list's 9:16 tile.
+    const sw = Math.min(canvas.width, (canvas.height * 9) / 16), sh = Math.min(canvas.height, (canvas.width * 16) / 9);
+    c.getContext('2d')!.drawImage(canvas, (canvas.width - sw) / 2, (canvas.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
     return new Promise((resolve) => c.toBlob((b) => resolve(b ?? undefined), 'image/jpeg', 0.75));
   }
   function scheduleSave() {
@@ -704,6 +709,19 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     slider.addEventListener('change', () => set(true));
     return [row(ui('ed.text-size'), label), slider, note(ui('ed.text-size-note', { m: sizePct(AR_SIZE_MEDIUM) }))];
   };
+  /** Video format: 9:16 (default), square or 16:9; remembered on this device for the next reel. */
+  function setFormat(f: Format) {
+    project.format = f === '9:16' ? undefined : f;
+    try { localStorage.setItem('format', f); } catch { /* private window */ }
+    rebuild();
+    changed();
+    previewText();
+  }
+  const formatRow = () => [
+    row(ui('ed.format'), chips<Format>([{ value: '9:16', label: ui('ed.format-916') }, { value: '1:1', label: ui('ed.format-11') }, { value: '16:9', label: ui('ed.format-169') }],
+      () => project.format ?? '9:16', setFormat)),
+    note(ui('ed.format-note')),
+  ];
   const slowmoRow = () => row(ui('ed.slowmo'), chips<string>(SLOWMO.map((v) => ({ value: String(v), label: v === 1 ? ui('ed.off') : ui(v === 0.75 ? 'ed.slowmo-slow' : 'ed.slowmo-very') })),
     () => String(project.slowmo ?? 1), (v) => setSlowmo(Number(v))));
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
@@ -1001,6 +1019,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       ];
     } else if (quick.step === 'layout') {
       body = [
+        ...formatRow(),
         ...sizeSlider(),
         row(ui('qr.name-place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
           () => project.titlePos, (v) => { own('layout'); project.titlePos = v; rebuild(); changed(); })),
@@ -1270,6 +1289,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }, { value: 'round', label: ui('ed.round') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
     { id: 'layout', icon: 'layout', label: ui('ed.layout'), options: [
+      { id: 'format', icon: 'full', label: ui('ed.format'), panel: formatRow },
       { id: 'title', icon: 'text', label: ui('ed.surah-name'), panel: () => [
         row(ui('ed.place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
           () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
@@ -1537,7 +1557,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   // A page pinch-zoomed by the browser magnifies the canvas too: count that zoom in.
   const resize = () => {
     const zoom = Math.max(1, window.visualViewport?.scale ?? 1);
-    const w = Math.min(1080, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1) * zoom)) || 540;
+    setFrame(project.format);
+    const w = Math.min(W, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1) * zoom)) || 540;
     canvas.width = w;
     canvas.height = Math.round((w * H) / W);
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
@@ -1546,6 +1567,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
+  fitStage();
   window.visualViewport?.addEventListener('resize', resize);
 
   // --- loading ---
@@ -1568,7 +1590,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (was) void play();
   }
 
+  /** The preview takes the reel's format (also after undo / redo). */
+  function fitStage() {
+    const f = project.format ?? '9:16';
+    if (f === shownFormat) return;
+    shownFormat = f;
+    const [fw, fh] = FORMATS[f];
+    stage.style.setProperty('--fr', String(fh / fw));
+    stage.style.aspectRatio = `${fw} / ${fh}`;
+    resize();
+  }
   function rebuild() {
+    fitStage();
     if (!plan) return;
     const trId = project.translation ?? currentTranslation();
     if (englishBy.has(trId)) english = englishBy.get(trId)!;
@@ -1908,7 +1941,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (document.hidden) void notifyReady();
       void recordReel(project.reciterId, n, from, to);
       result.replaceChildren(
-        h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video' }),
+        h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video', style: `aspect-ratio: ${W} / ${H}${W >= H ? '; width: min(360px, 86vw)' : ''}` }),
         h('p', { class: 'small' }, `✓ ${ui('ed.made', { s: secs, mb: (blob.size / 1e6).toFixed(1), q: quality === 1920 ? '1080P' : '720P' })}`),
         creditsBlock() ?? '',
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },

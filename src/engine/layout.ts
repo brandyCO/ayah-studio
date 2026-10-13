@@ -1,11 +1,28 @@
-// Frame geometry (logical 1080×1920 units) and text layout for the four text modes.
+// Frame geometry (logical units: 1080×1920 for 9:16, 1080×1080 square, 1920×1080 wide) and text layout
+// for the four text modes.
 // Quran text is only ever split at word boundaries; lines and pages joined back with single spaces
 // are verified to equal the original words, so nothing can be dropped or altered.
 
-export const W = 1080;
-export const H = 1920;
-export const SAFE = { x0: W * 0.05, x1: W * 0.95, y0: H * 0.05, y1: H * 0.95 };
-export const TEXT_W = SAFE.x1 - SAFE.x0 - 40;
+/** Video formats: 9:16 (Reels / TikTok / Shorts, the default), square, and 16:9 (YouTube). */
+export type Format = '9:16' | '1:1' | '16:9';
+export const FORMATS: Record<Format, [number, number]> = { '9:16': [1080, 1920], '1:1': [1080, 1080], '16:9': [1920, 1080] };
+export const isFormat = (v: unknown): v is Format => typeof v === 'string' && v in FORMATS;
+
+// The current frame. Live bindings: frameLayout() and render() set it from the style / project they
+// are given, so everything drawn or laid out for a reel uses that reel's format.
+export let W = 1080;
+export let H = 1920;
+export let SAFE = { x0: W * 0.05, x1: W * 0.95, y0: H * 0.05, y1: H * 0.95 };
+/** Text line width; capped on the wide frame so lines stay readable. */
+export let TEXT_W = SAFE.x1 - SAFE.x0 - 40;
+export function setFrame(f: Format = '9:16') {
+  const [w, h] = FORMATS[f] ?? FORMATS['9:16'];
+  if (w === W && h === H) return;
+  W = w;
+  H = h;
+  SAFE = { x0: W * 0.05, x1: W * 0.95, y0: H * 0.05, y1: H * 0.95 };
+  TEXT_W = Math.min(SAFE.x1 - SAFE.x0 - 40, 1400);
+}
 
 export const FONT_AR = '"UthmanicHafs", "AmiriQuran", serif';
 // Surah names come from a different source/encoding than the Quran text, so use Amiri for them.
@@ -74,6 +91,7 @@ export interface FrameStyle {
   watermark: boolean;
   textSize?: TextSize; // default 'm'
   arSize?: number; // the size slider (AR_SIZE_MIN–AR_SIZE_MAX px); wins over textSize when set
+  format?: Format; // default '9:16'
   learn?: boolean; // learning reel: word meanings large, the text area shared evenly
   enFont?: EnFont; // default 'serif'
 }
@@ -100,6 +118,7 @@ export interface FrameLayout {
 
 /** Everything stays inside the 5% title-safe area and nothing overlaps (rule 6). */
 export function frameLayout(st: FrameStyle): FrameLayout {
+  setFrame(st.format);
   let bottom = SAFE.y1;
   let watermark: number | null = null, credit: number | null = null;
   if (st.watermark) {

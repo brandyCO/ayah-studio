@@ -74,7 +74,10 @@ const MODES = [['ayah', 1], ['line', 1], ['half', 1], ['words', 1], ['words', 2]
 const STYLE = { titlePos: 'top', titleSize: 'm', credit: false, watermark: true };
 const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true }, { titlePos: 'bottom', titleSize: 's', credit: true, watermark: false }, { titlePos: 'bottom', titleSize: 'l', credit: false, watermark: true },
   { ...STYLE, textSize: 'l', enFont: 'sans' }, { titlePos: 'below', titleSize: 'm', credit: false, watermark: true, textSize: 's' },
-  { ...STYLE, arSize: 52 }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, arSize: 92 }, { titlePos: 'below', titleSize: 's', credit: false, watermark: false, arSize: 75 }];
+  { ...STYLE, arSize: 52 }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, arSize: 92 }, { titlePos: 'below', titleSize: 's', credit: false, watermark: false, arSize: 75 },
+  { ...STYLE, format: '1:1' }, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true, format: '1:1', arSize: 92 },
+  { ...STYLE, format: '16:9' }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, format: '16:9', arSize: 92 },
+  { ...STYLE, learn: true }, { ...STYLE, learn: true, format: '16:9' }];
 const surah = (n) => meta[n - 1];
 const reciter = { id: 0, name: 'Test', short: 'Test', everyayah: '' };
 const norm = (x) => x.split(/\s+/).filter(Boolean).join(' ');

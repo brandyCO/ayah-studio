@@ -11,7 +11,7 @@ import {
 } from 'mediabunny';
 import { lightRes, type BackgroundMedia } from './backgrounds';
 import type { ExportPath } from './capabilities';
-import { H, W } from './layout';
+import { H, setFrame, W } from './layout';
 import type { Project } from './project';
 import { render } from './render';
 import { prepareScenes, sceneSpans } from './scenes';
@@ -40,10 +40,12 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     aacRegistered = true;
   }
 
-  const scale = o.height / H;
+  // `height` is the 9:16 height (1920 / 1280); other formats keep the same short side (1080 / 720).
+  setFrame(o.project.format);
+  const scale = (o.height * 9) / 16 / Math.min(W, H);
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(W * scale);
-  canvas.height = o.height;
+  canvas.height = Math.round(H * scale);
   const ctx = canvas.getContext('2d', { alpha: false })!;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
