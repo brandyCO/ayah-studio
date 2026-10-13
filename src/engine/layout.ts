@@ -74,6 +74,7 @@ export interface FrameStyle {
   watermark: boolean;
   textSize?: TextSize; // default 'm'
   arSize?: number; // the size slider (AR_SIZE_MIN–AR_SIZE_MAX px); wins over textSize when set
+  learn?: boolean; // learning reel: word meanings large, the text area shared evenly
   enFont?: EnFont; // default 'serif'
 }
 
@@ -129,7 +130,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     title = bottom - T;
     bottom = title - 30;
   }
-  const split = st.translation ? Math.round(top + 0.62 * (bottom - top - 30)) : bottom;
+  const split = st.translation ? Math.round(top + (st.learn ? 0.5 : 0.62) * (bottom - top - 30)) : bottom;
   const ar = { top, bottom: split };
   const en = st.translation ? { top: split + 30, bottom } : { top: bottom, bottom };
   // The slider scales every mode's sizes from Medium; long text still shrinks to 64 px (or to the
@@ -144,7 +145,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     words: scaled(AR_SIZES.words, k, arMin),
   };
   const enFont = st.enFont === 'sans' ? FONT_EN_SANS : st.enFont === 'round' ? FONT_EN_ROUND : FONT_EN;
-  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: scaled(EN_SIZES, k, EN_MIN), enFont };
+  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: st.learn ? [72, 64, 56, 48, 40, EN_MIN] : scaled(EN_SIZES, k, EN_MIN), enFont };
 }
 
 export interface Fit {

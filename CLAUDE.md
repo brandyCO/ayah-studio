@@ -377,9 +377,17 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       the range (measured with a ZWJ after the prefix so letters keep their joined forms) — colour only,
       never the text (rules 1, 7); the recited-word highlight stays on top. `project.tajweed` (per device
       pref `tajweed`, not in the look); Quick reel → Text and Text → Tajweed colours with a legend.
-      `npm run check` verifies every range sits inside its word Owner request 2026-10-13 (second pass). The studio preview's
+      `npm run check` verifies every range sits inside its word. (Second pass, 2026-10-13:) the studio preview's
       height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
       stretches it
+- [x] Learning reels (owner request 2026-10-13): `project.learn` — Words mode, 1 word a step, the synced
+      Quran.com word meaning drawn large under it (`frameStyle().learn`: text area split 50/50, meanings
+      72 → 32 px). Only with word timings (rule 8); Quick reel → Text and Text → Learning reel
+- [x] Series mode (owner request 2026-10-13): Quick reel → Finish → **Make a series**: "Up to ayah" (≤ 200
+      ayat) + each part ~30/60/90 s → `planSeries()` (`src/engine/series.ts`, greedy, whole ayat only, ≤
+      `MAX_AYAT`, lengths from the reciter's QDC timings, else ~0.55 s a word) → one draft per part with this
+      reel's look, `project.series {part, of}` and the closing card on (this reel becomes part 1; ≤ 30 parts),
+      then `#/drafts`. "Part k of N" on the intro/closing card, in the caption and in the drafts list
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
       `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
       `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`

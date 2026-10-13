@@ -87,6 +87,10 @@ export interface Project {
   slowmo?: number;
   /** Tajweed colours on the Arabic (src/engine/tajweed.ts). Per device like cinema (not in the look). */
   tajweed?: boolean;
+  /** Series mode: this reel is part `part` of `of` (shown on the closing card and in the caption). */
+  series?: { part: number; of: number };
+  /** Learning reel: the synced word meanings drawn large under the words (Words mode, word timings only). */
+  learn?: boolean;
 }
 
 export interface Closing {
@@ -112,6 +116,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   watermark: p.watermark,
   textSize: p.textSize,
   arSize: p.arSize,
+  learn: !!p.learn && p.textMode === 'words' && p.showTranslation && p.translationMode === 'words',
   enFont: p.enFont,
 });
 
@@ -259,6 +264,9 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.cinema = d.cinema === true; // drafts from before the setting keep their own start
   if (typeof d.arSize === 'number' && Number.isFinite(d.arSize)) p.arSize = clampArSize(d.arSize);
   p.tajweed = d.tajweed === true;
+  p.learn = d.learn === true;
+  const sr = d.series;
+  if (sr && Number.isInteger(sr.part) && Number.isInteger(sr.of) && sr.part >= 1 && sr.part <= sr.of && sr.of <= 200) p.series = { part: sr.part, of: sr.of };
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
