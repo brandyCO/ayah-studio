@@ -74,6 +74,9 @@ export interface Project {
   /** The reel opens on the voice: the silence before the first word is trimmed to the safe minimum
    *  (MIN_LEAD before the sound found in the audio). Only the start; the pauses between ayat stay. */
   tightStart?: boolean;
+  /** Cinematic touches (src/engine/cinema.ts): breathing glow, open/close from black, slow drift,
+   *  depth. Per device like tightStart (not part of the look, so gifts are unchanged). */
+  cinema?: boolean;
 }
 
 export interface Closing {
@@ -157,6 +160,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     grain: false,
     vignette: false,
     tightStart: true,
+    cinema: true,
   };
 }
 
@@ -236,7 +240,8 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
   if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
   if (typeof d.translation === 'string' && validTranslation(d.translation)) p.translation = d.translation;
-  p.tightStart = d.tightStart === true; // drafts from before the setting keep their own start
+  p.tightStart = d.tightStart === true;
+  p.cinema = d.cinema === true; // drafts from before the setting keep their own start
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }
 

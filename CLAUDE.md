@@ -337,6 +337,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       before the voice found by `voiceOnset()`); the pauses between ayat are untouched. Switch in Quick
       reel → Finish and Audio → Start on voice; trimming the start by hand turns it off. The editor now
       rearranges the audio whenever any piece moves (trims alone used to leave it unarranged)
+- [x] Cinematic (owner request 2026-10-13, "premium, emotional"): `project.cinema` (new reels on;
+      per-device pref `cinema`; not in the look, so gifts are unchanged), `src/engine/cinema.ts`, all pure
+      in t: **breath** — the Arabic's halo swells with the reciter's loudness (`breathOf(audio)`: 50 Hz
+      RMS, scaled to a full voice, smoothed both ways; set on `Timeline.breath` by the editor; light
+      only, rule 7); **open/close** — the background rises out of black (1.4 s) and settles to 85 % black
+      over the last 1.6 s, drawn under the text and the reference (rule 2); **drift** — the background
+      scales 1 → 1.07 over the reel; **depth** — a 1/10-size copy of the background laid over it while
+      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
+      button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
+      the end pauses and brings them back
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

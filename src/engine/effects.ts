@@ -46,6 +46,8 @@ export interface TextBlock {
   opacity: number;
   /** Word highlight: the word being recited, drawn again over its place in `color` with a soft glow. */
   hl?: Highlight | null;
+  /** 0..1: a soft halo that swells with the reciter's voice (cinema). Light only, no motion. */
+  breath?: number;
 }
 
 export interface Highlight {
@@ -152,6 +154,14 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
   const top = b.top + dy;
   if (blur > 0.05) ctx.filter = `blur(${(blur * px).toFixed(2)}px)`;
 
+  if (b.breath && b.breath > 0.02) {
+    // Breath: a halo in the text colour, as strong as the voice is loud.
+    ctx.save();
+    ctx.shadowColor = rgba(b.color, 0.55 * b.breath);
+    ctx.shadowBlur = (12 + 30 * b.breath) * px;
+    fillLines(ctx, b, top);
+    ctx.restore();
+  }
   if (glow > 0.01) {
     // A soft halo in the text colour under the text, then the text itself.
     ctx.save();

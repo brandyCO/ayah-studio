@@ -21,6 +21,7 @@ import {
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
+import { breathOf } from '../engine/cinema';
 import { applyRecommended, applyStyle, isRecommended, currentStyle, FOOTAGE, QUICK_MOTIONS, RECOMMENDED, STYLES } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
@@ -90,7 +91,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
-  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; } catch { /* private window: on */ }
+  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; project.cinema = localStorage.getItem('cinema') !== '0'; } catch { /* private window: on */ }
   // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
   const draftKey = draft?.id ?? draftId ?? newDraftId();
   const created = draft?.created ?? Date.now();
@@ -130,15 +131,29 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
   const stage = h('div', { class: 'stage' }, canvas, status);
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : play()) }, icon('play', 26));
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play().then(() => { if (playing) watch(true); })) }, icon('play', 26));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
   const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
   const redoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.redo'), disabled: true, onclick: () => redo() }, icon('redo'));
   const fullBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.fullScreen'), onclick: () => setFull(!studio.classList.contains('full')) }, icon('full'));
   const setPlayIcon = () => {
+    if (!playing) watch(false);
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
     playBtn.setAttribute('aria-label', ui(playing ? 'ed.pause' : 'ed.play'));
   };
+  // Watching: Play (the button) fades the tools away and the preview fills the screen; a tap on the
+  // preview, Esc or the end of the reel brings them back (and pauses).
+  let wasFull = false;
+  let built = false; // the studio exists (pause() can run while the reel is still loading)
+  function watch(on: boolean) {
+    if (!built || on === studio.classList.contains('watching')) return;
+    if (on) { wasFull = studio.classList.contains('full'); setFull(true); }
+    studio.classList.toggle('watching', on);
+    if (!on) setFull(wasFull);
+  }
+  stage.addEventListener('click', () => { if (studio.classList.contains('watching')) pause(); });
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && studio.classList.contains('watching')) pause(); };
+  document.addEventListener('keydown', onKey);
   function setFull(on: boolean) {
     studio.classList.toggle('full', on);
     fullBtn.replaceChildren(icon(on ? 'unfull' : 'full'));
@@ -613,6 +628,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.tightStart = on;
     try { localStorage.setItem('tightStart', on ? '1' : '0'); } catch { /* private window */ }
   }
+  /** Cinematic touches; remembered on this device for the next reel. */
+  function setCinema(on: boolean) {
+    project.cinema = on;
+    try { localStorage.setItem('cinema', on ? '1' : '0'); } catch { /* private window */ }
+  }
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
   /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
@@ -790,6 +810,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       ];
     } else {
       body = [
+        row(ui('ed.cinema'), chips<'on' | 'off'>([{ value: 'on', label: ui('qr.on') }, { value: 'off', label: ui('ed.off') }],
+          () => (project.cinema ? 'on' : 'off'), (v) => setCinema(v === 'on'))),
+        note(ui('ed.cinema-note')),
         row(ui('ed.tight-start'), chips<'on' | 'off'>([{ value: 'on', label: ui('qr.on') }, { value: 'off', label: ui('ed.off') }],
           () => (project.tightStart ? 'on' : 'off'), (v) => { setTightStart(v === 'on'); arrange(); })),
         note(ui('ed.tight-note')),
@@ -933,6 +956,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
         () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
       { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
       { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
       { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
     ] },
@@ -1154,6 +1178,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
     overlay);
   root.append(studio);
+  built = true;
   // A new reel opens on the styles: one tap for a finished look, then Export.
   if (!draft) {
     tool = TOOLS[0];
@@ -1220,6 +1245,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
+    if (audio) tl.breath = breathOf(audio);
     spine.invalidate();
     if (t > tl.duration) t = 0;
     if (selection?.kind === 'scene' && selection.index >= tl.scenes.length) selection = null;
@@ -1474,6 +1500,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   return () => {
     if (saveTimer) void saveNow(); // an edit not yet saved
     alive = false;
+    document.removeEventListener('keydown', onKey);
     cancelAnimationFrame(raf);
     ro.disconnect();
     window.visualViewport?.removeEventListener('resize', resize);

@@ -1,3 +1,4 @@
+import type { Breath } from './cinema';
 // Timeline derived from the recitation: the reel plan says when each ayah and word is recited; the
 // text mode turns that into text events — groups of whole words on screen, shown again when the
 // reciter repeats them (pure apart from text measuring).
@@ -61,6 +62,8 @@ export interface Timeline {
   segmented: boolean;
   /** The whole-ayah translation's translator (closing card credit) and writing direction. */
   translation: ReelTranslation;
+  /** The recitation's loudness (set by the player once the audio is known; cinema breath). */
+  breath?: Breath;
 }
 
 export interface ReelTranslation {

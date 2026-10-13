@@ -165,6 +165,8 @@ const en = {
   'ed.highlight-needs-timings': 'This recitation has no word timings, so words can\'t be lit (never guessed).',
   'ed.grain': 'Grain',
   'ed.vignette': 'Vignette',
+  'ed.cinema': 'Cinematic',
+  'ed.cinema-note': 'The words glow softly with the reciter\'s voice; the scene rises out of darkness, drifts slowly closer, softens behind the ayah and settles back into darkness at the end. The reference always stays.',
   'ed.tight-start': 'Start on the first word',
   'ed.tight-bar': 'Start on voice',
   'ed.tight-note': 'The video opens just before the voice: only the silence at the start is trimmed, never a word. The pauses between ayat stay natural.',

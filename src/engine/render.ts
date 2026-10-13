@@ -4,6 +4,7 @@
 import type { BackgroundMedia } from './backgrounds';
 import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
+import { breathAt, darken, drift, shade, soften } from './cinema';
 import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
@@ -281,11 +282,27 @@ function drawClosing(ctx: CanvasRenderingContext2D, c: NonNullable<Project['clos
 /** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */
 export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: (BackgroundMedia | undefined)[]) {
   ctx.save();
-  drawScenes(ctx, t, sceneSpans(tl.scenes, project.transition), project.transition, media);
+  const cine = !!project.cinema;
+  const spans = sceneSpans(tl.scenes, project.transition);
+  if (cine) {
+    // The background drifts slowly closer over the whole reel.
+    const z = drift(t, tl.duration);
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(z, z);
+    ctx.translate(-W / 2, -H / 2);
+    drawScenes(ctx, t, spans, project.transition, media);
+    ctx.restore();
+    // Depth: the background softens while an ayah is on screen.
+    const a = ayahAt(tl, t);
+    if (a) soften(ctx, Math.min(smooth(clamp01((t - a.start) / 0.8)), smooth(clamp01((a.end - t) / 0.8))));
+  } else drawScenes(ctx, t, spans, project.transition, media);
   drawGrade(ctx, project.grade);
   if (project.vignette) drawVignette(ctx);
   if (project.grain) drawGrain(ctx, t);
   drawScrim(ctx, SCRIM_STRENGTH[project.scrim] ?? 1);
+  // Open from black, settle back into it; the text and the reference are drawn after, unchanged.
+  if (cine) darken(ctx, shade(t, tl.duration));
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -325,7 +342,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   if (ev) {
     setTextShadow(ctx, colors.ar);
     const hl = project.highlight && ayah ? highlightAt(ayah, ev, t, colors.hl ?? '#f2c46b') : null;
-    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1, hl });
+    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1, hl, breath: cine ? breathAt(tl.breath, t) : 0 });
   }
   if (en) {
     // Synced meanings move with their words; a whole-ayah translation turns pages on its own timing.

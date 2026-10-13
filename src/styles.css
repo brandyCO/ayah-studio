@@ -1295,3 +1295,9 @@ dialog.circle-full::backdrop { background: #04071c; }
 .quick-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
 .quick-export { width: 100%; margin-top: 12px; }
 .style-art.rec { background-color: #0b1424; background-size: cover; background-position: center; }
+
+/* Watching (editor): Play fades the tools away and the preview fills the screen; a tap brings them back */
+.studio.watching .transport { opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+.studio.watching .stage { cursor: pointer; animation: watch-in .9s ease both; }
+@keyframes watch-in { from { opacity: .55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .studio.watching .stage { animation: none; } }
