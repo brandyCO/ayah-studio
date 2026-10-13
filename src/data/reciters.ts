@@ -78,7 +78,7 @@ export const RECITERS: Reciter[] = [
   { id: 1035, name: 'Abdulrahman Al-Majed', short: 'Al-Majed', qdc: false, mp3quran: { read: 236, surahs: '2-52,54-68,70-95,97-112,114' } },
   { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '2-3,5-6,8,12,16,21-22,24,26-32,34-35,37,39,41-42,44,47,67,87-88,93-94,98,103,110' } },
   // mp3quran.net without ayah times: made by alignment and checked (scripts/make-mp3quran-timings.py).
-  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1,13-15,19,31-32,34-36,41-42,44-46,50-51,53,55-56,58-69,71,73,77,81-85,88-90,94-95,97-98,102-103,105,107,109-114' } },
+  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1,13-15,19,31-32,34-36,41-42,44,46,50-51,53,55-56,58-64,66-69,71,73,77,81-85,88-90,94-95,97-98,102-103,105,107,109-114' } },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */

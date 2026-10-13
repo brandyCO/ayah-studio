@@ -43,13 +43,20 @@ QUIET_DB = 12  # below the surah's speech level (90th percentile)
 ctx = ssl.create_default_context(cafile=os.environ.get('SSL_CERT_FILE') or None)
 
 
+class Redirected(Exception):
+  pass
+
+
 def get(url, rng=None, tries=4):
   for k in range(tries):
     try:
       req = urllib.request.Request(url, headers={'User-Agent': 'ayah-studio-verify'})
       if rng: req.add_header('Range', 'bytes=%d-%d' % rng)
       with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
+        # mp3quran redirects a surah it lacks to another reciter's folder: never take someone else's voice.
+        if r.geturl().rsplit('/', 1)[0] != url.rsplit('/', 1)[0]: raise Redirected(r.geturl())
         return r.read(), r.headers
+    except Redirected: raise
     except Exception:
       if k == tries - 1: raise
       time.sleep(2 ** k)

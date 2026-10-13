@@ -351,7 +351,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and applies the verifier's rules (pause ≥ 12 dB under speech or null, ≤ 10 % null, pace) plus a
       confidence check (mean log-probability per ayah ≥ −1.5); `public/data/mp3quran/islam-sobhi.json`
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
-      57 surahs so far; still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
+      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
       99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new

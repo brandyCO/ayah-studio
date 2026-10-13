@@ -28,10 +28,12 @@ function checked(read: number | string): Promise<Checked> {
 }
 
 const sizes = new Map<string, Promise<number | null>>();
-/** The file's size now (null when it cannot be told, e.g. offline: the cached bytes are then used). */
+/** The file's size now (null when it cannot be told, e.g. offline: the cached bytes are then used; -1 when
+ *  mp3quran redirects it to another reciter's folder, as it does for surahs a reciter lacks). */
 function sizeOf(url: string): Promise<number | null> {
   if (!sizes.has(url)) {
     sizes.set(url, fetch(url, { method: 'HEAD' }).then((r) => {
+      if (r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
       const n = Number(r.headers.get('Content-Length'));
       return r.ok && n > 0 ? n : null;
     }, () => null));
