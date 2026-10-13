@@ -335,8 +335,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       4–8 Fajr, 16–20 Golden hour, else After rain); text mode from the reciter's pace (`pacedMode()`:
       > 1.7 words/s → Line, else Ayah). Applied by itself when the step opens and follows the footage until
       the user taps a vibe; the others and "More looks" (the 7 styles) are one tap away; footage kept.
-      Never chosen from an ayah's meaning (no interpretation of the Quran) → **Text** (Fade, Rise, Ink
-      reveal, Glow) → **Finish** (Cinematic, Start on the first word, Ayah Studio mark Off / Small, Export)
+      Never chosen from an ayah's meaning (no interpretation of the Quran) → **Text** (on screen: Ayah /
+      Line / Half line / Words 1–3, timed modes only with word timings; translation synced / whole ayah /
+      off; recited word Off or 12 colours; motion Fade, Rise, Ink reveal, Glow) → **Layout** (surah name +
+      reference Top / Under the ayah / Bottom, Arabic name Show / Hide, size; the reference always stays)
+      → **Finish** (Cinematic, Start on the first word, Ayah Studio mark Off / Small, Export). Footage: up
+      to 4 clips, numbered in tap order (tap again to take one out), changing **with each ayah** or
+      **evenly** (`quickSplit`). Text/Layout choices are kept when a vibe or style is tapped afterwards
+      (`keepOwn()`; per device `quickOwn`). Owner request 2026-10-13 (second pass). The studio preview's
+      height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
+      stretches it
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
       `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
       `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`
