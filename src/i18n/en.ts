@@ -220,6 +220,7 @@ const en = {
   'ed.format-11': "1:1 Square",
   'ed.format-169': "16:9 YouTube",
   'ed.format-note': "9:16 for TikTok, Reels and Shorts; square for feeds and WhatsApp; 16:9 for YouTube and screens. The text is laid out again for each.",
+  'ed.reciter-search': "Search reciters",
   'ed.learn': "Learning reel",
   'ed.learn-note': "One word at a time with its English meaning large beneath it, timed to the reciter. Word meanings from Quran.com.",
   'ed.learn-needs-timings': "Learning reels need this reciter's word timings; pick a reciter with word timings.",
