@@ -48,7 +48,7 @@ def everyayah(folder, s, text):
       pre = al.opening(x, s, ayah, mk.BASMALA, mk.ISTIADHA) if a == 1 else []
       _, wd = al.align(x, [ayah], pre)
       conf = al.LAST_CONF
-      ayat.append(dict(conf=round(conf[0], 3), w=mk.word_spans([ayah], wd)[0], ms=round(len(x) / al.SR * 1000)))
+      ayat.append(dict(conf=round(conf[0], 3), lconf=round(al.LAST_LCONF[0], 3), w=mk.word_spans([ayah], wd)[0], ms=round(len(x) / al.SR * 1000)))
     except Exception as e:
       ayat.append(dict(error=str(e)[:200]))
     finally:

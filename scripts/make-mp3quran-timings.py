@@ -91,7 +91,7 @@ def analyse(name, folder, s, text, max_min=1e9):
   dur = len(x) / al.SR
   # Recited before ayah 1 (basmala, isti'adha, either, both or neither): heard, not assumed.
   ay, wd = al.align(x, text, al.opening(x, s, text[0], BASMALA, ISTIADHA))
-  conf = al.LAST_CONF
+  conf, lconf = al.LAST_CONF, al.LAST_LCONF
   db = envelope(x)
   speech = float(np.percentile(db, 90))
   n = len(ay)
@@ -100,18 +100,19 @@ def analyse(name, folder, s, text, max_min=1e9):
     cuts.append(quietest(db, speech, ay[k][1] - 0.1, ay[k + 1][0] + 0.1))
   last = quietest(db, speech, ay[-1][1] - 0.1, ay[-1][1] + 1.5)
   cuts.append(last if last is not None or ay[-1][1] + 1.5 < dur else round(dur * 1000))
-  raw = dict(size=size, ay=[[round(a * 1000), round(b * 1000)] for a, b in ay], conf=[round(c, 3) for c in conf],
+  raw = dict(size=size, ay=[[round(a * 1000), round(b * 1000)] for a, b in ay], conf=[round(c, 3) for c in conf], lconf=[round(c, 3) for c in lconf],
              w=word_spans(text, wd), c=cuts)
   if not hd: raw['seek'] = seek_table(path)
   return raw, None
 
 
 def word_spans(text, wd):
-  """Per ayah [[word number (1-based, our words), startMs, endMs], ...]; words without letters have none."""
+  """Per ayah [[word number (1-based, our words), startMs, endMs, letter confidence × 100], ...]; words without
+  letters have none."""
   out = []
   for a, ws in zip(text, wd):
     idx = [j + 1 for j, w in enumerate(al.words_of(a)) if al.letters(w)]
-    out.append([[j, round(s * 1000), round(e * 1000)] for j, (s, e) in zip(idx, ws)])
+    out.append([[j, round(s * 1000), round(e * 1000), round(q * 100)] for j, (s, e, q) in zip(idx, ws)])
   return out
 
 
