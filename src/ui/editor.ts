@@ -90,6 +90,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
+  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; } catch { /* private window: on */ }
   // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
   const draftKey = draft?.id ?? draftId ?? newDraftId();
   const created = draft?.created ?? Date.now();
@@ -523,12 +524,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const [maxHead, maxTail] = trimLimits(base.plan, i);
     const [head, tail] = project.trims[ayahNo(i)] ?? [0, 0];
     return {
-      head: Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
+      head: i === 0 && project.tightStart ? maxHead : Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
       gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : 0,
     };
   }
   const ms = (x: number) => Math.round(x * 1000) / 1000; // edits are kept to the millisecond
   function trimAudio(i: number, head: number, tail: number) {
+    if (i === 0 && project.tightStart && Math.abs(head - audioTrim(0)!.maxHead) > 0.0005) setTightStart(false); // set by hand from now on
     project.trims[ayahNo(i)] = [ms(head), ms(tail)];
     arrange();
     changed();
@@ -568,6 +570,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     v = ms(Math.min(Math.max(v, lo), hi));
     const tr = audioTrim(i)!;
     if (i === 0) {
+      setTightStart(false);
       project.trims[ayahNo(0)] = [ms(natural(0)[0] - v), ms(tr.tail)];
     } else {
       const prev = audioTrim(i - 1)!;
@@ -604,6 +607,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     arrange();
     changed();
     toast(ui('ed.silencesTrimmed'));
+  }
+  /** Start on the first word (only the reel's start); remembered on this device for the next reel. */
+  function setTightStart(on: boolean) {
+    project.tightStart = on;
+    try { localStorage.setItem('tightStart', on ? '1' : '0'); } catch { /* private window */ }
   }
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
@@ -782,6 +790,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       ];
     } else {
       body = [
+        row(ui('ed.tight-start'), chips<'on' | 'off'>([{ value: 'on', label: ui('qr.on') }, { value: 'off', label: ui('ed.off') }],
+          () => (project.tightStart ? 'on' : 'off'), (v) => { setTightStart(v === 'on'); arrange(); })),
+        note(ui('ed.tight-note')),
         row(ui('qr.mark'), chips<'off' | 'on'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.mark-small') }],
           () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
         note(ui('qr.mark-note')),
@@ -883,6 +894,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
         row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
         note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
+      { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
       { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
     { id: 'mood', icon: 'mood', label: ui('ed.mood'), options: [{ id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel }] },
@@ -1187,7 +1199,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const was = playing; // keep watching while editing
     pause();
     plan = arrangeReel(base.plan, pc);
-    audio = pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
+    audio = plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio;
     spine.setAudio(audio);
     rebuild();
     if (was) void play();

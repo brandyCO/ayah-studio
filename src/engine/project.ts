@@ -71,6 +71,9 @@ export interface Project {
   /** The whole-ayah translation (an id from src/data/translationList.ts); missing = the reader's choice.
    *  Kept with the draft, not with the remembered look (gifts carry looks only). */
   translation?: string;
+  /** The reel opens on the voice: the silence before the first word is trimmed to the safe minimum
+   *  (MIN_LEAD before the sound found in the audio). Only the start; the pauses between ayat stay. */
+  tightStart?: boolean;
 }
 
 export interface Closing {
@@ -100,7 +103,7 @@ export const OUTRO = 3; // seconds of the closing reference card
 export const PAUSES = [0, 0.5, 1, 2];
 
 /** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to'>>) => {
+export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart'>>) => {
   const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
   return {
     pause: p.pause,
@@ -108,7 +111,8 @@ export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & P
     intro: p.intro ? INTRO : 0,
     outro: p.outro ? OUTRO : 0,
     gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
-    trims: ayat.map((a): [number, number] => p.trims?.[a] ?? [0, 0]),
+    // Start on the first word: as much of the opening silence as is safe (arrangeReel clamps it).
+    trims: ayat.map((a, i): [number, number] => (i === 0 && p.tightStart ? [Infinity, p.trims?.[a]?.[1] ?? 0] : p.trims?.[a] ?? [0, 0])),
     holds: ayat.map((a) => p.holds?.[a] ?? null),
   };
 };
@@ -152,6 +156,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     highlight: false,
     grain: false,
     vignette: false,
+    tightStart: true,
   };
 }
 
@@ -231,6 +236,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (isNumRecord(d.holds, finite)) p.holds = { ...d.holds! };
   if (isNumRecord(d.trims, (x) => Array.isArray(x) && x.length === 2 && x.every(finite))) p.trims = structuredClone(d.trims!);
   if (typeof d.translation === 'string' && validTranslation(d.translation)) p.translation = d.translation;
+  p.tightStart = d.tightStart === true; // drafts from before the setting keep their own start
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }
 

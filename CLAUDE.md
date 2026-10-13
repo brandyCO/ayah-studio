@@ -331,6 +331,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       pause, `applyRecommended()` in `src/engine/styles.ts`; the picked footage is kept) → **Text** (Fade,
       Rise, Ink reveal, Glow) → **Finish** (Ayah Studio mark Off / Small, Export). "Recommended" is a curated
       default, not ranked by data yet
+- [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):
+      `project.tightStart` (new reels on; per-device pref `tightStart`; drafts from before stay off):
+      `pacing()` trims the first ayah's opening silence to the safe minimum (`trimLimits`: `MIN_LEAD`
+      before the voice found by `voiceOnset()`); the pauses between ayat are untouched. Switch in Quick
+      reel → Finish and Audio → Start on voice; trimming the start by hand turns it off. The editor now
+      rearranges the audio whenever any piece moves (trims alone used to leave it unarranged)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
