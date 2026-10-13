@@ -353,7 +353,21 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
       55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
-      99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037)
+      99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037). **Word times for every reciter** (owner request
+      2026-10-13, "all modes for all reciters"): the same aligner gives each word's time. `.github/workflows/align.yml`
+      (manual; `scripts/align-plan.py`: the 37 reciters without QDC timings × 4 surah ranges, 18 jobs at a time on
+      GitHub's free runners) runs `scripts/align-batch.py` and pushes raw results to the branch `align-results`
+      (`align/{key}/{SSS}.json`: ayah + word spans, confidence, cuts, VBR seek table). `scripts/make-word-timings.py
+      RESULTS` checks them and writes `public/data/words/{key}/{SSS}.json` (display-word times per ayah, only ayat
+      that pass: heard clearly, every word timed in order, no word but the last > 3 s and no silence > 2.5 s
+      inside the ayah — repetitions would stretch a word), the mp3quran cuts and `words: '…'` in `reciters.ts`.
+      Checked against Quran.com's word times for Alafasy (same recording, 8 surahs): median 0.04 s, 90 % within
+      0.17 s. App: `src/data/alignedWords.ts`; mp3quran timings get `segments`; everyayah reels plan words per
+      ayah file (`planClipReel(…, words)`); a reel is word-timed only when every ayah has words (rule 8).
+      Aligner details: free audio (star) costs 1 nat a frame (stray audio before ayah 1 is no longer taken for
+      it); what precedes ayah 1 (basmala / isti'adha) is heard by a read-back (`opening()`), not chosen by score;
+      long files in 8-min windows (identical results); VBR files: `seek` table (byte offset of every 50th frame)
+      → `decodeMp3Span(…, seek)` Range-fetches exactly (lag 0 against a whole-file decode in Chromium)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

@@ -87,8 +87,8 @@ def main():
   rec = open(rec_path).read()
   for key in sorted(os.listdir(os.path.join(res_dir, 'align'))):
     if only and key not in only: continue
-    line = next((l for l in rec.splitlines() if re.search(r"(everyayah|mp3quran)", l) and
-                 (re.search(r"\{ id: %s," % re.escape(key), l) or re.search(r"read: '?%s'?," % re.escape(key), l))), None)
+    line = next((l for l in rec.splitlines() if 'qdc: false' in l and re.search(r"(everyayah|mp3quran)", l) and
+                 (re.search(r"\{ id: %s," % re.escape(key), l) and 'mp3quran' not in l or re.search(r"read: '?%s'?," % re.escape(key), l))), None)
     if not line or 'qdc: false' not in line: print(key, ': no such reciter'); continue
     mp3 = 'mp3quran' in line
     files = sorted(f for f in os.listdir(os.path.join(res_dir, 'align', key)) if f.endswith('.json'))
