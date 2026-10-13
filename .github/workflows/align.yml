@@ -48,7 +48,7 @@ jobs:
         job: ${{ fromJson(needs.plan.outputs.jobs) }}
     env:
       ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
-      MP3_CACHE: ${{ runner.temp }}/mp3
+      MP3_CACHE: /tmp/mp3
       DEADLINE: '18000'
       KEY: ${{ matrix.job.key }}
       KIND: ${{ matrix.job.kind }}
