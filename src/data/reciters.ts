@@ -7,7 +7,9 @@
 // (1001+) are ours, not QDC's; they never reach the mushaf player or the Kids space (those need timings).
 // Reciters with `mp3quran` play slices of mp3quran.net full-surah recordings, cut at the pauses that
 // `scripts/verify-mp3quran.py` measured (public/data/mp3quran/{read}.json), only for the surahs whose
-// ayah times it verified against the audio (Ayah mode only).
+// ayah times it verified against the audio (Ayah mode only). A recording with no ayah times at all (or
+// a surah whose times were wrong) can get them from `scripts/make-mp3quran-timings.py`: forced alignment
+// of the audio with our own text, then the same pause and pace checks (its file is named, not numbered).
 
 export interface Reciter {
   id: number; // QDC recitation id
@@ -17,9 +19,9 @@ export interface Reciter {
   note?: string; // picker only
   everyayah?: string;
   qdc?: false; // no QDC recording or word timings: Ayah mode only
-  /** mp3quran.net recitation (read id) and the surahs whose ayah times passed
-   *  `scripts/verify-mp3quran.py` ("1-3,5"); only those surahs are offered. Ayah mode only. */
-  mp3quran?: { read: number; surahs: string };
+  /** mp3quran.net recitation (read id, or the name of an aligned recording) and the surahs whose ayah
+   *  times passed the checks ("1-3,5"); only those surahs are offered. Ayah mode only. */
+  mp3quran?: { read: number | string; surahs: string };
 }
 
 export const RECITERS: Reciter[] = [
