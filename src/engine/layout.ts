@@ -19,7 +19,7 @@ export const FONT_EN_ROUND = 'Nunito, "Varela Round", system-ui, sans-serif';
 export const AR_LINE = 1.8;
 export const EN_LINE = 1.4;
 const EN_SIZES = [44, 40, 36];
-/** Arabic sizes per text mode, largest first; 64 px is the legible minimum. */
+/** Arabic sizes per text mode at Medium, largest first; 64 px is the minimum long text shrinks to. */
 export const AR_SIZES = {
   ayah: [80, 72, 64],
   line: [80, 72, 64],
@@ -28,6 +28,14 @@ export const AR_SIZES = {
 } as const;
 const AR_MIN = 64;
 const EN_MIN = 32;
+/** The Arabic size slider (px of a whole ayah on the 1080 px frame; Medium = 80). Owner decision
+ *  2026-10-13: 52 px is the smallest still readable on a phone (~19 px on screen), 92 px the largest. */
+export const AR_SIZE_MIN = 52;
+export const AR_SIZE_MAX = 92;
+export const AR_SIZE_MEDIUM = 80;
+export const clampArSize = (v: number) => Math.min(AR_SIZE_MAX, Math.max(AR_SIZE_MIN, Math.round(v)));
+/** The S / M / L closest to a slider size (kept for gifts, which only know those three). */
+export const nearestTextSize = (v: number): TextSize => (v < 75 ? 's' : v > 86 ? 'l' : 'm');
 
 export type TextSize = 's' | 'm' | 'l';
 export type EnFont = 'serif' | 'sans' | 'round';
@@ -37,9 +45,12 @@ const SIZE_SCALE: Record<TextSize, number> = { s: 0.88, m: 1, l: 1.14 };
  * Sizes scaled for the chosen text size, largest first, never below the legible minimum (long text
  * wraps instead); the minimum stays the last resort so whatever fits at Medium still fits.
  */
-function scaled(sizes: readonly number[], z: TextSize, min: number): number[] {
-  const out = [...sizes.map((x) => Math.max(min, 2 * Math.round((x * SIZE_SCALE[z]) / 2))), min];
-  return out.filter((x, i) => out.indexOf(x) === i);
+function scaled(sizes: readonly number[], k: number, min: number): number[] {
+  const top = Math.max(min, 2 * Math.round((sizes[0] * k) / 2));
+  // Medium's own steps (up to the top size) stay in the ladder, so a bigger setting never lands on a
+  // smaller size than Medium would for the same long ayah.
+  const out = [...sizes.map((x) => Math.max(min, 2 * Math.round((x * k) / 2))), ...(k > 1 ? sizes.filter((x) => x <= top) : []), min];
+  return out.filter((x, i) => out.indexOf(x) === i).sort((x, y) => y - x);
 }
 
 /** The canvas calls layout needs (a stub with the same shape is used by the node checks). */
@@ -62,6 +73,7 @@ export interface FrameStyle {
   credit: boolean; // "Recited by …" line (optional)
   watermark: boolean;
   textSize?: TextSize; // default 'm'
+  arSize?: number; // the size slider (AR_SIZE_MIN–AR_SIZE_MAX px); wins over textSize when set
   enFont?: EnFont; // default 'serif'
 }
 
@@ -120,15 +132,19 @@ export function frameLayout(st: FrameStyle): FrameLayout {
   const split = st.translation ? Math.round(top + 0.62 * (bottom - top - 30)) : bottom;
   const ar = { top, bottom: split };
   const en = st.translation ? { top: split + 30, bottom } : { top: bottom, bottom };
-  const z = st.textSize ?? 'm';
+  // The slider scales every mode's sizes from Medium; long text still shrinks to 64 px (or to the
+  // slider's own size when the user picked smaller), never below AR_SIZE_MIN.
+  const v = st.arSize != null ? clampArSize(st.arSize) : null;
+  const k = v != null ? v / AR_SIZE_MEDIUM : SIZE_SCALE[st.textSize ?? 'm'];
+  const arMin = v != null ? Math.min(AR_MIN, v) : AR_MIN;
   const arSizes = {
-    ayah: scaled(AR_SIZES.ayah, z, AR_MIN),
-    line: scaled(AR_SIZES.line, z, AR_MIN),
-    half: scaled(AR_SIZES.half, z, AR_MIN),
-    words: scaled(AR_SIZES.words, z, AR_MIN),
+    ayah: scaled(AR_SIZES.ayah, k, arMin),
+    line: scaled(AR_SIZES.line, k, arMin),
+    half: scaled(AR_SIZES.half, k, arMin),
+    words: scaled(AR_SIZES.words, k, arMin),
   };
   const enFont = st.enFont === 'sans' ? FONT_EN_SANS : st.enFont === 'round' ? FONT_EN_ROUND : FONT_EN;
-  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: scaled(EN_SIZES, z, EN_MIN), enFont };
+  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: scaled(EN_SIZES, k, EN_MIN), enFont };
 }
 
 export interface Fit {

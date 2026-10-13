@@ -149,28 +149,33 @@ export function scenesAt(spans: SceneSpan[], t: number): { a: SceneSpan; b: Scen
 /** The usable start of a clip: within the video, leaving at least a tenth of a second. */
 export const clipIn = (clip: Clip | null | undefined, duration: number) => Math.min(Math.max(0, clip?.in ?? 0), Math.max(0, duration - 0.1));
 
+/** Slow motion for every background video (the recitation is never slowed): 1, 0.75 or 0.5. */
+export const SLOWMO = [1, 0.75, 0.5] as const;
+export type Slowmo = (typeof SLOWMO)[number];
+
 /**
  * Video time of a scene's background at reel time t: it starts at the clip's in-point when the scene
  * first shows; a clip shorter than the scene loops from its in-point, slows down, or holds its last frame.
+ * `speed` is the reel's slow motion (1 = as filmed).
  */
-export function videoTime(s: SceneSpan, t: number, clip: Clip | null | undefined, duration: number): number {
-  const lt = Math.max(0, t - s.from);
+export function videoTime(s: SceneSpan, t: number, clip: Clip | null | undefined, duration: number, speed = 1): number {
+  const lt = Math.max(0, t - s.from) * speed;
   const start = clipIn(clip, duration);
   const avail = Math.max(0.1, duration - start);
-  const slot = s.to - s.from;
+  const slot = (s.to - s.from) * speed; // video seconds the scene shows at this speed
   const fit = clip?.fit ?? 'loop';
   if (fit === 'hold' || (fit === 'loop' && avail >= slot)) return Math.min(start + lt, duration - 1 / 60);
-  const rate = fit === 'slow' ? Math.max(MIN_RATE, Math.min(1, avail / slot)) : 1;
+  const rate = fit === 'slow' ? Math.max(MIN_RATE / speed, Math.min(1, avail / slot)) : 1;
   return start + ((lt * rate) % avail);
 }
 
 /** Make every video visible at t hold its frame (export: awaited; preview: fire and forget). */
-export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false): Promise<unknown> | null {
+export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false, speed = 1): Promise<unknown> | null {
   const { a, b } = scenesAt(spans, t);
   const jobs: Promise<void>[] = [];
   for (const s of [a, b]) {
     const v = s && media[s.entry]?.video;
-    if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(videoTime(s, t, clips[s.entry], v.duration)));
+    if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(videoTime(s, t, clips[s.entry], v.duration, speed)));
   }
   return jobs.length ? Promise.all(jobs) : null;
 }

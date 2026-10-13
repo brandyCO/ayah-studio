@@ -1,8 +1,8 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
 import { TEXT_EFFECTS, type TextEffect } from './effects';
-import type { EnFont, FrameStyle, TextSize, TitlePos, TitleSize } from './layout';
+import { clampArSize, type EnFont, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
 import { validTranslation } from '../data/translations';
-import { MAX_SCENES, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
+import { MAX_SCENES, SLOWMO, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
 export type { SceneMode, TextEffect, Transition };
 /** Ayah: whole ayah · Line: one screen line · Half: half a line · Words: 1–3 words per step. */
@@ -49,6 +49,9 @@ export interface Project {
   grade: Grade;
   scrim: Scrim;
   textSize: TextSize;
+  /** The Arabic size slider in px (layout AR_SIZE_MIN–MAX); wins over textSize. Per device, not in the
+   *  look (gifts keep S / M / L: textSize follows the nearest). */
+  arSize?: number;
   textPos: TextPos;
   enFont: EnFont;
   pause: number; // extra seconds of silence between ayat
@@ -77,6 +80,8 @@ export interface Project {
   /** Cinematic touches (src/engine/cinema.ts): breathing glow, open/close from black, slow drift,
    *  depth. Per device like tightStart (not part of the look, so gifts are unchanged). */
   cinema?: boolean;
+  /** Slow motion for the background videos (`SLOWMO`; 1 = as filmed). Per device like cinema; never the recitation. */
+  slowmo?: number;
 }
 
 export interface Closing {
@@ -97,6 +102,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   credit: p.credit,
   watermark: p.watermark,
   textSize: p.textSize,
+  arSize: p.arSize,
   enFont: p.enFont,
 });
 
@@ -242,6 +248,8 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (typeof d.translation === 'string' && validTranslation(d.translation)) p.translation = d.translation;
   p.tightStart = d.tightStart === true;
   p.cinema = d.cinema === true; // drafts from before the setting keep their own start
+  if (typeof d.arSize === 'number' && Number.isFinite(d.arSize)) p.arSize = clampArSize(d.arSize);
+  p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
 }
 

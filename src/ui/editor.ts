@@ -13,7 +13,7 @@ import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { H, W } from '../engine/layout';
-import type { EnFont, TextSize, TitlePos, TitleSize } from '../engine/layout';
+import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
   applyLook, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
@@ -26,7 +26,7 @@ import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, Q
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
 import {
-  CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, TRANSITIONS, videoTime,
+  CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, SLOWMO, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
 } from '../engine/scenes';
 import { buildTimeline, type Timeline } from '../engine/timeline';
@@ -91,7 +91,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const project = newProject(n, from, to, reciterById(reelReciter(DEFAULT_RECITER)).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id));
-  else try { project.tightStart = localStorage.getItem('tightStart') !== '0'; project.cinema = localStorage.getItem('cinema') !== '0'; } catch { /* private window: on */ }
+  else try {
+    project.tightStart = localStorage.getItem('tightStart') !== '0';
+    project.cinema = localStorage.getItem('cinema') !== '0';
+    const az = Number(localStorage.getItem('arSize'));
+    if (az) project.arSize = clampArSize(az);
+    const sm = Number(localStorage.getItem('slowmo'));
+    project.slowmo = (SLOWMO as readonly number[]).includes(sm) ? sm : 1;
+  } catch { /* private window: on */ }
   // Autosave: a reel becomes a draft at its first edit and is saved after every edit.
   const draftKey = draft?.id ?? draftId ?? newDraftId();
   const created = draft?.created ?? Date.now();
@@ -331,7 +338,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // The second part continues the video from the frame at the playhead.
     const v = media[sc.entry]?.video;
     const clip = fitClips()[sc.entry];
-    const second: Clip | null = v ? { in: videoTime(sceneSpans(tl.scenes, project.transition)[i], t, clip, v.duration), fit: clip?.fit ?? 'loop' } : clip;
+    const second: Clip | null = v ? { in: videoTime(sceneSpans(tl.scenes, project.transition)[i], t, clip, v.duration, project.slowmo ?? 1), fit: clip?.fit ?? 'loop' } : clip;
     toCustom();
     if (project.sceneMode === 'single') {
       project.sceneLengths = [tl.duration];
@@ -633,6 +640,36 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.cinema = on;
     try { localStorage.setItem('cinema', on ? '1' : '0'); } catch { /* private window */ }
   }
+  /** Slow motion for the background videos (never the recitation); remembered on this device. */
+  function setSlowmo(v: number) {
+    project.slowmo = v;
+    try { localStorage.setItem('slowmo', String(v)); } catch { /* private window */ }
+    changed();
+  }
+  /** Arabic text size: a slider from the smallest readable size to the largest (0–100 %). */
+  const sizePct = (v: number) => Math.round(((v - AR_SIZE_MIN) / (AR_SIZE_MAX - AR_SIZE_MIN)) * 100);
+  const sizeSlider = (): Node[] => {
+    const cur = () => project.arSize ?? ({ s: 70, m: AR_SIZE_MEDIUM, l: 92 } as const)[project.textSize];
+    const label = h('span', { class: 'clip-time' }, `${sizePct(cur())} %`);
+    const slider = h('input', { class: 'clip-slider', type: 'range', min: String(AR_SIZE_MIN), max: String(AR_SIZE_MAX), step: '1', value: String(cur()), 'aria-label': ui('ed.text-size') });
+    let raf = 0;
+    const set = (save: boolean) => {
+      if (exporting) return;
+      const v = clampArSize(Number(slider.value));
+      project.arSize = v;
+      project.textSize = nearestTextSize(v); // what gifts (S / M / L only) get
+      label.textContent = `${sizePct(v)} %`;
+      if (save) try { localStorage.setItem('arSize', String(v)); } catch { /* private window */ }
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { rebuild(); previewText(); });
+      changed(false); // keep the slider while dragging
+    };
+    slider.addEventListener('input', () => set(false));
+    slider.addEventListener('change', () => set(true));
+    return [row(ui('ed.text-size'), label), slider, note(ui('ed.text-size-note', { m: sizePct(AR_SIZE_MEDIUM) }))];
+  };
+  const slowmoRow = () => row(ui('ed.slowmo'), chips<string>(SLOWMO.map((v) => ({ value: String(v), label: v === 1 ? ui('ed.off') : ui(v === 0.75 ? 'ed.slowmo-slow' : 'ed.slowmo-very') })),
+    () => String(project.slowmo ?? 1), (v) => setSlowmo(Number(v))));
   const resetAudio = () => { project.gaps = {}; project.trims = {}; project.holds = {}; arrange(); changed(); };
   const hasAudioEdits = () => [project.gaps, project.trims, project.holds].some((x) => Object.keys(x).length > 0);
   /** Whole ayat only (rule 1): change the selection at either end; the look is kept. */
@@ -691,22 +728,54 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     note(ui('ed.styles-note')),
   ];
 
-  // --- Quick reel: footage by preference → the recommended style first → text motion → finish ---
-  type QuickStep = 'footage' | 'style' | 'motion' | 'finish';
+  // --- Quick reel: footage by preference → the recommended style first → text → layout → finish ---
+  type QuickStep = 'footage' | 'style' | 'motion' | 'layout' | 'finish';
+  /** Choices made in the Quick reel's Text and Layout steps: kept when a vibe or style is tapped. */
+  type QuickOwn = 'text' | 'hl' | 'tr' | 'layout' | 'motion';
+  const OWN_KEYS: Record<QuickOwn, readonly (keyof Project)[]> = {
+    text: ['textMode', 'wordsPerStep'], hl: ['highlight'], tr: ['showTranslation', 'translationMode'],
+    layout: ['titlePos', 'titleSize', 'surahName'], motion: ['textEffect'],
+  };
+  const MAX_QUICK_CLIPS = 4;
+  const readPref = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const savePref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
   const quick = {
     step: 'footage' as QuickStep,
-    pref: (() => { try { return localStorage.getItem('quickFootage'); } catch { return null; } })(),
+    pref: readPref('quickFootage'),
     hits: [] as StockHit[],
     searching: false,
     error: '',
     loading: null as string | null, // a clip being downloaded
     pct: 0,
-    footage: null as string | null, // the clip picked here (kept when a style is applied)
+    clips: [] as string[], // the clips picked here, in tap order (kept when a style is applied)
+    split: (readPref('quickSplit') === 'even' ? 'even' : 'ayah') as 'ayah' | 'even', // how several clips change
     styled: false, // a vibe or style was applied in the Quick reel
     auto: false, // ...by the recommendation (not by a tap)
+    picked: null as string | null, // 'vibe:id' / 'style:id' last applied here
+    // Text and layout choices made here (per device, so the next reel keeps them too)
+    own: new Set(((readPref('quickOwn') ?? '').split(',')).filter((x): x is QuickOwn => x in OWN_KEYS)),
+  };
+  /** The user set this in the Quick reel: a later vibe or style leaves it as it is. */
+  const own = (k: QuickOwn) => { quick.own.add(k); savePref('quickOwn', [...quick.own].join(',')); };
+  /** The picked clips become the scenes: one plays throughout, several change per ayah or evenly. */
+  const applyClips = () => {
+    if (!quick.clips.length) return;
+    project.scenes = [...quick.clips];
+    project.clips = [];
+    project.sceneLengths = [];
+    project.sceneMode = quick.clips.length > 1 ? quick.split : 'single';
+    fitClips();
+  };
+  /** Applies a vibe or style, keeping the footage picked here and the user's own text/layout choices. */
+  const keepOwn = (fn: () => void) => {
+    const was = structuredClone(project);
+    fn();
+    for (const k of quick.own) for (const f of OWN_KEYS[k]) (project as unknown as Record<string, unknown>)[f] = was[f];
+    if (quick.own.has('hl')) project.colors.hl = was.colors.hl;
+    applyClips();
   };
   /** The vibe for this moment: the footage picked in this reel, else the local hour. */
-  const quickRecommendation = () => recommendVibe(quick.footage ? quick.pref : null, new Date().getHours());
+  const quickRecommendation = () => recommendVibe(quick.clips.length ? quick.pref : null, new Date().getHours());
   /** Words recited per second (from the word timings), null without them. */
   function recitedPace(): number | null {
     const A = (base?.plan ?? plan)?.ayat.filter((a) => a.seq?.length) ?? [];
@@ -717,7 +786,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const quickRefresh = () => { if (option?.id === 'quick') refreshUI(); };
   async function quickSearch(pref: string) {
     quick.pref = pref;
-    try { localStorage.setItem('quickFootage', pref); } catch { /* private window */ }
+    savePref('quickFootage', pref);
     const f = FOOTAGE.find((x) => x.id === pref);
     if (!f || !stockEnabled()) return quickRefresh();
     quick.searching = true;
@@ -736,18 +805,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   async function quickPick(hit: StockHit) {
     if (exporting || quick.loading) return;
+    const at = quick.clips.indexOf(stockId(hit));
+    if (at >= 0) { // tapped again: taken out (the last one stays, so there is always footage)
+      if (quick.clips.length > 1) { quick.clips.splice(at, 1); applyClips(); scenesChanged(); changed(); }
+      return quickRefresh();
+    }
+    if (quick.clips.length >= MAX_QUICK_CLIPS) return toast(ui('qr.max-clips', { n: MAX_QUICK_CLIPS }));
     quick.loading = stockId(hit);
     quick.pct = 0;
     quickRefresh();
     try {
       const id = await downloadHit(hit, (f) => { const p = Math.round(f * 100); if (p !== quick.pct) { quick.pct = p; quickRefresh(); } });
       if (!alive) return;
-      quick.footage = id;
-      project.scenes = [id];
-      project.clips = [];
-      project.sceneMode = 'single';
-      project.sceneLengths = [];
-      fitClips();
+      if (!quick.clips.includes(id)) quick.clips.push(id);
+      applyClips();
       scenesChanged();
       changed();
     } catch (e) {
@@ -757,7 +828,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     quickRefresh();
   }
   const quickPanel = (): Node[] => {
-    const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['finish', ui('qr.finish')]];
+    const steps: [QuickStep, string][] = [['footage', ui('qr.footage')], ['style', ui('qr.style')], ['motion', ui('qr.motion')], ['layout', ui('qr.layout')], ['finish', ui('qr.finish')]];
     const at = steps.findIndex(([v]) => v === quick.step);
     const go = (v: QuickStep) => {
       // The recommended vibe is applied the first time the Style step opens (any tap changes it).
@@ -765,8 +836,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (v === 'style' && (!quick.styled || quick.auto)) {
         quick.styled = true;
         quick.auto = true;
-        const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
-        applyVibe(project, quickRecommendation().vibe, keep, pacedMode(recitedPace()));
+        const v = quickRecommendation().vibe;
+        quick.picked = `vibe:${v.id}`;
+        keepOwn(() => applyVibe(project, v, undefined, pacedMode(recitedPace())));
         fitClips(); arrange(); void loadScenes(); changed();
       }
       quick.step = v; quickRefresh(); panel.scrollTop = 0; panelBody.scrollTop = 0;
@@ -791,48 +863,95 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         quick.hits.length ? h('div', { class: 'bg-grid' }, ...quick.hits.map((x) => {
           const id = stockId(x);
           const busy = quick.loading === id;
+          const n = quick.clips.indexOf(id) + 1;
           return h('div', { class: `bg-cell${busy ? ' loading' : ''}` },
             h('button', {
-              class: `bg-thumb${project.scenes[0] === id ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
-              title: `${x.tags} · ${x.user}`, onclick: () => void quickPick(x),
-            }, h('span', {}, `▶ ${Math.round(x.duration ?? 0)} s`)),
+              class: `bg-thumb${n ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
+              title: `${x.tags} · ${x.user}`, 'aria-pressed': n ? 'true' : 'false', onclick: () => void quickPick(x),
+            }, h('span', {}, `▶ ${Math.round(x.duration ?? 0)} s`), n ? h('b', { class: 'bg-num' }, String(n)) : null),
             busy ? h('div', { class: 'bg-progress', role: 'progressbar', 'aria-valuenow': String(quick.pct) },
               h('span', { class: 'spinner' }), h('b', {}, `${quick.pct}%`), h('i', { style: `width:${quick.pct}%` })) : null,
             !busy && owned.has(id) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, ui('qr.saved'))) : null);
         })) : null,
+        quick.clips.length > 1 ? row(ui('qr.clips-change'), chips<'ayah' | 'even'>([{ value: 'ayah', label: ui('qr.split-ayah') }, { value: 'even', label: ui('qr.split-even') }],
+          () => quick.split, (v) => { quick.split = v; savePref('quickSplit', v); applyClips(); scenesChanged(); changed(); })) : null,
+        quick.clips.length > 1 ? note(ui(quick.split === 'ayah' ? 'qr.split-note-ayah' : 'qr.split-note-even')) : null,
+        quick.clips.length ? slowmoRow() : null,
+        quick.clips.length ? note(ui('ed.slowmo-note')) : null,
         quick.hits.length ? note(ui('qr.footage-credit')) : null,
       ];
     } else if (quick.step === 'style') {
-      const keep = quick.footage && project.scenes.includes(quick.footage) ? quick.footage : undefined;
+      const keep = quick.clips.length > 0;
       const rec = quickRecommendation();
-      const now = currentVibe(project);
-      const pickStyle = (fn: () => void) => { quick.styled = true; quick.auto = false; fn(); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
+      // What was applied here, unless the look was changed elsewhere since (then what it still matches)
+      const now = quick.picked?.startsWith('vibe:') ? quick.picked.slice(5) : quick.picked ? null : currentVibe(project);
+      const nowStyle = quick.picked?.startsWith('style:') ? quick.picked.slice(6) : null;
+      const pickStyle = (id: string, fn: () => void) => { quick.styled = true; quick.auto = false; quick.picked = id; keepOwn(fn); fitClips(); arrange(); void loadScenes(); changed(); previewText(); };
       const vibeTile = (v: Vibe, recommended: boolean) => tile({
         on: now === v.id, label: recommended ? `${tOr(`vibe.${v.id}`, v.label)} · ${ui('qr.recommended')}` : tOr(`vibe.${v.id}`, v.label),
         art: h('span', { class: `style-art${v.grain ? ' grain' : ''}${v.vignette ? ' vignette' : ''}${recommended ? ' rec' : ''}`, style: `background-image:url(${(backgroundById(v.scene) as { thumb?: string }).thumb ?? ''})` },
           h('span', { class: `style-words${v.highlight ? ' lit' : ''}`, style: `--hl:${v.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
-        onclick: () => pickStyle(() => applyVibe(project, v, keep, pacedMode(recitedPace()))),
+        onclick: () => pickStyle(`vibe:${v.id}`, () => applyVibe(project, v, undefined, pacedMode(recitedPace()))),
       });
       body = [
         h('p', { class: 'quick-why' }, ui('qr.why', { when: ui(`qr.when-${rec.why}`, { footage: ui(`qr.f.${quick.pref ?? 'sky'}` as 'qr.f.sky').toLowerCase() }), feel: ui(`qr.feel-${rec.vibe.id}` as 'qr.feel-fajr') })),
         h('div', { class: 'tiles' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
         note(ui(keep ? 'qr.vibe-note-footage' : 'qr.vibe-note')),
+        quick.own.size ? note(ui('qr.own-kept')) : null,
         h('p', { class: 'muted small' }, ui('qr.more-looks')),
         h('div', { class: 'tiles' }, ...STYLES.map((st) => tile({
-          on: !now && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
+          on: nowStyle ? nowStyle === st.id : !quick.picked && !now && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
           art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
             h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
-          onclick: () => pickStyle(() => { applyStyle(project, st); if (keep) project.scenes = [keep]; }),
+          onclick: () => pickStyle(`style:${st.id}`, () => applyStyle(project, st)),
         }))),
       ];
     } else if (quick.step === 'motion') {
+      const timed = wordTimed();
+      const tr = project.showTranslation ? project.translationMode : 'off';
       body = [
+        row(ui('qr.on-screen'), chips(MODES, mode, (v) => { own('text'); project.textMode = v; rebuild(); changed(); quickRefresh(); }, (v) => v === 'ayah' || timed)),
+        mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
+          () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { own('text'); project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); changed(); })) : null,
+        timed ? null : note(ui('qr.modes-need-timings')),
+        row(ui('ed.translation'), chips<'words' | 'ayah' | 'off'>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }, { value: 'off', label: ui('ed.off') }],
+          () => tr, (v) => {
+            own('tr');
+            project.showTranslation = v !== 'off';
+            if (v !== 'off') project.translationMode = v;
+            rebuild(); changed(); quickRefresh();
+          })),
+        h('p', { class: 'muted small' }, ui('qr.recited-word')),
+        h('div', { class: 'colour-grid hl-grid' },
+          h('button', {
+            class: `swatch swatch-off${project.highlight ? '' : ' on'}`, 'aria-label': `${ui('qr.recited-word')}: ${ui('ed.off')}`,
+            onclick: () => { own('hl'); project.highlight = false; changed(); quickRefresh(); },
+          }, ui('ed.off')),
+          ...HL_COLOURS.map((c) => h('button', {
+            class: `swatch${project.highlight && project.colors.hl === c ? ' on' : ''}`, style: `background:${c}`, disabled: !timed,
+            'aria-label': `${ui('qr.recited-word')}: ${c}`,
+            onclick: () => { if (exporting || !timed) return; own('hl'); project.colors.hl = c; project.highlight = true; changed(); quickRefresh(); previewText(); },
+          }))),
+        timed ? null : note(ui('ed.highlight-needs-timings')),
+        h('p', { class: 'muted small' }, ui('qr.motion-label')),
         h('div', { class: 'tiles' }, ...QUICK_MOTIONS.map((fx) => tile({
           on: project.textEffect === fx, label: tOr(`fx.${fx}`, TEXT_EFFECTS.find((e) => e.value === fx)!.label),
           art: h('span', { class: `fx-sample fx-${fx}` }, 'آية'),
-          onclick: () => { project.textEffect = fx; changed(false); quickRefresh(); previewText(); },
+          onclick: () => { own('motion'); project.textEffect = fx; changed(false); quickRefresh(); previewText(); },
         }))),
         note(ui('qr.motion-note')),
+        note(ui('qr.own-kept')),
+      ];
+    } else if (quick.step === 'layout') {
+      body = [
+        ...sizeSlider(),
+        row(ui('qr.name-place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
+          () => project.titlePos, (v) => { own('layout'); project.titlePos = v; rebuild(); changed(); })),
+        row(ui('qr.ar-name'), chips<'show' | 'hide'>([{ value: 'show', label: ui('ed.show') }, { value: 'hide', label: ui('ed.hide') }],
+          () => (project.surahName ? 'show' : 'hide'), (v) => { own('layout'); project.surahName = v === 'show'; rebuild(); changed(); })),
+        row(ui('ed.size'), chips<TitleSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
+          () => project.titleSize, (v) => { own('layout'); project.titleSize = v; rebuild(); changed(); })),
+        note(ui('qr.ref-stays')),
       ];
     } else {
       body = [
@@ -852,10 +971,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return [head, ...body.filter((x): x is Node => !!x), nav];
   };
 
+  const HL_COLOURS = ['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'];
   const highlightPanel = () => [
     chips<'on' | 'off'>([{ value: 'on', label: ui('ed.highlight-on') }, { value: 'off', label: ui('ed.off') }],
       () => (project.highlight ? 'on' : 'off'), (v) => { project.highlight = v === 'on'; if (project.highlight) previewText(); }, (v) => v === 'off' || wordTimed()),
-    h('div', { class: 'colour-grid' }, ...['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'].map((c) =>
+    h('div', { class: 'colour-grid' }, ...HL_COLOURS.map((c) =>
       h('button', {
         class: `swatch${project.colors.hl === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${ui('ed.highlight')}: ${c}`,
         onclick: () => { if (!exporting) { project.colors.hl = c; project.highlight = true; changed(); previewText(); } },
@@ -955,8 +1075,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(syncText),
       ].filter(Boolean) as Node[] },
       { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
-      { id: 'size', icon: 'size', label: ui('ed.size'), panel: () => [chips<TextSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
-        () => project.textSize, (v) => { project.textSize = v; rebuild(); })] },
+      { id: 'size', icon: 'size', label: ui('ed.size'), panel: sizeSlider },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
         () => project.textPos, (v) => { project.textPos = v; })] },
       { id: 'gap', icon: 'hold', label: ui('ed.between-ayat'), panel: () => [
@@ -982,6 +1101,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
         () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
       { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'slowmo', icon: 'hold', label: ui('ed.slowmo'), panel: () => [slowmoRow(), note(ui('ed.slowmo-note'))] },
       { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
       { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
       { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
@@ -1409,7 +1529,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       dirty = true;
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
-    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true)?.then(() => (dirty = true));
+    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true, project.slowmo ?? 1)?.then(() => (dirty = true));
     spine.frame();
     if (!dirty) return;
     dirty = false;
