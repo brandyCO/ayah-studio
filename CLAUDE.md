@@ -366,7 +366,18 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       the reference via `drawClosing`, turns the card on; Quick reel → Finish and Layout → Dedication);
       Quick reel → Style: **Try another** (a random other vibe + motion, own choices and footage kept;
       Previous goes back) and, with footage picked, vibe tiles show **their own clip** tinted by each
-      vibe's grade Owner request 2026-10-13 (second pass). The studio preview's
+      vibe's grade
+- [x] Tajweed colours (owner request 2026-10-13): `public/data/tajweed.json` by `scripts/fetch-tajweed.mjs`
+      — Quran.com's tajweed markup (API v4 `quran/verses/uthmani_tajweed`, Uthmani encoding) moved onto our
+      own KFGQPC words: both texts reduced to letters (marks dropped, ى/ی→ي, ٲ→ٰ, ٱ→ا), aligned per ayah
+      (LCS; an ayah missing more than max(3, 3 %) letters would get no colours — all 6236 aligned), a rule on
+      marks only colours the letter it sits on, a dagger alif colours its carrier. `src/engine/tajweed.ts`:
+      9 legend groups (madd 6 / 4–5 / 2·4·6 / 2, ghunnah·ikhfa·idgham, iqlab, qalqalah, idgham without
+      ghunnah, silent), `tajweedLines()`; `drawText` draws each coloured word again over its place, clipped to
+      the range (measured with a ZWJ after the prefix so letters keep their joined forms) — colour only,
+      never the text (rules 1, 7); the recited-word highlight stays on top. `project.tajweed` (per device
+      pref `tajweed`, not in the look); Quick reel → Text and Text → Tajweed colours with a legend.
+      `npm run check` verifies every range sits inside its word Owner request 2026-10-13 (second pass). The studio preview's
       height is also capped by the width (`.studio .stage`), so full-screen play on tall phones no longer
       stretches it
 - [x] Start on the first word (owner request 2026-10-13, "only at the beginning of the reel"):

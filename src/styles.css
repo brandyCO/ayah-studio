@@ -1343,3 +1343,7 @@ dialog.circle-full::backdrop { background: #04071c; }
 .style-art.tint-cool { filter: saturate(.8) hue-rotate(12deg) brightness(.92); }
 .style-art.tint-dusk { filter: hue-rotate(-22deg) saturate(1.1) brightness(.9); }
 .style-art.tint-mono { filter: grayscale(1); }
+/* Tajweed colours legend */
+.tajweed-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 4px 0 8px; font-size: 12px; color: var(--muted); }
+.tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.tajweed-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
