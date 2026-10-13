@@ -5,7 +5,7 @@
 // live in the preview, even while playing, and can be undone.
 import { arrangeAudio, polishAudio } from '../data/audio';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
@@ -747,7 +747,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         void loadAudio();
       },
     }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
-      r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+      r.qdc === false && !hasAlignedWords(r, n) ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
     r.id === project.reciterId ? icon('check', 18) : null);
   /** mp3quran reciters whose recording is not verified for this reel's ayat (filled when the picker opens). */
   const unchecked = new Set<number>();

@@ -127,18 +127,25 @@ export function planQdcReel(
 }
 
 /** Plan for per-ayah clips (everyayah): no word timings, so Ayah mode only. */
-export function planClipReel(from: number, durations: number[]): ReelPlan {
+export function planClipReel(from: number, durations: number[], words?: { texts: string[]; segments: (unknown[] | undefined)[] }): ReelPlan {
   let t = LEAD_IN;
   const offsets: number[] = [];
   const ayat = durations.map((d, i): PlannedAyah => {
     offsets.push(t);
-    const a = { ayah: from + i, start: t, end: 0, last: t + d, wordStart: null, seq: null, stats: null };
+    // Word times made by alignment (alignedWords), in this ayah's own file.
+    const at = t;
+    const wt = words?.segments[i] ? wordTimings(displayWords(words.texts[i]).length,
+      { verse_key: '', timestamp_from: 0, timestamp_to: d * 1000, segments: words.segments[i] }, null) : null;
+    const a: PlannedAyah = wt
+      ? { ayah: from + i, start: at + Math.min(wt.start[0], wt.seq[0][1]), end: 0, last: at + Math.min(wt.last, d),
+        wordStart: wt.start.map((s) => at + s), seq: wt.seq.map(([w, x, y]): Recited => [w, at + x, at + y]), stats: wt.stats }
+      : { ayah: from + i, start: t, end: 0, last: t + d, wordStart: null, seq: null, stats: null };
     t += d + GAP;
     return a;
   });
   const duration = t - GAP + TAIL;
   holdEnds(ayat, duration);
-  return { source: 'everyayah', duration, ayat, wordTimed: false, offsets };
+  return { source: 'everyayah', duration, ayat, wordTimed: ayat.every((a) => a.wordStart), offsets };
 }
 
 export interface Pacing {
