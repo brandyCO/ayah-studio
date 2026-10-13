@@ -1,4 +1,5 @@
 import type { Breath } from './cinema';
+import type { AyahTajweed } from './tajweed';
 // Timeline derived from the recitation: the reel plan says when each ayah and word is recited; the
 // text mode turns that into text events — groups of whole words on screen, shown again when the
 // reciter repeats them (pure apart from text measuring).
@@ -42,6 +43,8 @@ export interface TimedAyah {
   /** The ayah's display words, and when each is recited (reel time; null without word timings). */
   words: string[];
   seq: Recited[] | null;
+  /** Tajweed colour ranges per word (set by the editor when tajweed colours are on). */
+  tajweed?: AyahTajweed | null;
 }
 
 export interface Timeline {

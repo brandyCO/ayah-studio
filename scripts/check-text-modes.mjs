@@ -362,6 +362,23 @@ const sudais = new Map([...await qdc(3, 103)]);
   }
 }
 
+// Tajweed colours: every range sits inside its own word of our text, for every ayah (the text is never touched).
+{
+  const tj = await data('tajweed.json');
+  const tajweed = await server.ssrLoadModule('/src/engine/tajweed.ts');
+  assert(Object.keys(tj.ayat).length > 6000, 'tajweed: ranges for (nearly) every ayah');
+  for (const [key, entry] of Object.entries(tj.ayat)) {
+    const [s, a] = key.split(':').map(Number);
+    const ws = words.displayWords(quran.surahs[s - 1][a - 1]);
+    const parsed = tajweed.parseTajweed(entry);
+    assert(parsed && Object.keys(parsed).length > 0, `tajweed ${key}: parses`);
+    for (const [w, spans] of Object.entries(parsed)) {
+      const len = [...ws[+w] ?? ''].length;
+      assert(+w < ws.length && spans.every(([b, e]) => b >= 0 && e > b && e <= len), `tajweed ${key}: ranges inside word ${w}`);
+    }
+  }
+}
+
 await server.close();
 console.log(`${failures ? 'FAILED' : 'OK'}: ${checks} checks, ${failures} failures · ${stats.timelines} timelines, ${stats.events} events (${stats.shownAgain} shown again for repeats) · segments: ${stats.repeats} repeats, ${stats.malformed} malformed, ${stats.interpolated} words interpolated · ${stats.unmergedShort} short groups that could not merge ${stats.shortest !== undefined ? ` (shortest ${stats.shortest.toFixed(2)} s)` : ''}`);
 process.exit(failures ? 1 : 0);

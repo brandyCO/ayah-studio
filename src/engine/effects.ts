@@ -1,6 +1,7 @@
 // Calm text effects (rule 7: respectful only — no bounce, shake, glitch, distort or spin). Each one
 // draws a block of lines for a timed text item: it comes in after `start` and leaves before `end`.
 // Long durations, soft easing; ink reveal and light sweep run right-to-left for Arabic.
+import type { TajweedWord } from './tajweed';
 import { W } from './layout';
 
 export type TextEffect =
@@ -48,6 +49,8 @@ export interface TextBlock {
   hl?: Highlight | null;
   /** 0..1: a soft halo that swells with the reciter's voice (cinema). Light only, no motion. */
   breath?: number;
+  /** Tajweed colours: per line, words drawn again over their place, clipped to each coloured range. */
+  tajweed?: TajweedWord[][] | null;
 }
 
 export interface Highlight {
@@ -201,6 +204,41 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
     });
   } else {
     fillLines(ctx, b, top);
+  }
+
+  const linesIn = !stagger || age >= Math.min(0.35, (d * 0.3) / b.lines.length) * (b.lines.length - 1) + Math.min(enter, d * 0.4);
+  if (b.tajweed && (ink === null || ink >= 1) && linesIn) {
+    // Tajweed: the same word, same place, same shapes; only the colour of its ranges changes (rules 1, 7).
+    // A range's place inside the word is measured with a joiner after the prefix, so letters keep the
+    // joined forms they have in the word.
+    ctx.save();
+    ctx.textAlign = b.dir === 'rtl' ? 'right' : 'left';
+    ctx.shadowColor = 'transparent';
+    b.tajweed.forEach((items, li) => {
+      if (!items.length) return;
+      const lineW = ctx.measureText(b.lines[li]).width;
+      const y = top + b.size * b.lh * (li + 0.5);
+      for (const it of items) {
+        const pre = it.before ? ctx.measureText(`${it.before} `).width : 0;
+        const chars = [...it.word];
+        const wordW = ctx.measureText(it.word).width;
+        const at = (k: number) => (k <= 0 ? 0 : k >= chars.length ? wordW : ctx.measureText(`${chars.slice(0, k).join('')}\u200d`).width);
+        const x = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
+        for (const [s, e, color] of it.spans) {
+          const a0 = at(s), a1 = Math.max(a0 + 1, at(e));
+          ctx.save();
+          ctx.beginPath();
+          const pad = b.size; // marks above / below the line
+          if (b.dir === 'rtl') ctx.rect(x - a1, y - pad, a1 - a0, 2 * pad);
+          else ctx.rect(x + a0, y - pad, a1 - a0, 2 * pad);
+          ctx.clip();
+          ctx.fillStyle = color;
+          ctx.fillText(it.word, x, y);
+          ctx.restore();
+        }
+      }
+    });
+    ctx.restore();
   }
 
   if (b.hl && (ink === null || ink >= 1)) {

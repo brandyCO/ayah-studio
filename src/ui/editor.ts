@@ -4,7 +4,7 @@
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
 import { arrangeAudio, polishAudio } from '../data/audio';
-import { loadWordMap, reference, surahMeta, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary } from '../data/library';
@@ -22,6 +22,7 @@ import {
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render } from '../engine/render';
 import { breathOf } from '../engine/cinema';
+import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
@@ -94,6 +95,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   else try {
     project.tightStart = localStorage.getItem('tightStart') !== '0';
     project.cinema = localStorage.getItem('cinema') !== '0';
+    project.tajweed = localStorage.getItem('tajweed') === '1';
     const az = Number(localStorage.getItem('arSize'));
     if (az) project.arSize = clampArSize(az);
     const sm = Number(localStorage.getItem('slowmo'));
@@ -641,6 +643,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.cinema = on;
     try { localStorage.setItem('cinema', on ? '1' : '0'); } catch { /* private window */ }
   }
+  /** Tajweed colours on the Arabic; remembered on this device for the next reel. */
+  function setTajweed(on: boolean) {
+    project.tajweed = on;
+    try { localStorage.setItem('tajweed', on ? '1' : '0'); } catch { /* private window */ }
+    rebuild();
+    changed();
+    if (on) previewText();
+  }
+  const tajweedRow = () => row(ui('ed.tajweed'), chips<'on' | 'off'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.on') }],
+    () => (project.tajweed ? 'on' : 'off'), (v) => setTajweed(v === 'on')));
+  const tajweedLegend = () => h('div', { class: 'tajweed-legend' }, ...TAJWEED_LEGEND.map((x) =>
+    h('span', {}, h('i', { style: `background:${x.color}` }), ui(`tj.${x.group}` as 'tj.madd2'))));
   /** Slow motion for the background videos (never the recitation); remembered on this device. */
   function setSlowmo(v: number) {
     project.slowmo = v;
@@ -952,6 +966,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
             onclick: () => { if (exporting || !timed) return; own('hl'); project.colors.hl = c; project.highlight = true; changed(); quickRefresh(); previewText(); },
           }))),
         timed ? null : note(ui('ed.highlight-needs-timings')),
+        tajweedRow(),
+        project.tajweed ? tajweedLegend() : null,
         h('p', { class: 'muted small' }, ui('qr.motion-label')),
         h('div', { class: 'tiles' }, ...QUICK_MOTIONS.map((fx) => tile({
           on: project.textEffect === fx, label: tOr(`fx.${fx}`, TEXT_EFFECTS.find((e) => e.value === fx)!.label),
@@ -1111,6 +1127,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(syncText),
       ].filter(Boolean) as Node[] },
       { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
+      { id: 'tajweed', icon: 'colours', label: ui('ed.tajweed'), panel: () => [tajweedRow(), tajweedLegend(), note(ui('ed.tajweed-note'))] },
       { id: 'size', icon: 'size', label: ui('ed.size'), panel: sizeSlider },
       { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
         () => project.textPos, (v) => { project.textPos = v; })] },
@@ -1474,10 +1491,26 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
     if (audio) tl.breath = breathOf(audio);
+    if (project.tajweed) {
+      if (tajweedData) tl.ayat.forEach((a, i) => { a.tajweed = tajweedData![i]; });
+      else ensureTajweed();
+    }
     spine.invalidate();
     if (t > tl.duration) t = 0;
     if (selection?.kind === 'scene' && selection.index >= tl.scenes.length) selection = null;
     dirty = true;
+  }
+
+  // Tajweed colours: the ranges for these ayat, loaded the first time they are switched on.
+  let tajweedData: (AyahTajweed | null)[] | null = null;
+  let tajweedLoading = false;
+  function ensureTajweed() {
+    if (tajweedData || tajweedLoading) return;
+    tajweedLoading = true;
+    surahTajweed(n).then((all) => {
+      tajweedData = all.slice(from - 1, to).map(parseTajweed);
+      if (alive) rebuild();
+    }, () => { tajweedLoading = false; toast(ui('ed.tajweed-failed')); });
   }
 
   // Recitation per reciter (kept while the editor is open, so switching back is instant).

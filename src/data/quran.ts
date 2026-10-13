@@ -31,6 +31,13 @@ function load<T>(file: string): Promise<T> {
 
 export const loadMeta = () => load<SurahMeta[]>('meta.json');
 
+/** Tajweed colour ranges of a surah's ayat (src/engine/tajweed.ts parses them); loaded on first use. */
+export async function surahTajweed(n: number): Promise<(string | undefined)[]> {
+  const d = await load<{ ayat: Record<string, string> }>('tajweed.json');
+  const meta = (await loadMeta())[n - 1];
+  return Array.from({ length: meta.ayahs }, (_, i) => d.ayat[`${n}:${i + 1}`]);
+}
+
 export async function surahText(n: number): Promise<string[]> {
   const d = await load<{ surahs: string[][] }>('quran-uthmani.json');
   return d.surahs[n - 1];

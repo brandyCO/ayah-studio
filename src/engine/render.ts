@@ -4,6 +4,7 @@
 import type { BackgroundMedia } from './backgrounds';
 import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
+import { tajweedLines } from './tajweed';
 import { breathAt, darken, drift, shade, soften } from './cinema';
 import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { GRADES, SCRIM_STRENGTH } from './moods';
@@ -343,7 +344,8 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   if (ev) {
     setTextShadow(ctx, colors.ar);
     const hl = project.highlight && ayah ? highlightAt(ayah, ev, t, colors.hl ?? '#f2c46b') : null;
-    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1, hl, breath: cine ? breathAt(tl.breath, t) : 0 });
+    const tajweed = project.tajweed && ayah ? tajweedLines(ayah.words, ev.first, ev.ar.counts, ayah.tajweed) : null;
+    drawText(ctx, fx, ev, t, { lines: ev.ar.lines, size: ev.ar.size, lh: AR_LINE, top: arTop, font: FONT_AR, dir: 'rtl', color: colors.ar, opacity: 1, hl, tajweed, breath: cine ? breathAt(tl.breath, t) : 0 });
   }
   if (en) {
     // Synced meanings move with their words; a whole-ayah translation turns pages on its own timing.

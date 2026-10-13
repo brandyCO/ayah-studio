@@ -85,6 +85,8 @@ export interface Project {
   cinema?: boolean;
   /** Slow motion for the background videos (`SLOWMO`; 1 = as filmed). Per device like cinema; never the recitation. */
   slowmo?: number;
+  /** Tajweed colours on the Arabic (src/engine/tajweed.ts). Per device like cinema (not in the look). */
+  tajweed?: boolean;
 }
 
 export interface Closing {
@@ -256,6 +258,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.tightStart = d.tightStart === true;
   p.cinema = d.cinema === true; // drafts from before the setting keep their own start
   if (typeof d.arSize === 'number' && Number.isFinite(d.arSize)) p.arSize = clampArSize(d.arSize);
+  p.tajweed = d.tajweed === true;
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
