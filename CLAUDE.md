@@ -323,7 +323,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
       "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi / Raad Al Kurdi:
-      no verified source with CORS (not on everyayah or QDC), so not added
+      no verified source with CORS (not on everyayah or QDC), so not added. 2026-10-13: 20 more everyayah
+      reciters (ids 1007–1026: Hudhaify, Ayyoub, Jibreel, Budair, Qahtani, Bukhatir, Basfar, Matroud, Salamah,
+      Husary + Minshawi Mujawwad, Tablawi, Ali Jaber, Muhsin Al-Qasim, Neana, Alaqimy, Sowaid, Alili, Sahl
+      Yassin, AbdulKareem; Hafs, ≥ 64 kbps, first + last ayah of every surah checked; Warsh folders left
+      out, the text is Hafs); migration `20261016000000_more_reciters.sql` (`valid_reciter()`); a search box
+      in the reciter picker
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

@@ -36,6 +36,28 @@ export const RECITERS: Reciter[] = [
   { id: 1004, name: 'Ahmed Al-Ajamy', short: 'Ajamy', everyayah: 'ahmed_ibn_ali_al_ajamy_128kbps', qdc: false },
   { id: 1005, name: 'Fares Abbad', short: 'Abbad', everyayah: 'Fares_Abbad_64kbps', qdc: false },
   { id: 1006, name: 'Abdullah Al-Juhany', short: 'Juhany', everyayah: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps', qdc: false },
+  // 2026-10-13: Hafs reciters on everyayah at >= 64 kbps with every surah's first and last ayah present
+  // (checked). Warsh folders are left out: the bundled text is Hafs (rule 1).
+  { id: 1007, name: 'Ali Al-Hudhaify', short: 'Hudhaify', everyayah: 'Hudhaify_128kbps', qdc: false },
+  { id: 1008, name: 'Muhammad Ayyoub', short: 'Ayyoub', everyayah: 'Muhammad_Ayyoub_128kbps', qdc: false },
+  { id: 1009, name: 'Muhammad Jibreel', short: 'Jibreel', everyayah: 'Muhammad_Jibreel_128kbps', qdc: false },
+  { id: 1010, name: 'Salah Al-Budair', short: 'Budair', everyayah: 'Salah_Al_Budair_128kbps', qdc: false },
+  { id: 1011, name: 'Khalid Al-Qahtani', short: 'Qahtani', everyayah: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps', qdc: false },
+  { id: 1012, name: 'Salah Bukhatir', short: 'Bukhatir', everyayah: 'Salaah_AbdulRahman_Bukhatir_128kbps', qdc: false },
+  { id: 1013, name: 'Abdullah Basfar', short: 'Basfar', everyayah: 'Abdullah_Basfar_192kbps', qdc: false },
+  { id: 1014, name: 'Abdullah Al-Matroud', short: 'Matroud', everyayah: 'Abdullah_Matroud_128kbps', qdc: false },
+  { id: 1015, name: 'Yaser Salamah', short: 'Salamah', everyayah: 'Yaser_Salamah_128kbps', qdc: false },
+  { id: 1016, name: 'Mahmoud Khalil Al-Husary', short: 'Husary (Mujawwad)', style: 'Mujawwad', everyayah: 'Husary_128kbps_Mujawwad', qdc: false },
+  { id: 1017, name: 'Mohamed Siddiq al-Minshawi', short: 'Minshawi (Mujawwad)', style: 'Mujawwad', everyayah: 'Minshawy_Mujawwad_192kbps', qdc: false },
+  { id: 1018, name: 'Mohammad Al-Tablawi', short: 'Tablawi', everyayah: 'Mohammad_al_Tablaway_128kbps', qdc: false },
+  { id: 1019, name: 'Ali Jaber', short: 'Ali Jaber', everyayah: 'Ali_Jaber_64kbps', qdc: false },
+  { id: 1020, name: 'Muhsin Al-Qasim', short: 'Al-Qasim', everyayah: 'Muhsin_Al_Qasim_192kbps', qdc: false },
+  { id: 1021, name: 'Ahmed Neana', short: 'Neana', everyayah: 'Ahmed_Neana_128kbps', qdc: false },
+  { id: 1022, name: 'Akram Al-Alaqimy', short: 'Alaqimy', everyayah: 'Akram_AlAlaqimy_128kbps', qdc: false },
+  { id: 1023, name: 'Ayman Sowaid', short: 'Sowaid', everyayah: 'Ayman_Sowaid_64kbps', qdc: false },
+  { id: 1024, name: 'Aziz Alili', short: 'Alili', everyayah: 'aziz_alili_128kbps', qdc: false },
+  { id: 1025, name: 'Sahl Yassin', short: 'Sahl Yassin', everyayah: 'Sahl_Yassin_128kbps', qdc: false },
+  { id: 1026, name: 'Muhammad AbdulKareem', short: 'AbdulKareem', everyayah: 'Muhammad_AbdulKareem_128kbps', qdc: false },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */

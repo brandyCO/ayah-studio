@@ -750,13 +750,24 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     r.id === project.reciterId ? icon('check', 18) : null);
   let popular: { id: number; trending: boolean }[] = [];
   void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
+  /** Filters the list below it by name (there are ~40 reciters). */
+  const reciterSearch = () => {
+    const input = h('input', { class: 'search', type: 'search', placeholder: ui('ed.reciter-search'), 'aria-label': ui('ed.reciter-search') });
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      const list = input.nextElementSibling;
+      list?.querySelectorAll<HTMLElement>('button').forEach((b) => { b.hidden = !!q && !(b.textContent ?? '').toLowerCase().includes(q); });
+    });
+    return input;
+  };
   const reciterPanel = () => {
     const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id), trending: p.trending })).filter((x) => x.r).slice(0, 3);
     return [
       top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
-      h('div', { class: 'list' }, ...RECITERS.map((r) => reciterButton(r))),
+      reciterSearch(),
+      h('div', { class: 'list reciter-list' }, ...RECITERS.map((r) => reciterButton(r))),
     ].filter(Boolean) as Node[];
   };
 
