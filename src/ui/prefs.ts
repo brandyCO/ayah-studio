@@ -20,7 +20,7 @@ export function touchPref(key: SyncedPref) {
   } catch {
     /* ignore */
   }
-  window.dispatchEvent(new Event('prefs-changed'));
+  window.dispatchEvent(new CustomEvent('prefs-changed', { detail: key }));
 }
 
 /** Synced preferences with their change times (for syncing). */

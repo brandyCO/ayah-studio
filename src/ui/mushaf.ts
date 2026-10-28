@@ -3,14 +3,16 @@
 // long-press / drag to select ayat for a reel.
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
+import { addRecentPage } from '../data/history';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { isNative } from '../native';
-import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
+import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
+import { icon } from './icons';
 import { h, toast } from './dom';
 import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -22,14 +24,11 @@ import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
-import { lamps } from '../data/lamps';
-import { logPageRead, monthReads } from '../data/readLog';
+import { logPageRead } from '../data/readLog';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
-import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
-import type { CircleContext } from './circles';
-// The circles screens load on first use (they are large and most readers open them rarely).
-const openCircle = (ctx: CircleContext, id: string, fresh?: boolean) => import('./circles').then((m) => m.openCircle(ctx, id, fresh));
-const openCircles = (ctx: CircleContext) => void import('./circles').then((m) => m.openCircles(ctx));
+// The family circles screens load on first use.
+const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
+const openCircles = () => void import('./circles').then((m) => m.openCircles());
 import { selectionController, type Sel } from './selection';
 
 type Seg = [number, number, string];
@@ -42,24 +41,6 @@ const bismillah = () =>
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: t('mushaf.bookmarkMark', { ref: `${b.s}:${b.a}` }) })));
 registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: wroteHere(lastWritten(r)) })));
-// Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
-let circleCtx: CircleContext | null = null;
-registerToday(async () => {
-  if (!account() || !circleCtx) return [];
-  const ctx = circleCtx;
-  const items = myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').map(({ state, part }) => {
-    const pages = ctx.juzPages(part.juz);
-    const left = pages.length - pages.filter((p) => pagesRead(part).has(p)).length;
-    return { icon: '◯', text: left ? t(left === 1 ? 'today.juzLeft1' : 'today.juzLeft', { juz: part.juz, n: left, circle: state.circle.name }) : t('today.juzRead', { juz: part.juz }), onClick: () => void openCircle(ctx, state.circle.id) };
-  });
-  for (const st of cachedCircles()) {
-    if (st.circle.status === 'complete' && st.circle.completed_at && Date.now() - Date.parse(st.circle.completed_at) < 7 * DAY) {
-      items.push({ icon: '☾', text: t('today.khatm', { circle: st.circle.name }), onClick: () => void openCircle(ctx, st.circle.id) });
-    }
-  }
-  return items;
-});
-
 // A note's mark pulses once per app session when its page is visited again (not for today's notes).
 const pulsed = new Set<string>();
 const DAY = 86_400_000;
@@ -113,26 +94,6 @@ registerToday(async () => {
   return (await import('./ramadan')).ramadanToday(ctx);
 });
 
-// Revision lamps (T5a): lamps past their interval, gently.
-let openLampsHere: (() => void) | null = null;
-registerToday(async () => {
-  if (!openLampsHere || !Object.keys(lamps()).length) return [];
-  const { dimLamps } = await import('./lamps');
-  const { count, surah } = await dimLamps();
-  if (!count) return [];
-  const open = openLampsHere;
-  return [{ icon: '✦', text: count === 1 ? t('today.lamp', { surah: surahName(surah!) }) : surah ? t('today.lampsIn', { n: count, surah: surahName(surah) }) : t('today.lamps', { n: count }), onClick: () => open() }];
-});
-
-// Home sky (L6): pages read this month as stars.
-let openSkyHere: (() => void) | null = null;
-registerToday(() => {
-  const n = monthReads().size;
-  if (!openSkyHere || !n) return [];
-  const open = openSkyHere;
-  return [{ icon: '✶', text: n === 1 ? t('today.sky1') : t('today.sky', { n }), onClick: () => open() }];
-});
-
 function firstVisitHint() {
   try {
     if (localStorage.getItem('mushafHint')) return;
@@ -156,6 +117,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
@@ -222,48 +184,29 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
-    onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
   root.append(bar, area, sel.bar, player.bar);
 
-  // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
-  const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
-  circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
-  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
-  openSkyHere = () => void import('./sky').then((x) => x.openSky({
-    current: page,
-    goToPage: (p) => { toggleBar(false); go(p); },
-    openCircle: (id) => void openCircle(circleCtx!, id),
-  }));
-  openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
-  const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
-  let portion = myPortion();
-  const decorate = () => {
-    portion = myPortion();
-    for (const [p, el] of built) el.classList.toggle('my-portion', portion.has(p));
-    startReadTimer();
-  };
-  window.addEventListener('circles-changed', decorate);
+  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
   const startReadTimer = () => {
     clearTimeout(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    // Every page open ≥ 20 s lights a star in the Home sky; circles and Ramadan count it too.
+    // Every page open ≥ 20 s is logged (this device); Ramadan counts it too.
     readTimer = window.setTimeout(() => {
       if (p !== page) return;
       logPageRead(p);
-      if (portion.has(p) || ramadan) { markPageRead(p, juzPages); markRamadanRead(p); }
+      if (ramadan) markRamadanRead(p);
     }, 20_000);
   };
-  if (account() && navigator.onLine) void loadCircles().catch(() => {});
   try {
     const open = sessionStorage.getItem('openCircle');
     if (open) {
       sessionStorage.removeItem('openCircle');
-      window.setTimeout(() => void openCircle(circleCtx!, open, true), 300);
+      window.setTimeout(() => void openCircle(open), 300);
     }
   } catch {
     /* ignore */
@@ -354,7 +297,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const f = Math.min((base * width) / widest, lh * 0.72);
     el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
     el.dataset.fit = '1';
-    el.classList.toggle('my-portion', portion.has(Number(el.dataset.page)));
     paintMarks(el); // positions depend on the line heights just set
   }
   const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
@@ -386,6 +328,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
   }
 
+  let recentTimer = 0;
   function header() {
     const pg = mushaf.pages[page - 1];
     const segs = pg.lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
@@ -396,6 +339,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
     startReadTimer();
+    // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
+    clearTimeout(recentTimer);
+    const p = page;
+    recentTimer = window.setTimeout(() => addRecentPage(p, s, a), 3000);
   }
 
   // A page whose font is still downloading slides in as a placeholder, replaced when it is ready.
@@ -429,6 +376,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
+    releasePageFonts((p) => Math.abs(p - page) <= 6); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
   }
 
@@ -563,11 +511,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           go(mushaf.pageOf(s, a));
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, `✎  ${t('menu.reflections')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, `✦  ${t('menu.lamps')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openSkyHere?.(); } }, `✶  ${t('menu.sky')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, `🎁  ${t('menu.gifts')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
@@ -652,11 +597,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
-    window.removeEventListener('circles-changed', decorate);
     clearTimeout(readTimer);
-    circleCtx = null;
-    openLampsHere = null;
-    openSkyHere = null;
+    clearTimeout(recentTimer);
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);

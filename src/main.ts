@@ -1,11 +1,11 @@
 // Entry: hash router for the three Phase 0 screens.
 //   #/                 surah list (the app itself opens on the mushaf: where the user left off, or Al-Fatiha)
+//   #/search           the same list with the search box focused (surah, 2:255, juz 5, page 50, words)
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
-//   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { capabilities } from './engine/capabilities';
@@ -56,9 +56,6 @@ async function route() {
     } else if (view === 'join' && a) {
       const { showJoin } = await import('./ui/circles');
       c = await showJoin(screen, a);
-    } else if (view === 'gift' && a) {
-      const { showGift } = await import('./ui/gift');
-      c = await showGift(screen, a);
     } else if (view === 'ramadan') {
       // A Ramadan reminder was tapped: the mushaf on the next page of today's portion.
       const { ramadanTarget } = await import('./ui/ramadan');
@@ -75,7 +72,7 @@ async function route() {
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
-    } else c = await showSurahList(screen);
+    } else c = await showSurahList(screen, view === 'search');
     if (id === routeId) cleanup = c;
     else c();
   } catch (e) {
