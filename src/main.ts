@@ -120,9 +120,9 @@ if (launch && !liteMode()) playOpening();
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
-const lightToday = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
-lightToday();
-document.addEventListener('visibilitychange', lightToday);
+const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
+markOpen();
+document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 void import('./ui/rewards').then((m) => m.watchRewards());
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets

@@ -84,6 +84,12 @@ export function todayGoals(now = new Date()): GoalProgress[] {
   return out;
 }
 
+/** The flame's rule: one goal met (or one counted page) lights the day; with no goals, opening does. */
+export function anyGoalMet(now = new Date()): boolean {
+  const list = todayGoals(now);
+  return !list.length || (readLog()[dayKey(now)]?.length ?? 0) > 0 || list.some((x) => x.done >= x.target);
+}
+
 /** Marks the day when every goal is met; true when that just happened. */
 export function checkGoals(now = new Date()): boolean {
   const list = todayGoals(now);

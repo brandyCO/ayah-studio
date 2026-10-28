@@ -87,7 +87,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       } }, `🔥  ${t('rl.askFriend')}`) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
-        h('span', { class: 'me-chip' }, t('me.weeks', { n: s.weeks })),
+        h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
   };

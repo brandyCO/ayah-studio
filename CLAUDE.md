@@ -1051,7 +1051,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       stops moving within 1 s of the last word (or for 4 s anywhere in the kept recording) also ends it
 
 ### Phase 8 — Me tab: streaks, goals, dhikr, widgets (owner request 2026-10-28)
-Owner decisions: a daily streak with a living flame (a day is lit by opening the app), a free streak
+Owner decisions: a daily streak with a living flame (a day is lit by meeting one daily goal — owner decision 2026-10-28; at first by opening the app), a free streak
 freeze each week, a friend can relight a lost streak; honest page counting (a page counts only after
 it has been on screen for the reading time, default 1½ min, owner-confirmed; read-aloud check later);
 stats for week / month / all time; daily goals incl. dhikr (tasbih, istighfar, tahleel, hawqala,
@@ -1074,7 +1074,11 @@ duas/reflections section in Me.
       compact (76 px flame beside the count); "Your week" folded into the stats (this week's tiles show ▲/▼
       against last week); badges show 4 (earned, then the closest) + "All n of 20"; the settings (reading
       time per page, prayer location / method / Asr / lock screen, dhikr reminders, then the app menu) moved
-      to `#/me/settings` (⚙ in Me's top bar)
+      to `#/me/settings` (⚙ in Me's top bar). **What lights the flame** (owner decision 2026-10-28, "any one
+      goal met"): a day is lit (`DayRec.f`, `lightFlame()`) when one of the day's goals is met or one page was
+      counted (`anyGoalMet()`; with no goals set, opening the app does), checked by `rewards.ts` after the
+      app was opened that day (not from the Kids space); missed days are settled once per day (`settle()`:
+      freeze or the flame goes out); widget strings say "Meet a goal today to keep it"
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
       (counted pages), ayat memorised (+/− by the user), reels made, dhikr on the **tasbih counter**
       (`src/ui/tasbih.ts`: Subhan Allah, Alhamdulillah, Allahu Akbar, tahleel, istighfar, hawqala; targets

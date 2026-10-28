@@ -1,8 +1,10 @@
-// Goals and badges: whenever the journey or the reading log changes, mark a day when every goal is
+// Goals, flame and badges: whenever the journey or the reading log changes, light today's flame
+// when one goal is met (once the app was opened today, so not from the Kids space), mark a day when every goal is
 // met and earn the badges whose goal is reached. A new badge fires `badge-earned` (the Me screen
 // shows it large) and, elsewhere, a short toast.
 import { checkBadges } from '../data/badges';
-import { checkGoals } from '../data/goals';
+import { anyGoalMet, checkGoals } from '../data/goals';
+import { lightFlame, todayRec } from '../data/journey';
 import { t, type Key } from '../i18n';
 import { toast } from './dom';
 
@@ -11,6 +13,8 @@ function check() {
   if (busy) return;
   busy = true;
   try {
+    const d = todayRec();
+    if (d.o && !d.f && anyGoalMet() && lightFlame() && location.hash !== '#/me') toast(t('me.litToast'));
     if (checkGoals()) toast(t('goal.allMet'));
     const fresh = checkBadges();
     if (fresh.length) {

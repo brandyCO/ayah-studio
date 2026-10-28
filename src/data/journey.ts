@@ -7,7 +7,8 @@
 // A surah is finished when every one of its pages has been read (counted) since its last finish,
 // all within 60 days. Minutes listened = recitation actually played in the player.
 //
-// Streak: a day is lit when the app is opened. A missed day is covered by the week's free freeze
+// Streak: a day is lit when one of the day's goals is met (a counted page always counts; with no
+// goals set, opening the app is enough; see rewards.ts). A missed day is covered by the week's free freeze
 // (one per calendar week, Monday first, used by itself). When the missed days cannot all be
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
 import { dayKey, readLog } from './readLog';
@@ -21,6 +22,8 @@ const FINISH_WINDOW = 60 * DAY;
 interface DayRec {
   /** Opened the app. */
   o?: 1;
+  /** The flame was lit (a goal met). */
+  f?: 1;
   /** Ayat read (ayat starting on the pages counted). */
   ay?: number;
   /** Seconds of recitation listened to. */
@@ -57,6 +60,8 @@ interface State {
   /** The flame that went out: its length and the days missed. */
   lost?: { n: number; days: string[]; at: string };
   best: number;
+  /** The day the missed days before it were last settled. */
+  settled?: string;
 }
 
 const empty = (): State => ({
@@ -85,6 +90,7 @@ function load(): State {
       if (v.badges && typeof v.badges === 'object') s.badges = v.badges;
       if (v.lost && Array.isArray(v.lost.days)) s.lost = v.lost;
       if (Number.isFinite(v.best)) s.best = v.best;
+      if (typeof v.settled === 'string') s.settled = v.settled;
     }
   } catch {
     /* ignore */
@@ -127,15 +133,14 @@ export const weekOf = (k: string) => { const d = parse(k); return addDays(k, -((
 
 function covered(s = load()): Set<string> {
   const out = new Set(s.frozen.concat(s.revived));
-  for (const [k, d] of Object.entries(s.days)) if (d.o) out.add(k);
+  for (const [k, d] of Object.entries(s.days)) if (d.f) out.add(k);
   return out;
 }
 
-/** Marks today as opened; first settles any missed days (the weekly freeze, or the flame goes out). */
-export function recordOpen(now = new Date()) {
-  const s = load();
-  const k = dayKey(now);
-  if (s.days[k]?.o) return;
+/** Settles the unlit days before day `k` once: the weekly freeze covers them, or the flame goes out. */
+function settle(s: State, k: string) {
+  if (s.settled === k) return;
+  s.settled = k;
   const cov = covered(s);
   let last = '';
   for (const d of cov) if (d < k && d > last) last = d;
@@ -157,6 +162,14 @@ export function recordOpen(now = new Date()) {
       }
     }
   }
+}
+
+/** Marks today as opened and settles any missed days before it. */
+export function recordOpen(now = new Date()) {
+  const s = load();
+  const k = dayKey(now);
+  if (s.days[k]?.o && s.settled === k) return;
+  settle(s, k);
   today(now).o = 1;
   const cutoff = addDays(k, -KEEP_DAYS);
   for (const d of Object.keys(s.days)) if (d < cutoff) delete s.days[d];
@@ -165,6 +178,18 @@ export function recordOpen(now = new Date()) {
   if (s.lost && s.lost.at < addDays(k, -2)) delete s.lost; // a friend can relight it for 2 days
   s.best = Math.max(s.best, streakOn(k, covered(s)));
   save();
+}
+
+/** Lights today's flame (a goal was met); false when it was already lit. */
+export function lightFlame(now = new Date()): boolean {
+  const s = load();
+  const k = dayKey(now);
+  if (s.days[k]?.f) return false;
+  settle(s, k);
+  today(now).f = 1;
+  s.best = Math.max(s.best, streakOn(k, covered(s)));
+  save();
+  return true;
 }
 
 /** Consecutive covered days ending on day `k` (0 when `k` is not covered). */
@@ -333,7 +358,7 @@ export function stats(period: Period, now = new Date()): Stats {
   if (period === 'all') {
     const surahList = [...new Set(Object.values(s.days).flatMap((d) => d.s ?? []))];
     const vals = Object.values(s.days);
-    return { ...s.totals, surahList, goalDays: vals.filter((d) => d.g).length, litDays: vals.filter((d) => d.o).length };
+    return { ...s.totals, surahList, goalDays: vals.filter((d) => d.g).length, litDays: vals.filter((d) => d.f).length };
   }
   const from = period === 'week' ? weekOf(k) : `${k.slice(0, 8)}01`;
   const out: Stats = { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, surahList: [], goalDays: 0, litDays: 0 };
@@ -347,7 +372,7 @@ export function stats(period: Period, now = new Date()): Stats {
     out.memorised += r.m ?? 0;
     for (const n of Object.values(r.dk ?? {})) out.dhikr += n;
     if (r.g) out.goalDays++;
-    if (r.o) out.litDays++;
+    if (r.f) out.litDays++;
     for (const su of r.s ?? []) { out.surahs++; if (!out.surahList.includes(su)) out.surahList.push(su); }
   }
   return out;
