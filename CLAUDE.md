@@ -569,7 +569,7 @@ cloud. Build in this order:
       grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
       kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
       120 days), so nothing written on two devices is lost; in Export my data and the privacy page
-- [x] T2a Khatm circles (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
+- [x] ~~T2a Khatm circles~~ — **removed by the owner on 2026-10-28** (the ring, juz sheets, gold page edge, Today lines, Khatm reel, Ramadan's "with a circle" links, `src/ui/constellation.ts`; ☰ → **Family circles** now lists only family circles (K6), which keep the shared circle code, invite links and `#/join/{code}`; the database is untouched). As built (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
       `circle_members`, `circle_parts`; members read, nobody writes directly: `create_circle`,
       `join_circle` (8-char code), `take_part` (null = pick one), `set_part` (taken/done/free),
       `new_round` (owner), `update_circle`, `leave_circle` (owner → next member; last one out deletes),
@@ -588,7 +588,7 @@ cloud. Build in this order:
       `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`, added 2026-10-09; all migrations applied live)
 - [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
       (§7 step 4)
-- [x] T3 Gift an ayah (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
+- [x] ~~T3 Gift an ayah~~ — **removed by the owner on 2026-10-28** (the composer, `#/gift/…`, ☰ → Gifts, the 🎁 buttons in the selection bar and the editor, `src/ui/gift.ts`, `src/together/gifts.ts` and the lift/bloom moments are gone; the `gifts` table and its functions stay untouched and stay in Export my data, with gifts received on this device). As built (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
       reciter, look, sender name ≤ 40, message ≤ 140, `reply_to`, opens); nobody reads or writes the
       table: `send_gift` (checks surah/ayah against `ayah_count()`, ≤ 10 ayat, `valid_reciter()`, the look
       with `valid_gift_look()` = `applyLook()`'s rules, built-in backgrounds only; 30 a day, anonymous
@@ -607,7 +607,7 @@ cloud. Build in this order:
       Anonymous sign-ins; until then the composer asks for Google sign-in. Shared links from the Android
       app point at the Pages site (`shareableLink()` in `src/native.ts`; circle invites too).
       In Export my data and the privacy page
-- [x] T5a Revision lamps, manual (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
+- [x] ~~T5a Revision lamps~~ — **removed by the owner on 2026-10-28** (☰ → My memorisation, the Today card line, sync of the `lamp` document, `src/data/lamps.ts`, `src/ui/lamps.ts`; existing local and synced lamps stay in Export my data). As built (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
       (localStorage `lamps`: per page box 1–5, last revised, memorised since; Leitner intervals
       1/2/4/8/16 days; "Revised today" = up a box, "Needs work" = box 1; light = 1 → 0.15 over two
       intervals, `due` past one) + `src/ui/lamps.ts`: ☰ → **My memorisation**: one canvas, a row per juz,
@@ -840,7 +840,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       breath = a swell at each word start from the QDC timings; Noor brightens when a surah ends;
       tap → controls (✕, play/pause, sleep Off/15/30/60: fades to black over the last minute, then
       pauses and releases the wake lock); Esc/back closes; Device check → Light scenes: step + Reset)
-- [x] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
+- [x] ~~L2 Light reel backgrounds~~ — **removed by the owner on 2026-10-28** (the Light tab, `src/light/reel.ts`, `flatReel.ts`, `scenes/reel.ts`, the thumbnails; drafts/styles/vibes that used one now use a preset: dawn → Soft clouds, stars/aurora → Night, lanterns/rays → Light; the 2D transitions Light bloom and Drift through clouds stay). As built: light reel backgrounds + transitions
       Light bloom, Drift through clouds; gifts/walls allow-list (migration + pgTAP)
       (built 2026-10-10: background kind `light` in `src/engine/backgrounds.ts` (`LIGHT_BACKGROUNDS`,
       `BUILT_IN_BACKGROUNDS` = presets + light, used by gifts/walls; `disposeMedia()`); `loadBackground()`
@@ -858,7 +858,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       Migration `20261014100000_l2_light_looks.sql` (`valid_gift_look()` accepts the 5 ids + 2
       transitions; pgTAP `light_looks.test.sql`, 9 checks). The service worker warm-up also fetches the
       three.js chunks and the light thumbnails)
-- [x] L3 Khatm circle as a constellation (SVG ring = fallback)
+- [x] ~~L3 Khatm circle as a constellation~~ — **removed with the Khatm circles on 2026-10-28**. As built
       (built 2026-10-10: `src/light/scenes/constellation.ts` — the 30 juz as stars on a ring floating
       in a night sky (sky turned upwards, star field, mist below, Noor at the lower right), facing the
       viewer with a ≤ 4° wobble and each star drifting a little in depth; free = faint lilac points on a
@@ -886,7 +886,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       `src/ui/lampField.ts`, the Grid / Lanterns chip and `lampsView` are gone; ☰ → My memorisation is
       the canvas grid as before, with the Today card reminder ("3 lamps are getting dim in …"). Proper
       revision reminders belong to T5b (a dim lamp opens a revision session; local notifications)
-- [x] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
+- [x] L5 Moments — **3D parts removed by the owner on 2026-10-28** (gift lift/bloom, the Ramadan crescent and Eid backdrops: `src/ui/moment.ts`, `scenes/moments.ts`; the Ramadan moments are plain 2D dialogs; the export lantern and the opening sweep stay). As built: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
       (built 2026-10-10: `src/light/scenes/moments.ts` (pure in t) + `src/ui/moment.ts`: `playMoment()`
       (full-screen or inline, tap/back skips, flat → a short CSS glow) and `lightBackdrop()` (a 3D scene
@@ -905,7 +905,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
       its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
       depths)
-- [x] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
+- [x] ~~L6 Home sky~~ — **removed by the owner on 2026-10-28** (☰ → Sky, the Today line, `src/ui/sky.ts`, `src/light/scenes/homeSky.ts`, `flatSky.ts`, `skyLayout.ts`; the reading log `src/data/readLog.ts` stays for T9). As built
       (built 2026-10-10: `src/data/readLog.ts` — a local reading log (localStorage `readLog`, day →
       pages, this device only, ~13 months kept for T9); the mushaf's 20 s read timer now always runs and
       logs the page (circle portions and Ramadan as before). `src/light/skyLayout.ts` (no three): every
@@ -927,7 +927,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       up/down (wheel, ↑↓) travels along the avenue, sideways swings round it, with a soft glide; labels
       for circles follow their rings. `cloudSea()` (shared) now dissolves its far edge into the sky dome
       (no hard horizon line in any scene). Flat version unchanged (the 2D dome picture)
-- [x] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
+- [x] ~~L7 Kids path in 3D~~ — **removed by the owner on 2026-10-28** ("keep it 2D, light performance"): the Kids space always shows the 2D lantern path with Noor and the constellations (L7b); `src/ui/kidsSky.ts`, `src/light/scenes/kidsPath.ts` and the "Lanterns in 3D" switch are gone. As built
       (built 2026-10-10: `src/light/scenes/kidsPath.ts` — the 38 surah lanterns (round paper, thin caps)
       float over a soft cloud sea and wind away into the distance in the 2D path's own wave
       (`lanternAt(i)`), soft dots between them, haze (fog) far off, motes; dawn palette by day, night
