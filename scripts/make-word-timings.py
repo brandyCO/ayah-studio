@@ -22,7 +22,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MIN_CONF, MIN_LCONF = -1.5, -3.0
 LONG = float(os.environ.get('LONG', 8000))  # ms: no word but the last held longer
-MAX_UNEXPLAINED = int(os.environ.get('MAX_UNEXPLAINED', 6))
 SUB = os.environ.get('ALIGN_SUB', 'align2')
 
 
@@ -71,9 +70,6 @@ def ayah_words(text, words, conf, lconf, lo=None, hi=None):
   if {w[0] for w in words} != need: return None
   for a, b in zip(words, words[1:]):
     if b[1] < a[2] or not (b[0] == a[0] + 1 or b[0] <= a[0]): return None  # in time; next word or back (repeat)
-  # Speech the words do not explain (the model hears letters where the path rests) means a word is missing or
-  # misplaced; a held madd or a pause has none.
-  if any(w[3] > MAX_UNEXPLAINED for w in words): return None
   if any(w[2] - w[1] > LONG for w in words[:-1]): return None
   if lo is not None and (words[0][1] < lo or words[-1][2] > hi): return None
   td = token_display(text)

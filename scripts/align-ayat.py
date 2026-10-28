@@ -21,8 +21,8 @@ SR = 16000
 HOP = 320  # samples per output frame (20 ms)
 # Model input pieces with context on both sides. Short on purpose: given a long stretch the model leaves out
 # words the reciter repeats (its training text has no repeats), so the repeat sounds like silence to it; in
-# 6 s pieces it hears every word (e.g. Alafasy 78:40, words 5–10 read twice).
-CHUNK, CTX = int(float(os.environ.get('ALIGN_CHUNK', 6)) * SR), int(float(os.environ.get('ALIGN_CTX', 1)) * SR)
+# 3 s pieces it hears every word (Alafasy: all 4 repeats Quran.com marks in 8 surahs, e.g. 78:40 words 5–10).
+CHUNK, CTX = int(float(os.environ.get('ALIGN_CHUNK', 3)) * SR), int(float(os.environ.get('ALIGN_CTX', 1)) * SR)
 
 _model = None
 
