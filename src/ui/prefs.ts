@@ -1,7 +1,7 @@
 // Per-device UI preferences (best effort: storage can be unavailable). The ones in SYNCED_PREFS
 // follow the user's account across devices (src/cloud/sync.ts): each change records when it was made,
 // and the newest change wins.
-export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation'] as const;
+export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation', 'brandTheme'] as const;
 type SyncedPref = (typeof SYNCED_PREFS)[number];
 
 function prefTimes(): Record<string, number> {
@@ -155,6 +155,22 @@ export function tourSeen(): boolean {
 export function markTourSeen() {
   try {
     localStorage.setItem('tourSeen', '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Export size last picked in the studio (1080P / 720P), this device only. */
+export function exportQuality(): 1920 | 1280 {
+  try {
+    return localStorage.getItem('exportQuality') === '1280' ? 1280 : 1920;
+  } catch {
+    return 1920;
+  }
+}
+export function setExportQuality(q: 1920 | 1280) {
+  try {
+    localStorage.setItem('exportQuality', String(q));
   } catch {
     /* ignore */
   }

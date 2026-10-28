@@ -69,7 +69,7 @@ button { font: inherit; color: inherit; }
 .brand h1 { margin: 0; font-size: 19px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand p { margin: 0; font-size: 13px; }
 .brand-name { width: fit-content; max-width: 100%; background: var(--brand-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.primary.brand-btn { background: var(--brand-fill); color: #fff; }
+.primary.brand-btn { background: var(--brand-fill); color: #fff; box-shadow: var(--brand-shadow, none); }
 .icon-btn {
   display: inline-grid; place-items: center; flex: none;
   width: 40px; height: 40px; border-radius: 50%;
@@ -528,7 +528,7 @@ section.sheet .sheet-head h2 { font-size: 15px; }
 .export-progress { width: min(360px, 100%); text-align: center; }
 .export-pct { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .export-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 12px 0 4px; }
-.export-bar > div { height: 100%; width: 0; background: var(--brand-bar); transition: width .2s; }
+.export-bar > div { height: 100%; width: 0; background: var(--brand-bar); transition: width .2s; box-shadow: var(--brand-shadow, none); }
 .export-progress .chip { margin-top: 18px; }
 .export-result { width: min(360px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .export-result .result-video { width: min(220px, 60vw); margin: 0; border-radius: 8px; }
@@ -1157,6 +1157,47 @@ body[data-view="kids"] {
 .tajweed-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .series-until { width: 6em; }
 
+/* Bottom tab bar: Read · Listen · Create · Me. Always shown on the surah list and drafts; on the
+   mushaf it comes up with the title bar (tap the page), so the page itself stays clean. */
+.tabbar {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 9;
+  display: flex; justify-content: center;
+  padding: 4px 8px max(6px, env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--line);
+  transition: transform .2s ease;
+}
+.tab-btn {
+  flex: 1; max-width: 140px; min-height: 56px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600;
+  border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tab-btn.on { color: var(--accent); }
+.tab-btn:active { background: var(--sel); }
+.tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+.tabbar.auto { transform: translateY(110%); }
+body.tabs-up .tabbar.auto { transform: none; }
+body.has-selbar .tabbar.auto { transform: translateY(110%); }
+body.tabs-up .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
+body.tabs-up .rf-hint { opacity: 0; }
+
+/* Me sheet: grouped menu */
+.sheet-menu { max-height: 72vh; overflow-y: auto; overscroll-behavior: contain; }
+.menu-group { margin: 14px 10px 2px; font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.menu-group:first-child { margin-top: 2px; }
+
+/* Create sheet */
+.create-item { align-items: center; text-decoration: none; color: var(--text); }
+.create-ic {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 12px; background: var(--sel); color: var(--accent);
+}
+.create-ic.brand { background: var(--brand-fill); color: #fff; }
+.create-txt { display: flex; flex-direction: column; min-width: 0; text-align: start; }
+.create-txt .muted { margin: 0; }
+
 /* search + juz / quarter navigation (src/ui/surahList.ts) */
 .nav-tabs { margin: 6px 0 0; }
 .surah-row.here { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 10px; }
@@ -1182,3 +1223,23 @@ body[data-view="kids"] {
   border: 1px solid var(--line); border-radius: 12px; background: var(--card); text-decoration: none; font-size: 13px;
 }
 .nav-page strong { font-size: 15px; }
+
+/* ☰ → Theme colours (src/ui/themePicker.ts): live preview on top, a grid of gradient tiles */
+.theme-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 10px 0 16px; padding: 18px 14px;
+  border-radius: 16px; background: radial-gradient(closest-side, var(--brand-glow), transparent), var(--card); border: 1px solid var(--line); }
+.theme-brand { font-size: 26px; font-weight: 700; letter-spacing: .01em; }
+.theme-preview .brand-btn { pointer-events: none; }
+.theme-bar { width: 70%; margin: 0; }
+.theme-bar > div { width: 64%; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 12px; }
+.theme-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.theme-swatch { position: relative; width: 100%; aspect-ratio: 1; border-radius: 18px; background: var(--tg); overflow: hidden;
+  box-shadow: 0 4px 16px -4px var(--tglow); transition: transform .2s, box-shadow .2s; outline: 2px solid transparent; outline-offset: 3px; }
+.theme-swatch::after { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,.35), transparent 45%); }
+.theme-pill { position: absolute; inset-inline: 14%; bottom: 14%; height: 18%; border-radius: 999px; background: var(--tf); box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.theme-tile:hover .theme-swatch { transform: translateY(-2px); }
+.theme-tile.on .theme-swatch { outline-color: var(--accent); box-shadow: 0 0 22px -2px var(--tglow); }
+.theme-tile.on .theme-name { color: var(--accent); font-weight: 650; }
+.theme-tile:focus-visible { outline: none; }
+.theme-tile:focus-visible .theme-swatch { outline-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .theme-swatch { transition: none; } }

@@ -58,6 +58,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Light haptic taps (navigator.vibrate in the WebView); a normal permission, never asked. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Export in the background: foreground service + keep the CPU awake with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

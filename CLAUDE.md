@@ -559,6 +559,12 @@ save to gallery / share sheet; offline audio cache; settings.
       `--brand-text`, `--brand-glow`. Used only by `.brand-name` (app name), `.primary.brand-btn` (Export,
       "Turn into reel"), studio `.chip.on` / `.tab.on`, export + download bars and the empty Drafts glow;
       `theme-color` per colour scheme. The mushaf keeps its own `--paper` / `--ink`
+- [x] Theme colours (owner request 2026-10-28): ☰ → Theme colours — 12 brand gradients with a neon glow
+      (`src/ui/theme.ts`: Emerald (default), Aurora, Ultraviolet, Synthwave, Neon Sunset, Deep Ocean,
+      Royal Gold, Rose Quartz, Cyber Lime, Nebula, Arctic Ice, Ember). Each sets the brand tokens, the
+      accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
+      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
+      gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
@@ -867,6 +873,16 @@ tafsir only from published, credited editions; UI strings only are translated by
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
 - [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
       < 16 MB) — postponed by the owner (2026-10-09)
+- [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
+      Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
+      page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
+      page (or pause); Me = the ☰ menu, now grouped (Reading / Your Quran / Together / Settings); Create = a
+      sheet (Choose ayat → the long-press hint, Today's ayah reel, Continue your last reel, All drafts). From
+      another screen Listen/Me/Choose ayat open the last page read first (sessionStorage `tabIntent`).
+      Export size remembered per device (`exportQuality`); `haptic()` on tab taps (Android: VIBRATE
+      permission). **Smaller APK** (owner decision 2026-10-28): the CI build leaves out the mushaf page fonts
+      except p1–p3; the app fetches the others from the Pages site on first view and keeps them in Cache
+      Storage `qcf-v2` (`pageFontSource()` in `src/data/mushaf.ts`), so a page opened once reads offline
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
