@@ -215,7 +215,7 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       horizontal pans (`onPan`, axis decided once) besides long-press selection. Smoothness pass: a swipe
       during a slide lands it at once and follows the new swipe (chained flips); a page whose font is
       still downloading slides in as a "Page N" placeholder (spinner) and fills in when ready; fonts
-      load 3 pages ahead; the player shows a spinner + "loading…" while starting or buffering
+      load 3 pages ahead and are freed again more than 6 pages away (`releasePageFonts()`); the player shows a spinner + "loading…" while starting or buffering
 - [x] Listen while reading (owner request): ☰ → "Listen from this page", ▶ in the selection bar, or —
       while listening — tap an ayah to play from it. `src/ui/player.ts` streams the reciter's QDC
       full-surah MP3 (seeking by the verse timings), tints the ayah being recited and colours the word
@@ -564,6 +564,11 @@ save to gallery / share sheet; offline audio cache; settings.
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
       `MediaScanPlugin.java` adds it to the gallery. Share = `@capacitor/share` with the saved file's URI
       (saves first if needed). Storage permission only asked on Android ≤ 10 (manifest: maxSdkVersion)
+- [x] Background export in the app (owner request 2026-10-28): `ExportService.java` (foreground service,
+      type `dataSync`, partial wake lock ≤ 60 min, silent progress notification with Cancel) +
+      `ExportServicePlugin.java`, started by `exportGuard()` (`src/native.ts`) for the whole export; the
+      WebView renderer stays important while hidden (`setRendererPriorityPolicy`). The video is still made
+      by the web code; the service only keeps the app running when the user leaves it or the screen goes off
 - [x] Offline in the app: no service worker inside Capacitor (the app files are local); QDC timings
       kept in IndexedDB `timings` (network first, newest 60) by `src/data/qdc.ts`; audio as on the web
 - [ ] Android app tested by the owner on their phone (not verifiable in the cloud container: no

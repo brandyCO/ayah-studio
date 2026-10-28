@@ -8,7 +8,7 @@ import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { isNative } from '../native';
-import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
+import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
@@ -376,6 +376,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
+    releasePageFonts((p) => Math.abs(p - page) <= 6); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
   }
 
