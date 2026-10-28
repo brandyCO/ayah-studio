@@ -42,8 +42,25 @@ export function logPageRead(page: number, now = new Date()): boolean {
   } catch {
     /* ignore */
   }
+  allCache = null;
   window.dispatchEvent(new Event('readlog-changed'));
   return true;
+}
+
+// The user's other devices' logs (journey.ts keeps them), joined with this one by readLogAll().
+let otherLogs: Log[] = [];
+let allCache: Log | null = null;
+export function setOtherLogs(logs: Log[]) {
+  otherLogs = logs;
+  allCache = null;
+}
+/** Pages read per day on all the user's devices (a page read on two devices the same day counts once). */
+export function readLogAll(): Log {
+  if (!otherLogs.length) return readLog();
+  if (allCache) return allCache;
+  const out: Log = {};
+  for (const log of [readLog(), ...otherLogs]) for (const [k, pages] of Object.entries(log)) out[k] = out[k] ? [...new Set([...out[k], ...pages])] : [...pages];
+  return (allCache = out);
 }
 
 export interface PageReads {

@@ -6,7 +6,7 @@
 // ≥ 3); goals never change by themselves. Progress comes from the journey (journey.ts) and the reading log; when every goal that
 // is on has been met, the day is marked (it counts toward goal badges and the weekly summary).
 import { addDays, allDays, markGoalsMet, todayRec } from './journey';
-import { dayKey, readLog } from './readLog';
+import { dayKey, readLogAll } from './readLog';
 
 /** The dhikr on the tasbih counter. Short fixed phrases only; never altered. */
 export const DHIKR = [
@@ -46,18 +46,28 @@ export interface Goals {
   pace: Pace | null;
   /** The day the goals last changed (suggestions wait a week after a change). */
   since: string;
+  /** When they last changed (ms), so the newest wins between the user's devices. */
+  at: number;
 }
 export type Pace = 'gentle' | 'steady' | 'devoted';
-const DEFAULT: Goals = { pages: 2, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: true, custom: [], pace: null, since: '' };
+const DEFAULT: Goals = { pages: 2, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: true, custom: [], pace: null, since: '', at: 0 };
 export const PACES: Record<Pace, Pick<Goals, 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar'>> = {
   gentle: { pages: 1, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: false },
   steady: { pages: 2, memorise: 1, reels: 0, dhikr: { subhan: 100 }, adhkar: true },
   devoted: { pages: 5, memorise: 3, reels: 0, dhikr: { subhan: 100, istighfar: 100, tahleel: 100 }, adhkar: true },
 };
 
+let memo: { raw: string | null; g: Goals } | null = null;
+/** The goals (parsed once per change; callers get their own copy). */
 export function goals(): Goals {
+  let raw: string | null = null;
+  try { raw = localStorage.getItem('goals'); } catch { /* ignore */ }
+  if (memo?.raw !== raw || !memo) memo = { raw, g: parseGoals(raw) };
+  return structuredClone(memo.g);
+}
+function parseGoals(raw: string | null): Goals {
   try {
-    const v = JSON.parse(localStorage.getItem('goals') ?? 'null');
+    const v = JSON.parse(raw ?? 'null');
     if (!v || typeof v !== 'object') return structuredClone(DEFAULT);
     const pick = (x: unknown, list: readonly number[], d: number) => (list.includes(Number(x)) ? Number(x) : d);
     const dhikr: Goals['dhikr'] = {};
@@ -78,6 +88,7 @@ export function goals(): Goals {
         })) : [],
       pace: v.pace === 'gentle' || v.pace === 'steady' || v.pace === 'devoted' ? v.pace : 'steady',
       since: typeof v.since === 'string' ? v.since : '',
+      at: Number.isFinite(v.at) ? v.at : 0,
     };
   } catch {
     return structuredClone(DEFAULT);
@@ -86,6 +97,7 @@ export function goals(): Goals {
 export function setGoals(g: Goals) {
   try {
     g.since = dayKey();
+    g.at = Date.now();
     g.pace ??= 'steady';
     localStorage.setItem('goals', JSON.stringify(g));
   } catch {
@@ -109,7 +121,7 @@ export function todayGoals(now = new Date()): GoalProgress[] {
   const g = goals();
   const d = todayRec(now);
   const out: GoalProgress[] = [];
-  if (g.pages) out.push({ id: 'pages', kind: 'pages', done: readLog()[dayKey(now)]?.length ?? 0, target: g.pages });
+  if (g.pages) out.push({ id: 'pages', kind: 'pages', done: readLogAll()[dayKey(now)]?.length ?? 0, target: g.pages });
   if (g.memorise) out.push({ id: 'memorise', kind: 'memorise', done: d.m ?? 0, target: g.memorise });
   if (g.reels) out.push({ id: 'reels', kind: 'reels', done: d.r ?? 0, target: g.reels });
   for (const { id } of DHIKR) {
@@ -125,7 +137,7 @@ export function todayGoals(now = new Date()): GoalProgress[] {
 /** The flame's rule: one goal met (or one counted page) lights the day; with no goals, opening does. */
 export function anyGoalMet(now = new Date()): boolean {
   const list = todayGoals(now);
-  return !list.length || (readLog()[dayKey(now)]?.length ?? 0) > 0 || list.some((x) => x.done >= x.target);
+  return !list.length || (readLogAll()[dayKey(now)]?.length ?? 0) > 0 || list.some((x) => x.done >= x.target);
 }
 
 /** Marks the day when every goal is met; true when that just happened. */
@@ -150,7 +162,7 @@ export function goalTip(now = new Date()): GoalTip | null {
   const today = dayKey(now);
   if (!g.since || g.since > addDays(today, -7)) return null;
   const days = allDays();
-  const log = readLog();
+  const log = readLogAll();
   const last7 = Array.from({ length: 7 }, (_, i) => addDays(today, -1 - i));
   const used = last7.filter((k) => days[k]?.o).length;
   const step = (list: readonly number[], cur: number, up: boolean) => {
@@ -195,3 +207,16 @@ export function dismissTip(tip: GoalTip) {
 }
 /** True until the user picked a pace (or saved any goals). */
 export const needsPace = () => { try { return localStorage.getItem('goals') === null; } catch { return false; } };
+
+/** The raw goals for the cloud (null until the user chose any). */
+export const goalsRecord = (): Goals | null => (needsPace() ? null : goals());
+/** Another device's goals: the most recently changed set wins. */
+export function mergeGoals(remote: unknown): boolean {
+  if (!remote || typeof remote !== 'object') return false;
+  const at = Number((remote as Goals).at);
+  if (!Number.isFinite(at) || at <= goals().at || (needsPace() && at <= 0)) return false;
+  const g = parseGoals(JSON.stringify(remote));
+  try { localStorage.setItem('goals', JSON.stringify(g)); } catch { return false; }
+  window.dispatchEvent(new Event('journey-changed'));
+  return true;
+}

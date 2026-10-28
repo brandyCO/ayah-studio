@@ -28,8 +28,16 @@ function check() {
   }
 }
 
+// Many changes can arrive at once (a tasbih tap, a page counted, a sync): check once per frame.
+let queued = false;
+const soon = () => {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => { queued = false; check(); });
+};
+
 export function watchRewards() {
-  window.addEventListener('journey-changed', check);
-  window.addEventListener('readlog-changed', check);
+  window.addEventListener('journey-changed', soon);
+  window.addEventListener('readlog-changed', soon);
   check();
 }

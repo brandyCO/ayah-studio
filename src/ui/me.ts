@@ -393,8 +393,11 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   };
 
   void import('../together/relight').then((m) => m.takeRelights());
-  const refresh = () => { paintHero(); paintGoals(); paintStats(); paintBadges(); };
-  refresh();
+  // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
+  let queued = 0;
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); };
+  const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
+  paintAll();
   paintLibrary();
   void paintPrayer();
   const tick = window.setInterval(() => { if (!document.hidden) void paintPrayer(); }, 30_000);
@@ -411,6 +414,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   window.addEventListener('prayer-changed', onPrayer);
   return () => {
     clearInterval(tick);
+    cancelAnimationFrame(queued);
     window.removeEventListener('prayer-changed', onPrayer);
     window.removeEventListener('journey-changed', refresh);
     window.removeEventListener('readlog-changed', refresh);

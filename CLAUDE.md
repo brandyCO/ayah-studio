@@ -1079,6 +1079,23 @@ duas/reflections section in Me.
       counted (`anyGoalMet()`; with no goals set, opening the app does), checked by `rewards.ts` after the
       app was opened that day (not from the Kids space); missed days are settled once per day (`settle()`:
       freeze or the flame goes out); widget strings say "Meet a goal today to keep it"
+      **Rewards** (owner request 2026-10-28): nothing pops up by itself; a met goal or a new badge waits on Me
+      with a glowing **Claim** (`src/data/claims.ts`; `DayRec.cl`, `State.claimed`; a dot on the Me tab).
+      Claim plays a moment (`src/ui/celebrate.ts`, SVG + CSS + a spark canvas `src/ui/sparks.ts`; the button
+      becomes a seed of light that flies to the centre, gathers and bursts): **lantern** (a daily goal),
+      **star window** (every goal), **rising flame** (streak badges), **rosette** (first surah, 10 surahs, a
+      juz, 100 ayat memorised, 10,000 dhikr), **Khatm** (doubled rosette, halo, date), **medal** (the rest).
+      Vibration on each beat, no sound; reduced motion → the still end picture. The first look at Me after
+      the flame is lit, it *catches* on the card (flare, sparks, the count ticks on). **Goals engine**: a
+      starting pace (Gentle / Steady / Devoted, `PACES`), at most one weekly suggestion (`goalTip()`: met on
+      ≥ 5 of 7 days → a step up; ≤ 1 while the app was used ≥ 3 days → a step down; never automatic),
+      **your own goals** (≤ 5: a name, once or ×2–20, every day or chosen weekdays; `DayRec.cu`) counting
+      like any goal. **Sync** when signed in (`src/cloud/sync.ts`): each device's journey + reading log as
+      its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
+      and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
+      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      Speed: streak() and stats('all') are memoised per change, goals parsed once per change, rewards and
+      the Me screen repaint at most once a frame, the streak card only when it changed
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
       (counted pages), ayat memorised (+/− by the user), reels made, dhikr on the **tasbih counter**
       (`src/ui/tasbih.ts`: Subhan Allah, Alhamdulillah, Allahu Akbar, tahleel, istighfar, hawqala; targets
