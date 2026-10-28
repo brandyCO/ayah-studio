@@ -1526,10 +1526,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     studio.classList.remove('premiere');
     pause();
   }
-  const giftBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.gift'), title: ui('ed.gift'), onclick: () => {
-    pause();
-    void import('./gift').then((m) => m.openGiftComposer(s, project.from, project.to, { look: lookOf(project), reciter: project.reciterId }));
-  } }, icon('gift'));
   const exportPathLabel = h('p', { class: 'muted small' });
   const progressBar = lanternProgress(); // a lantern filling with light (docs/light.md, L5)
   const progressText = h('div', { class: 'export-pct' }, '0%');
@@ -1542,7 +1538,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
-      h('div', { class: 'top-right' }, giftBtn, qualityBtn, exportBtn, qualityMenu)),
+      h('div', { class: 'top-right' }, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, stage),
     h('div', { class: 'transport' }, timeLabel, h('div', { class: 'play-group' }, restartBtn, playBtn), h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),

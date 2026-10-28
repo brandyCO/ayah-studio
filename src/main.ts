@@ -5,7 +5,6 @@
 //   #/drafts           saved reel drafts
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
-//   #/gift/ID          a gift: a few ayat in the sender's reel look (opens without an account)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { capabilities } from './engine/capabilities';
@@ -55,9 +54,6 @@ async function route() {
     } else if (view === 'join' && a) {
       const { showJoin } = await import('./ui/circles');
       c = await showJoin(screen, a);
-    } else if (view === 'gift' && a) {
-      const { showGift } = await import('./ui/gift');
-      c = await showGift(screen, a);
     } else if (view === 'ramadan') {
       // A Ramadan reminder was tapped: the mushaf on the next page of today's portion.
       const { ramadanTarget } = await import('./ui/ramadan');
