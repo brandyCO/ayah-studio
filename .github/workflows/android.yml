@@ -39,6 +39,10 @@ jobs:
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
           VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      # The mushaf page fonts (~95 MB) are downloaded by the app on first use and kept offline
+      # (src/data/mushaf.ts); only the first pages ship in the APK.
+      - name: Leave most page fonts out of the APK
+        run: find dist/fonts/qcf-v2 -name 'p*.woff2' ! -name 'p1.woff2' ! -name 'p2.woff2' ! -name 'p3.woff2' -delete
       - run: npx cap sync android
       - name: Signing key
         if: env.KEYSTORE_B64 != ''

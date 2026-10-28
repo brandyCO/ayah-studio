@@ -2,6 +2,9 @@
 // Complex QCF V2 layout. Each text line lists, per ayah, the words as glyph codes of that page's font
 // (public/fonts/qcf-v2/p{page}.woff2). The words' text is verified against the bundled Quran text.
 
+import { Capacitor } from '@capacitor/core';
+import { PUBLIC_URL } from '../cloud/config';
+
 /** ["h", surah] header · ["b", surah] basmala · [[surah, ayah, "glyph glyph …"], ...] text line */
 export type MushafLine = ['h', number] | ['b', number] | [number, number, string][];
 
@@ -78,10 +81,31 @@ export function loadMushaf(): Promise<Mushaf> {
 const fonts = new Map<number, Promise<void>>();
 
 /** Load the QCF V2 font for a page (family "qcf-p{page}"). */
+// Android app: only the first pages' fonts ship in the APK (the 604 fonts are ~95 MB). The others
+// come from the public web app the first time a page is opened and are kept in Cache Storage, so a
+// page read once stays readable offline. The web build fetches its own copies (the service worker
+// keeps them).
+const BUNDLED_PAGES = 3;
+const FONT_CACHE = 'qcf-v2';
+async function pageFontSource(page: number): Promise<string | ArrayBuffer> {
+  const local = `url(${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2)`;
+  if (!Capacitor.isNativePlatform() || page <= BUNDLED_PAGES) return local;
+  const url = `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`;
+  const cache = await caches.open(FONT_CACHE);
+  let res = await cache.match(url);
+  if (!res) {
+    res = await fetch(url);
+    if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
+    await cache.put(url, res.clone());
+  }
+  return res.arrayBuffer();
+}
+
 export function loadPageFont(page: number): Promise<void> {
   if (!fonts.has(page)) {
-    const face = new FontFace(`qcf-p${page}`, `url(${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2)`, { display: 'block' });
-    const p = face.load().then((f) => void document.fonts.add(f));
+    const p = pageFontSource(page)
+      .then((src) => new FontFace(`qcf-p${page}`, src, { display: 'block' }).load())
+      .then((f) => void document.fonts.add(f));
     p.catch(() => fonts.delete(page));
     fonts.set(page, p);
   }

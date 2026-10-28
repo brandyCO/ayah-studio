@@ -52,6 +52,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Light haptic taps (navigator.vibrate in the WebView); a normal permission, never asked. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Saving exported videos to Movies/ on Android 10 and older (11+ needs no permission). -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />

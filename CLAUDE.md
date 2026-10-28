@@ -806,6 +806,16 @@ tafsir only from published, credited editions; UI strings only are translated by
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
 - [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
       < 16 MB) — postponed by the owner (2026-10-09)
+- [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
+      Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
+      page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
+      page (or pause); Me = the ☰ menu, now grouped (Reading / Your Quran / Together / Settings); Create = a
+      sheet (Choose ayat → the long-press hint, Today's ayah reel, Continue your last reel, All drafts). From
+      another screen Listen/Me/Choose ayat open the last page read first (sessionStorage `tabIntent`).
+      Export size remembered per device (`exportQuality`); `haptic()` on tab taps (Android: VIBRATE
+      permission). **Smaller APK** (owner decision 2026-10-28): the CI build leaves out the mushaf page fonts
+      except p1–p3; the app fetches the others from the Pages site on first view and keeps them in Cache
+      Storage `qcf-v2` (`pageFontSource()` in `src/data/mushaf.ts`), so a page opened once reads offline
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
