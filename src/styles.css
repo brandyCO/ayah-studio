@@ -1348,3 +1348,19 @@ dialog.circle-full::backdrop { background: #04071c; }
 .tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .tajweed-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .series-until { width: 6em; }
+
+/* search + juz / quarter navigation (src/ui/surahList.ts) */
+.nav-tabs { margin: 6px 0 0; }
+.surah-row.here { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 10px; }
+.nav-here { flex: none; font-size: 12px; color: var(--accent); }
+.nav-group-title { margin: 18px 6px 2px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.nav-jump { width: 100%; margin: 6px 0; font-weight: 600; color: var(--accent); }
+.nav-status { margin: 16px 6px 4px; font-size: 14px; }
+.nav-status:empty { display: none; }
+.hits { list-style: none; margin: 0; padding: 0; }
+.hit { display: flex; flex-direction: column; gap: 6px; padding: 14px 6px; border-bottom: 1px solid var(--line); text-decoration: none; }
+.hit-ref { font-size: 13px; font-weight: 600; color: var(--accent); }
+.hit-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 23px; line-height: 2; text-align: right; }
+.hit-tr { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.hit mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 4px; }
+.nav-more { display: block; margin: 16px auto; }

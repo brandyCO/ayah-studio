@@ -1,5 +1,6 @@
 // Entry: hash router for the three Phase 0 screens.
 //   #/                 surah list (the app itself opens on the mushaf: where the user left off, or Al-Fatiha)
+//   #/search           the same list with the search box focused (surah, 2:255, juz 5, page 50, words)
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
@@ -74,7 +75,7 @@ async function route() {
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
-    } else c = await showSurahList(screen);
+    } else c = await showSurahList(screen, view === 'search');
     if (id === routeId) cleanup = c;
     else c();
   } catch (e) {

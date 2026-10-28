@@ -5,7 +5,7 @@
 import { isNative } from './native';
 
 const BASE = import.meta.env.BASE_URL;
-const DATA = ['meta.json', 'quran-uthmani.json', 'en-sahih.json', 'en-wbw.json', 'mushaf.json', 'word-map.json'];
+const DATA = ['meta.json', 'quran-uthmani.json', 'en-sahih.json', 'en-wbw.json', 'mushaf.json', 'word-map.json', 'divisions.json'];
 const FONTS = ['UthmanicHafs.woff2', 'SuraNames.woff2', 'AmiriQuran.woff2', 'bismillah.svg'];
 
 export function setupOffline() {

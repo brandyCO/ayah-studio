@@ -11,6 +11,7 @@ import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/m
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
+import { icon } from './icons';
 import { h, toast } from './dom';
 import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -156,6 +157,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {

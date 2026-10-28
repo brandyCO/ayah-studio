@@ -229,6 +229,17 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
 - [x] Paper look in day mode (owner request): warm cream pages with a fine grain and faint mottling
       (an inline SVG noise tile, `--paper-grain`) and softly shaded sheet edges (`--paper-edge`), which
       move with the page while swiping; night mode stays plain dark
+- [x] Search + juz / quarter navigation (owner request 2026-10-28): the surah list (`#/`, and `#/search`
+      with the box focused; 🔍 in the mushaf's drop-down bar) has tabs **Surahs / Juz / Hizb & quarters**
+      (240 quarters grouped by juz: Hizb n, ¼ ½ ¾; start reference + page; the reader's current juz /
+      quarter marked) and one search box: references ("2:255", "baqara 255", "juz 5", "جزء 5", "hizb 3",
+      "page 50"; Enter opens), surah names (English or Arabic) and words — Arabic folded to letters (harakat,
+      alif/hamza forms, ة/ه, ى/ي; dagger alif both dropped and written out, so الرحمن and الكتاب both match the
+      Uthmani spelling; whole words marked, never split) or the chosen translation (≥ 3 letters). Results show
+      the whole ayah + translation, 30 at a time (`src/data/search.ts`, `src/ui/surahList.ts`).
+      `public/data/divisions.json` by `scripts/fetch-divisions.mjs`: juz + quarter starts from Quran.com,
+      checked against alquran.cloud (one known difference: quarter 106 at 15:49, as in Quran.com) and the ۞
+      marks in our own text
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
