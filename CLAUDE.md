@@ -215,7 +215,7 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       horizontal pans (`onPan`, axis decided once) besides long-press selection. Smoothness pass: a swipe
       during a slide lands it at once and follows the new swipe (chained flips); a page whose font is
       still downloading slides in as a "Page N" placeholder (spinner) and fills in when ready; fonts
-      load 3 pages ahead; the player shows a spinner + "loading…" while starting or buffering
+      load 3 pages ahead and are freed again more than 6 pages away (`releasePageFonts()`); the player shows a spinner + "loading…" while starting or buffering
 - [x] Listen while reading (owner request): ☰ → "Listen from this page", ▶ in the selection bar, or —
       while listening — tap an ayah to play from it. `src/ui/player.ts` streams the reciter's QDC
       full-surah MP3 (seeking by the verse timings), tints the ayah being recited and colours the word
