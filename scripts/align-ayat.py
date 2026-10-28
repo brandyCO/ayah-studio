@@ -19,10 +19,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.environ.get('ALIGN_MODEL', os.path.join(ROOT, '.cache', 'align-model'))
 SR = 16000
 HOP = 320  # samples per output frame (20 ms)
-# Model input pieces with context on both sides. Short on purpose: given a long stretch the model leaves out
-# words the reciter repeats (its training text has no repeats), so the repeat sounds like silence to it; in
+# Model input pieces with context on both sides. Ayah boundaries use long pieces (30 s: 165/165 boundaries in
+# the benchmark, 3 s pieces miss 2). Word times use short ones (WORD_CHUNK): given a long stretch the model leaves
+# out words the reciter repeats (its training text has no repeats), so the repeat sounds like silence to it; in
 # 3 s pieces it hears every word (Alafasy: all 4 repeats Quran.com marks in 8 surahs, e.g. 78:40 words 5–10).
-CHUNK, CTX = int(float(os.environ.get('ALIGN_CHUNK', 3)) * SR), int(float(os.environ.get('ALIGN_CTX', 1)) * SR)
+CHUNK, CTX = 30 * SR, 3 * SR
+WORD_CHUNK, WORD_CTX = int(float(os.environ.get('ALIGN_CHUNK', 3)) * SR), int(float(os.environ.get('ALIGN_CTX', 1)) * SR)
 
 _model = None
 
@@ -45,8 +47,9 @@ def load(path, t0=None, t1=None):
 
 
 @torch.inference_mode()
-def emissions(x):
+def emissions(x, chunk=None, ctx=None):
   """Log-probabilities per 20 ms frame for the whole signal (pieces with context, stitched)."""
+  CHUNK, CTX = chunk or globals()['CHUNK'], ctx or globals()['CTX']
   m = model()
   out = []
   n = len(x)
@@ -167,9 +170,9 @@ def align_repeats(x, ayah, preamble=(), f0=0, f1=None):
   word over it. Returns (segments [[word index 0-based, start s, end s], ...] in time order — repeated words
   appear again —, confidence, letter confidence, unexplained letters per segment). `f0`, `f1`: frames of x to
   use (one ayah of a surah recording); times stay in seconds from the start of x."""
-  global LAST_EM, _EM_OF
-  if globals().get('_EM_OF') is not x: LAST_EM, _EM_OF = emissions(x), x
-  em = LAST_EM[f0:f1].numpy().astype(np.float64)
+  global _WEM, _WEM_OF
+  if globals().get('_WEM_OF') is not x: _WEM, _WEM_OF = emissions(x, WORD_CHUNK, WORD_CTX), x
+  em = _WEM[f0:f1].numpy().astype(np.float64)
   T = em.shape[0]
   blank, sep = VOCAB['<pad>'], VOCAB['|']
   star = em.max(1) - STAR_COST

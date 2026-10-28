@@ -93,6 +93,7 @@ def main():
     line = next((l for l in rec.splitlines() if 'qdc: false' in l and re.search(r"(everyayah|mp3quran)", l) and
                  (re.search(r"\{ id: %s," % re.escape(key), l) and 'mp3quran' not in l or re.search(r"read: '?%s'?," % re.escape(key), l))), None)
     if not line or 'qdc: false' not in line: print(key, ': no such reciter'); continue
+    if "style: 'Mujawwad'" in line: print(key, ': mujawwad, word times not reliable yet'); continue
     mp3 = 'mp3quran' in line
     files = sorted(f for f in os.listdir(os.path.join(res_dir, SUB, key)) if f.endswith('.json'))
     doc_path = os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)

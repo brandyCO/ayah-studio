@@ -26,6 +26,7 @@ for line in src.splitlines():
   else:
     kind, key, source = 'everyayah', rid, re.search(r"everyayah: '([^']+)'", line).group(1)
   if only and key not in only: continue
+  if not only and "style: 'Mujawwad'" in line: continue  # not reliable yet (Abdul Basit test): Ayah mode only
   if fixed:
     jobs.append(dict(kind=kind, key=key, source=source, surahs=fixed)); continue
   # Contiguous surah ranges of about equal text.
