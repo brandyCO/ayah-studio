@@ -6,4 +6,13 @@
     <color name="daily_accent">#0A6E55</color>
     <string name="daily_widget_label">Ayah of the day</string>
     <string name="daily_widget_description">A calm ayah each day, with its translation</string>
+    <color name="tasbih_tap">#140A6E55</color>
+    <string name="streak_widget_label">Daily streak</string>
+    <string name="streak_widget_description">Your streak flame and this week</string>
+    <string name="tasbih_widget_label">Tasbih</string>
+    <string name="tasbih_widget_description">Count dhikr from the home screen</string>
+    <string name="prayer_widget_label">Prayer times</string>
+    <string name="prayer_widget_description">The next prayer and today’s times, worked out on your phone</string>
+    <string name="tasbih_next">Next dhikr</string>
+    <string name="tasbih_count">Count one</string>
 </resources>

@@ -4,6 +4,9 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
+//   #/me               Me: streak flame, stats, reading time, settings
+//   #/relight/CODE     relight a friend's streak flame
+//   #/me/settings      the Me tab's settings
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
@@ -23,6 +26,7 @@ import { applyLite, liteMode } from './lite';
 import { initErrors } from './errors';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
+import { recordOpen } from './data/journey';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -75,6 +79,12 @@ async function route() {
         const { showKids } = await import('./ui/kids');
         c = await showKids(screen);
       }
+    } else if (view === 'relight' && a) {
+      const { showRelight } = await import('./ui/relight');
+      c = await showRelight(screen, a);
+    } else if (view === 'me') {
+      const { showMe, showMeSettings } = await import('./ui/me');
+      c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -109,6 +119,13 @@ if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
+// The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
+const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
+markOpen();
+document.addEventListener('visibilitychange', markOpen);
+// Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
+void import('./ui/rewards').then((m) => m.watchRewards());
+if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
@@ -116,5 +133,9 @@ startSync();
 if (isNative()) void import('./ui/morning').then((m) => m.initDailyNative()); // widget + morning ayah (Android)
 void initAuth();
 void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
+void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's relight opened before signing in
+// A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
+void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

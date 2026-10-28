@@ -1,12 +1,15 @@
 // Sync between a signed-in user's devices (docs/together.md T0). Local first: everything lives on the
 // device as before; when signed in, this mirrors it to Supabase `user_docs` and merges what other
-// devices wrote. Synced: bookmarks and settings (one document each, merged per entry: the newest
+// devices wrote. Synced: the Me tab (each device's journey — streak days, counts, badges, reading
+// log — as its own document, read combined; goals: the newest set wins), bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
 // travel as tombstones) and reflections (one document per ayah's note, merged per paragraph: the
 // newest edit wins). Thumbnails and own media never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
 import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
+import { journeyRecord, mergeJourney } from '../data/journey';
+import { goalsRecord, mergeGoals } from '../data/goals';
 import type { Project } from '../engine/project';
 import { mergePrefs, prefRecords } from '../ui/prefs';
 import { account, onAccount } from './auth';
@@ -86,6 +89,10 @@ async function applyRemote(rows: Row[], meta: Meta) {
       mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
     } else if (r.kind === 'setting' && r.id === 'prefs') {
       if (mergePrefs(r.data.prefs)) window.dispatchEvent(new Event('prefs-synced'));
+    } else if (r.kind === 'state' && r.id.startsWith('journey:')) {
+      mergeJourney(r.data, r.id.slice(8)); // kept per device and read combined
+    } else if (r.kind === 'setting' && r.id === 'goals') {
+      mergeGoals(r.data.goals);
     } else if (r.kind === 'reflection') {
       mergeReflection(r.data); // merged per paragraph; the result is pushed back on this round
     } else if (r.kind === 'draft') {
@@ -115,6 +122,10 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
   add('state', 'bookmarks', { items }, JSON.stringify(items));
   const prefs = prefRecords();
   add('setting', 'prefs', { prefs }, JSON.stringify(prefs));
+  const journey = journeyRecord();
+  add('state', `journey:${dev}`, journey, JSON.stringify(journey));
+  const g = goalsRecord();
+  if (g) add('setting', 'goals', { goals: g }, String(g.at));
   await loadReflections();
   for (const r of reflectionRecords()) {
     const data = { s: r.s, a: r.a, entries: r.entries };
@@ -201,6 +212,8 @@ export function startSync() {
     else setStatus({ state: 'off', at: null });
   });
   for (const ev of ['bookmarks-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  // The Me tab (streak, goals, counts) changes often while counting dhikr: sync once it rests.
+  for (const ev of ['journey-changed', 'readlog-changed']) window.addEventListener(ev, () => soon(20_000));
   // The reel look is remembered at every studio edit, like the draft below.
   window.addEventListener('prefs-changed', (e) => soon((e as CustomEvent).detail === 'reelLook' ? 20_000 : 4000));
   // The studio saves its draft ~1 s after every edit: sync once the editing has rested a while,

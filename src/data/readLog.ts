@@ -1,7 +1,7 @@
 // Reading log (docs/light.md L6, later T9 "Your year"): which mushaf pages were read on which local
-// day, on this device only (localStorage `readLog`: "YYYY-MM-DD" → pages). A page open ≥ 20 s counts
-// (the mushaf's read timer). Kept for ~13 months; nothing is counted against anyone — it only lights
-// stars in the Home sky. A change fires `readlog-changed`.
+// day, on this device only (localStorage `readLog`: "YYYY-MM-DD" → pages). A page counts after
+// the reading time picked in Me (default 1½ min on screen; the mushaf's read timer). Kept for ~13
+// months for the Me stats and T9. A change fires `readlog-changed`.
 const KEY = 'readLog';
 const KEEP_DAYS = 400;
 
@@ -28,12 +28,12 @@ export function readLog(): Log {
   return (cache = out);
 }
 
-/** Records that `page` was read today. */
-export function logPageRead(page: number, now = new Date()) {
-  if (!Number.isInteger(page) || page < 1 || page > 604) return;
+/** Records that `page` was read today; false when it already was (or is not a page). */
+export function logPageRead(page: number, now = new Date()): boolean {
+  if (!Number.isInteger(page) || page < 1 || page > 604) return false;
   const log = readLog();
   const k = dayKey(now);
-  if (log[k]?.includes(page)) return;
+  if (log[k]?.includes(page)) return false;
   log[k] = [...(log[k] ?? []), page];
   const cutoff = dayKey(new Date(now.getTime() - KEEP_DAYS * 86_400_000));
   for (const d of Object.keys(log)) if (d < cutoff) delete log[d];
@@ -42,7 +42,25 @@ export function logPageRead(page: number, now = new Date()) {
   } catch {
     /* ignore */
   }
+  allCache = null;
   window.dispatchEvent(new Event('readlog-changed'));
+  return true;
+}
+
+// The user's other devices' logs (journey.ts keeps them), joined with this one by readLogAll().
+let otherLogs: Log[] = [];
+let allCache: Log | null = null;
+export function setOtherLogs(logs: Log[]) {
+  otherLogs = logs;
+  allCache = null;
+}
+/** Pages read per day on all the user's devices (a page read on two devices the same day counts once). */
+export function readLogAll(): Log {
+  if (!otherLogs.length) return readLog();
+  if (allCache) return allCache;
+  const out: Log = {};
+  for (const log of [readLog(), ...otherLogs]) for (const [k, pages] of Object.entries(log)) out[k] = out[k] ? [...new Set([...out[k], ...pages])] : [...pages];
+  return (allCache = out);
 }
 
 export interface PageReads {

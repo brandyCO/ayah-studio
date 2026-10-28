@@ -31,6 +31,7 @@ import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajwee
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
+import { reelMade } from '../data/journey';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, SLOWMO, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
@@ -2203,6 +2204,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       progressRow.hidden = true;
       if (document.hidden) void notifyReady();
       void recordReel(project.reciterId, n, from, to);
+      reelMade();
       result.replaceChildren(
         h('video', { src: resultUrl, controls: true, playsInline: true, class: 'result-video', style: `aspect-ratio: ${W} / ${H}${W >= H ? '; width: min(360px, 86vw)' : ''}` }),
         h('p', { class: 'small' }, `✓ ${ui('ed.made', { s: secs, mb: (blob.size / 1e6).toFixed(1), q: quality === 1920 ? '1080P' : '720P' })}`),

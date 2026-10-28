@@ -116,6 +116,34 @@ body[data-view="reel"] {
 }`;
 }
 
+/** Mixes two `#rrggbb` colours (t = share of b). */
+function mix(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (sh: number) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return `#${[16, 8, 0].map((sh) => ch(sh).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** The colours of the Me tab's streak flame and reward moments, taken from the theme's gradient:
+ *  deep = its dark stops, n1–n3 = its neon stops, hi = the brightest stop lifted towards white,
+ *  core = almost white with a hint of it, ink = dark text on the bright fills. */
+export interface RewardPalette { deep: string; deep2: string; n1: string; n2: string; n3: string; hi: string; core: string; ink: string; hue: number }
+export function rewardPalette(x = themeById(themeId())): RewardPalette {
+  const n = x.neon;
+  return {
+    deep: x.fill[0], deep2: x.fill[x.fill.length - 1], n1: n[0], n2: n[Math.min(1, n.length - 1)], n3: n[n.length - 1],
+    hi: mix(n[n.length - 1], '#ffffff', 0.55), core: mix(n[n.length - 1], '#ffffff', 0.85), ink: x.accentInkDark, hue: x.hue,
+  };
+}
+/** The palette as CSS custom properties (set for every theme, emerald included). */
+function rewardCss(x: BrandTheme): string {
+  const p = rewardPalette(x);
+  return `:root {
+  --rw-deep: ${p.deep}; --rw-deep2: ${p.deep2}; --rw-n1: ${p.n1}; --rw-n2: ${p.n2}; --rw-n3: ${p.n3};
+  --rw-hi: ${p.hi}; --rw-core: ${p.core}; --rw-ink: ${p.ink};
+  --rw-night: hsl(${p.hue} 55% 13%); --rw-night2: hsl(${p.hue} 40% 7%); --rw-night3: hsl(${p.hue} 35% 4%);
+}`;
+}
+
 /** Applies the saved theme (call once at start, before the first screen). */
 export function applyTheme(id = themeId()) {
   const x = themeById(id);
@@ -125,7 +153,7 @@ export function applyTheme(id = themeId()) {
     style.id = 'brand-theme';
     document.head.append(style);
   }
-  style.textContent = themeCss(x);
+  style.textContent = `${themeCss(x)}\n${rewardCss(x)}`;
   document.documentElement.dataset.theme = x.id;
   const dark = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="dark"]');
   if (dark) dark.content = x.id === DEFAULT_THEME ? '#07130f' : night(x).meta;

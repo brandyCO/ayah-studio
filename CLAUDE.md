@@ -1050,6 +1050,90 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       repeat waited for ever. Now the last ayah stops 0.8 s after its last word, and a playhead that
       stops moving within 1 s of the last word (or for 4 s anywhere in the kept recording) also ends it
 
+### Phase 8 — Me tab: streaks, goals, dhikr, widgets (owner request 2026-10-28)
+Owner decisions: a daily streak with a living flame (a day is lit by meeting one daily goal — owner decision 2026-10-28; at first by opening the app), a free streak
+freeze each week, a friend can relight a lost streak; honest page counting (a page counts only after
+it has been on screen for the reading time, default 1½ min, owner-confirmed; read-aloud check later);
+stats for week / month / all time; daily goals incl. dhikr (tasbih, istighfar, tahleel, hawqala,
+morning adhkar from a published source, never written by us); milestone badges; My library; widgets
+(streak, tasbih, daily ayah, prayer times; prayer times on the lock screen). No reading calendar, no
+duas/reflections section in Me.
+- [x] M1 Me screen `#/me` (`src/ui/me.ts`, the Me tab now opens it; ☰ still opens the menu, and
+      Me → Settings and more opens it on the mushaf): flame (`src/ui/flame.ts`, SVG + CSS, tiers at 7 / 30
+      days, out = ember + smoke, still with reduced motion / old-phone mode), this week's days, weeks in a
+      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; if the
+      missed days cannot all be covered the flame goes out and `lost` is kept 2 days for a friend's
+      relight), best. `src/data/journey.ts` (localStorage `journey`, this device): `recordOpen()` (main.ts,
+      on start and when the app comes back; not in the Kids space), `countPage()` (ayat starting on the
+      page; a surah is finished when all its pages were counted since its last finish, within 60 days),
+      `addListen()` (player: recitation actually played), `reelMade()` (export), `stats()`. The mushaf's
+      read timer counts visible seconds only: `pageSeconds()` (1 / 1½ / 2 / 3 / 4 min, set in Me) logs the
+      page (`readLog`, now also used for the stats); Ramadan's portion keeps its 20 s
+      Second pass (owner request 2026-10-28): the flame is a bold streak icon (rounded flame with a curl,
+      inner flame, core, glossy highlight; gentle sway) on the Me card and the streak widget; the card is
+      compact (76 px flame beside the count); "Your week" folded into the stats (this week's tiles show ▲/▼
+      against last week); badges show 4 (earned, then the closest) + "All n of 20"; the settings (reading
+      time per page, prayer location / method / Asr / lock screen, dhikr reminders, then the app menu) moved
+      to `#/me/settings` (⚙ in Me's top bar). **What lights the flame** (owner decision 2026-10-28, "any one
+      goal met"): a day is lit (`DayRec.f`, `lightFlame()`) when one of the day's goals is met or one page was
+      counted (`anyGoalMet()`; with no goals set, opening the app does), checked by `rewards.ts` after the
+      app was opened that day (not from the Kids space); missed days are settled once per day (`settle()`:
+      freeze or the flame goes out); widget strings say "Meet a goal today to keep it"
+      **Rewards** (owner request 2026-10-28): nothing pops up by itself; a met goal or a new badge waits on Me
+      with a glowing **Claim** (`src/data/claims.ts`; `DayRec.cl`, `State.claimed`; a dot on the Me tab).
+      Claim plays a moment (`src/ui/celebrate.ts`, SVG + CSS + a spark canvas `src/ui/sparks.ts`; the button
+      becomes a seed of light that flies to the centre, gathers and bursts): **lantern** (a daily goal),
+      **star window** (every goal), **rising flame** (streak badges), **rosette** (first surah, 10 surahs, a
+      juz, 100 ayat memorised, 10,000 dhikr), **Khatm** (doubled rosette, halo, date), **medal** (the rest).
+      Vibration on each beat, no sound; reduced motion → the still end picture. The first look at Me after
+      the flame is lit, it *catches* on the card (flare, sparks, the count ticks on). **Goals engine**: a
+      starting pace (Gentle / Steady / Devoted, `PACES`), at most one weekly suggestion (`goalTip()`: met on
+      ≥ 5 of 7 days → a step up; ≤ 1 while the app was used ≥ 3 days → a step down; never automatic),
+      **your own goals** (≤ 5: a name, once or ×2–20, every day or chosen weekdays; `DayRec.cu`) counting
+      like any goal. **Sync** when signed in (`src/cloud/sync.ts`): each device's journey + reading log as
+      its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
+      and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
+      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
+      rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
+      follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
+      the Android widget flame keeps its fixed warm colours.
+      Speed: streak() and stats('all') are memoised per change, goals parsed once per change, rewards and
+      the Me screen repaint at most once a frame, the streak card only when it changed
+- [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
+      (counted pages), ayat memorised (+/− by the user), reels made, dhikr on the **tasbih counter**
+      (`src/ui/tasbih.ts`: Subhan Allah, Alhamdulillah, Allahu Akbar, tahleel, istighfar, hawqala; targets
+      33–1000; ring, vibration, Undo) and the morning adhkar as a "Mark done" (no adhkar text yet: it will
+      come only from a published, cited collection). A day with every goal met is marked (`g`).
+      **Your week** (this week since Monday vs last week). Stats also show juz finished, ayat memorised,
+      dhikr. **Badges** (`src/data/badges.ts`, 20: streak 7/30/100/180/365, pages 1/100, surahs 1/10, a juz,
+      Khatm = all 604 pages counted, memorised 10/100, dhikr 1k/10k, 10 h listening, reels 1/10, goal days
+      7/30) drawn by `src/ui/badge.ts` (eight-pointed star medallion in bronze/silver/gold/emerald, line
+      icon, a passing shine; grey with progress while locked; tap → goal + progress or date earned).
+      `src/ui/rewards.ts` checks goals and badges on every journey change (toast, or the badge sheet in Me).
+      **My library**: bookmarks, reels and drafts, the last pages read
+- [x] M3 **Prayer times** (`src/data/prayer.ts`, `adhan`; Me → Prayer times): location rounded to 0.01°
+      (never sent), method guessed from the time zone (12 methods, changeable), Asr Standard / Hanafi,
+      next prayer + today's six. **Dhikr reminders** (Android; Me → goals: 06:30 / 09:00 / 13:00 / 17:00 /
+      21:00, daily local notifications, ids 3000–3004 → `#/me`). **Android widgets** (`src/ui/widgets.ts` ⇄
+      `WidgetsPlugin.java`, SharedPreferences `widgets`): `StreakWidget` (flame vector lit / low / out,
+      days, this week, weeks; works out yesterday/today itself until the app opens), `TasbihWidget` (tap
+      to count, ⟳ next dhikr, progress to the goal; counts kept natively until the app takes them into
+      the journey on start/resume), `PrayerWidget` (next prayer + today's times, 14 days handed over);
+      **lock screen**: an optional silent ongoing notification "Asr · 15:42" with a countdown
+      (`Widgets.prayerTick()`, channel `prayer_next`, id 7400), moved on by an inexact alarm at each
+      prayer (`PrayerAlarm`, also after boot / update / clock change). Manifest: coarse location, boot.
+      The daily ayah widget is unchanged. Only verifiable on the phone (Java checked with javac against
+      the Android 15 framework jar)
+- [x] M4 Friend relight: migration `20261028000000_m4_relight.sql` (`relights`: 10-char code, owner's first
+      name, streak, 1–3 missed days, 48 h; no table access; `ask_relight` (Google accounts only, 3 a
+      week), `relight_preview` (anon too), `give_relight` (another Google account, once, 10 a day),
+      `take_relights` (owner, once); pgTAP `relight.test.sql`). App: Me hero → "Ask a friend to relight it"
+      (`src/together/relight.ts`: share sheet / copy link `#/relight/{code}`), friend's page
+      `src/ui/relight.ts` (the ember catches; sign-in first, resumed after), the owner's app takes relights
+      on start / resume / Me (`journey.revive()`: missed days → `revived`). Privacy page updated
+- [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
+
 ---
 
 ## Repository layout (target)

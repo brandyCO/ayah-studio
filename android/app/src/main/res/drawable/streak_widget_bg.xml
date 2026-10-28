@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A warm night behind the flame (as the Me screen's card), in day and night mode. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:type="radial" android:gradientRadius="220dp" android:centerX="0.3" android:centerY="0.9"
+        android:startColor="#4A1D08" android:centerColor="#24110A" android:endColor="#0E0A09" />
+    <corners android:radius="22dp" />
+</shape>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The streak flame (same shapes as src/ui/flame.ts): the bold streak icon, burning low (not yet opened today). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="50dp" android:height="70dp" android:viewportWidth="100" android:viewportHeight="140">
+    <path android:fillColor="#8A4A2E" android:pathData="M50 4C55 20 61 33 63 46C70 43 77 39 82 32C86 47 88 66 88 90C88 116 71 134 50 134C29 134 12 116 12 90C12 66 14 47 18 32C23 39 30 43 37 46C39 33 45 20 50 4Z" />
+    <path android:fillColor="#B87A45" android:pathData="M50 52C56 70 73 86 73 106C73 121 63 130 50 130C37 130 27 121 27 106C27 86 44 70 50 52Z" />
+    <path android:fillColor="#E8C28A" android:pathData="M50 90C55 100 63 106 63 116C63 123 57 127 50 127C43 127 37 123 37 116C37 106 45 100 50 90Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeAlpha="0.25" android:strokeWidth="5" android:strokeLineCap="round" android:pathData="M24 102C22 90 23 74 27 62" />
+</vector>
