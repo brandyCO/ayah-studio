@@ -10,6 +10,9 @@ import { t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { lastRead } from './prefs';
+import { pendingRewards } from '../data/claims';
+
+const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
 export type Tab = 'read' | 'listen' | 'create' | 'me';
 type Intent = 'listen' | 'menu' | 'pick';
@@ -41,7 +44,7 @@ export function takeTabIntent(): Intent | null {
 export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLElement {
   const btn = (id: Tab, ic: string, label: string, act: () => void) =>
     h('button', {
-      class: `tab-btn${id === active ? ' on' : ''}`, 'aria-current': id === active ? 'page' : false,
+      class: `tab-btn ${id}${id === active ? ' on' : ''}${id === 'me' && rewardWaiting() ? ' has-dot' : ''}`, 'aria-current': id === active ? 'page' : false,
       onclick: () => { haptic(); act(); },
     }, icon(ic, 24), h('span', {}, label));
   return h('nav', { class: `tabbar${auto ? ' auto' : ''}`, 'aria-label': t('tab.nav') },

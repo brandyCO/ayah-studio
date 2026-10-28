@@ -42,6 +42,8 @@ interface DayRec {
   ad?: 1;
   /** Every daily goal was met. */
   g?: 1;
+  /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
+  cl?: string[];
 }
 export interface Totals { pages: number; ayat: number; listen: number; surahs: number; reels: number; dhikr: number; juz: number; memorised: number }
 interface State {
@@ -62,10 +64,12 @@ interface State {
   best: number;
   /** The day the missed days before it were last settled. */
   settled?: string;
+  /** Badges whose reward was claimed (the animation played). */
+  claimed: Record<string, 1>;
 }
 
 const empty = (): State => ({
-  days: {}, frozen: [], revived: [], pageLast: {}, finished: {}, juzDone: {}, badges: {}, best: 0,
+  days: {}, frozen: [], revived: [], pageLast: {}, finished: {}, juzDone: {}, badges: {}, claimed: {}, best: 0,
   totals: { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0 },
 });
 
@@ -91,6 +95,7 @@ function load(): State {
       if (v.lost && Array.isArray(v.lost.days)) s.lost = v.lost;
       if (Number.isFinite(v.best)) s.best = v.best;
       if (typeof v.settled === 'string') s.settled = v.settled;
+      if (v.claimed && typeof v.claimed === 'object') s.claimed = v.claimed;
     }
   } catch {
     /* ignore */
@@ -121,6 +126,21 @@ export function earnBadges(ids: string[], now = new Date()): string[] {
   for (const id of fresh) s.badges[id] = dayKey(now);
   save();
   return fresh;
+}
+/** Rewards: a goal met today (or 'all'), or an earned badge, once claimed on the Me screen. */
+export const goalClaimed = (id: string, now = new Date()) => !!todayRec(now).cl?.includes(id);
+export const badgeClaimed = (id: string) => !!load().claimed[id];
+export function claimGoal(id: string, now = new Date()) {
+  const d = today(now);
+  if (d.cl?.includes(id)) return;
+  d.cl = [...(d.cl ?? []), id];
+  save();
+}
+export function claimBadge(id: string) {
+  const s = load();
+  if (s.claimed[id]) return;
+  s.claimed[id] = 1;
+  save();
 }
 /** All days (read only), for summaries. */
 export const allDays = (): Readonly<Record<string, Readonly<DayRec>>> => load().days;

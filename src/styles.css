@@ -1493,3 +1493,84 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 @media (prefers-reduced-motion: reduce) { .rl-flame.catch .flame { animation: none; } }
 .screen-relight { max-width: none !important; padding: 0 !important; margin: 0 !important; }
 .screen-me .pr-set, .me-card > .pr-set { margin-top: 12px; }
+
+/* Reward moments (src/ui/celebrate.ts): played on Claim only. Every element's resting style is its
+   final picture; the animations only lead into it (so .still shows the end at once). */
+.cel { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); text-align: center; color: #fbeee0;
+  background: radial-gradient(90% 60% at 50% 40%, rgba(40, 26, 10, .97), rgba(6, 10, 9, .99)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: cel-in .3s ease-out both; }
+.cel.out { animation: cel-out .26s ease-in both; }
+.cel-stage { position: relative; width: min(72vw, 280px); aspect-ratio: 1; display: grid; place-items: center; }
+.cel-stage > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cel-text { max-width: 340px; }
+.cel-kicker { margin: 0; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f3c56b;
+  animation: cel-up .5s .9s ease-out both; }
+.cel-text h2 { margin: 4px 0 2px; font-size: 26px; animation: cel-up .5s 1s ease-out both; }
+.cel-sub { margin: 0; color: #d9c3ad; font-size: var(--fs-s); animation: cel-up .5s 1.1s ease-out both; }
+.cel-ok { margin-top: 14px; min-width: 180px; padding: 12px 22px; border-radius: var(--r-pill); border: 0; font: inherit; font-weight: 700;
+  color: #2b1a06; background: linear-gradient(180deg, #ffe39a, #f0b54a); box-shadow: 0 6px 24px rgba(255, 190, 80, .35); cursor: pointer;
+  animation: cel-up .5s 1.3s ease-out both; }
+.cel-mote { opacity: 0; transform-box: fill-box; animation: cel-mote 2.2s var(--d) ease-out both; }
+.cel-burst { transform-box: fill-box; transform-origin: center; opacity: .8; animation: cel-burst 1.4s .9s ease-out both; }
+.cel-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: cel-draw .9s var(--d) ease-in-out both; }
+.cel-fill { transform-box: fill-box; transform-origin: center; animation: cel-pop .7s 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
+/* lantern */
+.cel-lantern { transform-box: view-box; transform-origin: 100px 104px; animation: cel-rise 1s cubic-bezier(.2, .8, .3, 1) both, cel-sway 3s 1s ease-in-out infinite alternate; }
+.cel-core { transform-box: fill-box; transform-origin: center; animation: cel-core 1.4s .7s ease-out both; }
+/* star */
+.cel-star .cel-burst { animation-delay: 1.1s; }
+/* flame */
+.cel-fl { position: relative; z-index: 1; margin-top: -40px; animation: cel-flame 1s cubic-bezier(.2, 1.2, .4, 1) both; }
+.cel-rings { position: absolute; inset: 0; display: grid; place-items: center; }
+.cel-rings i { position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255, 170, 70, .5); opacity: 0;
+  animation: cel-ring 2.4s ease-out infinite; }
+.cel-rings i:nth-child(2) { animation-delay: .8s; }
+.cel-rings i:nth-child(3) { animation-delay: 1.6s; }
+.cel-count { position: absolute; bottom: 4%; inset-inline: 0; display: flex; justify-content: center; align-items: baseline; gap: 6px; z-index: 2; }
+.cel-num { font-size: 44px; font-weight: 800; line-height: 1;
+  background: linear-gradient(180deg, #fff3d6, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cel-count span { font-weight: 600; opacity: .85; }
+.cel-badge { position: absolute; z-index: 2; display: grid; place-items: center; animation: cel-badge .8s 1.2s cubic-bezier(.2, 1.4, .4, 1) both; }
+.cel-badge.small { top: 2%; inset-inline-end: 4%; animation-delay: 1.4s; }
+/* rosette */
+.cel-petal { transform-box: view-box; transform-origin: 120px 120px; animation: cel-petal .9s var(--d) cubic-bezier(.2, .9, .3, 1) both; }
+.cel-ring { transform-box: view-box; transform-origin: 120px 120px; animation: cel-turn 40s linear infinite; }
+.cel-rosette .cel-badge { animation-delay: 1.5s; }
+/* medal */
+.cel-rays { transform-box: view-box; transform-origin: 100px 100px; animation: cel-fade 1s .3s ease-out both, cel-turn 30s linear infinite; }
+.cel.still *, .cel.still { animation: none !important; }
+.cel.still { animation: cel-in .3s ease-out both !important; }
+.cel.still .cel-mote { opacity: 0; }
+@keyframes cel-in { from { opacity: 0; } }
+@keyframes cel-out { to { opacity: 0; } }
+@keyframes cel-up { from { opacity: 0; transform: translateY(10px); } }
+@keyframes cel-fade { from { opacity: 0; } }
+@keyframes cel-rise { from { opacity: 0; transform: translateY(120px) scale(.6); } }
+@keyframes cel-sway { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
+@keyframes cel-core { 0% { opacity: .3; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes cel-burst { 0% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.15); } 100% { opacity: .8; transform: scale(1); } }
+@keyframes cel-mote { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(var(--y)); } }
+@keyframes cel-draw { from { stroke-dashoffset: 1; } }
+@keyframes cel-pop { from { opacity: 0; transform: scale(.3) rotate(-22deg); } }
+@keyframes cel-flame { from { opacity: 0; transform: translateY(60px) scale(.3); } }
+@keyframes cel-ring { 0% { opacity: .8; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes cel-badge { 0% { opacity: 0; transform: translateY(-40px) scale(1.4); } 100% { opacity: 1; } }
+@keyframes cel-petal { from { opacity: 0; transform: rotate(-40deg) scale(0); } }
+@keyframes cel-turn { to { transform: rotate(360deg); } }
+
+/* Claim buttons (Me): a met goal or a new badge waits here with a soft shimmer. */
+.chip.claim, .claim-all, .claim-badge { position: relative; overflow: hidden; border: 0; font-weight: 700; color: #2b1a06;
+  background: linear-gradient(180deg, #ffe39a, #f0b54a); box-shadow: 0 0 0 1px rgba(255, 210, 120, .5), 0 4px 16px rgba(255, 180, 60, .3); }
+.chip.claim::after, .claim-all::after, .claim-badge::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .7) 50%, transparent 70%); animation: claim-shine 2.8s ease-in-out infinite; }
+@keyframes claim-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .chip.claim::after, .claim-all::after, .claim-badge::after { animation: none; } }
+.claim-all { display: flex; width: 100%; justify-content: center; gap: 8px; margin: 4px 0 10px; padding: 12px; border-radius: var(--r-m); font: inherit; font-weight: 700; cursor: pointer; }
+.claim-badges { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.claim-badge { display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border-radius: var(--r-m); font: inherit; text-align: start; cursor: pointer; }
+.claim-badge .cb-txt { flex: 1; display: flex; flex-direction: column; }
+.claim-badge .cb-txt span { font-size: var(--fs-xs); font-weight: 600; opacity: .8; }
+.claim-badge .cb-go { font-size: var(--fs-s); }
+.tab-btn.me { position: relative; }
+.tab-btn.me.has-dot::after { content: ''; position: absolute; top: 6px; inset-inline-start: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%;
+  background: #f0b54a; box-shadow: 0 0 0 2px var(--bg), 0 0 8px rgba(255, 180, 60, .8); }

@@ -5,7 +5,9 @@
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { DHIKR, DHIKR_GOALS, MEMO_GOALS, PAGE_GOALS, REEL_GOALS, goals, setGoals, todayGoals, type DhikrId, type GoalProgress } from '../data/goals';
-import { badgeStates, type BadgeState } from '../data/badges';
+import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
+import { badgeMoment } from '../data/claims';
+import { badgeClaimed, claimBadge, claimGoal, goalClaimed } from '../data/journey';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -92,6 +94,31 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
   };
 
+  // --- rewards: a met goal or a new badge waits for its Claim tap, then its moment plays ---
+  let playing = false;
+  const play = async (run: () => Promise<void>, mark: () => void) => {
+    if (playing) return;
+    playing = true;
+    try {
+      await run();
+    } finally {
+      playing = false;
+      mark();
+    }
+  };
+  const claimGoalRow = (g: GoalProgress) => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') })),
+    () => claimGoal(g.id));
+  const claimAll = () => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') })),
+    () => claimGoal('all'));
+  const claimBadgeNow = (b: BadgeDef) => play(
+    () => import('./celebrate').then((m) => {
+      const k = badgeMoment(b);
+      return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b });
+    }),
+    () => claimBadge(b.id));
+
   // --- today's goals ---
   const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
     ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)
@@ -107,6 +134,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, 'aria-pressed': String(met), onclick: () => { setAdhkar(!met); haptic(); } }, met ? t('goal.doneMark') : t('goal.markDone'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
+    if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: () => void claimGoalRow(g) }, `✦ ${t('cel.claim')}`);
     return h('div', { class: `goal${met ? ' met' : ''}` },
       h('span', { class: 'goal-ring', style: `--p:${pct}` }, met ? '✓' : ''),
       h('span', { class: 'goal-txt' },
@@ -120,7 +148,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     goalsBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
-      all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
+      all && list.length > 1 && !goalClaimed('all')
+        ? h('button', { class: 'claim-all', onclick: () => void claimAll() }, `✦ ${t('cel.claimAll')}`)
+        : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
       h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
   };
@@ -181,7 +211,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const paintBadges = () => {
     const all = badgeStates();
     const got = all.filter((b) => b.earned).length;
-    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: () => openBadge(b) },
+    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: () => (b.earned && !badgeClaimed(b.def.id) ? void claimBadgeNow(b.def) : openBadge(b)) },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
       h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
@@ -190,7 +220,12 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const next = all.filter((b) => !b.earned).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
     const order = [...earned, ...next];
     const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
+    const waiting = earned.filter((b) => !badgeClaimed(b.def.id));
     badgeBox.replaceChildren(
+      waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: () => void claimBadgeNow(b.def) },
+        badgeArt(b.def.tier, b.def.icon, true, 44),
+        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, t(b.def.name as Key, { n: b.def.need }))),
+        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '',
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
         h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
       h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
@@ -254,21 +289,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     hero, goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
 
-  const onBadge = (e: Event) => {
-    const ids = (e as CustomEvent<string[]>).detail;
-    const b = badgeStates().find((x) => x.def.id === ids[0]);
-    if (b && !document.querySelector('dialog[open]')) openBadge(b, true);
-  };
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
-  window.addEventListener('badge-earned', onBadge);
   window.addEventListener('prayer-changed', onPrayer);
   return () => {
     clearInterval(tick);
     window.removeEventListener('prayer-changed', onPrayer);
     window.removeEventListener('journey-changed', refresh);
     window.removeEventListener('readlog-changed', refresh);
-    window.removeEventListener('badge-earned', onBadge);
   };
 }
 
