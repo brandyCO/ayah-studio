@@ -296,23 +296,3 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
 }
 
 /** JSON with object keys sorted (the database may store them in another order). */
-const canon = (v: unknown): string => (Array.isArray(v) ? `[${v.map(canon).join(',')}]`
-  : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon((v as Record<string, unknown>)[k])}`).join(',')}}`
-    : JSON.stringify(v));
-
-/** A look received from someone else (a gift) must be valid as a whole: known keys only, and every
- *  value one that applyLook() would keep unchanged (the database checks the same rules). */
-export function strictLook(look: unknown, validBackground: (id: string) => boolean): boolean {
-  if (!look || typeof look !== 'object' || Array.isArray(look)) return false;
-  const l = look as Record<string, unknown>;
-  if (!Object.keys(l).every((k) => (LOOK_KEYS as readonly string[]).includes(k))) return false;
-  if ('scenes' in l && (!Array.isArray(l.scenes) || !l.scenes.length)) return false;
-  if ('colors' in l && (!l.colors || typeof l.colors !== 'object' || !Object.keys(l.colors).every((k) => ['ar', 'en', 'title', 'hl'].includes(k)))) return false;
-  const p = newProject(1, 1, 1, 0);
-  applyLook(p, l, validBackground);
-  return Object.keys(l).every((k) => {
-    const got = (p as unknown as Record<string, unknown>)[k];
-    if (k === 'colors') return Object.entries(l.colors as object).every(([x, c]) => typeof c === 'string' && (got as Record<string, string>)[x] === c.toLowerCase());
-    return canon(got) === canon(l[k]);
-  });
-}

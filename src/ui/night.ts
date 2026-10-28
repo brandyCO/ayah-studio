@@ -1,14 +1,14 @@
 // Night listening (docs/light.md, L1): a full-screen night sky over a cloud sea while the recitation
-// plays. The 3D scene (three.js, loaded only here) is a background; the ayah sits flat and still on
-// top in the Quran font with its translation and reference (Light rule 1), crossfading per ayah.
-// Motes and Noor breathe with the word timings (never with guessed audio levels). Sleep timer fades
-// to dark and pauses the recitation. Flat 2D version for reduced motion / battery saver / no WebGL.
+// plays. The sky is a still 2D picture (light/flat.ts; the 3D version was dropped to keep the app
+// light); the ayah sits flat and still on top in the Quran font with its translation and reference
+// (Light rule 1), crossfading per ayah. A soft glow breathes with the word timings (never with guessed
+// audio levels) and brightens when a surah completes. Sleep timer fades to dark and pauses the recitation.
 import { loadWordMap, reference, surahText, surahTranslation, type SurahMeta } from '../data/quran';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans } from '../engine/words';
 import { t } from '../i18n';
 import { paintNightFlat } from '../light/flat';
-import { lightQuality, type Quality } from '../light/support';
+import { reducedMotion } from '../light/support';
 import { h } from './dom';
 import { icon } from './icons';
 
@@ -44,9 +44,9 @@ let open: (() => void) | null = null;
 
 export async function openNight(src: NightSource) {
   if (open) return;
-  open = () => {}; // opening (guards a second tap while three.js loads)
-  const quality: Quality = await lightQuality();
-  let canvas = h('canvas', { class: 'night-canvas', 'aria-hidden': 'true' });
+  open = () => {}; // opening (guards a second tap while it loads)
+  const canvas = h('canvas', { class: 'night-canvas', 'aria-hidden': 'true' });
+  const breathEl = h('div', { class: 'night-breath', 'aria-hidden': 'true' });
   const dark = h('div', { class: 'night-dark' });
   const textLayer = h('div', { class: 'night-text-layer', 'aria-live': 'polite' });
   const measure = h('div', { class: 'night-ar night-measure', 'aria-hidden': 'true' });
@@ -58,51 +58,27 @@ export async function openNight(src: NightSource) {
     playBtn,
     sleepRow);
   const asleepNote = h('div', { class: 'night-asleep' }, t('night.asleep'));
-  const root = h('div', { class: 'night', role: 'dialog', 'aria-label': t('night.open') }, canvas, textLayer, dark, asleepNote, controls, measure);
+  const root = h('div', { class: 'night is-flat', role: 'dialog', 'aria-label': t('night.open') }, canvas, breathEl, textLayer, dark, asleepNote, controls, measure);
   document.body.append(root);
   document.body.classList.add('night-open');
 
-  // --- the scene: 3D, or the flat picture ---
-  let stage: import('../light/engine').LightStage | null = null;
-  let input: { breath: number; glow: number } | null = null;
+  // --- the scene: a still picture; a soft glow over it breathes with the words ---
+  paintNightFlat(canvas);
+  const input = { breath: 0, glow: 0 };
   let glowFrom = -1e9; // when Noor last brightened (a surah completed)
-  const flat = () => {
-    stage?.dispose();
-    stage = null;
-    input = null;
-    root.classList.add('is-flat');
-    // A canvas that held a WebGL context cannot give a 2D one: swap in a fresh canvas.
-    const c2 = h('canvas', { class: 'night-canvas', 'aria-hidden': 'true' });
-    canvas.replaceWith(c2);
-    canvas = c2;
-    paintNightFlat(canvas);
+  const calm = reducedMotion();
+  let breathRaf = 0;
+  const breathe = () => {
+    breathRaf = requestAnimationFrame(breathe);
+    if (asleep) return;
+    feed();
+    breathEl.style.opacity = String(Math.min(1, 0.3 + (calm ? 0 : 0.45 * input.breath) + 0.5 * input.glow));
   };
-  const t0 = performance.now();
-  if (quality === 'flat') flat();
-  else {
-    try {
-      const [{ LightStage }, { nightScene }] = await Promise.all([import('../light/engine'), import('../light/scenes/night')]);
-      if (!root.isConnected) return;
-      const sc = nightScene(1);
-      input = sc.input;
-      stage = new LightStage(canvas, sc, {
-        quality,
-        clock: () => (performance.now() - t0) / 1000 + 40, // start a little into the drift
-        beforeFrame: () => feed(),
-        onFallback: () => { console.warn('Night listening: too slow for 3D, flat version'); flat(); },
-      });
-      stage.start();
-    } catch (e) {
-      console.warn('Night listening: flat version', e);
-      flat();
-    }
-  }
-  const onResize = () => { if (!stage) paintNightFlat(canvas); };
+  const onResize = () => paintNightFlat(canvas);
   addEventListener('resize', onResize);
 
   // --- breath from the word timings ---
   function feed() {
-    if (!input) return;
     const p = src.position();
     let starts: number[] = [];
     if (p && src.playing()) {
@@ -245,6 +221,7 @@ export async function openNight(src: NightSource) {
 
   // --- sleep timer: fades to dark over the last minute, then pauses the recitation ---
   let sleepMin = 0, sleepAt = 0, asleep = false, sleepRaf = 0;
+  breathRaf = requestAnimationFrame(breathe);
   function paintSleep() {
     const left = sleepAt ? Math.max(0, Math.ceil((sleepAt - Date.now()) / 60000)) : 0;
     sleepRow.replaceChildren(
@@ -267,7 +244,6 @@ export async function openNight(src: NightSource) {
     if (left <= 0) {
       asleep = true;
       if (src.playing()) src.toggle();
-      stage?.pause();
       root.classList.add('is-asleep');
       void lock?.release().catch(() => {});
       lock = null;
@@ -283,7 +259,6 @@ export async function openNight(src: NightSource) {
       asleep = false;
       root.classList.remove('is-asleep');
       dark.style.opacity = '0';
-      stage?.start();
       wake();
     }
     showControls();
@@ -310,9 +285,8 @@ export async function openNight(src: NightSource) {
     open = null;
     req++;
     unsub();
-    stage?.dispose();
-    stage = null;
     clearInterval(playTimer);
+    cancelAnimationFrame(breathRaf);
     clearInterval(sleepPaint);
     clearTimeout(hideT);
     cancelAnimationFrame(sleepRaf);
