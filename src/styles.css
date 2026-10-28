@@ -671,44 +671,14 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .rf-snip { font-size: 14px; line-height: 1.45; opacity: .85; overflow-wrap: anywhere; }
 .rf-snip mark { background: color-mix(in srgb, var(--accent) 24%, transparent); color: inherit; border-radius: 3px; }
 
-/* Khatm circles (src/ui/circles.ts) */
-.mushaf-page.my-portion { box-shadow: var(--paper-edge), inset -3px 0 0 -1px rgba(201, 161, 74, .55); }
-@media (prefers-color-scheme: dark) { .mushaf-page.my-portion { box-shadow: inset -3px 0 0 -1px rgba(214, 178, 110, .5); } }
-.circle-sheet, .circles-sheet { max-height: 92vh; overflow: auto; }
+/* Family circles (src/ui/circles.ts, src/ui/family.ts) */
+.circles-sheet { max-height: 92vh; overflow: auto; }
 .circle-row { gap: 12px; }
 .circle-row-text { display: flex; flex-direction: column; min-width: 0; }
-.mini-ring { flex: none; }
-.mini-ring .seg { fill: none; stroke: var(--line); stroke-width: 1; }
-.mini-ring .seg.taken { fill: color-mix(in srgb, var(--accent) 30%, transparent); stroke: none; }
-.mini-ring .seg.done { fill: var(--accent); stroke: none; }
 .circle-form { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
 .circle-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
 .circle-form .search { width: 100%; box-sizing: border-box; color: var(--text); }
-.ring-box { position: relative; width: min(300px, 82vw); margin: 8px auto 4px; aspect-ratio: 1; }
-.ring { width: 100%; height: 100%; overflow: visible; }
-.seg-g { cursor: pointer; outline: none; }
-.seg-g .seg { fill: transparent; stroke: var(--line); stroke-width: 1.2; transition: fill .4s ease; }
-.seg-g.taken .seg { fill: color-mix(in srgb, var(--c) 32%, transparent); stroke: color-mix(in srgb, var(--c) 70%, transparent); }
-.seg-g.done .seg { fill: var(--c); stroke: var(--c); }
-.seg-g.mine .seg { stroke: var(--text); stroke-width: 2; }
-.seg-g.picked .seg, .seg-g:focus-visible .seg { stroke: var(--accent); stroke-width: 3; }
-.seg-label { font: 600 11px system-ui, sans-serif; fill: var(--muted); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.seg-g.taken .seg-label { fill: var(--text); font-size: 13px; }
-.seg-g.done .seg-label { fill: #fff; font-size: 13px; }
-.seg-g.sweep .seg { animation: seg-sweep 1.8s cubic-bezier(.25,.1,.25,1) both; }
-@keyframes seg-sweep { from { fill: color-mix(in srgb, var(--c) 30%, transparent); filter: brightness(1); } 55% { filter: brightness(1.45) drop-shadow(0 0 6px var(--c)); } to { fill: var(--c); filter: none; } }
-.ring.glow { animation: ring-glow 2.4s cubic-bezier(.25,.1,.25,1) 1; }
-@keyframes ring-glow { 50% { filter: drop-shadow(0 0 14px rgba(214, 178, 110, .75)); } }
-@media (prefers-reduced-motion: reduce) { .seg-g.sweep .seg, .ring.glow { animation: none; } }
-.ring-centre {
-  position: absolute; inset: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; pointer-events: none;
-}
-.ring-centre b { font-size: 20px; }
-.circle-panel { min-height: 64px; margin: 4px 0 8px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.circle-panel p { margin: 0; }
 .circle-sub { margin: 14px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
-.circle-members { display: flex; flex-direction: column; gap: 6px; }
 .member { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .member-dot { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; font-size: 13px; font-weight: 700; }
 .circle-foot { margin-top: 14px; }
@@ -1027,39 +997,7 @@ body[data-view="kids"] {
 @media (prefers-reduced-motion: reduce) { .night, .night.out { animation: none; } .night-block { transition: opacity .3s; } }
 .night-en.scrolls { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); padding: 10px 0; }
 /* Light scene tiles drift slowly, like the scenes themselves (docs/light.md, L2) */
-.bg-thumb.light-tile { background-size: 130% auto; animation: light-tile 14s ease-in-out infinite alternate; }
-@keyframes light-tile { from { background-position: 30% 40%; } to { background-position: 70% 60%; } }
-@media (prefers-reduced-motion: reduce) { .bg-thumb.light-tile { animation: none; background-position: center; } }
 
-/* Khatm circle as a constellation (docs/light.md, L3): the 3D sky behind a see-through SVG ring */
-.ring-box.ring-3d { width: min(340px, 90vw); border-radius: 18px; overflow: hidden; background: #04071c; }
-.ring-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-/* The ring lies back in 3D: the flat SVG keeps focus + screen readers, the canvas takes the taps and
-   the labels follow their stars (src/ui/constellation.ts). */
-.ring-3d .ring { position: relative; pointer-events: none; }
-.ring-3d .ring-centre { pointer-events: none; }
-.ring-3d .seg-label { opacity: 0; }
-.ring-sky { touch-action: pan-y; cursor: grab; }
-.ring-sky-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.ring-sky-label {
-  position: absolute; left: 0; top: 0; transform-origin: 50% 0; will-change: transform;
-  font: 600 10px/1 system-ui, sans-serif; color: rgba(246, 239, 226, .75); text-shadow: 0 0 6px rgba(4, 7, 28, .9);
-}
-.ring-sky-label.mine { color: #fff1d6; }
-.ring-3d .seg-g .seg, .ring-3d .seg-g.taken .seg, .ring-3d .seg-g.done .seg { fill: transparent; stroke: none; }
-.ring-3d .seg-g.picked .seg, .ring-3d .seg-g:focus-visible .seg { stroke: none; }
-.ring-3d .seg-label, .ring-3d .seg-g.taken .seg-label, .ring-3d .seg-g.done .seg-label { fill: rgba(246, 239, 226, .55); font-size: 10px; }
-.ring-3d .seg-g.mine .seg-label { fill: #fff1d6; }
-.ring-3d .ring-centre { color: #f6efe2; text-shadow: 0 1px 10px rgba(4, 7, 28, .9); }
-.ring-3d .ring-centre .muted { color: rgba(246, 239, 226, .7); }
-.ring-3d.celebrating .ring-centre, .circle-panel.after-bloom { animation: after-bloom 1.2s ease 3.2s both; }
-@keyframes after-bloom { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .ring-3d.celebrating .ring-centre, .circle-panel.after-bloom { animation: none; } }
-
-/* Light moments (docs/light.md, L5) */
-.light-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.light-backdrop { z-index: 0; pointer-events: none; }
-.moment.has-light > :not(.light-backdrop) { position: relative; z-index: 1; }
 
 /* Export progress: a lantern filling with light */
 .lantern-progress { display: flex; justify-content: center; margin: 4px 0 6px; }
@@ -1123,32 +1061,6 @@ body[data-view="kids"] {
   .kids-stop.bloom .kids-const circle, .kids-stop.bloom .kids-const path { animation: none; }
   .kids-stop.bloom .kids-const { animation: kids-star-in 1.6s ease both .6s; }
 }
-
-/* Khatm circle, full screen (owner request 2026-10-11): a night sky with the ring large, actions below */
-dialog.circle-full {
-  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
-  overflow-y: auto; overscroll-behavior: contain; color: #f6efe2;
-  background: radial-gradient(ellipse at 50% 20%, #151c4c, #070b26 55%, #04071c);
-  --text: #f6efe2; --muted: rgba(246, 239, 226, .66); --line: rgba(246, 239, 226, .2); --card: rgba(255, 255, 255, .06); --accent: #e8cf96; --accent-ink: #1a1405;
-}
-dialog.circle-full[open] { animation: night-in .5s ease both; }
-dialog.circle-full::backdrop { background: #04071c; }
-.circle-full-head {
-  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
-  padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: linear-gradient(#04071c, rgba(4, 7, 28, 0));
-}
-.circle-full-head h2 { margin: 0; font-size: 19px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
-.circle-full .icon-btn { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .18); flex: none; }
-.circle-full .circle-view { padding: 0 16px max(24px, env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
-.circle-full .ring-box { width: min(420px, 92vw); margin: 0 auto 8px; }
-.circle-full .ring-box.ring-3d { width: calc(100% + 32px); max-width: none; margin: 0 -16px 8px; height: min(64vh, 135vw); aspect-ratio: auto; border-radius: 0; background: transparent;
-  -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
-.circle-full .circle-panel { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
-.circle-full .chip { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .2); }
-.circle-full .primary { background: #e8cf96; color: #1a1405; border-color: transparent; }
-.circle-full .ring-box:not(.ring-3d) .seg-g .seg { stroke: rgba(246, 239, 226, .3); }
-.circle-full .ring-box:not(.ring-3d) .seg-label { fill: rgba(246, 239, 226, .7); }
-@media (prefers-reduced-motion: reduce) { dialog.circle-full[open] { animation: none; } }
 
 /* Studio styles: moving tiles (background drifting slowly, three "words" lighting up in turn) */
 .style-art {

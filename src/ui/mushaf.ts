@@ -24,11 +24,9 @@ import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
-import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
-import type { CircleContext } from './circles';
-// The circles screens load on first use (they are large and most readers open them rarely).
-const openCircle = (ctx: CircleContext, id: string, fresh?: boolean) => import('./circles').then((m) => m.openCircle(ctx, id, fresh));
-const openCircles = (ctx: CircleContext) => void import('./circles').then((m) => m.openCircles(ctx));
+// The family circles screens load on first use.
+const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
+const openCircles = () => void import('./circles').then((m) => m.openCircles());
 import { selectionController, type Sel } from './selection';
 
 type Seg = [number, number, string];
@@ -41,24 +39,6 @@ const bismillah = () =>
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: t('mushaf.bookmarkMark', { ref: `${b.s}:${b.a}` }) })));
 registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: wroteHere(lastWritten(r)) })));
-// Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
-let circleCtx: CircleContext | null = null;
-registerToday(async () => {
-  if (!account() || !circleCtx) return [];
-  const ctx = circleCtx;
-  const items = myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').map(({ state, part }) => {
-    const pages = ctx.juzPages(part.juz);
-    const left = pages.length - pages.filter((p) => pagesRead(part).has(p)).length;
-    return { icon: '◯', text: left ? t(left === 1 ? 'today.juzLeft1' : 'today.juzLeft', { juz: part.juz, n: left, circle: state.circle.name }) : t('today.juzRead', { juz: part.juz }), onClick: () => void openCircle(ctx, state.circle.id) };
-  });
-  for (const st of cachedCircles()) {
-    if (st.circle.status === 'complete' && st.circle.completed_at && Date.now() - Date.parse(st.circle.completed_at) < 7 * DAY) {
-      items.push({ icon: '☾', text: t('today.khatm', { circle: st.circle.name }), onClick: () => void openCircle(ctx, st.circle.id) });
-    }
-  }
-  return items;
-});
-
 // A note's mark pulses once per app session when its page is visited again (not for today's notes).
 const pulsed = new Set<string>();
 const DAY = 86_400_000;
@@ -206,36 +186,24 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   root.append(bar, area, sel.bar, player.bar);
 
-  // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
-  const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
-  circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
-  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
-  const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
-  let portion = myPortion();
-  const decorate = () => {
-    portion = myPortion();
-    for (const [p, el] of built) el.classList.toggle('my-portion', portion.has(p));
-    startReadTimer();
-  };
-  window.addEventListener('circles-changed', decorate);
+  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
   const startReadTimer = () => {
     clearTimeout(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    // Every page open ≥ 20 s is logged (this device); circles and Ramadan count it too.
+    // Every page open ≥ 20 s is logged (this device); Ramadan counts it too.
     readTimer = window.setTimeout(() => {
       if (p !== page) return;
       logPageRead(p);
-      if (portion.has(p) || ramadan) { markPageRead(p, juzPages); markRamadanRead(p); }
+      if (ramadan) markRamadanRead(p);
     }, 20_000);
   };
-  if (account() && navigator.onLine) void loadCircles().catch(() => {});
   try {
     const open = sessionStorage.getItem('openCircle');
     if (open) {
       sessionStorage.removeItem('openCircle');
-      window.setTimeout(() => void openCircle(circleCtx!, open, true), 300);
+      window.setTimeout(() => void openCircle(open), 300);
     }
   } catch {
     /* ignore */
@@ -326,7 +294,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const f = Math.min((base * width) / widest, lh * 0.72);
     el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
     el.dataset.fit = '1';
-    el.classList.toggle('my-portion', portion.has(Number(el.dataset.page)));
     paintMarks(el); // positions depend on the line heights just set
   }
   const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
@@ -535,7 +502,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           go(mushaf.pageOf(s, a));
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, `✎  ${t('menu.reflections')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
@@ -620,9 +587,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
-    window.removeEventListener('circles-changed', decorate);
     clearTimeout(readTimer);
-    circleCtx = null;
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);

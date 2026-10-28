@@ -564,7 +564,7 @@ cloud. Build in this order:
       grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
       kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
       120 days), so nothing written on two devices is lost; in Export my data and the privacy page
-- [x] T2a Khatm circles (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
+- [x] ~~T2a Khatm circles~~ — **removed by the owner on 2026-10-28** (the ring, juz sheets, gold page edge, Today lines, Khatm reel, Ramadan's "with a circle" links, `src/ui/constellation.ts`; ☰ → **Family circles** now lists only family circles (K6), which keep the shared circle code, invite links and `#/join/{code}`; the database is untouched). As built (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
       `circle_members`, `circle_parts`; members read, nobody writes directly: `create_circle`,
       `join_circle` (8-char code), `take_part` (null = pick one), `set_part` (taken/done/free),
       `new_round` (owner), `update_circle`, `leave_circle` (owner → next member; last one out deletes),
@@ -835,7 +835,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       breath = a swell at each word start from the QDC timings; Noor brightens when a surah ends;
       tap → controls (✕, play/pause, sleep Off/15/30/60: fades to black over the last minute, then
       pauses and releases the wake lock); Esc/back closes; Device check → Light scenes: step + Reset)
-- [x] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
+- [x] ~~L2 Light reel backgrounds~~ — **removed by the owner on 2026-10-28** (the Light tab, `src/light/reel.ts`, `flatReel.ts`, `scenes/reel.ts`, the thumbnails; drafts/styles/vibes that used one now use a preset: dawn → Soft clouds, stars/aurora → Night, lanterns/rays → Light; the 2D transitions Light bloom and Drift through clouds stay). As built: light reel backgrounds + transitions
       Light bloom, Drift through clouds; gifts/walls allow-list (migration + pgTAP)
       (built 2026-10-10: background kind `light` in `src/engine/backgrounds.ts` (`LIGHT_BACKGROUNDS`,
       `BUILT_IN_BACKGROUNDS` = presets + light, used by gifts/walls; `disposeMedia()`); `loadBackground()`
@@ -853,7 +853,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       Migration `20261014100000_l2_light_looks.sql` (`valid_gift_look()` accepts the 5 ids + 2
       transitions; pgTAP `light_looks.test.sql`, 9 checks). The service worker warm-up also fetches the
       three.js chunks and the light thumbnails)
-- [x] L3 Khatm circle as a constellation (SVG ring = fallback)
+- [x] ~~L3 Khatm circle as a constellation~~ — **removed with the Khatm circles on 2026-10-28**. As built
       (built 2026-10-10: `src/light/scenes/constellation.ts` — the 30 juz as stars on a ring floating
       in a night sky (sky turned upwards, star field, mist below, Noor at the lower right), facing the
       viewer with a ≤ 4° wobble and each star drifting a little in depth; free = faint lilac points on a
@@ -881,7 +881,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       `src/ui/lampField.ts`, the Grid / Lanterns chip and `lampsView` are gone; ☰ → My memorisation is
       the canvas grid as before, with the Today card reminder ("3 lamps are getting dim in …"). Proper
       revision reminders belong to T5b (a dim lamp opens a revision session; local notifications)
-- [x] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
+- [x] L5 Moments — **3D parts removed by the owner on 2026-10-28** (gift lift/bloom, the Ramadan crescent and Eid backdrops: `src/ui/moment.ts`, `scenes/moments.ts`; the Ramadan moments are plain 2D dialogs; the export lantern and the opening sweep stay). As built: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
       (built 2026-10-10: `src/light/scenes/moments.ts` (pure in t) + `src/ui/moment.ts`: `playMoment()`
       (full-screen or inline, tap/back skips, flat → a short CSS glow) and `lightBackdrop()` (a 3D scene

@@ -1,6 +1,6 @@
 // Ramadan mode (docs/together.md T7).
 //   First night (or ☰ → Ramadan): a calm full-screen moment — crescent, "Ramadan Mubarak" and a plan:
-//   one Khatm, two, or "just keep me company"; alone or with a Khatm circle.
+//   one Khatm, two, or "just keep me company"; on this device.
 //   Each day: today's portion on the Today card (the pages left over the days left), opening the
 //   mushaf on the right page; in the Android app a local reminder shortly before Maghrib (adhan, from
 //   the user's location or their own time). Each evening: "Tonight's ayah" — an ayah from today's
@@ -20,13 +20,11 @@ import { MOODS, applyMood } from '../engine/moods';
 import { applyLook, newProject } from '../engine/project';
 import { isNative } from '../native';
 import { h, toast } from './dom';
-import { lightBackdrop } from './moment';
 import { lastRead, reelLook, reelReciter } from './prefs';
 import { locale, t as tr } from '../i18n';
 
 export interface RamadanContext {
   goToPage(page: number): void;
-  openCircles(): void;
 }
 
 const CRESCENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.2a9 9 0 1 0 5.3 15.1A7.6 7.6 0 0 1 15.5 3.2z" fill="currentColor"/></svg>';
@@ -115,11 +113,9 @@ async function tonightsReel() {
 }
 
 // --- full-screen moments ---
-function moment(cls: string, scene: 'crescent' | 'eid', ...content: (Node | string | false)[]) {
+function moment(cls: string, ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `moment ${cls}` }, ...content);
-  // The crescent rising over the cloud sea / Eid's dawn behind the moment (docs/light.md, L5).
-  const stop = lightBackdrop(d, scene);
-  d.addEventListener('close', () => { stop(); d.remove(); });
+  d.addEventListener('close', () => d.remove());
   document.body.append(d);
   d.showModal();
   return d;
@@ -133,12 +129,11 @@ export function ramadanWelcome(ctx: RamadanContext) {
     void scheduleReminders();
     void portionLabel().then((l) => toast(plan === 'company' ? tr('ram.companyToast') : l ? tr('ram.today', { text: l.text }) : tr('ram.mubarak')));
   };
-  const d = moment('ramadan-welcome', 'crescent',
+  const d = moment('ramadan-welcome',
     crescentBig(),
     h('h2', {}, tr('ram.mubarak')),
     h('p', { class: 'moment-sub' }, tr('ram.how')),
     h('div', { class: 'moment-choices' }, ...plans().map((p) => h('button', { class: 'moment-choice', onclick: () => pick(p.value) }, h('b', {}, p.label), h('span', {}, p.note)))),
-    h('button', { class: 'link-btn moment-link', onclick: () => { setWelcomed(); d.close(); ctx.openCircles(); } }, tr('ram.together')),
     h('button', { class: 'link-btn moment-skip', onclick: () => { setWelcomed(); d.close(); } }, tr('ram.notNow')));
 }
 
@@ -179,7 +174,7 @@ export async function openRecap() {
       listen);
   }
   const days = d.days.length;
-  const dlg = moment('ramadan-recap', 'eid',
+  const dlg = moment('ramadan-recap',
     crescentBig(),
     h('h2', {}, tr('ram.yours')),
     h('p', { class: 'recap-line' }, days ? tr(days === 1 ? 'ram.days1' : 'ram.days', { n: days }) : tr('ram.eid')),
@@ -231,7 +226,6 @@ export function openRamadan(ctx: RamadanContext) {
         portion.page ? h('button', { class: 'primary brand-btn', onclick: () => { d.close(); ctx.goToPage(portion.page!); } }, tr('ram.open')) : ''));
     }
     if (total) nodes.push(h('p', { class: 'muted small' }, tr('ram.pagesRead', { n: Math.min(done, total), total })));
-    nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); ctx.openCircles(); } }, `◯ ${tr('ram.together')}`));
 
     // Reminder before Maghrib (Android app: local notifications).
     nodes.push(h('p', { class: 'circle-sub' }, tr('ram.reminder')));
