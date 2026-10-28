@@ -686,44 +686,14 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .rf-snip { font-size: 14px; line-height: 1.45; opacity: .85; overflow-wrap: anywhere; }
 .rf-snip mark { background: color-mix(in srgb, var(--accent) 24%, transparent); color: inherit; border-radius: 3px; }
 
-/* Khatm circles (src/ui/circles.ts) */
-.mushaf-page.my-portion { box-shadow: var(--paper-edge), inset -3px 0 0 -1px rgba(201, 161, 74, .55); }
-@media (prefers-color-scheme: dark) { .mushaf-page.my-portion { box-shadow: inset -3px 0 0 -1px rgba(214, 178, 110, .5); } }
-.circle-sheet, .circles-sheet { max-height: 92vh; overflow: auto; }
+/* Family circles (src/ui/circles.ts, src/ui/family.ts) */
+.circles-sheet { max-height: 92vh; overflow: auto; }
 .circle-row { gap: 12px; }
 .circle-row-text { display: flex; flex-direction: column; min-width: 0; }
-.mini-ring { flex: none; }
-.mini-ring .seg { fill: none; stroke: var(--line); stroke-width: 1; }
-.mini-ring .seg.taken { fill: color-mix(in srgb, var(--accent) 30%, transparent); stroke: none; }
-.mini-ring .seg.done { fill: var(--accent); stroke: none; }
 .circle-form { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
 .circle-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
 .circle-form .search { width: 100%; box-sizing: border-box; color: var(--text); }
-.ring-box { position: relative; width: min(300px, 82vw); margin: 8px auto 4px; aspect-ratio: 1; }
-.ring { width: 100%; height: 100%; overflow: visible; }
-.seg-g { cursor: pointer; outline: none; }
-.seg-g .seg { fill: transparent; stroke: var(--line); stroke-width: 1.2; transition: fill .4s ease; }
-.seg-g.taken .seg { fill: color-mix(in srgb, var(--c) 32%, transparent); stroke: color-mix(in srgb, var(--c) 70%, transparent); }
-.seg-g.done .seg { fill: var(--c); stroke: var(--c); }
-.seg-g.mine .seg { stroke: var(--text); stroke-width: 2; }
-.seg-g.picked .seg, .seg-g:focus-visible .seg { stroke: var(--accent); stroke-width: 3; }
-.seg-label { font: 600 11px system-ui, sans-serif; fill: var(--muted); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.seg-g.taken .seg-label { fill: var(--text); font-size: 13px; }
-.seg-g.done .seg-label { fill: #fff; font-size: 13px; }
-.seg-g.sweep .seg { animation: seg-sweep 1.8s cubic-bezier(.25,.1,.25,1) both; }
-@keyframes seg-sweep { from { fill: color-mix(in srgb, var(--c) 30%, transparent); filter: brightness(1); } 55% { filter: brightness(1.45) drop-shadow(0 0 6px var(--c)); } to { fill: var(--c); filter: none; } }
-.ring.glow { animation: ring-glow 2.4s cubic-bezier(.25,.1,.25,1) 1; }
-@keyframes ring-glow { 50% { filter: drop-shadow(0 0 14px rgba(214, 178, 110, .75)); } }
-@media (prefers-reduced-motion: reduce) { .seg-g.sweep .seg, .ring.glow { animation: none; } }
-.ring-centre {
-  position: absolute; inset: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; pointer-events: none;
-}
-.ring-centre b { font-size: 20px; }
-.circle-panel { min-height: 64px; margin: 4px 0 8px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.circle-panel p { margin: 0; }
 .circle-sub { margin: 14px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
-.circle-members { display: flex; flex-direction: column; gap: 6px; }
 .member { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .member-dot { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; font-size: 13px; font-weight: 700; }
 .circle-foot { margin-top: 14px; }
@@ -731,69 +701,8 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .join { max-width: 520px; margin: 0 auto; padding: 16px; }
 .join-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); text-align: center; margin-bottom: 12px; }
 .join-card h2 { margin: 0 0 6px; }
-/* Gift an ayah (src/ui/gift.ts) */
-.gift-sheet, .gifts-sheet { max-height: 92vh; overflow: auto; }
-.gift-ref { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
-.gift-reply-to { margin: 8px 0 0; font-size: 14px; }
-.gift-msg { resize: none; font: inherit; line-height: 1.4; }
-.gift-label-row { display: flex; justify-content: space-between; }
-.gift-presets { display: flex; gap: 6px; overflow-x: auto; margin-top: -4px; padding-bottom: 2px; }
-.gift-presets .chip { flex: none; font-size: 13px; }
-.gift-signin { padding: 10px 12px; border-radius: 12px; background: var(--sel); }
-.gift-signin p { margin: 0 0 8px; }
-.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
-.gift-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 8px 0; }
-.gift-done h3 { margin: 4px 0 0; }
-.gift-url { width: 100%; box-sizing: border-box; text-align: center; color: var(--text); font-size: 13px; }
-.gift-page { max-width: 520px; margin: 0 auto; padding: 10px 16px 32px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.gift-stage {
-  position: relative; height: min(66vh, calc((100vw - 32px) * 16 / 9), 780px); aspect-ratio: 9 / 16; max-width: 100%;
-  border-radius: 14px; overflow: hidden; background: #000; box-shadow: var(--shadow);
-}
-.gift-canvas { display: block; width: 100%; height: 100%; }
-.gift-sealed {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  border: 0; cursor: pointer; color: #f3efe6; font: inherit; text-align: center; padding: 24px;
-  background: radial-gradient(circle at 50% 42%, rgba(34, 179, 160, .28), transparent 60%), #07130f;
-  transition: opacity .9s cubic-bezier(.25,.1,.25,1), transform .9s cubic-bezier(.25,.1,.25,1);
-}
-.gift-sealed.open { opacity: 0; transform: scale(1.04); pointer-events: none; }
-.gift-seal { font-size: 54px; filter: drop-shadow(0 0 18px rgba(34, 179, 160, .45)); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
-.gift-seal.small-seal { font-size: 40px; }
-@keyframes gift-breathe { to { filter: drop-shadow(0 0 28px rgba(94, 234, 212, .6)); transform: translateY(-2px); } }
-.gift-from { font-size: 22px; font-weight: 650; }
-.gift-sealed-ref { font-size: 15px; opacity: .8; }
-.gift-tap { margin-top: 12px; font-size: 13px; opacity: .7; letter-spacing: .04em; }
-.gift-controls { display: flex; justify-content: center; min-height: 44px; }
-.gift-controls .ctl { color: var(--text); }
-.gift-note { margin: 0; max-width: 440px; text-align: center; }
-.gift-note blockquote { margin: 0; font-size: 17px; line-height: 1.5; }
-.gift-note figcaption { margin-top: 4px; color: var(--muted); font-size: 14px; }
-.gift-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
-.gift-actions.glow { animation: gift-actions-in 1.2s cubic-bezier(.25,.1,.25,1) both; }
-@keyframes gift-actions-in { from { opacity: .4; transform: translateY(6px); } }
-.gift-extra { width: 100%; text-align: center; }
-.gift-extra .gift-row { justify-content: center; }
-.gift-error { text-align: center; padding: 40px 0; }
-.gift-list { display: flex; flex-direction: column; gap: 4px; }
-.gift-row { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); }
-.gift-row-main {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px;
-  border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: start; cursor: pointer;
-}
-.gift-row-main:hover { background: var(--sel); }
-a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
-@media (prefers-reduced-motion: reduce) { .gift-seal, .gift-actions.glow { animation: none; } .gift-sealed { transition: opacity .4s; transform: none; } }
-/* Revision lamps (src/ui/lamps.ts) */
-.lamps-sheet { max-height: 94vh; overflow: auto; }
-.lamps-summary { margin: 4px 0 8px; }
-.lamps-grid { display: block; width: 100%; touch-action: manipulation; cursor: pointer; }
-.lamp-panel { margin: 10px 0 4px; display: flex; flex-direction: column; gap: 8px; }
-.lamp-head { display: flex; align-items: center; gap: 8px; }
-.lamp-head > div { flex: 1; min-width: 0; text-align: center; }
-.lamp-mark-row select, .lamp-mark-row input { width: auto; flex: 1; min-width: 0; color: var(--text); }
-.lamp-range { display: flex; align-items: center; gap: 6px; flex: 1; }
-.lamp-range input { width: 5em; }
+/* Soft breathing glow (used by the Ramadan crescent) */
+@keyframes soft-breathe { to { filter: drop-shadow(0 0 28px rgba(94, 234, 212, .6)); transform: translateY(-2px); } }
 /* Ramadan mode (src/ui/ramadan.ts): full-screen moments and the sheet */
 .moment {
   width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border: 0; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
@@ -805,7 +714,7 @@ a.gift-row { flex-direction: column; gap: 2px; padding: 6px 0; }
 @keyframes moment-in { from { opacity: 0; } }
 .moment::backdrop { background: #07130f; }
 .moment h2 { margin: 4px 0 0; font-size: 28px; font-weight: 600; letter-spacing: .01em; }
-.moment-crescent { width: 72px; height: 72px; color: #e8cf96; filter: drop-shadow(0 0 22px rgba(232, 207, 150, .45)); animation: gift-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
+.moment-crescent { width: 72px; height: 72px; color: #e8cf96; filter: drop-shadow(0 0 22px rgba(232, 207, 150, .45)); animation: soft-breathe 2.4s cubic-bezier(.25,.1,.25,1) infinite alternate; }
 .moment-crescent svg { width: 100%; height: 100%; }
 .moment-sub { margin: 0; opacity: .8; }
 .moment-choices { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); margin-top: 8px; }
@@ -1103,49 +1012,7 @@ body[data-view="kids"] {
 @media (prefers-reduced-motion: reduce) { .night, .night.out { animation: none; } .night-block { transition: opacity .3s; } }
 .night-en.scrolls { -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); padding: 10px 0; }
 /* Light scene tiles drift slowly, like the scenes themselves (docs/light.md, L2) */
-.bg-thumb.light-tile { background-size: 130% auto; animation: light-tile 14s ease-in-out infinite alternate; }
-@keyframes light-tile { from { background-position: 30% 40%; } to { background-position: 70% 60%; } }
-@media (prefers-reduced-motion: reduce) { .bg-thumb.light-tile { animation: none; background-position: center; } }
 
-/* Khatm circle as a constellation (docs/light.md, L3): the 3D sky behind a see-through SVG ring */
-.ring-box.ring-3d { width: min(340px, 90vw); border-radius: 18px; overflow: hidden; background: #04071c; }
-.ring-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-/* The ring lies back in 3D: the flat SVG keeps focus + screen readers, the canvas takes the taps and
-   the labels follow their stars (src/ui/constellation.ts). */
-.ring-3d .ring { position: relative; pointer-events: none; }
-.ring-3d .ring-centre { pointer-events: none; }
-.ring-3d .seg-label { opacity: 0; }
-.ring-sky { touch-action: pan-y; cursor: grab; }
-.ring-sky-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.ring-sky-label {
-  position: absolute; left: 0; top: 0; transform-origin: 50% 0; will-change: transform;
-  font: 600 10px/1 system-ui, sans-serif; color: rgba(246, 239, 226, .75); text-shadow: 0 0 6px rgba(4, 7, 28, .9);
-}
-.ring-sky-label.mine { color: #fff1d6; }
-.ring-3d .seg-g .seg, .ring-3d .seg-g.taken .seg, .ring-3d .seg-g.done .seg { fill: transparent; stroke: none; }
-.ring-3d .seg-g.picked .seg, .ring-3d .seg-g:focus-visible .seg { stroke: none; }
-.ring-3d .seg-label, .ring-3d .seg-g.taken .seg-label, .ring-3d .seg-g.done .seg-label { fill: rgba(246, 239, 226, .55); font-size: 10px; }
-.ring-3d .seg-g.mine .seg-label { fill: #fff1d6; }
-.ring-3d .ring-centre { color: #f6efe2; text-shadow: 0 1px 10px rgba(4, 7, 28, .9); }
-.ring-3d .ring-centre .muted { color: rgba(246, 239, 226, .7); }
-.ring-3d.celebrating .ring-centre, .circle-panel.after-bloom { animation: after-bloom 1.2s ease 3.2s both; }
-@keyframes after-bloom { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .ring-3d.celebrating .ring-centre, .circle-panel.after-bloom { animation: none; } }
-
-/* Light moments (docs/light.md, L5) */
-.light-moment { position: fixed; inset: 0; z-index: 60; background: #060a22; animation: night-in .8s ease both; cursor: pointer; }
-.light-moment.inline { position: absolute; z-index: 5; border-radius: inherit; }
-.light-moment.out { animation: night-out .7s ease both; }
-.light-moment.flat { background: radial-gradient(circle at 50% 55%, rgba(255, 213, 138, .55), rgba(6, 10, 34, .96) 60%); }
-.light-moment-canvas, .light-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.light-moment-caption {
-  position: absolute; left: 0; right: 0; bottom: 18%; margin: 0; text-align: center; color: #fff1d6;
-  font: 500 17px system-ui, sans-serif; letter-spacing: .02em; text-shadow: 0 1px 12px rgba(6, 10, 34, .9);
-  animation: after-bloom 1s ease 1.2s both;
-}
-.light-backdrop { z-index: 0; pointer-events: none; }
-.moment.has-light > :not(.light-backdrop) { position: relative; z-index: 1; }
-@media (prefers-reduced-motion: reduce) { .light-moment, .light-moment.out, .light-moment-caption { animation: none; } }
 
 /* Export progress: a lantern filling with light */
 .lantern-progress { display: flex; justify-content: center; margin: 4px 0 6px; }
@@ -1170,55 +1037,6 @@ body[data-view="kids"] {
   background-size: 250% 100%; animation: opening-sweep .85s cubic-bezier(.45, .05, .35, 1) .05s both; mix-blend-mode: screen;
 }
 @keyframes opening-sweep { from { background-position: 120% 0; } to { background-position: -20% 0; } }
-
-/* ---- Home sky (docs/light.md, L6): pages read this month as stars, circles as rings ---- */
-.home-sky {
-  position: fixed; inset: 0; z-index: 40; background: #04071c; color: #f6efe2;
-  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
-  animation: night-in 1.2s ease both;
-}
-.home-sky.out { animation: night-out .6s ease both; }
-.home-sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
-.home-sky-labels { position: absolute; inset: 0; pointer-events: none; }
-.home-sky-ring-label {
-  position: absolute; left: 0; top: 0; pointer-events: auto; max-width: 40vw; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; padding: 4px 8px; border: 0; border-radius: 999px; background: none; cursor: pointer;
-  font: 500 12px/1.2 system-ui, sans-serif; letter-spacing: .03em; color: rgba(246, 239, 226, .62);
-}
-.home-sky-head {
-  position: absolute; inset-inline: 0; top: 0; display: flex; align-items: flex-start; gap: 10px;
-  padding: max(12px, env(safe-area-inset-top)) 16px 28px;
-  background: linear-gradient(rgba(4, 7, 28, .72), rgba(4, 7, 28, 0)); pointer-events: none;
-}
-.home-sky-head > * { pointer-events: auto; }
-.home-sky-btn { color: #f6efe2; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .14); flex: none; }
-.home-sky-titles { flex: 1; min-width: 0; padding-top: 2px; }
-.home-sky-title { margin: 0; font: 600 19px/1.25 system-ui, sans-serif; color: #fff6e6; }
-.home-sky-month { margin: 2px 0 0; font: 13px/1.3 system-ui, sans-serif; color: rgba(246, 239, 226, .7); }
-.home-sky-count { margin: 6px 0 0; font: 14px/1.4 system-ui, sans-serif; color: rgba(255, 226, 176, .9); max-width: 32em; }
-.home-sky-foot {
-  position: absolute; inset-inline: 0; bottom: 0; padding: 24px 16px max(16px, env(safe-area-inset-bottom));
-  text-align: center; pointer-events: none;
-}
-.home-sky-juz { font: 500 12px/1.3 system-ui, sans-serif; letter-spacing: .08em; color: rgba(201, 195, 230, .75); }
-.home-sky-hint { margin-top: 6px; font: 13px/1.3 system-ui, sans-serif; color: rgba(246, 239, 226, .6); transition: opacity 1.5s ease; }
-.home-sky-hint.gone { opacity: 0; }
-
-/* ---- Kids path in 3D (docs/light.md, L7): the scene fills the screen; the stops (links + names)
-   are placed on their lanterns by src/ui/kidsSky.ts and swiping glides along the path ---- */
-.kids-sky-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
-.screen.kids.kids-3d { touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
-.screen.kids.kids-3d > :not(.kids-sky-canvas) { position: relative; z-index: 1; }
-.kids-3d .kids-path { height: 0 !important; }
-.kids-3d .kids-path-line { display: none; }
-.kids-3d .kids-stop { position: fixed; transform-origin: 0 0; will-change: transform; -webkit-user-drag: none; }
-.kids-3d .kids-lantern, .kids-3d .kids-stop.lit .kids-lantern, .kids-3d .kids-stop.next .kids-lantern {
-  background: none; border-color: transparent; box-shadow: none; animation: none;
-}
-.kids-3d .kids-lantern svg { opacity: 0; }
-.kids-3d .kids-stop-label { text-shadow: 0 0 12px var(--kids-card), 0 0 3px var(--kids-card); transition: opacity .8s ease; }
-.kids-3d .kids-stop.kids-far .kids-stop-label { opacity: 0; }
-.kids-3d .kids-top, .kids-3d .kids-lead { text-shadow: 0 0 12px var(--kids-card); }
 
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */
@@ -1252,39 +1070,12 @@ body[data-view="kids"] {
 .kids-stop.bloom .kids-const path { stroke-dasharray: 1; animation: kids-const-draw 2.4s ease-in-out both; animation-delay: var(--d); }
 @keyframes kids-star-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes kids-const-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-.kids-3d .kids-const, .kids-3d .kids-path .kids-noor { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .kids-noor > span { transition: opacity 1s ease; }
   .kids-noor-halo { animation: none; }
   .kids-stop.bloom .kids-const circle, .kids-stop.bloom .kids-const path { animation: none; }
   .kids-stop.bloom .kids-const { animation: kids-star-in 1.6s ease both .6s; }
 }
-
-/* Khatm circle, full screen (owner request 2026-10-11): a night sky with the ring large, actions below */
-dialog.circle-full {
-  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
-  overflow-y: auto; overscroll-behavior: contain; color: #f6efe2;
-  background: radial-gradient(ellipse at 50% 20%, #151c4c, #070b26 55%, #04071c);
-  --text: #f6efe2; --muted: rgba(246, 239, 226, .66); --line: rgba(246, 239, 226, .2); --card: rgba(255, 255, 255, .06); --accent: #e8cf96; --accent-ink: #1a1405;
-}
-dialog.circle-full[open] { animation: night-in .5s ease both; }
-dialog.circle-full::backdrop { background: #04071c; }
-.circle-full-head {
-  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
-  padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: linear-gradient(#04071c, rgba(4, 7, 28, 0));
-}
-.circle-full-head h2 { margin: 0; font-size: 19px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
-.circle-full .icon-btn { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .18); flex: none; }
-.circle-full .circle-view { padding: 0 16px max(24px, env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
-.circle-full .ring-box { width: min(420px, 92vw); margin: 0 auto 8px; }
-.circle-full .ring-box.ring-3d { width: calc(100% + 32px); max-width: none; margin: 0 -16px 8px; height: min(64vh, 135vw); aspect-ratio: auto; border-radius: 0; background: transparent;
-  -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
-.circle-full .circle-panel { padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
-.circle-full .chip { color: #f6efe2; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .2); }
-.circle-full .primary { background: #e8cf96; color: #1a1405; border-color: transparent; }
-.circle-full .ring-box:not(.ring-3d) .seg-g .seg { stroke: rgba(246, 239, 226, .3); }
-.circle-full .ring-box:not(.ring-3d) .seg-label { fill: rgba(246, 239, 226, .7); }
-@media (prefers-reduced-motion: reduce) { dialog.circle-full[open] { animation: none; } }
 
 /* Studio styles: moving tiles (background drifting slowly, three "words" lighting up in turn) */
 .style-art {

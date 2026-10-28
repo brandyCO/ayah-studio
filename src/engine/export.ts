@@ -9,7 +9,7 @@ import {
   WebMOutputFormat,
   canEncodeAudio,
 } from 'mediabunny';
-import { lightRes, type BackgroundMedia } from './backgrounds';
+import type { BackgroundMedia } from './backgrounds';
 import type { ExportPath } from './capabilities';
 import { H, setFrame, W } from './layout';
 import type { Project } from './project';
@@ -66,8 +66,6 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
 
   const abort = () => void output.cancel();
   o.signal.addEventListener('abort', abort);
-  const cap = lightRes.cap;
-  lightRes.cap = W; // light scenes at the full export size
   try {
     await output.start();
     await audio.add(o.audio);
@@ -99,7 +97,6 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     if (output.state !== 'canceled' && output.state !== 'finalized') await output.cancel().catch(() => {});
     throw e;
   } finally {
-    lightRes.cap = cap;
     o.signal.removeEventListener('abort', abort);
   }
 }

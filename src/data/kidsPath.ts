@@ -1,6 +1,6 @@
 // The Kids space's lantern path as data (docs/kids.md K3, docs/light.md L7): the order of the
-// surahs, each stop's state (learned / next / just lit) and the wave layout, read by both the 2D
-// path (src/ui/kids.ts) and the 3D one (src/ui/kidsSky.ts + src/light/scenes/kidsPath.ts), plus the
+// surahs, each stop's state (learned / next / just lit) and the wave layout, read by the 2D
+// path (src/ui/kids.ts), plus the
 // small constellation a learned surah gains (one star per ayah). No drawing here, no three.js.
 import { KIDS_SURAHS } from './kids';
 

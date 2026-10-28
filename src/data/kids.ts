@@ -13,9 +13,8 @@ export interface KidsSettings {
   speed: 0.75 | 1;
   repeats: 1 | 3;
   translation: boolean; // Sahih International under the ayah
-  sky3d: boolean; // the path as floating lanterns in 3D where the device can (docs/light.md L7)
 }
-const DEFAULTS: KidsSettings = { name: '', reciter: null, speed: 1, repeats: 1, translation: true, sky3d: true };
+const DEFAULTS: KidsSettings = { name: '', reciter: null, speed: 1, repeats: 1, translation: true };
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -49,7 +48,6 @@ export function kidsSettings(): KidsSettings {
     speed: o.speed === 0.75 ? 0.75 : 1,
     repeats: o.repeats === 3 ? 3 : 1,
     translation: typeof o.translation === 'boolean' ? o.translation : DEFAULTS.translation,
-    sky3d: typeof o.sky3d === 'boolean' ? o.sky3d : DEFAULTS.sky3d,
   };
 }
 export function setKidsSettings(patch: Partial<KidsSettings>) {
