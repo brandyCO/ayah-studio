@@ -503,7 +503,7 @@ const en = {
   'tour.reel': 'Make a reel',
   'tour.reelText': 'Long-press an ayah, extend the selection, then Turn into reel: a calm 9:16 video timed to the recitation, made on your device.',
   'tour.together': 'Together',
-  'tour.togetherText': 'Khatm circles, gifts and the ayah wall bring family and friends in. All optional, and private by default.',
+  'tour.togetherText': 'Family circles let parents and grandparents cheer on the children learning their surahs. All optional, and private by default.',
   'tour.skip': 'Skip',
   'tour.next': 'Next',
   'tour.start': 'Start reading',
