@@ -8,6 +8,7 @@ import {
 } from '../data/search';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { openDebugPanel } from './debug';
+import { tabBar } from './tabs';
 import { h } from './dom';
 import { lastRead } from './prefs';
 import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
@@ -275,13 +276,13 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, t('list.tagline'))),
-      h('a', { class: 'chip', href: '#/drafts' }, t('list.drafts')),
       h('button', { class: 'chip', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, t('list.kids')),
       h('button', { class: 'icon-btn', 'aria-label': t('list.deviceCheck'), title: t('list.deviceCheck'), onclick: openDebugPanel }, '⚙')),
     form,
     recent,
     tabs,
     body,
+    tabBar('read'),
   );
   if (focus) requestAnimationFrame(() => search.focus());
   return () => { alive = false; clearTimeout(timer); };

@@ -3,6 +3,7 @@ import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
 import { loadMeta, reference } from '../data/quran';
 import { reciterById } from '../data/reciters';
 import { h, toast } from './dom';
+import { tabBar } from './tabs';
 import { locale, t } from '../i18n';
 
 function ago(at: number) {
@@ -48,6 +49,7 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
       h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
       h('div', { class: 'brand' }, h('h1', {}, t('list.drafts')), h('p', { class: 'muted' }, t('dr.sub')))),
     drafts.length ? grid : empty(),
+    tabBar('create'),
   );
   return () => urls.forEach((u) => URL.revokeObjectURL(u));
 }

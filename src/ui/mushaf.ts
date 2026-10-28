@@ -30,6 +30,7 @@ import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/rama
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
 const openCircles = () => void import('./circles').then((m) => m.openCircles());
 import { selectionController, type Sel } from './selection';
+import { pickHint, tabBar, takeTabIntent } from './tabs';
 
 type Seg = [number, number, string];
 
@@ -122,6 +123,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
     bar.classList.toggle('show', show);
+    document.body.classList.toggle('tabs-up', show); // the tab bar comes up with the title bar
     if (show) void fillToday(today, () => toggleBar(false));
   };
   let markTapped = false; // the current tap started on a margin mark
@@ -187,7 +189,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
-  root.append(bar, area, sel.bar, player.bar);
+  const listenNow = () => {
+    toggleBar(false);
+    if (player.active()) player.toggle();
+    else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
+  };
+  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow, me: () => openMenu() }, true);
+  root.append(bar, area, sel.bar, player.bar, tabs);
 
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
@@ -500,32 +508,35 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   function openMenu() {
     const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: t('menu.pagePlaceholder', { n: PAGE_COUNT }), inputmode: 'numeric' });
-    const d: HTMLDialogElement = sheet(sheetHead(t('mushaf.menu'), () => d.close()),
-      h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, `🎧  ${t('menu.listen')}`),
+    const group = (title: string) => h('h3', { class: 'menu-group' }, title);
+    const d: HTMLDialogElement = sheet(sheetHead(t('me.title'), () => d.close()),
+      h('div', { class: 'menu sheet-menu' },
+        group(t('menu.gRead')),
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, `📖  ${t('menu.allSurahs')}`),
-        h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, `🎬  ${t('menu.drafts')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
-          toggleBar(false);
-          go(mushaf.pageOf(s, a));
-          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
-        }); } }, `✎  ${t('menu.reflections')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
-        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
-          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./themePicker').then((m) => m.openThemePicker()); } }, `◐  ${t('theme.menu')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
           const p = Math.round(Number(input.value));
           if (valid(p)) { d.close(); toggleBar(false); go(p); }
         } }, input, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
+        group(t('menu.gYours')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
+          toggleBar(false);
+          go(mushaf.pageOf(s, a));
+          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
+        }); } }, `✎  ${t('menu.reflections')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
+        group(t('menu.gTogether')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
+        group(t('menu.gSettings')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./themePicker').then((m) => m.openThemePicker()); } }, `◐  ${t('theme.menu')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
+        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
+          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
         h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => {
           setTimeTint(!timeTintOn());
           d.close();
@@ -581,6 +592,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (returning) markTourSeen();
     else { touring = true; showTour(firstVisitHint); }
   } else firstVisitHint();
+  // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
+  const intent = takeTabIntent();
+  if (intent === 'listen') listenNow();
+  else if (intent === 'me') openMenu();
+  else if (intent === 'pick') pickHint();
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
   // Never over the tour: the moment waits for the next start.
   {
@@ -606,7 +622,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(resizeTimer);
     sel.destroy();
     player.destroy();
-    document.body.classList.remove('mushaf-mode', 'listening');
+    document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };

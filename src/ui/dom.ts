@@ -32,3 +32,11 @@ export const fmtTime = (s: number) => {
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 };
+
+/** A light tap felt in the hand (Android; ignored where vibration is not available or reduced motion is on). */
+export function haptic(ms = 8) {
+  try {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate?.(ms);
+  } catch { /* ignore */ }
+}

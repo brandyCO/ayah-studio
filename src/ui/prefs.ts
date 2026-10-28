@@ -159,3 +159,19 @@ export function markTourSeen() {
     /* ignore */
   }
 }
+
+/** Export size last picked in the studio (1080P / 720P), this device only. */
+export function exportQuality(): 1920 | 1280 {
+  try {
+    return localStorage.getItem('exportQuality') === '1280' ? 1280 : 1920;
+  } catch {
+    return 1920;
+  }
+}
+export function setExportQuality(q: 1920 | 1280) {
+  try {
+    localStorage.setItem('exportQuality', String(q));
+  } catch {
+    /* ignore */
+  }
+}

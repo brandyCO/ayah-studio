@@ -45,7 +45,7 @@ import { h, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
 import { createMediaPicker } from './mediaPicker';
-import { reelLook, reelReciter, setReelLook, setReelReciter } from './prefs';
+import { exportQuality, reelLook, reelReciter, setExportQuality, setReelLook, setReelReciter } from './prefs';
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -146,7 +146,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startT = 0;
   let dirty = true;
   let syncText = ui('ed.loadingTimings');
-  let quality: 1920 | 1280 = 1920;
+  let quality: 1920 | 1280 = exportQuality(); // remembered per device
   let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
   let colourKey: keyof TextColors = 'ar'; // Style → Colours: which text's colour the panel sets
   let layerSel: Layer | null = null; // moved / scaled by touch on the preview: its actions are in the bar
@@ -1667,11 +1667,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   });
 
   // Quality menu (top bar) and export page.
-  const qualityLabel = h('span', {}, '1080P');
+  const qualityLabel = h('span', {}, quality === 1280 ? '720P' : '1080P');
   const qualityMenu = h('div', { class: 'quality-menu', hidden: true });
   const drawQualityMenu = () => qualityMenu.replaceChildren(
     ...([[1920, '1080P', ui('ed.q1080')], [1280, '720P', ui('ed.q720')]] as const).map(([q, l, d]) =>
-      h('button', { class: `menu-item${quality === q ? ' on' : ''}`, onclick: () => { quality = q; qualityLabel.textContent = l; qualityMenu.hidden = true; } },
+      h('button', { class: `menu-item${quality === q ? ' on' : ''}`, onclick: () => { quality = q; setExportQuality(q); qualityLabel.textContent = l; qualityMenu.hidden = true; } },
         h('b', {}, l), h('span', { class: 'muted small' }, d))),
     h('button', { class: 'menu-item', onclick: () => { qualityMenu.hidden = true; openDebugPanel(); } }, h('b', {}, ui('list.deviceCheck')), h('span', { class: 'muted small' }, ui('ed.deviceCheckSub'))));
   const qualityBtn = h('button', { class: 'quality', onclick: () => { drawQualityMenu(); qualityMenu.hidden = !qualityMenu.hidden; } }, qualityLabel, icon('down', 16));
