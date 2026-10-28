@@ -526,6 +526,18 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [ ] Before a public launch: ask Pixabay (and Pexels) for higher limits (`proxy/README.md`)
 - [ ] Tested by the owner on their phone (upload from gallery, Pixabay pick, export)
 
+### Speed pass (owner request 2026-10-28)
+- [x] Launch: no encoder check at startup (it blocked ~1 s), the last page's font fetched before the
+      layout (`lastPage` in localStorage), reflections read after the first page → reopen ~0.5 s at 4× CPU
+      throttle (was ~2 s). Offline warm-up once per app version (`warmedUp`); QDC timings reused for 3 days
+- [x] Caches: recitation audio ≤ 300 MB (least recently used first), SW page fonts ≤ 200, timings ≤ 120,
+      Android font cache ≤ 200; thumbnails as WebP (built-in, library, drafts)
+- [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
+      preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
+- [x] Performance timings (`src/perf.ts`, this device only, Device check)
+- [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
+      `SENTRY_DSN`; then mention it on the privacy page
+
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
 save to gallery / share sheet; offline audio cache; settings.

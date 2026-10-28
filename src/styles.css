@@ -1243,3 +1243,10 @@ body.tabs-up .rf-hint { opacity: 0; }
 .theme-tile:focus-visible { outline: none; }
 .theme-tile:focus-visible .theme-swatch { outline-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .theme-swatch { transition: none; } }
+
+/* Old-phone mode (src/lite.ts): the heaviest decorations off — paper grain and sheet shadows, glass
+   blur behind bars and sheets. Reels and exports are not affected. */
+html.lite { --paper-grain: none; --paper-edge: none; }
+html.lite *, html.lite *::before, html.lite *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.lite .mushaf-strip.moving .mushaf-page { box-shadow: none; }
+html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }

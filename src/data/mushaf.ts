@@ -97,6 +97,9 @@ async function pageFontSource(page: number): Promise<string | ArrayBuffer> {
     res = await fetch(url);
     if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
     await cache.put(url, res.clone());
+    // Keep at most 200 downloaded pages (~30 MB); the oldest go first.
+    const keys = await cache.keys();
+    for (const k of keys.slice(0, Math.max(0, keys.length - 200))) await cache.delete(k);
   }
   return res.arrayBuffer();
 }

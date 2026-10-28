@@ -8,7 +8,7 @@ import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTransl
 import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
-import { loadLibrary } from '../data/library';
+import { loadLibrary, smallImage } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
@@ -39,6 +39,8 @@ import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, recitedSpan, wordMeanings } from '../engine/words';
 import { ayahLength, planSeries } from '../engine/series';
 import { qdcSurah } from '../data/qdc';
+import { liteMode } from '../lite';
+import { perfRecord, perfStart } from '../perf';
 import { exportGuard, isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
@@ -92,6 +94,7 @@ const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${S
 
 /** `draftId`: reopen a saved draft (its ayat range comes from the address, which may have changed). */
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number, draftId?: string): Promise<() => void> {
+  const perfEditor = perfStart('Open studio → preview ready');
   const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n, currentTranslation()), surahWordMeanings(n), loadWordMap(), loadLibrary(),
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
@@ -134,7 +137,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let mediaReady = false;
   let mediaVersion = 0; // bumped whenever the decoded scenes change
   let previewScale = 1; // preview resolution now (lowered only while playing on a slow device)
-  let playScale = 1; // learned for this visit: used from the next Play on
+  let playScale = liteMode() ? 0.75 : 1; // learned for this visit: used from the next Play on (old phones start lower)
   let frameGap = 0, gapCount = 0, lastFrameAt = 0;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
@@ -216,7 +219,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Other formats: the middle of the frame, cropped to the drafts list's 9:16 tile.
     const sw = Math.min(canvas.width, (canvas.height * 9) / 16), sh = Math.min(canvas.height, (canvas.width * 16) / 9);
     c.getContext('2d')!.drawImage(canvas, (canvas.width - sw) / 2, (canvas.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
-    return new Promise((resolve) => c.toBlob((b) => resolve(b ?? undefined), 'image/jpeg', 0.75));
+    return smallImage(c, 0.75).then((b) => b, () => undefined);
   }
   function scheduleSave() {
     clearTimeout(saveTimer);
@@ -2026,6 +2029,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!dirty) return;
     dirty = false;
     render(pctx, t, project, tl, media, drawn);
+    if (mediaReady && audio) perfEditor();
     const guides = touch.guides();
     if (guides) drawGuides(pctx, guides.centred);
     if (layerSel && !studio.classList.contains('watching')) drawSelection(pctx, layerSel, drawn);
@@ -2190,6 +2194,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const file = new File([blob], name, { type: blob.type });
       const canShare = !!navigator.canShare?.({ files: [file] });
       const secs = ((performance.now() - started) / 1000).toFixed(1);
+      perfRecord(`Make video (${quality === 1920 ? '1080P' : '720P'}, ${Math.round(tl!.duration)} s reel)`, performance.now() - started);
       progressRow.hidden = true;
       if (document.hidden) void notifyReady();
       void recordReel(project.reciterId, n, from, to);
