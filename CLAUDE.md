@@ -468,7 +468,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       dragging (the text snaps to the centre); a tap never plays/pauses (owner: a tap means edit);
       **My styles** (Styles → "Save this look", ≤ 8, localStorage `myStyles`, applied with `applyLook()`);
       slow phones: while playing, the preview drops to 75 % then 50 % resolution when frames come
-      ≥ 40 ms apart, sharp again when paused (export unchanged)
+      ≥ 40 ms apart, sharp again when paused (export unchanged). Third pass (owner "yes"): the export decodes the next
+      background frame while the current one encodes; `VideoLoop` copies only the last frame at or before
+      t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
+      before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
+      reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

@@ -88,7 +88,7 @@ export class VideoLoop {
     // Decode no larger than needed to cover the 1080×1920 frame (phone videos are often 4K).
     const k = Math.min(1, Math.max(1080 / track.displayWidth, 1920 / track.displayHeight));
     const w = Math.round(track.displayWidth * k), h = Math.round(track.displayHeight * k);
-    const loop = new VideoLoop(new CanvasSink(track, { width: w, height: h, fit: 'cover', poolSize: 2 }), duration, w, h);
+    const loop = new VideoLoop(new CanvasSink(track, { width: w, height: h, fit: 'cover', poolSize: 3 }), duration, w, h);
     await loop.prepare(0);
     return loop;
   }
@@ -114,13 +114,16 @@ export class VideoLoop {
       this.next = (await this.iter.next()).value ?? null;
       this.shown = -1;
     }
+    // Step to the last frame at or before lt and copy only that one (a 60 fps clip in a 30 fps reel
+    // skips every other frame). The sink's pool of 3 keeps `frame` intact while `next` decodes.
     let frame: WrappedCanvas | null = null;
     while (this.next && this.next.timestamp <= lt + 1e-4) {
       frame = this.next;
-      const ctx = this.canvas.getContext('2d')!;
-      ctx.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height);
-      this.shown = frame.timestamp;
       this.next = (await this.iter.next()).value ?? null;
+    }
+    if (frame) {
+      this.canvas.getContext('2d')!.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height);
+      this.shown = frame.timestamp;
     }
     if (!frame && this.shown < 0 && this.next) {
       // Requested time is before the first frame: show the first frame.
