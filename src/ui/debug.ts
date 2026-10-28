@@ -2,7 +2,6 @@
 import { feature, setFeature } from '../features';
 import { capabilities } from '../engine/capabilities';
 import { h } from './dom';
-import { hasWebGL, reducedMotion, saveQuality, savedQuality } from '../light/support';
 
 export function openDebugPanel() {
   const table = h('table', { class: 'caps' }, h('tr', {}, h('td', {}, 'Checking…')));
@@ -15,7 +14,6 @@ export function openDebugPanel() {
     h('label', { class: 'sub-row flag-row' },
       h('input', { type: 'checkbox', checked: feature('tafsir'), onchange: (e: Event) => setFeature('tafsir', (e.target as HTMLInputElement).checked) }),
       h('span', {}, 'Tafsir beside the translation (preview: licence not confirmed yet)')),
-    lightRow(),
     h('p', { class: 'muted small' }, `User agent: ${navigator.userAgent}`),
   );
   dialog.addEventListener('close', () => dialog.remove());
@@ -30,10 +28,3 @@ export function openDebugPanel() {
   });
 }
 
-/** Light scenes (docs/light.md): the quality step the fps watchdog settled on, with a reset. */
-function lightRow() {
-  const why = !hasWebGL() ? 'no WebGL → flat 2D' : reducedMotion() ? 'reduced motion → flat 2D' : `3D · ${savedQuality()}`;
-  const label = h('span', {}, `Light scenes: ${why}`);
-  return h('div', { class: 'sub-row flag-row' }, label,
-    h('button', { class: 'chip', onclick: () => { saveQuality(null); label.textContent = `Light scenes: ${hasWebGL() && !reducedMotion() ? '3D · medium' : why}`; } }, 'Reset'));
-}

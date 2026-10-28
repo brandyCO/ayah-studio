@@ -731,7 +731,8 @@ cloud. Build in this order:
       Cloudflare **Turnstile** check (`src/cloud/captcha.ts`, invisible unless a tap is needed) when the
       repo variable `TURNSTILE_SITE_KEY` is set (passed to the Pages + Android builds); Supabase checks
       the token once CAPTCHA protection is on (Attack protection → Turnstile + secret key). Google
-      sign-in is not affected (Supabase skips the captcha for id-token / PKCE sign-ins). Set up and verified
+      sign-in is not affected (Supabase skips the captcha for id-token / PKCE sign-ins). (2026-10-28: guest sign-in and the
+      Turnstile check were removed with walls and gifts — `signInGuest()`, `captcha.ts`, `TURNSTILE_SITE_KEY`.) Set up and verified
       2026-10-09: repo variable `TURNSTILE_SITE_KEY` + secret key in Supabase; a guest sign-in without a
       token or with a fake one is refused, Google sign-in (web + id-token) unaffected, the check passed
       on the owner's phone
@@ -878,7 +879,9 @@ text is never in the 3D scene (always flat, still, KFGQPC / QCF, drawn on top); 
 companions, angels, the unseen, people, animals); no music/sfx; the mushaf page stays clean; slow,
 soft, dim, skippable, with a flat 2D fallback (reduced motion, battery saver, no WebGL, slow GPU);
 no AI-written religious content. Every scene is a pure function of (t, seed), so preview = export.
-- [x] L1 Light engine (`src/light/`) + Night listening (full-screen night sky over a cloud sea from
+- [x] L1 Light engine (`src/light/`) + Night listening (2026-10-28, owner: keep the app light — the 3D engine and
+      three.js are removed; Night listening always uses the still 2D sky (`light/flat.ts`) with a soft halo
+      round Noor that breathes with the word timings; Device check → Light scenes is gone) (full-screen night sky over a cloud sea from
       the player; the ayah flat in the middle; motes breathe with the word timings; sleep timer)
       (built 2026-10-10: `three` 0.186.1 (exact), only via `import()` — its chunks (~134 KB gzip) load
       when Night listening opens in 3D; entry +1.9 KB, editor unchanged. `src/light/support.ts`

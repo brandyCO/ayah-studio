@@ -744,9 +744,6 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 
 .chip.danger { color: #c0392b; }
 
-/* Turnstile check before a guest (anonymous) sign-in (src/cloud/captcha.ts) */
-.captcha-sheet { width: min(360px, calc(100% - 32px)); text-align: center; }
-.captcha-box { display: flex; justify-content: center; min-height: 8px; }
 
 /* translation picker (G1) */
 .tr-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
@@ -956,7 +953,7 @@ body[data-view="kids"] {
 .tafsir-text .tf-ar { font-family: "AmiriQuran", "UthmanicHafs", serif; font-size: 1.15em; line-height: 1.9; }
 .flag-row { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
 
-/* ---- Night listening (docs/light.md, L1): 3D sky behind, the ayah flat and still on top ---- */
+/* ---- Night listening (docs/light.md, L1): a still 2D sky behind, the ayah flat and still on top ---- */
 .night {
   position: fixed; inset: 0; z-index: 40; background: #05081a; color: #f6efe2;
   overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
@@ -966,6 +963,11 @@ body[data-view="kids"] {
 @keyframes night-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes night-out { to { opacity: 0; } }
 .night-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* A soft warm halo around Noor (light/flat.ts), breathing with the recited words (opacity set in night.ts) */
+.night-breath {
+  position: absolute; inset: 0; pointer-events: none; opacity: .3; will-change: opacity;
+  background: radial-gradient(circle 130px at 72% 80%, rgba(255, 201, 119, .45), transparent 75%);
+}
 .night-text-layer { position: absolute; inset: 0; pointer-events: none; }
 .night-block {
   position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
