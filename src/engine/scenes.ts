@@ -1,7 +1,6 @@
 // Scenes (backgrounds) fill the recitation exactly, and calm transitions between them (~1–2 s, soft
 // easing). Scene boundaries partition [0, duration]; a transition is centred on its boundary.
-import { lightRes, type BackgroundMedia } from './backgrounds';
-import { paintLightFlat } from '../light/flatReel';
+import type { BackgroundMedia } from './backgrounds';
 import { pxScale } from './effects';
 import { H, W } from './layout';
 
@@ -170,14 +169,15 @@ export function videoTime(s: SceneSpan, t: number, clip: Clip | null | undefined
 }
 
 /** Make every video visible at t hold its frame (export: awaited; preview: fire and forget). */
-export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false, speed = 1): Promise<unknown> | null {
+/** Resolves true when a video's picture changed (null: no video to prepare). */
+export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false, speed = 1): Promise<boolean> | null {
   const { a, b } = scenesAt(spans, t);
-  const jobs: Promise<void>[] = [];
+  const jobs: Promise<boolean>[] = [];
   for (const s of [a, b]) {
     const v = s && media[s.entry]?.video;
     if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(videoTime(s, t, clips[s.entry], v.duration, speed)));
   }
-  return jobs.length ? Promise.all(jobs) : null;
+  return jobs.length ? Promise.all(jobs).then((r) => r.some(Boolean)) : null;
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -207,22 +207,6 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
   } else if (b?.kind === 'video' && m!.video) {
     const c = m!.video.canvas;
     cover(ctx, c, c.width, c.height, zoom, dy, dx);
-  } else if (b?.kind === 'light') {
-    // A light scene, rendered for the reel time t at the output's pixel size (capped for the preview).
-    if (m!.light) {
-      const k = Math.min(Math.abs(ctx.getTransform().a), lightRes.cap / W);
-      const c = m!.light.frame(t, Math.max(2, Math.round(W * k)), Math.max(2, Math.round(H * k)));
-      cover(ctx, c, c.width, c.height, zoom, dy, dx);
-    } else {
-      ctx.save();
-      if (zoom !== 1 || dx || dy) {
-        ctx.translate(W / 2 + dx, H / 2 + dy);
-        ctx.scale(zoom, zoom);
-        ctx.translate(-W / 2, -H / 2);
-      }
-      paintLightFlat(ctx, b.scene, t);
-      ctx.restore();
-    }
   } else if (b?.kind === 'color') {
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 100, W / 2, H * 0.45, H * 0.75);
     g.addColorStop(0, 'rgba(255,255,255,0.07)');

@@ -9,7 +9,7 @@ import {
   WebMOutputFormat,
   canEncodeAudio,
 } from 'mediabunny';
-import { lightRes, type BackgroundMedia } from './backgrounds';
+import type { BackgroundMedia } from './backgrounds';
 import type { ExportPath } from './capabilities';
 import { H, setFrame, W } from './layout';
 import type { Project } from './project';
@@ -66,8 +66,6 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
 
   const abort = () => void output.cancel();
   o.signal.addEventListener('abort', abort);
-  const cap = lightRes.cap;
-  lightRes.cap = W; // light scenes at the full export size
   try {
     await output.start();
     await audio.add(o.audio);
@@ -75,14 +73,21 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
 
     const frames = Math.ceil(o.timeline.duration * FPS);
     const spans = sceneSpans(o.timeline.scenes, o.project.transition);
+    // Pipelined: while frame i is being encoded, the background video is already decoding frame i + 1
+    // (`video.add` copies the canvas at once, so the next frame can be prepared straight away).
+    const prep = (i: number) => prepareScenes(spans, i / FPS, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
+    let ready = prep(0);
     for (let i = 0; i < frames; i++) {
       if (o.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
       const t = i / FPS;
-      await prepareScenes(spans, t, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
+      await ready;
       render(ctx, t, o.project, o.timeline, o.media);
-      await video.add(t, 1 / FPS);
+      const encoded = video.add(t, 1 / FPS);
+      ready = i + 1 < frames ? prep(i + 1) : null;
+      await encoded;
       if (i % 5 === 0) o.onProgress(i / frames);
     }
+    await ready;
     video.close();
     await output.finalize();
     o.onProgress(1);
@@ -92,7 +97,6 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     if (output.state !== 'canceled' && output.state !== 'finalized') await output.cancel().catch(() => {});
     throw e;
   } finally {
-    lightRes.cap = cap;
     o.signal.removeEventListener('abort', abort);
   }
 }

@@ -2,6 +2,8 @@
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import { clampArSize, isFormat, type EnFont, type Format, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
 import { validTranslation } from '../data/translations';
+import { markStrip, validMark, type Mark } from './mark';
+import { validMotion, type Motion } from './motion';
 import { MAX_SCENES, SLOWMO, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
 export type { SceneMode, TextEffect, Transition };
@@ -68,7 +70,13 @@ export interface Project {
   /** A dedication in the user's own words ("For my mother"), on the closing card in the UI font, never
    *  near the ayah. Not in the look (each reel its own). */
   dedication?: string;
+  /** The small "Ayah Studio" mark (off by default). */
   watermark: boolean;
+  /** The user's own watermark: their text or logo (src/engine/mark.ts). Per device like cinema (not in
+   *  the look, so gifts never carry it). */
+  mark?: Mark;
+  /** Moved / scaled by touch on the preview, optionally keyframed (src/engine/motion.ts). Per reel. */
+  motion?: Motion;
   /** Word highlight: the word being recited turns `colors.hl` (only with word timings: rule 8). */
   highlight: boolean;
   /** Finishing touches over the background (never over the text). */
@@ -91,6 +99,9 @@ export interface Project {
   series?: { part: number; of: number };
   /** Learning reel: the synced word meanings drawn large under the words (Words mode, word timings only). */
   learn?: boolean;
+  /** Seconds the video keeps going after the recitation ends (0–TAIL_MAX; silent: no sound is added,
+   *  rule 3). The background, the reference and the marks continue. Per reel. */
+  tail?: number;
   /** Video format (default 9:16). Per device like cinema (not in the look, so gifts stay 9:16). */
   format?: Format;
 }
@@ -116,6 +127,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   surahName: p.surahName,
   credit: p.credit,
   watermark: p.watermark,
+  mark: markStrip(p.mark),
   textSize: p.textSize,
   arSize: p.arSize,
   format: p.format,
@@ -127,15 +139,17 @@ export const MAX_AYAT = 10;
 export const INTRO = 3; // seconds of the intro title card
 export const OUTRO = 3; // seconds of the closing reference card
 export const PAUSES = [0, 0.5, 1, 2];
+export const TAIL_MAX = 10;
 
 /** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart'>>) => {
+export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart' | 'tail'>>) => {
   const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
   return {
     pause: p.pause,
     hold: p.gap === 'hold',
     intro: p.intro ? INTRO : 0,
     outro: p.outro ? OUTRO : 0,
+    tail: Math.min(TAIL_MAX, Math.max(0, p.tail ?? 0)),
     gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
     // Start on the first word: as much of the opening silence as is safe (arrangeReel clamps it).
     trims: ayat.map((a, i): [number, number] => (i === 0 && p.tightStart ? [Infinity, p.trims?.[a]?.[1] ?? 0] : p.trims?.[a] ?? [0, 0])),
@@ -274,6 +288,11 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
+  const mk = validMark(d.mark);
+  if (mk) p.mark = mk;
+  p.motion = validMotion(d.motion);
+  if (typeof d.tail === 'number' && Number.isFinite(d.tail) && d.tail > 0) p.tail = Math.min(TAIL_MAX, Math.round(d.tail * 10) / 10);
+  else delete p.tail;
 }
 
 /** JSON with object keys sorted (the database may store them in another order). */
