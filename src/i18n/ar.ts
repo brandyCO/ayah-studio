@@ -306,6 +306,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'ed.another-next': "الآيات التالية ({ref})",
   'ed.another-pick': "اختر آيات أخرى",
   'ed.ready-title': "فيديوك جاهز",
+  'ed.exporting-title': 'جارٍ إعداد الفيديو',
+  'ed.exporting-cancel': 'إلغاء',
   'qr.try': "جرّب شكلًا آخر",
   'qr.previous': "السابق",
   'ed.text-size': "حجم نص القرآن",

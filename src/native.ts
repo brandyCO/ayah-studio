@@ -83,3 +83,44 @@ export async function shareTextFile(name: string, text: string) {
  *  lives at https://localhost, so shared links use the public web app instead. */
 export const shareableLink = (hash: string) =>
   `${isNative() ? PUBLIC_URL : location.origin + location.pathname}${hash}`;
+
+/** Our native foreground service (android/…/ExportService.java): keeps an export running in the background. */
+interface ExportServicePlugin {
+  start(o: { title: string; cancel: string }): Promise<void>;
+  progress(o: { percent: number }): Promise<void>;
+  stop(): Promise<void>;
+  addListener(event: 'cancel', fn: () => void): Promise<{ remove(): Promise<void> }>;
+}
+const ExportService = registerPlugin<ExportServicePlugin>('ExportService');
+
+export interface ExportGuard {
+  progress(fraction: number): void;
+  stop(): void;
+}
+
+/**
+ * Android app: while a reel is being made, a foreground service with a progress notification keeps
+ * the app running when the user leaves it or turns the screen off; Cancel there calls `onCancel`.
+ * Elsewhere (web) it does nothing.
+ */
+export function exportGuard(title: string, cancel: string, onCancel: () => void): ExportGuard {
+  if (!isNative()) return { progress() {}, stop() {} };
+  let last = -1;
+  let stopped = false;
+  const listener = ExportService.addListener('cancel', onCancel).catch(() => null);
+  void ExportService.start({ title, cancel }).catch((e) => console.warn('Export service not started', e));
+  return {
+    progress(f) {
+      const pct = Math.round(f * 100);
+      if (stopped || pct === last) return;
+      last = pct;
+      void ExportService.progress({ percent: pct }).catch(() => {});
+    },
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      void ExportService.stop().catch(() => {});
+      void listener.then((l) => l?.remove());
+    },
+  };
+}

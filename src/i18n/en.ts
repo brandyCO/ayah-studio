@@ -265,6 +265,8 @@ const en = {
   'ed.another-next': "Next ayat ({ref})",
   'ed.another-pick': "Choose other ayat",
   'ed.ready-title': "Your reel is ready",
+  'ed.exporting-title': 'Making your reel',
+  'ed.exporting-cancel': 'Cancel',
   'qr.try': "Try another",
   'qr.previous': "Previous",
   'ed.text-size': "Quran text size",

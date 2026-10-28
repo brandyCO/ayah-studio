@@ -35,7 +35,7 @@ import { buildTimeline, type Timeline } from '../engine/timeline';
 import { displayWords, parseSpans, recitedSpan, wordMeanings } from '../engine/words';
 import { ayahLength, planSeries } from '../engine/series';
 import { qdcSurah } from '../data/qdc';
-import { isNative, saveVideo, shareFile, type SavedFile } from '../native';
+import { exportGuard, isNative, saveVideo, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
@@ -1948,9 +1948,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     result.hidden = true;
     shareExtras.replaceChildren(trustLine(), captionBlock());
     void askToNotify();
+    const ctrl = exporting;
+    // Android: a foreground service keeps the export going when the user leaves the app.
+    const guard = exportGuard(ui('ed.exporting-title'), ui('ed.exporting-cancel'), () => ctrl.abort());
     const setProgress = (f: number) => {
       progressBar.set(f);
       progressText.textContent = `${Math.round(f * 100)}%`;
+      guard.progress(f);
     };
     setProgress(0);
     const started = performance.now();
@@ -1994,6 +1998,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         console.error(e);
       } else toast(ui('ed.exportCancelled'));
     } finally {
+      guard.stop();
       exporting = null;
       dirty = true;
     }
