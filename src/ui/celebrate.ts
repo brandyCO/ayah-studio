@@ -6,13 +6,16 @@
 //   rosette  a big milestone (a surah, a juz, a Khatm, 10,000 dhikr…): a twelve-petal rosette unfolds like a
 //            mosque window, the badge settles in its centre
 //   medal    other badges: soft rays turn slowly behind the badge as it settles
-// A light vibration, no sound. Tap the button (or anywhere once it has played) to close; Esc too.
+// Polish: the Claim button lifts into a seed of light that flies to the centre, gathers and bursts
+// (flash, light sweep, sparks on a canvas, src/ui/sparks.ts); the moment unfolds from that burst with
+// overshoot, a second beat when it lands, then slow motes rising. A light vibration on each beat, no sound. Tap the button (or anywhere once it has played) to close; Esc too.
 // Reduced motion: the still final picture, faded in.
 import type { BadgeDef } from '../data/badges';
 import { t, type Key } from '../i18n';
 import { h } from './dom';
 import { badgeArt } from './badge';
 import { flame } from './flame';
+import { sparks, type Sparks } from './sparks';
 
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string }
@@ -124,7 +127,7 @@ function vibrate(p: number[]) {
 }
 
 /** Plays a reward moment over the screen; resolves when it is closed. */
-export function celebrate(m: Moment): Promise<void> {
+export function celebrate(m: Moment, from?: Element | null): Promise<void> {
   // Old-phone mode keeps the moment: it is a few SVG shapes moved by CSS, cheap to draw.
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stage = h('div', { class: 'cel-stage' });
@@ -152,40 +155,97 @@ export function celebrate(m: Moment): Promise<void> {
         h('span', { class: 'cel-badge' }, badgeArt(b.tier, b.icon, true, m.kind === 'rosette' ? 104 : 120)));
     }
   }
+  const palette: Record<Moment['kind'], string[]> = {
+    lantern: ['rgba(255,214,120,1)', 'rgba(255,170,70,1)', 'rgba(255,240,200,1)'],
+    star: ['rgba(255,214,120,1)', 'rgba(255,246,214,1)', 'rgba(255,190,90,1)'],
+    flame: ['rgba(255,150,60,1)', 'rgba(255,205,90,1)', 'rgba(255,110,50,1)'],
+    rosette: ['rgba(255,214,120,1)', 'rgba(150,240,210,1)', 'rgba(255,246,214,1)'],
+    medal: ['rgba(255,214,120,1)', 'rgba(255,240,200,1)'],
+  };
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
-    const el = h('div', { class: `cel cel-${m.kind}${still ? ' still' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
+    const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
+    const el = h('div', { class: `cel cel-${m.kind}${still ? ' still go' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
+      h('span', { class: 'cel-flash', 'aria-hidden': 'true' }),
+      h('span', { class: 'cel-sweep', 'aria-hidden': 'true' }),
       stage,
+      canvas,
       h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub)),
       ok);
     const opened = performance.now();
+    const timers: number[] = [];
+    const later = (ms: number, f: () => void) => timers.push(window.setTimeout(f, ms));
+    let fx: Sparks | null = null;
     let done = false;
     const close = () => {
       if (done) return;
       done = true;
+      timers.forEach(clearTimeout);
+      fx?.stop();
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
-      setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 260);
+      setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     ok.addEventListener('click', close);
-    el.addEventListener('click', (e) => { if (e.target !== ok && performance.now() - opened > 1600) close(); });
+    el.addEventListener('click', (e) => { if (e.target !== ok && performance.now() - opened > 2000) close(); });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
     ok.focus({ preventScroll: true });
-    // Feel: a soft tap, then a fuller one as the light opens.
-    vibrate(m.kind === 'lantern' ? [10, 900, 22] : m.kind === 'star' ? [10, 700, 14, 300, 26] : m.kind === 'rosette' ? [10, 500, 12, 500, 16, 400, 40] : [10, 800, 30]);
-    if (count && !still && m.kind === 'flame') {
-      const target = m.days;
-      const t0 = performance.now() + 350;
-      const tick = (now: number) => {
-        const p = Math.min(1, Math.max(0, (now - t0) / 1000));
-        count!.textContent = String(Math.round(target * (1 - (1 - p) ** 3)));
-        if (p < 1 && !done) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
+    if (still) return;
+
+    // 1. A seed of light: the Claim button lifts, becomes a glowing orb and flies to the centre,
+    //    gathers itself (anticipation) and bursts — then the moment unfolds from that burst.
+    const box = stage.getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    const seed = h('span', { class: 'cel-seed', 'aria-hidden': 'true' });
+    stage.append(seed);
+    const r = from?.getBoundingClientRect();
+    const has = !!(r && r.width);
+    const dx = has ? r!.left + r!.width / 2 - cx : 0;
+    const dy = has ? r!.top + r!.height / 2 - cy : 40;
+    const FLY = has ? 560 : 360;
+    const T = FLY + 420;
+    seed.animate([
+      { transform: has ? `translate(${dx}px, ${dy}px) scale(${r!.width / 48}, ${r!.height / 48})` : `translate(0, ${dy}px) scale(.2)`, opacity: 0.9, offset: 0 },
+      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - (has ? 70 : 0)}px) scale(.8)`, opacity: 1, offset: (FLY * 0.55) / T },
+      { transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: FLY / T },
+      { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + 300) / T },
+      { transform: 'translate(0, 0) scale(2.6)', filter: 'brightness(2)', opacity: 0, offset: 1 },
+    ], { duration: T, easing: 'cubic-bezier(.3, 0, .2, 1)', fill: 'forwards' });
+    vibrate([8]);
+    const BURST = FLY + 300;
+
+    // 2. The burst: a soft flash, light sweeping across, sparks flying out, the moment playing.
+    later(BURST, () => {
+      el.classList.add('go');
+      fx = sparks(canvas, palette[m.kind]);
+      const big = m.kind === 'rosette' || m.kind === 'star' || m.kind === 'flame';
+      const sb = stage.getBoundingClientRect();
+      const cr = canvas.getBoundingClientRect();
+      fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
+      vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' ? [24, 90, 14] : [22]);
+      // A second beat when the badge lands / the star fills / the lantern opens.
+      const beat = m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
+      later(beat, () => {
+        const b2 = stage.getBoundingClientRect();
+        fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
+        vibrate([14]);
+      });
+      later(beat + 300, () => fx?.motes(true));
+      if (count && m.kind === 'flame') {
+        const target = m.days;
+        const t0 = performance.now() + 350;
+        const tick = (now: number) => {
+          const p = Math.min(1, Math.max(0, (now - t0) / 1000));
+          count!.textContent = String(Math.round(target * (1 - (1 - p) ** 3)));
+          if (p < 1 && !done) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    });
   });
 }

@@ -106,16 +106,16 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       mark();
     }
   };
-  const claimGoalRow = (g: GoalProgress) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') })),
+  const claimGoalRow = (g: GoalProgress, from?: Element) => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') }, from)),
     () => claimGoal(g.id));
-  const claimAll = () => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') })),
+  const claimAll = (from?: Element) => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') }, from)),
     () => claimGoal('all'));
-  const claimBadgeNow = (b: BadgeDef) => play(
+  const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
       const k = badgeMoment(b);
-      return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b });
+      return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b }, from);
     }),
     () => claimBadge(b.id));
 
@@ -134,7 +134,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, 'aria-pressed': String(met), onclick: () => { setAdhkar(!met); haptic(); } }, met ? t('goal.doneMark') : t('goal.markDone'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
-    if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: () => void claimGoalRow(g) }, `✦ ${t('cel.claim')}`);
+    if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: (e: Event) => void claimGoalRow(g, e.currentTarget as Element) }, `✦ ${t('cel.claim')}`);
     return h('div', { class: `goal${met ? ' met' : ''}` },
       h('span', { class: 'goal-ring', style: `--p:${pct}` }, met ? '✓' : ''),
       h('span', { class: 'goal-txt' },
@@ -149,7 +149,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
       all && list.length > 1 && !goalClaimed('all')
-        ? h('button', { class: 'claim-all', onclick: () => void claimAll() }, `✦ ${t('cel.claimAll')}`)
+        ? h('button', { class: 'claim-all', onclick: (e: Event) => void claimAll(e.currentTarget as Element) }, `✦ ${t('cel.claimAll')}`)
         : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
       h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
@@ -211,7 +211,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const paintBadges = () => {
     const all = badgeStates();
     const got = all.filter((b) => b.earned).length;
-    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: () => (b.earned && !badgeClaimed(b.def.id) ? void claimBadgeNow(b.def) : openBadge(b)) },
+    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: (e: Event) => (b.earned && !badgeClaimed(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b)) },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
       h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
@@ -222,7 +222,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
     const waiting = earned.filter((b) => !badgeClaimed(b.def.id));
     badgeBox.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: () => void claimBadgeNow(b.def) },
+      waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
         h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, t(b.def.name as Key, { n: b.def.need }))),
         h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '',
