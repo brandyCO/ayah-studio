@@ -559,6 +559,12 @@ save to gallery / share sheet; offline audio cache; settings.
       `--brand-text`, `--brand-glow`. Used only by `.brand-name` (app name), `.primary.brand-btn` (Export,
       "Turn into reel"), studio `.chip.on` / `.tab.on`, export + download bars and the empty Drafts glow;
       `theme-color` per colour scheme. The mushaf keeps its own `--paper` / `--ink`
+- [x] Theme colours (owner request 2026-10-28): ☰ → Theme colours — 12 brand gradients with a neon glow
+      (`src/ui/theme.ts`: Emerald (default), Aurora, Ultraviolet, Synthwave, Neon Sunset, Deep Ocean,
+      Royal Gold, Rose Quartz, Cyber Lime, Nebula, Arctic Ice, Ember). Each sets the brand tokens, the
+      accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
+      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
+      gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
