@@ -8,9 +8,10 @@ without listening again. Run by .github/workflows/align.yml, one job per reciter
   python3 scripts/align-batch.py mp3quran KEY FOLDER_URL 1-6 OUT (full-surah files on mp3quran.net)
 
 OUT/KEY/SSS.json, one per surah (a surah already there is skipped, so a job can be run again):
-  everyayah: {"ayat": [{"conf", "w": [[word, startMs, endMs], ...], "ms": file length} | {"error"}]}
-  mp3quran:  analyse()'s result ({"size", "ay", "conf", "w", "c", "seek"?}) or {"error"}
-Times are ms in that file; word = 1-based position in our ayah text (words without letters have none).
+  everyayah: {"ayat": [{"conf", "lconf", "w": [[word, startMs, endMs, unexplained], ...], "ms": file length} | {"error"}]}
+  mp3quran:  analyse()'s result ({"size", "ay", "conf", "lconf", "w", "c", "r", "seek"?}) or {"error"}
+Times are ms in that file; word = 1-based position in our ayah text (words without letters have none). Words
+are in the order recited: a word the reciter repeats is listed again (align-ayat.align_repeats).
 """
 import importlib.util, json, os, sys, time
 
@@ -46,9 +47,8 @@ def everyayah(folder, s, text):
         open(path, 'wb').write(data)
       x = al.load(path)
       pre = al.opening(x, s, ayah, mk.BASMALA, mk.ISTIADHA) if a == 1 else []
-      _, wd = al.align(x, [ayah], pre)
-      conf = al.LAST_CONF
-      ayat.append(dict(conf=round(conf[0], 3), lconf=round(al.LAST_LCONF[0], 3), w=mk.word_spans([ayah], wd)[0], ms=round(len(x) / al.SR * 1000)))
+      segs, conf, lconf, unexp = al.align_repeats(x, ayah, pre)
+      ayat.append(dict(conf=round(conf, 3), lconf=round(lconf, 3), w=mk.rep_spans(segs, unexp), ms=round(len(x) / al.SR * 1000)))
     except Exception as e:
       ayat.append(dict(error=str(e)[:200]))
     finally:

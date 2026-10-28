@@ -2,7 +2,7 @@ name: Align recitations
 
 # Word (and ayah) times for the reciters without them (scripts/align-plan.py: everyayah + mp3quran ones),
 # made by forced alignment on GitHub's runners (scripts/align-batch.py). Raw results go to the branch
-# `align-results` (align/{key}/{surah}.json); they are checked and turned into app data afterwards. Run it
+# `align-results` (align2/{key}/{surah}.json, words in the order recited with repeats; align/ = the first run); they are checked and turned into app data afterwards. Run it
 # again to finish surahs a job did not reach: surahs already in `align-results` are skipped.
 on:
   workflow_dispatch:
@@ -50,6 +50,7 @@ jobs:
       ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
       MP3_CACHE: /tmp/mp3
       DEADLINE: '18000'
+      RES: align2
       KEY: ${{ matrix.job.key }}
       KIND: ${{ matrix.job.kind }}
       SOURCE: ${{ matrix.job.source }}
@@ -78,8 +79,8 @@ jobs:
         run: |
           git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
-          git -C "$RUNNER_TEMP/res" sparse-checkout set "align/$KEY"
-          mkdir -p out && cp -r "$RUNNER_TEMP/res/align/." out/ 2>/dev/null || true
+          git -C "$RUNNER_TEMP/res" sparse-checkout set "$RES/$KEY"
+          mkdir -p out && cp -r "$RUNNER_TEMP/res/$RES/." out/ 2>/dev/null || true
       - name: Align
         run: python3 scripts/align-batch.py "$KIND" "$KEY" "$SOURCE" "$SURAHS" out
       - name: Save results
@@ -88,8 +89,8 @@ jobs:
           cd "$RUNNER_TEMP/res"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p "align/$KEY" && cp "$GITHUB_WORKSPACE/out/$KEY/"*.json "align/$KEY/" 2>/dev/null || true
-          git add "align/$KEY"
+          mkdir -p "$RES/$KEY" && cp "$GITHUB_WORKSPACE/out/$KEY/"*.json "$RES/$KEY/" 2>/dev/null || true
+          git add "$RES/$KEY"
           git diff --cached --quiet && exit 0
           git commit -qm "Alignment: $KEY surahs $SURAHS"
           for i in 1 2 3 4 5 6 7 8; do

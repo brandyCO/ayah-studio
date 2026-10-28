@@ -21,7 +21,9 @@ import importlib.util, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MIN_CONF, MIN_LCONF = -1.5, -3.0
-LONG, GAP = 3000, 2500
+LONG = float(os.environ.get('LONG', 8000))  # ms: no word but the last held longer
+MAX_UNEXPLAINED = int(os.environ.get('MAX_UNEXPLAINED', 6))
+SUB = os.environ.get('ALIGN_SUB', 'align2')
 
 
 def mod(name, file):
@@ -62,21 +64,26 @@ def ranges(nums):
 
 
 def ayah_words(text, words, conf, lconf, lo=None, hi=None):
-  """Checked display-word times for one ayah, or None."""
+  """Checked display-word times for one ayah, in the order recited (a repeated word is listed again), or None.
+  `words`: align_repeats() segments [[word, startMs, endMs, unexplained letters], ...]."""
   if conf < MIN_CONF or lconf < MIN_LCONF: return None
-  need = sum(1 for w in text.rsplit('\xa0', 1)[0].replace('\xa0', ' ').split(' ') if al.letters(w))
-  if len(words) != need: return None
+  need = {j + 1 for j, w in enumerate(al.words_of(text)) if al.letters(w)}
+  if {w[0] for w in words} != need: return None
   for a, b in zip(words, words[1:]):
-    if b[1] < a[2] or b[1] - a[2] > GAP: return None
+    if b[1] < a[2] or not (b[0] == a[0] + 1 or b[0] <= a[0]): return None  # in time; next word or back (repeat)
+  # Speech the words do not explain (the model hears letters where the path rests) means a word is missing or
+  # misplaced; a held madd or a pause has none.
+  if any(w[3] > MAX_UNEXPLAINED for w in words): return None
   if any(w[2] - w[1] > LONG for w in words[:-1]): return None
   if lo is not None and (words[0][1] < lo or words[-1][2] > hi): return None
   td = token_display(text)
-  out = {}
+  out = []
   for j, s, e, *_ in words:
     d = td[j]
-    out[d] = [d, min(s, out[d][1]), max(e, out[d][2])] if d in out else [d, s, e]
-  if len(out) != len(display_words(text)): return None
-  return [out[d] for d in sorted(out)]
+    if out and out[-1][0] == d and s >= out[-1][2]: out[-1][2] = e  # the next token of the same display word
+    else: out.append([d, s, e])
+  if {o[0] for o in out} != set(range(1, len(display_words(text)) + 1)): return None
+  return out
 
 
 def main():
@@ -85,13 +92,13 @@ def main():
   quran = json.load(open(os.path.join(ROOT, 'public', 'data', 'quran-uthmani.json')))['surahs']
   rec_path = os.path.join(ROOT, 'src', 'data', 'reciters.ts')
   rec = open(rec_path).read()
-  for key in sorted(os.listdir(os.path.join(res_dir, 'align'))):
+  for key in sorted(os.listdir(os.path.join(res_dir, SUB))):
     if only and key not in only: continue
     line = next((l for l in rec.splitlines() if 'qdc: false' in l and re.search(r"(everyayah|mp3quran)", l) and
                  (re.search(r"\{ id: %s," % re.escape(key), l) and 'mp3quran' not in l or re.search(r"read: '?%s'?," % re.escape(key), l))), None)
     if not line or 'qdc: false' not in line: print(key, ': no such reciter'); continue
     mp3 = 'mp3quran' in line
-    files = sorted(f for f in os.listdir(os.path.join(res_dir, 'align', key)) if f.endswith('.json'))
+    files = sorted(f for f in os.listdir(os.path.join(res_dir, SUB, key)) if f.endswith('.json'))
     doc_path = os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)
     doc = json.load(open(doc_path)) if mp3 else None
     aligned_only = mp3 and not key.isdigit()  # no published times at all: every cut is ours
@@ -99,7 +106,7 @@ def main():
     judged, rates = {}, []
     if mp3:  # cuts for surahs without verified ones (judge() as in make-mp3quran-timings.py)
       for f in files:
-        s = int(f[:3]); raw = json.load(open(os.path.join(res_dir, 'align', key, f)))
+        s = int(f[:3]); raw = json.load(open(os.path.join(res_dir, SUB, key, f)))
         if 'error' in raw or (str(s) in doc['surahs'] and not doc['surahs'][str(s)].get('aligned')): continue
         r, why = mk.judge(raw, quran[s - 1])
         if r: judged[s] = r; rates += r[1]
@@ -112,7 +119,7 @@ def main():
     with_words, n_ok, n_all = [], 0, 0
     out_dir = os.path.join(ROOT, 'public', 'data', 'words', key)
     for f in files:
-      s = int(f[:3]); raw = json.load(open(os.path.join(res_dir, 'align', key, f)))
+      s = int(f[:3]); raw = json.load(open(os.path.join(res_dir, SUB, key, f)))
       if 'error' in raw: continue
       text, got = quran[s - 1], {}
       if mp3:
@@ -121,7 +128,9 @@ def main():
         for k in range(len(text)):
           n_all += 1
           if c[k] is None or c[k + 1] is None: continue
-          w = ayah_words(text[k], raw['w'][k], raw['conf'][k], raw['lconf'][k], c[k], c[k + 1])
+          r = raw['r'][k]
+          if 'error' in r: continue
+          w = ayah_words(text[k], r['w'], r['conf'], r['lconf'], c[k], c[k + 1])
           if w: got[str(k + 1)] = w
       else:
         for k, a in enumerate(raw['ayat']):

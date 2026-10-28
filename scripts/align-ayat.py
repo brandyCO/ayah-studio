@@ -19,7 +19,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.environ.get('ALIGN_MODEL', os.path.join(ROOT, '.cache', 'align-model'))
 SR = 16000
 HOP = 320  # samples per output frame (20 ms)
-CHUNK, CTX = 30 * SR, 3 * SR  # model input pieces with context on both sides
+# Model input pieces with context on both sides. Short on purpose: given a long stretch the model leaves out
+# words the reciter repeats (its training text has no repeats), so the repeat sounds like silence to it; in
+# 6 s pieces it hears every word (e.g. Alafasy 78:40, words 5–10 read twice).
+CHUNK, CTX = int(float(os.environ.get('ALIGN_CHUNK', 6)) * SR), int(float(os.environ.get('ALIGN_CTX', 1)) * SR)
 
 _model = None
 
@@ -132,13 +135,114 @@ def _align_em(em, ayat, preamble):
     if who and who[0] != 'pre':
       lc.setdefault(who[0], []).append(float(sc[t])); lw.setdefault(who, []).append(float(sc[t]))
   lconf = [sum(lc.get(i, [0])) / max(1, len(lc.get(i, []))) for i in range(len(ayat))]
-  # The same per word, kept as a third value of each word span.
+  # Speech the text does not explain: letters the model hears (runs of one letter as its best guess) on frames
+  # where the path is on a blank, inside a word's span or in the gap after it. A pause has none and a long
+  # madd is one letter held; the reciter going back to repeat words leaves many (blanks absorb them cheaply).
+  best = em.argmax(1).tolist()
+  heard = [b != blank and b != sep and path[t] == blank for t, b in enumerate(best)]
+  starts = [t for t in range(len(best)) if heard[t] and (t == 0 or not heard[t - 1] or best[t - 1] != best[t])]
+  import bisect
+  def unexplained(a, b):
+    return bisect.bisect_left(starts, b) - bisect.bisect_left(starts, a)
+  # The same per word, kept as third (letter confidence) and fourth (unexplained letters in its span and the
+  # gap after it) values of each word span.
   for i, a in enumerate(ayat):
     k = 0
-    for j in range(len(words_of(a))):
-      if (i, j) in ws:
-        v = lw.get((i, j), [0]); words[i][k].append(sum(v) / len(v)); k += 1
+    ks = [(i, j) for j in range(len(words_of(a))) if (i, j) in ws]
+    for n, key in enumerate(ks):
+      v = lw.get(key, [0]); words[i][k].append(sum(v) / len(v))
+      nxt = ws[ks[n + 1]][0] if n + 1 < len(ks) else ws[key][1] + 1
+      words[i][k].append(unexplained(ws[key][0], nxt)); k += 1
   return spans_a, words, float(sc.sum()), conf, lconf
+
+
+JUMP = float(os.environ.get('JUMP', 8.0))  # cost (nats) of going back to repeat words
+MAXBACK = 12  # words a repeat may go back
+
+
+def align_repeats(x, ayah, preamble=(), f0=0, f1=None):
+  """One ayah (an everyayah file, or one ayah's stretch of a surah file) aligned allowing the reciter to go back
+  and recite words again: a CTC Viterbi whose path may jump from the end of a word to the start of the same or
+  an earlier word (≤ MAXBACK back) at a cost of JUMP. Without it a repeat is absorbed by blanks and stretches one
+  word over it. Returns (segments [[word index 0-based, start s, end s], ...] in time order — repeated words
+  appear again —, confidence, letter confidence, unexplained letters per segment). `f0`, `f1`: frames of x to
+  use (one ayah of a surah recording); times stay in seconds from the start of x."""
+  global LAST_EM, _EM_OF
+  if globals().get('_EM_OF') is not x: LAST_EM, _EM_OF = emissions(x), x
+  em = LAST_EM[f0:f1].numpy().astype(np.float64)
+  T = em.shape[0]
+  blank, sep = VOCAB['<pad>'], VOCAB['|']
+  star = em.max(1) - STAR_COST
+  em2 = np.concatenate([em, star[:, None]], 1)
+  S = em.shape[1]
+  tokens, owner = [S], [None]
+  def add_word(w, who):
+    ls = letters(w)
+    if not ls: return
+    if len(tokens) > 1 and owner[-1] is not None: tokens.append(sep); owner.append(None)
+    for c in ls: tokens.append(VOCAB[c]); owner.append(who)
+  for p in preamble:
+    for w in p.split(' '): add_word(w, -1)
+  for j, w in enumerate(words_of(ayah)): add_word(w, j)
+  tokens.append(S); owner.append(None)
+  L = len(tokens); N = 2 * L + 1
+  ext = np.full(N, blank); ext[1::2] = tokens
+  own = [None] * N
+  for i in range(L): own[2 * i + 1] = owner[i]
+  allow2 = np.zeros(N, bool)
+  for s in range(3, N, 2): allow2[s] = ext[s] != ext[s - 2]
+  wids = sorted({o for o in owner if o is not None and o >= 0})
+  first = np.array([min(2 * i + 1 for i in range(L) if owner[i] == j) for j in wids])
+  last = np.array([max(2 * i + 1 for i in range(L) if owner[i] == j) for j in wids])
+  n = len(wids)
+  jk = np.arange(n)
+  ok = (jk[None, :] >= jk[:, None]) & (jk[None, :] - jk[:, None] < MAXBACK)  # [target k, source j]
+  NEG = -1e18
+  alpha = np.full(N, NEG); alpha[0] = em2[0, ext[0]]; alpha[1] = em2[0, ext[1]]
+  bp = np.zeros((T, N), np.int32)
+  idx = np.arange(N)
+  for t in range(1, T):
+    c1 = np.concatenate([[NEG], alpha[:-1]]); c2 = np.concatenate([[NEG, NEG], alpha[:-2]]); c2[~allow2] = NEG
+    stack = np.stack([alpha, c1, c2]); arg = stack.argmax(0); best = stack.max(0)
+    src = idx - arg
+    # back-jumps: from a word's last letter (or the blank after it) to the blank before an earlier word
+    a1, a2 = alpha[last], alpha[last + 1]
+    js = np.maximum(a1, a2); jsrc = np.where(a1 >= a2, last, last + 1)
+    m = np.where(ok, js[None, :], NEG); bj = m.argmax(1); bv = m.max(1) - JUMP
+    tgt = first - 1
+    better = bv > best[tgt]
+    best[tgt[better]] = bv[better]; src[tgt[better]] = jsrc[bj[better]]
+    alpha = best + em2[t, ext]
+    bp[t] = src
+  s = N - 1 if alpha[N - 1] >= alpha[N - 2] else N - 2
+  path = [0] * T
+  for t in range(T - 1, -1, -1):
+    path[t] = s; s = bp[t, s]
+  # visits: a new one at every change of word or jump back (state index going down)
+  segs, cur, sc_all, lsc = [], None, [], []
+  for t in range(T):
+    st = path[t]; o = own[st]
+    sc = em2[t, ext[st]]
+    if t and st < path[t - 1]: cur = None
+    if o is not None and o >= 0:
+      lsc.append(sc)
+      if cur is None or cur[0] != o:
+        cur = [o, t, t + 1]; segs.append(cur)
+      else: cur[2] = t + 1
+    if o is not None and o >= 0 or (segs and segs[0][1] <= t): sc_all.append(sc)
+  sec = HOP / SR
+  t0, t1 = segs[0][1], segs[-1][2]
+  conf = float(np.mean([em2[t, ext[path[t]]] for t in range(t0, t1)]))
+  lconf = float(np.mean(lsc)) if lsc else -99.0
+  best_tok = em.argmax(1)
+  heard = [b != blank and b != sep and ext[path[t]] == blank for t, b in enumerate(best_tok)]
+  starts = [t for t in range(T) if heard[t] and (t == 0 or not heard[t - 1] or best_tok[t - 1] != best_tok[t])]
+  import bisect
+  unexp = []
+  for k, (o, a, b) in enumerate(segs):
+    nxt = segs[k + 1][1] if k + 1 < len(segs) else b
+    unexp.append(bisect.bisect_left(starts, nxt) - bisect.bisect_left(starts, a))
+  return [[o, (a + f0) * sec, (b + f0) * sec] for o, a, b in segs], conf, lconf, unexp
 
 
 WINDOW = 480  # seconds: longer recordings are aligned window by window
@@ -171,7 +275,7 @@ def align(x, ayat, preamble=()):
     keep = j - i if last or j == len(ayat) else max(1, j - i - 1)
     off = f0 / fps
     ay += [[s + off, e + off] for s, e in a[:keep]]
-    wd += [[[s + off, e + off, q] for s, e, q in ws] for ws in w[:keep]]
+    wd += [[[s + off, e + off, *r] for s, e, *r in ws] for ws in w[:keep]]
     conf += c[:keep]; lconf += lc[:keep]; score += sc
     i += keep; pre = []
     f0 = int((ay[-1][1] - 0.1) * fps)  # just before the end of the last ayah kept: the star takes the rest
@@ -226,4 +330,4 @@ if __name__ == '__main__':
   pre = [] if s in (1, 9) or a != 1 else ['بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ']
   ay, wd = align(load(audio), text[a - 1:b], pre)
   print(json.dumps({'ayat': [[round(x * 1000), round(y * 1000)] for x, y in ay],
-                    'words': [[[round(x * 1000), round(y * 1000)] for x, y, _ in w] for w in wd]}))
+                    'words': [[[round(x * 1000), round(y * 1000)] for x, y, *_ in w] for w in wd]}))

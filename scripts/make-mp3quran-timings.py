@@ -100,20 +100,37 @@ def analyse(name, folder, s, text, max_min=1e9):
     cuts.append(quietest(db, speech, ay[k][1] - 0.1, ay[k + 1][0] + 0.1))
   last = quietest(db, speech, ay[-1][1] - 0.1, ay[-1][1] + 1.5)
   cuts.append(last if last is not None or ay[-1][1] + 1.5 < dur else round(dur * 1000))
+  # Each ayah again on its own, following repeats: from its cut (or just before it starts, where the reciter
+  # joined two ayat) to the next.
+  fps, rep = al.SR / al.HOP, []
+  for k in range(n):
+    a = cuts[k] / 1000 if cuts[k] is not None else ay[k][0] - 0.3
+    b = cuts[k + 1] / 1000 if cuts[k + 1] is not None else ay[k][1] + 0.3
+    try:
+      segs, c, lc, u = al.align_repeats(x, text[k], [], max(0, int(a * fps)), int(b * fps))
+      rep.append(dict(conf=round(c, 3), lconf=round(lc, 3), w=rep_spans(segs, u)))
+    except Exception as e:
+      rep.append(dict(error=str(e)[:100]))
   raw = dict(size=size, ay=[[round(a * 1000), round(b * 1000)] for a, b in ay], conf=[round(c, 3) for c in conf], lconf=[round(c, 3) for c in lconf],
-             w=word_spans(text, wd), c=cuts)
+             w=word_spans(text, wd), c=cuts, r=rep)
   if not hd: raw['seek'] = seek_table(path)
   return raw, None
 
 
 def word_spans(text, wd):
-  """Per ayah [[word number (1-based, our words), startMs, endMs, letter confidence × 100], ...]; words without
-  letters have none."""
+  """Per ayah [[word number (1-based, our words), startMs, endMs, letter confidence × 100, unexplained letters],
+  ...]; words without letters have none."""
   out = []
   for a, ws in zip(text, wd):
     idx = [j + 1 for j, w in enumerate(al.words_of(a)) if al.letters(w)]
-    out.append([[j, round(s * 1000), round(e * 1000), round(q * 100)] for j, (s, e, q) in zip(idx, ws)])
+    out.append([[j, round(s * 1000), round(e * 1000), round(q * 100), u] for j, (s, e, q, u) in zip(idx, ws)])
   return out
+
+
+def rep_spans(segs, unexp):
+  """align_repeats() segments → [[word number (1-based, our words), startMs, endMs, unexplained letters], ...] in
+  the order recited."""
+  return [[o + 1, round(a * 1000), round(b * 1000), u] for (o, a, b), u in zip(segs, unexp)]
 
 
 def judge(raw, text):
