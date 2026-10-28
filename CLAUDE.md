@@ -1069,6 +1069,12 @@ duas/reflections section in Me.
       `addListen()` (player: recitation actually played), `reelMade()` (export), `stats()`. The mushaf's
       read timer counts visible seconds only: `pageSeconds()` (1 / 1½ / 2 / 3 / 4 min, set in Me) logs the
       page (`readLog`, now also used for the stats); Ramadan's portion keeps its 20 s
+      Second pass (owner request 2026-10-28): the flame is a bold streak icon (rounded flame with a curl,
+      inner flame, core, glossy highlight; gentle sway) on the Me card and the streak widget; the card is
+      compact (76 px flame beside the count); "Your week" folded into the stats (this week's tiles show ▲/▼
+      against last week); badges show 4 (earned, then the closest) + "All n of 20"; the settings (reading
+      time per page, prayer location / method / Asr / lock screen, dhikr reminders, then the app menu) moved
+      to `#/me/settings` (⚙ in Me's top bar)
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
       (counted pages), ayat memorised (+/− by the user), reels made, dhikr on the **tasbih counter**
       (`src/ui/tasbih.ts`: Subhan Allah, Alhamdulillah, Allahu Akbar, tahleel, istighfar, hawqala; targets
