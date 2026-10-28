@@ -583,7 +583,7 @@ cloud. Build in this order:
       `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`, added 2026-10-09; all migrations applied live)
 - [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
       (§7 step 4)
-- [x] T3 Gift an ayah (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
+- [x] ~~T3 Gift an ayah~~ — **removed by the owner on 2026-10-28** (the composer, `#/gift/…`, ☰ → Gifts, the 🎁 buttons in the selection bar and the editor, `src/ui/gift.ts`, `src/together/gifts.ts` and the lift/bloom moments are gone; the `gifts` table and its functions stay untouched and stay in Export my data, with gifts received on this device). As built (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
       reciter, look, sender name ≤ 40, message ≤ 140, `reply_to`, opens); nobody reads or writes the
       table: `send_gift` (checks surah/ayah against `ayah_count()`, ≤ 10 ayat, `valid_reciter()`, the look
       with `valid_gift_look()` = `applyLook()`'s rules, built-in backgrounds only; 30 a day, anonymous
@@ -602,7 +602,7 @@ cloud. Build in this order:
       Anonymous sign-ins; until then the composer asks for Google sign-in. Shared links from the Android
       app point at the Pages site (`shareableLink()` in `src/native.ts`; circle invites too).
       In Export my data and the privacy page
-- [x] T5a Revision lamps, manual (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
+- [x] ~~T5a Revision lamps~~ — **removed by the owner on 2026-10-28** (☰ → My memorisation, the Today card line, sync of the `lamp` document, `src/data/lamps.ts`, `src/ui/lamps.ts`; existing local and synced lamps stay in Export my data). As built (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
       (localStorage `lamps`: per page box 1–5, last revised, memorised since; Leitner intervals
       1/2/4/8/16 days; "Revised today" = up a box, "Needs work" = box 1; light = 1 → 0.15 over two
       intervals, `due` past one) + `src/ui/lamps.ts`: ☰ → **My memorisation**: one canvas, a row per juz,
@@ -900,7 +900,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
       its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
       depths)
-- [x] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
+- [x] ~~L6 Home sky~~ — **removed by the owner on 2026-10-28** (☰ → Sky, the Today line, `src/ui/sky.ts`, `src/light/scenes/homeSky.ts`, `flatSky.ts`, `skyLayout.ts`; the reading log `src/data/readLog.ts` stays for T9). As built
       (built 2026-10-10: `src/data/readLog.ts` — a local reading log (localStorage `readLog`, day →
       pages, this device only, ~13 months kept for T9); the mushaf's 20 s read timer now always runs and
       logs the page (circle portions and Ramadan as before). `src/light/skyLayout.ts` (no three): every
@@ -922,7 +922,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       up/down (wheel, ↑↓) travels along the avenue, sideways swings round it, with a soft glide; labels
       for circles follow their rings. `cloudSea()` (shared) now dissolves its far edge into the sky dome
       (no hard horizon line in any scene). Flat version unchanged (the 2D dome picture)
-- [x] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
+- [x] ~~L7 Kids path in 3D~~ — **removed by the owner on 2026-10-28** ("keep it 2D, light performance"): the Kids space always shows the 2D lantern path with Noor and the constellations (L7b); `src/ui/kidsSky.ts`, `src/light/scenes/kidsPath.ts` and the "Lanterns in 3D" switch are gone. As built
       (built 2026-10-10: `src/light/scenes/kidsPath.ts` — the 38 surah lanterns (round paper, thin caps)
       float over a soft cloud sea and wind away into the distance in the 2D path's own wave
       (`lanternAt(i)`), soft dots between them, haze (fog) far off, motes; dawn palette by day, night

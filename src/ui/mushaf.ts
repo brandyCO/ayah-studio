@@ -22,8 +22,7 @@ import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
-import { lamps } from '../data/lamps';
-import { logPageRead, monthReads } from '../data/readLog';
+import { logPageRead } from '../data/readLog';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
 import type { CircleContext } from './circles';
@@ -111,26 +110,6 @@ registerToday(async () => {
   if (!ramadanCtx || (!now.day && !now.eid)) return [];
   const ctx = ramadanCtx;
   return (await import('./ramadan')).ramadanToday(ctx);
-});
-
-// Revision lamps (T5a): lamps past their interval, gently.
-let openLampsHere: (() => void) | null = null;
-registerToday(async () => {
-  if (!openLampsHere || !Object.keys(lamps()).length) return [];
-  const { dimLamps } = await import('./lamps');
-  const { count, surah } = await dimLamps();
-  if (!count) return [];
-  const open = openLampsHere;
-  return [{ icon: '✦', text: count === 1 ? t('today.lamp', { surah: surahName(surah!) }) : surah ? t('today.lampsIn', { n: count, surah: surahName(surah) }) : t('today.lamps', { n: count }), onClick: () => open() }];
-});
-
-// Home sky (L6): pages read this month as stars.
-let openSkyHere: (() => void) | null = null;
-registerToday(() => {
-  const n = monthReads().size;
-  if (!openSkyHere || !n) return [];
-  const open = openSkyHere;
-  return [{ icon: '✶', text: n === 1 ? t('today.sky1') : t('today.sky', { n }), onClick: () => open() }];
 });
 
 function firstVisitHint() {
@@ -222,7 +201,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
-    onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
@@ -232,12 +210,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
   circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
-  openSkyHere = () => void import('./sky').then((x) => x.openSky({
-    current: page,
-    goToPage: (p) => { toggleBar(false); go(p); },
-    openCircle: (id) => void openCircle(circleCtx!, id),
-  }));
-  openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
   const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
   let portion = myPortion();
   const decorate = () => {
@@ -251,7 +223,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    // Every page open ≥ 20 s lights a star in the Home sky; circles and Ramadan count it too.
+    // Every page open ≥ 20 s is logged (this device); circles and Ramadan count it too.
     readTimer = window.setTimeout(() => {
       if (p !== page) return;
       logPageRead(p);
@@ -564,10 +536,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
         }); } }, `✎  ${t('menu.reflections')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, `✦  ${t('menu.lamps')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openSkyHere?.(); } }, `✶  ${t('menu.sky')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, `🎁  ${t('menu.gifts')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
         h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
@@ -654,8 +623,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     window.removeEventListener('circles-changed', decorate);
     clearTimeout(readTimer);
     circleCtx = null;
-    openLampsHere = null;
-    openSkyHere = null;
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);

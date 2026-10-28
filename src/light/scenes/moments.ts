@@ -1,6 +1,4 @@
-// Moments (docs/light.md, L5): short full-screen scenes and calm backdrops, each a pure function of
-// t. lift — a gift's light lifts off the clouds and becomes a star; bloom — a lantern glows and
-// blooms open into the reel;
+// Moments (docs/light.md, L5): calm backdrops, each a pure function of t.
 // crescent — Ramadan's first night: the sky filling with stars over the cloud sea, under the
 // moment's crescent; eid — dawn over the clouds
 // with lanterns drifting up.
@@ -50,7 +48,7 @@ function base() {
   return { scene, camera };
 }
 
-/** Night over a cloud sea (shared by lift, bloom and crescent). */
+/** Night over a cloud sea (crescent). */
 function nightSea(seed: number, glowDir: Vector3) {
   const { scene, camera } = base();
   const sky = skyDome({ zenith: '#060a22', mid: '#151c4c', horizon: '#3a3366', glow: '#a87f8c' }, glowDir);
@@ -58,68 +56,6 @@ function nightSea(seed: number, glowDir: Vector3) {
   const clouds = cloudSea({ deep: '#0a0f2c', mid: '#232858', top: '#7a73a8', fog: '#3a3366', glint: '#e7c7a8', skyGlow: '#a87f8c' }, glowDir, { scale: 0.06 });
   scene.add(sky, stars.object, clouds.object);
   return { scene, camera, sky, stars, clouds };
-}
-
-/** A gift sent: a warm light lifts off the clouds, rises with a trail and settles as a new star. */
-export function liftScene(seed = 1): LightScene {
-  const n = nightSea(seed, new Vector3(0.1, 0.12, -1));
-  const light = new Group();
-  const core = glowSprite('#fff4dc', 0.5, 1), halo = glowSprite('#ffc977', 2.4, 0.4);
-  const trail = Array.from({ length: 18 }, (_, i) => glowSprite('#ffd58a', 0.3 * (1 - i / 18) + 0.06, 0.35 * (1 - i / 18)));
-  light.add(...trail, halo, core);
-  n.scene.add(light);
-  const path = (t: number, out: Vector3) => {
-    const k = ease(clamp01((t - 0.3) / 2.8));
-    return out.set(Math.sin(k * 3.2) * 0.8 * (1 - k), -1.6 + k * 9, -9 - k * 6);
-  };
-  return wrap({
-    scene: n.scene, camera: n.camera, far: [n.sky, n.stars.object],
-    pose(t, _s, px) {
-      n.camera.position.set(0, 3 + ease(clamp01(t / 4)) * 0.8, -ease(clamp01(t / 4)) * 2);
-      n.camera.rotation.set(0.1 + ease(clamp01((t - 0.5) / 3)) * 0.18, 0, 0);
-      n.stars.update(t, px);
-      n.clouds.update(t, n.camera.position);
-      path(t, core.position).add(n.camera.position);
-      halo.position.copy(core.position);
-      const arrive = clamp01((t - 2.9) / 0.8);
-      core.scale.setScalar(0.5 * (1 - 0.6 * arrive) * (1 + 0.15 * Math.sin(t * 4)));
-      halo.scale.setScalar(2.4 * (1 - 0.7 * arrive) + Math.sin(Math.PI * arrive) * 2);
-      trail.forEach((s, i) => {
-        path(t - (i + 1) * 0.06, s.position).add(n.camera.position);
-        s.material.opacity = 0.35 * (1 - i / 18) * (1 - arrive);
-      });
-    },
-  });
-}
-
-/** A gift opened: a lantern floats in, glows brighter and blooms open into light. */
-export function bloomScene(seed = 1): LightScene {
-  const n = nightSea(seed, new Vector3(-0.1, 0.12, -1));
-  const lantern = glowSprite('#ffd58a', 1.2, 0.9), inner = glowSprite('#fff6e6', 0.4, 1), wide = glowSprite('#ffe9c4', 1, 0);
-  const motes = moteField(seed + 2, 120, new Vector3(0, 3, -9), new Vector3(6, 2.5, 5), '#ffe4b0');
-  n.scene.add(lantern, inner, wide, motes.object);
-  return wrap({
-    scene: n.scene, camera: n.camera, far: [n.sky, n.stars.object],
-    pose(t, scale, px) {
-      // The camera eases in towards the lantern as it blooms, so the light comes to you.
-      const dolly = ease(clamp01(t / 3));
-      n.camera.position.set(Math.sin(t * 0.4) * 0.15 * (1 - dolly), 3 + dolly * 0.6, -dolly * 3);
-      n.camera.rotation.set(0.08 + dolly * 0.06, 0, 0);
-      n.stars.update(t, px);
-      n.clouds.update(t, n.camera.position);
-      const rise = ease(clamp01(t / 1.4));
-      const p = new Vector3(0, 3.2 + rise * 1.4 + Math.sin(t * 1.3) * 0.05, -7);
-      lantern.position.copy(p);
-      inner.position.copy(p);
-      wide.position.copy(p).add(new Vector3(0, 0, 0.5));
-      const g = clamp01((t - 1.2) / 1.0), b = ease(clamp01((t - 2.0) / 1.2));
-      lantern.scale.setScalar(1.2 + g * 0.8);
-      inner.scale.setScalar(0.4 + g * 0.5);
-      wide.scale.setScalar(1 + b * 26);
-      wide.material.opacity = b;
-      motes.update(t, g, scale);
-    },
-  });
 }
 
 /** Ramadan's first night: the night sky over the cloud sea slowly filling with stars, Noor nearby.
@@ -164,5 +100,5 @@ export function eidScene(seed = 1): LightScene {
   });
 }
 
-export const MOMENTS = { lift: liftScene, bloom: bloomScene, crescent: crescentScene, eid: eidScene };
+export const MOMENTS = { crescent: crescentScene, eid: eidScene };
 export type MomentId = keyof typeof MOMENTS;

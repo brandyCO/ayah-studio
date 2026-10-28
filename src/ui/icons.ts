@@ -52,7 +52,6 @@ const P: Record<string, string> = {
   highlight: '<path d="M4 18h16"/><path d="M6 14h4M14 14h4"/><rect x="9.5" y="6" width="5" height="10" rx="1.5" fill="currentColor" stroke="none" opacity=".45"/><path d="M10 14h4"/>',
   grain: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h.01M12 9h.01M16 8h.01M9 12h.01M14 12h.01M8 16h.01M12 15h.01M16 16h.01" stroke-width="2.4"/>',
   vignette: '<rect x="3.5" y="5" width="17" height="14" rx="3"/><ellipse cx="12" cy="12" rx="5.5" ry="4"/>',
-  gift: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-4-6-4.5-5.5-1.5.3 1.4 3 1.5 5.5 1.5zM12 9c1.5-4 6-4.5 5.5-1.5-.3 1.4-3 1.5-5.5 1.5z"/>',
   save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
 };
 
