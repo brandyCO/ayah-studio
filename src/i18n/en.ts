@@ -937,6 +937,9 @@ const en = {
   'search.searching': 'Searching…',
   'search.short': 'Type at least 3 letters to search the translation',
   'mushaf.search': 'Search',
+  'hist.searches': 'Recent searches',
+  'hist.pages': 'Recently read',
+  'hist.clear': 'Clear',
 };
 
 export type Key = keyof typeof en;

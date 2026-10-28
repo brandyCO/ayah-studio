@@ -1364,3 +1364,13 @@ dialog.circle-full::backdrop { background: #04071c; }
 .hit-tr { font-size: 14px; line-height: 1.5; color: var(--muted); }
 .hit mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 4px; }
 .nav-more { display: block; margin: 16px auto; }
+.nav-recent section { margin-top: 4px; }
+.nav-recent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.nav-recent-head .linkish { border: 0; background: none; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; }
+.nav-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+.nav-pages { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 8px; margin: 0 -16px; padding-inline: 16px; }
+.nav-page {
+  flex: none; display: flex; flex-direction: column; gap: 2px; min-width: 132px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card); text-decoration: none; font-size: 13px;
+}
+.nav-page strong { font-size: 15px; }

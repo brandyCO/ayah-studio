@@ -240,6 +240,10 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       `public/data/divisions.json` by `scripts/fetch-divisions.mjs`: juz + quarter starts from Quran.com,
       checked against alquran.cloud (one known difference: quarter 106 at 15:49, as in Quran.com) and the ۞
       marks in our own text
+      History (owner request): with an empty box, **Recent searches** (chips, the last 10 searches acted on —
+      a result opened or Enter) and **Recently read** (cards: the last 12 mushaf pages stayed on ≥ 3 s, page,
+      reference, when), each with Clear; this device only (`src/data/history.ts`, localStorage
+      `searchHistory` / `recentPages`). 🔍 opens a fresh search; ‹ back to `#/` keeps the last one
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).

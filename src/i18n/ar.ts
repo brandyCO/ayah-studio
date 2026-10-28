@@ -984,6 +984,9 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'search.searching': 'جارٍ البحث…',
   'search.short': 'اكتب 3 أحرف على الأقل للبحث في الترجمة',
   'mushaf.search': 'بحث',
+  'hist.searches': 'عمليات البحث الأخيرة',
+  'hist.pages': 'قرأت مؤخرًا',
+  'hist.clear': 'مسح',
 };
 
 export default ar;

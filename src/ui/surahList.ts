@@ -10,7 +10,17 @@ import { currentTranslation, translationInfo } from '../data/translations';
 import { openDebugPanel } from './debug';
 import { h } from './dom';
 import { lastRead } from './prefs';
-import { surahName, t } from '../i18n';
+import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
+import { locale, surahName, t } from '../i18n';
+
+function ago(at: number) {
+  const s = (Date.now() - at) / 1000;
+  if (s < 60) return t('dr.justNow');
+  if (s < 3600) return t('dr.minAgo', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('dr.hAgo', { n: Math.floor(s / 3600) });
+  if (s < 7 * 86400) return t('dr.dAgo', { n: Math.floor(s / 86400) });
+  return new Date(at).toLocaleDateString(locale());
+}
 
 type Tab = 'surahs' | 'juz' | 'quarters';
 const TABS: Tab[] = ['surahs', 'juz', 'quarters'];
@@ -47,13 +57,41 @@ function firstAyahOf(mushaf: Mushaf, page: number): [number, number] {
 
 export async function showSurahList(root: HTMLElement, focus = false): Promise<() => void> {
   const meta = await loadMeta();
+  if (focus) lastQuery = ''; // 🔍 starts a fresh search (recent searches are one tap away)
   const ref = (s: number, a: number) => `${surahName(meta[s - 1])} · ${s}:${a}`;
   let tab = savedTab();
   let timer = 0;
   let searchId = 0;
   let alive = true;
 
-  const body = h('div', { class: 'nav-body' });
+  // Opening anything from the results remembers the search.
+  const body = h('div', {
+    class: 'nav-body',
+    onclick: (e: Event) => { if (search.value.trim() && (e.target as Element).closest('a, .nav-jump')) addSearch(search.value); },
+  });
+  const recent = h('div', { class: 'nav-recent' });
+  function showRecent() {
+    const qs = recentSearches();
+    const ps = recentPages();
+    recent.replaceChildren(...[
+      qs.length > 0 && h('section', {},
+        h('div', { class: 'nav-recent-head' },
+          h('h2', { class: 'nav-group-title' }, t('hist.searches')),
+          h('button', { class: 'linkish', type: 'button', onclick: () => { clearSearches(); showRecent(); } }, t('hist.clear'))),
+        h('div', { class: 'nav-chips' }, ...qs.map((q) => h('button', {
+          class: 'chip', type: 'button', dir: 'auto',
+          onclick: () => { search.value = lastQuery = q; fill(); },
+        }, q)))),
+      ps.length > 0 && h('section', {},
+        h('div', { class: 'nav-recent-head' },
+          h('h2', { class: 'nav-group-title' }, t('hist.pages')),
+          h('button', { class: 'linkish', type: 'button', onclick: () => { clearRecentPages(); showRecent(); } }, t('hist.clear'))),
+        h('div', { class: 'nav-pages' }, ...ps.map((p) => h('a', { class: 'nav-page', href: ayahHash(p.s, p.a) },
+          h('strong', {}, t('common.page', { n: p.page })),
+          h('span', {}, ref(p.s, p.a)),
+          h('span', { class: 'muted' }, ago(p.at)))))),
+    ].filter((x): x is HTMLElement => !!x));
+  }
   const search = h('input', {
     type: 'search', class: 'search', placeholder: t('list.search'), value: lastQuery,
     autocomplete: 'off', enterkeyhint: 'search', 'aria-label': t('mushaf.search'),
@@ -69,6 +107,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
     onsubmit: (e: Event) => {
       e.preventDefault();
       const j = parseJump(meta, search.value);
+      addSearch(search.value);
       if (j) void jumpTo(j);
       else search.blur(); // closes the phone keyboard so the results show
     },
@@ -223,6 +262,8 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
   function fill() {
     const q = search.value.trim();
     tabs.hidden = !!q;
+    recent.hidden = !!q;
+    if (!q) showRecent();
     tabBtns.forEach((b, i) => { b.classList.toggle('on', TABS[i] === tab); b.setAttribute('aria-selected', String(TABS[i] === tab)); });
     if (q) return void showSearch(q);
     searchId++;
@@ -238,6 +279,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
       h('button', { class: 'chip', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, t('list.kids')),
       h('button', { class: 'icon-btn', 'aria-label': t('list.deviceCheck'), title: t('list.deviceCheck'), onclick: openDebugPanel }, '⚙')),
     form,
+    recent,
     tabs,
     body,
   );
