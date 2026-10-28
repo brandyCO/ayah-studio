@@ -4,10 +4,10 @@
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
-import { DHIKR, DHIKR_GOALS, MEMO_GOALS, PAGE_GOALS, REEL_GOALS, goals, setGoals, todayGoals, type DhikrId, type GoalProgress } from '../data/goals';
+import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
 import { badgeMoment } from '../data/claims';
-import { badgeClaimed, claimBadge, claimGoal, goalClaimed } from '../data/journey';
+import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed } from '../data/journey';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -27,6 +27,8 @@ const minutes = (sec: number) => {
   return m >= 60 ? t('me.hm', { h: Math.floor(m / 60), m: m % 60 }) : t('me.min', { n: m });
 };
 const timeLabel = (sec: number) => (sec % 60 ? t('me.minHalf', { n: Math.floor(sec / 60) }) : t('me.minN', { n: sec / 60 }));
+/** "Read 2 pages", "Read 1 page"… (a goal's name for an amount). */
+const goalText = (kind: string, n: number) => t((n === 1 && ['pages', 'memorise', 'reels'].includes(kind) ? `goal.${kind}1` : `goal.${kind}`) as Key, { n });
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 
 let period: Period = 'week';
@@ -70,17 +72,29 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
+  let heroSig = '';
   const paintHero = () => {
     const s = streak();
+    // Repaint only when something on the card changed (keeps the flame's animation running).
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.week, s.lost]);
+    if (sig === heroSig) return;
+    heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
       h('span', { class: 'me-pip-ic' }, w.state === 'lit' || w.state === 'revived' ? flame(1, 18, true) : w.state === 'frozen' ? '❄' : ''),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
+    // The first look at Me after today's flame was lit: it catches (flares up, sparks, the count ticks on).
+    let seen = '';
+    try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
+    const catchNow = s.litToday && seen !== dayKey() && s.days > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (s.litToday) try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
+    const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 76, still));
     hero.replaceChildren(
       h('div', { class: 'me-top' },
-        h('div', { class: 'me-flame' }, flame(tier, 76, still)),
+        flameBox,
         h('div', { class: 'me-top-txt' },
-          h('div', { class: 'me-count' }, h('b', {}, String(s.days)), h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
+          h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
           h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
       s.lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: s.lost.n })) : '',
       s.lost && s.lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
@@ -92,6 +106,20 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
+    if (catchNow) {
+      const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
+      hero.append(canvas);
+      void import('./sparks').then(({ sparks }) => setTimeout(() => {
+        const fx = sparks(canvas, ['rgba(255,170,70,1)', 'rgba(255,214,120,1)', 'rgba(255,240,200,1)']);
+        const f = flameBox.getBoundingClientRect();
+        const c = canvas.getBoundingClientRect();
+        fx.burst(f.left + f.width / 2 - c.left, f.top + f.height * 0.45 - c.top, 34, 0.55);
+        num.textContent = String(s.days);
+        num.classList.add('tick');
+        haptic(14);
+        setTimeout(() => { fx.stop(); canvas.remove(); }, 2600);
+      }, 650));
+    }
   };
 
   // --- rewards: a met goal or a new badge waits for its Claim tap, then its moment plays ---
@@ -122,7 +150,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   // --- today's goals ---
   const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
     ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)
-    : t(`goal.${g.kind}` as Key, { n: g.target });
+    : g.kind === 'custom' ? g.custom!.name
+      : goalText(g.kind, g.target);
   const goalRow = (g: GoalProgress) => {
     const met = g.done >= g.target;
     const pct = Math.min(1, g.done / g.target);
@@ -134,26 +163,106 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, 'aria-pressed': String(met), onclick: () => { setAdhkar(!met); haptic(); } }, met ? t('goal.doneMark') : t('goal.markDone'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
+    else if (g.kind === 'custom') {
+      const c = g.custom!;
+      act = c.target === 1
+        ? h('button', { class: `chip${met ? ' on' : ''}`, 'aria-pressed': String(met), onclick: () => { addCustom(c.id, met ? -1 : 1, 1); haptic(); } }, met ? t('goal.doneMark') : t('goal.markDone'))
+        : h('span', { class: 'goal-step' },
+          h('button', { class: 'chip', 'aria-label': t('goal.less'), onclick: () => { addCustom(c.id, -1, c.target); haptic(); } }, '−'),
+          h('button', { class: 'chip', 'aria-label': t('goal.more'), onclick: () => { addCustom(c.id, 1, c.target); haptic(); } }, '+'));
+    }
     if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: (e: Event) => void claimGoalRow(g, e.currentTarget as Element) }, `✦ ${t('cel.claim')}`);
     return h('div', { class: `goal${met ? ' met' : ''}` },
       h('span', { class: 'goal-ring', style: `--p:${pct}` }, met ? '✓' : ''),
       h('span', { class: 'goal-txt' },
         h('b', {}, goalLabel(g)),
-        h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarHelp')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
+        h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarHelp'))
+          : g.kind === 'custom' && g.target === 1 ? (met ? t('goal.doneToday') : t('cg.mine')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
       act);
   };
+  // A first pace (once), then the goals; at most one gentle suggestion a week.
+  const paceCard = () => h('div', { class: 'pace' },
+    h('p', { class: 'muted small' }, t('pace.sub')),
+    ...(['gentle', 'steady', 'devoted'] as Pace[]).map((p) => h('button', { class: `pace-opt${p === 'steady' ? ' rec' : ''}`, onclick: () => { choosePace(p); haptic(); } },
+      h('b', {}, t(`pace.${p}` as Key)), h('span', { class: 'muted small' }, paceLine(p)))));
+  const paceLine = (p: Pace) => {
+    const v = PACES[p];
+    const dk = Object.values(v.dhikr).reduce((a, b) => a + (b ?? 0), 0);
+    return [goalText('pages', v.pages), v.memorise ? goalText('memorise', v.memorise) : '', t('pace.dhikr', { n: dk }), v.adhkar ? t('goal.adhkar') : '']
+      .filter(Boolean).join(' · ');
+  };
+  const tipLabel = (tip: GoalTip, n: number) => tip.kind === 'dhikr'
+    ? `${t(DHIKR.find((x) => x.id === tip.dhikr)!.key as Key)} ×${n}` : goalText(tip.kind, n);
+  const tipCard = (tip: GoalTip) => h('div', { class: `goal-tip${tip.up ? ' up' : ''}` },
+    h('p', {}, t(tip.up ? 'tip.up' : 'tip.down', { goal: tipLabel(tip, tip.from), to: tipLabel(tip, tip.to) })),
+    h('div', { class: 'chips' },
+      h('button', { class: 'chip on', onclick: () => { acceptTip(tip); haptic(); toast(t('tip.done')); } }, t('tip.yes')),
+      h('button', { class: 'chip', onclick: () => dismissTip(tip) }, t('tip.no'))));
   const paintGoals = () => {
+    if (needsPace()) {
+      goalsBox.replaceChildren(h('h2', { class: 'me-h' }, t('pace.title')), paceCard());
+      return;
+    }
     const list = todayGoals();
     const all = list.length > 0 && list.every((g) => g.done >= g.target);
+    const tip = goalTip();
     goalsBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
+      tip ? tipCard(tip) : '',
       all && list.length > 1 && !goalClaimed('all')
         ? h('button', { class: 'claim-all', onclick: (e: Event) => void claimAll(e.currentTarget as Element) }, `✦ ${t('cel.claimAll')}`)
         : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
+      h('div', { class: 'goal-links' },
+        h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
+        goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
   };
+  /** Add or change one of the user's own goals. */
+  function openCustom(c?: CustomGoal) {
+    const cur: CustomGoal = c ? { ...c, days: [...c.days] } : { id: Date.now().toString(36), name: '', target: 1, days: [] };
+    const name = h('input', { class: 'search', maxlength: 40, placeholder: t('cg.placeholder'), value: cur.name, 'aria-label': t('cg.name') });
+    const wd = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    const chip = (label: string, on: () => boolean, tap: () => void) => {
+      const b = h('button', { class: `chip${on() ? ' on' : ''}`, 'aria-pressed': String(on()), onclick: () => { tap(); paint(); } }, label);
+      return b;
+    };
+    const times = h('div', { class: 'chips' });
+    const days = h('div', { class: 'chips' });
+    const paint = () => {
+      times.replaceChildren(...CUSTOM_TIMES.map((n) => chip(n === 1 ? t('cg.once') : `×${n}`, () => cur.target === n, () => { cur.target = n; })));
+      days.replaceChildren(chip(t('cg.every'), () => !cur.days.length, () => { cur.days = []; }),
+        ...order.map((d) => chip(wd.format(new Date(2026, 0, 4 + d)), () => cur.days.includes(d), () => {
+          cur.days = cur.days.includes(d) ? cur.days.filter((x) => x !== d) : [...cur.days, d];
+          if (cur.days.length === 7) cur.days = [];
+        })));
+    };
+    paint();
+    const d = dialog(t(c ? 'cg.edit' : 'cg.title'),
+      h('div', { class: 'sheet-scroll goal-editor' },
+        h('label', { class: 'goal-edit' }, h('b', {}, t('cg.name')), name),
+        h('div', { class: 'goal-edit' }, h('b', {}, t('cg.times')), times),
+        h('div', { class: 'goal-edit' }, h('b', {}, t('cg.days')), days),
+        h('p', { class: 'muted small' }, t('cg.private')),
+        h('div', { class: 'chips cg-actions' },
+          h('button', { class: 'primary brand-btn', onclick: () => {
+            cur.name = name.value.trim().slice(0, 40);
+            if (!cur.name) { name.focus(); return; }
+            const g = goals();
+            const i = g.custom.findIndex((x) => x.id === cur.id);
+            if (i >= 0) g.custom[i] = cur; else if (g.custom.length < CUSTOM_MAX) g.custom.push(cur);
+            setGoals(g);
+            d.close();
+          } }, t('cg.save')),
+          c ? h('button', { class: 'chip', onclick: () => {
+            const g = goals();
+            g.custom = g.custom.filter((x) => x.id !== cur.id);
+            setGoals(g);
+            d.close();
+          } }, t('cg.delete')) : '')));
+    if (!c) setTimeout(() => name.focus(), 50);
+  }
   function openGoalEditor() {
     const g = goals();
     const row = (label: string, list: readonly number[], cur: number, set: (n: number) => void, fmt = (n: number) => String(n)) =>
@@ -164,13 +273,21 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
           (e.currentTarget as HTMLElement).parentElement!.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === e.currentTarget));
         },
       }, n ? fmt(n) : t('goal.off')))));
-    dialog(t('goal.editTitle'),
+    const paceRow = h('div', { class: 'goal-edit' }, h('b', {}, t('pace.title')), h('div', { class: 'chips' },
+      ...(['gentle', 'steady', 'devoted'] as Pace[]).map((p) => h('button', { class: 'chip', onclick: () => { choosePace(p); d.close(); openGoalEditor(); } }, t(`pace.${p}` as Key)))));
+    const mine = h('div', { class: 'goal-edit' }, h('b', {}, t('cg.mine')),
+      h('div', { class: 'menu' }, ...g.custom.map((c) => h('button', { class: 'menu-item', onclick: () => { d.close(); openCustom(c); } },
+        h('span', {}, c.name), h('span', { class: 'muted small' }, ` · ${c.target === 1 ? t('cg.once') : `×${c.target}`}`))),
+      g.custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => { d.close(); openCustom(); } }, `＋  ${t('cg.add')}`) : h('p', { class: 'muted small' }, t('cg.full'))));
+    const d = dialog(t('goal.editTitle'),
       h('div', { class: 'sheet-scroll goal-editor' },
+        paceRow,
         row(t('goal.ePages'), PAGE_GOALS, g.pages, (n) => { g.pages = n; }),
         row(t('goal.eMemo'), MEMO_GOALS, g.memorise, (n) => { g.memorise = n; }),
         row(t('goal.eReels'), REEL_GOALS, g.reels, (n) => { g.reels = n; }),
         ...DHIKR.map((x) => row(t(x.key as Key), DHIKR_GOALS, g.dhikr[x.id] ?? 0, (n) => { if (n) g.dhikr[x.id] = n; else delete g.dhikr[x.id]; })),
-        row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on'))));
+        row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on')),
+        mine));
   }
 
   const paintStats = () => {

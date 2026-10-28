@@ -20,7 +20,7 @@ export function pendingRewards(now = new Date()): Pending[] {
   return out;
 }
 
-/** Which animation a badge gets: the streak flame, the grand rosette, or the medallion. */
-export const badgeMoment = (b: BadgeDef): 'flame' | 'rosette' | 'medal' =>
-  b.icon === 'flame' ? 'flame'
+/** Which animation a badge gets: the streak flame, the Khatm, the grand rosette, or the medallion. */
+export const badgeMoment = (b: BadgeDef): 'flame' | 'khatm' | 'rosette' | 'medal' =>
+  b.icon === 'flame' ? 'flame' : b.id === 'khatm' ? 'khatm'
     : ['surah1', 'surahs10', 'juz1', 'khatm', 'memo100', 'dhikr10k'].includes(b.id) ? 'rosette' : 'medal';

@@ -5,13 +5,15 @@
 //   flame    a streak milestone: the flame rises, rings of light pulse out, the days count up, the badge drops in
 //   rosette  a big milestone (a surah, a juz, a Khatm, 10,000 dhikr…): a twelve-petal rosette unfolds like a
 //            mosque window, the badge settles in its centre
+//   khatm    reading every page of the mushaf: the rosette doubled (an outer ring of 24 petals opening after
+//            the 12), a slow halo that stays, the date under the title; the longest and grandest
 //   medal    other badges: soft rays turn slowly behind the badge as it settles
 // Polish: the Claim button lifts into a seed of light that flies to the centre, gathers and bursts
 // (flash, light sweep, sparks on a canvas, src/ui/sparks.ts); the moment unfolds from that burst with
 // overshoot, a second beat when it lands, then slow motes rising. A light vibration on each beat, no sound. Tap the button (or anywhere once it has played) to close; Esc too.
 // Reduced motion: the still final picture, faded in.
 import type { BadgeDef } from '../data/badges';
-import { t, type Key } from '../i18n';
+import { locale, t, type Key } from '../i18n';
 import { h } from './dom';
 import { badgeArt } from './badge';
 import { flame } from './flame';
@@ -20,7 +22,7 @@ import { sparks, type Sparks } from './sparks';
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string }
   | { kind: 'flame'; badge: BadgeDef; days: number }
-  | { kind: 'rosette' | 'medal'; badge: BadgeDef };
+  | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
 
 const NS = 'http://www.w3.org/2000/svg';
 const svg = (box: number, inner: string) => {
@@ -90,7 +92,9 @@ function starArt() {
     <g fill="#ffe08a">${motes(12, 100, 100, 60)}</g>`);
 }
 
-function rosetteArt() {
+function rosetteArt(khatm = false) {
+  const outer = khatm ? Array.from({ length: 24 }, (_, i) =>
+    `<g transform="rotate(${i * 15 + 7.5} 120 120)"><path class="cel-petal outer" style="--d:${(0.9 + i * 0.035).toFixed(2)}s" d="M120 120C127 92 128 40 120 6C112 40 113 92 120 120Z"/></g>`).join('') : '';
   const petals = Array.from({ length: 12 }, (_, i) =>
     `<g transform="rotate(${i * 30} 120 120)"><path class="cel-petal" style="--d:${(i * 0.06).toFixed(2)}s" d="M120 120C134 92 134 56 120 22C106 56 106 92 120 120Z"/></g>`).join('');
   const dots = Array.from({ length: 24 }, (_, i) => {
@@ -103,7 +107,9 @@ function rosetteArt() {
       <radialGradient id="celPg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#bff5e4" stop-opacity=".55"/><stop offset=".6" stop-color="#ffd977" stop-opacity=".18"/><stop offset="1" stop-color="#ffd977" stop-opacity="0"/></radialGradient>
     </defs>
     <circle class="cel-burst" cx="120" cy="120" r="118" fill="url(#celPg)"/>
+    ${khatm ? '<circle class="cel-halo" cx="120" cy="120" r="70" fill="none" stroke="#ffe7a3" stroke-width="10" stroke-opacity=".25"/>' : ''}
     <g class="cel-ring" fill="#f3c56b" opacity=".7">${dots}</g>
+    ${khatm ? `<g fill="url(#celP)" stroke="#f3c56b" stroke-width=".8" opacity=".6">${outer}</g>` : ''}
     <g fill="url(#celP)" stroke="#f3c56b" stroke-width="1.2">${petals}</g>
     <g fill="none" stroke="#f3c56b" stroke-width="2" stroke-linejoin="round">
       <polygon class="cel-draw" pathLength="1" style="--d:.7s" points="${square(120, 120, 98, 45)}"/>
@@ -150,9 +156,11 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
         h('span', { class: 'cel-count' }, count, h('span', {}, t('me.days'))),
         h('span', { class: 'cel-badge small' }, badgeArt(b.tier, b.icon, true, 64)));
     } else {
-      kicker = t(m.kind === 'rosette' ? 'cel.big' : 'cel.badge');
-      stage.append(m.kind === 'rosette' ? rosetteArt() : raysArt(),
-        h('span', { class: 'cel-badge' }, badgeArt(b.tier, b.icon, true, m.kind === 'rosette' ? 104 : 120)));
+      kicker = t(m.kind === 'medal' ? 'cel.badge' : 'cel.big');
+      if (m.kind === 'khatm') title = t('cel.khatm');
+      if (m.kind === 'khatm') sub = t('cel.khatmSub', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'long' }).format(new Date()) });
+      stage.append(m.kind === 'medal' ? raysArt() : rosetteArt(m.kind === 'khatm'),
+        h('span', { class: 'cel-badge' }, badgeArt(b.tier, b.icon, true, m.kind === 'medal' ? 120 : 104)));
     }
   }
   const palette: Record<Moment['kind'], string[]> = {
@@ -160,6 +168,7 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
     star: ['rgba(255,214,120,1)', 'rgba(255,246,214,1)', 'rgba(255,190,90,1)'],
     flame: ['rgba(255,150,60,1)', 'rgba(255,205,90,1)', 'rgba(255,110,50,1)'],
     rosette: ['rgba(255,214,120,1)', 'rgba(150,240,210,1)', 'rgba(255,246,214,1)'],
+    khatm: ['rgba(255,214,120,1)', 'rgba(120,235,200,1)', 'rgba(255,250,230,1)', 'rgba(255,190,90,1)'],
     medal: ['rgba(255,214,120,1)', 'rgba(255,240,200,1)'],
   };
   return new Promise((resolve) => {
@@ -223,13 +232,13 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
     later(BURST, () => {
       el.classList.add('go');
       fx = sparks(canvas, palette[m.kind]);
-      const big = m.kind === 'rosette' || m.kind === 'star' || m.kind === 'flame';
+      const big = m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'star' || m.kind === 'flame';
       const sb = stage.getBoundingClientRect();
       const cr = canvas.getBoundingClientRect();
       fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
-      vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' ? [24, 90, 14] : [22]);
+      vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' || m.kind === 'khatm' ? [24, 90, 14] : [22]);
       // A second beat when the badge lands / the star fills / the lantern opens.
-      const beat = m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
+      const beat = m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
       later(beat, () => {
         const b2 = stage.getBoundingClientRect();
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);

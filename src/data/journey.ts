@@ -44,6 +44,8 @@ interface DayRec {
   g?: 1;
   /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
   cl?: string[];
+  /** The user's own goals: id → times done that day. */
+  cu?: Record<string, number>;
 }
 export interface Totals { pages: number; ayat: number; listen: number; surahs: number; reels: number; dhikr: number; juz: number; memorised: number }
 interface State {
@@ -333,6 +335,14 @@ export function addMemorised(n: number, now = new Date()) {
   const next = Math.max(0, (d.m ?? 0) + n);
   load().totals.memorised = Math.max(0, load().totals.memorised + next - (d.m ?? 0));
   d.m = next;
+  save();
+}
+
+/** One of the user's own goals: `n` more (or fewer) times today. */
+export function addCustom(id: string, n: number, max: number, now = new Date()) {
+  const d = today(now);
+  const v = Math.max(0, Math.min(max, (d.cu?.[id] ?? 0) + n));
+  d.cu = { ...(d.cu ?? {}), [id]: v };
   save();
 }
 
