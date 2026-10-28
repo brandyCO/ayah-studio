@@ -200,7 +200,12 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'prefs-changed', 'drafts-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  // The reel look is remembered at every studio edit, like the draft below.
+  window.addEventListener('prefs-changed', (e) => soon((e as CustomEvent).detail === 'reelLook' ? 20_000 : 4000));
+  // The studio saves its draft ~1 s after every edit: sync once the editing has rested a while,
+  // not a pull + push round after each pause (leaving the studio still syncs within 20 s).
+  window.addEventListener('drafts-changed', () => soon(20_000));
   window.addEventListener('online', () => soon(500));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') soon(500);

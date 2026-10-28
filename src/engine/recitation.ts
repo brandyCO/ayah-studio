@@ -146,6 +146,8 @@ export interface Pacing {
   hold: boolean; // keep an ayah's text on screen until just before the next ayah
   intro: number; // seconds of intro card before the recitation
   outro: number; // seconds of closing card after it
+  /** Seconds the video keeps going after the recitation (silent; background and marks continue). */
+  tail?: number;
   /** Per ayah: seconds of silence added before it (≥ 0; the first ayah's entry is ignored). */
   gaps?: number[];
   /** Per ayah: seconds of silence trimmed from the start and end of its audio (clamped so no word is cut). */
@@ -202,7 +204,7 @@ export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
     pieces.push({ from: a + head, to: b - tail, at });
   });
   const lastP = pieces[n - 1];
-  const duration = lastP.at + (lastP.to - lastP.from) + o.outro;
+  const duration = lastP.at + (lastP.to - lastP.from) + Math.max(0, o.tail ?? 0) + o.outro;
   const ayat = A.map((a, i): PlannedAyah => {
     const d0 = pieces[i].at - pieces[i].from;
     // Never before the ayah's own audio (the first ayah may be trimmed past an early word timing).

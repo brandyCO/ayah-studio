@@ -57,7 +57,7 @@ export class VideoLoop {
   private iter: AsyncGenerator<WrappedCanvas, void, unknown> | null = null;
   private next: WrappedCanvas | null = null;
   private shown = -1;
-  private busy: Promise<void> | null = null;
+  private busy: Promise<boolean> | null = null;
 
   private constructor(private sink: CanvasSink, readonly duration: number, w: number, h: number) {
     this.canvas = document.createElement('canvas');
@@ -81,7 +81,7 @@ export class VideoLoop {
     // Decode no larger than needed to cover the 1080×1920 frame (phone videos are often 4K).
     const k = Math.min(1, Math.max(1080 / track.displayWidth, 1920 / track.displayHeight));
     const w = Math.round(track.displayWidth * k), h = Math.round(track.displayHeight * k);
-    const loop = new VideoLoop(new CanvasSink(track, { width: w, height: h, fit: 'cover', poolSize: 2 }), duration, w, h);
+    const loop = new VideoLoop(new CanvasSink(track, { width: w, height: h, fit: 'cover', poolSize: 3 }), duration, w, h);
     await loop.prepare(0);
     return loop;
   }
@@ -90,14 +90,16 @@ export class VideoLoop {
     return this.busy !== null;
   }
 
-  /** Make `canvas` hold the frame for time t (looped). Calls are serialized. */
-  prepare(t: number): Promise<void> {
+  /** Make `canvas` hold the frame for time t (looped). Calls are serialized. Resolves true when the
+   *  picture changed (a paused preview need not be redrawn otherwise). */
+  prepare(t: number): Promise<boolean> {
     if (this.busy) return this.busy.then(() => this.prepare(t));
     this.busy = this.seek(((t % this.duration) + this.duration) % this.duration).finally(() => (this.busy = null));
     return this.busy;
   }
 
-  private async seek(lt: number) {
+  private async seek(lt: number): Promise<boolean> {
+    const before = this.shown;
     // Restart the decoder when jumping backwards (loop wrap, scrubbing) or far ahead.
     if (!this.iter || lt < this.shown || lt > this.shown + 1) {
       await this.iter?.return();
@@ -105,19 +107,23 @@ export class VideoLoop {
       this.next = (await this.iter.next()).value ?? null;
       this.shown = -1;
     }
+    // Step to the last frame at or before lt and copy only that one (a 60 fps clip in a 30 fps reel
+    // skips every other frame). The sink's pool of 3 keeps `frame` intact while `next` decodes.
     let frame: WrappedCanvas | null = null;
     while (this.next && this.next.timestamp <= lt + 1e-4) {
       frame = this.next;
-      const ctx = this.canvas.getContext('2d')!;
-      ctx.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height);
-      this.shown = frame.timestamp;
       this.next = (await this.iter.next()).value ?? null;
+    }
+    if (frame) {
+      this.canvas.getContext('2d')!.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height);
+      this.shown = frame.timestamp;
     }
     if (!frame && this.shown < 0 && this.next) {
       // Requested time is before the first frame: show the first frame.
       this.canvas.getContext('2d')!.drawImage(this.next.canvas, 0, 0, this.canvas.width, this.canvas.height);
       this.shown = this.next.timestamp;
     }
+    return this.shown !== before;
   }
 
   dispose() {

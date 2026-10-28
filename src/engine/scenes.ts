@@ -169,14 +169,15 @@ export function videoTime(s: SceneSpan, t: number, clip: Clip | null | undefined
 }
 
 /** Make every video visible at t hold its frame (export: awaited; preview: fire and forget). */
-export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false, speed = 1): Promise<unknown> | null {
+/** Resolves true when a video's picture changed (null: no video to prepare). */
+export function prepareScenes(spans: SceneSpan[], t: number, media: (BackgroundMedia | undefined)[], clips: (Clip | null)[], skipBusy = false, speed = 1): Promise<boolean> | null {
   const { a, b } = scenesAt(spans, t);
-  const jobs: Promise<void>[] = [];
+  const jobs: Promise<boolean>[] = [];
   for (const s of [a, b]) {
     const v = s && media[s.entry]?.video;
     if (v && !(skipBusy && v.isBusy)) jobs.push(v.prepare(videoTime(s, t, clips[s.entry], v.duration, speed)));
   }
-  return jobs.length ? Promise.all(jobs) : null;
+  return jobs.length ? Promise.all(jobs).then((r) => r.some(Boolean)) : null;
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));

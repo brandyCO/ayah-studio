@@ -24,6 +24,7 @@ const words = await load('/src/engine/words.ts');
 const rec = await load('/src/engine/recitation.ts');
 const { buildTimeline } = await load('/src/engine/timeline.ts');
 const layout = await load('/src/engine/layout.ts');
+const motion = await load('/src/engine/motion.ts');
 const scenes = await load('/src/engine/scenes.ts');
 
 const data = (f) => readFile(new URL(`../public/data/${f}`, import.meta.url), 'utf8').then(JSON.parse);
@@ -77,6 +78,9 @@ const STYLES = [STYLE, { titlePos: 'below', titleSize: 'l', credit: true, waterm
   { ...STYLE, arSize: 52 }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, arSize: 92 }, { titlePos: 'below', titleSize: 's', credit: false, watermark: false, arSize: 75 },
   { ...STYLE, format: '1:1' }, { titlePos: 'below', titleSize: 'l', credit: true, watermark: true, format: '1:1', arSize: 92 },
   { ...STYLE, format: '16:9' }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, format: '16:9', arSize: 92 },
+  // The user's own watermark (strip at the top or the bottom), with everything else on.
+  { ...STYLE, mark: { h: 72, top: true } }, { titlePos: 'bottom', titleSize: 'l', credit: true, watermark: true, mark: { h: 144, top: false } },
+  { titlePos: 'below', titleSize: 'm', credit: true, watermark: false, mark: { h: 88, top: false }, format: '1:1' }, { ...STYLE, mark: { h: 144, top: true }, format: '16:9' },
   { ...STYLE, learn: true }, { ...STYLE, learn: true, format: '16:9' }];
 const surah = (n) => meta[n - 1];
 const reciter = { id: 0, name: 'Test', short: 'Test', everyayah: '' };
@@ -105,6 +109,31 @@ function checkLayout(lay, style, label) {
   assert(lay.ar.bottom <= lay.en.top || lay.en.bottom === lay.en.top, `${label}: Arabic above translation`);
   if (style.titlePos === 'below') assert(lay.title >= Math.max(lay.ar.bottom, lay.en.bottom) + 30, `${label}: room for the surah name under the translation`);
   for (const y of [lay.credit, lay.watermark]) if (y !== null) assert(y - 20 >= Math.max(lay.en.bottom, lay.ar.bottom, title[1]) && y + 20 <= S.y1, `${label}: footer clear of everything`);
+  if (style.mark) {
+    const m = lay.mark;
+    assert(!!m && m.y >= S.y0 - 1e-6 && m.y + m.h <= S.y1 + 1e-6, `${label}: own mark inside the title-safe area`);
+    const others = [[lay.ar.top, Math.max(lay.ar.bottom, lay.en.bottom)], title, ...[lay.credit, lay.watermark].filter((y) => y !== null).map((y) => [y - 20, y + 20])];
+    for (const [a, b] of others) assert(m.y + m.h <= a || m.y >= b, `${label}: own mark clear of the text, reference, credit and Ayah Studio mark`);
+  }
+}
+
+// Moved text (src/engine/motion.ts): whatever the user asks, the drawn block stays inside its region
+// and never below the legible minimum scale.
+{
+  const region = { x0: 54, x1: 1026, y0: 300, y1: 1600 };
+  for (const box of [{ x0: 140, x1: 940, y0: 700, y1: 1000 }, { x0: 60, x1: 1020, y0: 400, y1: 1500 }, { x0: 500, x1: 580, y0: 900, y1: 960 }])
+    for (const p of [{ x: 0, y: 0, s: 1 }, { x: -3000, y: 4000, s: 5 }, { x: 900, y: -900, s: 0.1 }, { x: 37, y: -12, s: 1.3 }])
+      for (const minS of [0.65, 1]) {
+        const f = motion.fitTextPose(p, box, region, minS);
+        const cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2;
+        const r = { x0: cx + f.x - ((box.x1 - box.x0) * f.s) / 2, x1: cx + f.x + ((box.x1 - box.x0) * f.s) / 2, y0: cy + f.y - ((box.y1 - box.y0) * f.s) / 2, y1: cy + f.y + ((box.y1 - box.y0) * f.s) / 2 };
+        const fits = (box.x1 - box.x0) * minS <= region.x1 - region.x0 && (box.y1 - box.y0) * minS <= region.y1 - region.y0;
+        assert(f.s >= minS - 1e-9, 'moved text: never below the legible minimum');
+        if (fits) assert(r.x0 >= region.x0 - 1e-6 && r.x1 <= region.x1 + 1e-6 && r.y0 >= region.y0 - 1e-6 && r.y1 <= region.y1 + 1e-6, `moved text stays inside its area (${JSON.stringify(p)})`);
+      }
+  const tr = motion.addKey(motion.placed(undefined, 0, { x: 0, y: -200, s: 1 }), 1);
+  const tr2 = motion.placed(tr, 5, { x: 0, y: 200, s: 1.2 });
+  assert(motion.poseAt(tr2, 1).y === -200 && motion.poseAt(tr2, 5).y === 200 && Math.abs(motion.poseAt(tr2, 3).y) < 1e-9 && motion.poseAt(tr2, 9).s === 1.2, 'keyframes: held before/after, eased between');
 }
 
 function checkTimeline(tl, label, texts, plan, meanings, synced) {

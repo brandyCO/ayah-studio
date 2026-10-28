@@ -440,6 +440,46 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
       button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
       the end pauses and brings them back
+- [x] Own watermark, move by touch, faster studio (owner request 2026-10-28): **Layout → Watermark**
+      (`src/ui/markPanel.ts`, `src/engine/mark.ts`): the small Ayah Studio mark on/off, the user's own
+      mark — text (≤ 40 chars, UI font) or a logo (PNG/WebP/SVG/JPEG, scaled to ≤ 480 px, kept on this device
+      in localStorage `markLogos`, `src/data/logos.ts`) — top left/right or bottom left/centre/right, size
+      50–200 %, opacity 20–100 %, and **Remove all watermarks**. `project.mark` (per device pref `myMark`,
+      not in the look, so gifts never carry it); `frameLayout()` keeps a strip for it at the top or the
+      bottom, so it never covers the text, the reference, the credit or the Ayah Studio mark (rule 6;
+      `npm run check`). Quick reel → Finish links to it. **Move** (`src/engine/motion.ts`,
+      `src/ui/studioTouch.ts`): Move tool → Text / Background, or a tap on the preview; drag to move,
+      pinch or the mouse wheel to scale. `project.motion {text?, bg?}`: one pose for the whole reel, or
+      keyframes (Add keyframe at the playhead; later moves set the key at the playhead; previous/next;
+      gold diamonds on the timeline ruler; eased with smoothstep). The renderer keeps the text block
+      inside the text area and never below the legible minimum (52 px Arabic, 32 px translation) — moved
+      and scaled only, never rotated (rule 7); the name + reference move with it when they sit below the
+      ayah; the background is kept covering the frame (scale 1–3×). Speed: a paused preview on a video
+      background no longer redraws every frame (`VideoLoop.prepare()` reports a changed picture; idle
+      CPU ≈ 935 → 27 ms per 3 s in Chromium); the timeline draws its tracks into a cached layer three
+      screens wide (playing, panning and scrubbing copy it; waveform via a max-pyramid); icons are parsed
+      once and cloned; draft and reel-look syncing wait 20 s after the last studio edit
+      Second pass (owner "yes", 2026-10-28): **5 tools** (Styles · Text · Audio · Scenes · Layout; Colours
+      is one option with Ayah / Translation / Surah name tabs; Move text sits in Text, Move background in
+      Scenes; a draft reopens on the last tool used, pref `lastTool`); a **scrubber** on top of every panel
+      (look through the reel while adjusting); timeline for thumbs: 52 px tracks, 20 px grip handles,
+      the playhead snaps to ayah starts (and word starts when zoomed in) with a light vibration, faint
+      word marks on the audio; preview: **corner handles** resize, the safe area and centre line show while
+      dragging (the text snaps to the centre); a tap never plays/pauses (owner: a tap means edit);
+      **My styles** (Styles → "Save this look", ≤ 8, localStorage `myStyles`, applied with `applyLook()`);
+      slow phones: while playing, the preview drops to 75 % then 50 % resolution when frames come
+      ≥ 40 ms apart, sharp again when paused (export unchanged). Third pass (owner "yes"): the export decodes the next
+      background frame while the current one encodes; `VideoLoop` copies only the last frame at or before
+      t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
+      before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
+      reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
+      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
+      divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
+      top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
+      Until** (`mark.from` / `mark.to`, 0.3 s fades); **Audio → Ending**: `project.tail` 0–10 s
+      (`TAIL_MAX`) after the recitation, before the closing card — silent (rule 3), background, reference
+      and marks continue (`Pacing.tail`, `arrangeReel`)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
