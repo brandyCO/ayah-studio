@@ -47,10 +47,11 @@ export interface SpineOptions {
 }
 
 const PAD = 16; // the reel starts this far from the left edge
-const RULER = 24, SCENES = 50, AUDIO = 46, GAP = 8;
+const RULER = 24, SCENES = 52, AUDIO = 52, GAP = 8;
 const Y_SC = RULER + 4, Y_AU = Y_SC + SCENES + GAP;
 const TRACKS = Y_AU + AUDIO;
-const HANDLE = 14;
+const HANDLE = 20; // wide grips, easy to catch with a thumb
+const SNAP_PX = 8; // the playhead snaps to an ayah or word start this close
 
 const thumbs = new Map<string, HTMLImageElement>();
 
@@ -211,7 +212,7 @@ export function createSpine(o: SpineOptions) {
     if (y < Y_SC - 2) return { kind: 'ruler' };
     const t = T(x);
     const sel = o.selection();
-    const near = (s: number) => Math.abs(X(s) - x) <= HANDLE + 6;
+    const near = (s: number) => Math.abs(X(s) - x) <= HANDLE + 10;
     if (y < Y_SC + SCENES + GAP / 2) {
       if (x >= X(tl.duration) + 8 && x <= X(tl.duration) + 8 + SCENES) return { kind: 'add' };
       const b = [0, ...sceneBounds(), tl.duration];
@@ -226,8 +227,8 @@ export function createSpine(o: SpineOptions) {
       const blocks = audioBlocks();
       if (sel?.kind === 'audio' && blocks[sel.index]) {
         const bl = blocks[sel.index];
-        if (Math.abs(X(bl.a) + HANDLE / 2 - x) <= HANDLE) return { kind: 'audio', index: sel.index, part: 'start' };
-        if (Math.abs(X(bl.b) - HANDLE / 2 - x) <= HANDLE) return { kind: 'audio', index: sel.index, part: 'end' };
+        if (Math.abs(X(bl.a) + HANDLE / 2 - x) <= HANDLE + 6) return { kind: 'audio', index: sel.index, part: 'start' };
+        if (Math.abs(X(bl.b) - HANDLE / 2 - x) <= HANDLE + 6) return { kind: 'audio', index: sel.index, part: 'end' };
       }
       const i = blocks.findIndex((bl) => t >= bl.a && t < bl.b);
       return i >= 0 ? { kind: 'audio', index: i, part: 'body' } : { kind: 'empty' };
@@ -251,7 +252,8 @@ export function createSpine(o: SpineOptions) {
       round(x, y - 1, HANDLE, hh + 2, 4);
       ctx.fill();
       ctx.fillStyle = '#222';
-      ctx.fillRect(x + HANDLE / 2 - 1, y + hh / 2 - 8, 2, 16);
+      ctx.fillRect(x + HANDLE / 2 - 3, y + hh / 2 - 9, 2, 18);
+      ctx.fillRect(x + HANDLE / 2 + 1, y + hh / 2 - 9, 2, 18);
     }
   }
 
@@ -355,6 +357,18 @@ export function createSpine(o: SpineOptions) {
           ctx.rect(x, mid - hh / 2, 1.5, hh);
         }
         ctx.fill();
+      }
+      // Faint marks where each recited word starts (only with word timings; never guessed: rule 8).
+      const seq = tl.ayat[i]?.seq;
+      if (seq) {
+        ctx.fillStyle = 'rgba(255,255,255,.32)';
+        let lastX = -1e9;
+        for (const r of seq) {
+          const wx = X(r[1] + off);
+          if (wx - lastX < 5 || wx < x0 || wx > x1) continue;
+          ctx.fillRect(wx - 0.5, Y_AU + AUDIO - 9, 1, 6);
+          lastX = wx;
+        }
       }
       const ay = o.plan()?.ayat[i];
       if (ay && sel?.kind === 'audio' && sel.index === i) {
@@ -477,6 +491,28 @@ export function createSpine(o: SpineOptions) {
     drawOverlay(tl, w);
   }
 
+  // --- snapping (CapCut-style, with a light tick on phones that vibrate) ---
+  let snapped = NaN;
+  const buzz = (at: number) => {
+    if (at !== snapped && !Number.isNaN(at)) navigator.vibrate?.(8);
+    snapped = at;
+  };
+  /** Scrub time snapped to the nearest ayah or word start within SNAP_PX. */
+  function snapScrub(tm: number): number {
+    const tl = o.timeline();
+    if (!tl) return tm;
+    let best = SNAP_PX / pps, to = NaN;
+    const take = (x: number) => { const d = Math.abs(x - tm); if (d < best) { best = d; to = x; } };
+    take(0);
+    for (const a of tl.ayat) {
+      take(a.start);
+      // Word starts only once zoomed in enough that words are apart (else every spot would snap).
+      if (pps >= 60) for (const r of a.seq ?? []) take(r[1]);
+    }
+    buzz(to);
+    return Number.isNaN(to) ? tm : to;
+  }
+
   // --- pointer handling ---
   const local = (e: PointerEvent) => {
     const r = el.getBoundingClientRect();
@@ -516,7 +552,8 @@ export function createSpine(o: SpineOptions) {
     drag = { ...d, x0: p.x, y0: p.y, moved: false, lastX: p.x, lastT: performance.now(), v: 0 };
     if (d.kind === 'scrub') {
       o.onScrubStart();
-      o.seek(Math.min(Math.max(0, T(p.x)), dur()));
+      snapped = NaN;
+      o.seek(snapScrub(Math.min(Math.max(0, T(p.x)), dur())));
     }
   });
 
@@ -546,7 +583,7 @@ export function createSpine(o: SpineOptions) {
     const tm = Math.min(Math.max(0, T(p.x)), tl.duration);
     switch (drag.kind) {
       case 'scrub':
-        o.seek(tm);
+        o.seek(snapScrub(tm));
         break;
       case 'pan':
         left = drag.left0 - (p.x - drag.x0) / pps;
@@ -561,6 +598,7 @@ export function createSpine(o: SpineOptions) {
           let best = 14 / pps, snapTo = v;
           for (const s of snapPoints(plan.ayat)) if (s >= lo && s <= hi && Math.abs(s - v) < best) [best, snapTo] = [Math.abs(s - v), s];
           v = snapTo;
+          buzz(best < 14 / pps ? snapTo : NaN);
         }
         bs[k] = ms(v);
         o.seek(bs[k]);

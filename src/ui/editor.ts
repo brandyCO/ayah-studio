@@ -17,7 +17,7 @@ import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout
 import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
-  applyLook, cleanDedication, DEDICATION_MAX, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
+  applyLook, cleanDedication, DEDICATION_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
@@ -25,7 +25,7 @@ import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
 import { markPanel, savedMark } from './markPanel';
-import { attachTouch, drawSelection } from './studioTouch';
+import { attachTouch, drawGuides, drawSelection } from './studioTouch';
 import { breathOf } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
@@ -133,6 +133,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let media: BackgroundMedia[] = []; // decoded background of each entry in project.scenes
   let mediaReady = false;
   let mediaVersion = 0; // bumped whenever the decoded scenes change
+  let previewScale = 1; // preview resolution now (lowered only while playing on a slow device)
+  let playScale = 1; // learned for this visit: used from the next Play on
+  let frameGap = 0, gapCount = 0, lastFrameAt = 0;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
   let src: AudioBufferSourceNode | null = null;
@@ -145,6 +148,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let syncText = ui('ed.loadingTimings');
   let quality: 1920 | 1280 = 1920;
   let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
+  let colourKey: keyof TextColors = 'ar'; // Style → Colours: which text's colour the panel sets
   let layerSel: Layer | null = null; // moved / scaled by touch on the preview: its actions are in the bar
   const drawn: RenderInfo = { text: null, textPose: IDENTITY, bgPose: IDENTITY, fitText: (p) => p, fitBg: (p) => p }; // the preview's last frame
 
@@ -802,7 +806,46 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   /** One-tap styles: a finished look (background, mood, text mode, highlight, finishing touches). */
+  // My styles: the user's own looks, saved on this device and reapplied in one tap.
+  type MyStyle = { id: string; name: string; look: Look };
+  const myStyles = (): MyStyle[] => { try { const v = JSON.parse(readPref('myStyles') ?? '[]'); return Array.isArray(v) ? v.filter((x) => x && typeof x.id === 'string' && x.look) : []; } catch { return []; } };
+  const saveMyStyles = (list: MyStyle[]) => savePref('myStyles', JSON.stringify(list.slice(0, 8)));
+  function myStylesRow(): Node {
+    const list = myStyles();
+    const mine = JSON.stringify(lookOf(project));
+    return h('div', { class: 'tiles my-styles' },
+      ...list.map((st) => {
+        const b = backgroundById(st.look.scenes?.[0] ?? '');
+        const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
+        return h('div', { class: 'my-style' },
+          tile({
+            on: JSON.stringify(st.look) === mine, label: st.name,
+            art: h('span', { class: 'style-art', style: bgCss }, h('span', { class: `style-words${st.look.highlight ? ' lit' : ''}`, style: `--hl:${st.look.colors?.hl ?? '#f2c46b'}` }, h('i', {}), h('i', {}), h('i', {}))),
+            onclick: () => {
+              applyLook(project, structuredClone(st.look), isBackground);
+              fitClips();
+              arrange();
+              void loadScenes();
+              changed();
+              previewText();
+            },
+          }),
+          h('button', { class: 'mark-logo-x', 'aria-label': ui('ed.my-style-delete'), onclick: () => { saveMyStyles(myStyles().filter((x) => x.id !== st.id)); refreshUI(); } }, '✕'));
+      }),
+      list.length < 8 ? tile({
+        on: false, label: ui('ed.my-style-save'), art: h('span', { class: 'glyph' }, '+'),
+        onclick: () => {
+          const all = myStyles();
+          saveMyStyles([...all, { id: `s${Date.now().toString(36)}`, name: ui('ed.my-style-name', { n: all.length + 1 }), look: lookOf(project) }]);
+          toast(ui('ed.my-style-saved'));
+          refreshUI();
+        },
+      }) : h('span', {}));
+  }
   const stylePanel = () => [
+    row(ui('ed.my-styles'), h('span', {})),
+    myStylesRow(),
+    row(ui('ed.styles'), h('span', {})),
     h('div', { class: 'tiles' }, ...STYLES.map((st) => {
       const b = backgroundById(st.scene);
       const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
@@ -1279,21 +1322,24 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   // --- tools (bottom bar) ---
+  // Five tools, CapCut-style: what is touched most comes first in each.
   const TOOLS: Tool[] = [
     { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [
       { id: 'quick', icon: 'sparkle', label: ui('qr.title'), panel: quickPanel },
       { id: 'styles', icon: 'mood', label: ui('ed.styles'), panel: stylePanel },
+      { id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel },
+      { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
+      { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
+      { id: 'colours', icon: 'colours', label: ui('ed.colours'), panel: () => {
+        const parts: [keyof TextColors, string, string][] = [['ar', ui('ed.ayah'), 'Ayah'], ['en', ui('ed.translation'), 'Translation'], ['title', ui('ed.surah-name'), 'Surah name']];
+        const cur = parts.find((x) => x[0] === colourKey)!;
+        return [
+          h('div', { class: 'tabs' }, ...parts.map(([k, label]) => h('button', { class: `tab${k === colourKey ? ' on' : ''}`, onclick: () => { colourKey = k; picking = null; refreshUI(); } },
+            h('span', { class: 'dot', style: `background:${project.colors[k]};margin-inline-end:6px;vertical-align:-3px` }), label))),
+          ...colourPanel(cur[0], cur[2])(),
+        ];
+      } },
     ] },
-    { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), options: [{ id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel }] },
-    { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
-      { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
-      { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
-        row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-        note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
-      { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
-      { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
-    ] },
-    { id: 'mood', icon: 'mood', label: ui('ed.mood'), options: [{ id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel }] },
     { id: 'text', icon: 'text', label: ui('ed.text'), options: [
       { id: 'mode', icon: 'mode', label: ui('ed.text-mode'), panel: () => [
         chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
@@ -1310,37 +1356,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'gap', icon: 'hold', label: ui('ed.between-ayat'), panel: () => [
         chips<GapText>([{ value: 'hold', label: ui('ed.keep-the-ayah') }, { value: 'clear', label: ui('ed.clear') }], () => project.gap, (v) => { project.gap = v; arrange(); }),
         note(ui('ed.what-the-text-does-in-the-pause-between-'))] },
-    ] },
-    { id: 'move', icon: 'move', label: ui('mv.tool'), options: [
-      { id: 'mv-text', icon: 'text', label: ui('mv.text'), action: () => selectLayer('text') },
-      { id: 'mv-bg', icon: 'scenes', label: ui('mv.bg'), action: () => selectLayer('bg') },
-    ] },
-    { id: 'effects', icon: 'effects', label: ui('ed.effects'), options: [
-      { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
-      { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
-    ] },
-    { id: 'colours', icon: 'colours', label: ui('ed.colours'), options: [
-      { id: 'c-ar', icon: () => dot(project.colors.ar), label: ui('ed.ayah'), panel: colourPanel('ar', 'Ayah') },
-      { id: 'c-en', icon: () => dot(project.colors.en), label: ui('ed.translation'), panel: colourPanel('en', 'Translation') },
-      { id: 'c-title', icon: () => dot(project.colors.title), label: ui('ed.surah-name'), panel: colourPanel('title', 'Surah name') },
-    ] },
-    { id: 'scenes', icon: 'scenes', label: ui('ed.scenes'), options: [
-      { id: 'add', icon: 'plus', label: ui('ed.add'), panel: () => bgPicker(null) },
-      { id: 'change', icon: 'replace', label: ui('ed.change'), panel: () => bgPicker(sceneAtPlayhead()) },
-      { id: 'layout', icon: 'layout', label: ui('ed.arrange'), panel: sceneLayoutPanel },
-      { id: 'grade', icon: 'grade', label: ui('ed.grade'), panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
-        on: project.grade === g, label: tOr(`grade.${g}`, GRADES[g].label), art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
-      })))] },
-      { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
-        () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
-      { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
-      { id: 'slowmo', icon: 'hold', label: ui('ed.slowmo'), panel: () => [slowmoRow(), note(ui('ed.slowmo-note'))] },
-      { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
-      { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
-      { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
-    ] },
-    { id: 'translation', icon: 'translation', label: ui('ed.translation'), options: [
-      { id: 'tr-show', icon: 'show', label: ui('ed.show'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
+      { id: 'mv-text', icon: 'move', label: ui('mv.tool'), action: () => selectLayer('text') },
+      { id: 'tr-show', icon: 'translation', label: ui('ed.translation'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
       { id: 'tr-sync', icon: 'sync', label: ui('ed.sync'), disabled: () => !project.showTranslation, panel: () => [
         chips<TranslationMode>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }],
           () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
@@ -1355,6 +1372,31 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         })] },
       { id: 'tr-font', icon: 'font', label: ui('ed.font'), disabled: () => !project.showTranslation, panel: () => [
         chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }, { value: 'round', label: ui('ed.round') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+    ] },
+    { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
+      { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel },
+      { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
+      { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
+        row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
+        note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
+      { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
+      { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
+    ] },
+    { id: 'scenes', icon: 'scenes', label: ui('ed.scenes'), options: [
+      { id: 'add', icon: 'plus', label: ui('ed.add'), panel: () => bgPicker(null) },
+      { id: 'change', icon: 'replace', label: ui('ed.change'), panel: () => bgPicker(sceneAtPlayhead()) },
+      { id: 'layout', icon: 'layout', label: ui('ed.arrange'), panel: sceneLayoutPanel },
+      { id: 'mv-bg', icon: 'move', label: ui('mv.tool'), action: () => selectLayer('bg') },
+      { id: 'grade', icon: 'grade', label: ui('ed.grade'), panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
+        on: project.grade === g, label: tOr(`grade.${g}`, GRADES[g].label), art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
+      })))] },
+      { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
+        () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
+      { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
+      { id: 'slowmo', icon: 'hold', label: ui('ed.slowmo'), panel: () => [slowmoRow(), note(ui('ed.slowmo-note'))] },
+      { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
+      { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
+      { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
     ] },
     { id: 'layout', icon: 'layout', label: ui('ed.layout'), options: [
       { id: 'format', icon: 'full', label: ui('ed.format'), panel: formatRow },
@@ -1441,7 +1483,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let selection: Selection = null;
   const panelTitle = h('h2', {});
   const panelBody = h('div', { class: 'sheet-body panel' });
+  // While a panel covers the timeline, a thin scrubber above it still moves the playhead, so a change
+  // can be checked at any moment of the reel without closing the panel.
+  const panelScrub = h('input', { class: 'panel-scrub', type: 'range', min: '0', max: '1', step: '0.01', value: '0', 'aria-label': ui('ed.scrub') });
+  panelScrub.addEventListener('input', () => {
+    if (!tl || exporting) return;
+    if (playing) pause();
+    t = Math.min(tl.duration, Math.max(0, Number(panelScrub.value)));
+    spine.reveal(t);
+    dirty = true;
+  });
   const panel = h('section', { class: 'sheet', hidden: true },
+    panelScrub,
     h('div', { class: 'sheet-head' }, panelTitle,
       h('button', { class: 'icon-btn sheet-close', 'aria-label': ui('common.done'), onclick: () => { picking = null; openOption(null); } }, icon('check'))),
     panelBody);
@@ -1467,6 +1520,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   function openTool(x: Tool | null) {
     tool = x;
+    if (x) savePref('lastTool', x.id); // a draft reopens on the tool used last
     selection = null;
     layerSel = null;
     option = null;
@@ -1506,6 +1560,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Panel: slides up over the timeline and bar (the preview keeps its size).
     const content = option?.panel?.();
     panel.hidden = !content;
+    if (content && tl) { panelScrub.max = String(tl.duration); panelScrub.value = String(t); }
     studio.classList.toggle('panel-open', !!content);
     panelTitle.textContent = option ? (option.id.startsWith('c-') ? ui('ed.colourOf', { what: option.label }) : option.label) : '';
     // Keep the same nodes in place (a focused search box would lose the phone keyboard).
@@ -1557,7 +1612,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   });
 
   // Move and scale by touch on the preview (text block or background), keyframed when the layer has keys.
-  attachTouch({
+  const touch = attachTouch({
     canvas,
     project: () => project,
     time: () => t,
@@ -1646,7 +1701,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   built = true;
   // A new reel opens on the styles: one tap for a finished look, then Export.
   let firstReel = false; // the first reel on this device: it starts finished and plays by itself
-  if (!draft) {
+  if (draft) tool = TOOLS.find((x) => x.id === readPref('lastTool')) ?? null;
+  else {
     tool = TOOLS[0];
     option = tool.options[0];
     let keepLook = false;
@@ -1680,7 +1736,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const resize = () => {
     const zoom = Math.max(1, window.visualViewport?.scale ?? 1);
     setFrame(project.format);
-    const w = Math.min(W, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1) * zoom)) || 540;
+    const w = Math.min(W, Math.round(canvas.getBoundingClientRect().width * (devicePixelRatio || 1) * zoom * previewScale)) || 540;
     canvas.width = w;
     canvas.height = Math.round((w * H) / W);
     pctx.setTransform(w / W, 0, 0, w / W, 0, 0);
@@ -1900,9 +1956,31 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   let raf = 0;
   let preparedKey = '';
-  function frame() {
+  // Slow phones: while playing, the preview drops to a lower resolution when frames come too slowly
+  // (≥ 40 ms apart on average); paused, it is sharp again. The export is never affected.
+  function setPreviewScale(k: number) {
+    if (k === previewScale) return;
+    previewScale = k;
+    resize();
+  }
+  function pacePlayback(now: number) {
+    if (!playing) { lastFrameAt = 0; gapCount = 0; frameGap = 0; if (previewScale !== 1) setPreviewScale(1); return; }
+    if (previewScale !== playScale && gapCount === 0) setPreviewScale(playScale);
+    if (lastFrameAt) {
+      frameGap = frameGap ? frameGap * 0.92 + (now - lastFrameAt) * 0.08 : now - lastFrameAt;
+      if (++gapCount > 45 && frameGap > 40 && playScale > 0.5) {
+        playScale = playScale > 0.75 ? 0.75 : 0.5;
+        setPreviewScale(playScale);
+        gapCount = 1;
+        frameGap = 0;
+      }
+    } else gapCount = 0;
+    lastFrameAt = now;
+  }
+  function frame(now = performance.now()) {
     raf = requestAnimationFrame(frame);
     if (exporting || !tl || !mediaReady) return;
+    pacePlayback(now);
     if (firstReel && audio) { firstReel = false; void startPremiere(ui('ed.first-reel')); }
     if (playing && ac) {
       t = startT + ac.currentTime - startCtx;
@@ -1923,9 +2001,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!dirty) return;
     dirty = false;
     render(pctx, t, project, tl, media, drawn);
+    const guides = touch.guides();
+    if (guides) drawGuides(pctx, guides.centred);
     if (layerSel && !studio.classList.contains('watching')) drawSelection(pctx, layerSel, drawn);
     if (layerSel && (keyIndex(project.motion?.[layerSel], t) >= 0) !== shownOnKey) refreshUI();
     timeLabel.textContent = `${clock(t)} / ${clock(tl.duration)}`;
+    if (!panel.hidden) {
+      panelScrub.max = String(tl.duration);
+      if (document.activeElement !== panelScrub) panelScrub.value = String(t);
+    }
   }
   raf = requestAnimationFrame(frame);
 

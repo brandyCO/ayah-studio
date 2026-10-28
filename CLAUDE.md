@@ -459,6 +459,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       CPU ≈ 935 → 27 ms per 3 s in Chromium); the timeline draws its tracks into a cached layer three
       screens wide (playing, panning and scrubbing copy it; waveform via a max-pyramid); icons are parsed
       once and cloned; draft and reel-look syncing wait 20 s after the last studio edit
+      Second pass (owner "yes", 2026-10-28): **5 tools** (Styles · Text · Audio · Scenes · Layout; Colours
+      is one option with Ayah / Translation / Surah name tabs; Move text sits in Text, Move background in
+      Scenes; a draft reopens on the last tool used, pref `lastTool`); a **scrubber** on top of every panel
+      (look through the reel while adjusting); timeline for thumbs: 52 px tracks, 20 px grip handles,
+      the playhead snaps to ayah starts (and word starts when zoomed in) with a light vibration, faint
+      word marks on the audio; preview: **corner handles** resize, the safe area and centre line show while
+      dragging (the text snaps to the centre); a tap never plays/pauses (owner: a tap means edit);
+      **My styles** (Styles → "Save this look", ≤ 8, localStorage `myStyles`, applied with `applyLook()`);
+      slow phones: while playing, the preview drops to 75 % then 50 % resolution when frames come
+      ≥ 40 ms apart, sharp again when paused (export unchanged)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
