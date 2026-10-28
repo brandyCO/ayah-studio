@@ -64,22 +64,33 @@ export function shade(t: number, duration: number): number {
 /** The background's slow approach: 1 → 1.07 over the reel. */
 export const drift = (t: number, duration: number) => 1 + 0.07 * smooth(t / Math.max(1, duration));
 
-let small: HTMLCanvasElement | OffscreenCanvas | null = null;
-/** Softens what is drawn so far (the background) by `amount` 0..1: a downscaled copy laid over it. */
+type Scratch = HTMLCanvasElement | OffscreenCanvas;
+let small: Scratch | null = null, mid: Scratch | null = null;
+const scratch = (c: Scratch | null, w: number, h: number): Scratch => {
+  c ??= typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : document.createElement('canvas');
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  return c;
+};
+/** Softens what is drawn so far (the background) by `amount` 0..1: a downscaled copy laid over it.
+ *  The copy is enlarged smoothly to 1/4 size first and only then stretched over the frame: the same
+ *  soft look as one high-quality stretch at about half the cost per frame. */
 export function soften(ctx: CanvasRenderingContext2D, amount: number) {
   if (amount < 0.02) return;
   const c = ctx.canvas;
   const w = Math.max(8, Math.round(c.width / 10)), h = Math.max(8, Math.round(c.height / 10));
-  small ??= typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : document.createElement('canvas');
-  if (small.width !== w || small.height !== h) { small.width = w; small.height = h; }
+  small = scratch(small, w, h);
+  mid = scratch(mid, Math.round(c.width / 4), Math.round(c.height / 4));
   const s = small.getContext('2d') as CanvasRenderingContext2D;
   s.imageSmoothingQuality = 'high';
   s.drawImage(c, 0, 0, w, h);
+  const m = mid.getContext('2d') as CanvasRenderingContext2D;
+  m.imageSmoothingQuality = 'high';
+  m.drawImage(small, 0, 0, mid.width, mid.height);
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 0.55 * amount;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(small, 0, 0, c.width, c.height);
+  ctx.imageSmoothingQuality = 'low';
+  ctx.drawImage(mid, 0, 0, c.width, c.height);
   ctx.restore();
 }
 

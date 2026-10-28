@@ -56,6 +56,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
   let stopAt = Infinity;
   let alive = true;
   let litT = 0;
+  let stillT = -1, stillAt = 0; // the playhead's last position and when it last moved
 
   const audio = new Audio();
   audio.preload = 'auto';
@@ -158,7 +159,10 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
           for (let w = f; w <= l; w++) heard[w] = true;
         }
         if (ws.length === 1 && wt) heard[0] = true; // one-word ayah: the ayah's own timing
-        return { src: blobUrl, from: v.timestamp_from / 1000, to: v.timestamp_to / 1000, words: wt, heard: wt ? heard : heard.fill(false) };
+        // The surah's last timing often runs past the end of the recording: stop a moment after its
+        // last word instead of waiting for the file to end.
+        const to = v.timestamp_to / 1000;
+        return { src: blobUrl, from: v.timestamp_from / 1000, to: i === words.length - 1 && wt ? Math.min(to, wt.last + 0.8) : to, words: wt, heard: wt ? heard : heard.fill(false) };
       });
     } catch (e) {
       console.warn('Kids recitation (QDC) failed, using per-ayah files', e);
@@ -195,6 +199,8 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
     await seek(x.src, from);
     audio.playbackRate = rate;
     stopAt = to;
+    stillT = -1;
+    stillAt = performance.now();
     await audio.play();
   }
 
@@ -251,7 +257,19 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       lastWord = w;
       if (w !== null) lightWord(w);
     }
-    if (t >= stopAt || audio.ended) ended();
+    // The end of the span, or of the recording. The last ayah's timing can run past the end of the
+    // file (An-Nas: 40.91 s of a 40.0 s recording), and some phones stop there without an `ended`
+    // event, so a playhead that stops moving after the last word (or for 4 s anywhere in
+    // the kept recording, which never buffers) also ends it.
+    const now = performance.now();
+    if (t !== stillT || audio.seeking) {
+      stillT = t;
+      stillAt = now;
+    }
+    const lastEnd = state === 'playing' && x.words ? x.words.last : stopAt;
+    const still = now - stillAt;
+    const atEnd = Number.isFinite(audio.duration) && t >= audio.duration - 0.05;
+    if (t >= stopAt || audio.ended || atEnd || (still > 1200 && t >= lastEnd - 1) || (still > 4000 && audio.src.startsWith('blob:'))) ended();
   }
 
   function ended() {

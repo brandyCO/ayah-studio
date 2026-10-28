@@ -215,7 +215,7 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       horizontal pans (`onPan`, axis decided once) besides long-press selection. Smoothness pass: a swipe
       during a slide lands it at once and follows the new swipe (chained flips); a page whose font is
       still downloading slides in as a "Page N" placeholder (spinner) and fills in when ready; fonts
-      load 3 pages ahead; the player shows a spinner + "loading…" while starting or buffering
+      load 3 pages ahead and are freed again more than 6 pages away (`releasePageFonts()`); the player shows a spinner + "loading…" while starting or buffering
 - [x] Listen while reading (owner request): ☰ → "Listen from this page", ▶ in the selection bar, or —
       while listening — tap an ayah to play from it. `src/ui/player.ts` streams the reciter's QDC
       full-surah MP3 (seeking by the verse timings), tints the ayah being recited and colours the word
@@ -229,6 +229,21 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
 - [x] Paper look in day mode (owner request): warm cream pages with a fine grain and faint mottling
       (an inline SVG noise tile, `--paper-grain`) and softly shaded sheet edges (`--paper-edge`), which
       move with the page while swiping; night mode stays plain dark
+- [x] Search + juz / quarter navigation (owner request 2026-10-28): the surah list (`#/`, and `#/search`
+      with the box focused; 🔍 in the mushaf's drop-down bar) has tabs **Surahs / Juz / Hizb & quarters**
+      (240 quarters grouped by juz: Hizb n, ¼ ½ ¾; start reference + page; the reader's current juz /
+      quarter marked) and one search box: references ("2:255", "baqara 255", "juz 5", "جزء 5", "hizb 3",
+      "page 50"; Enter opens), surah names (English or Arabic) and words — Arabic folded to letters (harakat,
+      alif/hamza forms, ة/ه, ى/ي; dagger alif both dropped and written out, so الرحمن and الكتاب both match the
+      Uthmani spelling; whole words marked, never split) or the chosen translation (≥ 3 letters). Results show
+      the whole ayah + translation, 30 at a time (`src/data/search.ts`, `src/ui/surahList.ts`).
+      `public/data/divisions.json` by `scripts/fetch-divisions.mjs`: juz + quarter starts from Quran.com,
+      checked against alquran.cloud (one known difference: quarter 106 at 15:49, as in Quran.com) and the ۞
+      marks in our own text
+      History (owner request): with an empty box, **Recent searches** (chips, the last 10 searches acted on —
+      a result opened or Enter) and **Recently read** (cards: the last 12 mushaf pages stayed on ≥ 3 s, page,
+      reference, when), each with Clear; this device only (`src/data/history.ts`, localStorage
+      `searchHistory` / `recentPages`). 🔍 opens a fresh search; ‹ back to `#/` keeps the last one
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
@@ -440,6 +455,46 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
       button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
       the end pauses and brings them back
+- [x] Own watermark, move by touch, faster studio (owner request 2026-10-28): **Layout → Watermark**
+      (`src/ui/markPanel.ts`, `src/engine/mark.ts`): the small Ayah Studio mark on/off, the user's own
+      mark — text (≤ 40 chars, UI font) or a logo (PNG/WebP/SVG/JPEG, scaled to ≤ 480 px, kept on this device
+      in localStorage `markLogos`, `src/data/logos.ts`) — top left/right or bottom left/centre/right, size
+      50–200 %, opacity 20–100 %, and **Remove all watermarks**. `project.mark` (per device pref `myMark`,
+      not in the look, so gifts never carry it); `frameLayout()` keeps a strip for it at the top or the
+      bottom, so it never covers the text, the reference, the credit or the Ayah Studio mark (rule 6;
+      `npm run check`). Quick reel → Finish links to it. **Move** (`src/engine/motion.ts`,
+      `src/ui/studioTouch.ts`): Move tool → Text / Background, or a tap on the preview; drag to move,
+      pinch or the mouse wheel to scale. `project.motion {text?, bg?}`: one pose for the whole reel, or
+      keyframes (Add keyframe at the playhead; later moves set the key at the playhead; previous/next;
+      gold diamonds on the timeline ruler; eased with smoothstep). The renderer keeps the text block
+      inside the text area and never below the legible minimum (52 px Arabic, 32 px translation) — moved
+      and scaled only, never rotated (rule 7); the name + reference move with it when they sit below the
+      ayah; the background is kept covering the frame (scale 1–3×). Speed: a paused preview on a video
+      background no longer redraws every frame (`VideoLoop.prepare()` reports a changed picture; idle
+      CPU ≈ 935 → 27 ms per 3 s in Chromium); the timeline draws its tracks into a cached layer three
+      screens wide (playing, panning and scrubbing copy it; waveform via a max-pyramid); icons are parsed
+      once and cloned; draft and reel-look syncing wait 20 s after the last studio edit
+      Second pass (owner "yes", 2026-10-28): **5 tools** (Styles · Text · Audio · Scenes · Layout; Colours
+      is one option with Ayah / Translation / Surah name tabs; Move text sits in Text, Move background in
+      Scenes; a draft reopens on the last tool used, pref `lastTool`); a **scrubber** on top of every panel
+      (look through the reel while adjusting); timeline for thumbs: 52 px tracks, 20 px grip handles,
+      the playhead snaps to ayah starts (and word starts when zoomed in) with a light vibration, faint
+      word marks on the audio; preview: **corner handles** resize, the safe area and centre line show while
+      dragging (the text snaps to the centre); a tap never plays/pauses (owner: a tap means edit);
+      **My styles** (Styles → "Save this look", ≤ 8, localStorage `myStyles`, applied with `applyLook()`);
+      slow phones: while playing, the preview drops to 75 % then 50 % resolution when frames come
+      ≥ 40 ms apart, sharp again when paused (export unchanged). Third pass (owner "yes"): the export decodes the next
+      background frame while the current one encodes; `VideoLoop` copies only the last frame at or before
+      t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
+      before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
+      reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
+      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
+      divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
+      top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
+      Until** (`mark.from` / `mark.to`, 0.3 s fades); **Audio → Ending**: `project.tail` 0–10 s
+      (`TAIL_MAX`) after the recitation, before the closing card — silent (rule 3), background, reference
+      and marks continue (`Pacing.tail`, `arrangeReel`)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
@@ -504,11 +559,22 @@ save to gallery / share sheet; offline audio cache; settings.
       `--brand-text`, `--brand-glow`. Used only by `.brand-name` (app name), `.primary.brand-btn` (Export,
       "Turn into reel"), studio `.chip.on` / `.tab.on`, export + download bars and the empty Drafts glow;
       `theme-color` per colour scheme. The mushaf keeps its own `--paper` / `--ink`
+- [x] Theme colours (owner request 2026-10-28): ☰ → Theme colours — 12 brand gradients with a neon glow
+      (`src/ui/theme.ts`: Emerald (default), Aurora, Ultraviolet, Synthwave, Neon Sunset, Deep Ocean,
+      Royal Gold, Rose Quartz, Cyber Lime, Nebula, Arctic Ice, Ember). Each sets the brand tokens, the
+      accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
+      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
+      gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
       `MediaScanPlugin.java` adds it to the gallery. Share = `@capacitor/share` with the saved file's URI
       (saves first if needed). Storage permission only asked on Android ≤ 10 (manifest: maxSdkVersion)
+- [x] Background export in the app (owner request 2026-10-28): `ExportService.java` (foreground service,
+      type `dataSync`, partial wake lock ≤ 60 min, silent progress notification with Cancel) +
+      `ExportServicePlugin.java`, started by `exportGuard()` (`src/native.ts`) for the whole export; the
+      WebView renderer stays important while hidden (`setRendererPriorityPolicy`). The video is still made
+      by the web code; the service only keeps the app running when the user leaves it or the screen goes off
 - [x] Offline in the app: no service worker inside Capacitor (the app files are local); QDC timings
       kept in IndexedDB `timings` (network first, newest 60) by `src/data/qdc.ts`; audio as on the web
 - [ ] Android app tested by the owner on their phone (not verifiable in the cloud container: no
@@ -564,7 +630,7 @@ cloud. Build in this order:
       grouped by surah, search (accent/harakat-insensitive, match marked). Synced as `user_docs`
       kind `reflection` (id `s:a`), merged per paragraph (newest edit wins, removals as tombstones for
       120 days), so nothing written on two devices is lost; in Export my data and the privacy page
-- [x] T2a Khatm circles (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
+- [x] ~~T2a Khatm circles~~ — **removed by the owner on 2026-10-28** (the ring, juz sheets, gold page edge, Today lines, Khatm reel, Ramadan's "with a circle" links, `src/ui/constellation.ts`; ☰ → **Family circles** now lists only family circles (K6), which keep the shared circle code, invite links and `#/join/{code}`; the database is untouched). As built (2026-10-08): migration `20261009000000_t2_circles.sql` — `circles`,
       `circle_members`, `circle_parts`; members read, nobody writes directly: `create_circle`,
       `join_circle` (8-char code), `take_part` (null = pick one), `set_part` (taken/done/free),
       `new_round` (owner), `update_circle`, `leave_circle` (owner → next member; last one out deletes),
@@ -583,7 +649,7 @@ cloud. Build in this order:
       `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`, added 2026-10-09; all migrations applied live)
 - [ ] T2b Push foundation (evening digest of circle activity): waits on the owner's Firebase project
       (§7 step 4)
-- [x] T3 Gift an ayah (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
+- [x] ~~T3 Gift an ayah~~ — **removed by the owner on 2026-10-28** (the composer, `#/gift/…`, ☰ → Gifts, the 🎁 buttons in the selection bar and the editor, `src/ui/gift.ts`, `src/together/gifts.ts` and the lift/bloom moments are gone; the `gifts` table and its functions stay untouched and stay in Export my data, with gifts received on this device). As built (2026-10-08): migration `20261010000000_t3_gifts.sql` — `gifts` (references,
       reciter, look, sender name ≤ 40, message ≤ 140, `reply_to`, opens); nobody reads or writes the
       table: `send_gift` (checks surah/ayah against `ayah_count()`, ≤ 10 ayat, `valid_reciter()`, the look
       with `valid_gift_look()` = `applyLook()`'s rules, built-in backgrounds only; 30 a day, anonymous
@@ -602,7 +668,7 @@ cloud. Build in this order:
       Anonymous sign-ins; until then the composer asks for Google sign-in. Shared links from the Android
       app point at the Pages site (`shareableLink()` in `src/native.ts`; circle invites too).
       In Export my data and the privacy page
-- [x] T5a Revision lamps, manual (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
+- [x] ~~T5a Revision lamps~~ — **removed by the owner on 2026-10-28** (☰ → My memorisation, the Today card line, sync of the `lamp` document, `src/data/lamps.ts`, `src/ui/lamps.ts`; existing local and synced lamps stay in Export my data). As built (2026-10-08; before the Phase 2 flashcards): `src/data/lamps.ts`
       (localStorage `lamps`: per page box 1–5, last revised, memorised since; Leitner intervals
       1/2/4/8/16 days; "Revised today" = up a box, "Needs work" = box 1; light = 1 → 0.15 over two
       intervals, `due` past one) + `src/ui/lamps.ts`: ☰ → **My memorisation**: one canvas, a row per juz,
@@ -845,7 +911,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       breath = a swell at each word start from the QDC timings; Noor brightens when a surah ends;
       tap → controls (✕, play/pause, sleep Off/15/30/60: fades to black over the last minute, then
       pauses and releases the wake lock); Esc/back closes; Device check → Light scenes: step + Reset)
-- [x] L2 Light reel backgrounds (`light:dawn` / `stars` / `aurora` / `lanterns` / `rays`) + transitions
+- [x] ~~L2 Light reel backgrounds~~ — **removed by the owner on 2026-10-28** (the Light tab, `src/light/reel.ts`, `flatReel.ts`, `scenes/reel.ts`, the thumbnails; drafts/styles/vibes that used one now use a preset: dawn → Soft clouds, stars/aurora → Night, lanterns/rays → Light; the 2D transitions Light bloom and Drift through clouds stay). As built: light reel backgrounds + transitions
       Light bloom, Drift through clouds; gifts/walls allow-list (migration + pgTAP)
       (built 2026-10-10: background kind `light` in `src/engine/backgrounds.ts` (`LIGHT_BACKGROUNDS`,
       `BUILT_IN_BACKGROUNDS` = presets + light, used by gifts/walls; `disposeMedia()`); `loadBackground()`
@@ -863,7 +929,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       Migration `20261014100000_l2_light_looks.sql` (`valid_gift_look()` accepts the 5 ids + 2
       transitions; pgTAP `light_looks.test.sql`, 9 checks). The service worker warm-up also fetches the
       three.js chunks and the light thumbnails)
-- [x] L3 Khatm circle as a constellation (SVG ring = fallback)
+- [x] ~~L3 Khatm circle as a constellation~~ — **removed with the Khatm circles on 2026-10-28**. As built
       (built 2026-10-10: `src/light/scenes/constellation.ts` — the 30 juz as stars on a ring floating
       in a night sky (sky turned upwards, star field, mist below, Noor at the lower right), facing the
       viewer with a ≤ 4° wobble and each star drifting a little in depth; free = faint lilac points on a
@@ -891,7 +957,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       `src/ui/lampField.ts`, the Grid / Lanterns chip and `lampsView` are gone; ☰ → My memorisation is
       the canvas grid as before, with the Today card reminder ("3 lamps are getting dim in …"). Proper
       revision reminders belong to T5b (a dim lamp opens a revision session; local notifications)
-- [x] L5 Moments: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
+- [x] L5 Moments — **3D parts removed by the owner on 2026-10-28** (gift lift/bloom, the Ramadan crescent and Eid backdrops: `src/ui/moment.ts`, `scenes/moments.ts`; the Ramadan moments are plain 2D dialogs; the export lantern and the opening sweep stay). As built: gift lift-off / lantern bloom, wall lanterns over a night horizon, Ramadan crescent
       over the cloud sea + Eid recap, export lantern, opening light sweep over the logo
       (built 2026-10-10: `src/light/scenes/moments.ts` (pure in t) + `src/ui/moment.ts`: `playMoment()`
       (full-screen or inline, tap/back skips, flat → a short CSS glow) and `lightBackdrop()` (a 3D scene
@@ -910,7 +976,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       (`moteField` gained a depth wrap) while looking slowly across the band; the constellation keeps
       its camera still (taps) but its motes, mist and sky shift against the ring's wobble at their own
       depths)
-- [x] L6 Home sky (pages read this month as stars, circles as constellations, Noor)
+- [x] ~~L6 Home sky~~ — **removed by the owner on 2026-10-28** (☰ → Sky, the Today line, `src/ui/sky.ts`, `src/light/scenes/homeSky.ts`, `flatSky.ts`, `skyLayout.ts`; the reading log `src/data/readLog.ts` stays for T9). As built
       (built 2026-10-10: `src/data/readLog.ts` — a local reading log (localStorage `readLog`, day →
       pages, this device only, ~13 months kept for T9); the mushaf's 20 s read timer now always runs and
       logs the page (circle portions and Ramadan as before). `src/light/skyLayout.ts` (no three): every
@@ -932,7 +998,7 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       up/down (wheel, ↑↓) travels along the avenue, sideways swings round it, with a soft glide; labels
       for circles follow their rings. `cloudSea()` (shared) now dissolves its far edge into the sky dome
       (no hard horizon line in any scene). Flat version unchanged (the 2D dome picture)
-- [x] L7 Kids path in 3D (with the Kids session; their 2D path = fallback)
+- [x] ~~L7 Kids path in 3D~~ — **removed by the owner on 2026-10-28** ("keep it 2D, light performance"): the Kids space always shows the 2D lantern path with Noor and the constellations (L7b); `src/ui/kidsSky.ts`, `src/light/scenes/kidsPath.ts` and the "Lanterns in 3D" switch are gone. As built
       (built 2026-10-10: `src/light/scenes/kidsPath.ts` — the 38 surah lanterns (round paper, thin caps)
       float over a soft cloud sea and wind away into the distance in the 2D path's own wave
       (`lanternAt(i)`), soft dots between them, haze (fog) far off, motes; dawn palette by day, night
@@ -964,6 +1030,10 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       swells or star stagger; a glide becomes a fade out and in. 3D path: the same constellations as
       glow points + soft lines beside each lit lantern (`kidsPathScene(count, night, surahs, ayahs)`,
       built on first light, drawn star by star on a bloom); the 2D Noor and SVG stars are hidden there
+      Fix (2026-10-11, owner: stuck on the last ayah): a surah's last timing runs past the end of its
+      recording (e.g. An-Nas 40.91 s of 40.0 s), and the phone never reported the end, so listen &
+      repeat waited for ever. Now the last ayah stops 0.8 s after its last word, and a playhead that
+      stops moving within 1 s of the last word (or for 4 s anywhere in the kept recording) also ends it
 
 ---
 

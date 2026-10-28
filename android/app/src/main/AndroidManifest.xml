@@ -38,6 +38,12 @@
                 android:resource="@xml/daily_ayah_widget_info" />
         </receiver>
 
+        <!-- Keeps a reel export running when the user leaves the app (ExportService.java) -->
+        <service
+            android:name=".ExportService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -54,6 +60,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Light haptic taps (navigator.vibrate in the WebView); a normal permission, never asked. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Export in the background: foreground service + keep the CPU awake with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Saving exported videos to Movies/ on Android 10 and older (11+ needs no permission). -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />

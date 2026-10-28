@@ -111,3 +111,16 @@ export function loadPageFont(page: number): Promise<void> {
   }
   return fonts.get(page)!;
 }
+
+/**
+ * Frees the page fonts that `keep` rejects (pages far from the one being read), so a long reading
+ * session does not hold hundreds of fonts in memory. A freed page loads again from the cache when it
+ * is opened.
+ */
+export function releasePageFonts(keep: (page: number) => boolean) {
+  for (const page of [...fonts.keys()]) {
+    if (keep(page)) continue;
+    fonts.delete(page);
+    for (const face of document.fonts) if (face.family.replace(/["']/g, '') === `qcf-p${page}`) document.fonts.delete(face);
+  }
+}
