@@ -34,16 +34,20 @@ async function fetchNetwork(path: string): Promise<AudioFilesResponse> {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
-/** Network first (then kept on the device); the copy kept before when offline. */
+/** A copy kept within this time is used as it is (timings rarely change): no network call. */
+const FRESH_MS = 3 * 24 * 3600 * 1000;
+
+/** The copy kept on the device while fresh; else network first (then kept), the old copy when offline. */
 async function fetchJson(path: string): Promise<AudioFilesResponse> {
+  const kept = await tx<{ data: AudioFilesResponse; used: number; fetched?: number } | undefined>('timings', 'readonly', (s) => s.get(path)).catch(() => undefined);
+  if (kept?.data && Date.now() - (kept.fetched ?? 0) < FRESH_MS) return kept.data;
   try {
     const data = await fetchNetwork(path);
-    void tx('timings', 'readwrite', (s) => s.put({ key: path, data, used: Date.now() }))
+    void tx('timings', 'readwrite', (s) => s.put({ key: path, data, used: Date.now(), fetched: Date.now() }))
       .then(() => keepNewest('timings', MAX_KEPT))
       .catch((e) => console.warn('Timings not kept for offline use', e));
     return data;
   } catch (e) {
-    const kept = await tx<{ data: AudioFilesResponse } | undefined>('timings', 'readonly', (s) => s.get(path)).catch(() => undefined);
     if (kept?.data) return kept.data;
     throw e;
   }
