@@ -19,6 +19,8 @@ import { setupOffline } from './offline';
 import { isNative } from './native';
 import { initI18n, t } from './i18n';
 import { applyTheme } from './ui/theme';
+import { applyLite, liteMode } from './lite';
+import { initErrors } from './errors';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 
@@ -90,11 +92,13 @@ async function route() {
 // or Al-Fatiha the first time. The surah list stays one tap away ('‹' or ☰ → All surahs).
 const launch = !location.hash || location.hash === '#' || location.hash === '#/';
 applyTheme(); // the user's brand gradient, before the first screen
+applyLite(); // old-phone mode: heavy decorations off (src/lite.ts)
+initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (launch) history.replaceState(null, '', lastRead());
 // A launch (not a shared link) opens with a light sweep across the logo (docs/light.md, L5).
-if (launch) playOpening();
+if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
