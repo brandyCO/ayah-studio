@@ -574,6 +574,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
         h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
         isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
           `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./themePicker').then((m) => m.openThemePicker()); } }, `◐  ${t('theme.menu')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();

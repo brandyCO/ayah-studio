@@ -19,6 +19,7 @@ import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
 import { isNative } from './native';
 import { initI18n, t } from './i18n';
+import { applyTheme } from './ui/theme';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 
@@ -92,6 +93,8 @@ async function route() {
 // Opening the app (no address of its own) goes straight to the mushaf: where the user left off,
 // or Al-Fatiha the first time. The surah list stays one tap away ('‹' or ☰ → All surahs).
 const launch = !location.hash || location.hash === '#' || location.hash === '#/';
+applyTheme(); // the user's brand gradient, before the first screen
+window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (launch) history.replaceState(null, '', lastRead());
 // A launch (not a shared link) opens with a light sweep across the logo (docs/light.md, L5).

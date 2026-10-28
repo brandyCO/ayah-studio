@@ -69,7 +69,7 @@ button { font: inherit; color: inherit; }
 .brand h1 { margin: 0; font-size: 19px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand p { margin: 0; font-size: 13px; }
 .brand-name { width: fit-content; max-width: 100%; background: var(--brand-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.primary.brand-btn { background: var(--brand-fill); color: #fff; }
+.primary.brand-btn { background: var(--brand-fill); color: #fff; box-shadow: var(--brand-shadow, none); }
 .icon-btn {
   display: inline-grid; place-items: center; flex: none;
   width: 40px; height: 40px; border-radius: 50%;
@@ -513,7 +513,7 @@ section.sheet .sheet-head h2 { font-size: 15px; }
 .export-progress { width: min(360px, 100%); text-align: center; }
 .export-pct { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .export-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 12px 0 4px; }
-.export-bar > div { height: 100%; width: 0; background: var(--brand-bar); transition: width .2s; }
+.export-bar > div { height: 100%; width: 0; background: var(--brand-bar); transition: width .2s; box-shadow: var(--brand-shadow, none); }
 .export-progress .chip { margin-top: 18px; }
 .export-result { width: min(360px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .export-result .result-video { width: min(220px, 60vw); margin: 0; border-radius: 8px; }
@@ -1348,3 +1348,23 @@ dialog.circle-full::backdrop { background: #04071c; }
 .tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .tajweed-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .series-until { width: 6em; }
+
+/* ☰ → Theme colours (src/ui/themePicker.ts): live preview on top, a grid of gradient tiles */
+.theme-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 10px 0 16px; padding: 18px 14px;
+  border-radius: 16px; background: radial-gradient(closest-side, var(--brand-glow), transparent), var(--card); border: 1px solid var(--line); }
+.theme-brand { font-size: 26px; font-weight: 700; letter-spacing: .01em; }
+.theme-preview .brand-btn { pointer-events: none; }
+.theme-bar { width: 70%; margin: 0; }
+.theme-bar > div { width: 64%; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 12px; }
+.theme-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.theme-swatch { position: relative; width: 100%; aspect-ratio: 1; border-radius: 18px; background: var(--tg); overflow: hidden;
+  box-shadow: 0 4px 16px -4px var(--tglow); transition: transform .2s, box-shadow .2s; outline: 2px solid transparent; outline-offset: 3px; }
+.theme-swatch::after { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,.35), transparent 45%); }
+.theme-pill { position: absolute; inset-inline: 14%; bottom: 14%; height: 18%; border-radius: 999px; background: var(--tf); box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.theme-tile:hover .theme-swatch { transform: translateY(-2px); }
+.theme-tile.on .theme-swatch { outline-color: var(--accent); box-shadow: 0 0 22px -2px var(--tglow); }
+.theme-tile.on .theme-name { color: var(--accent); font-weight: 650; }
+.theme-tile:focus-visible { outline: none; }
+.theme-tile:focus-visible .theme-swatch { outline-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .theme-swatch { transition: none; } }

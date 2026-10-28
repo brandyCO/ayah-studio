@@ -469,6 +469,11 @@ const en = {
   'tour.skip': 'Skip',
   'tour.next': 'Next',
   'tour.start': 'Start reading',
+  'theme.menu': 'Theme colours',
+  'theme.title': 'Theme colours',
+  'theme.note': 'Pick the gradient that feels like you. It colours the app’s buttons, highlights and progress bars — never the mushaf page, the Quran text or your reels.',
+  'theme.applied': '{name} applied',
+  'theme.sample': 'Turn into reel',
   'menu.tour': 'Tour',
 
   // tafsir (G4)
