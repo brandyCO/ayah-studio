@@ -371,5 +371,14 @@ export function setPageSeconds(sec: number) {
   }
 }
 
+/** A friend relit the flame: the missed days count as covered again. */
+export function revive(days: string[]) {
+  const s = load();
+  for (const d of days) if (/^\d{4}-\d{2}-\d{2}$/.test(d) && !s.revived.includes(d)) s.revived.push(d);
+  delete s.lost;
+  s.best = Math.max(s.best, streakOn(dayKey(), covered(s)));
+  save();
+}
+
 /** For tests: forget the cached state. */
 export const _reset = () => { cache = null; };

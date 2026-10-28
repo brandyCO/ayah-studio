@@ -5,6 +5,7 @@
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
 //   #/me               Me: streak flame, stats, reading time, settings
+//   #/relight/CODE     relight a friend's streak flame
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
@@ -77,6 +78,9 @@ async function route() {
         const { showKids } = await import('./ui/kids');
         c = await showKids(screen);
       }
+    } else if (view === 'relight' && a) {
+      const { showRelight } = await import('./ui/relight');
+      c = await showRelight(screen, a);
     } else if (view === 'me') {
       const { showMe } = await import('./ui/me');
       c = await showMe(screen);
@@ -128,5 +132,9 @@ startSync();
 if (isNative()) void import('./ui/morning').then((m) => m.initDailyNative()); // widget + morning ayah (Android)
 void initAuth();
 void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
+void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's relight opened before signing in
+// A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
+void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

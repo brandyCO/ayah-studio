@@ -17,6 +17,8 @@ import { openMoreMenu, tabBar } from './tabs';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
 import { isNative } from '../native';
+import { account } from '../cloud/auth';
+import { openAccount } from './account';
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -79,6 +81,10 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'me-count' }, h('b', {}, String(s.days)), h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
       h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')),
       s.lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: s.lost.n })) : '',
+      s.lost && s.lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
+        if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
+        void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
+      } }, `🔥  ${t('rl.askFriend')}`) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t('me.weeks', { n: s.weeks })),
@@ -284,6 +290,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       }, timeLabel(sec)))));
   };
 
+  void import('../together/relight').then((m) => m.takeRelights());
   const refresh = () => { paintHero(); paintGoals(); paintWeek(); paintStats(); paintBadges(); };
   refresh();
   paintLibrary();

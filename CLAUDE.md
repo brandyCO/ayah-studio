@@ -1094,7 +1094,13 @@ duas/reflections section in Me.
       prayer (`PrayerAlarm`, also after boot / update / clock change). Manifest: coarse location, boot.
       The daily ayah widget is unchanged. Only verifiable on the phone (Java checked with javac against
       the Android 15 framework jar)
-- [ ] M4 Friend relight (Google sign-in + Supabase)
+- [x] M4 Friend relight: migration `20261028000000_m4_relight.sql` (`relights`: 10-char code, owner's first
+      name, streak, 1–3 missed days, 48 h; no table access; `ask_relight` (Google accounts only, 3 a
+      week), `relight_preview` (anon too), `give_relight` (another Google account, once, 10 a day),
+      `take_relights` (owner, once); pgTAP `relight.test.sql`). App: Me hero → "Ask a friend to relight it"
+      (`src/together/relight.ts`: share sheet / copy link `#/relight/{code}`), friend's page
+      `src/ui/relight.ts` (the ember catches; sign-in first, resumed after), the owner's app takes relights
+      on start / resume / Me (`journey.revive()`: missed days → `revived`). Privacy page updated
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

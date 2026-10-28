@@ -1467,3 +1467,20 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .pr-method { width: 100%; }
 .pr-asr { align-items: center; margin-bottom: 6px; }
 .rem-row { margin-top: 10px; }
+
+/* Relight: the Me hero's ask and a friend's #/relight page */
+.me-relight { margin: -4px auto 12px; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid rgba(255, 170, 90, .55);
+  background: rgba(255, 140, 50, .14); color: #ffd9b0; font: inherit; font-weight: 600; font-size: var(--fs-s); cursor: pointer; }
+.relight { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px 16px; text-align: center; color: #fbeee0;
+  background: radial-gradient(120% 70% at 50% 75%, #4a1d08 0%, #24110a 45%, #0e0a09 100%); }
+.relight h1 { margin: 8px 0 0; font-size: var(--fs-h1); max-width: 22em; }
+.rl-sub { margin: 0; color: #e9cfb4; max-width: 28em; }
+.rl-act { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 10px; }
+.rl-act .muted { color: #c9a58a; }
+.rl-btn { font-size: var(--fs-l); padding: 14px 24px; }
+.rl-home { margin-top: 18px; color: #fbeee0; border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); }
+.rl-flame.catch .flame { animation: rl-catch 1.2s var(--ease-out) both; }
+@keyframes rl-catch { 0% { transform: scale(.3); opacity: .2; filter: brightness(2); } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .rl-flame.catch .flame { animation: none; } }
+.screen-relight { max-width: none !important; padding: 0 !important; margin: 0 !important; }
