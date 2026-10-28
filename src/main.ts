@@ -8,7 +8,6 @@
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
-import { capabilities } from './engine/capabilities';
 import { h } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
@@ -99,7 +98,6 @@ if (launch) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
-void capabilities(); // warm up the device check
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
