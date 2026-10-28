@@ -1,7 +1,8 @@
 // Bottom tab bar: Read · Listen · Create · Me. One tap to the four things people come for.
 // On the mushaf the bar stays hidden until the page is tapped (the page stays clean); on the
-// surah list and drafts it is always shown. Listen and Me act on the mushaf: from another screen
-// they open the last page read and then start (sessionStorage `tabIntent`).
+// surah list, drafts and Me it is always shown. Me is its own screen (#/me: streak, stats). Listen
+// acts on the mushaf: from another screen it opens the last page read and then starts
+// (sessionStorage `tabIntent`).
 import { draftHash, listDrafts } from '../data/drafts';
 import { todaysAyah } from '../data/daily';
 import { loadMeta, reference } from '../data/quran';
@@ -11,8 +12,8 @@ import { icon } from './icons';
 import { lastRead } from './prefs';
 
 export type Tab = 'read' | 'listen' | 'create' | 'me';
-type Intent = 'listen' | 'me' | 'pick';
-export interface TabHandlers { read?: () => void; listen?: () => void; me?: () => void }
+type Intent = 'listen' | 'menu' | 'pick';
+export interface TabHandlers { read?: () => void; listen?: () => void }
 
 const goMushaf = (intent?: Intent) => {
   if (intent === 'pick' && document.body.classList.contains('mushaf-mode')) {
@@ -33,7 +34,7 @@ export function takeTabIntent(): Intent | null {
   try {
     const v = sessionStorage.getItem('tabIntent');
     sessionStorage.removeItem('tabIntent');
-    return v === 'listen' || v === 'me' || v === 'pick' ? v : null;
+    return v === 'listen' || v === 'menu' || v === 'pick' ? v : null;
   } catch { return null; }
 }
 
@@ -47,7 +48,7 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
     btn('read', 'book', t('tab.read'), on.read ?? (() => goMushaf())),
     btn('listen', 'listen', t('tab.listen'), on.listen ?? (() => goMushaf('listen'))),
     btn('create', 'create', t('tab.create'), () => void openCreate()),
-    btn('me', 'me', t('tab.me'), on.me ?? (() => goMushaf('me'))));
+    btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }
 
 /** The Create sheet: start from today's ayah, continue a draft, or pick ayat in the mushaf. */
@@ -82,6 +83,9 @@ export async function openCreate() {
   document.body.append(d);
   d.showModal();
 }
+
+/** Settings and the rest of the menu (it lives on the mushaf). */
+export const openMoreMenu = () => goMushaf('menu');
 
 /** After "Pick ayat": say how to select, near where the user will do it. */
 export const pickHint = () => toast(t('create.pickHint'));

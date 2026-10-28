@@ -26,6 +26,7 @@ import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
+import { countPage, pageSeconds } from '../data/journey';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 // The family circles screens load on first use.
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
@@ -210,21 +211,30 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (player.active()) player.toggle();
     else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
   };
-  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow, me: () => openMenu() }, true);
+  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow }, true);
   root.append(bar, area, sel.bar, player.bar, tabs);
 
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
   const startReadTimer = () => {
-    clearTimeout(readTimer);
+    clearInterval(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    // Every page open ≥ 20 s is logged (this device); Ramadan counts it too.
-    readTimer = window.setTimeout(() => {
-      if (p !== page) return;
-      logPageRead(p);
-      if (ramadan) markRamadanRead(p);
-    }, 20_000);
+    // Honest counting (Me tab): a page counts as read only after it has been on screen for the
+    // reading time the user picked (default 1½ min); the clock stops while the app is hidden, so
+    // swiping past or leaving the phone does not count. Ramadan's portion keeps its 20 s.
+    const need = pageSeconds();
+    let seen = 0;
+    readTimer = window.setInterval(() => {
+      if (p !== page) { clearInterval(readTimer); return; }
+      if (document.hidden) return;
+      seen++;
+      if (seen === 20 && ramadan) markRamadanRead(p);
+      if (seen >= need) {
+        clearInterval(readTimer);
+        if (logPageRead(p)) countPage(mushaf, p);
+      }
+    }, 1000);
   };
   try {
     const open = sessionStorage.getItem('openCircle');
@@ -645,7 +655,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
   if (intent === 'listen') listenNow();
-  else if (intent === 'me') openMenu();
+  else if (intent === 'menu') openMenu();
   else if (intent === 'pick') pickHint();
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
   // Never over the tour: the moment waits for the next start.
@@ -665,7 +675,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
-    clearTimeout(readTimer);
+    clearInterval(readTimer);
     clearTimeout(recentTimer);
     listenHere = null;
     ramadanCtx = null;

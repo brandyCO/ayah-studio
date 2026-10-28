@@ -1050,6 +1050,31 @@ no AI-written religious content. Every scene is a pure function of (t, seed), so
       repeat waited for ever. Now the last ayah stops 0.8 s after its last word, and a playhead that
       stops moving within 1 s of the last word (or for 4 s anywhere in the kept recording) also ends it
 
+### Phase 8 — Me tab: streaks, goals, dhikr, widgets (owner request 2026-10-28)
+Owner decisions: a daily streak with a living flame (a day is lit by opening the app), a free streak
+freeze each week, a friend can relight a lost streak; honest page counting (a page counts only after
+it has been on screen for the reading time, default 1½ min, owner-confirmed; read-aloud check later);
+stats for week / month / all time; daily goals incl. dhikr (tasbih, istighfar, tahleel, hawqala,
+morning adhkar from a published source, never written by us); milestone badges; My library; widgets
+(streak, tasbih, daily ayah, prayer times; prayer times on the lock screen). No reading calendar, no
+duas/reflections section in Me.
+- [x] M1 Me screen `#/me` (`src/ui/me.ts`, the Me tab now opens it; ☰ still opens the menu, and
+      Me → Settings and more opens it on the mushaf): flame (`src/ui/flame.ts`, SVG + CSS, tiers at 7 / 30
+      days, out = ember + smoke, still with reduced motion / old-phone mode), this week's days, weeks in a
+      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; if the
+      missed days cannot all be covered the flame goes out and `lost` is kept 2 days for a friend's
+      relight), best. `src/data/journey.ts` (localStorage `journey`, this device): `recordOpen()` (main.ts,
+      on start and when the app comes back; not in the Kids space), `countPage()` (ayat starting on the
+      page; a surah is finished when all its pages were counted since its last finish, within 60 days),
+      `addListen()` (player: recitation actually played), `reelMade()` (export), `stats()`. The mushaf's
+      read timer counts visible seconds only: `pageSeconds()` (1 / 1½ / 2 / 3 / 4 min, set in Me) logs the
+      page (`readLog`, now also used for the stats); Ramadan's portion keeps its 20 s
+- [ ] M2 Daily goals (pages, ayat memorised, reels, dhikr counter), weekly summary, milestone badges, My library
+- [ ] M3 Android widgets (streak, tasbih, prayer times; the daily ayah widget exists) + prayer times by
+      location with a lock-screen notification, tasbih reminders
+- [ ] M4 Friend relight (Google sign-in + Supabase)
+- [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
+
 ---
 
 ## Repository layout (target)

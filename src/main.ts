@@ -4,6 +4,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
+//   #/me               Me: streak flame, stats, reading time, settings
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
@@ -23,6 +24,7 @@ import { applyLite, liteMode } from './lite';
 import { initErrors } from './errors';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
+import { recordOpen } from './data/journey';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -75,6 +77,9 @@ async function route() {
         const { showKids } = await import('./ui/kids');
         c = await showKids(screen);
       }
+    } else if (view === 'me') {
+      const { showMe } = await import('./ui/me');
+      c = await showMe(screen);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -109,6 +114,10 @@ if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
+// The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
+const lightToday = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
+lightToday();
+document.addEventListener('visibilitychange', lightToday);
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
