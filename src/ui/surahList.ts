@@ -9,7 +9,7 @@ import {
 import { currentTranslation, translationInfo } from '../data/translations';
 import { openDebugPanel } from './debug';
 import { tabBar } from './tabs';
-import { h } from './dom';
+import { h, skeletonRows } from './dom';
 import { lastRead } from './prefs';
 import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
 import { locale, surahName, t } from '../i18n';
@@ -159,6 +159,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
 
   async function showDivisions(which: 'juz' | 'quarters') {
     const id = searchId;
+    body.replaceChildren(skeletonRows(6));
     const [d, mushaf] = await Promise.all([loadDivisions(), loadMushaf()]);
     if (id !== searchId || !alive) return;
     const at = here ? divisionOf(d, here.s, here.a) : null;
@@ -224,14 +225,18 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
       return;
     }
     status.textContent = t('search.searching');
+    const skel = skeletonRows(4);
+    list.append(skel);
     const info = translationInfo(currentTranslation());
     let hits: AyahHit[];
     try {
       hits = arabic ? await searchArabic(q) : (await searchTranslation(q, info.id)).hits;
     } catch (e) {
+      skel.remove();
       if (id === searchId) status.textContent = e instanceof Error ? e.message : String(e);
       return;
     }
+    skel.remove();
     if (id !== searchId || !alive) return;
     if (!hits.length) {
       status.textContent = arabic && q.replace(/\s/g, '').length < MIN_QUERY ? '' : t('search.none', { q });

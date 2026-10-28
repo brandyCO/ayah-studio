@@ -40,3 +40,20 @@ export function haptic(ms = 8) {
     navigator.vibrate?.(ms);
   } catch { /* ignore */ }
 }
+
+/** A skeleton of a screen while it loads: a mushaf page (15 soft lines) or a list (a header and rows). */
+export function skeleton(kind: 'page' | 'list'): HTMLElement {
+  if (kind === 'page') {
+    return h('div', { class: 'route-skel skel skel-page', 'aria-busy': 'true' },
+      ...Array.from({ length: 15 }, (_, i) => h('span', { class: 'skel-line', style: i === 14 ? 'width:58%' : '' })));
+  }
+  return h('div', { class: 'route-skel skel skel-list', 'aria-busy': 'true' },
+    h('span', { class: 'skel-bar skel-title' }), h('span', { class: 'skel-bar skel-search' }),
+    ...Array.from({ length: 8 }, () => h('span', { class: 'skel-row' },
+      h('span', { class: 'skel-dot' }), h('span', { class: 'skel-lines' }, h('span', { class: 'skel-bar' }), h('span', { class: 'skel-bar short' })))));
+}
+
+/** Rows of a list while it loads (search results, drafts). */
+export const skeletonRows = (n = 4) =>
+  h('div', { class: 'skel skel-rows', 'aria-busy': 'true' }, ...Array.from({ length: n }, () => h('span', { class: 'skel-row' },
+    h('span', { class: 'skel-lines' }, h('span', { class: 'skel-bar' }), h('span', { class: 'skel-bar short' })))));

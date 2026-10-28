@@ -833,6 +833,14 @@ const en = {
   'hist.searches': 'Recent searches',
   'hist.pages': 'Recently read',
   'hist.clear': 'Clear',
+  'voice.sample': 'Hear {name}',
+  'welcome.label': 'Welcome',
+  'welcome.lang': 'Your language',
+  'welcome.langText': 'For the buttons and menus. The Quran is always in Arabic.',
+  'welcome.reciter': 'Your reciter',
+  'welcome.reciterText': 'Tap ▶ to hear a voice, then pick one. You can change it any time.',
+  'welcome.theme': 'Your colours',
+  'welcome.themeText': 'The colour of buttons and highlights. The mushaf page stays plain.',
 };
 
 export type Key = keyof typeof en;

@@ -892,6 +892,14 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'hist.searches': 'عمليات البحث الأخيرة',
   'hist.pages': 'قرأت مؤخرًا',
   'hist.clear': 'مسح',
+  'voice.sample': 'استمع إلى {name}',
+  'welcome.label': 'أهلًا بك',
+  'welcome.lang': 'لغتك',
+  'welcome.langText': 'للأزرار والقوائم. القرآن بالعربية دائمًا.',
+  'welcome.reciter': 'قارئك',
+  'welcome.reciterText': 'المس ▶ لتسمع الصوت، ثم اختر. يمكنك تغييره متى شئت.',
+  'welcome.theme': 'ألوانك',
+  'welcome.themeText': 'لون الأزرار والتمييز. صفحة المصحف تبقى كما هي.',
 };
 
 export default ar;

@@ -9,7 +9,7 @@
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { capabilities } from './engine/capabilities';
-import { h } from './ui/dom';
+import { h, skeleton } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
@@ -42,6 +42,11 @@ async function route() {
   app.replaceChildren(screen);
   document.body.dataset.view = view || 'home';
   window.scrollTo(0, 0);
+  // A screen that takes a moment (data, fonts) shows a skeleton of itself instead of a blank page,
+  // only when it is not ready within 120 ms (no flash on a fast open). The studio has its own.
+  const skel = view === 'reel' ? null : skeleton(view === 's' && readerMode() === 'mushaf' ? 'page' : 'list');
+  const skelTimer = skel ? window.setTimeout(() => { if (id === routeId) app.append(skel); }, 120) : 0;
+  const dropSkel = () => { clearTimeout(skelTimer); skel?.remove(); };
   try {
     let c: () => void;
     if (view === 's' && Number(a)) {
@@ -73,9 +78,11 @@ async function route() {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
     } else c = await showSurahList(screen, view === 'search');
+    dropSkel();
     if (id === routeId) cleanup = c;
     else c();
   } catch (e) {
+    dropSkel();
     if (id !== routeId) return;
     console.error(e);
     screen.replaceChildren(h('div', { class: 'error' },

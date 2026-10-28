@@ -357,13 +357,29 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const placeholders = new Map<number, HTMLElement>();
   const placeholder = (p: number) => {
     if (!placeholders.has(p)) {
-      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true' },
-        h('span', { class: 'spinner' }), h('span', { class: 'mp-loading' }, t('common.page', { n: p }))));
+      // A skeleton of the page: 15 soft lines where the text will be, a light sweeping across them.
+      const lines = Array.from({ length: 15 }, (_, i) => h('span', { class: 'skel-line', style: i === 14 ? 'width:58%' : '' }));
+      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
+        ...lines));
     }
     return placeholders.get(p)!;
   };
 
   let renderId = 0;
+  // After a slide lands, the rest of the work (attaching the new neighbour, fitting it, the header,
+  // marks) waits a frame, so the landing frame itself stays light. A new swipe runs it at once.
+  let pendingLayout = 0;
+  function layoutSoon() {
+    cancelAnimationFrame(pendingLayout);
+    pendingLayout = requestAnimationFrame(() => { pendingLayout = 0; layout(); });
+  }
+  function flushLayout() {
+    if (!pendingLayout) return;
+    cancelAnimationFrame(pendingLayout);
+    pendingLayout = 0;
+    layout();
+  }
+  const idle = (f: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(f, { timeout: 600 }); else setTimeout(f, 120); };
   /** Show `page` with its neighbours at once (placeholders for pages still loading). */
   function layout() {
     const id = ++renderId;
@@ -383,6 +399,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     for (const p of want) if (!built.has(p)) void buildPage(p).then(attach);
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
+    // Build the pages two away while idle (their words, not yet fitted), so the next flip only fits.
+    idle(() => { if (id === renderId) for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p); });
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
     releasePageFonts((p) => Math.abs(p - page) <= 6); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
@@ -396,28 +414,36 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     strip.style.transition = ms ? `transform ${ms}ms cubic-bezier(.22,.8,.24,1)` : 'none';
     strip.style.transform = x ? `translateX(${x}px)` : '';
   }
+  let panRaf = 0;
+  let panX = 0;
   function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
     // Swiping again while a page is still sliding: let it land at once and follow the new swipe.
     if (animating) finishNow?.();
+    flushLayout();
     const dir = dx > 0 ? 1 : -1; // finger moving right brings in the next page (on the left)
     const target = page + dir;
     if (phase === 'move') {
       panning = true;
       strip.classList.add('moving');
-      setStrip(valid(target) ? dx : dx * 0.25); // resistance at the first and last page
+      panX = valid(target) ? dx : dx * 0.25; // resistance at the first and last page
+      // One transform per frame, however often the finger reports.
+      panRaf ||= requestAnimationFrame(() => { panRaf = 0; if (panning) setStrip(panX); });
       return;
     }
+    cancelAnimationFrame(panRaf);
+    panRaf = 0;
     panning = false;
     const fling = Math.abs(vx) > 0.35 && Math.sign(vx) === dir;
-    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx));
+    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx), Math.abs(vx));
     else {
-      setStrip(0, 240);
+      setStrip(0, 220);
       window.setTimeout(() => { if (!panning && !animating) strip.classList.remove('moving'); }, 260);
     }
   }
   /** Slide to a neighbouring page (from where the finger left it). */
-  function slideTo(target: number, from = 0) {
+  function slideTo(target: number, from = 0, speed = 0) {
     if (animating) finishNow?.();
+    flushLayout();
     const dir = target > page ? 1 : -1;
     if (!strip.querySelector(`[data-page="${target}"]`)) {
       page = target;
@@ -427,7 +453,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     animating = true;
     strip.classList.add('moving');
-    const ms = Math.round(160 + 160 * (1 - Math.min(1, from / W())));
+    // Carry the finger's speed: the rest of the way at that speed (px/ms), between 140 and 300 ms.
+    const rest = Math.max(0, W() - from);
+    const ms = Math.round(Math.min(300, Math.max(140, speed > 0.3 ? (rest / speed) * 1.6 : 160 + 140 * (rest / W()))));
     setStrip(dir * W(), ms);
     let done = false;
     const finish = () => {
@@ -435,10 +463,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       done = true;
       finishNow = null;
       page = target;
+      place(); // the pages already in the strip move into their new places in the same frame
       setStrip(0);
       strip.classList.remove('moving');
       animating = false;
-      layout();
+      layoutSoon();
     };
     finishNow = finish;
     strip.addEventListener('transitionend', finish, { once: true });
@@ -447,6 +476,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   function go(p: number) {
     if (animating) finishNow?.();
+    flushLayout();
     if (!valid(p) || p === page) return;
     if (Math.abs(p - page) === 1) slideTo(p);
     else {
@@ -590,7 +620,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     let returning = false;
     try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
     if (returning) markTourSeen();
-    else { touring = true; showTour(firstVisitHint); }
+    else { touring = true; void import('./welcome').then((m) => m.showWelcome(firstVisitHint)); } // language, reciter, theme
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
@@ -610,6 +640,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   return () => {
     renderId++;
+    cancelAnimationFrame(pendingLayout);
+    cancelAnimationFrame(panRaf);
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
