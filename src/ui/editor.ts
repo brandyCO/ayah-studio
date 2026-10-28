@@ -21,7 +21,11 @@ import {
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
-import { render } from '../engine/render';
+import { render, type RenderInfo } from '../engine/render';
+import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
+import { loadLogo } from '../data/logos';
+import { markPanel, savedMark } from './markPanel';
+import { attachTouch, drawSelection } from './studioTouch';
 import { breathOf } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
@@ -96,6 +100,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id && covers(r, n)));
   else try {
+    project.mark = savedMark(); // the user's own watermark, as set up last time
     project.tightStart = localStorage.getItem('tightStart') !== '0';
     project.cinema = localStorage.getItem('cinema') !== '0';
     project.tajweed = localStorage.getItem('tajweed') === '1';
@@ -127,6 +132,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const measure = document.createElement('canvas').getContext('2d')!;
   let media: BackgroundMedia[] = []; // decoded background of each entry in project.scenes
   let mediaReady = false;
+  let mediaVersion = 0; // bumped whenever the decoded scenes change
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
   let src: AudioBufferSourceNode | null = null;
@@ -139,6 +145,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let syncText = ui('ed.loadingTimings');
   let quality: 1920 | 1280 = 1920;
   let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
+  let layerSel: Layer | null = null; // moved / scaled by touch on the preview: its actions are in the bar
+  const drawn: RenderInfo = { text: null, textPose: IDENTITY, bgPose: IDENTITY, fitText: (p) => p, fitBg: (p) => p }; // the preview's last frame
 
   // --- DOM: preview and control row ---
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
@@ -226,8 +234,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function restore(json: string) {
     const prev = project;
     const before = { reciter: prev.reciterId, scenes: JSON.stringify(prev.scenes) };
-    Object.assign(project, JSON.parse(json) as Project);
+    const snap = JSON.parse(json) as Project;
+    // Keys the snapshot lacks were unset then (JSON drops undefined): unset them again.
+    for (const k of Object.keys(project) as (keyof Project)[]) if (!(k in snap)) delete project[k];
+    Object.assign(project, snap);
     selection = null;
+    layerSel = null;
+    void loadLogo(project.mark?.logo).then(() => (dirty = true));
     option = null;
     setReelLook(lookOf(project));
     if (project.reciterId !== before.reciter) {
@@ -1067,6 +1080,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(ui('ed.tight-note')),
         row(ui('qr.mark'), chips<'off' | 'on'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.mark-small') }],
           () => (project.watermark ? 'on' : 'off'), (v) => { project.watermark = v === 'on'; rebuild(); })),
+        h('button', { class: 'chip', onclick: () => openWatermark() }, project.mark?.kind && project.mark.kind !== 'off' ? ui('mk.edit-own') : ui('mk.add-own')),
         note(ui('qr.mark-note')),
         ...dedicationField(),
         ...seriesField(),
@@ -1076,6 +1090,28 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     return [head, ...body.filter((x): x is Node => !!x), nav];
   };
+
+  /** Layout → Watermark: Ayah Studio mark, the user's own text or logo, or none at all. */
+  let markRaf = 0;
+  function watermarkPanel(): Node[] {
+    return markPanel({
+      project,
+      busy: () => !!exporting,
+      changed: (live) => {
+        void loadLogo(project.mark?.logo).then(() => (dirty = true));
+        cancelAnimationFrame(markRaf);
+        markRaf = requestAnimationFrame(() => rebuild()); // the mark's strip moves the text area
+        changed(!live);
+      },
+    });
+  }
+  function openWatermark() {
+    tool = TOOLS.find((x) => x.id === 'layout')!;
+    selection = null;
+    layerSel = null;
+    option = tool.options.find((o) => o.id === 'watermark')!;
+    refreshUI();
+  }
 
   /** A dedication in the user's own words on the closing card (which it turns on). */
   function dedicationField(): Node[] {
@@ -1275,6 +1311,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         chips<GapText>([{ value: 'hold', label: ui('ed.keep-the-ayah') }, { value: 'clear', label: ui('ed.clear') }], () => project.gap, (v) => { project.gap = v; arrange(); }),
         note(ui('ed.what-the-text-does-in-the-pause-between-'))] },
     ] },
+    { id: 'move', icon: 'move', label: ui('mv.tool'), options: [
+      { id: 'mv-text', icon: 'text', label: ui('mv.text'), action: () => selectLayer('text') },
+      { id: 'mv-bg', icon: 'scenes', label: ui('mv.bg'), action: () => selectLayer('bg') },
+    ] },
     { id: 'effects', icon: 'effects', label: ui('ed.effects'), options: [
       { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
       { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
@@ -1329,10 +1369,42 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'intro', icon: 'card', label: ui('ed.intro-card'), toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
       { id: 'outro', icon: 'card', label: ui('ed.end-card'), toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
       { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
-      { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), toggle: { get: () => project.watermark, set: (v) => { project.watermark = v; rebuild(); } } },
+      { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), panel: watermarkPanel },
       { id: 'dedication', icon: 'card', label: ui('ed.dedication'), panel: dedicationField },
     ] },
   ];
+
+  // --- moved by touch: the selected layer's actions (keyframes) ---
+  function selectLayer(l: Layer | null) {
+    layerSel = l;
+    selection = null;
+    tool = null;
+    option = null;
+    if (l && !moveHinted) { moveHinted = true; toast(ui('mv.hint')); }
+    refreshUI();
+    dirty = true;
+  }
+  const keyTimes = (l: Layer) => (project.motion?.[l]?.anim ? project.motion[l]!.keys.map((k) => k.t) : []);
+  function layerOptions(l: Layer): Opt[] {
+    const tr = project.motion?.[l];
+    const on = keyIndex(tr, t) >= 0;
+    const ks = keyTimes(l);
+    const seek = (x: number | undefined) => { if (x === undefined) return; pause(); t = x; spine.reveal(x); dirty = true; refreshUI(); };
+    const setTrack = (next: typeof tr) => {
+      const m = { ...project.motion, [l]: next };
+      if (!next) delete m[l];
+      project.motion = m.text || m.bg ? m : undefined;
+      changed();
+    };
+    return [
+      { id: 'key', icon: 'keyframe', label: ui(on ? 'mv.key-remove' : 'mv.key-add'), action: () => setTrack(on && tr ? removeKey(tr, t) : addKey(tr, t)) },
+      { id: 'key-prev', icon: 'prev', label: ui('mv.key-prev'), disabled: () => !ks.some((x) => x < t - 0.05), action: () => seek([...ks].reverse().find((x) => x < t - 0.05)) },
+      { id: 'key-next', icon: 'next', label: ui('mv.key-next'), disabled: () => !ks.some((x) => x > t + 0.05), action: () => seek(ks.find((x) => x > t + 0.05)) },
+      { id: 'mv-reset', icon: 'reset', label: ui('ed.reset'), disabled: () => !tr, action: () => setTrack(undefined) },
+    ];
+  }
+  let shownOnKey = false; // the keyframe button follows the playhead
+  let moveHinted = false; // the how-to toast, once per visit
 
   // --- block actions (when a block is selected in the timeline) ---
   function selectionOptions(sel: NonNullable<Selection>): Opt[] {
@@ -1396,6 +1468,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function openTool(x: Tool | null) {
     tool = x;
     selection = null;
+    layerSel = null;
     option = null;
     // A tool with a single panel opens it straight away (Reciter, Mood).
     if (x && x.options.length === 1 && x.options[0].panel) option = x.options[0];
@@ -1408,6 +1481,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   function select(sel: Selection) {
     selection = sel;
+    layerSel = null;
     tool = null;
     option = null;
     refreshUI();
@@ -1415,8 +1489,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const back = (label: string, onclick: () => void) =>
     h('button', { class: 'tool back', 'aria-label': ui('common.back'), onclick }, h('span', { class: 'tool-icon' }, icon('back')), h('span', {}, label));
   function refreshUI() {
-    // Bottom bar: a selected block's actions, a tool's options, or the tools.
-    if (selection) {
+    // Bottom bar: a moved layer's or a selected block's actions, a tool's options, or the tools.
+    if (layerSel) {
+      shownOnKey = keyIndex(project.motion?.[layerSel], t) >= 0;
+      bar.replaceChildren(back(ui(layerSel === 'text' ? 'mv.text' : 'mv.bg'), () => selectLayer(null)),
+        ...layerOptions(layerSel).map((o) => barButton(o, () => runOption(o))));
+    } else if (selection) {
       bar.replaceChildren(back(ui(selection.kind === 'scene' ? 'ed.scene' : 'ed.audio'), () => select(null)),
         ...selectionOptions(selection).map((o) => barButton(o, () => runOption(o))));
     } else if (tool) {
@@ -1475,6 +1553,22 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     audioTrim,
     trimAudio: (i, hd, tlv) => { if (!exporting) trimAudio(i, hd, tlv); },
     setGap: (i, g) => { if (!exporting) setGap(i, g); },
+    keys: () => (layerSel ? keyTimes(layerSel) : []),
+  });
+
+  // Move and scale by touch on the preview (text block or background), keyframed when the layer has keys.
+  attachTouch({
+    canvas,
+    project: () => project,
+    time: () => t,
+    info: () => drawn,
+    enabled: () => !!tl && !exporting && !picking && !studio.classList.contains('watching') && !studio.classList.contains('premiere'),
+    layer: () => layerSel,
+    select: (l) => selectLayer(l),
+    onStart: () => { if (playing) pause(); },
+    live: () => { dirty = true; spine.refresh(); },
+    done: () => changed(),
+    hint: () => toast(ui('mv.bg-zoom')),
   });
 
   // Eyedropper: a tap on the preview takes the colour under the finger.
@@ -1738,6 +1832,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     for (const m of media) if (!next.includes(m)) disposeMedia(m);
     media = next;
+    mediaVersion++;
     mediaReady = true;
     if (tl) setStatus('');
     dirty = true;
@@ -1804,6 +1899,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
 
   let raf = 0;
+  let preparedKey = '';
   function frame() {
     raf = requestAnimationFrame(frame);
     if (exporting || !tl || !mediaReady) return;
@@ -1817,11 +1913,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       dirty = true;
     }
     // Fetch the video frames for t (two during a transition); they are drawn on the next tick.
-    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true, project.slowmo ?? 1)?.then(() => (dirty = true));
+    // Only when the picture can change: a paused preview stays idle (no redraw every frame).
+    const key = `${t}|${mediaVersion}|${JSON.stringify(tl.scenes.map((x) => [x.start, x.entry]))}|${JSON.stringify(project.clips)}|${project.slowmo}`;
+    if (playing || (key !== preparedKey && !media.some((m) => m.video?.isBusy))) {
+      preparedKey = key;
+      void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true, project.slowmo ?? 1)?.then((ch) => { if (ch) dirty = true; });
+    }
     spine.frame();
     if (!dirty) return;
     dirty = false;
-    render(pctx, t, project, tl, media);
+    render(pctx, t, project, tl, media, drawn);
+    if (layerSel && !studio.classList.contains('watching')) drawSelection(pctx, layerSel, drawn);
+    if (layerSel && (keyIndex(project.motion?.[layerSel], t) >= 0) !== shownOnKey) refreshUI();
     timeLabel.textContent = `${clock(t)} / ${clock(tl.duration)}`;
   }
   raf = requestAnimationFrame(frame);
@@ -1942,6 +2045,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     pause();
     commit();
+    await loadLogo(project.mark?.logo); // the user's logo is decoded before the first frame
     exporting = new AbortController();
     overlay.hidden = false;
     progressRow.hidden = false;

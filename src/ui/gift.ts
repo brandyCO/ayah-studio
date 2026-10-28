@@ -392,7 +392,7 @@ export async function showGift(root: HTMLElement, id: string): Promise<() => voi
       }
       dirty = true;
     }
-    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true)?.then(() => (dirty = true));
+    void prepareScenes(sceneSpans(tl.scenes, project.transition), t, media, project.clips, true)?.then((ch) => { if (ch) dirty = true; });
     if (!dirty) return;
     dirty = false;
     render(ctx, t, project, tl, media);

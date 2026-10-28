@@ -440,6 +440,25 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
       button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
       the end pauses and brings them back
+- [x] Own watermark, move by touch, faster studio (owner request 2026-10-28): **Layout → Watermark**
+      (`src/ui/markPanel.ts`, `src/engine/mark.ts`): the small Ayah Studio mark on/off, the user's own
+      mark — text (≤ 40 chars, UI font) or a logo (PNG/WebP/SVG/JPEG, scaled to ≤ 480 px, kept on this device
+      in localStorage `markLogos`, `src/data/logos.ts`) — top left/right or bottom left/centre/right, size
+      50–200 %, opacity 20–100 %, and **Remove all watermarks**. `project.mark` (per device pref `myMark`,
+      not in the look, so gifts never carry it); `frameLayout()` keeps a strip for it at the top or the
+      bottom, so it never covers the text, the reference, the credit or the Ayah Studio mark (rule 6;
+      `npm run check`). Quick reel → Finish links to it. **Move** (`src/engine/motion.ts`,
+      `src/ui/studioTouch.ts`): Move tool → Text / Background, or a tap on the preview; drag to move,
+      pinch or the mouse wheel to scale. `project.motion {text?, bg?}`: one pose for the whole reel, or
+      keyframes (Add keyframe at the playhead; later moves set the key at the playhead; previous/next;
+      gold diamonds on the timeline ruler; eased with smoothstep). The renderer keeps the text block
+      inside the text area and never below the legible minimum (52 px Arabic, 32 px translation) — moved
+      and scaled only, never rotated (rule 7); the name + reference move with it when they sit below the
+      ayah; the background is kept covering the frame (scale 1–3×). Speed: a paused preview on a video
+      background no longer redraws every frame (`VideoLoop.prepare()` reports a changed picture; idle
+      CPU ≈ 935 → 27 ms per 3 s in Chromium); the timeline draws its tracks into a cached layer three
+      screens wide (playing, panning and scrubbing copy it; waveform via a max-pyramid); icons are parsed
+      once and cloned; draft and reel-look syncing wait 20 s after the last studio edit
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

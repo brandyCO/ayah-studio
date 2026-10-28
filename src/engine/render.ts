@@ -6,7 +6,9 @@ import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
 import { tajweedLines } from './tajweed';
 import { breathAt, darken, drift, shade, soften } from './cinema';
-import { AR_LINE, EN_LINE, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, setFrame, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
+import { AR_LINE, AR_SIZE_MIN, EN_LINE, EN_MIN, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, SAFE, setFrame, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
+import { logoImage, markShown, MARK_FONT, type Mark } from './mark';
+import { fitBgPose, fitTextPose, IDENTITY, poseAt, type Pose, type Rect } from './motion';
 import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
 import { reference } from '../data/quran';
@@ -282,12 +284,58 @@ function drawClosing(ctx: CanvasRenderingContext2D, c: NonNullable<Project['clos
   }
 }
 
+/** What the preview needs to know about a drawn frame (for moving things by touch). */
+export interface RenderInfo {
+  text: Rect | null; // the text block as drawn (after its pose), frame units
+  textPose: Pose;
+  bgPose: Pose;
+  /** The pose that would be drawn for a requested one (kept legible and inside the frame). */
+  fitText: (p: Pose) => Pose;
+  fitBg: (p: Pose) => Pose;
+}
+
+/** The user's own watermark in its strip (the layout keeps it clear of the text: rule 6). */
+function drawMark(ctx: CanvasRenderingContext2D, m: Mark, box: { y: number; h: number }) {
+  const x = m.pos === 'tl' || m.pos === 'bl' ? SAFE.x0 + 8 : m.pos === 'bc' ? W / 2 : SAFE.x1 - 8;
+  const align: CanvasTextAlign = m.pos === 'tl' || m.pos === 'bl' ? 'left' : m.pos === 'bc' ? 'center' : 'right';
+  ctx.save();
+  ctx.globalAlpha = m.opacity;
+  if (m.kind === 'logo') {
+    const img = logoImage(m.logo);
+    if (img && img.width && img.height) {
+      const w = Math.min((box.h * img.width) / img.height, W * 0.4), hh = (w * img.height) / img.width;
+      const x0 = align === 'left' ? x : align === 'center' ? x - w / 2 : x - w;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 8 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b);
+      ctx.drawImage(img, x0, box.y + (box.h - hh) / 2, w, hh);
+    }
+  } else {
+    setTextShadow(ctx, '#ffffff');
+    ctx.fillStyle = '#ffffff';
+    ctx.direction = 'ltr';
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.font = `600 ${Math.round(MARK_FONT * m.size)}px ${FONT_UI}`;
+    ctx.fillText(m.text, x, box.y + box.h / 2, W * 0.6);
+  }
+  ctx.restore();
+}
+
 /** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */
-export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: (BackgroundMedia | undefined)[]) {
+export function render(ctx: CanvasRenderingContext2D, t: number, project: Project, tl: Timeline, media: (BackgroundMedia | undefined)[], info?: RenderInfo) {
   setFrame(project.format);
   ctx.save();
   const cine = !!project.cinema;
   const spans = sceneSpans(tl.scenes, project.transition);
+  // Moved / scaled by the user (always still covering the frame).
+  const bgPose = project.motion?.bg ? fitBgPose(poseAt(project.motion.bg, t), W, H) : IDENTITY;
+  const posed = bgPose !== IDENTITY;
+  if (posed) {
+    ctx.save();
+    ctx.translate(W / 2 + bgPose.x, H / 2 + bgPose.y);
+    ctx.scale(bgPose.s, bgPose.s);
+    ctx.translate(-W / 2, -H / 2);
+  }
   if (cine) {
     // The background drifts slowly closer over the whole reel.
     const z = drift(t, tl.duration);
@@ -301,6 +349,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     const a = ayahAt(tl, t);
     if (a) soften(ctx, Math.min(smooth(clamp01((t - a.start) / 0.8)), smooth(clamp01((a.end - t) / 0.8))));
   } else drawScenes(ctx, t, spans, project.transition, media);
+  if (posed) ctx.restore();
   drawGrade(ctx, project.grade);
   if (project.vignette) drawVignette(ctx);
   if (project.grain) drawGrain(ctx, t);
@@ -342,6 +391,56 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     if (en) enTop = place(lay.en.top, lay.en.bottom, enH(en));
   }
 
+  // Moved / scaled by the user: the block (Arabic, translation, and the surah name when it sits below)
+  // keeps inside the text area and never gets smaller than the legible minimum (rule 6).
+  const T0 = titleBlock(project.titleSize, project.surahName !== false);
+  let textPose = IDENTITY;
+  let box: Rect | null = null;
+  if (ev || en) {
+    const below = project.titlePos === 'below';
+    let y0 = ev ? arTop : enTop, y1 = en ? enTop + enH(en) : arTop + (ev ? arH(ev.ar) : 0);
+    if (below) y1 = titleTop + T0;
+    let w = 0;
+    if (ev) {
+      ctx.font = `${ev.ar.size}px ${FONT_AR}`;
+      for (const l of ev.ar.lines) w = Math.max(w, ctx.measureText(l).width);
+    }
+    if (en) {
+      ctx.font = `${en.size}px ${lay.enFont}`;
+      for (const l of en.lines) w = Math.max(w, ctx.measureText(l).width);
+    }
+    if (!ev) y0 = enTop;
+    box = { x0: W / 2 - w / 2 - 8, x1: W / 2 + w / 2 + 8, y0, y1 };
+    const tr = project.motion?.text;
+    const region = { x0: SAFE.x0, x1: SAFE.x1, y0: lay.text.top, y1: below ? lay.title + T0 : lay.text.bottom };
+    const minS = Math.max(ev ? Math.min(1, AR_SIZE_MIN / ev.ar.size) : 0, en ? Math.min(1, EN_MIN / en.size) : 0, 0.01);
+    const b = box;
+    if (tr) textPose = fitTextPose(poseAt(tr, t), b, region, minS);
+    if (info) info.fitText = (p) => fitTextPose(p, b, region, minS);
+  }
+  const tcx = W / 2, tcy = box ? (box.y0 + box.y1) / 2 : H / 2;
+  const posedText = (draw: () => void) => {
+    if (textPose === IDENTITY) return draw();
+    ctx.save();
+    ctx.translate(tcx + textPose.x, tcy + textPose.y);
+    ctx.scale(textPose.s, textPose.s);
+    ctx.translate(-tcx, -tcy);
+    draw();
+    ctx.restore();
+  };
+  if (info) {
+    info.textPose = textPose;
+    info.bgPose = bgPose;
+    const fw = W, fh = H;
+    info.fitBg = (p) => fitBgPose(p, fw, fh);
+    if (!box) info.fitText = (p) => p;
+    info.text = box && {
+      x0: tcx + textPose.x + (box.x0 - tcx) * textPose.s, x1: tcx + textPose.x + (box.x1 - tcx) * textPose.s,
+      y0: tcy + textPose.y + (box.y0 - tcy) * textPose.s, y1: tcy + textPose.y + (box.y1 - tcy) * textPose.s,
+    };
+  }
+
+  posedText(() => {
   // Ayah text: each event shows from its first recited word until the next (word-timed).
   if (ev) {
     setTextShadow(ctx, colors.ar);
@@ -356,6 +455,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     const dir = project.translationMode === 'words' ? 'ltr' : tl.translation.dir;
     drawText(ctx, fx, en, t, { lines: en.lines, size: en.size, lh: EN_LINE, top: enTop, font: lay.enFont, dir, color: colors.en, opacity: 0.92 });
   }
+  });
 
   // Intro / closing card; the surah name + reference make way for it (the card shows the reference).
   const card = cardAt(tl, t);
@@ -368,18 +468,23 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   // Surah name (optional) + reference (always visible, rule 2) at the chosen place and size.
   const z = TITLE_SIZES[project.titleSize];
   const nameH = project.surahName !== false ? z.name * 1.4 : 0;
-  setTextShadow(ctx, colors.title);
-  ctx.fillStyle = colors.title;
-  ctx.globalAlpha = under;
-  if (nameH) {
-    ctx.direction = 'rtl';
-    ctx.font = `${z.name}px ${FONT_NAME}`;
-    ctx.fillText(head.surah.ar, W / 2, titleTop + z.name * 0.7);
-  }
-  ctx.direction = 'ltr';
-  ctx.font = `500 ${z.ref}px ${FONT_UI}`;
-  ctx.globalAlpha = 0.9 * under;
-  ctx.fillText(head.ref, W / 2, titleTop + nameH + z.ref * 0.7);
+  const drawTitle = () => {
+    setTextShadow(ctx, colors.title);
+    ctx.fillStyle = colors.title;
+    ctx.globalAlpha = under;
+    if (nameH) {
+      ctx.direction = 'rtl';
+      ctx.font = `${z.name}px ${FONT_NAME}`;
+      ctx.fillText(head.surah.ar, W / 2, titleTop + z.name * 0.7);
+    }
+    ctx.direction = 'ltr';
+    ctx.font = `500 ${z.ref}px ${FONT_UI}`;
+    ctx.globalAlpha = 0.9 * under;
+    ctx.fillText(head.ref, W / 2, titleTop + nameH + z.ref * 0.7);
+  };
+  // "Below": the name and reference belong to the text block and move with it.
+  if (project.titlePos === 'below' && box) posedText(drawTitle);
+  else drawTitle();
 
   // Footer: optional reciter credit and watermark.
   if (lay.credit !== null) {
@@ -394,5 +499,6 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     ctx.globalAlpha = 0.6;
     ctx.fillText('Ayah Studio', W / 2, lay.watermark);
   }
+  if (lay.mark && markShown(project.mark)) drawMark(ctx, project.mark, lay.mark);
   ctx.restore();
 }

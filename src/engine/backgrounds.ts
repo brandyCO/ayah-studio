@@ -64,7 +64,7 @@ export class VideoLoop {
   private iter: AsyncGenerator<WrappedCanvas, void, unknown> | null = null;
   private next: WrappedCanvas | null = null;
   private shown = -1;
-  private busy: Promise<void> | null = null;
+  private busy: Promise<boolean> | null = null;
 
   private constructor(private sink: CanvasSink, readonly duration: number, w: number, h: number) {
     this.canvas = document.createElement('canvas');
@@ -97,14 +97,16 @@ export class VideoLoop {
     return this.busy !== null;
   }
 
-  /** Make `canvas` hold the frame for time t (looped). Calls are serialized. */
-  prepare(t: number): Promise<void> {
+  /** Make `canvas` hold the frame for time t (looped). Calls are serialized. Resolves true when the
+   *  picture changed (a paused preview need not be redrawn otherwise). */
+  prepare(t: number): Promise<boolean> {
     if (this.busy) return this.busy.then(() => this.prepare(t));
     this.busy = this.seek(((t % this.duration) + this.duration) % this.duration).finally(() => (this.busy = null));
     return this.busy;
   }
 
-  private async seek(lt: number) {
+  private async seek(lt: number): Promise<boolean> {
+    const before = this.shown;
     // Restart the decoder when jumping backwards (loop wrap, scrubbing) or far ahead.
     if (!this.iter || lt < this.shown || lt > this.shown + 1) {
       await this.iter?.return();
@@ -125,6 +127,7 @@ export class VideoLoop {
       this.canvas.getContext('2d')!.drawImage(this.next.canvas, 0, 0, this.canvas.width, this.canvas.height);
       this.shown = this.next.timestamp;
     }
+    return this.shown !== before;
   }
 
   dispose() {

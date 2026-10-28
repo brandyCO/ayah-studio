@@ -2,6 +2,8 @@
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import { clampArSize, isFormat, type EnFont, type Format, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
 import { validTranslation } from '../data/translations';
+import { markStrip, validMark, type Mark } from './mark';
+import { validMotion, type Motion } from './motion';
 import { MAX_SCENES, SLOWMO, TRANSITIONS, type Clip, type SceneMode, type Transition } from './scenes';
 
 export type { SceneMode, TextEffect, Transition };
@@ -68,7 +70,13 @@ export interface Project {
   /** A dedication in the user's own words ("For my mother"), on the closing card in the UI font, never
    *  near the ayah. Not in the look (each reel its own). */
   dedication?: string;
+  /** The small "Ayah Studio" mark (off by default). */
   watermark: boolean;
+  /** The user's own watermark: their text or logo (src/engine/mark.ts). Per device like cinema (not in
+   *  the look, so gifts never carry it). */
+  mark?: Mark;
+  /** Moved / scaled by touch on the preview, optionally keyframed (src/engine/motion.ts). Per reel. */
+  motion?: Motion;
   /** Word highlight: the word being recited turns `colors.hl` (only with word timings: rule 8). */
   highlight: boolean;
   /** Finishing touches over the background (never over the text). */
@@ -116,6 +124,7 @@ export const frameStyle = (p: Project): FrameStyle => ({
   surahName: p.surahName,
   credit: p.credit,
   watermark: p.watermark,
+  mark: markStrip(p.mark),
   textSize: p.textSize,
   arSize: p.arSize,
   format: p.format,
@@ -274,6 +283,9 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
+  const mk = validMark(d.mark);
+  if (mk) p.mark = mk;
+  p.motion = validMotion(d.motion);
 }
 
 /** JSON with object keys sorted (the database may store them in another order). */

@@ -53,10 +53,22 @@ const P: Record<string, string> = {
   grain: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h.01M12 9h.01M16 8h.01M9 12h.01M14 12h.01M8 16h.01M12 15h.01M16 16h.01" stroke-width="2.4"/>',
   vignette: '<rect x="3.5" y="5" width="17" height="14" rx="3"/><ellipse cx="12" cy="12" rx="5.5" ry="4"/>',
   gift: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-4-6-4.5-5.5-1.5.3 1.4 3 1.5 5.5 1.5zM12 9c1.5-4 6-4.5 5.5-1.5-.3 1.4-3 1.5-5.5 1.5z"/>',
+  keyframe: '<path d="M12 4l6 8-6 8-6-8z"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
+  prev: '<path d="M15 6l-6 6 6 6M6 5v14"/>',
+  next: '<path d="M9 6l6 6-6 6M18 5v14"/>',
   save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
 };
 
+/** Parsed once per name and size, then cloned (the tool bar redraws often). */
+const made = new Map<string, SVGSVGElement>();
 export function icon(name: keyof typeof P | string, size = 22): SVGSVGElement {
+  const key = `${name}|${size}`;
+  let tpl = made.get(key);
+  if (!tpl) made.set(key, (tpl = build(name, size)));
+  return tpl.cloneNode(true) as SVGSVGElement;
+}
+function build(name: string, size: number): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('width', String(size));

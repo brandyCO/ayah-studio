@@ -44,7 +44,7 @@ export const AR_SIZES = {
   words: [96, 88, 80, 72, 64],
 } as const;
 const AR_MIN = 64;
-const EN_MIN = 32;
+export const EN_MIN = 32;
 /** The Arabic size slider (px of a whole ayah on the 1080 px frame; Medium = 80). Owner decision
  *  2026-10-13: 52 px is the smallest still readable on a phone (~19 px on screen), 92 px the largest. */
 export const AR_SIZE_MIN = 52;
@@ -89,6 +89,7 @@ export interface FrameStyle {
   surahName?: boolean; // the Arabic surah name above the reference (default on); the reference always shows (rule 2)
   credit: boolean; // "Recited by …" line (optional)
   watermark: boolean;
+  mark?: { h: number; top: boolean } | null; // the user's own watermark strip (src/engine/mark.ts)
   textSize?: TextSize; // default 'm'
   arSize?: number; // the size slider (AR_SIZE_MIN–AR_SIZE_MAX px); wins over textSize when set
   format?: Format; // default '9:16'
@@ -111,6 +112,7 @@ export interface FrameLayout {
   title: number; // top of the surah name + reference block ("below": its lowest place; it follows the text)
   credit: number | null; // centre line of the reciter credit
   watermark: number | null;
+  mark: { y: number; h: number } | null; // the user's own watermark: top of its strip and its height
   arSizes: Record<keyof typeof AR_SIZES, number[]>;
   enSizes: number[];
   enFont: string;
@@ -120,7 +122,15 @@ export interface FrameLayout {
 export function frameLayout(st: FrameStyle): FrameLayout {
   setFrame(st.format);
   let bottom = SAFE.y1;
-  let watermark: number | null = null, credit: number | null = null;
+  let watermark: number | null = null, credit: number | null = null, mark: { y: number; h: number } | null = null;
+  let top = SAFE.y0 + 24;
+  if (st.mark?.top) {
+    mark = { y: SAFE.y0, h: st.mark.h };
+    top = SAFE.y0 + st.mark.h + 24;
+  } else if (st.mark) {
+    mark = { y: bottom - st.mark.h, h: st.mark.h };
+    bottom -= st.mark.h + 16;
+  }
   if (st.watermark) {
     watermark = bottom - 22;
     bottom -= 50;
@@ -130,7 +140,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     bottom -= 52;
   }
   const T = titleBlock(st.titleSize, st.surahName ?? true);
-  let top = SAFE.y0 + 24, title: number;
+  let title: number;
   if (st.titlePos === 'top') {
     title = top;
     top += T + 60;
@@ -164,7 +174,7 @@ export function frameLayout(st: FrameStyle): FrameLayout {
     words: scaled(AR_SIZES.words, k, arMin),
   };
   const enFont = st.enFont === 'sans' ? FONT_EN_SANS : st.enFont === 'round' ? FONT_EN_ROUND : FONT_EN;
-  return { ar, en, text: { top, bottom }, title, credit, watermark, arSizes, enSizes: st.learn ? [72, 64, 56, 48, 40, EN_MIN] : scaled(EN_SIZES, k, EN_MIN), enFont };
+  return { ar, en, text: { top, bottom }, title, credit, watermark, mark, arSizes, enSizes: st.learn ? [72, 64, 56, 48, 40, EN_MIN] : scaled(EN_SIZES, k, EN_MIN), enFont };
 }
 
 export interface Fit {
