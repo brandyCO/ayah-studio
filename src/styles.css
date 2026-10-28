@@ -1328,6 +1328,9 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 }
 .me-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; text-align: start; }
 .me-flame { flex: none; display: flex; justify-content: center; width: 64px; }
+/* The flame on the card is alive: it breathes a little bigger now and then, as well as swaying. */
+.me-flame:not(.catch) .flame:not(.still) { animation: me-breathe 3.2s ease-in-out infinite; transform-origin: 50% 92%; }
+@keyframes me-breathe { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.06, 1.09); filter: brightness(1.12); } }
 .me-top-txt { min-width: 0; }
 .me-count { display: flex; align-items: baseline; gap: 8px; }
 .me-count b { font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -1px;
@@ -1339,7 +1342,15 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-pip { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 36px; font-size: var(--fs-2xs); color: color-mix(in srgb, var(--rw-hi) 50%, #888); }
 .me-pip-ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); font-size: 15px; color: #9fd8ff; }
-.me-pip.lit .me-pip-ic, .me-pip.revived .me-pip-ic { background: color-mix(in srgb, var(--rw-n1) 18%, transparent); border-color: color-mix(in srgb, var(--rw-n2) 50%, transparent); }
+.me-pip.lit .me-pip-ic, .me-pip.revived .me-pip-ic { background: linear-gradient(160deg, var(--rw-n1), var(--rw-n3)); border-color: transparent;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n2) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.me-pip-ic svg { width: 70%; height: 70%; overflow: visible; }
+.me-pip.lit .me-pip-d, .me-pip.revived .me-pip-d { color: var(--rw-hi); font-weight: 700; }
+/* A check that stamps in: the circle pops, the tick draws itself. */
+.me-pip-ic.stamp { animation: pip-stamp .55s cubic-bezier(.2, 1.6, .4, 1) both; }
+.me-pip-ic.stamp path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pip-tick .35s .2s ease-out forwards; }
+@keyframes pip-stamp { 0% { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: none; } }
+@keyframes pip-tick { to { stroke-dashoffset: 0; } }
 .me-pip.today .me-pip-ic { border: 1.5px dashed color-mix(in srgb, var(--rw-hi) 70%, transparent); }
 .me-pip.missed .me-pip-ic { opacity: .45; }
 .me-pip.frozen .me-pip-ic { background: rgba(120, 200, 255, .14); border-color: rgba(140, 210, 255, .45); }
@@ -1618,3 +1629,32 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .cel-khatm .cel-text h2 { font-size: 30px; }
 .cel-halo { transform-box: view-box; transform-origin: 120px 120px; animation: cel-halo 4s 1.8s ease-in-out infinite alternate both; }
 @keyframes cel-halo { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1.15); } }
+
+/* The streak moment (src/ui/streakMoment.ts). */
+.cel-streak { gap: 6px; }
+.sm-stage { position: relative; width: min(64vw, 240px); aspect-ratio: 1; display: grid; place-items: center; }
+.sm-flame { position: relative; z-index: 1; filter: drop-shadow(0 0 28px color-mix(in srgb, var(--rw-n2) 55%, transparent)); }
+.cel-streak.go .sm-flame { animation: sm-flame 1.1s cubic-bezier(.2, 1.35, .4, 1) both; }
+@keyframes sm-flame { 0% { opacity: 0; transform: translateY(40px) scale(.15); filter: brightness(2.4); } 55% { opacity: 1; transform: scale(1.14); } 100% { transform: none; } }
+.sm-count { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; margin-top: -18px; }
+.sm-roll { position: relative; display: grid; height: 76px; overflow: hidden; padding-inline: 6px; }
+.sm-roll .sm-n { grid-area: 1 / 1; }
+.sm-n { display: block; font-size: 72px; line-height: 76px; font-weight: 900; letter-spacing: -2px; text-align: center;
+  background: linear-gradient(180deg, var(--rw-core), var(--rw-n2) 70%, var(--rw-n3)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sm-n.new { transform: translateY(100%); }
+.sm-roll.go .sm-n.old { animation: sm-out .45s cubic-bezier(.5, 0, .7, .4) both; }
+.sm-roll.go .sm-n.new { animation: sm-in .7s .15s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes sm-out { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes sm-in { from { transform: translateY(100%); } to { transform: none; } }
+.sm-label { font-size: 22px; font-weight: 800; color: var(--rw-hi); animation: cel-up .6s .7s ease-out both; }
+.sm-sub { position: relative; z-index: 2; margin: 2px 0 10px; max-width: 320px; text-align: center; font-size: var(--fs-s);
+  color: color-mix(in srgb, var(--rw-hi) 60%, #bbb); animation: cel-up .6s 1s ease-out both; }
+.sm-week { position: relative; z-index: 2; display: flex; gap: 6px; padding: 12px 14px; border-radius: var(--r-l);
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); animation: cel-up .6s 1.2s ease-out both; }
+.sm-week .me-pip-ic { width: 32px; height: 32px; }
+.sm-slot { border: 1.5px dashed color-mix(in srgb, var(--rw-hi) 70%, transparent) !important; background: transparent !important; box-shadow: none !important; }
+.cel-streak .cel-ok { animation: cel-up .5s 1.6s ease-out both; }
+.cel-streak.still .sm-n.old { display: none; }
+.cel-streak.still .sm-n.new { transform: none; }
+.cel-streak:not(.go) .sm-flame { opacity: 0; }

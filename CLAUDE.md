@@ -1098,6 +1098,13 @@ duas/reflections section in Me.
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
       the Android widget flame keeps its fixed warm colours.
+      **Streak moment** (owner request 2026-10-28, after a Duolingo reference): the flame is a chunky
+      two-tone streak icon (main tip leaning right, a small bump on the left, a round inner drop; app and
+      widget drawables); the week row shows a check in a theme-gradient circle for each lit day; the card's
+      flame breathes; once a day, the first time Me is open after a goal lit the flame (and only while no
+      sheet, tasbih or reward is open), `src/ui/streakMoment.ts` plays: the flame springs up from a burst,
+      the count rolls from yesterday's number to today's, today's circle stamps in its check, Continue
+      (pref `flameSeen`; reduced motion → the still end picture)
       Speed: streak() and stats('all') are memoised per change, goals parsed once per change, rewards and
       the Me screen repaint at most once a frame, the streak card only when it changed
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
