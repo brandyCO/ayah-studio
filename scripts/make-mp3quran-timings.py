@@ -134,20 +134,23 @@ def rep_spans(segs, unexp):
 
 
 def judge(raw, text):
-  """The checks → ([entry for the json, pace per ayah], note) or (None, reason)."""
-  low = [k + 1 for k, c in enumerate(raw['conf']) if c < MIN_CONF]
-  if low: return None, 'text not clearly heard in ayah %s' % low[:5]
-  cuts = raw['c']
+  """The checks → ([entry for the json, pace per ayah], note) or (None, reason). An ayah the model did not hear
+  clearly (on the whole-surah pass and, where there is one, on its own repeat-following pass) loses both its
+  cuts, so no reel starts or ends next to it; the rest of the surah stays usable."""
+  cuts = list(raw['c'])
+  rep = raw.get('r') or [{}] * len(raw['conf'])
+  low = [k for k, c in enumerate(raw['conf']) if c < MIN_CONF and rep[k].get('conf', -99) < MIN_CONF]
+  for k in low: cuts[k] = cuts[k + 1] = None
   fails = sum(c is None for c in cuts)
   # Times made by alignment are checked by their confidence, so a cut without a pause only means the reciter
-  # joined those ayat (wasl): reels cannot start or end there. More than half joined → left out.
-  if fails > len(cuts) // 2: return None, '%d of %d cuts not in a pause' % (fails, len(cuts))
+  # joined those ayat (wasl): reels cannot start or end there. More than half unusable → left out.
+  if fails > len(cuts) // 2: return None, '%d of %d cuts not usable' % (fails, len(cuts))
   if any(a is not None and b is not None and b - a < 300 for a, b in zip(cuts, cuts[1:])):
     return None, 'pauses too close together'
   rates = [vf.letters(text[k]) / max(0.05, (b - a) / 1000) for k, (a, b) in enumerate(raw['ay'])]
   out = dict(size=raw['size'], c=cuts, aligned=True)
   if 'seek' in raw: out['seek'] = raw['seek']
-  return [out, rates], ('%d cuts unchecked' % fails if fails else None)
+  return [out, rates], ('%d cuts unusable' % fails if fails else None)
 
 
 def surah(name, folder, s, text, max_min):

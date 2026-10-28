@@ -109,7 +109,9 @@ def main():
         if r: judged[s] = r; rates += r[1]
       rs = sorted(rates); med = rs[len(rs) // 2] if rs else 0
       for s, (out, rr) in judged.items():
-        if any(vf.letters(quran[s - 1][k]) >= 8 and not med / 3 <= x <= med * 2.2 for k, x in enumerate(rr)): continue
+        for k, x in enumerate(rr):  # an implausible pace means a misplaced ayah: no reel starts or ends next to it
+          if vf.letters(quran[s - 1][k]) >= 8 and not med / 3 <= x <= med * 2.2: out['c'][k] = out['c'][k + 1] = None
+        if sum(c is None for c in out['c']) > len(out['c']) // 2: continue
         doc['surahs'][str(s)] = out
       doc['surahs'] = dict(sorted(doc['surahs'].items(), key=lambda kv: int(kv[0])))
       json.dump(doc, open(doc_path, 'w'), separators=(',', ':'))
