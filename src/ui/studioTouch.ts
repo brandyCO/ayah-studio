@@ -20,6 +20,8 @@ export interface TouchOptions {
   live: () => void; // redraw while moving
   done: () => void; // a move finished: record it
   hint: (what: 'bg-zoom') => void; // the background fills the frame: zoom in before it can move
+  /** The user's own mark dragged: centre across the safe width (0–1) and top or bottom strip. */
+  markMove: (x: number, top: boolean, live: boolean) => void;
 }
 
 export function attachTouch(o: TouchOptions) {
@@ -28,6 +30,17 @@ export function attachTouch(o: TouchOptions) {
   // corner: resizing by a corner handle (distance from the box's centre); move: one finger or a pinch.
   let g: { layer: Layer; pose: Pose; x: number; y: number; d: number; moved: boolean; corner?: { cx: number; cy: number; d0: number } } | null = null;
   let centred = false; // the text sits on the frame's vertical centre line (snapped)
+  // Dragging the user's own mark: where the finger took hold of it (offset from its centre).
+  let mk: { id: number; dx: number; moved: boolean; x0: number; y0: number } | null = null;
+  const markAt = (x: number, y: number) => {
+    const r = o.info().mark;
+    const pad = 16 * unit();
+    return r && x >= r.x0 - pad && x <= r.x1 + pad && y >= r.y0 - pad && y <= r.y1 + pad ? r : null;
+  };
+  const markPlace = (x: number, y: number, live: boolean) => {
+    const nx = Math.min(1, Math.max(0, (x - SAFE.x0) / (SAFE.x1 - SAFE.x0)));
+    o.markMove(Math.abs(nx - 0.5) < 0.02 ? 0.5 : nx, y < H / 2, live);
+  };
   /** Frame units per CSS pixel (handles and snaps are sized for a thumb, not for the frame). */
   const unit = () => W / Math.max(1, c.getBoundingClientRect().width);
   const boxOf = (l: Layer) => (l === 'text' ? o.info().text : { x0: 0, y0: 0, x1: W, y1: H });
@@ -83,6 +96,15 @@ export function attachTouch(o: TouchOptions) {
   c.addEventListener('pointerdown', (e) => {
     if (!o.enabled()) return;
     const at = frameXY(e);
+    if (pts.size === 0 && !mk) {
+      const r = markAt(at.x, at.y);
+      if (r) {
+        mk = { id: e.pointerId, dx: at.x - (r.x0 + r.x1) / 2, moved: false, x0: at.x, y0: at.y };
+        c.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
+    if (mk) return;
     pts.set(e.pointerId, at);
     c.setPointerCapture(e.pointerId);
     if (pts.size === 1) {
@@ -99,6 +121,13 @@ export function attachTouch(o: TouchOptions) {
     } else if (g) begin(g.layer, g.moved);
   });
   c.addEventListener('pointermove', (e) => {
+    if (mk && e.pointerId === mk.id) {
+      const at = frameXY(e);
+      if (!mk.moved && Math.hypot(at.x - mk.x0, at.y - mk.y0) < 12 * unit()) return;
+      if (!mk.moved) { mk.moved = true; o.onStart(); }
+      markPlace(at.x - mk.dx, at.y, true);
+      return;
+    }
     if (!g || !pts.has(e.pointerId)) return;
     pts.set(e.pointerId, frameXY(e));
     const m = centre();
@@ -118,6 +147,12 @@ export function attachTouch(o: TouchOptions) {
     apply(g.layer, { x: g.pose.x + dx, y: g.pose.y + dy, s });
   });
   const end = (e: PointerEvent) => {
+    if (mk && e.pointerId === mk.id) {
+      const was = mk;
+      mk = null;
+      if (was.moved) { const at = frameXY(e); markPlace(at.x - was.dx, at.y, false); }
+      return;
+    }
     if (!pts.delete(e.pointerId) || !g) return;
     if (pts.size) return begin(g.layer, g.moved); // one finger left: carry on moving with it
     const was = g;
@@ -146,7 +181,7 @@ export function attachTouch(o: TouchOptions) {
 
   return {
     /** While something is being moved: show the guides (safe area, centre line). */
-    guides: () => (g?.moved ? { layer: g.layer, centred } : null),
+    guides: () => (g?.moved ? { layer: g.layer, centred } : mk?.moved ? { layer: 'mark' as const, centred: false } : null),
   };
 }
 

@@ -7,7 +7,7 @@ import { drawScenes, sceneSpans } from './scenes';
 import { tajweedLines } from './tajweed';
 import { breathAt, darken, drift, shade, soften } from './cinema';
 import { AR_LINE, AR_SIZE_MIN, EN_LINE, EN_MIN, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, SAFE, setFrame, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
-import { logoImage, markShown, MARK_FONT, type Mark } from './mark';
+import { knockedLogo, logoImage, markAlpha, markShown, MARK_FONT, type Mark } from './mark';
 import { fitBgPose, fitTextPose, IDENTITY, poseAt, type Pose, type Rect } from './motion';
 import { GRADES, SCRIM_STRENGTH } from './moods';
 import type { Project } from './project';
@@ -292,33 +292,51 @@ export interface RenderInfo {
   /** The pose that would be drawn for a requested one (kept legible and inside the frame). */
   fitText: (p: Pose) => Pose;
   fitBg: (p: Pose) => Pose;
+  /** The user's own mark as drawn (frame units), or null. */
+  mark?: Rect | null;
 }
 
-/** The user's own watermark in its strip (the layout keeps it clear of the text: rule 6). */
-function drawMark(ctx: CanvasRenderingContext2D, m: Mark, box: { y: number; h: number }) {
-  const x = m.pos === 'tl' || m.pos === 'bl' ? SAFE.x0 + 8 : m.pos === 'bc' ? W / 2 : SAFE.x1 - 8;
-  const align: CanvasTextAlign = m.pos === 'tl' || m.pos === 'bl' ? 'left' : m.pos === 'bc' ? 'center' : 'right';
-  ctx.save();
-  ctx.globalAlpha = m.opacity;
+/** The user's own watermark in its strip (the layout keeps it clear of the text: rule 6). Placed at a
+ *  corner / the centre, or where it was dragged (`x`), always inside the title-safe width. Returns
+ *  the drawn rectangle (for touch). */
+function drawMark(ctx: CanvasRenderingContext2D, m: Mark, box: { y: number; h: number }, t: number): Rect | null {
+  const alpha = markAlpha(m, t);
+  let w = 0, hh = box.h;
+  let img: CanvasImageSource | null = null;
   if (m.kind === 'logo') {
-    const img = logoImage(m.logo);
-    if (img && img.width && img.height) {
-      const w = Math.min((box.h * img.width) / img.height, W * 0.4), hh = (w * img.height) / img.width;
-      const x0 = align === 'left' ? x : align === 'center' ? x - w / 2 : x - w;
-      ctx.shadowColor = 'rgba(0,0,0,0.35)';
-      ctx.shadowBlur = 8 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b);
-      ctx.drawImage(img, x0, box.y + (box.h - hh) / 2, w, hh);
-    }
+    const raw = logoImage(m.logo);
+    if (!raw || !raw.width || !raw.height) return null;
+    img = (m.knock && m.logo && knockedLogo(m.logo)) || raw;
+    w = Math.min((box.h * raw.width) / raw.height, W * 0.4);
+    hh = (w * raw.height) / raw.width;
+  } else {
+    ctx.save();
+    ctx.font = `600 ${Math.round(MARK_FONT * m.size)}px ${FONT_UI}`;
+    w = Math.min(ctx.measureText(m.text).width, W * 0.6);
+    ctx.restore();
+  }
+  const left = m.pos === 'tl' || m.pos === 'bl', mid = m.pos === 'bc';
+  let x0 = m.x !== undefined ? SAFE.x0 + m.x * (SAFE.x1 - SAFE.x0) - w / 2 : left ? SAFE.x0 + 8 : mid ? W / 2 - w / 2 : SAFE.x1 - 8 - w;
+  x0 = Math.min(Math.max(x0, SAFE.x0), SAFE.x1 - w);
+  const rect = { x0, y0: box.y + (box.h - hh) / 2, x1: x0 + w, y1: box.y + (box.h + hh) / 2 };
+  if (alpha <= 0.001) return rect;
+  ctx.save();
+  ctx.globalAlpha = m.opacity * alpha;
+  if (img) {
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 8 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b);
+    ctx.drawImage(img, rect.x0, rect.y0, w, hh);
   } else {
     setTextShadow(ctx, '#ffffff');
     ctx.fillStyle = '#ffffff';
     ctx.direction = 'ltr';
-    ctx.textAlign = align;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.font = `600 ${Math.round(MARK_FONT * m.size)}px ${FONT_UI}`;
-    ctx.fillText(m.text, x, box.y + box.h / 2, W * 0.6);
+    ctx.fillText(m.text, x0, box.y + box.h / 2, W * 0.6);
   }
   ctx.restore();
+  return rect;
 }
 
 /** `media[i]` is the decoded background of `project.scenes[i]` (missing while loading: black). */
@@ -499,6 +517,7 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     ctx.globalAlpha = 0.6;
     ctx.fillText('Ayah Studio', W / 2, lay.watermark);
   }
-  if (lay.mark && markShown(project.mark)) drawMark(ctx, project.mark, lay.mark);
+  const markRect = lay.mark && markShown(project.mark) ? drawMark(ctx, project.mark, lay.mark, t) : null;
+  if (info) info.mark = markRect;
   ctx.restore();
 }

@@ -11,6 +11,14 @@ export interface Mark {
   pos: MarkPos;
   size: number; // MARK_SIZE range (1 = 72 px logo / 34 px text on the 1080 px frame)
   opacity: number; // 0.2–1
+  /** Dragged on the preview: the mark's centre across the title-safe width, 0 (left) … 1 (right).
+   *  Top or bottom still comes from `pos` (the layout keeps that strip clear of the text). */
+  x?: number;
+  /** Remove black: a logo made on a black background shows without it (black → clear). */
+  knock?: boolean;
+  /** Shown from / until these reel seconds (missing: the whole reel), with a soft 0.3 s fade. */
+  from?: number;
+  to?: number;
 }
 
 export const MARK_TEXT_MAX = 40;
@@ -26,6 +34,42 @@ export const cleanMarkText = (x: string) => x.replace(/[\u0000-\u001f\u007f]/g, 
 const logos = new Map<string, CanvasImageSource & { width: number; height: number }>();
 export const registerLogo = (id: string, img: CanvasImageSource & { width: number; height: number }) => void logos.set(id, img);
 export const logoImage = (id: string | undefined) => (id ? logos.get(id) ?? null : null);
+
+/** A logo with its black taken out: alpha = the brightest channel, colours divided by it (the same
+ *  look as laying the logo over the video with a "screen" blend). Made once per logo. */
+const knocked = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
+export function knockedLogo(id: string): (HTMLCanvasElement | OffscreenCanvas) | null {
+  const img = logos.get(id);
+  if (!img || !img.width || !img.height) return null;
+  let c = knocked.get(id);
+  if (c) return c;
+  c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(img.width, img.height) : document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const x = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height);
+  const px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const m = Math.max(px[i], px[i + 1], px[i + 2]);
+    const a = (m / 255) * (px[i + 3] / 255);
+    if (m > 0) { px[i] = (px[i] * 255) / m; px[i + 1] = (px[i + 1] * 255) / m; px[i + 2] = (px[i + 2] * 255) / m; }
+    px[i + 3] = Math.round(a * 255);
+  }
+  x.putImageData(d, 0, 0);
+  knocked.set(id, c);
+  return c;
+}
+
+/** How visible the mark is at t (its own start and end, with a soft fade). */
+export function markAlpha(m: Mark, t: number): number {
+  const fade = 0.3;
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  let a = 1;
+  if (m.from !== undefined && m.from > 0) a = Math.min(a, clamp((t - m.from) / fade + 1));
+  if (m.to !== undefined) a = Math.min(a, clamp((m.to - t) / fade));
+  return a;
+}
 
 /** Whether a mark is drawn at all. */
 export const markShown = (m: Mark | undefined): m is Mark =>
@@ -51,5 +95,9 @@ export function validMark(v: unknown): Mark | undefined {
     pos: m.pos,
     size: num(m.size, MARK_SIZE[0], MARK_SIZE[1], 1),
     opacity: num(m.opacity, 0.2, 1, 0.8),
+    x: typeof m.x === 'number' && Number.isFinite(m.x) ? num(m.x, 0, 1, 0.5) : undefined,
+    knock: m.knock === true || undefined,
+    from: typeof m.from === 'number' && Number.isFinite(m.from) && m.from > 0 ? Math.min(m.from, 3600) : undefined,
+    to: typeof m.to === 'number' && Number.isFinite(m.to) && m.to > 0 ? Math.min(m.to, 3600) : undefined,
   };
 }

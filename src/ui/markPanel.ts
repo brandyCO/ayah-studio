@@ -20,9 +20,12 @@ function saveMark(m: Mark) {
 export interface MarkPanelOptions {
   project: Project;
   busy: () => boolean; // exporting
+  duration: () => number; // the reel's length in seconds (for the mark's start and end)
   /** After a change: relayout (the mark's strip may have changed) and record it. `live`: while dragging a slider. */
   changed: (live?: boolean) => void;
 }
+
+export { saveMark };
 
 export function markPanel(o: MarkPanelOptions): Node[] {
   const p = o.project;
@@ -83,15 +86,27 @@ export function markPanel(o: MarkPanelOptions): Node[] {
           set((x) => { if (x.logo === l.id) x.logo = listLogos()[0]?.id; });
         } }, '✕'))),
       h('button', { class: 'chip mark-upload', onclick: () => file.click() }, ui('mk.upload')), file));
+    nodes.push(row(ui('mk.knock'), chips<'off' | 'on'>([['off', ui('ed.off')], ['on', ui('mk.on')]], () => (m.knock ? 'on' : 'off'),
+      (v) => set((x) => { if (v === 'on') x.knock = true; else delete x.knock; }))));
     nodes.push(note(ui('mk.logo-note')));
   }
 
   if (m.kind !== 'off') {
     const names: Record<MarkPos, string> = { tl: ui('mk.tl'), tr: ui('mk.tr'), bl: ui('mk.bl'), bc: ui('mk.bc'), br: ui('mk.br') };
     nodes.push(
-      row(ui('ed.place'), chips<MarkPos>(MARK_POS.map((x) => [x, names[x]]), () => m.pos, (v) => set((x) => { x.pos = v; }))),
+      row(ui('ed.place'), chips<MarkPos>(MARK_POS.map((x) => [x, names[x]]), () => m.pos, (v) => set((x) => { x.pos = v; delete x.x; }))),
       ...slider(MARK_SIZE[0] * 100, MARK_SIZE[1] * 100, 5, () => Math.round(m.size * 100), (v) => { m.size = v / 100; }, ui('ed.size'), (v) => `${Math.round(v)} %`),
       ...slider(20, 100, 5, () => Math.round(m.opacity * 100), (v) => { m.opacity = v / 100; }, ui('mk.opacity'), (v) => `${Math.round(v)} %`),
+    );
+    // When it shows: from / until (the end slider's last step = to the very end).
+    const D = Math.max(1, Math.round(o.duration() * 10) / 10);
+    const secs = (v: number) => `${v.toFixed(1)} s`;
+    nodes.push(
+      ...slider(0, D, 0.1, () => Math.min(m.from ?? 0, D), (v) => { if (v > 0) m.from = v; else delete m.from; if (m.to !== undefined && m.to <= v + 0.5) m.to = Math.min(D, v + 0.5); },
+        ui('mk.from'), (v) => (v > 0 ? secs(v) : ui('mk.start'))),
+      ...slider(0, D, 0.1, () => Math.min(m.to ?? D, D), (v) => { if (v >= D) delete m.to; else m.to = Math.max(v, (m.from ?? 0) + 0.5); },
+        ui('mk.to'), (v) => (v >= D ? ui('mk.end') : secs(v))),
+      note(ui('mk.drag-note')),
     );
   }
 

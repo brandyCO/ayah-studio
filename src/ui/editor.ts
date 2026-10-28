@@ -17,14 +17,14 @@ import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout
 import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
-  applyLook, cleanDedication, DEDICATION_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
+  applyLook, cleanDedication, DEDICATION_MAX, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
-import { markPanel, savedMark } from './markPanel';
+import { markPanel, saveMark, savedMark } from './markPanel';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
 import { breathOf } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
@@ -727,6 +727,22 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     slider.addEventListener('change', () => set(true));
     return [row(ui('ed.text-size'), label), slider, note(ui('ed.text-size-note', { m: sizePct(AR_SIZE_MEDIUM) }))];
   };
+  /** Seconds the video keeps going after the recitation (silent; background, reference and marks go on). */
+  const tailPanel = (): Node[] => {
+    const fmt = (v: number) => (v ? `+${v.toFixed(1)} s` : ui('ed.off'));
+    const label = h('span', { class: 'clip-time' }, fmt(project.tail ?? 0));
+    const slider = h('input', { class: 'clip-slider', type: 'range', min: '0', max: String(TAIL_MAX), step: '0.5', value: String(project.tail ?? 0), 'aria-label': ui('ed.tail') });
+    slider.addEventListener('input', () => { label.textContent = fmt(Number(slider.value)); });
+    slider.addEventListener('change', () => {
+      if (exporting) return;
+      const v = Number(slider.value);
+      if (v > 0) project.tail = v; else delete project.tail;
+      arrange();
+      changed(false);
+      if (tl) { t = Math.max(0, tl.duration - Math.min(tl.duration, (project.tail ?? 0) + 1.5)); dirty = true; } // show the new ending
+    });
+    return [row(ui('ed.tail-after'), label), slider, note(ui('ed.tail-note'))];
+  };
   /** Video format: 9:16 (default), square or 16:9; remembered on this device for the next reel. */
   function setFormat(f: Format) {
     project.format = f === '9:16' ? undefined : f;
@@ -1140,6 +1156,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return markPanel({
       project,
       busy: () => !!exporting,
+      duration: () => tl?.duration ?? 0,
       changed: (live) => {
         void loadLogo(project.mark?.logo).then(() => (dirty = true));
         cancelAnimationFrame(markRaf);
@@ -1379,6 +1396,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
         row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
         note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
+      { id: 'tail', icon: 'gap', label: ui('ed.tail'), panel: tailPanel },
       { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
       { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
@@ -1624,6 +1642,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     live: () => { dirty = true; spine.refresh(); },
     done: () => changed(),
     hint: () => toast(ui('mv.bg-zoom')),
+    markMove: (x, top, live) => {
+      const m = project.mark;
+      if (!m || exporting) return;
+      const wasTop = m.pos === 'tl' || m.pos === 'tr';
+      m.x = Math.round(x * 1000) / 1000;
+      m.pos = top ? (x < 0.5 ? 'tl' : 'tr') : x < 0.34 ? 'bl' : x > 0.66 ? 'br' : 'bc';
+      saveMark(m);
+      if (top !== wasTop) rebuild(); // the mark's strip moved: the text area changes
+      dirty = true;
+      if (!live) changed(option?.id === 'watermark'); // refresh the panel's place chips
+    },
   });
 
   // Eyedropper: a tap on the preview takes the colour under the finger.
@@ -1762,7 +1791,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     pause();
     plan = arrangeReel(base.plan, pc);
     // Steady loudness + soft edges, the same for preview and export (polishAudio).
-    audio = polishAudio(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio);
+    audio = polishAudio(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.tail || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio);
     spine.setAudio(audio);
     rebuild();
     if (was) void play();

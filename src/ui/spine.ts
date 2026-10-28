@@ -634,12 +634,19 @@ export function createSpine(o: SpineOptions) {
     const tl = o.timeline();
     if (!tl) return;
     if (!d.moved) {
-      // Tap: select (or deselect) a block, add a scene, or seek on the ruler.
+      // Tap: the playhead jumps to the tapped moment (snapped to an ayah or word start nearby), so
+      // you can listen from there; a block is selected too (tapping the selected one keeps it), and a
+      // tap on empty space lets go of the selection.
       const at = hit(d.x0, d.y0);
       if (at.kind === 'add') return o.addScene();
+      if (d.kind !== 'scrub') {
+        o.onScrubStart();
+        snapped = NaN;
+        o.seek(snapScrub(Math.min(Math.max(0, T(d.x0)), dur())));
+      }
       if (at.kind === 'scene' || at.kind === 'audio') {
         const sel = o.selection();
-        o.select(sel?.kind === at.kind && sel.index === at.index ? null : { kind: at.kind, index: at.index });
+        if (sel?.kind !== at.kind || sel.index !== at.index) o.select({ kind: at.kind, index: at.index });
       } else if (at.kind === 'empty') o.select(null);
       return;
     }

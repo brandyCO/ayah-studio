@@ -472,7 +472,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       background frame while the current one encodes; `VideoLoop` copies only the last frame at or before
       t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
       before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
-      reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps
+      reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
+      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
+      divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
+      top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
+      Until** (`mark.from` / `mark.to`, 0.3 s fades); **Audio → Ending**: `project.tail` 0–10 s
+      (`TAIL_MAX`) after the recitation, before the closing card — silent (rule 3), background, reference
+      and marks continue (`Pacing.tail`, `arrangeReel`)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
