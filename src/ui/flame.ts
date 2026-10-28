@@ -26,7 +26,7 @@ export function flame(tier: FlameTier, size = 140, still = false): HTMLElement {
     `<circle class="fl-ember" cx="${36 + ((i * 37) % 28)}" cy="104" r="${1.1 + (i % 3) * 0.5}" style="--d:${(i * 0.53) % 2.6}s;--x:${((i * 29) % 21) - 10}px"/>`).join('');
   el.innerHTML = tier === 0
     ? `<svg viewBox="0 0 100 140" width="100%" height="100%">
-        <defs><radialGradient id="${id}e" cx="50%" cy="60%" r="50%"><stop offset="0" stop-color="#ff8a3d" stop-opacity=".9"/><stop offset="1" stop-color="#7a2a10" stop-opacity="0"/></radialGradient></defs>
+        <defs><radialGradient id="${id}e" cx="50%" cy="60%" r="50%"><stop offset="0" style="stop-color:var(--rw-n1)" stop-opacity=".9"/><stop offset="1" style="stop-color:var(--rw-deep)" stop-opacity="0"/></radialGradient></defs>
         <path class="fl-smoke" d="M50 118C44 104 58 96 50 82C44 70 56 62 50 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
         <ellipse cx="50" cy="128" rx="20" ry="7" fill="#3a302b"/>
         <ellipse class="fl-coal" cx="50" cy="125" rx="12" ry="5" fill="url(#${id}e)"/>

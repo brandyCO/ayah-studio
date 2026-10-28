@@ -18,6 +18,10 @@ import { h } from './dom';
 import { badgeArt } from './badge';
 import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
+import { rewardPalette, rgba } from './theme';
+
+/** The theme's reward colours, read when a moment starts (so a theme change shows at once). */
+let P = rewardPalette();
 
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string }
@@ -52,20 +56,20 @@ const square = (cx: number, cy: number, r: number, rot: number) => Array.from({ 
 function lanternArt() {
   return svg(200, `
     <defs>
-      <radialGradient id="celG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff3c4" stop-opacity=".95"/><stop offset=".4" stop-color="#ffc35a" stop-opacity=".45"/><stop offset="1" stop-color="#ff9a2a" stop-opacity="0"/></radialGradient>
-      <linearGradient id="celL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8862a"/><stop offset=".5" stop-color="#ffd27a"/><stop offset="1" stop-color="#e8862a"/></linearGradient>
+      <radialGradient id="celG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.core}" stop-opacity=".95"/><stop offset=".4" stop-color="${P.n3}" stop-opacity=".45"/><stop offset="1" stop-color="${P.n1}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="celL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${P.n1}"/><stop offset=".5" stop-color="${P.hi}"/><stop offset="1" stop-color="${P.n1}"/></linearGradient>
     </defs>
     <circle class="cel-burst" cx="100" cy="104" r="92" fill="url(#celG)"/>
     <g class="cel-lantern">
-      <path d="M100 22V44" stroke="#f3c56b" stroke-width="2" stroke-linecap="round"/>
-      <path d="M86 44H114L110 54H90Z" fill="#b8742a"/>
+      <path d="M100 22V44" stroke="${P.n3}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M86 44H114L110 54H90Z" fill="${P.deep2}"/>
       <path d="M80 54C72 80 72 128 80 154H120C128 128 128 80 120 54Z" fill="url(#celL)"/>
-      <path d="M91 54C86 84 86 124 91 154M109 54C114 84 114 124 109 154M100 54V154" fill="none" stroke="#9a5a1c" stroke-opacity=".35" stroke-width="1.5"/>
-      <ellipse class="cel-core" cx="100" cy="104" rx="13" ry="28" fill="#fff8dc"/>
-      <path d="M90 154H110L106 162H94Z" fill="#b8742a"/>
-      <path d="M100 162V178" stroke="#f3c56b" stroke-width="2" stroke-linecap="round"/>
+      <path d="M91 54C86 84 86 124 91 154M109 54C114 84 114 124 109 154M100 54V154" fill="none" stroke="${P.deep}" stroke-opacity=".35" stroke-width="1.5"/>
+      <ellipse class="cel-core" cx="100" cy="104" rx="13" ry="28" fill="${P.core}"/>
+      <path d="M90 154H110L106 162H94Z" fill="${P.deep2}"/>
+      <path d="M100 162V178" stroke="${P.n3}" stroke-width="2" stroke-linecap="round"/>
     </g>
-    <g fill="#ffe08a">${motes(14, 100, 104, 46)}</g>`);
+    <g fill="${P.n3}">${motes(14, 100, 104, 46)}</g>`);
 }
 
 function starArt() {
@@ -77,19 +81,19 @@ function starArt() {
   }).join('');
   return svg(200, `
     <defs>
-      <radialGradient id="celS" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff6cf"/><stop offset=".55" stop-color="#ffcf63"/><stop offset="1" stop-color="#d9962c"/></radialGradient>
-      <radialGradient id="celSg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd977" stop-opacity=".55"/><stop offset="1" stop-color="#ffd977" stop-opacity="0"/></radialGradient>
+      <radialGradient id="celS" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="${P.core}"/><stop offset=".55" stop-color="${P.n3}"/><stop offset="1" stop-color="${P.n1}"/></radialGradient>
+      <radialGradient id="celSg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.n3}" stop-opacity=".55"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
     </defs>
     <circle class="cel-burst" cx="100" cy="100" r="98" fill="url(#celSg)"/>
-    <g fill="none" stroke="#f3c56b" stroke-width="2.2" stroke-linejoin="round">
+    <g fill="none" stroke="${P.n3}" stroke-width="2.2" stroke-linejoin="round">
       <circle class="cel-draw" pathLength="1" style="--d:0s" cx="100" cy="100" r="86" stroke-opacity=".55"/>
       <polygon class="cel-draw" pathLength="1" style="--d:.15s" points="${sq1}"/>
       <polygon class="cel-draw" pathLength="1" style="--d:.4s" points="${sq2}"/>
       ${rays}
     </g>
-    <polygon class="cel-fill" points="${starPoints(100, 100, 50, 38)}" fill="url(#celS)" stroke="#fff1b8" stroke-width="1.5"/>
-    <circle class="cel-fill" cx="100" cy="100" r="16" fill="#fffbe8"/>
-    <g fill="#ffe08a">${motes(12, 100, 100, 60)}</g>`);
+    <polygon class="cel-fill" points="${starPoints(100, 100, 50, 38)}" fill="url(#celS)" stroke="${P.hi}" stroke-width="1.5"/>
+    <circle class="cel-fill" cx="100" cy="100" r="16" fill="${P.core}"/>
+    <g fill="${P.n3}">${motes(12, 100, 100, 60)}</g>`);
 }
 
 function rosetteArt(khatm = false) {
@@ -103,29 +107,29 @@ function rosetteArt(khatm = false) {
   }).join('');
   return svg(240, `
     <defs>
-      <linearGradient id="celP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2c0" stop-opacity=".95"/><stop offset="1" stop-color="#2fbf9b" stop-opacity=".55"/></linearGradient>
-      <radialGradient id="celPg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#bff5e4" stop-opacity=".55"/><stop offset=".6" stop-color="#ffd977" stop-opacity=".18"/><stop offset="1" stop-color="#ffd977" stop-opacity="0"/></radialGradient>
+      <linearGradient id="celP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.hi}" stop-opacity=".95"/><stop offset="1" stop-color="${P.n1}" stop-opacity=".55"/></linearGradient>
+      <radialGradient id="celPg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.hi}" stop-opacity=".55"/><stop offset=".6" stop-color="${P.n3}" stop-opacity=".18"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
     </defs>
     <circle class="cel-burst" cx="120" cy="120" r="118" fill="url(#celPg)"/>
-    ${khatm ? '<circle class="cel-halo" cx="120" cy="120" r="70" fill="none" stroke="#ffe7a3" stroke-width="10" stroke-opacity=".25"/>' : ''}
-    <g class="cel-ring" fill="#f3c56b" opacity=".7">${dots}</g>
-    ${khatm ? `<g fill="url(#celP)" stroke="#f3c56b" stroke-width=".8" opacity=".6">${outer}</g>` : ''}
-    <g fill="url(#celP)" stroke="#f3c56b" stroke-width="1.2">${petals}</g>
-    <g fill="none" stroke="#f3c56b" stroke-width="2" stroke-linejoin="round">
+    ${khatm ? '<circle class="cel-halo" cx="120" cy="120" r="70" fill="none" stroke="${P.hi}" stroke-width="10" stroke-opacity=".25"/>' : ''}
+    <g class="cel-ring" fill="${P.n3}" opacity=".7">${dots}</g>
+    ${khatm ? `<g fill="url(#celP)" stroke="${P.n3}" stroke-width=".8" opacity=".6">${outer}</g>` : ''}
+    <g fill="url(#celP)" stroke="${P.n3}" stroke-width="1.2">${petals}</g>
+    <g fill="none" stroke="${P.n3}" stroke-width="2" stroke-linejoin="round">
       <polygon class="cel-draw" pathLength="1" style="--d:.7s" points="${square(120, 120, 98, 45)}"/>
       <polygon class="cel-draw" pathLength="1" style="--d:.85s" points="${square(120, 120, 98, 0)}"/>
       <circle class="cel-draw" pathLength="1" style="--d:1s" cx="120" cy="120" r="62"/>
     </g>
-    <g fill="#ffe08a">${motes(16, 120, 120, 80)}</g>`);
+    <g fill="${P.n3}">${motes(16, 120, 120, 80)}</g>`);
 }
 
 function raysArt() {
   const rays = Array.from({ length: 16 }, (_, i) =>
     `<path transform="rotate(${i * 22.5} 100 100)" d="M100 100L95 6H105Z" opacity="${i % 2 ? 0.35 : 0.6}"/>`).join('');
   return svg(200, `
-    <defs><radialGradient id="celR" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe08a" stop-opacity=".9"/><stop offset="1" stop-color="#ffe08a" stop-opacity="0"/></radialGradient></defs>
+    <defs><radialGradient id="celR" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.n3}" stop-opacity=".9"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient></defs>
     <g class="cel-rays" fill="url(#celR)">${rays}</g>
-    <g fill="#ffe08a">${motes(10, 100, 100, 50)}</g>`);
+    <g fill="${P.n3}">${motes(10, 100, 100, 50)}</g>`);
 }
 
 function vibrate(p: number[]) {
@@ -134,6 +138,7 @@ function vibrate(p: number[]) {
 
 /** Plays a reward moment over the screen; resolves when it is closed. */
 export function celebrate(m: Moment, from?: Element | null): Promise<void> {
+  P = rewardPalette();
   // Old-phone mode keeps the moment: it is a few SVG shapes moved by CSS, cheap to draw.
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stage = h('div', { class: 'cel-stage' });
@@ -163,14 +168,8 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
         h('span', { class: 'cel-badge' }, badgeArt(b.tier, b.icon, true, m.kind === 'medal' ? 120 : 104)));
     }
   }
-  const palette: Record<Moment['kind'], string[]> = {
-    lantern: ['rgba(255,214,120,1)', 'rgba(255,170,70,1)', 'rgba(255,240,200,1)'],
-    star: ['rgba(255,214,120,1)', 'rgba(255,246,214,1)', 'rgba(255,190,90,1)'],
-    flame: ['rgba(255,150,60,1)', 'rgba(255,205,90,1)', 'rgba(255,110,50,1)'],
-    rosette: ['rgba(255,214,120,1)', 'rgba(150,240,210,1)', 'rgba(255,246,214,1)'],
-    khatm: ['rgba(255,214,120,1)', 'rgba(120,235,200,1)', 'rgba(255,250,230,1)', 'rgba(255,190,90,1)'],
-    medal: ['rgba(255,214,120,1)', 'rgba(255,240,200,1)'],
-  };
+  // Sparks in the theme's colours: its neon stops, its brightest stop lifted, a near-white core.
+  const sparkColors = [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1), ...(m.kind === 'flame' ? [rgba(P.n2, 1)] : [])];
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
@@ -231,7 +230,7 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
     // 2. The burst: a soft flash, light sweeping across, sparks flying out, the moment playing.
     later(BURST, () => {
       el.classList.add('go');
-      fx = sparks(canvas, palette[m.kind]);
+      fx = sparks(canvas, sparkColors);
       const big = m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'star' || m.kind === 'flame';
       const sb = stage.getBoundingClientRect();
       const cr = canvas.getBoundingClientRect();

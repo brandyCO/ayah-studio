@@ -14,6 +14,7 @@ import { loadMeta, reference, type SurahMeta } from '../data/quran';
 import { locale, surahName, t, type Key } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
+import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
 import { openMoreMenu, tabBar } from './tabs';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
@@ -110,7 +111,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
       hero.append(canvas);
       void import('./sparks').then(({ sparks }) => setTimeout(() => {
-        const fx = sparks(canvas, ['rgba(255,170,70,1)', 'rgba(255,214,120,1)', 'rgba(255,240,200,1)']);
+        const P = rewardPalette();
+        const fx = sparks(canvas, [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1)]);
         const f = flameBox.getBoundingClientRect();
         const c = canvas.getBoundingClientRect();
         fx.burst(f.left + f.width / 2 - c.left, f.top + f.height * 0.45 - c.top, 34, 0.55);

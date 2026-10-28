@@ -1094,6 +1094,10 @@ duas/reflections section in Me.
       its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
       and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
       when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
+      rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
+      follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
+      the Android widget flame keeps its fixed warm colours.
       Speed: streak() and stats('all') are memoised per change, goals parsed once per change, rewards and
       the Me screen repaint at most once a frame, the streak card only when it changed
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
