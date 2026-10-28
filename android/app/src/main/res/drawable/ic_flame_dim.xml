@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The streak flame (same shapes as src/ui/flame.ts): three tongues, burning low (not yet opened today). -->
+<!-- The streak flame (same shapes as src/ui/flame.ts): the bold streak icon, burning low (not yet opened today). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="50dp" android:height="70dp" android:viewportWidth="100" android:viewportHeight="140">
-    <path android:fillColor="#8A4A2E" android:pathData="M50 6C58 30 84 46 84 86C84 114 68 132 50 132C32 132 16 114 16 88C16 66 28 54 34 38C38 52 42 58 47 60C44 42 44 24 50 6Z" />
-    <path android:fillColor="#B87A45" android:pathData="M50 38C56 58 73 70 73 96C73 117 63 128 50 128C37 128 27 117 27 98C27 84 35 76 40 65C43 75 46 80 50 82C48 69 47 54 50 38Z" />
-    <path android:fillColor="#E8C28A" android:pathData="M50 74C55 88 63 96 63 108C63 120 57 127 50 127C43 127 37 120 37 110C37 100 45 91 50 74Z" />
+    <path android:fillColor="#8A4A2E" android:pathData="M54 8C62 28 88 46 88 86C88 114 71 133 50 133C29 133 12 116 12 92C12 74 20 62 30 52C30 63 34 71 41 75C38 50 44 28 54 8Z" />
+    <path android:fillColor="#B87A45" android:pathData="M51 58C60 76 73 87 73 104C73 119 63 128 50 128C37 128 27 119 27 106C27 94 35 86 41 78C43 85 46 89 51 91C48 81 47 70 51 58Z" />
+    <path android:fillColor="#E8C28A" android:pathData="M50 92C56 101 62 107 62 115C62 122 57 126 50 126C43 126 38 122 38 116C38 108 45 102 50 92Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeAlpha="0.25" android:strokeWidth="5" android:strokeLineCap="round" android:pathData="M24 98C22 86 26 76 33 68" />
 </vector>

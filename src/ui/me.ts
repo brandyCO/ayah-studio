@@ -1,7 +1,7 @@
-// Me (#/me): the daily streak flame, today's goals (pages, memorising, reels, dhikr, morning
-// adhkar), the week compared with last week, honest stats (week / month / all time), milestone
-// badges, My library (bookmarks, recently read, drafts), the reading time a page needs to count, and
-// the way to the settings menu.
+// Me (#/me): a compact streak card (flame, count, this week), today's goals (pages, memorising, reels,
+// dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
+// time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
+// screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { DHIKR, DHIKR_GOALS, MEMO_GOALS, PAGE_GOALS, REEL_GOALS, goals, setGoals, todayGoals, type DhikrId, type GoalProgress } from '../data/goals';
@@ -60,11 +60,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
   const goalsBox = h('section', { class: 'me-card' });
-  const weekBox = h('section', { class: 'me-card' });
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
-  const timeBox = h('section', { class: 'me-card' });
   const prayerBox = h('section', { class: 'me-card' });
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
@@ -74,12 +72,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const s = streak();
     const tier = flameTier(s.days, s.litToday);
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
-      h('span', { class: 'me-pip-ic' }, w.state === 'lit' || w.state === 'revived' ? flame(1, 22, true) : w.state === 'frozen' ? '❄' : ''),
+      h('span', { class: 'me-pip-ic' }, w.state === 'lit' || w.state === 'revived' ? flame(1, 18, true) : w.state === 'frozen' ? '❄' : ''),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
     hero.replaceChildren(
-      h('div', { class: 'me-flame' }, flame(tier, 150, still)),
-      h('div', { class: 'me-count' }, h('b', {}, String(s.days)), h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
-      h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')),
+      h('div', { class: 'me-top' },
+        h('div', { class: 'me-flame' }, flame(tier, 76, still)),
+        h('div', { class: 'me-top-txt' },
+          h('div', { class: 'me-count' }, h('b', {}, String(s.days)), h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
+          h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
       s.lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: s.lost.n })) : '',
       s.lost && s.lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
         if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
@@ -122,20 +122,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
       all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
-      isNative() ? remindRow() : '');
-  };
-  const remindRow = () => {
-    const on = dhikrReminders();
-    return h('div', { class: 'goal-edit rem-row' }, h('b', {}, t('rem.label')),
-      h('div', { class: 'chips' }, ...REMINDER_TIMES.map((tm) => h('button', {
-        class: `chip${on.includes(tm) ? ' on' : ''}`, 'aria-pressed': String(on.includes(tm)),
-        onclick: async () => {
-          const next = on.includes(tm) ? on.filter((x) => x !== tm) : [...on, tm];
-          if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
-          paintGoals();
-        },
-      }, timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3))))))));
+      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
   };
   function openGoalEditor() {
     const g = goals();
@@ -156,54 +143,39 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on'))));
   }
 
-  // --- this week vs last week ---
-  const paintWeek = () => {
-    const now = new Date();
-    const lastSunday = parse(addDays(weekOf(dayKey(now)), -1));
-    const a = stats('week', now);
-    const b = stats('week', lastSunday);
-    const line = (label: string, x: number, y: number, show = (n: number) => String(n)) => {
-      const diff = x - y;
-      return h('div', { class: 'wk-line' }, h('span', {}, label), h('b', {}, show(x)),
-        h('span', { class: `wk-diff ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}` }, diff ? `${diff > 0 ? '▲' : '▼'} ${show(Math.abs(diff))}` : '–'));
-    };
-    const monday = new Date().getDay() === 1;
-    weekBox.replaceChildren(
-      h('h2', { class: 'me-h' }, t('wk.title')),
-      h('p', { class: 'muted small' }, monday && b.litDays ? t('wk.monday', { pages: b.pages, dhikr: b.dhikr }) : t('wk.sub')),
-      h('div', { class: 'wk' },
-        line(t('me.pages'), a.pages, b.pages),
-        line(t('me.ayat'), a.ayat, b.ayat),
-        line(t('me.listened'), a.listen, b.listen, minutes),
-        line(t('me.dhikr'), a.dhikr, b.dhikr),
-        line(t('me.memorised'), a.memorised, b.memorised),
-        line(t('wk.goalDays'), a.goalDays, b.goalDays),
-        line(t('wk.lit'), a.litDays, b.litDays)));
-  };
-
   const paintStats = () => {
     const st: Stats = stats(period);
+    const now = new Date();
+    const last = period === 'week' ? stats('week', parse(addDays(weekOf(dayKey(now)), -1))) : null;
     const tab = (p: Period, label: string) => h('button', {
       class: `tab${p === period ? ' on' : ''}`, role: 'tab', 'aria-selected': String(p === period),
       onclick: () => { period = p; haptic(); paintStats(); },
     }, label);
-    const tile = (n: string, label: string, sub?: string) =>
-      h('div', { class: 'me-tile' }, h('b', {}, n), h('span', {}, label), sub ? h('span', { class: 'muted small' }, sub) : '');
+    // This week: each tile also says how it compares with last week.
+    const vs = (k: keyof Stats, show = (n: number) => String(n)) => {
+      if (!last) return '';
+      const d = (st[k] as number) - (last[k] as number);
+      return d ? h('span', { class: `wk-diff ${d > 0 ? 'up' : 'down'}` }, `${d > 0 ? '▲' : '▼'} ${show(Math.abs(d))}`) : '';
+    };
+    const tile = (n: string, label: string, diff: Node | string, sub?: string) =>
+      h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, n), diff), h('span', {}, label), sub ? h('span', { class: 'muted small' }, sub) : '');
     const names = st.surahList.slice(-3).map((s) => surahName(meta[s - 1])).join(' · ');
     statsBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('me.stats')),
       h('div', { class: 'tabs me-tabs', role: 'tablist' },
         tab('week', t('me.week')), tab('month', t('me.month')), tab('all', t('me.all'))),
       h('div', { class: 'me-tiles' },
-        tile(String(st.pages), t('me.pages')),
-        tile(String(st.ayat), t('me.ayat')),
-        tile(minutes(st.listen), t('me.listened')),
-        tile(String(st.surahs), t('me.surahs'), names || undefined),
-        tile(String(st.juz), t('me.juz')),
-        tile(String(st.memorised), t('me.memorised')),
-        tile(String(st.dhikr), t('me.dhikr')),
-        tile(String(st.reels), t('me.reels'))),
-      h('p', { class: 'muted small' }, t('me.honest', { time: timeLabel(pageSeconds()) })));
+        tile(String(st.pages), t('me.pages'), vs('pages')),
+        tile(String(st.ayat), t('me.ayat'), vs('ayat')),
+        tile(minutes(st.listen), t('me.listened'), vs('listen', (n) => minutes(n))),
+        tile(String(st.surahs), t('me.surahs'), vs('surahs'), names || undefined),
+        tile(String(st.juz), t('me.juz'), vs('juz')),
+        tile(String(st.memorised), t('me.memorised'), vs('memorised')),
+        tile(String(st.dhikr), t('me.dhikr'), vs('dhikr')),
+        tile(String(st.reels), t('me.reels'), vs('reels'))),
+      h('p', { class: 'muted small' }, last
+        ? (now.getDay() === 1 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
+        : t('me.honest', { time: timeLabel(pageSeconds()) })));
   };
 
   const paintBadges = () => {
@@ -213,9 +185,15 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
       h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
+    // Earned first (newest first), then the ones closest to being earned.
+    const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
+    const next = all.filter((b) => !b.earned).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
+    const order = [...earned, ...next];
+    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
     badgeBox.replaceChildren(
-      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')), h('span', { class: 'muted small' }, t('bd.count', { n: got, of: all.length }))),
-      h('div', { class: 'bd-grid' }, ...[...all.filter((b) => b.earned), ...all.filter((b) => !b.earned)].map(tile)));
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
+        h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
+      h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
   };
 
   const paintLibrary = () => {
@@ -254,56 +232,26 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const nextAt = tomorrow ?? times[next];
     if (next < 0) next = 0;
     const mins = Math.max(0, Math.round((nextAt.getTime() - now) / 60_000));
-    const sel = h('select', { class: 'search pr-method', 'aria-label': t('pr.method'), onchange: (e: Event) =>
-      setPrayerSettings({ ...prayerSettings(), method: (e.target as HTMLSelectElement).value as Method }) },
-    ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
     prayerBox.replaceChildren(
-      h('div', { class: 'me-row' }, head, locate),
+      h('div', { class: 'me-row' }, head, h('a', { class: 'chip', href: '#/me/settings' }, t('me.settings'))),
       h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
       h('div', { class: 'pr-list' }, ...times.map((x, i) => h('div', { class: `pr-row${i === next && !tomorrow ? ' next' : ''}${i === 1 ? ' sun' : ''}` },
         h('span', {}, t(`pr.${PRAYERS[i]}` as Key)), h('b', {}, timeFmt.format(x))))),
-      h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
-      h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
-        ...[false, true].map((hanafi) => h('button', {
-          class: `chip${ps.hanafi === hanafi ? ' on' : ''}`, 'aria-pressed': String(ps.hanafi === hanafi),
-          onclick: () => setPrayerSettings({ ...prayerSettings(), hanafi }),
-        }, t(hanafi ? 'pr.hanafi' : 'pr.standard')))),
-      isNative() ? h('button', {
-        class: `menu-item${ps.lockScreen ? ' on' : ''}`, 'aria-pressed': String(ps.lockScreen),
-        onclick: async () => {
-          const on = !prayerSettings().lockScreen;
-          if (on && !(await allowNotifications())) return toast(t('rem.denied'));
-          setPrayerSettings({ ...prayerSettings(), lockScreen: on });
-        },
-      }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
       h('p', { class: 'muted small' }, t('pr.privacy')));
   };
 
-  const paintTime = () => {
-    const cur = pageSeconds();
-    timeBox.replaceChildren(
-      h('h2', { class: 'me-h' }, t('me.pageTime')),
-      h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
-      h('div', { class: 'chips' }, ...PAGE_TIMES.map((sec) => h('button', {
-        class: `chip${sec === cur ? ' on' : ''}`, 'aria-pressed': String(sec === cur),
-        onclick: () => { setPageSeconds(sec); haptic(); paintTime(); paintStats(); },
-      }, timeLabel(sec)))));
-  };
-
   void import('../together/relight').then((m) => m.takeRelights());
-  const refresh = () => { paintHero(); paintGoals(); paintWeek(); paintStats(); paintBadges(); };
+  const refresh = () => { paintHero(); paintGoals(); paintStats(); paintBadges(); };
   refresh();
   paintLibrary();
-  paintTime();
   void paintPrayer();
   const tick = window.setInterval(() => { if (!document.hidden) void paintPrayer(); }, 30_000);
   const onPrayer = () => void paintPrayer();
   root.append(
     h('header', { class: 'topbar' },
-      h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub')))),
-    hero, goalsBox, prayerBox, weekBox, statsBox, badgeBox, libBox, timeBox,
-    h('section', { class: 'me-card menu' },
-      h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)),
+      h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
+      h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
+    hero, goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
 
   const onBadge = (e: Event) => {
@@ -322,4 +270,66 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     window.removeEventListener('readlog-changed', refresh);
     window.removeEventListener('badge-earned', onBadge);
   };
+}
+
+/** #/me/settings: the Me tab's own settings, then the way on to the app's menu. */
+export function showMeSettings(root: HTMLElement): () => void {
+  const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
+  const body = h('div', {});
+  const section = (title: string, ...kids: (Node | string)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
+  const chips = <T,>(list: readonly T[], cur: (x: T) => boolean, label: (x: T) => string, pick: (x: T) => void | Promise<void>) =>
+    h('div', { class: 'chips' }, ...list.map((x) => h('button', {
+      class: `chip${cur(x) ? ' on' : ''}`, 'aria-pressed': String(cur(x)),
+      onclick: async () => { await pick(x); haptic(); paint(); },
+    }, label(x))));
+
+  const paint = () => {
+    const ps = prayerSettings();
+    const rem = dhikrReminders();
+    const sel = h('select', { class: 'search pr-method', 'aria-label': t('pr.method'), onchange: (e: Event) =>
+      setPrayerSettings({ ...prayerSettings(), method: (e.target as HTMLSelectElement).value as Method }) },
+    ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
+    body.replaceChildren(
+      section(t('set.reading'),
+        h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
+        h('b', { class: 'set-label' }, t('me.pageTime')),
+        chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x))),
+      section(t('pr.title'),
+        h('p', { class: 'muted small' }, t('pr.locHelp')),
+        h('button', { class: 'chip', onclick: async () => {
+          toast(t('pr.finding'));
+          if (!(await locatePrayer())) toast(t('pr.denied'));
+        } }, ps.lat === null ? t('pr.setLocation') : t('pr.update')),
+        h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
+        h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
+          ...[false, true].map((hanafi) => h('button', {
+            class: `chip${ps.hanafi === hanafi ? ' on' : ''}`, 'aria-pressed': String(ps.hanafi === hanafi),
+            onclick: () => setPrayerSettings({ ...prayerSettings(), hanafi }),
+          }, t(hanafi ? 'pr.hanafi' : 'pr.standard')))),
+        isNative() ? h('button', {
+          class: `menu-item${ps.lockScreen ? ' on' : ''}`, 'aria-pressed': String(ps.lockScreen),
+          onclick: async () => {
+            const on = !prayerSettings().lockScreen;
+            if (on && !(await allowNotifications())) return toast(t('rem.denied'));
+            setPrayerSettings({ ...prayerSettings(), lockScreen: on });
+          },
+        }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
+        h('p', { class: 'muted small' }, t('pr.privacy'))),
+      isNative() ? section(t('rem.label'),
+        chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
+          async (tm) => {
+            const next = rem.includes(tm) ? rem.filter((x) => x !== tm) : [...rem, tm];
+            if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
+          })) : '',
+      h('section', { class: 'me-card menu' },
+        h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)));
+  };
+  paint();
+  root.append(
+    h('header', { class: 'topbar' },
+      h('a', { class: 'icon-btn', href: '#/me', 'aria-label': t('me.title') }, '‹'),
+      h('div', { class: 'brand' }, h('h1', {}, t('me.settings')))),
+    body, tabBar('me'));
+  window.addEventListener('prayer-changed', paint);
+  return () => window.removeEventListener('prayer-changed', paint);
 }

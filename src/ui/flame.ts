@@ -1,5 +1,7 @@
-// The streak flame (Me tab): a living fire drawn in SVG and moved by CSS only (three layered tongues
-// flickering at their own pace, a breathing glow, embers rising). It grows with the streak:
+// The streak flame (Me tab, widget): a bold, rounded streak icon rather than a realistic fire (a
+// chunky outer flame with a curl on its left, a lighter inner flame, a bright core and a glossy
+// highlight), drawn in SVG and moved by CSS only (a gentle sway, the inner flames flickering, a
+// breathing glow, embers rising). It grows with the streak:
 // tier 1 (1–6 days) warm orange, 2 (7–29) brighter gold with more embers, 3 (30+) a white-hot core.
 // Tier 0 = the flame is out: a dim ember with a thin curl of smoke. Reduced motion → a still flame.
 let uid = 0;
@@ -8,9 +10,10 @@ export type FlameTier = 0 | 1 | 2 | 3;
 export const flameTier = (days: number, lit: boolean): FlameTier =>
   !lit && days === 0 ? 0 : days >= 30 ? 3 : days >= 7 ? 2 : 1;
 
-const OUTER = 'M50 6C58 30 84 46 84 86C84 114 68 132 50 132C32 132 16 114 16 88C16 66 28 54 34 38C38 52 42 58 47 60C44 42 44 24 50 6Z';
-const MID = 'M50 38C56 58 73 70 73 96C73 117 63 128 50 128C37 128 27 117 27 98C27 84 35 76 40 65C43 75 46 80 50 82C48 69 47 54 50 38Z';
-const CORE = 'M50 74C55 88 63 96 63 108C63 120 57 127 50 127C43 127 37 120 37 110C37 100 45 91 50 74Z';
+const OUTER = 'M54 8C62 28 88 46 88 86C88 114 71 133 50 133C29 133 12 116 12 92C12 74 20 62 30 52C30 63 34 71 41 75C38 50 44 28 54 8Z';
+const MID = 'M51 58C60 76 73 87 73 104C73 119 63 128 50 128C37 128 27 119 27 106C27 94 35 86 41 78C43 85 46 89 51 91C48 81 47 70 51 58Z';
+const CORE = 'M50 92C56 101 62 107 62 115C62 122 57 126 50 126C43 126 38 122 38 116C38 108 45 102 50 92Z';
+const SHINE = 'M24 98C22 86 26 76 33 68';
 
 /** The flame; `size` is its height in CSS px. */
 export function flame(tier: FlameTier, size = 140, still = false): HTMLElement {
@@ -37,9 +40,12 @@ export function flame(tier: FlameTier, size = 140, still = false): HTMLElement {
         </defs>
         <ellipse class="fl-glow" cx="50" cy="94" rx="62" ry="58" fill="url(#${id}g)"/>
         <g class="fl-embers" style="fill:var(--fl-m2)">${embers}</g>
-        <path class="fl-outer" d="${OUTER}" fill="url(#${id}o)"/>
-        <path class="fl-mid" d="${MID}" fill="url(#${id}m)"/>
-        <path class="fl-core" d="${CORE}" fill="url(#${id}c)"/>
+        <g class="fl-body">
+          <path class="fl-outer" d="${OUTER}" fill="url(#${id}o)" style="stroke:var(--fl-o1)" stroke-width="3" stroke-linejoin="round"/>
+          <path class="fl-mid" d="${MID}" fill="url(#${id}m)"/>
+          <path class="fl-core" d="${CORE}" fill="url(#${id}c)"/>
+          <path class="fl-shine" d="${SHINE}" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="5" stroke-linecap="round"/>
+        </g>
       </svg>`;
   return el;
 }
