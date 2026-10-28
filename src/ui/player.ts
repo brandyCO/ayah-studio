@@ -9,6 +9,7 @@ import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
 import { t } from '../i18n';
 import type { NightSource } from './night';
+import { sampleButton, stopSample } from './voiceSample';
 
 interface Verse {
   a: number;
@@ -209,8 +210,8 @@ export function createPlayer(o: PlayerHooks) {
           if (at) void playFrom(at.s, at.a);
           else paint();
         },
-      }, reciterPickerLabel(r)))));
-    d.addEventListener('close', () => d.remove());
+      }, h('span', {}, reciterPickerLabel(r)), sampleButton(r)))));
+    d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();

@@ -14,7 +14,7 @@ import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout';
-import { AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
+import { FONT_EN, FONT_EN_ROUND, FONT_EN_SANS, AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
   applyLook, cleanDedication, DEDICATION_MAX, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
@@ -47,6 +47,7 @@ import { h, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
 import { createMediaPicker } from './mediaPicker';
+import { sampleButton } from './voiceSample';
 import { exportQuality, reelLook, reelReciter, setExportQuality, setReelLook, setReelReciter } from './prefs';
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
@@ -284,10 +285,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     scheduleSave();
     dirty = true;
   };
-  const chips = <T extends string>(items: { value: T; label: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) =>
+  const chips = <T extends string>(items: { value: T; label: string; style?: string }[], get: () => T | null, set: (v: T) => void, enabled: (v: T) => boolean = () => true) =>
     h('div', { class: 'chips' }, ...items.map((it) =>
       h('button', {
-        class: `chip${get() === it.value ? ' on' : ''}`,
+        class: `chip${get() === it.value ? ' on' : ''}`, style: it.style,
         disabled: !enabled(it.value),
         onclick: () => { if (get() !== it.value && !exporting) { set(it.value); changed(); } },
       }, it.label)));
@@ -784,6 +785,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       },
     }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
       r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+    sampleButton(r), // hear the voice before choosing
     r.id === project.reciterId ? icon('check', 18) : null);
   /** mp3quran reciters whose recording is not verified for this reel's ayat (filled when the picker opens). */
   const unchecked = new Set<number>();
@@ -1391,7 +1393,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           changed();
         })] },
       { id: 'tr-font', icon: 'font', label: ui('ed.font'), disabled: () => !project.showTranslation, panel: () => [
-        chips<EnFont>([{ value: 'serif', label: ui('ed.serif') }, { value: 'sans', label: ui('ed.sans') }, { value: 'round', label: ui('ed.round') }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+        chips<EnFont>([ // each name drawn in its own font: a live preview
+          { value: 'serif', label: ui('ed.serif'), style: `font-family:${FONT_EN}` },
+          { value: 'sans', label: ui('ed.sans'), style: `font-family:${FONT_EN_SANS}` },
+          { value: 'round', label: ui('ed.round'), style: `font-family:${FONT_EN_ROUND};font-weight:600` }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
     ] },
     { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
       { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel },
