@@ -18,14 +18,14 @@ export type Background =
 const bg = (f: string) => `${import.meta.env.BASE_URL}backgrounds/${f}`;
 
 export const BACKGROUNDS: Background[] = [
-  { id: 'mist', label: 'Mist', kind: 'video', src: bg('mist-loop.mp4'), alt: bg('mist-loop.webm'), thumb: bg('mist-loop-thumb.jpg') },
-  { id: 'motes', label: 'Light', kind: 'video', src: bg('motes-loop.mp4'), alt: bg('motes-loop.webm'), thumb: bg('motes-loop-thumb.jpg') },
-  { id: 'dunes', label: 'Dunes', kind: 'image', src: bg('dusk-dunes.jpg'), thumb: bg('dusk-dunes-thumb.jpg') },
-  { id: 'night', label: 'Night', kind: 'image', src: bg('night-sky.jpg'), thumb: bg('night-sky-thumb.jpg') },
+  { id: 'mist', label: 'Mist', kind: 'video', src: bg('mist-loop.mp4'), alt: bg('mist-loop.webm'), thumb: bg('mist-loop-thumb.webp') },
+  { id: 'motes', label: 'Light', kind: 'video', src: bg('motes-loop.mp4'), alt: bg('motes-loop.webm'), thumb: bg('motes-loop-thumb.webp') },
+  { id: 'dunes', label: 'Dunes', kind: 'image', src: bg('dusk-dunes.jpg'), thumb: bg('dusk-dunes-thumb.webp') },
+  { id: 'night', label: 'Night', kind: 'image', src: bg('night-sky.jpg'), thumb: bg('night-sky-thumb.webp') },
   // Kid-friendly pastel skies (docs/kids.md K5; scripts/make-kid-backgrounds.py).
-  { id: 'kid-moon', label: 'Moon garden', kind: 'image', src: bg('kid-moon.jpg'), thumb: bg('kid-moon-thumb.jpg') },
-  { id: 'kid-dunes', label: 'Desert dawn', kind: 'image', src: bg('kid-dunes.jpg'), thumb: bg('kid-dunes-thumb.jpg') },
-  { id: 'kid-clouds', label: 'Soft clouds', kind: 'video', src: bg('kid-clouds-loop.mp4'), alt: bg('kid-clouds-loop.webm'), thumb: bg('kid-clouds-loop-thumb.jpg') },
+  { id: 'kid-moon', label: 'Moon garden', kind: 'image', src: bg('kid-moon.jpg'), thumb: bg('kid-moon-thumb.webp') },
+  { id: 'kid-dunes', label: 'Desert dawn', kind: 'image', src: bg('kid-dunes.jpg'), thumb: bg('kid-dunes-thumb.webp') },
+  { id: 'kid-clouds', label: 'Soft clouds', kind: 'video', src: bg('kid-clouds-loop.mp4'), alt: bg('kid-clouds-loop.webm'), thumb: bg('kid-clouds-loop-thumb.webp') },
   { id: 'midnight', label: 'Midnight', kind: 'color', color: '#0f1b2d' },
   { id: 'forest', label: 'Forest', kind: 'color', color: '#12291f' },
   { id: 'charcoal', label: 'Charcoal', kind: 'color', color: '#1d1d22' },

@@ -11,6 +11,8 @@ const APP = 'app-v1';
 const STATIC = 'static-v1';
 const NET = 'net-v1';
 const MAX_APP_FILES = 80;
+const MAX_PAGE_FONTS = 200; // mushaf page fonts (~150 KB each); the oldest kept are dropped first
+const MAX_NET = 120; // recitation timings answers
 const SCOPE = new URL(self.registration.scope);
 
 self.addEventListener('install', (event) => {
@@ -83,6 +85,7 @@ async function cacheFirst(name, req, onePerPath = false) {
       }
       await cache.put(req, copy);
       if (name === APP) await trim(cache, MAX_APP_FILES);
+      else if (new URL(req.url).pathname.includes('/fonts/qcf-v2/')) await trim(cache, MAX_PAGE_FONTS, '/fonts/qcf-v2/');
     })();
   }
   return res;
@@ -91,7 +94,7 @@ async function cacheFirst(name, req, onePerPath = false) {
 async function networkFirst(name, req, key, timeoutMs = 0) {
   const cache = await caches.open(name);
   const net = fetch(req).then((res) => {
-    if (res.ok) void cache.put(key, res.clone());
+    if (res.ok) void cache.put(key, res.clone()).then(() => (name === NET ? trim(cache, MAX_NET, '') : undefined));
     return res;
   });
   net.catch(() => {});
@@ -147,8 +150,8 @@ function withTimeout(p, ms) {
   });
 }
 
-/** Keep the newest `max` built files (old builds' files are dropped). */
-async function trim(cache, max) {
-  const keys = (await cache.keys()).filter((k) => new URL(k.url).pathname.includes('/assets/'));
+/** Keep the newest `max` entries whose path contains `part` (built files by default; old builds' go first). */
+async function trim(cache, max, part = '/assets/') {
+  const keys = (await cache.keys()).filter((k) => new URL(k.url).pathname.includes(part));
   for (const k of keys.slice(0, Math.max(0, keys.length - max))) await cache.delete(k);
 }

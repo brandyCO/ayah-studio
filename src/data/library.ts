@@ -69,6 +69,10 @@ function canvas(w: number, h: number) {
 }
 const jpeg = (c: HTMLCanvasElement, q: number) =>
   new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not encode the image'))), 'image/jpeg', q));
+/** Thumbnails as WebP (about half the size of JPEG) where the browser can write it, else JPEG. */
+export const smallImage = (c: HTMLCanvasElement, q: number) =>
+  new Promise<Blob | null>((resolve) => c.toBlob(resolve, 'image/webp', q))
+    .then((b) => (b && b.type === 'image/webp' ? b : jpeg(c, q)));
 
 /** A 9:16 thumbnail of `src`, cropped to cover. */
 function thumbnail(src: CanvasImageSource, sw: number, sh: number) {
@@ -76,7 +80,7 @@ function thumbnail(src: CanvasImageSource, sw: number, sh: number) {
   const ctx = c.getContext('2d')!;
   const k = Math.max(TW / sw, TH / sh);
   ctx.drawImage(src, (TW - sw * k) / 2, (TH - sh * k) / 2, sw * k, sh * k);
-  return jpeg(c, 0.8);
+  return smallImage(c, 0.8);
 }
 
 /**
@@ -114,7 +118,7 @@ async function prepareVideo(file: Blob) {
     if (!first) throw new Error('This video has no frames');
     const c = canvas(TW, TH);
     c.getContext('2d')!.drawImage(first.canvas, 0, 0);
-    return { blob: file, thumb: await jpeg(c, 0.8) };
+    return { blob: file, thumb: await smallImage(c, 0.8) };
   } finally {
     input.dispose();
   }

@@ -22,6 +22,7 @@ import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
+import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
@@ -105,8 +106,23 @@ function firstVisitHint() {
   toast(t('mushaf.hint'));
 }
 
+/** The page last shown for an address, so a reopen can fetch its font before the layout is in. */
+function rememberPage(hash: string, page: number) {
+  try { localStorage.setItem('lastPage', JSON.stringify([hash, page])); } catch { /* storage blocked */ }
+}
+function knownPage(hash: string): number | null {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem('lastPage') ?? 'null');
+    if (Array.isArray(v) && v[0] === hash && Number.isInteger(v[1]) && v[1] >= 1 && v[1] <= PAGE_COUNT) return v[1] as number;
+  } catch { /* ignore */ }
+  return null;
+}
+
 export async function showMushaf(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
-  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah(), loadReflections()]);
+  // Reopening where the user left off: start that page's font right away, while the layout loads.
+  const known = knownPage(location.hash);
+  if (known) void loadPageFont(known).catch(() => {});
+  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah()]);
   let page = focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n);
   root.classList.add('screen-mushaf');
   document.body.classList.add('mushaf-mode');
@@ -231,6 +247,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const repaintMarks = () => { for (const el of built.values()) if (el.dataset.fit) paintMarks(el); };
   window.addEventListener('bookmarks-changed', repaintMarks);
   window.addEventListener('reflections-changed', repaintMarks);
+  // Notes are read from the device after the first page shows (they only add margin marks).
+  void loadReflections().then(() => { repaintMarks(); pulseNotes(); });
 
   // Coming back to a page with an older note: its mark pulses once, with "You wrote here on …".
   const hint = h('button', { class: 'rf-hint', hidden: true });
@@ -346,6 +364,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     pageNum.replaceChildren(...(ramadanDay() ? [crescent()] : []), String(page));
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
+    rememberPage(`#/s/${s}/${a}`, page);
     startReadTimer();
     // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
     clearTimeout(recentTimer);
@@ -614,6 +633,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
+  void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {

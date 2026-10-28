@@ -15,7 +15,6 @@ faces, text or symbols.
 | `kid-dunes.jpg` | Image, 1080×1920 — Desert dawn (pastel dunes, pale sun) | Generated (`scripts/make-kid-backgrounds.py`) | Original work |
 | `kid-clouds-loop.mp4` | Video loop, 540×960, 12 s — Soft clouds | Generated (`scripts/make-kid-backgrounds.py`) | Original work |
 | `*-loop.webm` | VP9 copies of the loops, used where H.264 can't be decoded | Derived from the files above | Original work |
-| `*-thumb.jpg` | Picker thumbnails | Derived from the files above | Original work |
-| `light-*-thumb.jpg` | Thumbnails of the light scenes (Dawn cloud sea, Starfield drift, Aurora, Lantern field, Light rays), which are drawn live by `src/light/` | Rendered by `scripts/make-light-thumbs.mjs` | Original work |
+| `*-thumb.webp` | Picker thumbnails | Derived from the files above | Original work |
 
 When curated Pexels/Pixabay loops are added later, record each file's source URL and license here.

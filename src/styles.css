@@ -1309,3 +1309,10 @@ body.tabs-up .rf-hint { opacity: 0; }
 .welcome-option .welcome-name { flex: 1; min-width: 0; }
 .welcome-option > svg { color: var(--accent); }
 .welcome-theme { width: 100%; max-height: min(52dvh, 460px); overflow-y: auto; text-align: start; }
+
+/* Old-phone mode (src/lite.ts): the heaviest decorations off — paper grain and sheet shadows, glass
+   blur behind bars and sheets. Reels and exports are not affected. */
+html.lite { --paper-grain: none; --paper-edge: none; }
+html.lite *, html.lite *::before, html.lite *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.lite .mushaf-strip .mushaf-page { box-shadow: none; }
+html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }

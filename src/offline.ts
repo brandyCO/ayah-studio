@@ -13,22 +13,30 @@ export function setupOffline() {
   // whose files are on the device already.
   if (isNative() || !import.meta.env.PROD || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
   navigator.serviceWorker.register(`${BASE}sw.js`).catch((e) => console.warn('Offline mode unavailable', e));
-  const warm = () => window.setTimeout(() => void warmUp(), 3000);
+  // Once per app version: afterwards everything is in the cache, and re-reading it on every launch
+  // (the editor, the data files) only costs the phone time and memory.
+  const build = `${__DATA_VERSION__}|${document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src ?? ''}`;
+  const warm = () => {
+    try { if (localStorage.getItem('warmedUp') === build) return; } catch { /* storage blocked */ }
+    window.setTimeout(() => void warmUp().then((ok) => { if (ok) try { localStorage.setItem('warmedUp', build); } catch { /* ignore */ } }), 3000);
+  };
   if (navigator.serviceWorker.controller) warm();
   else navigator.serviceWorker.addEventListener('controllerchange', warm, { once: true });
 }
 
-async function warmUp() {
+async function warmUp(): Promise<boolean> {
   const urls = [...DATA.map((f) => `${BASE}data/${f}?v=${__DATA_VERSION__}`), ...FONTS.map((f) => `${BASE}fonts/${f}`)];
-  for (const u of urls) await fetch(u).catch(() => {});
+  let ok = true;
+  for (const u of urls) await fetch(u).then((r) => { if (!r.ok) ok = false; }, () => { ok = false; });
   try {
     await import('./ui/editor'); // the editor and video engine
     const { BACKGROUNDS } = await import('./engine/backgrounds');
     for (const b of BACKGROUNDS) {
       if (b.kind === 'color') continue;
-      for (const u of [b.src, b.thumb, b.kind === 'video' ? b.alt : undefined]) if (typeof u === 'string') await fetch(u).catch(() => {});
+      for (const u of [b.src, b.thumb, b.kind === 'video' ? b.alt : undefined]) if (typeof u === 'string') await fetch(u).then((r) => { if (!r.ok) ok = false; }, () => { ok = false; });
     }
   } catch {
-    /* offline right now: try again on the next visit */
+    return false; // offline right now: try again on the next visit
   }
+  return ok;
 }

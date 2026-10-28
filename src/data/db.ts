@@ -62,3 +62,21 @@ export async function keepNewest(store: 'audio' | 'timings' | 'tafsir', max: num
     };
   });
 }
+
+/**
+ * Drops the least recently used entries of `store` until the kept bytes fit in `maxBytes`.
+ * `size` is read from each entry (its stored size, or the length of its bytes for older entries).
+ */
+export async function keepUnderBytes(store: 'audio', maxBytes: number, size: (entry: unknown) => number) {
+  let total = 0;
+  await tx(store, 'readwrite', (s) => {
+    const req = s.index('used').openCursor(null, 'prev'); // newest first
+    req.onsuccess = () => {
+      const c = req.result;
+      if (!c) return;
+      total += size(c.value);
+      if (total > maxBytes) c.delete();
+      c.continue();
+    };
+  });
+}
