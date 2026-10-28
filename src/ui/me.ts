@@ -1,11 +1,18 @@
-// Me (#/me): the daily streak flame, this week's days, the weekly streak and freeze, and honest
-// stats (pages, ayat, minutes listened, surahs finished, reels made) for this week, this month or
-// all time. Also the reading time a page needs to count, and the way to the settings menu.
-import { PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, type Period } from '../data/journey';
-import { loadMeta } from '../data/quran';
-import { locale, surahName, t } from '../i18n';
+// Me (#/me): the daily streak flame, today's goals (pages, memorising, reels, dhikr, morning
+// adhkar), the week compared with last week, honest stats (week / month / all time), milestone
+// badges, My library (bookmarks, recently read, drafts), the reading time a page needs to count, and
+// the way to the settings menu.
+import { dayKey } from '../data/readLog';
+import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
+import { DHIKR, DHIKR_GOALS, MEMO_GOALS, PAGE_GOALS, REEL_GOALS, goals, setGoals, todayGoals, type DhikrId, type GoalProgress } from '../data/goals';
+import { badgeStates, type BadgeState } from '../data/badges';
+import { bookmarks } from '../data/bookmarks';
+import { recentPages } from '../data/history';
+import { loadMeta, reference, type SurahMeta } from '../data/quran';
+import { locale, surahName, t, type Key } from '../i18n';
 import { h, haptic } from './dom';
 import { flame, flameTier } from './flame';
+import { badgeArt } from './badge';
 import { openMoreMenu, tabBar } from './tabs';
 
 const minutes = (sec: number) => {
@@ -13,18 +20,48 @@ const minutes = (sec: number) => {
   return m >= 60 ? t('me.hm', { h: Math.floor(m / 60), m: m % 60 }) : t('me.min', { n: m });
 };
 const timeLabel = (sec: number) => (sec % 60 ? t('me.minHalf', { n: Math.floor(sec / 60) }) : t('me.minN', { n: sec / 60 }));
+const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 
 let period: Period = 'week';
+
+function dialog(title: string, ...body: (Node | string | false)[]) {
+  const close = () => d.close();
+  const d = h('dialog', { class: 'sheet bottom' },
+    h('div', { class: 'sheet-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
+    ...body.filter((x): x is Node | string => x !== false));
+  d.addEventListener('close', () => d.remove());
+  d.addEventListener('click', (e) => { if (e.target === d) close(); });
+  window.addEventListener('hashchange', close, { once: true });
+  document.body.append(d);
+  d.showModal();
+  return d;
+}
+
+/** A badge's sheet: the medallion large, its goal and progress, or the day it was earned. */
+export function openBadge(b: BadgeState, fresh = false) {
+  const n = b.def.need;
+  dialog(fresh ? t('bd.new') : t('bd.title'),
+    h('div', { class: `bd-detail${fresh ? ' fresh' : ''}` },
+      badgeArt(b.def.tier, b.def.icon, !!b.earned, 148),
+      h('h3', {}, t(b.def.name as Key, { n })),
+      h('p', { class: 'muted' }, t(b.def.goal as Key, { n })),
+      b.earned
+        ? h('p', { class: 'bd-when' }, t('bd.earned', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(parse(b.earned)) }))
+        : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, `${b.have} / ${n}`))));
+}
 
 export async function showMe(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  const goalsBox = h('section', { class: 'me-card' });
+  const weekBox = h('section', { class: 'me-card' });
   const statsBox = h('section', { class: 'me-card' });
+  const badgeBox = h('section', { class: 'me-card' });
+  const libBox = h('section', { class: 'me-card' });
   const timeBox = h('section', { class: 'me-card' });
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
-  const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 
   const paintHero = () => {
     const s = streak();
@@ -44,14 +81,90 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
   };
 
+  // --- today's goals ---
+  const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
+    ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)
+    : t(`goal.${g.kind}` as Key, { n: g.target });
+  const goalRow = (g: GoalProgress) => {
+    const met = g.done >= g.target;
+    const pct = Math.min(1, g.done / g.target);
+    let act: Node | string = '';
+    if (g.kind === 'dhikr') act = h('button', { class: 'chip', onclick: () => void import('./tasbih').then((m) => m.openTasbih(g.dhikr as DhikrId)) }, t('goal.count'));
+    else if (g.kind === 'memorise') act = h('span', { class: 'goal-step' },
+      h('button', { class: 'chip', 'aria-label': t('goal.less'), onclick: () => { addMemorised(-1); haptic(); } }, '−'),
+      h('button', { class: 'chip', 'aria-label': t('goal.more'), onclick: () => { addMemorised(1); haptic(); } }, '+'));
+    else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, 'aria-pressed': String(met), onclick: () => { setAdhkar(!met); haptic(); } }, met ? t('goal.doneMark') : t('goal.markDone'));
+    else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
+    else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
+    return h('div', { class: `goal${met ? ' met' : ''}` },
+      h('span', { class: 'goal-ring', style: `--p:${pct}` }, met ? '✓' : ''),
+      h('span', { class: 'goal-txt' },
+        h('b', {}, goalLabel(g)),
+        h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarHelp')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
+      act);
+  };
+  const paintGoals = () => {
+    const list = todayGoals();
+    const all = list.length > 0 && list.every((g) => g.done >= g.target);
+    goalsBox.replaceChildren(
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
+        h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
+      all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
+      list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
+      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
+  };
+  function openGoalEditor() {
+    const g = goals();
+    const row = (label: string, list: readonly number[], cur: number, set: (n: number) => void, fmt = (n: number) => String(n)) =>
+      h('div', { class: 'goal-edit' }, h('b', {}, label), h('div', { class: 'chips' }, ...list.map((n) => h('button', {
+        class: `chip${n === cur ? ' on' : ''}`, 'aria-pressed': String(n === cur),
+        onclick: (e: Event) => {
+          set(n); setGoals(g);
+          (e.currentTarget as HTMLElement).parentElement!.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === e.currentTarget));
+        },
+      }, n ? fmt(n) : t('goal.off')))));
+    dialog(t('goal.editTitle'),
+      h('div', { class: 'sheet-scroll goal-editor' },
+        row(t('goal.ePages'), PAGE_GOALS, g.pages, (n) => { g.pages = n; }),
+        row(t('goal.eMemo'), MEMO_GOALS, g.memorise, (n) => { g.memorise = n; }),
+        row(t('goal.eReels'), REEL_GOALS, g.reels, (n) => { g.reels = n; }),
+        ...DHIKR.map((x) => row(t(x.key as Key), DHIKR_GOALS, g.dhikr[x.id] ?? 0, (n) => { if (n) g.dhikr[x.id] = n; else delete g.dhikr[x.id]; })),
+        row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on'))));
+  }
+
+  // --- this week vs last week ---
+  const paintWeek = () => {
+    const now = new Date();
+    const lastSunday = parse(addDays(weekOf(dayKey(now)), -1));
+    const a = stats('week', now);
+    const b = stats('week', lastSunday);
+    const line = (label: string, x: number, y: number, show = (n: number) => String(n)) => {
+      const diff = x - y;
+      return h('div', { class: 'wk-line' }, h('span', {}, label), h('b', {}, show(x)),
+        h('span', { class: `wk-diff ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}` }, diff ? `${diff > 0 ? '▲' : '▼'} ${show(Math.abs(diff))}` : '–'));
+    };
+    const monday = new Date().getDay() === 1;
+    weekBox.replaceChildren(
+      h('h2', { class: 'me-h' }, t('wk.title')),
+      h('p', { class: 'muted small' }, monday && b.litDays ? t('wk.monday', { pages: b.pages, dhikr: b.dhikr }) : t('wk.sub')),
+      h('div', { class: 'wk' },
+        line(t('me.pages'), a.pages, b.pages),
+        line(t('me.ayat'), a.ayat, b.ayat),
+        line(t('me.listened'), a.listen, b.listen, minutes),
+        line(t('me.dhikr'), a.dhikr, b.dhikr),
+        line(t('me.memorised'), a.memorised, b.memorised),
+        line(t('wk.goalDays'), a.goalDays, b.goalDays),
+        line(t('wk.lit'), a.litDays, b.litDays)));
+  };
+
   const paintStats = () => {
-    const st = stats(period);
+    const st: Stats = stats(period);
     const tab = (p: Period, label: string) => h('button', {
       class: `tab${p === period ? ' on' : ''}`, role: 'tab', 'aria-selected': String(p === period),
       onclick: () => { period = p; haptic(); paintStats(); },
     }, label);
     const tile = (n: string, label: string, sub?: string) =>
-      h('div', { class: 'me-tile' }, h('b', {}, n), h('span', {}, label), sub ? h('span', { class: 'muted small' }, sub) : false);
+      h('div', { class: 'me-tile' }, h('b', {}, n), h('span', {}, label), sub ? h('span', { class: 'muted small' }, sub) : '');
     const names = st.surahList.slice(-3).map((s) => surahName(meta[s - 1])).join(' · ');
     statsBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('me.stats')),
@@ -62,8 +175,41 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         tile(String(st.ayat), t('me.ayat')),
         tile(minutes(st.listen), t('me.listened')),
         tile(String(st.surahs), t('me.surahs'), names || undefined),
+        tile(String(st.juz), t('me.juz')),
+        tile(String(st.memorised), t('me.memorised')),
+        tile(String(st.dhikr), t('me.dhikr')),
         tile(String(st.reels), t('me.reels'))),
       h('p', { class: 'muted small' }, t('me.honest', { time: timeLabel(pageSeconds()) })));
+  };
+
+  const paintBadges = () => {
+    const all = badgeStates();
+    const got = all.filter((b) => b.earned).length;
+    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: () => openBadge(b) },
+      badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
+      h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
+      b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
+    badgeBox.replaceChildren(
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')), h('span', { class: 'muted small' }, t('bd.count', { n: got, of: all.length }))),
+      h('div', { class: 'bd-grid' }, ...[...all.filter((b) => b.earned), ...all.filter((b) => !b.earned)].map(tile)));
+  };
+
+  const paintLibrary = () => {
+    const bms = bookmarks();
+    const recent = recentPages().slice(0, 3);
+    const ref = (s: number, a: number) => reference(meta[s - 1] as SurahMeta, a, a);
+    libBox.replaceChildren(
+      h('h2', { class: 'me-h' }, t('lib.title')),
+      h('div', { class: 'menu' },
+        h('button', { class: 'menu-item', onclick: () => openBookmarks() }, `🔖  ${t('lib.bookmarks', { n: bms.length })}`),
+        h('a', { class: 'menu-item', href: '#/drafts' }, `🎬  ${t('lib.reels')}`),
+        ...recent.map((r) => h('a', { class: 'menu-item', href: `#/s/${r.s}/${r.a}` },
+          h('span', {}, `📖  ${ref(r.s, r.a)}`), h('span', { class: 'muted small' }, ` · ${t('common.page', { n: r.page })}`)))));
+    function openBookmarks() {
+      dialog(t('menu.bookmarks'), bms.length
+        ? h('div', { class: 'sheet-scroll menu' }, ...bms.map((b) => h('a', { class: 'menu-item', href: `#/s/${b.s}/${b.a}` }, ref(b.s, b.a))))
+        : h('p', { class: 'muted' }, t('bm.empty')));
+    }
   };
 
   const paintTime = () => {
@@ -77,23 +223,29 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       }, timeLabel(sec)))));
   };
 
-  paintHero();
-  paintStats();
+  const refresh = () => { paintHero(); paintGoals(); paintWeek(); paintStats(); paintBadges(); };
+  refresh();
+  paintLibrary();
   paintTime();
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub')))),
-    hero, statsBox, timeBox,
+    hero, goalsBox, weekBox, statsBox, badgeBox, libBox, timeBox,
     h('section', { class: 'me-card menu' },
-      h('a', { class: 'menu-item', href: '#/drafts' }, `🎬  ${t('menu.drafts')}`),
       h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)),
     tabBar('me'));
 
-  const refresh = () => { paintHero(); paintStats(); };
+  const onBadge = (e: Event) => {
+    const ids = (e as CustomEvent<string[]>).detail;
+    const b = badgeStates().find((x) => x.def.id === ids[0]);
+    if (b && !document.querySelector('dialog[open]')) openBadge(b, true);
+  };
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
+  window.addEventListener('badge-earned', onBadge);
   return () => {
     window.removeEventListener('journey-changed', refresh);
     window.removeEventListener('readlog-changed', refresh);
+    window.removeEventListener('badge-earned', onBadge);
   };
 }

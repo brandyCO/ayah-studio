@@ -118,6 +118,8 @@ void initI18n().then(route);
 const lightToday = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 lightToday();
 document.addEventListener('visibilitychange', lightToday);
+// Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
+void import('./ui/rewards').then((m) => m.watchRewards());
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.

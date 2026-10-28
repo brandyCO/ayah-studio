@@ -1069,7 +1069,18 @@ duas/reflections section in Me.
       `addListen()` (player: recitation actually played), `reelMade()` (export), `stats()`. The mushaf's
       read timer counts visible seconds only: `pageSeconds()` (1 / 1½ / 2 / 3 / 4 min, set in Me) logs the
       page (`readLog`, now also used for the stats); Ramadan's portion keeps its 20 s
-- [ ] M2 Daily goals (pages, ayat memorised, reels, dhikr counter), weekly summary, milestone badges, My library
+- [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
+      (counted pages), ayat memorised (+/− by the user), reels made, dhikr on the **tasbih counter**
+      (`src/ui/tasbih.ts`: Subhan Allah, Alhamdulillah, Allahu Akbar, tahleel, istighfar, hawqala; targets
+      33–1000; ring, vibration, Undo) and the morning adhkar as a "Mark done" (no adhkar text yet: it will
+      come only from a published, cited collection). A day with every goal met is marked (`g`).
+      **Your week** (this week since Monday vs last week). Stats also show juz finished, ayat memorised,
+      dhikr. **Badges** (`src/data/badges.ts`, 20: streak 7/30/100/180/365, pages 1/100, surahs 1/10, a juz,
+      Khatm = all 604 pages counted, memorised 10/100, dhikr 1k/10k, 10 h listening, reels 1/10, goal days
+      7/30) drawn by `src/ui/badge.ts` (eight-pointed star medallion in bronze/silver/gold/emerald, line
+      icon, a passing shine; grey with progress while locked; tap → goal + progress or date earned).
+      `src/ui/rewards.ts` checks goals and badges on every journey change (toast, or the badge sheet in Me).
+      **My library**: bookmarks, reels and drafts, the last pages read
 - [ ] M3 Android widgets (streak, tasbih, prayer times; the daily ayah widget exists) + prayer times by
       location with a lock-screen notification, tasbih reminders
 - [ ] M4 Friend relight (Google sign-in + Supabase)
