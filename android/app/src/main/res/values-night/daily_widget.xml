@@ -4,4 +4,5 @@
     <color name="daily_text">#E9EEEC</color>
     <color name="daily_muted">#8E9A95</color>
     <color name="daily_accent">#3DD1AD</color>
+    <color name="tasbih_tap">#1F3DD1AD</color>
 </resources>

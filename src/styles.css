@@ -1455,3 +1455,15 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .tb-hint { text-align: center; }
 @keyframes tb-bump { 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .tb-btn.bump .tb-num { animation: none; } }
+
+/* Me: prayer times, dhikr reminders */
+.pr-next { margin: 0 0 8px; font-weight: 600; color: var(--accent); }
+.pr-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.pr-row { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: var(--r-m); background: var(--bg); font-size: var(--fs-s); }
+.pr-row b { font-size: var(--fs-l); font-variant-numeric: tabular-nums; }
+.pr-row.sun { opacity: .7; }
+.pr-row.next { background: var(--brand-fill); color: #fff; box-shadow: var(--brand-shadow, none); }
+.pr-set { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.pr-method { width: 100%; }
+.pr-asr { align-items: center; margin-bottom: 6px; }
+.rem-row { margin-top: 10px; }

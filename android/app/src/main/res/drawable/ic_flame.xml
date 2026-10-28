@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The streak flame (same shapes as src/ui/flame.ts): three tongues, lit. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="50dp" android:height="70dp" android:viewportWidth="100" android:viewportHeight="140">
+    <path android:fillColor="#F2541E" android:pathData="M50 6C58 30 84 46 84 86C84 114 68 132 50 132C32 132 16 114 16 88C16 66 28 54 34 38C38 52 42 58 47 60C44 42 44 24 50 6Z" />
+    <path android:fillColor="#FF9A2E" android:pathData="M50 38C56 58 73 70 73 96C73 117 63 128 50 128C37 128 27 117 27 98C27 84 35 76 40 65C43 75 46 80 50 82C48 69 47 54 50 38Z" />
+    <path android:fillColor="#FFE08A" android:pathData="M50 74C55 88 63 96 63 108C63 120 57 127 50 127C43 127 37 120 37 110C37 100 45 91 50 74Z" />
+</vector>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The flame is out: an ember and a curl of smoke. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="50dp" android:height="70dp" android:viewportWidth="100" android:viewportHeight="140">
+    <path android:strokeColor="#807770" android:strokeWidth="2.4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M50 118C44 104 58 96 50 82C44 70 56 62 50 48" />
+    <path android:fillColor="#3A302B" android:pathData="M30 128a20 7 0 1 0 40 0a20 7 0 1 0 -40 0Z" />
+    <path android:fillColor="#C4602A" android:pathData="M38 125a12 5 0 1 0 24 0a12 5 0 1 0 -24 0Z" />
+</vector>

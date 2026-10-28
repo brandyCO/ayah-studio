@@ -10,10 +10,13 @@ import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
 import { locale, surahName, t, type Key } from '../i18n';
-import { h, haptic } from './dom';
+import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
 import { badgeArt } from './badge';
 import { openMoreMenu, tabBar } from './tabs';
+import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
+import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
+import { isNative } from '../native';
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -60,6 +63,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
   const timeBox = h('section', { class: 'me-card' });
+  const prayerBox = h('section', { class: 'me-card' });
+  const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
@@ -111,7 +116,20 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
       all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`));
+      h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
+      isNative() ? remindRow() : '');
+  };
+  const remindRow = () => {
+    const on = dhikrReminders();
+    return h('div', { class: 'goal-edit rem-row' }, h('b', {}, t('rem.label')),
+      h('div', { class: 'chips' }, ...REMINDER_TIMES.map((tm) => h('button', {
+        class: `chip${on.includes(tm) ? ' on' : ''}`, 'aria-pressed': String(on.includes(tm)),
+        onclick: async () => {
+          const next = on.includes(tm) ? on.filter((x) => x !== tm) : [...on, tm];
+          if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
+          paintGoals();
+        },
+      }, timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3))))))));
   };
   function openGoalEditor() {
     const g = goals();
@@ -212,6 +230,49 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     }
   };
 
+  const paintPrayer = async () => {
+    const ps = prayerSettings();
+    const head = h('h2', { class: 'me-h' }, t('pr.title'));
+    const locate = h('button', { class: 'chip', onclick: async () => {
+      toast(t('pr.finding'));
+      if (!(await locatePrayer())) toast(t('pr.denied'));
+    } }, ps.lat === null ? t('pr.setLocation') : t('pr.update'));
+    if (ps.lat === null) {
+      prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate);
+      return;
+    }
+    const times = (await prayerDay(new Date(), ps))!;
+    const now = Date.now();
+    let next = times.findIndex((x, i) => i !== 1 && x.getTime() > now);
+    const tomorrow = next < 0 ? (await prayerDay(new Date(Date.now() + 86_400_000), ps))![0] : null;
+    const nextAt = tomorrow ?? times[next];
+    if (next < 0) next = 0;
+    const mins = Math.max(0, Math.round((nextAt.getTime() - now) / 60_000));
+    const sel = h('select', { class: 'search pr-method', 'aria-label': t('pr.method'), onchange: (e: Event) =>
+      setPrayerSettings({ ...prayerSettings(), method: (e.target as HTMLSelectElement).value as Method }) },
+    ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
+    prayerBox.replaceChildren(
+      h('div', { class: 'me-row' }, head, locate),
+      h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
+      h('div', { class: 'pr-list' }, ...times.map((x, i) => h('div', { class: `pr-row${i === next && !tomorrow ? ' next' : ''}${i === 1 ? ' sun' : ''}` },
+        h('span', {}, t(`pr.${PRAYERS[i]}` as Key)), h('b', {}, timeFmt.format(x))))),
+      h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
+      h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
+        ...[false, true].map((hanafi) => h('button', {
+          class: `chip${ps.hanafi === hanafi ? ' on' : ''}`, 'aria-pressed': String(ps.hanafi === hanafi),
+          onclick: () => setPrayerSettings({ ...prayerSettings(), hanafi }),
+        }, t(hanafi ? 'pr.hanafi' : 'pr.standard')))),
+      isNative() ? h('button', {
+        class: `menu-item${ps.lockScreen ? ' on' : ''}`, 'aria-pressed': String(ps.lockScreen),
+        onclick: async () => {
+          const on = !prayerSettings().lockScreen;
+          if (on && !(await allowNotifications())) return toast(t('rem.denied'));
+          setPrayerSettings({ ...prayerSettings(), lockScreen: on });
+        },
+      }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
+      h('p', { class: 'muted small' }, t('pr.privacy')));
+  };
+
   const paintTime = () => {
     const cur = pageSeconds();
     timeBox.replaceChildren(
@@ -227,10 +288,13 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   refresh();
   paintLibrary();
   paintTime();
+  void paintPrayer();
+  const tick = window.setInterval(() => { if (!document.hidden) void paintPrayer(); }, 30_000);
+  const onPrayer = () => void paintPrayer();
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub')))),
-    hero, goalsBox, weekBox, statsBox, badgeBox, libBox, timeBox,
+    hero, goalsBox, prayerBox, weekBox, statsBox, badgeBox, libBox, timeBox,
     h('section', { class: 'me-card menu' },
       h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)),
     tabBar('me'));
@@ -243,7 +307,10 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('badge-earned', onBadge);
+  window.addEventListener('prayer-changed', onPrayer);
   return () => {
+    clearInterval(tick);
+    window.removeEventListener('prayer-changed', onPrayer);
     window.removeEventListener('journey-changed', refresh);
     window.removeEventListener('readlog-changed', refresh);
     window.removeEventListener('badge-earned', onBadge);

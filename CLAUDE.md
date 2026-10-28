@@ -1081,8 +1081,19 @@ duas/reflections section in Me.
       icon, a passing shine; grey with progress while locked; tap → goal + progress or date earned).
       `src/ui/rewards.ts` checks goals and badges on every journey change (toast, or the badge sheet in Me).
       **My library**: bookmarks, reels and drafts, the last pages read
-- [ ] M3 Android widgets (streak, tasbih, prayer times; the daily ayah widget exists) + prayer times by
-      location with a lock-screen notification, tasbih reminders
+- [x] M3 **Prayer times** (`src/data/prayer.ts`, `adhan`; Me → Prayer times): location rounded to 0.01°
+      (never sent), method guessed from the time zone (12 methods, changeable), Asr Standard / Hanafi,
+      next prayer + today's six. **Dhikr reminders** (Android; Me → goals: 06:30 / 09:00 / 13:00 / 17:00 /
+      21:00, daily local notifications, ids 3000–3004 → `#/me`). **Android widgets** (`src/ui/widgets.ts` ⇄
+      `WidgetsPlugin.java`, SharedPreferences `widgets`): `StreakWidget` (flame vector lit / low / out,
+      days, this week, weeks; works out yesterday/today itself until the app opens), `TasbihWidget` (tap
+      to count, ⟳ next dhikr, progress to the goal; counts kept natively until the app takes them into
+      the journey on start/resume), `PrayerWidget` (next prayer + today's times, 14 days handed over);
+      **lock screen**: an optional silent ongoing notification "Asr · 15:42" with a countdown
+      (`Widgets.prayerTick()`, channel `prayer_next`, id 7400), moved on by an inexact alarm at each
+      prayer (`PrayerAlarm`, also after boot / update / clock change). Manifest: coarse location, boot.
+      The daily ayah widget is unchanged. Only verifiable on the phone (Java checked with javac against
+      the Android 15 framework jar)
 - [ ] M4 Friend relight (Google sign-in + Supabase)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 

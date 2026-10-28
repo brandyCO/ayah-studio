@@ -25,6 +25,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(MediaScanPlugin.class);
         registerPlugin(DailyPlugin.class);
         registerPlugin(ExportServicePlugin.class);
+        registerPlugin(WidgetsPlugin.class);
         keepHash(getIntent());
         super.onCreate(savedInstanceState);
     }
