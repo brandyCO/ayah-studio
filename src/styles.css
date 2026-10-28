@@ -1154,3 +1154,29 @@ body[data-view="kids"] {
 .tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .tajweed-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .series-until { width: 6em; }
+
+/* search + juz / quarter navigation (src/ui/surahList.ts) */
+.nav-tabs { margin: 6px 0 0; }
+.surah-row.here { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 10px; }
+.nav-here { flex: none; font-size: 12px; color: var(--accent); }
+.nav-group-title { margin: 18px 6px 2px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.nav-jump { width: 100%; margin: 6px 0; font-weight: 600; color: var(--accent); }
+.nav-status { margin: 16px 6px 4px; font-size: 14px; }
+.nav-status:empty { display: none; }
+.hits { list-style: none; margin: 0; padding: 0; }
+.hit { display: flex; flex-direction: column; gap: 6px; padding: 14px 6px; border-bottom: 1px solid var(--line); text-decoration: none; }
+.hit-ref { font-size: 13px; font-weight: 600; color: var(--accent); }
+.hit-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 23px; line-height: 2; text-align: right; }
+.hit-tr { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.hit mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 4px; }
+.nav-more { display: block; margin: 16px auto; }
+.nav-recent section { margin-top: 4px; }
+.nav-recent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.nav-recent-head .linkish { border: 0; background: none; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; }
+.nav-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+.nav-pages { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 8px; margin: 0 -16px; padding-inline: 16px; }
+.nav-page {
+  flex: none; display: flex; flex-direction: column; gap: 2px; min-width: 132px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card); text-decoration: none; font-size: 13px;
+}
+.nav-page strong { font-size: 15px; }

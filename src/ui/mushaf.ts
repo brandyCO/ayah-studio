@@ -3,6 +3,7 @@
 // long-press / drag to select ayat for a reel.
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
+import { addRecentPage } from '../data/history';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
@@ -11,6 +12,7 @@ import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/m
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
+import { icon } from './icons';
 import { h, toast } from './dom';
 import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -115,6 +117,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
@@ -325,6 +328,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
   }
 
+  let recentTimer = 0;
   function header() {
     const pg = mushaf.pages[page - 1];
     const segs = pg.lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
@@ -335,6 +339,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
     startReadTimer();
+    // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
+    clearTimeout(recentTimer);
+    const p = page;
+    recentTimer = window.setTimeout(() => addRecentPage(p, s, a), 3000);
   }
 
   // A page whose font is still downloading slides in as a placeholder, replaced when it is ready.
@@ -588,6 +596,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
     clearTimeout(readTimer);
+    clearTimeout(recentTimer);
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);

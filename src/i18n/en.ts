@@ -18,7 +18,7 @@ const en = {
   'common.saheeh': 'Saheeh International',
 
   // surah list
-  'list.search': 'Search surah by name or number',
+  'list.search': 'Surah, 2:255, juz 5, page 50 or words',
   'list.none': 'No surah found',
   'list.tagline': 'Read · select · turn into a reel',
   'list.drafts': 'Drafts',
@@ -781,6 +781,30 @@ const en = {
   'dr.deleteFailed': 'Could not delete: {msg}',
   'dr.empty': 'No drafts yet. Open a surah, long-press an ayah and tap “Turn into reel” — your reel is saved here as you edit it.',
   'dr.sub': 'Reels you started, saved on this device',
+  // search + juz / quarter navigation (src/ui/surahList.ts)
+  'nav.surahs': 'Surahs',
+  'nav.juz': 'Juz',
+  'nav.quarters': 'Hizb & quarters',
+  'nav.juzN': 'Juz {n}',
+  'nav.hizbN': 'Hizb {n}',
+  'nav.quarterOf': '{q} Hizb {n}',
+  'nav.startsAt': '{ref} · Page {page}',
+  'nav.here': 'You are reading here',
+  'search.goAyah': 'Go to {ref}',
+  'search.goJuz': 'Open Juz {n}',
+  'search.goHizb': 'Open Hizb {n}',
+  'search.goPage': 'Open page {n}',
+  'search.surahs': 'Surahs',
+  'search.count': '{n} ayat contain “{q}”',
+  'search.count1': '1 ayah contains “{q}”',
+  'search.none': 'Nothing found for “{q}”',
+  'search.more': 'Show more',
+  'search.searching': 'Searching…',
+  'search.short': 'Type at least 3 letters to search the translation',
+  'mushaf.search': 'Search',
+  'hist.searches': 'Recent searches',
+  'hist.pages': 'Recently read',
+  'hist.clear': 'Clear',
 };
 
 export type Key = keyof typeof en;

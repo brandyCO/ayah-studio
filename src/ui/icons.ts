@@ -28,6 +28,7 @@ const P: Record<string, string> = {
   replace: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   transition: '<path d="M4 6l8 6-8 6zM20 6l-8 6 8 6z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/>',
   magnet: '<path d="M6 4v7a6 6 0 0 0 12 0V4M6 8h4M14 8h4"/>',
   grade: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
   darken: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
