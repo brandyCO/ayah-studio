@@ -8,7 +8,7 @@ import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTransl
 import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
-import { loadLibrary } from '../data/library';
+import { loadLibrary, smallImage } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
@@ -216,7 +216,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Other formats: the middle of the frame, cropped to the drafts list's 9:16 tile.
     const sw = Math.min(canvas.width, (canvas.height * 9) / 16), sh = Math.min(canvas.height, (canvas.width * 16) / 9);
     c.getContext('2d')!.drawImage(canvas, (canvas.width - sw) / 2, (canvas.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
-    return new Promise((resolve) => c.toBlob((b) => resolve(b ?? undefined), 'image/jpeg', 0.75));
+    return smallImage(c, 0.75).then((b) => b, () => undefined);
   }
   function scheduleSave() {
     clearTimeout(saveTimer);
