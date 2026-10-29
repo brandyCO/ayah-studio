@@ -220,3 +220,27 @@ export function mergeGoals(remote: unknown): boolean {
   window.dispatchEvent(new Event('journey-changed'));
   return true;
 }
+
+// --- Light (Noor): what a claimed reward adds. Private to the user: no leaderboard, never called
+// reward or hasanat. A goal the user writes earns a fixed amount, so it cannot be inflated. ---
+const DHIKR_LIGHT: Record<number, number> = { 33: 5, 100: 10, 300: 20, 1000: 40 };
+/** Light for a met goal. */
+export function lightFor(g: Pick<GoalProgress, 'kind' | 'target'>): number {
+  switch (g.kind) {
+    case 'pages': return 10 * g.target;
+    case 'memorise': return 15 * g.target;
+    case 'reels': return 10 * g.target;
+    case 'dhikr': return DHIKR_LIGHT[g.target] ?? 5;
+    case 'adhkar': return 15;
+    default: return 10;
+  }
+}
+/** Every goal met: a bonus on top. */
+export const ALL_LIGHT = 20;
+/** Light for a badge, by its tier. */
+export const BADGE_LIGHT: Record<string, number> = { bronze: 25, silver: 50, gold: 100, emerald: 200 };
+/** The most Light today's goals can give (for the week's lantern). */
+export function dayLightMax(now = new Date()): number {
+  const list = todayGoals(now);
+  return list.reduce((a, g) => a + lightFor(g), 0) + (list.length > 1 ? ALL_LIGHT : 0);
+}

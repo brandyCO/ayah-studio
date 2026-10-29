@@ -46,6 +46,8 @@ interface DayRec {
   cl?: string[];
   /** The user's own goals: id → times done that day. */
   cu?: Record<string, number>;
+  /** Light earned by each reward claimed that day (goal id, 'all', or 'b:' + badge id). */
+  n?: Record<string, number>;
 }
 export interface Totals { pages: number; ayat: number; listen: number; surahs: number; reels: number; dhikr: number; juz: number; memorised: number }
 interface State {
@@ -136,18 +138,23 @@ export function earnBadges(ids: string[], now = new Date()): string[] {
 /** Rewards: a goal met today (or 'all'), or an earned badge, once claimed on the Me screen. */
 export const goalClaimed = (id: string, now = new Date()) => !!todayRec(now).cl?.includes(id);
 export const badgeClaimed = (id: string) => !!view().claimed[id];
-export function claimGoal(id: string, now = new Date()) {
+export function claimGoal(id: string, light = 0, now = new Date()) {
   const d = today(now);
   if (d.cl?.includes(id)) return;
   d.cl = [...(d.cl ?? []), id];
+  if (light > 0) d.n = { ...d.n, [id]: Math.round(light) };
   save();
 }
-export function claimBadge(id: string) {
+export function claimBadge(id: string, light = 0, now = new Date()) {
   const s = load();
   if (s.claimed[id]) return;
   s.claimed[id] = 1;
+  if (light > 0) { const d = today(now); d.n = { ...d.n, [`b:${id}`]: Math.round(light) }; }
   save();
 }
+const dayLight = (d: Readonly<DayRec> | undefined) => Object.values(d?.n ?? {}).reduce((a, b) => a + b, 0);
+/** Light earned on one day (all the user's devices). */
+export const lightOn = (k: string) => dayLight(view().days[k]);
 /** All days (read only), for summaries. */
 export const allDays = (): Readonly<Record<string, Readonly<DayRec>>> => view().days;
 
@@ -393,7 +400,7 @@ export function reelMade(now = new Date()) {
 }
 
 export type Period = 'week' | 'month' | 'all';
-export interface Stats extends Totals { surahList: number[]; goalDays: number; litDays: number }
+export interface Stats extends Totals { surahList: number[]; goalDays: number; litDays: number; light: number }
 
 /** Stats for this week (from Monday), this month, or all time on this device. */
 let allMemo: { ver: number; v: Stats } | null = null;
@@ -404,12 +411,12 @@ export function stats(period: Period, now = new Date()): Stats {
     if (allMemo?.ver === ver) return allMemo.v;
     const surahList = [...new Set(Object.values(s.days).flatMap((d) => d.s ?? []))];
     const vals = Object.values(s.days);
-    const v = { ...s.totals, surahList, goalDays: vals.filter((d) => d.g).length, litDays: vals.filter((d) => d.f).length };
+    const v = { ...s.totals, surahList, goalDays: vals.filter((d) => d.g).length, litDays: vals.filter((d) => d.f).length, light: vals.reduce((a, d) => a + dayLight(d), 0) };
     allMemo = { ver, v };
     return v;
   }
   const from = period === 'week' ? weekOf(k) : `${k.slice(0, 8)}01`;
-  const out: Stats = { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, surahList: [], goalDays: 0, litDays: 0 };
+  const out: Stats = { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, surahList: [], goalDays: 0, litDays: 0, light: 0 };
   for (const [d, pages] of Object.entries(readLogAll())) if (d >= from && d <= k) out.pages += pages.length;
   for (const [d, r] of Object.entries(s.days)) {
     if (d < from || d > k) continue;
@@ -418,6 +425,7 @@ export function stats(period: Period, now = new Date()): Stats {
     out.reels += r.r ?? 0;
     out.juz += r.j?.length ?? 0;
     out.memorised += r.m ?? 0;
+    out.light += dayLight(r);
     for (const n of Object.values(r.dk ?? {})) out.dhikr += n;
     if (r.g) out.goalDays++;
     if (r.f) out.litDays++;
@@ -501,6 +509,7 @@ function cleanOther(v: unknown): Other | null {
     if (Array.isArray(d.cl)) o.cl = strs(d.cl);
     if (d.dk) o.dk = nums(d.dk);
     if (d.cu) o.cu = nums(d.cu);
+    if (d.n) o.n = nums(d.n);
     days[k] = o;
   }
   const log: Record<string, number[]> = {};
@@ -587,6 +596,8 @@ function view(): State {
       if (b.cl) a.cl = union(a.cl, b.cl);
       if (b.dk) a.dk = addNums(a.dk, b.dk);
       if (b.cu) a.cu = addNums(a.cu, b.cu);
+      // The same reward claimed on two devices counts once.
+      if (b.n) a.n = maxNums(a.n ?? {}, b.n);
     }
     for (const k of Object.keys(v.totals) as (keyof Totals)[]) v.totals[k] += o.totals[k];
     v.frozen = union(v.frozen, o.frozen);

@@ -137,7 +137,7 @@ function vibrate(p: number[]) {
 }
 
 /** Plays a reward moment over the screen; resolves when it is closed. */
-export function celebrate(m: Moment, from?: Element | null): Promise<void> {
+export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<void> {
   P = rewardPalette();
   // Old-phone mode keeps the moment: it is a few SVG shapes moved by CSS, cheap to draw.
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -170,6 +170,20 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
   }
   // Sparks in the theme's colours: its neon stops, its brightest stop lifted, a near-white core.
   const sparkColors = [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1), ...(m.kind === 'flame' ? [rgba(P.n2, 1)] : [])];
+  // The Light this claim adds: a small pill that counts up once the moment lands.
+  const lightNum = light > 0 ? h('b', {}, String(still ? light : 0)) : null;
+  const lightPill = lightNum ? h('p', { class: 'cel-light' }, '✦ ', lightNum, ` ${t('me.light')}`) : null;
+  const countLight = () => {
+    if (!lightNum) return;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / 900);
+      lightNum.textContent = `+${Math.round(light * (1 - (1 - p) ** 3))}`;
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  if (lightNum && still) lightNum.textContent = `+${light}`;
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
@@ -179,6 +193,7 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
       stage,
       canvas,
       h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub)),
+      lightPill ?? '',
       ok);
     const opened = performance.now();
     const timers: number[] = [];
@@ -244,6 +259,7 @@ export function celebrate(m: Moment, from?: Element | null): Promise<void> {
         vibrate([14]);
       });
       later(beat + 300, () => fx?.motes(true));
+      later(beat + 150, countLight);
       if (count && m.kind === 'flame') {
         const target = m.days;
         const t0 = performance.now() + 350;
