@@ -11,7 +11,7 @@ const APP = 'app-v1';
 const STATIC = 'static-v1';
 const NET = 'net-v1';
 const MAX_APP_FILES = 80;
-const MAX_PAGE_FONTS = 200; // mushaf page fonts (~150 KB each); the oldest kept are dropped first
+const MAX_PAGE_FONTS = 700; // mushaf page fonts (~150 KB each): all 604 are kept (the app downloads the whole mushaf)
 const MAX_NET = 120; // recitation timings answers
 const SCOPE = new URL(self.registration.scope);
 

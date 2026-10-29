@@ -8,6 +8,7 @@ import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
+import { keepWholeMushaf } from '../data/mushafDownload';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { icon } from './icons';
 import { h, toast } from './dom';
@@ -422,11 +423,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     header();
     for (const p of want) if (!built.has(p)) void buildPage(p).then(attach);
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
-    for (const p of [page + 2, page + 3, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
+    for (const p of [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10])
+      if (valid(p)) void loadPageFont(p).catch(() => {});
     // Build the pages two away while idle (their words, not yet fitted), so the next flip only fits.
     idle(() => { if (id === renderId) for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p); });
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
-    releasePageFonts((p) => Math.abs(p - page) <= 6); // pages far away give their font's memory back
+    releasePageFonts((p) => Math.abs(p - page) <= 12); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
   }
 
@@ -579,6 +581,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
+  keepWholeMushaf(() => page);
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {

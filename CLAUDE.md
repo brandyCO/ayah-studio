@@ -978,6 +978,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       permission). **Smaller APK** (owner decision 2026-10-28): the CI build leaves out the mushaf page fonts
       except p1–p3; the app fetches the others from the Pages site on first view and keeps them in Cache
       Storage `qcf-v2` (`pageFontSource()` in `src/data/mushaf.ts`), so a page opened once reads offline
+      **Whole mushaf on the device** (owner request 2026-10-29, "no loading pages while swiping"):
+      `src/data/mushafDownload.ts` downloads all 604 page fonts (~95 MB) in the background after the first page
+      shows — two at a time while idle, nearest to the page being read first, Wi‑Fi / wired only (Network
+      Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. No cap on
+      kept page fonts any more (app cache; service worker `MAX_PAGE_FONTS` 700). The reader loads fonts 10 pages
+      ahead / 6 back (was 3 / 2) and keeps ±12 in memory
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)

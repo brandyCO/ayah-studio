@@ -97,11 +97,37 @@ async function pageFontSource(page: number): Promise<string | ArrayBuffer> {
     res = await fetch(url);
     if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
     await cache.put(url, res.clone());
-    // Keep at most 200 downloaded pages (~30 MB); the oldest go first.
-    const keys = await cache.keys();
-    for (const k of keys.slice(0, Math.max(0, keys.length - 200))) await cache.delete(k);
   }
   return res.arrayBuffer();
+}
+
+/** Where a page's font is fetched from and kept: the app's own Cache Storage (Android) or the
+ *  service worker's cache (web; `caches.match` searches every cache). */
+const fontUrl = (page: number) => Capacitor.isNativePlatform()
+  ? `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`
+  : new URL(`${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2`, location.href).href;
+
+/** Whether the page's font is already on this device (bundled in the app or downloaded). */
+export async function pageFontKept(page: number): Promise<boolean> {
+  if (Capacitor.isNativePlatform() && page <= BUNDLED_PAGES) return true;
+  return !!(await caches.match(fontUrl(page)).catch(() => undefined));
+}
+
+/** Download a page's font into the device's cache without loading it (the background download). */
+export async function keepPageFont(page: number): Promise<void> {
+  const url = fontUrl(page);
+  if (!Capacitor.isNativePlatform()) {
+    // The service worker keeps what passes through it.
+    const res = await fetch(url, { priority: 'low' } as RequestInit);
+    if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
+    await res.arrayBuffer();
+    return;
+  }
+  const cache = await caches.open(FONT_CACHE);
+  if (await cache.match(url)) return;
+  const res = await fetch(url, { priority: 'low' } as RequestInit);
+  if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
+  await cache.put(url, res);
 }
 
 export function loadPageFont(page: number): Promise<void> {
