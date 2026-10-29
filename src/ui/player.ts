@@ -1,9 +1,14 @@
-// Listen while reading: plays the reciter's full-surah recording (Quran.com QDC) from any ayah and
-// reports, from the word timings, which ayah and word are being recited, so the mushaf can highlight
-// them and turn the page. Continues into the next surah. Lock-screen controls via Media Session.
+// Listen while reading: plays the reciter's recording from any ayah and reports, from the word timings,
+// which ayah and word are being recited, so the mushaf can highlight them and turn the page. Continues
+// into the next surah. Lock-screen controls via Media Session. Every reciter in the list can be heard:
+// Quran.com reciters stream their full-surah file; mp3quran ones their checked surah file (cut points
+// from public/data/mp3quran); everyayah ones play the per-ayah files one after another. Words are lit
+// only where real timings exist (QDC, or aligned and checked: public/data/words; rule 8).
 import { qdcSurah } from '../data/qdc';
+import { mp3quranSurah } from '../data/mp3quran';
+import { alignedWords } from '../data/alignedWords';
 import type { SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, TIMED_RECITERS, timedReciterById, reciterPickerLabel } from '../data/reciters';
+import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -27,9 +32,20 @@ export interface PlayerHooks {
   onShow(shown: boolean): void;
 }
 
+// Ayat whose Quran.com word positions differ from our display words (public/data/word-map.json): aligned
+// word times count display words, so they are not lit there rather than lit on the wrong word.
+const SHIFTED = new Set(['2:181', '8:6', '13:37', '15:7', '27:20', '36:22', '37:130']);
+const validSegs = (segs: unknown): [number, number, number][] => (Array.isArray(segs) ? segs : []).filter((x): x is [number, number, number] =>
+  Array.isArray(x) && x.length >= 3 && x.slice(0, 3).every((n) => typeof n === 'number' && Number.isFinite(n))).map((x) => [x[0], x[1], x[2]]);
+
 export function createPlayer(o: PlayerHooks) {
-  const audio = new Audio();
+  // Two elements: everyayah ayat play from alternate ones, the next one started just before the current one
+  // ends, so the files join without a gap (as the original recording ran). Others use only `audio`.
+  let audio = new Audio();
   audio.preload = 'auto';
+  let ahead = new Audio();
+  ahead.preload = 'auto';
+  let aheadFor = 0; // the ayah loaded in `ahead`
   let surah = 0;
   let verses: Verse[] = [];
   let loadedFor = ''; // reciter/surah of `verses` and the audio
@@ -38,10 +54,22 @@ export function createPlayer(o: PlayerHooks) {
   let last = '';
   let cur: { s: number; a: number; w: number | null } | null = null;
   let req = 0;
+  // everyayah reciters: one file per ayah, played in turn (`perAyah`); `playing` = the ayah in the file.
+  let perAyah = false;
+  let using: Reciter | null = null; // the reciter actually loaded (the default where the chosen one has no recording)
+  let playing = 0;
   const listeners = new Set<(pos: { s: number; a: number; w: number | null } | null) => void>();
   const tell = (pos: typeof cur) => { o.onPosition(pos); for (const f of listeners) f(pos); };
 
-  const reciter = () => timedReciterById(reelReciter(DEFAULT_RECITER));
+  const reciter = () => reciterById(reelReciter(DEFAULT_RECITER));
+  /** The reciter for this surah: the chosen one, or the default when it has no checked recording of it. */
+  function reciterIn(s: number): Reciter {
+    const r = reciter();
+    if (covers(r, s)) return r;
+    const d = reciterById(DEFAULT_RECITER);
+    toast(t('pl.notHere', { name: r.short, other: d.short }));
+    return d;
+  }
 
   // --- bar ---
   const playBtn = h('button', { class: 'icon-btn pl-play', 'aria-label': 'Play', onclick: () => toggle() });
@@ -52,6 +80,8 @@ export function createPlayer(o: PlayerHooks) {
     playBtn,
     h('button', { class: 'icon-btn', 'aria-label': 'Next ayah', onclick: () => step(1) }, icon('right', 20)),
     h('div', { class: 'pl-info' }, label, who),
+    // Turn what is playing into a reel (this reciter, the ayah being recited).
+    h('button', { class: 'icon-btn', 'aria-label': t('pl.reel'), title: t('pl.reel'), onclick: () => makeReel() }, icon('create', 20)),
     // Night listening (docs/light.md, L1): loaded only when opened.
     h('button', { class: 'icon-btn', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
@@ -65,10 +95,10 @@ export function createPlayer(o: PlayerHooks) {
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
     label.textContent = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '';
-    who.textContent = `${reciter().short} ▾`;
+    who.textContent = `${(using ?? reciter()).short} ▾`;
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
-      if (cur) navigator.mediaSession.metadata = new MediaMetadata({ title: label.textContent, artist: reciter().name, album: 'Ayah Studio' });
+      if (cur) navigator.mediaSession.metadata = new MediaMetadata({ title: label.textContent, artist: (using ?? reciter()).name, album: 'Ayah Studio' });
     }
   }
 
@@ -80,22 +110,33 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   async function load(s: number): Promise<boolean> {
-    const r = reciter();
+    const r = reciterIn(s);
     const key = `${r.id}/${s}`;
     if (key === loadedFor) return true;
     const id = ++req;
-    const q = await qdcSurah(r.id, s);
-    if (id !== req) return false;
-    verses = [...q.timings.values()].map((v) => ({
-      a: Number(v.verse_key.split(':')[1]),
-      from: v.timestamp_from,
-      to: v.timestamp_to,
-      words: (v.segments ?? []).filter((x): x is [number, number, number] =>
-        Array.isArray(x) && x.length >= 3 && x.slice(0, 3).every((n) => typeof n === 'number' && Number.isFinite(n))) as [number, number, number][],
-    })).sort((x, y) => x.from - y.from);
+    let url = '';
+    if (r.qdc !== false || r.mp3quran) {
+      const q = r.qdc !== false ? await qdcSurah(r.id, s) : await mp3quranSurah(r, s);
+      if (id !== req) return false;
+      verses = [...q.timings.values()].map((v) => ({
+        a: Number(v.verse_key.split(':')[1]),
+        from: v.timestamp_from,
+        to: v.timestamp_to,
+        words: r.qdc === false && SHIFTED.has(v.verse_key) ? [] : validSegs(v.segments),
+      })).sort((x, y) => x.from - y.from);
+      url = q.audioUrl;
+    } else {
+      const words = await alignedWords(r, s);
+      if (id !== req) return false;
+      verses = Array.from({ length: o.meta[s - 1].ayahs }, (_, i) => ({
+        a: i + 1, from: 0, to: 0, words: SHIFTED.has(`${s}:${i + 1}`) ? [] : validSegs(words[i + 1]),
+      }));
+    }
+    perAyah = !url;
+    using = r;
     surah = s;
     loadedFor = key;
-    audio.src = q.audioUrl;
+    if (url) audio.src = url;
     return true;
   }
 
@@ -109,7 +150,12 @@ export function createPlayer(o: PlayerHooks) {
       if (!(await load(s))) return;
       const v = verses.find((x) => x.a === a) ?? verses[0];
       if (!v) throw new Error('No timings for this surah');
-      await seekTo(v.from / 1000);
+      if (perAyah) {
+        playing = v.a;
+        ahead.pause();
+        audio.src = everyayahUrl(using!, s, v.a);
+        preload(v.a + 1);
+      } else await seekTo(v.from / 1000);
       await audio.play();
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
@@ -117,6 +163,30 @@ export function createPlayer(o: PlayerHooks) {
     }
     loading = false;
     paint();
+  }
+
+  /** Load ayah `a` of the playing surah into the spare element. */
+  function preload(a: number) {
+    aheadFor = 0;
+    if (!perAyah || !using || a > verses.length) return;
+    ahead.src = everyayahUrl(using, surah, a);
+    ahead.load();
+    aheadFor = a;
+  }
+
+  /** everyayah: start the next ayah's file 40 ms before this one ends (crossfaded by the overlap). */
+  function switchOver() {
+    if (!perAyah || aheadFor !== playing + 1 || ahead.readyState < 3) return false;
+    if (!(audio.duration > 0) || audio.currentTime < audio.duration - 0.04) return false;
+    const prev = audio;
+    audio = ahead;
+    ahead = prev;
+    playing = aheadFor;
+    aheadFor = 0;
+    void audio.play().catch(() => toast('Could not play the recitation'));
+    // The previous file plays out its last moment; then it takes the ayah after this one.
+    prev.addEventListener('ended', () => preload(playing + 1), { once: true });
+    return true;
   }
 
   function seekTo(sec: number): Promise<void> {
@@ -151,6 +221,8 @@ export function createPlayer(o: PlayerHooks) {
     req++;
     loading = false;
     audio.pause();
+    ahead.pause();
+    aheadFor = 0;
     cancelAnimationFrame(raf);
     cur = null;
     last = '';
@@ -161,9 +233,11 @@ export function createPlayer(o: PlayerHooks) {
   /** Follows the recitation: the ayah whose span holds the time, and the word being recited. */
   function tick() {
     raf = requestAnimationFrame(tick);
+    switchOver();
     const t = audio.currentTime * 1000;
     let v: Verse | null = null;
-    for (const x of verses) {
+    if (perAyah) v = verses[playing - 1] ?? null;
+    else for (const x of verses) {
       if (x.from > t) break;
       v = x;
     }
@@ -180,27 +254,32 @@ export function createPlayer(o: PlayerHooks) {
     paint();
   }
 
+  /** Listen on both elements; only the one playing now counts. */
+  const on = (type: string, f: () => void) => {
+    for (const el of [audio, ahead]) el.addEventListener(type, (e) => { if (e.target === audio) f(); });
+  };
   // Minutes listened (Me tab): recitation actually played, flushed every 30 s and on pause.
   let heard = 0;
   let lastT = -1;
   const flush = () => { if (heard >= 1) { addListen(heard); heard = 0; } };
-  audio.addEventListener('timeupdate', () => {
+  on('timeupdate', () => {
     const now = audio.currentTime;
     const dt = now - lastT;
     if (!audio.paused && lastT >= 0 && dt > 0 && dt < 2) heard += dt / (audio.playbackRate || 1);
     lastT = now;
     if (heard >= 30) flush();
   });
-  audio.addEventListener('seeking', () => { lastT = -1; });
-  audio.addEventListener('pause', () => { lastT = -1; flush(); });
-  audio.addEventListener('emptied', () => { lastT = -1; flush(); });
-  audio.addEventListener('play', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); paint(); });
-  audio.addEventListener('pause', () => { cancelAnimationFrame(raf); loading = false; paint(); });
-  audio.addEventListener('waiting', () => { loading = true; paint(); }); // buffering
-  audio.addEventListener('playing', () => { loading = false; paint(); });
-  audio.addEventListener('ended', () => {
+  on('seeking', () => { lastT = -1; });
+  on('pause', () => { lastT = -1; flush(); });
+  on('emptied', () => { lastT = -1; flush(); });
+  on('play', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); paint(); });
+  on('pause', () => { cancelAnimationFrame(raf); loading = false; paint(); });
+  on('waiting', () => { loading = true; paint(); }); // buffering
+  on('playing', () => { loading = false; paint(); });
+  on('ended', () => {
     cancelAnimationFrame(raf);
-    if (surah && surah < 114) void playFrom(surah + 1, 1);
+    if (perAyah && surah && playing < verses.length) void playFrom(surah, playing + 1);
+    else if (surah && surah < 114) void playFrom(surah + 1, 1);
     else stop();
   });
 
@@ -214,8 +293,8 @@ export function createPlayer(o: PlayerHooks) {
   function pickReciter() {
     const d = h('dialog', { class: 'sheet bottom' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...TIMED_RECITERS.map((r) => h('button', {
-        class: `menu-item${r.id === reciter().id ? ' on' : ''}`,
+      h('div', { class: 'menu' }, ...RECITERS.filter((r) => !surah || covers(r, surah)).map((r) => h('button', {
+        class: `menu-item${r.id === (using ?? reciter()).id ? ' on' : ''}`,
         onclick: () => {
           d.close();
           if (r.id === reciter().id) return;
@@ -230,6 +309,14 @@ export function createPlayer(o: PlayerHooks) {
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();
+  }
+
+  /** The ayah being recited (or about to be) as a new reel in this reciter's voice. */
+  function makeReel() {
+    const at = cur ?? pending;
+    if (!at) return;
+    audio.pause();
+    location.hash = `#/reel/${at.s}/${at.a}-${at.a}`;
   }
 
   /** What Night listening reads: the recitation clock, the word timings and the controls. */
@@ -254,8 +341,7 @@ export function createPlayer(o: PlayerHooks) {
     position: () => cur,
     destroy() {
       stop();
-      audio.removeAttribute('src');
-      audio.load();
+      for (const el of [audio, ahead]) { el.removeAttribute('src'); el.load(); }
       if ('mediaSession' in navigator) for (const a of ['play', 'pause', 'previoustrack', 'nexttrack'] as const) navigator.mediaSession.setActionHandler(a, null);
     },
   };

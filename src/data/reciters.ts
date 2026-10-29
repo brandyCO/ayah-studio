@@ -4,7 +4,8 @@
 // cdn.islamic.network sends no CORS headers, so it is not usable from the browser.
 // Reciters marked `qdc: false` are popular on short video but have no word timings anywhere we can
 // verify: their reels use everyayah only, so only Ayah mode is offered for them (rule 8). Their ids
-// (1001+) are ours, not QDC's; they never reach the mushaf player or the Kids space (those need timings).
+// (1001+) are ours, not QDC's. The mushaf player plays every reciter (src/ui/player.ts); the Kids space
+// keeps to TIMED_RECITERS (it needs Quran.com's timings).
 // Reciters with `mp3quran` play slices of mp3quran.net full-surah recordings, cut at the pauses that
 // `scripts/verify-mp3quran.py` measured (public/data/mp3quran/{read}.json), only for the surahs whose
 // ayah times it verified against the audio (Ayah mode only). A recording with no ayah times at all (or

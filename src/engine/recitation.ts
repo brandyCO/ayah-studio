@@ -9,7 +9,11 @@ const PRE_ROLL = 0.25; // audio kept before the first word
 const POST_ROLL = 0.6; // audio kept after the last word (if the next ayah doesn't start sooner)
 const HOLD = 0.6; // text stays after its ayah's last word…
 const CLEAR = 0.15; // …but is gone this long before the next ayah starts
-export const GAP = 0.25; // between per-ayah clips (everyayah fallback)
+// Per-ayah clips (everyayah) are joined directly, as the original recording ran: each starts this much
+// before the previous one ends, crossfaded over the overlap (only the files' own MP3 padding overlaps).
+// A gap of silence here used to cut the reciter's echo dead between ayat.
+export const GAP = -0.04;
+export const CLIP_XF = -GAP;
 
 export interface PlannedAyah {
   ayah: number;
@@ -52,6 +56,10 @@ export interface AudioPiece {
   from: number;
   to: number;
   at: number;
+  /** Seconds faded in at its start / out at its end. Set where the piece meets added silence: the echo
+   *  after the last word fades away like a room's instead of stopping. Unset: a 10 ms fade at a cut. */
+  fadeIn?: number;
+  fadeOut?: number;
 }
 
 /** Slice of the surah recording covering ayat from..to, never reaching into the neighbouring ayat. */
@@ -209,6 +217,15 @@ export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
     const prev = pieces[i - 1];
     const at = i === 0 ? o.intro : prev.at + (prev.to - prev.from) + Math.max(0, o.pause + (o.gaps?.[i] ?? 0));
     pieces.push({ from: a + head, to: b - tail, at });
+  });
+  // Where a piece meets silence (a pause, the lead or the ending), let the recording's own echo fade out
+  // over the quiet after the last word (≤ 0.9 s) and come in softly before the first word.
+  pieces.forEach((p, i) => {
+    const end = p.at + (p.to - p.from);
+    const next = pieces[i + 1];
+    if (!next || next.at - end > 0.005) p.fadeOut = Math.max(0.01, Math.min(0.9, p.to - A[i].last - 0.05));
+    const prevEnd = i > 0 ? pieces[i - 1].at + (pieces[i - 1].to - pieces[i - 1].from) : 0;
+    if (i === 0 ? p.from > 0 : p.at - prevEnd > 0.005) p.fadeIn = Math.max(0.01, Math.min(0.12, A[i].start - p.from - 0.02));
   });
   const lastP = pieces[n - 1];
   const duration = lastP.at + (lastP.to - lastP.from) + Math.max(0, o.tail ?? 0) + o.outro;

@@ -36,17 +36,28 @@ export function ayahAudio(r: Reciter, surah: number, ayah: number): Promise<Audi
   return decoded.get(key)!;
 }
 
-/** Concatenate clips into one stereo buffer, placing clip i at offsets[i] seconds. */
+/** Join clips into one stereo buffer, clip i at offsets[i] seconds. Where a clip starts before the
+ *  previous one ends (per-ayah files joined directly), the overlap is crossfaded (equal power). */
 export function mixdown(clips: AudioBuffer[], offsets: number[], duration: number): AudioBuffer {
   const length = Math.ceil(duration * SAMPLE_RATE);
   const out = new AudioBuffer({ length, numberOfChannels: 2, sampleRate: SAMPLE_RATE });
-  clips.forEach((clip, i) => {
-    const at = Math.round(offsets[i] * SAMPLE_RATE);
-    for (let ch = 0; ch < 2; ch++) {
+  const starts = offsets.map((o) => Math.round(o * SAMPLE_RATE));
+  for (let ch = 0; ch < 2; ch++) {
+    const dst = out.getChannelData(ch);
+    clips.forEach((clip, i) => {
+      const at = starts[i];
       const src = clip.getChannelData(Math.min(ch, clip.numberOfChannels - 1));
-      out.copyToChannel(src.subarray(0, Math.max(0, Math.min(src.length, length - at))), ch, at);
-    }
-  });
+      const n = Math.max(0, Math.min(src.length, length - at));
+      const xin = i > 0 ? Math.max(0, starts[i - 1] + clips[i - 1].length - at) : 0;
+      const xout = i + 1 < clips.length ? Math.max(0, at + src.length - starts[i + 1]) : 0;
+      for (let k = 0; k < n; k++) {
+        let g = 1;
+        if (k < xin) g *= Math.sin((Math.PI / 2) * (k / xin));
+        if (k >= src.length - xout) g *= Math.cos((Math.PI / 2) * ((k - (src.length - xout)) / xout));
+        dst[at + k] += src[k] * g;
+      }
+    });
+  }
   return out;
 }
 
@@ -84,21 +95,28 @@ export async function sliceAudio(url: string, clip: [number, number], at: number
 export function arrangeAudio(src: AudioBuffer, pieces: AudioPiece[], duration: number): AudioBuffer {
   const R = src.sampleRate;
   const out = new AudioBuffer({ length: Math.ceil(duration * R), numberOfChannels: 2, sampleRate: R });
-  const fade = Math.round(0.01 * R); // cuts fall in the reciter's pauses; fade them anyway
-  for (const p of pieces) {
+  const cut = Math.round(0.01 * R); // cuts fall in the reciter's pauses; fade them anyway
+  pieces.forEach((p, k) => {
     const a = Math.round(p.from * R), b = Math.min(src.length, Math.round(p.to * R)), at = Math.round(p.at * R);
     const n = Math.min(b - a, out.length - at);
-    if (n <= 0) continue;
+    if (n <= 0) return;
+    // A piece that simply continues the previous one (nothing trimmed or added between) needs no fade.
+    const prev = pieces[k - 1], next = pieces[k + 1];
+    const joinedBefore = !!prev && Math.abs(prev.to - p.from) < 1e-4 && Math.abs(prev.at + (prev.to - prev.from) - p.at) < 1e-4;
+    const joinedAfter = !!next && Math.abs(next.from - p.to) < 1e-4 && Math.abs(p.at + (p.to - p.from) - next.at) < 1e-4;
+    const fin = joinedBefore || a === 0 ? 0 : Math.min(n, Math.round((p.fadeIn ?? 0.01) * R));
+    const fout = joinedAfter || b >= src.length ? 0 : Math.min(n, Math.round((p.fadeOut ?? 0.01) * R));
     for (let ch = 0; ch < 2; ch++) {
       const seg = src.getChannelData(Math.min(ch, src.numberOfChannels - 1)).slice(a, a + n);
-      for (let i = 0; i < fade && i < n; i++) {
-        const g = Math.sin((Math.PI / 2) * (i / fade));
-        if (a > 0) seg[i] *= g;
-        if (b < src.length) seg[n - 1 - i] *= g;
+      for (let i = 0; i < fin; i++) seg[i] *= Math.sin((Math.PI / 2) * (i / fin));
+      // Long fades decay like a room's echo (quadratic); a plain cut keeps the short sine.
+      for (let i = 0; i < fout; i++) {
+        const x = i / fout; // 0 at the very end
+        seg[n - 1 - i] *= fout > cut ? x * x : Math.sin((Math.PI / 2) * x);
       }
       out.copyToChannel(seg, ch, at);
     }
-  }
+  });
   return out;
 }
 
