@@ -61,8 +61,10 @@ export interface Project {
   gaps: Record<number, number>; // per ayah number: seconds of silence added before it
   trims: Record<number, [number, number]>; // per ayah number: silence trimmed from its audio's start and end
   holds: Record<number, number>; // per ayah number: seconds its text stays after its last word
-  intro: boolean; // title card before the recitation
-  outro: boolean; // closing reference card
+  /** No longer used (the cards were removed, owner 2026-10-29): stored reels and looks with them turned on
+   *  are moved to `lead` / `tail` by dropCards(). Kept so old drafts and gifts still read. */
+  intro: boolean;
+  outro: boolean;
   credit: boolean; // "Recited by …" (optional, off by default: owner decision)
   /** Extra lines on the closing card (the Khatm reel: circle and member names). User text: drawn in
    *  the UI font below the reference, never like the ayah. Not part of the remembered look. */
@@ -102,6 +104,8 @@ export interface Project {
   /** Seconds the video keeps going after the recitation ends (0–TAIL_MAX; silent: no sound is added,
    *  rule 3). The background, the reference and the marks continue. Per reel. */
   tail?: number;
+  /** Seconds of quiet before the first word (0–TAIL_MAX; silent, rule 3): dragged on the timeline. Per reel. */
+  lead?: number;
   /** Video format (default 9:16). Per device like cinema (not in the look, so gifts stay 9:16). */
   format?: Format;
 }
@@ -136,26 +140,46 @@ export const frameStyle = (p: Project): FrameStyle => ({
 });
 
 export const MAX_AYAT = 10;
-export const INTRO = 3; // seconds of the intro title card
-export const OUTRO = 3; // seconds of the closing reference card
+export const INTRO = 3; // seconds an old intro card becomes (dropCards)
+export const OUTRO = 3; // seconds an old closing card becomes; the least an ending with lines gets
 export const PAUSES = [0, 0.5, 1, 2];
 export const TAIL_MAX = 10;
 
-/** Pacing of the reel: silence added between ayat (and per ayah), text holds, cards before/after. */
-export const pacing = (p: Pick<Project, 'pause' | 'gap' | 'intro' | 'outro'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart' | 'tail'>>) => {
+/** The reel ends on lines of its own (a dedication, a Khatm / keepsake title, "Part k of N"): they show
+ *  over the background during the quiet time after the last word, once the ayah has left. */
+export const hasEnding = (p: Partial<Pick<Project, 'closing' | 'dedication' | 'series'>>) => !!(p.closing || p.dedication || p.series);
+const secs = (x: number | undefined) => Math.min(TAIL_MAX, Math.max(0, x ?? 0));
+
+/** Pacing of the reel: quiet before the first word and after the last, silence between ayat (and per
+ *  ayah), text holds. No title or closing cards: the reel's own start and end are dragged instead. */
+export const pacing = (p: Pick<Project, 'pause' | 'gap'> & Partial<Pick<Project, 'gaps' | 'trims' | 'holds' | 'from' | 'to' | 'tightStart' | 'tail' | 'lead' | 'closing' | 'dedication' | 'series'>>) => {
   const ayat = p.from && p.to ? Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from! + i) : [];
+  const end = secs(p.tail);
+  const ending = hasEnding(p) && end > 0;
   return {
     pause: p.pause,
     hold: p.gap === 'hold',
-    intro: p.intro ? INTRO : 0,
-    outro: p.outro ? OUTRO : 0,
-    tail: Math.min(TAIL_MAX, Math.max(0, p.tail ?? 0)),
+    intro: secs(p.lead),
+    // With ending lines the quiet end is the ending (the ayah leaves before it), else just more background.
+    outro: ending ? end : 0,
+    tail: ending ? 0 : end,
     gaps: ayat.map((a) => p.gaps?.[a] ?? 0),
     // Start on the first word: as much of the opening silence as is safe (arrangeReel clamps it).
     trims: ayat.map((a, i): [number, number] => (i === 0 && p.tightStart ? [Infinity, p.trims?.[a]?.[1] ?? 0] : p.trims?.[a] ?? [0, 0])),
     holds: ayat.map((a) => p.holds?.[a] ?? null),
   };
 };
+
+/** Old reels and looks with the intro / closing card on: the card's time becomes quiet start / end. */
+export function dropCards(p: Project) {
+  if (p.intro) p.lead = Math.max(p.lead ?? 0, INTRO);
+  if (p.outro) p.tail = Math.max(p.tail ?? 0, OUTRO);
+  p.intro = p.outro = false;
+}
+/** A reel given ending lines gets time to show them. */
+export function giveEnding(p: Project) {
+  if ((p.tail ?? 0) < OUTRO) p.tail = OUTRO;
+}
 
 export function newProject(surah: number, from: number, to: number, reciterId: number): Project {
   return {
@@ -258,6 +282,7 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
       out[k] = v;
     }
   }
+  dropCards(p);
 }
 
 export const lookOf = (p: Project): Look =>
@@ -293,6 +318,11 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.motion = validMotion(d.motion);
   if (typeof d.tail === 'number' && Number.isFinite(d.tail) && d.tail > 0) p.tail = Math.min(TAIL_MAX, Math.round(d.tail * 10) / 10);
   else delete p.tail;
+  if (typeof d.lead === 'number' && Number.isFinite(d.lead) && d.lead > 0) p.lead = Math.min(TAIL_MAX, Math.round(d.lead * 1000) / 1000);
+  else delete p.lead;
+  if (d.intro === true) p.intro = true; // (applyLook already moved the look's cards; the draft's own come last)
+  if (d.outro === true) p.outro = true;
+  dropCards(p);
 }
 
 /** JSON with object keys sorted (the database may store them in another order). */

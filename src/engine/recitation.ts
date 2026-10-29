@@ -127,25 +127,32 @@ export function planQdcReel(
 }
 
 /** Plan for per-ayah clips (everyayah): no word timings, so Ayah mode only. */
-export function planClipReel(from: number, durations: number[]): ReelPlan {
+export function planClipReel(from: number, durations: number[], words?: { texts: string[]; segments: (unknown[] | undefined)[] }): ReelPlan {
   let t = LEAD_IN;
   const offsets: number[] = [];
   const ayat = durations.map((d, i): PlannedAyah => {
     offsets.push(t);
-    const a = { ayah: from + i, start: t, end: 0, last: t + d, wordStart: null, seq: null, stats: null };
+    // Word times made by alignment (alignedWords), in this ayah's own file.
+    const at = t;
+    const wt = words?.segments[i] ? wordTimings(displayWords(words.texts[i]).length,
+      { verse_key: '', timestamp_from: 0, timestamp_to: d * 1000, segments: words.segments[i] }, null) : null;
+    const a: PlannedAyah = wt
+      ? { ayah: from + i, start: at + Math.min(wt.start[0], wt.seq[0][1]), end: 0, last: at + Math.min(wt.last, d),
+        wordStart: wt.start.map((s) => at + s), seq: wt.seq.map(([w, x, y]): Recited => [w, at + x, at + y]), stats: wt.stats }
+      : { ayah: from + i, start: t, end: 0, last: t + d, wordStart: null, seq: null, stats: null };
     t += d + GAP;
     return a;
   });
   const duration = t - GAP + TAIL;
   holdEnds(ayat, duration);
-  return { source: 'everyayah', duration, ayat, wordTimed: false, offsets };
+  return { source: 'everyayah', duration, ayat, wordTimed: ayat.every((a) => a.wordStart), offsets };
 }
 
 export interface Pacing {
   pause: number; // seconds of silence added between ayat
   hold: boolean; // keep an ayah's text on screen until just before the next ayah
-  intro: number; // seconds of intro card before the recitation
-  outro: number; // seconds of closing card after it
+  intro: number; // seconds of quiet before the recitation
+  outro: number; // seconds of ending (its lines) after it; the ayah text leaves before
   /** Seconds the video keeps going after the recitation (silent; background and marks continue). */
   tail?: number;
   /** Per ayah: seconds of silence added before it (≥ 0; the first ayah's entry is ignored). */
@@ -157,7 +164,7 @@ export interface Pacing {
 }
 
 /** Extra seconds the pacing adds to a reel of n ayat (for the length estimate). */
-export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro;
+export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro + (o.tail ?? 0);
 
 /**
  * Each ayah's audio before trimming (base reel seconds): the recording is cut in the middle of the

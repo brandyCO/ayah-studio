@@ -6,7 +6,9 @@
 // chunk is aligned by its end (its last frame is known), because a decoder may drop the first frames
 // of a chunk whose bit reservoir points into bytes we did not fetch. Verified in Chromium against a
 // whole-file decode (within one sample at 48 kHz). Variable-bitrate files can only be positioned
-// approximately, so they are refused (`VbrError`) and the caller decodes the whole file or falls back.
+// approximately, so they are refused (`VbrError`) and the caller decodes the whole file or falls back —
+// unless the caller has a seek table for the file (`SeekTable`: byte offset of every n-th audio frame,
+// measured offline from the file itself), which makes a VBR file exact too.
 import { cachedBytes } from './audioCache';
 
 interface Frame {
@@ -153,12 +155,32 @@ export interface DecodedSpan {
 
 export class VbrError extends Error {}
 
+/** Byte offsets of audio frames 0, n, 2n, … (frame 0 = the first after any Xing/Info frame), as the first
+ *  offset followed by differences. */
+export interface SeekTable {
+  n: number;
+  d: number[];
+}
+
+const tables = new WeakMap<SeekTable, number[]>();
+function offsets(s: SeekTable): number[] {
+  let o = tables.get(s);
+  if (!o) {
+    o = [];
+    let at = 0;
+    for (const x of s.d) o.push((at += x));
+    tables.set(s, o);
+  }
+  return o;
+}
+
 const MARGIN_FRAMES = 12; // ~0.3 s before the span: room for the bit reservoir and decoder warm-up
 
 /** Decode file seconds [t0, t1] (plus a margin) at `rate`. */
-export async function decodeMp3Span(url: string, t0: number, t1: number, rate: number, signal?: AbortSignal): Promise<DecodedSpan> {
+export async function decodeMp3Span(url: string, t0: number, t1: number, rate: number, signal?: AbortSignal, seek?: SeekTable): Promise<DecodedSpan> {
   const info = await probeMp3(url);
   const bpf = info.bytesPerFrame;
+  if (!bpf && seek) return decodeSeek(url, info, seek, t0, t1, rate, signal);
   if (!bpf) throw new VbrError('Variable-bitrate MP3: cannot seek exactly');
   const byteOf = (k: number) => info.audioStart + Math.floor(k * bpf);
   const frameAtTime = (t: number) => Math.floor((t * info.sr + info.skip) / info.spf);
@@ -183,4 +205,35 @@ export async function decodeMp3Span(url: string, t0: number, t1: number, rate: n
   // Align by the end: the chunk's last sample is the end of frame firstFrame + frames - 1.
   const endTime = ((firstFrame + frames) * info.spf - info.skip) / info.sr;
   return { buffer, t: endTime - buffer.duration };
+}
+
+/** decodeMp3Span for a VBR file with a seek table: whole table steps around the span, aligned by the end. */
+async function decodeSeek(url: string, info: Mp3Info, seek: SeekTable, t0: number, t1: number, rate: number, signal?: AbortSignal): Promise<DecodedSpan> {
+  const at = offsets(seek);
+  const frameAtTime = (t: number) => Math.floor((t * info.sr + info.skip) / info.spf);
+  const i0 = Math.max(0, Math.floor((frameAtTime(t0) - MARGIN_FRAMES) / seek.n));
+  const i1 = Math.ceil((frameAtTime(t1) + 4) / seek.n);
+  if (i0 >= at.length) throw new Error('Span past the end of the recording');
+  const a = at[i0];
+  const b = i1 < at.length ? at[i1] + 2048 : (await probeSize(url)) - 1;
+  const bytes = await range(url, a, b, signal);
+  // The table's offsets are frame starts; keep whole frames from there to the last complete one.
+  if (!frameAt(bytes, 0)) throw new Error('Seek table does not match the recording');
+  let end = 0, frames = 0;
+  for (let f = frameAt(bytes, end); f && end + f.len <= bytes.length; f = frameAt(bytes, end)) {
+    end += f.len;
+    frames++;
+  }
+  if (frames < 2) throw new Error('MP3 range too short');
+  const buffer = await new OfflineAudioContext(2, 1, rate).decodeAudioData(bytes.slice(0, end).buffer);
+  const endTime = ((i0 * seek.n + frames) * info.spf - info.skip) / info.sr;
+  return { buffer, t: endTime - buffer.duration };
+}
+
+/** The file's size (bytes), from a one-byte Range request. */
+async function probeSize(url: string): Promise<number> {
+  const res = await fetch(url, { headers: { Range: 'bytes=0-0' } });
+  const n = Number(res.headers.get('Content-Range')?.split('/')[1]);
+  if (!n) throw new Error('Unknown file size');
+  return n;
 }

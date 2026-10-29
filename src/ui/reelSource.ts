@@ -2,6 +2,7 @@
 // everyayah per-ayah files (Ayah mode only) when QDC has no timing, or an mp3quran.net recording cut
 // at its verified pauses (Ayah mode only). Shared by the editor and the
 // gift player, so a gift plays exactly like the editor's preview.
+import { alignedWords } from '../data/alignedWords';
 import { ayahAudio, mixdown, sliceAudio } from '../data/audio';
 import { mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { qdcSurah } from '../data/qdc';
@@ -20,7 +21,7 @@ export async function loadReel(r: Reciter, n: number, from: number, arabic: stri
     const p = planQdcReel(m.timings, n, from, arabic, {});
     if (!p) throw new UncheckedRange(`${r.short}: ${n}:${from}-${from + arabic.length - 1} is not verified`);
     progress('Loading recitation…');
-    return { plan: { ...p, source: 'mp3quran' }, audio: await sliceAudio(m.audioUrl, p.clip!, LEAD_IN, p.duration, m.fileDuration) };
+    return { plan: { ...p, source: 'mp3quran' }, audio: await sliceAudio(m.audioUrl, p.clip!, LEAD_IN, p.duration, m.fileDuration, m.seek) };
   }
   if (r.qdc !== false) try {
     const q = await qdcSurah(r.id, n);
@@ -33,13 +34,15 @@ export async function loadReel(r: Reciter, n: number, from: number, arabic: stri
   } catch (e) {
     console.warn(`QDC recitation failed (reciter ${r.id}); using everyayah`, e);
   }
-  // Fallback: per-ayah files without word timings (Ayah mode only).
+  // Fallback: per-ayah files, with word times made by alignment where they passed the checks (else Ayah
+  // mode only).
   let done = 0;
   progress(`Loading recitation… 0/${arabic.length}`);
   const clips = await Promise.all(arabic.map((_, i) => ayahAudio(r, n, from + i).then((b) => {
     progress(`Loading recitation… ${++done}/${arabic.length}`);
     return b;
   })));
-  const p = planClipReel(from, clips.map((c) => c.duration));
+  const words = r.qdc === false ? await alignedWords(r, n) : {};
+  const p = planClipReel(from, clips.map((c) => c.duration), { texts: arabic, segments: arabic.map((_, i) => words[from + i]) });
   return { plan: p, audio: mixdown(clips, p.offsets!, p.duration) };
 }

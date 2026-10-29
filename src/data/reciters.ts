@@ -22,6 +22,9 @@ export interface Reciter {
   /** mp3quran.net recitation (read id, or the name of an aligned recording) and the surahs whose ayah
    *  times passed the checks ("1-3,5"); only those surahs are offered. Ayah mode only. */
   mp3quran?: { read: number | string; surahs: string };
+  /** Surahs ("1-3,5") with word times made by alignment and checked (scripts/make-word-timings.py), in
+   *  public/data/words/{wordsKey(r)}/{SSS}.json; ayat that passed the checks only. */
+  words?: string;
 }
 
 export const RECITERS: Reciter[] = [
@@ -90,7 +93,16 @@ const coverage = new Map<string, Set<number>>();
 /** Whether the reciter has a usable recording of this surah (only mp3quran ones may not). */
 export function covers(r: Reciter, surah: number): boolean {
   if (!r.mp3quran) return true;
-  const key = r.mp3quran.surahs;
+  return inRanges(r.mp3quran.surahs, surah);
+}
+
+/** Whether this surah has checked word times made by alignment for the reciter. */
+export const hasAlignedWords = (r: Reciter, surah: number) => !!r.words && inRanges(r.words, surah);
+
+/** Folder of the reciter's aligned word times: the mp3quran recording's key, else the reciter id. */
+export const wordsKey = (r: Reciter) => String(r.mp3quran ? r.mp3quran.read : r.id);
+
+function inRanges(key: string, surah: number): boolean {
   if (!coverage.has(key)) {
     const set = new Set<number>();
     for (const part of key.split(',')) {

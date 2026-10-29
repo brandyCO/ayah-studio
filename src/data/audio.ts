@@ -1,7 +1,7 @@
 // Recitation audio for a reel. Primary: a slice of the reciter's QDC full-surah recording, Range-
 // fetched and trimmed by its timings. Fallback: everyayah.com per-ayah files (no word timings).
 import { cachedBytes } from './audioCache';
-import { decodeMp3Span, VbrError, type DecodedSpan } from './mp3';
+import { decodeMp3Span, VbrError, type DecodedSpan, type SeekTable } from './mp3';
 import { DEFAULT_RECITER, everyayahUrl, reciterById, type Reciter } from './reciters';
 import type { AudioPiece } from '../engine/recitation';
 
@@ -54,10 +54,10 @@ export function mixdown(clips: AudioBuffer[], offsets: number[], duration: numbe
  * The reel's recitation: file seconds clip[0]..clip[1] of the surah recording, placed at `at` seconds
  * in a buffer of `duration` seconds. Only the bytes covering the clip are downloaded.
  */
-export async function sliceAudio(url: string, clip: [number, number], at: number, duration: number, fileDuration: number | null): Promise<AudioBuffer> {
+export async function sliceAudio(url: string, clip: [number, number], at: number, duration: number, fileDuration: number | null, seek?: SeekTable): Promise<AudioBuffer> {
   let span: DecodedSpan;
   try {
-    span = await decodeMp3Span(url, clip[0], clip[1], SAMPLE_RATE);
+    span = await decodeMp3Span(url, clip[0], clip[1], SAMPLE_RATE, undefined, seek);
   } catch (e) {
     if (!(e instanceof VbrError) || !fileDuration || fileDuration > WHOLE_FILE_MAX) throw e;
     span = { buffer: await decode(await download(url)), t: 0 };

@@ -368,7 +368,21 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
       55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
-      99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037)
+      99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037). **Word times for every reciter** (owner request
+      2026-10-13, "all modes for all reciters"): the same aligner gives each word's time. `.github/workflows/align.yml`
+      (manual; `scripts/align-plan.py`: the 37 reciters without QDC timings × 4 surah ranges, 18 jobs at a time on
+      GitHub's free runners) runs `scripts/align-batch.py` and pushes raw results to the branch `align-results`
+      (`align/{key}/{SSS}.json`: ayah + word spans, confidence, cuts, VBR seek table). `scripts/make-word-timings.py
+      RESULTS` checks them and writes `public/data/words/{key}/{SSS}.json` (display-word times per ayah, only ayat
+      that pass: heard clearly, every word timed in order, no word but the last > 3 s and no silence > 2.5 s
+      inside the ayah — repetitions would stretch a word), the mp3quran cuts and `words: '…'` in `reciters.ts`.
+      Checked against Quran.com's word times for Alafasy (same recording, 8 surahs): median 0.04 s, 90 % within
+      0.17 s. App: `src/data/alignedWords.ts`; mp3quran timings get `segments`; everyayah reels plan words per
+      ayah file (`planClipReel(…, words)`); a reel is word-timed only when every ayah has words (rule 8).
+      Aligner details: free audio (star) costs 1 nat a frame (stray audio before ayah 1 is no longer taken for
+      it); what precedes ayah 1 (basmala / isti'adha) is heard by a read-back (`opening()`), not chosen by score;
+      long files in 8-min windows (identical results); VBR files: `seek` table (byte offset of every 50th frame)
+      → `decodeMp3Span(…, seek)` Range-fetches exactly (lag 0 against a whole-file decode in Chromium)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
@@ -452,9 +466,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       only, rule 7); **open/close** — the background rises out of black (1.4 s) and settles to 85 % black
       over the last 1.6 s, drawn under the text and the reference (rule 2); **drift** — the background
       scales 1 → 1.07 over the reel; **depth** — a 1/10-size copy of the background laid over it while
-      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
-      button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
-      the end pauses and brings them back
+      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching** (the premiere before
+      an export): the tools fade away (full-screen preview, transport hidden); a tap on the preview, Esc or
+      the end pauses and brings them back. Play while editing stays in place, like CapCut (owner, 2026-10-29)
 - [x] Own watermark, move by touch, faster studio (owner request 2026-10-28): **Layout → Watermark**
       (`src/ui/markPanel.ts`, `src/engine/mark.ts`): the small Ayah Studio mark on/off, the user's own
       mark — text (≤ 40 chars, UI font) or a logo (PNG/WebP/SVG/JPEG, scaled to ≤ 480 px, kept on this device
@@ -495,6 +509,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Until** (`mark.from` / `mark.to`, 0.3 s fades); **Audio → Ending**: `project.tail` 0–10 s
       (`TAIL_MAX`) after the recitation, before the closing card — silent (rule 3), background, reference
       and marks continue (`Pacing.tail`, `arrangeReel`)
+- [x] No intro/end cards (owner decision 2026-10-29, "the user elongates the start and end"): the 3 s title
+      card and closing reference card are gone; **Audio → Start & end**: `project.lead` (quiet before the
+      first word) and `project.tail` (after the last word), 0–10 s each, silent (rule 3); also by dragging
+      the first audio block (lead) or the end of the timeline (tail, white line + "end +x s"). The reference
+      header stays on screen throughout (rule 2). Old drafts/looks: `dropCards()` turns an intro into ≥ 3 s
+      lead and an outro into ≥ 3 s tail. Lines that need an ending (dedication, series "Part k of N",
+      Kids keepsake, Ramadan recap, translation credit) are drawn over the ending (`hasEnding()`,
+      `giveEnding()` makes the tail ≥ `OUTRO`)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

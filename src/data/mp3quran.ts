@@ -5,12 +5,15 @@
 // could not place (no pause there: ayat joined in one breath, or a wrong time) is null, and a reel may
 // not start, end or change ayah there (`UncheckedRange`).
 import type { VerseTiming } from '../engine/words';
+import type { SeekTable } from './mp3';
+import { alignedWords } from './alignedWords';
 import { covers, type Reciter } from './reciters';
 
 interface Checked {
   folder: string;
-  /** `vbr`: a variable-bitrate file (seconds long), decoded whole; `aligned`: times made by alignment. */
-  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; aligned?: boolean }>;
+  /** `seek`: a variable-bitrate file's seek table (`vbr`: its length in seconds, decoded whole);
+   *  `aligned`: times made by alignment. */
+  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean }>;
 }
 
 const files = new Map<number | string, Promise<Checked>>();
@@ -55,8 +58,10 @@ export interface Mp3QuranSurah {
   audioUrl: string;
   /** Per ayah: from the pause before it to the pause after it (ms, file time), as QDC-style timings without words. */
   timings: Map<string, VerseTiming>;
-  /** Seconds, for a variable-bitrate file (it cannot be Range-sliced, so it is decoded whole). */
+  /** Seconds, for a variable-bitrate file without a seek table (it is then decoded whole). */
   fileDuration: number | null;
+  /** A variable-bitrate file's seek table (exact Range slices). */
+  seek?: SeekTable;
 }
 
 export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3QuranSurah> {
@@ -67,10 +72,11 @@ export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3Quran
   const audioUrl = `${data.folder}${String(surah).padStart(3, '0')}.mp3`;
   const size = await sizeOf(audioUrl);
   if (size !== null && size !== s.size) throw new Error(`The recording of surah ${surah} changed since it was checked`);
+  const words = await alignedWords(r, surah);
   const timings = new Map<string, VerseTiming>();
   for (let k = 1; k < s.c.length; k++) {
     const a = s.c[k - 1], b = s.c[k];
-    if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b });
+    if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b, segments: words[k] });
   }
-  return { audioUrl, timings, fileDuration: s.vbr ?? null };
+  return { audioUrl, timings, fileDuration: s.vbr ?? null, seek: s.seek };
 }

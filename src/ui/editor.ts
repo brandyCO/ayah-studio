@@ -5,7 +5,7 @@
 // live in the preview, even while playing, and can be undone.
 import { arrangeAudio, polishAudio } from '../data/audio';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { covers, DEFAULT_RECITER, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary, smallImage } from '../data/library';
@@ -17,7 +17,7 @@ import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout
 import { FONT_EN, FONT_EN_ROUND, FONT_EN_SANS, AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
 import {
-  applyLook, cleanDedication, DEDICATION_MAX, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
+  applyLook, cleanDedication, DEDICATION_MAX, giveEnding, OUTRO, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
 import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
@@ -163,7 +163,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const status = h('div', { class: 'stage-status' });
   const stage = h('div', { class: 'stage' }, canvas, status);
   let shownFormat = ''; // the format the stage is shaped for (fitStage)
-  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play().then(() => { if (playing) watch(true); })) }, icon('play', 26));
+  const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play()) }, icon('play', 26)); // plays in place, like CapCut
   const restartBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.restart'), title: ui('ed.restart'), onclick: () => restart() }, icon('restart'));
   const timeLabel = h('span', { class: 'time', dir: 'ltr' }, '00:00 / 00:00');
   const undoBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.undo'), disabled: true, onclick: () => undo() }, icon('undo'));
@@ -174,8 +174,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
     playBtn.setAttribute('aria-label', ui(playing ? 'ed.pause' : 'ed.play'));
   };
-  // Watching: Play (the button) fades the tools away and the preview fills the screen; a tap on the
-  // preview, Esc or the end of the reel brings them back (and pauses).
+  // Watching (the premiere before an export only): the tools fade away and the preview fills the
+  // screen; a tap on the preview, Esc or the end of the reel brings them back (and pauses). Play while
+  // editing stays in place (owner request 2026-10-29).
   let wasFull = false;
   let built = false; // the studio exists (pause() can run while the reel is still loading)
   function watch(on: boolean) {
@@ -580,7 +581,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const [head, tail] = project.trims[ayahNo(i)] ?? [0, 0];
     return {
       head: i === 0 && project.tightStart ? maxHead : Math.min(head, maxHead), tail: Math.min(tail, maxTail), maxHead, maxTail,
-      gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : 0,
+      gap: i > 0 ? Math.max(0, project.pause + (project.gaps[ayahNo(i)] ?? 0)) : project.lead ?? 0, // the first: quiet before it
     };
   }
   const ms = (x: number) => Math.round(x * 1000) / 1000; // edits are kept to the millisecond
@@ -591,6 +592,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     changed();
   }
   function setGap(i: number, gap: number) {
+    if (i === 0) return setLead(gap);
     project.gaps[ayahNo(i)] = ms(gap - project.pause);
     arrange();
     changed();
@@ -732,21 +734,36 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     slider.addEventListener('change', () => set(true));
     return [row(ui('ed.text-size'), label), slider, note(ui('ed.text-size-note', { m: sizePct(AR_SIZE_MEDIUM) }))];
   };
-  /** Seconds the video keeps going after the recitation (silent; background, reference and marks go on). */
+  /** Quiet time before the first word and after the last (silent, rule 3: the background, the reference
+   *  and the marks go on). Also dragged on the timeline: the first audio block and the end of the reel. */
+  function setLead(v: number) {
+    if (v > 0) project.lead = ms(Math.min(TAIL_MAX, v)); else delete project.lead;
+    arrange();
+    changed(false);
+  }
+  function setTail(v: number) {
+    v = Math.min(TAIL_MAX, Math.round(v * 10) / 10);
+    if (v > 0) project.tail = v; else delete project.tail;
+    arrange();
+    changed(false);
+  }
   const tailPanel = (): Node[] => {
     const fmt = (v: number) => (v ? `+${v.toFixed(1)} s` : ui('ed.off'));
-    const label = h('span', { class: 'clip-time' }, fmt(project.tail ?? 0));
-    const slider = h('input', { class: 'clip-slider', type: 'range', min: '0', max: String(TAIL_MAX), step: '0.5', value: String(project.tail ?? 0), 'aria-label': ui('ed.tail') });
-    slider.addEventListener('input', () => { label.textContent = fmt(Number(slider.value)); });
-    slider.addEventListener('change', () => {
-      if (exporting) return;
-      const v = Number(slider.value);
-      if (v > 0) project.tail = v; else delete project.tail;
-      arrange();
-      changed(false);
-      if (tl) { t = Math.max(0, tl.duration - Math.min(tl.duration, (project.tail ?? 0) + 1.5)); dirty = true; } // show the new ending
-    });
-    return [row(ui('ed.tail-after'), label), slider, note(ui('ed.tail-note'))];
+    const slider = (get: () => number, set: (v: number) => void, label: string, show: () => number) => {
+      const out = h('span', { class: 'clip-time' }, fmt(get()));
+      const el = h('input', { class: 'clip-slider', type: 'range', min: '0', max: String(TAIL_MAX), step: '0.5', value: String(get()), 'aria-label': label });
+      el.addEventListener('input', () => { out.textContent = fmt(Number(el.value)); });
+      el.addEventListener('change', () => {
+        if (exporting) return;
+        set(Number(el.value));
+        if (tl) { pause(); t = Math.max(0, Math.min(tl.duration, show())); dirty = true; } // show the new start / ending
+      });
+      return [row(label, out), el];
+    };
+    return [
+      ...slider(() => project.lead ?? 0, setLead, ui('ed.lead-before'), () => 0),
+      ...slider(() => project.tail ?? 0, setTail, ui('ed.tail-after'), () => tl!.duration - Math.min(tl!.duration, (project.tail ?? 0) + 1.5)),
+      note(ui('ed.tail-note'))];
   };
   /** Video format: 9:16 (default), square or 16:9; remembered on this device for the next reel. */
   function setFormat(f: Format) {
@@ -785,7 +802,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         void loadAudio();
       },
     }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
-      r.qdc === false ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+      r.qdc === false && !hasAlignedWords(r, n) ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
     sampleButton(r), // hear the voice before choosing
     r.id === project.reciterId ? icon('check', 18) : null);
   /** mp3quran reciters whose recording is not verified for this reel's ayat (filled when the picker opens). */
@@ -1188,9 +1205,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       input.value = v;
       if ((project.dedication ?? '') === v) return;
       project.dedication = v || undefined;
-      if (v && !project.outro) { project.outro = true; arrange(); }
+      if (v && (project.tail ?? 0) < OUTRO) { giveEnding(project); arrange(); }
       changed(false);
-      if (v && tl) { pause(); t = Math.max(0, tl.duration - 2); dirty = true; } // show it on the closing card
+      if (v && tl) { pause(); t = Math.max(0, tl.duration - 2); dirty = true; } // show it at the end
     });
     return [row(ui('ed.dedication'), h('span', {})), input, note(ui('ed.dedication-note'))];
   }
@@ -1219,7 +1236,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         const v = timings?.get(`${n}:${a}`);
         lengths.push(ayahLength(v ? recitedSpan(v) : null, displayWords(allAr[a - 1]).length) + project.pause);
       }
-      const card = (project.intro ? 3 : 0) + 3; // each part ends on the closing card
+      const card = (project.lead ?? 0) + Math.max(project.tail ?? 0, OUTRO); // each part ends on its "Part k of N"
       parts = planSeries(from, lengths, Math.max(10, series.target - card), MAX_AYAT);
       const big = parts.length > 30;
       info.textContent = big ? ui('ed.series-too-many') : ui('ed.series-info', { n: parts.length, list: parts.slice(0, 4).map(([x, y]) => (x === y ? `${x}` : `${x}–${y}`)).join(', ') + (parts.length > 4 ? ', …' : '') });
@@ -1244,7 +1261,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           const p = structuredClone(project);
           [p.from, p.to] = parts[k];
           p.series = { part: k + 1, of };
-          p.outro = true;
+          giveEnding(p);
           p.trims = {};
           p.gaps = {};
           p.holds = {};
@@ -1435,8 +1452,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         row(ui('ed.surah-name'), chips<'show' | 'hide'>([{ value: 'show', label: ui('ed.show') }, { value: 'hide', label: ui('ed.hide') }],
           () => (project.surahName ? 'show' : 'hide'), (v) => { project.surahName = v === 'show'; rebuild(); })),
         note(ui('ed.the-reference-e-g-al-fatiha-1-1-always-s'))] },
-      { id: 'intro', icon: 'card', label: ui('ed.intro-card'), toggle: { get: () => project.intro, set: (v) => { project.intro = v; arrange(); } } },
-      { id: 'outro', icon: 'card', label: ui('ed.end-card'), toggle: { get: () => project.outro, set: (v) => { project.outro = v; arrange(); } } },
       { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
       { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), panel: watermarkPanel },
       { id: 'dedication', icon: 'card', label: ui('ed.dedication'), panel: dedicationField },
@@ -1635,6 +1650,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     audioTrim,
     trimAudio: (i, hd, tlv) => { if (!exporting) trimAudio(i, hd, tlv); },
     setGap: (i, g) => { if (!exporting) setGap(i, g); },
+    tail: () => project.tail ?? 0,
+    setTail: (v) => { if (!exporting) setTail(v); },
     keys: () => (layerSel ? keyTimes(layerSel) : []),
   });
 

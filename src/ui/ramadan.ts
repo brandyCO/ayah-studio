@@ -17,7 +17,7 @@ import {
 } from '../data/ramadan';
 import { DEFAULT_RECITER, reciterById, reciterFor } from '../data/reciters';
 import { MOODS, applyMood } from '../engine/moods';
-import { applyLook, newProject } from '../engine/project';
+import { applyLook, giveEnding, newProject } from '../engine/project';
 import { isNative } from '../native';
 import { h, toast } from './dom';
 import { lastRead, reelLook, reelReciter } from './prefs';
@@ -185,7 +185,7 @@ export async function openRecap() {
         const [s, a] = most;
         void newReel(s, a, (p) => {
           applyMood(p, MOODS.find((m) => m.id === 'gold')!);
-          p.outro = true;
+          giveEnding(p);
           const lines = [days ? tr(days === 1 ? 'ram.reelDays1' : 'ram.reelDays', { n: days }) : '', d.khatms ? (d.khatms === 1 ? tr('ram.one') : tr('ram.khatms', { n: d.khatms })) : ''].filter(Boolean);
           p.closing = { title: tr('ram.reelTitle', { year: now.year }).slice(0, 80), names: lines };
         });
