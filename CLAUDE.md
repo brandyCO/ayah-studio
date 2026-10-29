@@ -398,6 +398,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       per-ayah files are joined directly (`GAP` −0.04 s, crossfaded in `mixdown()`; was 0.25 s of silence), and
       where a piece meets added silence its echo fades out over the quiet after the last word (≤ 0.9 s, quadratic)
       and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
+      **No added pause by default** (owner decision 2026-10-29): every mood and vibe has `pause: 0`; a look
+      remembered from before loses its pause once (`pauseReset`); users add one under Audio → Pauses
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

@@ -106,7 +106,17 @@ export function setReelReciter(id: number) {
 /** The look of the last reel (text mode, mood settings, colours, pacing…), applied to the next one. */
 export function reelLook(): unknown {
   try {
-    return JSON.parse(localStorage.getItem('reelLook') ?? 'null');
+    const look = JSON.parse(localStorage.getItem('reelLook') ?? 'null');
+    // Owner decision 2026-10-29: looks no longer add a pause between ayat (the recitation plays as
+    // recorded). A look remembered from before loses its added pause once; a pause chosen later stays.
+    if (look && typeof look === 'object' && !localStorage.getItem('pauseReset')) {
+      localStorage.setItem('pauseReset', '1');
+      if ((look as { pause?: number }).pause) {
+        (look as { pause?: number }).pause = 0;
+        localStorage.setItem('reelLook', JSON.stringify(look));
+      }
+    }
+    return look;
   } catch {
     return null;
   }

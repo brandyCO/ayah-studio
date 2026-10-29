@@ -58,11 +58,11 @@ export interface Vibe extends Style {
   wordsPerStep?: 1 | 2 | 3;
 }
 export const VIBES: Vibe[] = [
-  { id: 'tahajjud', label: 'Tahajjud', scene: 'night', mood: 'night', textMode: 'ayah', highlight: true, hl: '#f2c46b', grain: false, vignette: true, effect: 'glow', pause: 1, gap: 'hold' },
-  { id: 'fajr', label: 'Fajr', scene: 'kid-clouds', mood: 'dawn', textMode: 'ayah', highlight: true, hl: '#f2c98a', grain: false, vignette: true, effect: 'blur-in', pause: 0.5, gap: 'hold' },
-  { id: 'rain', label: 'After rain', scene: 'mist', mood: 'serene', textMode: 'ayah', highlight: true, hl: '#e4ecf7', grain: true, vignette: true, effect: 'mist', pause: 0.5, gap: 'hold', grade: 'cool' },
-  { id: 'golden', label: 'Golden hour', scene: 'dunes', mood: 'gold', textMode: 'ayah', highlight: true, hl: '#f8e7b9', grain: true, vignette: true, effect: 'ink', pause: 0.5, gap: 'hold' },
-  { id: 'stillness', label: 'Stillness', scene: 'charcoal', mood: 'minimal', textMode: 'words', highlight: false, hl: '#f2c46b', grain: false, vignette: false, effect: 'fade', pause: 0.5, gap: 'clear', wordsPerStep: 2 },
+  { id: 'tahajjud', label: 'Tahajjud', scene: 'night', mood: 'night', textMode: 'ayah', highlight: true, hl: '#f2c46b', grain: false, vignette: true, effect: 'glow', pause: 0, gap: 'hold' },
+  { id: 'fajr', label: 'Fajr', scene: 'kid-clouds', mood: 'dawn', textMode: 'ayah', highlight: true, hl: '#f2c98a', grain: false, vignette: true, effect: 'blur-in', pause: 0, gap: 'hold' },
+  { id: 'rain', label: 'After rain', scene: 'mist', mood: 'serene', textMode: 'ayah', highlight: true, hl: '#e4ecf7', grain: true, vignette: true, effect: 'mist', pause: 0, gap: 'hold', grade: 'cool' },
+  { id: 'golden', label: 'Golden hour', scene: 'dunes', mood: 'gold', textMode: 'ayah', highlight: true, hl: '#f8e7b9', grain: true, vignette: true, effect: 'ink', pause: 0, gap: 'hold' },
+  { id: 'stillness', label: 'Stillness', scene: 'charcoal', mood: 'minimal', textMode: 'words', highlight: false, hl: '#f2c46b', grain: false, vignette: false, effect: 'fade', pause: 0, gap: 'clear', wordsPerStep: 2 },
 ];
 
 /** Apply a vibe; `keepScene` keeps the user's footage, `paced` is the text mode for this reciter's pace. */
