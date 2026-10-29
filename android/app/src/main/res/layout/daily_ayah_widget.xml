@@ -1,43 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ayah of the day (DailyAyahWidget): reference + translation in the system font. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Ayah of the day (DailyAyahWidget): on a night card in the theme colours (WidgetArt), the
+     reference, then the ayah in Arabic (a picture in the app's Quran font, made by the app) or the
+     chosen translation (system font), and the translator. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/daily_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="14dp"
-    android:background="@drawable/daily_widget_bg">
+    android:background="@drawable/widget_frame"
+    android:clipToOutline="true">
 
-    <TextView
-        android:id="@+id/daily_ref"
+    <ImageView
+        android:id="@+id/daily_bg"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/daily_accent"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:maxLines="1" />
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:contentDescription="@null" />
 
-    <TextView
-        android:id="@+id/daily_text"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="6dp"
-        android:textColor="@color/daily_text"
-        android:textSize="16sp"
-        android:lineSpacingMultiplier="1.15"
-        android:textDirection="anyRtl"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="17sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
 
-    <TextView
-        android:id="@+id/daily_credit"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="@color/daily_muted"
-        android:textSize="10sp"
-        android:maxLines="1" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/daily_ref"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/widget_chip"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/daily_text"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp"
+            android:textColor="#F2FFFFFF"
+            android:textSize="16sp"
+            android:lineSpacingMultiplier="1.15"
+            android:textDirection="anyRtl"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="17sp"
+            android:autoSizeStepGranularity="1sp" />
+
+        <ImageView
+            android:id="@+id/daily_ar"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="6dp"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="false"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/daily_credit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#80FFFFFF"
+            android:textSize="10sp"
+            android:maxLines="1" />
+    </LinearLayout>
+</FrameLayout>

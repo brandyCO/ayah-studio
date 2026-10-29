@@ -12,6 +12,7 @@ import { locale, t, type Key } from '../i18n';
 import { isNative } from '../native';
 import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
+import { dailyWidgetLang, setDailyWidgetLang } from './morning';
 import { tabBar } from './tabs';
 import { WIDGETS, pinWidget, widgetStatus, type WidgetKind, type WidgetStatus } from './widgets';
 
@@ -63,6 +64,14 @@ export async function showMeWidgets(root: HTMLElement): Promise<() => void> {
     h('h2', { class: 'me-h' }, t('wg.byHand')),
     h('ol', { class: 'wg-steps' }, h('li', {}, t('wg.step1')), h('li', {}, t('wg.step2')), h('li', {}, t('wg.step3'))));
 
+  // Today's ayah: Arabic (pictures drawn by the app in its Quran font) or the chosen translation.
+  const langChips = () => h('div', { class: 'wg-lang' },
+    h('span', { class: 'muted small' }, t('wg.dailyLang')),
+    h('div', { class: 'chips' }, ...(['ar', 'tr'] as const).map((l) => h('button', {
+      class: `chip${dailyWidgetLang() === l ? ' on' : ''}`,
+      onclick: () => { haptic(); setDailyWidgetLang(l); paint(); },
+    }, l === 'ar' ? t('wg.langAr') : t('wg.langTr')))));
+
   const paint = () => {
     body.replaceChildren(
       h('p', { class: 'muted wg-intro' }, native ? t('wg.intro') : t('wg.web')),
@@ -73,6 +82,7 @@ export async function showMeWidgets(root: HTMLElement): Promise<() => void> {
           h('div', { class: 'wg-text' },
             h('h3', {}, t(`wg.${kind}` as Key)),
             h('p', { class: 'muted small' }, t(`wg.${kind}Desc` as Key)),
+            kind === 'daily' ? langChips() : '',
             h('div', { class: 'wg-actions' },
               count ? h('span', { class: 'wg-on' }, `✓ ${t('wg.onHome')}`) : '',
               native && status.canPin ? h('button', {

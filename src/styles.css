@@ -1510,6 +1510,8 @@ button.lt-chip { cursor: pointer; }
 .wg-text { flex: 1; min-width: 0; }
 .wg-text h3 { margin: 0 0 2px; font-size: var(--fs-l); }
 .wg-text p { margin: 0 0 8px; }
+.wg-lang { display: grid; gap: 4px; margin: 0 0 8px; }
+.wg-lang .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .wg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .wg-on { font-size: var(--fs-s); color: var(--accent); font-weight: 600; }
 .wg-pv { flex: none; width: 128px; height: 96px; padding: 10px 12px; border-radius: 22px; display: flex; align-items: center; gap: 8px;
