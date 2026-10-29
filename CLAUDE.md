@@ -554,6 +554,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Volume slider: −44 … −28 dBFS RMS under a voice polished to ≈ −18, 1.5 s fades). Both in the look.
       The waveform and Cinematic breath follow the voice alone
 
+- [x] Logo + landscape pass (owner request 2026-10-29): the user's logo is decoded when the editor opens
+      (it used to load only with the Watermark panel or an export, so the preview often showed no logo and
+      its effects seemed not to work); **Remove black** keeps the logo solid (`knockBlack()`: near-black
+      pixels and darkish ones touching them or the border become clear, the anti-aliased rim is un-mixed
+      from black; was alpha = brightness, which made dark parts see-through); the small **Ayah Studio mark**
+      can be dragged along its line too (`project.wmX`; the mark nearest the finger is taken);
+      **Frame: Fill / Show whole** (`Clip.whole`; Scenes → Arrange for all scenes, a scene's Adjust for one):
+      landscape videos and photos shown complete over a soft copy of themselves that fills the frame
+      (`containSoft()`: shrunk to 1/40 and stretched back, pure). Pixabay videos already include landscape
+
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
       device" (several files → several scenes). Images are downscaled to what the 9:16 frame + Ken

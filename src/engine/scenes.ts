@@ -18,6 +18,9 @@ export interface Clip {
   /** This scene's brightness (−1 darker … +1 brighter) and blur (0 … 1), set with sliders. */
   b?: number;
   blur?: number;
+  /** Show the whole picture (for landscape footage): fitted inside the frame over a soft, blurred
+   *  copy of itself that fills it, instead of cropped to fill the frame. */
+  whole?: boolean;
 }
 export const BLUR_MAX = 24; // frame px at blur 1
 export const CLIP_FITS: { value: ClipFit; label: string }[] = [
@@ -193,6 +196,29 @@ function cover(ctx: CanvasRenderingContext2D, src: CanvasImageSource, sw: number
   ctx.drawImage(src, (W - dw) / 2 + dx, (H - dh) / 2 + panY, dw, dh);
 }
 
+/** Fitted inside the frame (whole picture), over a soft enlarged copy of itself that fills it.
+ *  The soft copy is made by shrinking the picture to a few dozen pixels and stretching it back,
+ *  so it costs little and is the same in the preview and the export. */
+let tiny: HTMLCanvasElement | null = null;
+function containSoft(ctx: CanvasRenderingContext2D, src: CanvasImageSource, sw: number, sh: number, zoom = 1, panY = 0, dx = 0) {
+  if (!tiny) tiny = document.createElement('canvas');
+  const tw = Math.max(8, Math.round(W / 40)), th = Math.max(8, Math.round(H / 40));
+  if (tiny.width !== tw || tiny.height !== th) { tiny.width = tw; tiny.height = th; }
+  const g = tiny.getContext('2d')!;
+  g.imageSmoothingQuality = 'medium';
+  const k = Math.max(tw / sw, th / sh);
+  g.drawImage(src, (tw - sw * k) / 2, (th - sh * k) / 2, sw * k, sh * k);
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(tiny, -W * 0.05, -H * 0.05, W * 1.1, H * 1.1);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  const s = Math.min(W / sw, H / sh) * zoom;
+  const dw = sw * s, dh = sh * s;
+  ctx.drawImage(src, (W - dw) / 2 + dx, (H - dh) / 2 + panY, dw, dh);
+}
+
 interface Look {
   zoom?: number;
   dx?: number;
@@ -211,10 +237,11 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
   if (blur > 0 && b?.kind !== 'color') ctx.filter = `blur(${(blur * BLUR_MAX * pxScale(ctx)).toFixed(2)}px)`;
   if (b?.kind === 'image' && m!.image) {
     const p = clamp01((t - s.from) / Math.max(s.to - s.from, 1));
-    cover(ctx, m!.image, m!.image.width, m!.image.height, (1.04 + 0.08 * p) * zoom, -30 * p + dy, dx);
+    const fill = adj?.whole ? containSoft : cover;
+    fill(ctx, m!.image, m!.image.width, m!.image.height, (adj?.whole ? 1 + 0.04 * p : 1.04 + 0.08 * p) * zoom, (adj?.whole ? -10 : -30) * p + dy, dx);
   } else if (b?.kind === 'video' && m!.video) {
     const c = m!.video.canvas;
-    cover(ctx, c, c.width, c.height, zoom, dy, dx);
+    (adj?.whole ? containSoft : cover)(ctx, c, c.width, c.height, zoom, dy, dx);
   } else if (b?.kind === 'color') {
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 100, W / 2, H * 0.45, H * 0.75);
     g.addColorStop(0, 'rgba(255,255,255,0.07)');

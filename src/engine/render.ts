@@ -280,6 +280,8 @@ export interface RenderInfo {
   fitBg: (p: Pose) => Pose;
   /** The user's own mark as drawn (frame units), or null. */
   mark?: Rect | null;
+  /** The small Ayah Studio mark as drawn (frame units), or null. */
+  wm?: Rect | null;
 }
 
 /** The user's own watermark in its strip (the layout keeps it clear of the text: rule 6). Placed at a
@@ -527,13 +529,20 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     ctx.globalAlpha = 0.92 * under;
     ctx.fillText(`Recited by ${reciterCredit(tl.reciter)}`, W / 2, lay.credit);
   }
+  let wmRect: Rect | null = null;
   if (lay.watermark !== null) {
     setTextShadow(ctx, '#ffffff');
     ctx.fillStyle = '#ffffff';
     ctx.font = `500 26px ${FONT_UI}`;
     ctx.globalAlpha = 0.6;
-    ctx.fillText('Ayah Studio', W / 2, lay.watermark);
+    // Centred, or where it was dragged along its line (always inside the title-safe width).
+    const hw = ctx.measureText('Ayah Studio').width / 2;
+    const cx = project.wmX === undefined ? W / 2
+      : Math.min(SAFE.x1 - hw, Math.max(SAFE.x0 + hw, SAFE.x0 + project.wmX * (SAFE.x1 - SAFE.x0)));
+    ctx.fillText('Ayah Studio', cx, lay.watermark);
+    wmRect = { x0: cx - hw, y0: lay.watermark - 20, x1: cx + hw, y1: lay.watermark + 20 };
   }
+  if (info) info.wm = wmRect;
   const markRect = lay.mark && markShown(project.mark) ? drawMark(ctx, project.mark, lay.mark, t, tl.duration) : null;
   if (info) info.mark = markRect;
   ctx.restore();
