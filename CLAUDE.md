@@ -389,6 +389,15 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
       (3562–4750 ayat; more surahs verified by the aligned cuts). The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
+      **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
+      before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
+      files from two alternating elements, the next started 40 ms before the current one ends (no gap); words lit
+      from the aligned times (not in the 7 word-map ayat); a surah a reciter has no checked recording of plays in
+      the default voice with a toast; the picker lists the reciters that cover the surah; a reel button in the bar
+      opens the ayah being recited in the studio. **Natural joins** (owner, same day: "the echo is cut"): reels of
+      per-ayah files are joined directly (`GAP` −0.04 s, crossfaded in `mixdown()`; was 0.25 s of silence), and
+      where a piece meets added silence its echo fades out over the quiet after the last word (≤ 0.9 s, quadratic)
+      and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
