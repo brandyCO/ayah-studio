@@ -156,6 +156,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startCtx = 0;
   let startT = 0;
   let dirty = true;
+  // The user's logo is decoded now, so the preview shows it from the first frame (not only once the
+  // watermark panel or an export has loaded it).
+  void loadLogo(project.mark?.logo).then(() => (dirty = true));
   let syncText = ui('ed.loadingTimings');
   let quality: 1920 | 1280 = exportQuality(); // remembered per device
   let picking: keyof TextColors | null = null; // eyedropper: the next tap on the preview takes a colour
@@ -1546,8 +1549,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     ...sceneLayoutPanel(),
     row(ui('ed.snap'), onOff(() => project.sceneSnap, (v) => { project.sceneSnap = v; changed(); })),
     slowmoRow(),
+    // Landscape footage: cropped to fill the frame, or shown whole over a soft copy of itself.
+    row(ui('ed.frame'), chips<string>([{ value: 'fill', label: ui('ed.frame-fill') }, { value: 'whole', label: ui('ed.frame-whole') }],
+      () => { const c = fitClips(); return project.scenes.length && project.scenes.every((_, k) => c[k]?.whole) ? 'whole' : 'fill'; },
+      (v) => { const c = fitClips(); project.scenes.forEach((_, k) => setWhole(c, k, v === 'whole')); scenesChanged(); changed(); })),
+    note(ui('ed.frame-note')),
     h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => selectLayer('bg') }, icon('move', 16), ui('ed.move-bg'))),
   ];
+  /** Shows scene k whole (fitted) or cropped to fill the frame. */
+  function setWhole(c: (Clip | null)[], k: number, on: boolean) {
+    if (on) (c[k] ??= { in: 0, fit: 'loop' }).whole = true;
+    else if (c[k]) delete c[k]!.whole;
+  }
 
   /** Scenes → Adjust: how dark the background gets behind the text, and the colour grade with its strength. */
   const adjustPanel = (): Node[] => [
@@ -1733,6 +1746,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     };
     const signed = (v: number) => (Math.abs(v) < 0.005 ? '0' : `${v > 0 ? '+' : '−'}${Math.round(Math.abs(v) * 100)}`);
     const nodes: Node[] = [
+      row(ui('ed.frame'), chips<string>([{ value: 'fill', label: ui('ed.frame-fill') }, { value: 'whole', label: ui('ed.frame-whole') }],
+        () => (project.clips?.[entry]?.whole ? 'whole' : 'fill'),
+        (v) => { if (exporting) return; setWhole(fitClips(), entry, v === 'whole'); dirty = true; changed(); })),
       ...slider(ui('ed.brightness'), -1, () => cur?.b ?? 0, (v) => { const c = clipOf(); if (Math.abs(v) < 0.005) delete c.b; else c.b = Math.round(v * 100) / 100; }, signed),
       ...slider(ui('ed.blur'), 0, () => cur?.blur ?? 0, (v) => { const c = clipOf(); if (v < 0.005) delete c.blur; else c.blur = Math.round(v * 100) / 100; }, (v) => `${Math.round(v * 100)} %`),
       note(ui('ed.scene-adjust-note')),
@@ -1931,6 +1947,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (top !== wasTop) rebuild(); // the mark's strip moved: the text area changes
       dirty = true;
       if (!live) changed(option?.id === 'watermark'); // refresh the panel's place chips
+    },
+    wmMove: (x, live) => {
+      if (exporting) return;
+      if (Math.abs(x - 0.5) < 0.02) delete project.wmX; else project.wmX = Math.round(x * 1000) / 1000;
+      dirty = true;
+      if (!live) changed();
     },
   });
 

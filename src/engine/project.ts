@@ -77,6 +77,8 @@ export interface Project {
   dedication?: string;
   /** The cover frame (reel seconds): embedded in the MP4 as its cover art and offered as an image. */
   cover?: number;
+  /** The small Ayah Studio mark dragged along its line: centre across the safe width (0–1); missing = centred. */
+  wmX?: number;
   /** The small "Ayah Studio" mark (off by default). */
   watermark: boolean;
   /** The user's own watermark: their text or logo (src/engine/mark.ts). Per device like cinema (not in
@@ -308,6 +310,7 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
           const b = adj(c.b, -1), bl = adj(c.blur, 0);
           if (b !== undefined) out.b = b;
           if (bl !== undefined) out.blur = bl;
+          if ((c as Clip).whole === true) out.whole = true;
           return out;
         });
       }
@@ -361,6 +364,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
   if (typeof d.cover === 'number' && Number.isFinite(d.cover) && d.cover >= 0) p.cover = Math.min(d.cover, 3600);
+  if (typeof d.wmX === 'number' && Number.isFinite(d.wmX)) p.wmX = Math.min(1, Math.max(0, d.wmX));
   const mk = validMark(d.mark);
   if (mk) p.mark = mk;
   p.motion = validMotion(d.motion);

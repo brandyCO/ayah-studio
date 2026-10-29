@@ -50,8 +50,12 @@ const logos = new Map<string, CanvasImageSource & { width: number; height: numbe
 export const registerLogo = (id: string, img: CanvasImageSource & { width: number; height: number }) => void logos.set(id, img);
 export const logoImage = (id: string | undefined) => (id ? logos.get(id) ?? null : null);
 
-/** A logo with its black taken out: alpha = the brightest channel, colours divided by it (the same
- *  look as laying the logo over the video with a "screen" blend). Made once per logo. */
+/** A logo with its black background taken out, keeping the logo itself solid: the black around it
+ *  (and black holes inside letters) becomes clear, dark parts of the logo stay opaque. Pixels at or
+ *  below KNOCK_LO (JPEG noise included) are background; darkish pixels up to KNOCK_HI are background
+ *  only when they touch it (soft edge); the anti-aliased rim is un-mixed from black so no dark fringe
+ *  is left. Made once per logo. */
+const KNOCK_LO = 24, KNOCK_HI = 64;
 const knocked = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
 export function knockedLogo(id: string): (HTMLCanvasElement | OffscreenCanvas) | null {
   const img = logos.get(id);
@@ -64,16 +68,59 @@ export function knockedLogo(id: string): (HTMLCanvasElement | OffscreenCanvas) |
   const x = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
   x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height);
-  const px = d.data;
-  for (let i = 0; i < px.length; i += 4) {
-    const m = Math.max(px[i], px[i + 1], px[i + 2]);
-    const a = (m / 255) * (px[i + 3] / 255);
-    if (m > 0) { px[i] = (px[i] * 255) / m; px[i + 1] = (px[i + 1] * 255) / m; px[i + 2] = (px[i + 2] * 255) / m; }
-    px[i + 3] = Math.round(a * 255);
-  }
+  knockBlack(d.data, c.width, c.height);
   x.putImageData(d, 0, 0);
   knocked.set(id, c);
   return c;
+}
+
+/** In place on RGBA pixels (see knockedLogo). Exported for the checks. */
+export function knockBlack(px: Uint8ClampedArray, w: number, h: number) {
+  const n = w * h;
+  // Brightness as seen over black (a transparent pixel counts as black).
+  const m = new Uint8Array(n);
+  for (let i = 0; i < n; i++) m[i] = Math.round((Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) * px[i * 4 + 3]) / 255);
+  // Background: every near-black pixel, plus darkish ones reached from it or from the border.
+  const bg = new Uint8Array(n);
+  const q = new Int32Array(n);
+  let qn = 0;
+  const seed = (i: number) => { if (!bg[i]) { bg[i] = 1; q[qn++] = i; } };
+  for (let i = 0; i < n; i++) if (m[i] <= KNOCK_LO) seed(i);
+  for (let xx = 0; xx < w; xx++) { if (m[xx] <= KNOCK_HI) seed(xx); if (m[n - w + xx] <= KNOCK_HI) seed(n - w + xx); }
+  for (let yy = 0; yy < h; yy++) { if (m[yy * w] <= KNOCK_HI) seed(yy * w); if (m[yy * w + w - 1] <= KNOCK_HI) seed(yy * w + w - 1); }
+  for (let k = 0; k < qn; k++) {
+    const i = q[k], xx = i % w;
+    if (xx > 0 && !bg[i - 1] && m[i - 1] <= KNOCK_HI) seed(i - 1);
+    if (xx < w - 1 && !bg[i + 1] && m[i + 1] <= KNOCK_HI) seed(i + 1);
+    if (i >= w && !bg[i - w] && m[i - w] <= KNOCK_HI) seed(i - w);
+    if (i < n - w && !bg[i + w] && m[i + w] <= KNOCK_HI) seed(i + w);
+  }
+  const unmix = (i: number, a: number) => {
+    const o = i * 4;
+    if (a <= 0) { px[o + 3] = 0; return; }
+    const k = px[o + 3] / 255 / a; // colour was mixed with black by this much
+    px[o] = Math.min(255, px[o] * k); px[o + 1] = Math.min(255, px[o + 1] * k); px[o + 2] = Math.min(255, px[o + 2] * k);
+    px[o + 3] = Math.round(a * 255);
+  };
+  const smooth = (v: number) => v * v * (3 - 2 * v);
+  for (let i = 0; i < n; i++) {
+    const xx = i % w;
+    if (bg[i]) {
+      const a = m[i] <= KNOCK_LO ? 0 : smooth((m[i] - KNOCK_LO) / (KNOCK_HI - KNOCK_LO)) * (m[i] / 255);
+      unmix(i, a);
+      continue;
+    }
+    // The logo's rim (next to the background): alpha = its brightness against the brightest logo
+    // pixel around it, so an anti-aliased edge fades out instead of keeping a dark line.
+    let touches = false, ref = m[i];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const yy = Math.floor(i / w) + dy, x2 = xx + dx;
+      if (yy < 0 || yy >= h || x2 < 0 || x2 >= w) continue;
+      const j = yy * w + x2;
+      if (bg[j]) touches = true; else if (m[j] > ref) ref = m[j];
+    }
+    if (touches && ref > 0 && m[i] < ref) unmix(i, (px[i * 4 + 3] / 255) * (m[i] / ref));
+  }
 }
 
 /** The mark's look at t: alpha, scale about its centre and a sideways shift (frame units), from its

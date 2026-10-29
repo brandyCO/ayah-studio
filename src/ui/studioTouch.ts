@@ -22,6 +22,8 @@ export interface TouchOptions {
   hint: (what: 'bg-zoom') => void; // the background fills the frame: zoom in before it can move
   /** The user's own mark dragged: centre across the safe width (0–1) and top or bottom strip. */
   markMove: (x: number, top: boolean, live: boolean) => void;
+  /** The small Ayah Studio mark dragged along its line: centre across the safe width (0–1). */
+  wmMove: (x: number, live: boolean) => void;
 }
 
 export function attachTouch(o: TouchOptions) {
@@ -31,15 +33,24 @@ export function attachTouch(o: TouchOptions) {
   let g: { layer: Layer; pose: Pose; x: number; y: number; d: number; moved: boolean; corner?: { cx: number; cy: number; d0: number } } | null = null;
   let centred = false; // the text sits on the frame's vertical centre line (snapped)
   // Dragging the user's own mark: where the finger took hold of it (offset from its centre).
-  let mk: { id: number; dx: number; moved: boolean; x0: number; y0: number } | null = null;
+  let mk: { id: number; dx: number; moved: boolean; x0: number; y0: number; wm: boolean } | null = null;
+  const hit = (r: { x0: number; y0: number; x1: number; y1: number } | null | undefined, x: number, y: number, pad: number) =>
+    r && x >= r.x0 - pad && x <= r.x1 + pad && y >= r.y0 - pad && y <= r.y1 + pad ? r : null;
+  // The mark under the finger: one it is right on first, else the nearest within a thumb's reach.
   const markAt = (x: number, y: number) => {
-    const r = o.info().mark;
-    const pad = 16 * unit();
-    return r && x >= r.x0 - pad && x <= r.x1 + pad && y >= r.y0 - pad && y <= r.y1 + pad ? r : null;
+    const all = [{ r: o.info().mark, wm: false }, { r: o.info().wm, wm: true }];
+    for (const pad of [0, 16 * unit()]) {
+      const found = all.filter((c) => hit(c.r, x, y, pad))
+        .sort((a, b) => Math.hypot(x - (a.r!.x0 + a.r!.x1) / 2, y - (a.r!.y0 + a.r!.y1) / 2) - Math.hypot(x - (b.r!.x0 + b.r!.x1) / 2, y - (b.r!.y0 + b.r!.y1) / 2));
+      if (found.length) return { r: found[0].r!, wm: found[0].wm };
+    }
+    return null;
   };
   const markPlace = (x: number, y: number, live: boolean) => {
     const nx = Math.min(1, Math.max(0, (x - SAFE.x0) / (SAFE.x1 - SAFE.x0)));
-    o.markMove(Math.abs(nx - 0.5) < 0.02 ? 0.5 : nx, y < H / 2, live);
+    const snapped = Math.abs(nx - 0.5) < 0.02 ? 0.5 : nx;
+    if (mk?.wm) o.wmMove(snapped, live);
+    else o.markMove(snapped, y < H / 2, live);
   };
   /** Frame units per CSS pixel (handles and snaps are sized for a thumb, not for the frame). */
   const unit = () => W / Math.max(1, c.getBoundingClientRect().width);
@@ -97,9 +108,10 @@ export function attachTouch(o: TouchOptions) {
     if (!o.enabled()) return;
     const at = frameXY(e);
     if (pts.size === 0 && !mk) {
-      const r = markAt(at.x, at.y);
-      if (r) {
-        mk = { id: e.pointerId, dx: at.x - (r.x0 + r.x1) / 2, moved: false, x0: at.x, y0: at.y };
+      const hitMark = markAt(at.x, at.y);
+      if (hitMark) {
+        const r = hitMark.r;
+        mk = { id: e.pointerId, dx: at.x - (r.x0 + r.x1) / 2, moved: false, x0: at.x, y0: at.y, wm: hitMark.wm };
         c.setPointerCapture(e.pointerId);
         return;
       }
@@ -149,8 +161,8 @@ export function attachTouch(o: TouchOptions) {
   const end = (e: PointerEvent) => {
     if (mk && e.pointerId === mk.id) {
       const was = mk;
-      mk = null;
       if (was.moved) { const at = frameXY(e); markPlace(at.x - was.dx, at.y, false); }
+      mk = null;
       return;
     }
     if (!pts.delete(e.pointerId) || !g) return;
