@@ -15,7 +15,11 @@ export type ClipFit = 'loop' | 'slow' | 'hold';
 export interface Clip {
   in: number;
   fit: ClipFit;
+  /** This scene's brightness (−1 darker … +1 brighter) and blur (0 … 1), set with sliders. */
+  b?: number;
+  blur?: number;
 }
+export const BLUR_MAX = 24; // frame px at blur 1
 export const CLIP_FITS: { value: ClipFit; label: string }[] = [
   { value: 'loop', label: 'Loop' },
   { value: 'slow', label: 'Slow down' },
@@ -196,11 +200,15 @@ interface Look {
 }
 
 /** One scene's background (images get a slow Ken Burns over the scene). */
-function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: BackgroundMedia | undefined, o: Look = {}) {
-  const zoom = o.zoom ?? 1, dx = o.dx ?? 0, dy = o.dy ?? 0;
+function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: BackgroundMedia | undefined, o: Look = {}, adj?: Clip | null) {
+  const blur = adj?.blur ?? 0;
+  const zoom = (o.zoom ?? 1) * (blur > 0 ? 1 + (blur * BLUR_MAX * 3) / W : 1); // blurred edges stay outside the frame
+  const dx = o.dx ?? 0, dy = o.dy ?? 0;
   const b = m?.bg;
   ctx.fillStyle = b?.kind === 'color' ? b.color : '#000';
   ctx.fillRect(0, 0, W, H);
+  const prevFilter = ctx.filter;
+  if (blur > 0 && b?.kind !== 'color') ctx.filter = `blur(${(blur * BLUR_MAX * pxScale(ctx)).toFixed(2)}px)`;
   if (b?.kind === 'image' && m!.image) {
     const p = clamp01((t - s.from) / Math.max(s.to - s.from, 1));
     cover(ctx, m!.image, m!.image.width, m!.image.height, (1.04 + 0.08 * p) * zoom, -30 * p + dy, dx);
@@ -213,6 +221,15 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
     g.addColorStop(1, 'rgba(0,0,0,0.25)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+  }
+  ctx.filter = prevFilter;
+  const br = adj?.b ?? 0;
+  if (Math.abs(br) > 0.005) {
+    ctx.save();
+    if (br < 0) ctx.fillStyle = `rgba(0,0,0,${(-br * 0.85).toFixed(3)})`;
+    else { ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = `rgba(255,255,255,${(br * 0.45).toFixed(3)})`; }
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 }
 
@@ -241,11 +258,11 @@ function masked(ctx: CanvasRenderingContext2D, paint: (c: CanvasRenderingContext
 }
 
 /** The background for time t: the current scene, or a calm transition between two scenes. */
-export function drawScenes(ctx: CanvasRenderingContext2D, t: number, spans: SceneSpan[], tr: Transition, media: (BackgroundMedia | undefined)[]) {
+export function drawScenes(ctx: CanvasRenderingContext2D, t: number, spans: SceneSpan[], tr: Transition, media: (BackgroundMedia | undefined)[], clips?: (Clip | null)[]) {
   const { a, b, p: raw } = scenesAt(spans, t);
-  const A = (o?: Look) => drawScene(ctx, a, t, media[a.entry], o);
+  const A = (o?: Look) => drawScene(ctx, a, t, media[a.entry], o, clips?.[a.entry]);
   if (!b) return A();
-  const B = (o?: Look) => drawScene(ctx, b, t, media[b.entry], o);
+  const B = (o?: Look) => drawScene(ctx, b, t, media[b.entry], o, clips?.[b.entry]);
   const p = smooth(clamp01(raw));
   const px = pxScale(ctx);
   const over = (paint: () => void, alpha: number) => {

@@ -1,6 +1,7 @@
 // The one pure render function: draws the frame at time t. Used by the live preview and the
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
+import { bloom, bokeh, caustics, leak, mist, motes, rain, ripple, snow } from './touches';
 import type { BackgroundMedia } from './backgrounds';
 import { drawText, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
@@ -9,7 +10,7 @@ import { breathAt, darken, drift, shade, soften } from './cinema';
 import { AR_LINE, AR_SIZE_MIN, EN_LINE, EN_MIN, FONT_AR, FONT_EN, FONT_NAME, FONT_UI, H, SAFE, setFrame, TITLE_SIZES, titleBlock, W, type Fit } from './layout';
 import { knockedLogo, logoImage, markFx, markPose, markShown, MARK_FONT, type Mark } from './mark';
 import { fitBgPose, fitTextPose, IDENTITY, poseAt, type Pose, type Rect } from './motion';
-import { GRADES, SCRIM_STRENGTH } from './moods';
+import { darkK, GRADES, GRAIN_DEFAULT, SCRIM_STRENGTH, VIGNETTE_DEFAULT } from './moods';
 import type { Project } from './project';
 import { reference } from '../data/quran';
 import { reciterCredit } from '../data/reciters';
@@ -22,13 +23,16 @@ const smooth = (x: number) => x * x * (3 - 2 * x);
 /** Where the text block sits in its free space (0 top … 1 bottom). */
 const TEXT_POS = { upper: 0.2, center: 0.5, lower: 0.8 } as const;
 
-function drawGrade(ctx: CanvasRenderingContext2D, grade: Project['grade']) {
+function drawGrade(ctx: CanvasRenderingContext2D, grade: Project['grade'], amount = 1) {
+  if (amount <= 0.001) return;
+  ctx.globalAlpha = amount;
   for (const [op, color] of GRADES[grade]?.layers ?? []) {
     ctx.globalCompositeOperation = op;
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, W, H);
   }
   ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
 }
 
 function drawScrim(ctx: CanvasRenderingContext2D, k: number) {
@@ -48,17 +52,17 @@ function drawScrim(ctx: CanvasRenderingContext2D, k: number) {
 }
 
 /** Vignette: the frame's edges darken softly (over the background, under the text). */
-function drawVignette(ctx: CanvasRenderingContext2D) {
-  const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) / 2);
+function drawVignette(ctx: CanvasRenderingContext2D, amount = VIGNETTE_DEFAULT) {
+  const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * (0.45 - amount * 0.2), W / 2, H / 2, Math.hypot(W, H) / 2);
   g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  g.addColorStop(1, `rgba(0,0,0,${Math.min(0.95, amount * 1.1).toFixed(3)})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
 
 /** Film grain: a fixed noise tile moved to a new place 12 times a second (pure in t, so preview = export). */
 let grainTile: HTMLCanvasElement | null = null;
-function drawGrain(ctx: CanvasRenderingContext2D, t: number) {
+function drawGrain(ctx: CanvasRenderingContext2D, t: number, amount = GRAIN_DEFAULT) {
   if (!grainTile) {
     grainTile = document.createElement('canvas');
     grainTile.width = grainTile.height = 256;
@@ -77,7 +81,7 @@ function drawGrain(ctx: CanvasRenderingContext2D, t: number) {
   const ox = -((step * 97) % 256), oy = -((step * 57) % 256);
   ctx.save();
   ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.07;
+  ctx.globalAlpha = 0.14 * amount;
   const pat = ctx.createPattern(grainTile, 'repeat')!;
   ctx.translate(ox, oy);
   ctx.fillStyle = pat;
@@ -358,17 +362,29 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
     ctx.translate(-W / 2, -H / 2);
-    drawScenes(ctx, t, spans, project.transition, media);
+    drawScenes(ctx, t, spans, project.transition, media, project.clips);
     ctx.restore();
     // Depth: the background softens while an ayah is on screen.
     const a = ayahAt(tl, t);
     if (a) soften(ctx, Math.min(smooth(clamp01((t - a.start) / 0.8)), smooth(clamp01((a.end - t) / 0.8))));
-  } else drawScenes(ctx, t, spans, project.transition, media);
+  } else drawScenes(ctx, t, spans, project.transition, media, project.clips);
   if (posed) ctx.restore();
-  drawGrade(ctx, project.grade);
-  if (project.vignette) drawVignette(ctx);
-  if (project.grain) drawGrain(ctx, t);
-  drawScrim(ctx, SCRIM_STRENGTH[project.scrim] ?? 1);
+  const tch = project.touches ?? [];
+  const has = (x: string) => tch.includes(x as never);
+  if (has('ripple')) ripple(ctx, t);
+  const am = project.amounts;
+  drawGrade(ctx, project.grade, am?.grade ?? 1);
+  if (has('bloom')) bloom(ctx);
+  if (has('leak')) leak(ctx, t);
+  if (has('bokeh')) bokeh(ctx, t);
+  if (has('mist')) mist(ctx, t);
+  if (has('rain')) rain(ctx, t);
+  if (project.vignette) drawVignette(ctx, am?.vignette);
+  if (project.grain) drawGrain(ctx, t, am?.grain);
+  drawScrim(ctx, am?.dark !== undefined ? darkK(am.dark) : SCRIM_STRENGTH[project.scrim] ?? 1);
+  // Small lights in front of the background, behind the text.
+  if (has('motes')) motes(ctx, t);
+  if (has('snow')) snow(ctx, t);
   // Open from black, settle back into it; the text and the reference are drawn after, unchanged.
   if (cine) darken(ctx, shade(t, tl.duration));
 
@@ -471,6 +487,9 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
     drawText(ctx, fx, en, t, { lines: en.lines, size: en.size, lh: EN_LINE, top: enTop, font: lay.enFont, dir, color: colors.en, opacity: 0.92 });
   }
   });
+
+  // Water light passes over everything, adding light only (it never moves the text).
+  if (has('caustics')) caustics(ctx, t);
 
   // The ending's lines (after the last word); the surah name + reference stay (rule 2), except under a
   // segmented reel's title, which names its surahs itself.

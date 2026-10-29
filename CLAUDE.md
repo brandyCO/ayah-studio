@@ -529,6 +529,21 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       embeds it as the MP4's cover art (Mediabunny `setMetadataTags`, `coverFront`; not in WebM) and the
       result page offers **Save cover image** (JPEG, for apps that ask for a cover). **My styles** now also
       keep Cinematic, Tajweed colours, the Arabic size and slow motion (`extra`), and can be renamed (✎)
+- [x] Studio optimisation pass (owner request 2026-10-29, "optimise the whole studio"): every tool has at most
+      six options, related settings share one panel. **Look**: Quick reel · Looks (tabs My styles / Styles /
+      Mood) · Colours. **Text**: Mode (+ words per step, Learning reel) · Effect · Highlight · Tajweed · Size &
+      place (slider, position, Move) · Translation (on/off, sync, font, which one). **Audio**: Reciter · Remove
+      silences · Pauses (+ text between ayat) · Start & end (+ Start on voice) · Reset. **Scenes**: Add ·
+      Change · Arrange (mode, snap, slow motion, Move) · Transition · Adjust · Touches. **Layout**: Format ·
+      Names (surah name, reference, reciter name) · Watermark · Cover · Dedication. A selected scene: Split ·
+      Length · Replace · Adjust (brightness −1…+1 and blur 0…1 for this scene, `Clip.b` / `Clip.blur`, plus
+      the video controls) · Order · Delete. Look cards (styles, moods, vibes, grades) are smaller (5 a row).
+      **Sliders** instead of steps (`project.amounts`, 0–1, reset by a mood or style): Darken (none → almost
+      black; ⅓ = Normal; `darkK()`), grade strength, grain, vignette. **Touches** (`project.touches`, ≤ 4,
+      `src/engine/touches.ts`, pure in t, animated tiles): Water (background seen through moving water, rows
+      and columns shifted, before the scrim), Water light (caustics, light only, over the frame), Floating
+      light, Bokeh, Glow, Light leak, Mist, Rain, Snow; plus Cinematic, Grain, Vignette. Nothing moves or
+      bends the Quran text (rule 7)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
