@@ -972,6 +972,7 @@ const en = {
   'pa.atTime': 'At the time',
   'pa.before': '{n} min before',
   'pa.sound': 'Sound',
+  'pa.s.adhan': 'Adhan (Madinah)',
   'pa.s.chime': 'Soft chime',
   'pa.s.default': 'Phone’s sound',
   'pa.s.quiet': 'Silent',

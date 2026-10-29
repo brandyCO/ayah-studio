@@ -1032,6 +1032,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'pa.atTime': 'عند الوقت',
   'pa.before': 'قبل {n} دقيقة',
   'pa.sound': 'الصوت',
+  'pa.s.adhan': 'الأذان (المدينة)',
   'pa.s.chime': 'رنّة هادئة',
   'pa.s.default': 'صوت الهاتف',
   'pa.s.quiet': 'صامت',

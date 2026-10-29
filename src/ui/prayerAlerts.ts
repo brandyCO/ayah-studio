@@ -3,7 +3,9 @@
 // location (prayer.ts). The next 10 days are scheduled (ids 3100–3149) and scheduled again whenever
 // the app opens, the settings or the location change, so the times follow the seasons and travel
 // (the location is refreshed quietly at most every 6 h, only when the phone already allows it).
-// Sounds: a soft chime (res/raw/prayer_chime.wav, generated), the phone's own sound, or silent.
+// Sounds: the opening "Allahu Akbar, Allahu Akbar" of the Madinah adhan (res/raw/prayer_adhan.ogg, a
+// 21 s clip the owner supplied, 2026-10-29), a soft chime (res/raw/prayer_chime.wav, generated), the
+// phone's own sound, or silent.
 // localStorage `prayerAlerts`.
 import { PRAYERS, prayerDay, prayerSettings, setPrayerSettings, type PrayerName } from '../data/prayer';
 import { locale, t, type Key } from '../i18n';
@@ -12,7 +14,7 @@ import { isNative } from '../native';
 export const ALERT_PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const satisfies readonly PrayerName[];
 export type AlertPrayer = (typeof ALERT_PRAYERS)[number];
 export const BEFORE = [0, 5, 10, 15, 30] as const;
-export const SOUNDS = ['chime', 'default', 'quiet'] as const;
+export const SOUNDS = ['adhan', 'chime', 'default', 'quiet'] as const;
 export type AlertSound = (typeof SOUNDS)[number];
 export interface PrayerAlerts { on: Record<AlertPrayer, boolean>; before: number; sound: AlertSound }
 
@@ -22,7 +24,7 @@ const IDS = Array.from({ length: DAYS * ALERT_PRAYERS.length }, (_, i) => BASE +
 const OFF: Record<AlertPrayer, boolean> = { fajr: false, dhuhr: false, asr: false, maghrib: false, isha: false };
 
 export function prayerAlerts(): PrayerAlerts {
-  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'chime' };
+  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'adhan' };
   try {
     const v = JSON.parse(localStorage.getItem('prayerAlerts') ?? 'null');
     if (!v || typeof v !== 'object') return base;
@@ -31,7 +33,7 @@ export function prayerAlerts(): PrayerAlerts {
     return {
       on,
       before: (BEFORE as readonly number[]).includes(v.before) ? v.before : 0,
-      sound: (SOUNDS as readonly string[]).includes(v.sound) ? v.sound : 'chime',
+      sound: (SOUNDS as readonly string[]).includes(v.sound) ? v.sound : 'adhan',
     };
   } catch {
     return base;
@@ -50,10 +52,21 @@ type LN = typeof import('@capacitor/local-notifications').LocalNotifications;
 let channels: Promise<void> | null = null;
 const makeChannels = (ln: LN) => (channels ??= (async () => {
   const name = t('pa.title');
+  await ln.createChannel({ id: 'prayer_adhan', name: `${name} · ${t('pa.s.adhan')}`, importance: 4, sound: 'prayer_adhan.ogg', vibration: true, visibility: 1 });
   await ln.createChannel({ id: 'prayer_chime', name: `${name} · ${t('pa.s.chime')}`, importance: 4, sound: 'prayer_chime.wav', vibration: true, visibility: 1 });
   await ln.createChannel({ id: 'prayer_default', name: `${name} · ${t('pa.s.default')}`, importance: 4, vibration: true, visibility: 1 });
   await ln.createChannel({ id: 'prayer_quiet', name: `${name} · ${t('pa.s.quiet')}`, importance: 2, vibration: false, visibility: 1 });
 })().catch(() => { channels = null; }));
+
+let sample: HTMLAudioElement | null = null;
+/** Plays the reminder sound once in the app, so the choice can be heard (the chime has no web copy). */
+export function previewSound(s: AlertSound) {
+  sample?.pause();
+  sample = null;
+  if (s !== 'adhan') return;
+  sample = new Audio('sounds/prayer-adhan.ogg');
+  void sample.play().catch(() => {});
+}
 
 /** Whether Android lets reminders ring on the minute (else they can be a few minutes late). */
 export async function exactAllowed(): Promise<boolean> {
