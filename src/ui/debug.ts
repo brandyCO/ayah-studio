@@ -2,7 +2,9 @@
 import { feature, setFeature } from '../features';
 import { capabilities } from '../engine/capabilities';
 import { h } from './dom';
-import { hasWebGL, reducedMotion, saveQuality, savedQuality } from '../light/support';
+import { liteAuto, liteSetting, setLiteSetting, type LiteSetting } from '../lite';
+import { perfSummary } from '../perf';
+import { errorReportsOn } from '../errors';
 
 export function openDebugPanel() {
   const table = h('table', { class: 'caps' }, h('tr', {}, h('td', {}, 'Checking…')));
@@ -15,7 +17,9 @@ export function openDebugPanel() {
     h('label', { class: 'sub-row flag-row' },
       h('input', { type: 'checkbox', checked: feature('tafsir'), onchange: (e: Event) => setFeature('tafsir', (e.target as HTMLInputElement).checked) }),
       h('span', {}, 'Tafsir beside the translation (preview: licence not confirmed yet)')),
-    lightRow(),
+    liteRow(),
+    perfBlock(),
+    h('p', { class: 'muted small' }, errorReportsOn() ? 'Error reports: on (Sentry; no account or personal data)' : 'Error reports: off'),
     h('p', { class: 'muted small' }, `User agent: ${navigator.userAgent}`),
   );
   dialog.addEventListener('close', () => dialog.remove());
@@ -30,10 +34,29 @@ export function openDebugPanel() {
   });
 }
 
-/** Light scenes (docs/light.md): the quality step the fps watchdog settled on, with a reset. */
-function lightRow() {
-  const why = !hasWebGL() ? 'no WebGL → flat 2D' : reducedMotion() ? 'reduced motion → flat 2D' : `3D · ${savedQuality()}`;
-  const label = h('span', {}, `Light scenes: ${why}`);
-  return h('div', { class: 'sub-row flag-row' }, label,
-    h('button', { class: 'chip', onclick: () => { saveQuality(null); label.textContent = `Light scenes: ${hasWebGL() && !reducedMotion() ? '3D · medium' : why}`; } }, 'Reset'));
+/** Old-phone mode (src/lite.ts): Auto (what this device gets, and why) / On / Off. */
+function liteRow() {
+  const auto = liteAuto();
+  const row = h('div', { class: 'sub-row flag-row' });
+  const paint = () => {
+    const cur = liteSetting();
+    row.replaceChildren(h('span', {}, 'Old-phone mode'),
+      ...(['auto', 'on', 'off'] as LiteSetting[]).map((v) => h('button', {
+        class: `chip${cur === v ? ' on' : ''}`,
+        onclick: () => { setLiteSetting(v); paint(); },
+      }, v === 'auto' ? `Auto (${auto.on ? 'on' : 'off'}: ${auto.why})` : v === 'on' ? 'On' : 'Off')));
+  };
+  paint();
+  return row;
+}
+
+/** Timings measured on this device (src/perf.ts): newest and median of each moment. */
+function perfBlock() {
+  const rows = perfSummary();
+  if (!rows.length) return h('p', { class: 'muted small' }, 'Timings: none yet (open the mushaf or the studio first).');
+  const s = (ms: number) => (ms >= 10000 ? `${Math.round(ms / 1000)} s` : `${(ms / 1000).toFixed(2)} s`);
+  return h('div', {},
+    h('h3', { class: 'small' }, 'Timings on this device'),
+    h('table', { class: 'caps' }, ...rows.map((r) =>
+      h('tr', {}, h('td', {}, r.name), h('td', {}, `${s(r.last)}${r.n > 1 ? ` · median ${s(r.median)} (${r.n})` : ''}`)))));
 }

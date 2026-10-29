@@ -42,13 +42,16 @@ export interface SpineOptions {
   audioTrim: (i: number) => AudioTrim | null;
   trimAudio: (i: number, head: number, tail: number) => void;
   setGap: (i: number, gap: number) => void;
+  /** Keyframes of the layer being moved (reel seconds), shown as diamonds on the ruler. */
+  keys?: () => number[];
 }
 
 const PAD = 16; // the reel starts this far from the left edge
-const RULER = 24, SCENES = 50, AUDIO = 46, GAP = 8;
+const RULER = 24, SCENES = 52, AUDIO = 52, GAP = 8;
 const Y_SC = RULER + 4, Y_AU = Y_SC + SCENES + GAP;
 const TRACKS = Y_AU + AUDIO;
-const HANDLE = 14;
+const HANDLE = 20; // wide grips, easy to catch with a thumb
+const SNAP_PX = 8; // the playhead snaps to an ayah or word start this close
 
 const thumbs = new Map<string, HTMLImageElement>();
 
@@ -78,10 +81,20 @@ export function createSpine(o: SpineOptions) {
   const zoomOut = h('button', { class: 'spine-zoom', 'aria-label': 'Zoom out', onclick: () => zoom(1 / 1.5) }, '−');
   const zoomIn = h('button', { class: 'spine-zoom', 'aria-label': 'Zoom in', onclick: () => zoom(1.5) }, '+');
   const el = h('div', { class: 'spine', dir: 'ltr', role: 'group', 'aria-label': 'Timeline' }, canvas, h('div', { class: 'spine-zooms' }, zoomOut, zoomIn));
-  const ctx = canvas.getContext('2d')!;
+  const screen = canvas.getContext('2d')!;
+  let ctx = screen; // the drawing helpers draw here: the screen, or the cached track layer
+  // The tracks are drawn once into a layer three screens wide and copied in; playing, panning and
+  // scrubbing then only move the copy and the playhead (redrawn when the tracks change or the view
+  // leaves the layer).
+  const layer = document.createElement('canvas');
+  const lctx = layer.getContext('2d')!;
+  let layerLeft = 0, layerPps = 0, layerW = 0, layerDpr = 0, layerH = 0;
   let peaks: Float32Array | null = null;
+  /** Max-pyramid of the peaks: level k holds the loudest of each 2^k peaks (fast when zoomed out). */
+  let levels: Float32Array[] = [];
   let peakRate = 50;
-  let dirty = true;
+  let dirty = true; // something to draw
+  let tracksDirty = true; // the tracks themselves changed
   let pps = 0; // px per second (0: fit on first draw)
   let left = 0; // seconds at the left edge
   let drag: (Drag & { x0: number; y0: number; moved: boolean; lastX: number; lastT: number; v: number }) | null = null;
@@ -110,7 +123,7 @@ export function createSpine(o: SpineOptions) {
     let img = thumbs.get(src);
     if (!img) {
       img = new Image();
-      img.onload = () => (dirty = true);
+      img.onload = () => (dirty = tracksDirty = true);
       img.src = src;
       thumbs.set(src, img);
     }
@@ -131,7 +144,8 @@ export function createSpine(o: SpineOptions) {
   /** Peak level per 2 ms of the reel's audio, for the waveform (fine enough to trim to the millisecond). */
   function setAudio(buf: AudioBuffer | null) {
     peaks = null;
-    dirty = true;
+    levels = [];
+    dirty = tracksDirty = true;
     if (!buf) return;
     const data = buf.getChannelData(0);
     const step = Math.max(1, Math.round(buf.sampleRate / 500));
@@ -147,6 +161,29 @@ export function createSpine(o: SpineOptions) {
     for (const v of out) top = Math.max(top, v);
     if (top > 0) for (let i = 0; i < out.length; i++) out[i] /= top;
     peaks = out;
+    levels = [out];
+    for (let lv = out; lv.length > 1;) {
+      const up = new Float32Array(Math.ceil(lv.length / 2));
+      for (let i = 0; i < up.length; i++) up[i] = Math.max(lv[2 * i], lv[2 * i + 1] ?? 0);
+      levels.push(up);
+      lv = up;
+    }
+  }
+  /** The loudest peak in [k0, k1): a few reads from the pyramid instead of a scan. */
+  function peakMax(k0: number, k1: number): number {
+    if (!peaks) return 0;
+    k0 = Math.max(0, k0);
+    k1 = Math.min(k1, peaks.length);
+    let v = 0, lv = 0;
+    while (k0 < k1) {
+      // Climb while the block at k0 is aligned and fits; read it; move on.
+      while (lv + 1 < levels.length && k0 % (1 << (lv + 1)) === 0 && k0 + (1 << (lv + 1)) <= k1) lv++;
+      while (lv > 0 && (k0 % (1 << lv) !== 0 || k0 + (1 << lv) > k1)) lv--;
+      const x = levels[lv][k0 >> lv];
+      if (x > v) v = x;
+      k0 += 1 << lv;
+    }
+    return v;
   }
 
   // --- geometry (with the drag in progress applied) ---
@@ -175,7 +212,7 @@ export function createSpine(o: SpineOptions) {
     if (y < Y_SC - 2) return { kind: 'ruler' };
     const t = T(x);
     const sel = o.selection();
-    const near = (s: number) => Math.abs(X(s) - x) <= HANDLE + 6;
+    const near = (s: number) => Math.abs(X(s) - x) <= HANDLE + 10;
     if (y < Y_SC + SCENES + GAP / 2) {
       if (x >= X(tl.duration) + 8 && x <= X(tl.duration) + 8 + SCENES) return { kind: 'add' };
       const b = [0, ...sceneBounds(), tl.duration];
@@ -190,8 +227,8 @@ export function createSpine(o: SpineOptions) {
       const blocks = audioBlocks();
       if (sel?.kind === 'audio' && blocks[sel.index]) {
         const bl = blocks[sel.index];
-        if (Math.abs(X(bl.a) + HANDLE / 2 - x) <= HANDLE) return { kind: 'audio', index: sel.index, part: 'start' };
-        if (Math.abs(X(bl.b) - HANDLE / 2 - x) <= HANDLE) return { kind: 'audio', index: sel.index, part: 'end' };
+        if (Math.abs(X(bl.a) + HANDLE / 2 - x) <= HANDLE + 6) return { kind: 'audio', index: sel.index, part: 'start' };
+        if (Math.abs(X(bl.b) - HANDLE / 2 - x) <= HANDLE + 6) return { kind: 'audio', index: sel.index, part: 'end' };
       }
       const i = blocks.findIndex((bl) => t >= bl.a && t < bl.b);
       return i >= 0 ? { kind: 'audio', index: i, part: 'body' } : { kind: 'empty' };
@@ -215,19 +252,13 @@ export function createSpine(o: SpineOptions) {
       round(x, y - 1, HANDLE, hh + 2, 4);
       ctx.fill();
       ctx.fillStyle = '#222';
-      ctx.fillRect(x + HANDLE / 2 - 1, y + hh / 2 - 8, 2, 16);
+      ctx.fillRect(x + HANDLE / 2 - 3, y + hh / 2 - 9, 2, 18);
+      ctx.fillRect(x + HANDLE / 2 + 1, y + hh / 2 - 9, 2, 18);
     }
   }
 
-  function draw() {
-    const tl = o.timeline();
-    const w = Wc();
-    const dpr = canvas.width / Math.max(1, w);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, height);
-    if (!tl) return;
-    if (!pps) pps = Math.min(90, Math.max(30, (w - PAD * 2 - 60) / tl.duration)); // fit a short reel
-    const t = o.time();
+  /** The tracks (ruler, scenes, recitation) into the current target, `w` px wide from `left`. */
+  function drawTracks(tl: Timeline, w: number) {
     const D = tl.duration;
     const sel = o.selection();
 
@@ -248,17 +279,12 @@ export function createSpine(o: SpineOptions) {
     }
     ctx.textAlign = 'left';
 
-    // Background scenes: thumbnails, length, transition markers, and the white + to add one.
+    // Background scenes: thumbnails, transition markers, and the white + to add one.
     const ids = o.scenes();
-    const b = [0, ...sceneBounds(), D];
-    const scenes = tl.scenes.map((s, i) => ({ ...s, start: b[i], end: b[i + 1] }));
+    const scenes = sceneRects(tl);
     const moving = drag?.kind === 'scene-move' ? drag : null;
     scenes.forEach((s, i) => {
-      let x0 = X(s.start) + 1, x1 = X(s.end) - 1;
-      if (moving?.index === i) {
-        x0 += moving.dt * pps;
-        x1 += moving.dt * pps;
-      }
+      const { x0, x1 } = s;
       if (x1 < 0 || x0 > w) return;
       const bg = backgroundById(ids[s.entry] ?? '');
       ctx.save();
@@ -272,17 +298,6 @@ export function createSpine(o: SpineOptions) {
         const tw = (SCENES * img.naturalWidth) / img.naturalHeight;
         for (let x = x0; x < x1; x += tw) if (x + tw > 0 && x < w) ctx.drawImage(img, x, Y_SC, tw, SCENES);
       }
-      // More decimals as you zoom in or drag an edge (to the millisecond).
-      const label = `${(s.end - s.start).toFixed(drag?.kind === 'scene-edge' || pps >= 400 ? 3 : pps >= 60 ? 2 : 1)}s`;
-      ctx.font = '600 10px system-ui, sans-serif';
-      const lw = ctx.measureText(label).width + 8;
-      const lx = Math.max(x0, 0) + 4 + (sel?.kind === 'scene' && sel.index === i ? HANDLE : 0);
-      ctx.fillStyle = 'rgba(0,0,0,.5)';
-      round(lx, Y_SC + 4, lw, 15, 3);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, lx + 4, Y_SC + 12);
       ctx.restore();
     });
     if (!moving && scenes.length > 1) {
@@ -309,7 +324,7 @@ export function createSpine(o: SpineOptions) {
     }
     if (sel?.kind === 'scene' && scenes[sel.index] && !moving) {
       const s = scenes[sel.index];
-      handles(X(s.start) + 1, X(s.end) - 1, Y_SC, SCENES, sel.index > 0, sel.index < scenes.length - 1);
+      handles(s.x0, s.x1, Y_SC, SCENES, sel.index > 0, sel.index < scenes.length - 1);
     }
     const ax = X(D) + 8;
     if (ax < w) {
@@ -322,8 +337,7 @@ export function createSpine(o: SpineOptions) {
     }
 
     // Recitation audio: one block per ayah with its waveform.
-    const blocks = audioBlocks();
-    blocks.forEach(({ a: a0, b: a1, off }, i) => {
+    audioBlocks().forEach(({ a: a0, b: a1, off }, i) => {
       const x0 = X(a0) + 1, x1 = X(a1) - 1;
       if (x1 < 0 || x0 > w || x1 <= x0) return;
       ctx.save();
@@ -334,13 +348,26 @@ export function createSpine(o: SpineOptions) {
       if (peaks) {
         ctx.fillStyle = '#62d2b6';
         const mid = Y_AU + AUDIO / 2 + 6;
+        ctx.beginPath();
         for (let x = Math.max(0, Math.floor(x0)); x < Math.min(w, x1); x += 2) {
           // The loudest peak under these 2 px (many peaks when zoomed out, part of one when zoomed in).
           const k0 = Math.floor((T(x) - off) * peakRate), k1 = Math.max(k0 + 1, Math.floor((T(x + 2) - off) * peakRate));
-          let v = 0;
-          for (let k = Math.max(0, k0); k < Math.min(k1, peaks.length); k++) if (peaks[k] > v) v = peaks[k];
+          const v = peakMax(k0, k1);
           const hh = Math.max(1, v * (AUDIO - 18));
-          ctx.fillRect(x, mid - hh / 2, 1.5, hh);
+          ctx.rect(x, mid - hh / 2, 1.5, hh);
+        }
+        ctx.fill();
+      }
+      // Faint marks where each recited word starts (only with word timings; never guessed: rule 8).
+      const seq = tl.ayat[i]?.seq;
+      if (seq) {
+        ctx.fillStyle = 'rgba(255,255,255,.32)';
+        let lastX = -1e9;
+        for (const r of seq) {
+          const wx = X(r[1] + off);
+          if (wx - lastX < 5 || wx < x0 || wx > x1) continue;
+          ctx.fillRect(wx - 0.5, Y_AU + AUDIO - 9, 1, 6);
+          lastX = wx;
         }
       }
       const ay = o.plan()?.ayat[i];
@@ -349,13 +376,49 @@ export function createSpine(o: SpineOptions) {
         ctx.fillStyle = 'rgba(255, 214, 110, .9)';
         for (const at of [ay.start, ay.last]) ctx.fillRect(X(at + off) - 0.5, Y_AU + 16, 1, AUDIO - 18);
       }
-      ctx.fillStyle = '#fff';
-      ctx.font = '600 10px system-ui, sans-serif';
-      ctx.textBaseline = 'top';
-      const pad = sel?.kind === 'audio' && sel.index === i ? HANDLE : 0;
-      ctx.fillText(`${tl.surah.n}:${tl.ayat[i].ayah}`, Math.max(x0, 0) + 5 + pad, Y_AU + 4);
       ctx.restore();
       if (sel?.kind === 'audio' && sel.index === i) handles(x0, x1, Y_AU, AUDIO, true, true);
+    });
+  }
+
+  /** Scene blocks in px (with a drag in progress applied). */
+  function sceneRects(tl: Timeline) {
+    const b = [0, ...sceneBounds(), tl.duration];
+    const moving = drag?.kind === 'scene-move' ? drag : null;
+    return tl.scenes.map((s, i) => {
+      const dx = moving?.index === i ? moving.dt * pps : 0;
+      return { ...s, start: b[i], end: b[i + 1], x0: X(b[i]) + 1 + dx, x1: X(b[i + 1]) - 1 + dx };
+    });
+  }
+
+  /** What moves with the view: sticky labels, the drag readout, keyframes and the playhead. */
+  function drawOverlay(tl: Timeline, w: number) {
+    const sel = o.selection();
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 10px system-ui, sans-serif';
+    sceneRects(tl).forEach((s, i) => {
+      if (s.x1 < 0 || s.x0 > w) return;
+      // More decimals as you zoom in or drag an edge (to the millisecond).
+      const label = `${(s.end - s.start).toFixed(drag?.kind === 'scene-edge' || pps >= 400 ? 3 : pps >= 60 ? 2 : 1)}s`;
+      const lw = ctx.measureText(label).width + 8;
+      const lx = Math.max(s.x0, 0) + 4 + (sel?.kind === 'scene' && sel.index === i ? HANDLE : 0);
+      if (lx + lw > s.x1) return;
+      ctx.fillStyle = 'rgba(0,0,0,.5)';
+      round(lx, Y_SC + 4, lw, 15, 3);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, lx + 4, Y_SC + 12);
+    });
+    const blocks = audioBlocks();
+    ctx.textBaseline = 'top';
+    blocks.forEach(({ a: a0, b: a1 }, i) => {
+      const x0 = X(a0) + 1, x1 = X(a1) - 1;
+      if (x1 < 0 || x0 > w || x1 <= x0) return;
+      const pad = sel?.kind === 'audio' && sel.index === i ? HANDLE : 0;
+      const lx = Math.max(x0, 0) + 5 + pad;
+      if (lx + 24 > x1) return;
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${tl.surah.n}:${tl.ayat[i].ayah}`, lx, Y_AU + 4);
     });
     if (drag && (drag.kind === 'audio-head' || drag.kind === 'audio-tail' || drag.kind === 'audio-move')) {
       const bl = blocks[drag.index];
@@ -365,7 +428,6 @@ export function createSpine(o: SpineOptions) {
         : drag.kind === 'audio-head' ? `silence before words ${ay ? (ay.start - bl.a).toFixed(3) : '–'} s${drag.head >= drag.trim.maxHead - 1e-3 ? ' · first word' : ''}`
           : `silence after words ${ay ? (bl.b - ay.last).toFixed(3) : '–'} s${drag.tail >= drag.trim.maxTail - 1e-3 ? ' · last word' : ''}`;
       ctx.font = '600 11px system-ui, sans-serif';
-      ctx.textBaseline = 'top';
       const mw = ctx.measureText(msg).width + 12;
       const mx = Math.min(Math.max(4, X(drag.kind === 'audio-tail' ? bl.b : bl.a) - mw / 2), w - mw - 4);
       ctx.fillStyle = 'rgba(0,0,0,.75)';
@@ -374,13 +436,81 @@ export function createSpine(o: SpineOptions) {
       ctx.fillStyle = '#fff';
       ctx.fillText(msg, mx + 6, Y_AU + AUDIO + 10);
     }
-
+    // Keyframes of the layer being moved: gold diamonds under the ruler.
+    for (const k of o.keys?.() ?? []) {
+      const x = X(k);
+      if (x < -6 || x > w + 6) continue;
+      ctx.fillStyle = '#f2c46b';
+      ctx.beginPath();
+      ctx.moveTo(x, RULER - 6);
+      ctx.lineTo(x + 5, RULER - 1);
+      ctx.lineTo(x, RULER + 4);
+      ctx.lineTo(x - 5, RULER - 1);
+      ctx.closePath();
+      ctx.fill();
+    }
     // Playhead.
-    const px = X(t);
+    const px = X(o.time());
     if (px >= 0 && px <= w) {
       ctx.fillStyle = '#fff';
       ctx.fillRect(px - 1, 2, 2, TRACKS + 6);
     }
+  }
+
+  function draw() {
+    const tl = o.timeline();
+    const w = Wc();
+    const dpr = canvas.width / Math.max(1, w);
+    screen.setTransform(dpr, 0, 0, dpr, 0, 0);
+    screen.clearRect(0, 0, w, height);
+    if (!tl) return;
+    if (!pps) pps = Math.min(90, Math.max(30, (w - PAD * 2 - 60) / tl.duration)); // fit a short reel
+    // Redraw the cached tracks only when they changed or the view left them.
+    const span = w / pps;
+    const inside = left >= layerLeft - 1e-9 && (left - layerLeft) * pps + w <= layerW * 3 + 0.5;
+    if (tracksDirty || pps !== layerPps || w !== layerW || dpr !== layerDpr || height !== layerH || !inside) {
+      tracksDirty = false;
+      layerPps = pps;
+      layerW = w;
+      layerDpr = dpr;
+      layerH = height;
+      layerLeft = Math.max(0, left - span);
+      const lw = Math.round(w * 3 * dpr), lh = Math.round(height * dpr);
+      if (layer.width !== lw || layer.height !== lh) { layer.width = lw; layer.height = lh; }
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      lctx.clearRect(0, 0, w * 3, height);
+      const keep = left;
+      left = layerLeft;
+      ctx = lctx;
+      try { drawTracks(tl, w * 3); } finally { ctx = screen; left = keep; }
+    }
+    const sx = Math.round((left - layerLeft) * pps * dpr);
+    screen.setTransform(1, 0, 0, 1, 0, 0);
+    screen.drawImage(layer, sx, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+    screen.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawOverlay(tl, w);
+  }
+
+  // --- snapping (CapCut-style, with a light tick on phones that vibrate) ---
+  let snapped = NaN;
+  const buzz = (at: number) => {
+    if (at !== snapped && !Number.isNaN(at)) navigator.vibrate?.(8);
+    snapped = at;
+  };
+  /** Scrub time snapped to the nearest ayah or word start within SNAP_PX. */
+  function snapScrub(tm: number): number {
+    const tl = o.timeline();
+    if (!tl) return tm;
+    let best = SNAP_PX / pps, to = NaN;
+    const take = (x: number) => { const d = Math.abs(x - tm); if (d < best) { best = d; to = x; } };
+    take(0);
+    for (const a of tl.ayat) {
+      take(a.start);
+      // Word starts only once zoomed in enough that words are apart (else every spot would snap).
+      if (pps >= 60) for (const r of a.seq ?? []) take(r[1]);
+    }
+    buzz(to);
+    return Number.isNaN(to) ? tm : to;
   }
 
   // --- pointer handling ---
@@ -422,7 +552,8 @@ export function createSpine(o: SpineOptions) {
     drag = { ...d, x0: p.x, y0: p.y, moved: false, lastX: p.x, lastT: performance.now(), v: 0 };
     if (d.kind === 'scrub') {
       o.onScrubStart();
-      o.seek(Math.min(Math.max(0, T(p.x)), dur()));
+      snapped = NaN;
+      o.seek(snapScrub(Math.min(Math.max(0, T(p.x)), dur())));
     }
   });
 
@@ -452,7 +583,7 @@ export function createSpine(o: SpineOptions) {
     const tm = Math.min(Math.max(0, T(p.x)), tl.duration);
     switch (drag.kind) {
       case 'scrub':
-        o.seek(tm);
+        o.seek(snapScrub(tm));
         break;
       case 'pan':
         left = drag.left0 - (p.x - drag.x0) / pps;
@@ -467,6 +598,7 @@ export function createSpine(o: SpineOptions) {
           let best = 14 / pps, snapTo = v;
           for (const s of snapPoints(plan.ayat)) if (s >= lo && s <= hi && Math.abs(s - v) < best) [best, snapTo] = [Math.abs(s - v), s];
           v = snapTo;
+          buzz(best < 14 / pps ? snapTo : NaN);
         }
         bs[k] = ms(v);
         o.seek(bs[k]);
@@ -486,6 +618,7 @@ export function createSpine(o: SpineOptions) {
         break;
     }
     dirty = true;
+    if (drag.kind !== 'scrub' && drag.kind !== 'pan') tracksDirty = true;
   });
 
   const end = (e: PointerEvent) => {
@@ -497,16 +630,23 @@ export function createSpine(o: SpineOptions) {
     if (!drag) return;
     const d = drag;
     drag = null;
-    dirty = true;
+    dirty = tracksDirty = true;
     const tl = o.timeline();
     if (!tl) return;
     if (!d.moved) {
-      // Tap: select (or deselect) a block, add a scene, or seek on the ruler.
+      // Tap: the playhead jumps to the tapped moment (snapped to an ayah or word start nearby), so
+      // you can listen from there; a block is selected too (tapping the selected one keeps it), and a
+      // tap on empty space lets go of the selection.
       const at = hit(d.x0, d.y0);
       if (at.kind === 'add') return o.addScene();
+      if (d.kind !== 'scrub') {
+        o.onScrubStart();
+        snapped = NaN;
+        o.seek(snapScrub(Math.min(Math.max(0, T(d.x0)), dur())));
+      }
       if (at.kind === 'scene' || at.kind === 'audio') {
         const sel = o.selection();
-        o.select(sel?.kind === at.kind && sel.index === at.index ? null : { kind: at.kind, index: at.index });
+        if (sel?.kind !== at.kind || sel.index !== at.index) o.select({ kind: at.kind, index: at.index });
       } else if (at.kind === 'empty') o.select(null);
       return;
     }
@@ -558,7 +698,9 @@ export function createSpine(o: SpineOptions) {
   return {
     el,
     setAudio,
-    invalidate: () => (dirty = true),
+    invalidate: () => (dirty = tracksDirty = true),
+    /** Redraw the playhead and markers only (the tracks are unchanged). */
+    refresh: () => (dirty = true),
     /** Redraw if something changed (call once per animation frame); follows the playhead while playing. */
     frame() {
       const t = o.time();

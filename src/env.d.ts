@@ -8,4 +8,6 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string;
   readonly VITE_SUPABASE_KEY?: string;
   readonly VITE_GOOGLE_WEB_CLIENT_ID?: string;
+  /** Sentry project DSN (src/errors.ts); unset → no error reports. */
+  readonly VITE_SENTRY_DSN?: string;
 }

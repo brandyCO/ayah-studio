@@ -3,14 +3,16 @@
 // long-press / drag to select ayat for a reel.
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
+import { addRecentPage } from '../data/history';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { isNative } from '../native';
-import { loadMushaf, loadPageFont, PAGE_COUNT, type MushafLine } from '../data/mushaf';
+import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { accountLabel, openAccount } from './account';
 import { openDebugPanel } from './debug';
+import { icon } from './icons';
 import { h, toast } from './dom';
 import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -20,17 +22,17 @@ import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
+import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
-import { lamps } from '../data/lamps';
-import { logPageRead, monthReads } from '../data/readLog';
+import { logPageRead } from '../data/readLog';
+import { countPage, pageSeconds } from '../data/journey';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
-import { cachedCircles, loadCircles, markPageRead, myParts, pagesRead } from '../together/circles';
-import type { CircleContext } from './circles';
-// The circles screens load on first use (they are large and most readers open them rarely).
-const openCircle = (ctx: CircleContext, id: string, fresh?: boolean) => import('./circles').then((m) => m.openCircle(ctx, id, fresh));
-const openCircles = (ctx: CircleContext) => void import('./circles').then((m) => m.openCircles(ctx));
+// The family circles screens load on first use.
+const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
+const openCircles = () => void import('./circles').then((m) => m.openCircles());
 import { selectionController, type Sel } from './selection';
+import { pickHint, tabBar, takeTabIntent } from './tabs';
 
 type Seg = [number, number, string];
 
@@ -42,24 +44,6 @@ const bismillah = () =>
 // and a reel draft still waiting.
 registerMarks(() => bookmarks().map((b) => ({ s: b.s, a: b.a, kind: 'bookmark', title: t('mushaf.bookmarkMark', { ref: `${b.s}:${b.a}` }) })));
 registerMarks(() => reflections().map((r) => ({ s: r.s, a: r.a, kind: 'reflection', title: wroteHere(lastWritten(r)) })));
-// Khatm circles: your juz on the Today card ("Juz 14 · 6 pages left"), a completed Khatm.
-let circleCtx: CircleContext | null = null;
-registerToday(async () => {
-  if (!account() || !circleCtx) return [];
-  const ctx = circleCtx;
-  const items = myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').map(({ state, part }) => {
-    const pages = ctx.juzPages(part.juz);
-    const left = pages.length - pages.filter((p) => pagesRead(part).has(p)).length;
-    return { icon: '◯', text: left ? t(left === 1 ? 'today.juzLeft1' : 'today.juzLeft', { juz: part.juz, n: left, circle: state.circle.name }) : t('today.juzRead', { juz: part.juz }), onClick: () => void openCircle(ctx, state.circle.id) };
-  });
-  for (const st of cachedCircles()) {
-    if (st.circle.status === 'complete' && st.circle.completed_at && Date.now() - Date.parse(st.circle.completed_at) < 7 * DAY) {
-      items.push({ icon: '☾', text: t('today.khatm', { circle: st.circle.name }), onClick: () => void openCircle(ctx, st.circle.id) });
-    }
-  }
-  return items;
-});
-
 // A note's mark pulses once per app session when its page is visited again (not for today's notes).
 const pulsed = new Set<string>();
 const DAY = 86_400_000;
@@ -113,26 +97,6 @@ registerToday(async () => {
   return (await import('./ramadan')).ramadanToday(ctx);
 });
 
-// Revision lamps (T5a): lamps past their interval, gently.
-let openLampsHere: (() => void) | null = null;
-registerToday(async () => {
-  if (!openLampsHere || !Object.keys(lamps()).length) return [];
-  const { dimLamps } = await import('./lamps');
-  const { count, surah } = await dimLamps();
-  if (!count) return [];
-  const open = openLampsHere;
-  return [{ icon: '✦', text: count === 1 ? t('today.lamp', { surah: surahName(surah!) }) : surah ? t('today.lampsIn', { n: count, surah: surahName(surah) }) : t('today.lamps', { n: count }), onClick: () => open() }];
-});
-
-// Home sky (L6): pages read this month as stars.
-let openSkyHere: (() => void) | null = null;
-registerToday(() => {
-  const n = monthReads().size;
-  if (!openSkyHere || !n) return [];
-  const open = openSkyHere;
-  return [{ icon: '✶', text: n === 1 ? t('today.sky1') : t('today.sky', { n }), onClick: () => open() }];
-});
-
 function firstVisitHint() {
   try {
     if (localStorage.getItem('mushafHint')) return;
@@ -143,8 +107,23 @@ function firstVisitHint() {
   toast(t('mushaf.hint'));
 }
 
+/** The page last shown for an address, so a reopen can fetch its font before the layout is in. */
+function rememberPage(hash: string, page: number) {
+  try { localStorage.setItem('lastPage', JSON.stringify([hash, page])); } catch { /* storage blocked */ }
+}
+function knownPage(hash: string): number | null {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem('lastPage') ?? 'null');
+    if (Array.isArray(v) && v[0] === hash && Number.isInteger(v[1]) && v[1] >= 1 && v[1] <= PAGE_COUNT) return v[1] as number;
+  } catch { /* ignore */ }
+  return null;
+}
+
 export async function showMushaf(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
-  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah(), loadReflections()]);
+  // Reopening where the user left off: start that page's font right away, while the layout loads.
+  const known = knownPage(location.hash);
+  if (known) void loadPageFont(known).catch(() => {});
+  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah()]);
   let page = focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n);
   root.classList.add('screen-mushaf');
   document.body.classList.add('mushaf-mode');
@@ -156,10 +135,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
     bar.classList.toggle('show', show);
+    document.body.classList.toggle('tabs-up', show); // the tab bar comes up with the title bar
     if (show) void fillToday(today, () => toggleBar(false));
   };
   let markTapped = false; // the current tap started on a margin mark
@@ -222,48 +203,44 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
-    onGift: (s) => { sel.clear(); void import('./gift').then((m) => m.openGiftComposer(meta[s.surah - 1], s.lo, s.hi)); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
   });
 
-  root.append(bar, area, sel.bar, player.bar);
-
-  // --- Khatm circles: a thin gold edge on the pages of your juz; a page open ≥ 20 s counts as read ---
-  const juzPages = (j: number) => mushaf.pages.flatMap((pg, i) => (pg.juz === j ? [i + 1] : []));
-  circleCtx = { juzPages, goToPage: (p) => { toggleBar(false); go(p); } };
-  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); }, openCircles: () => openCircles(circleCtx!) };
-  openSkyHere = () => void import('./sky').then((x) => x.openSky({
-    current: page,
-    goToPage: (p) => { toggleBar(false); go(p); },
-    openCircle: (id) => void openCircle(circleCtx!, id),
-  }));
-  openLampsHere = () => void import('./lamps').then((x) => x.openLamps(page, (p) => { toggleBar(false); go(p); }));
-  const myPortion = () => new Set(myParts().filter(({ state, part }) => part.status === 'taken' && state.circle.status === 'open').flatMap(({ part }) => juzPages(part.juz)));
-  let portion = myPortion();
-  const decorate = () => {
-    portion = myPortion();
-    for (const [p, el] of built) el.classList.toggle('my-portion', portion.has(p));
-    startReadTimer();
+  const listenNow = () => {
+    toggleBar(false);
+    if (player.active()) player.toggle();
+    else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
   };
-  window.addEventListener('circles-changed', decorate);
+  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow }, true);
+  root.append(bar, area, sel.bar, player.bar, tabs);
+
+  ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
   const startReadTimer = () => {
-    clearTimeout(readTimer);
+    clearInterval(readTimer);
     const p = page;
     const ramadan = !!ramadanNow().day && !!ramadanData().plan;
-    // Every page open ≥ 20 s lights a star in the Home sky; circles and Ramadan count it too.
-    readTimer = window.setTimeout(() => {
-      if (p !== page) return;
-      logPageRead(p);
-      if (portion.has(p) || ramadan) { markPageRead(p, juzPages); markRamadanRead(p); }
-    }, 20_000);
+    // Honest counting (Me tab): a page counts as read only after it has been on screen for the
+    // reading time the user picked (default 1½ min); the clock stops while the app is hidden, so
+    // swiping past or leaving the phone does not count. Ramadan's portion keeps its 20 s.
+    const need = pageSeconds();
+    let seen = 0;
+    readTimer = window.setInterval(() => {
+      if (p !== page) { clearInterval(readTimer); return; }
+      if (document.hidden) return;
+      seen++;
+      if (seen === 20 && ramadan) markRamadanRead(p);
+      if (seen >= need) {
+        clearInterval(readTimer);
+        if (logPageRead(p)) countPage(mushaf, p);
+      }
+    }, 1000);
   };
-  if (account() && navigator.onLine) void loadCircles().catch(() => {});
   try {
     const open = sessionStorage.getItem('openCircle');
     if (open) {
       sessionStorage.removeItem('openCircle');
-      window.setTimeout(() => void openCircle(circleCtx!, open, true), 300);
+      window.setTimeout(() => void openCircle(open), 300);
     }
   } catch {
     /* ignore */
@@ -280,6 +257,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const repaintMarks = () => { for (const el of built.values()) if (el.dataset.fit) paintMarks(el); };
   window.addEventListener('bookmarks-changed', repaintMarks);
   window.addEventListener('reflections-changed', repaintMarks);
+  // Notes are read from the device after the first page shows (they only add margin marks).
+  void loadReflections().then(() => { repaintMarks(); pulseNotes(); });
 
   // Coming back to a page with an older note: its mark pulses once, with "You wrote here on …".
   const hint = h('button', { class: 'rf-hint', hidden: true });
@@ -354,7 +333,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const f = Math.min((base * width) / widest, lh * 0.72);
     el.style.setProperty('--f', `${Math.floor(f * 4) / 4}px`);
     el.dataset.fit = '1';
-    el.classList.toggle('my-portion', portion.has(Number(el.dataset.page)));
     paintMarks(el); // positions depend on the line heights just set
   }
   const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
@@ -386,6 +364,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
   }
 
+  let recentTimer = 0;
   function header() {
     const pg = mushaf.pages[page - 1];
     const segs = pg.lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
@@ -395,20 +374,41 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     pageNum.replaceChildren(...(ramadanDay() ? [crescent()] : []), String(page));
     history.replaceState(null, '', `#/s/${s}/${a}`);
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
+    rememberPage(`#/s/${s}/${a}`, page);
     startReadTimer();
+    // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
+    clearTimeout(recentTimer);
+    const p = page;
+    recentTimer = window.setTimeout(() => addRecentPage(p, s, a), 3000);
   }
 
   // A page whose font is still downloading slides in as a placeholder, replaced when it is ready.
   const placeholders = new Map<number, HTMLElement>();
   const placeholder = (p: number) => {
     if (!placeholders.has(p)) {
-      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true' },
-        h('span', { class: 'spinner' }), h('span', { class: 'mp-loading' }, t('common.page', { n: p }))));
+      // A skeleton of the page: 15 soft lines where the text will be, a light sweeping across them.
+      const lines = Array.from({ length: 15 }, (_, i) => h('span', { class: 'skel-line', style: i === 14 ? 'width:58%' : '' }));
+      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
+        ...lines));
     }
     return placeholders.get(p)!;
   };
 
   let renderId = 0;
+  // After a slide lands, the rest of the work (attaching the new neighbour, fitting it, the header,
+  // marks) waits a frame, so the landing frame itself stays light. A new swipe runs it at once.
+  let pendingLayout = 0;
+  function layoutSoon() {
+    cancelAnimationFrame(pendingLayout);
+    pendingLayout = requestAnimationFrame(() => { pendingLayout = 0; layout(); });
+  }
+  function flushLayout() {
+    if (!pendingLayout) return;
+    cancelAnimationFrame(pendingLayout);
+    pendingLayout = 0;
+    layout();
+  }
+  const idle = (f: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(f, { timeout: 600 }); else setTimeout(f, 120); };
   /** Show `page` with its neighbours at once (placeholders for pages still loading). */
   function layout() {
     const id = ++renderId;
@@ -428,7 +428,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     for (const p of want) if (!built.has(p)) void buildPage(p).then(attach);
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2]) if (valid(p)) void loadPageFont(p).catch(() => {});
+    // Build the pages two away while idle (their words, not yet fitted), so the next flip only fits.
+    idle(() => { if (id === renderId) for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p); });
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
+    releasePageFonts((p) => Math.abs(p - page) <= 6); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
   }
 
@@ -440,28 +443,36 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     strip.style.transition = ms ? `transform ${ms}ms cubic-bezier(.22,.8,.24,1)` : 'none';
     strip.style.transform = x ? `translateX(${x}px)` : '';
   }
+  let panRaf = 0;
+  let panX = 0;
   function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
     // Swiping again while a page is still sliding: let it land at once and follow the new swipe.
     if (animating) finishNow?.();
+    flushLayout();
     const dir = dx > 0 ? 1 : -1; // finger moving right brings in the next page (on the left)
     const target = page + dir;
     if (phase === 'move') {
       panning = true;
       strip.classList.add('moving');
-      setStrip(valid(target) ? dx : dx * 0.25); // resistance at the first and last page
+      panX = valid(target) ? dx : dx * 0.25; // resistance at the first and last page
+      // One transform per frame, however often the finger reports.
+      panRaf ||= requestAnimationFrame(() => { panRaf = 0; if (panning) setStrip(panX); });
       return;
     }
+    cancelAnimationFrame(panRaf);
+    panRaf = 0;
     panning = false;
     const fling = Math.abs(vx) > 0.35 && Math.sign(vx) === dir;
-    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx));
+    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx), Math.abs(vx));
     else {
-      setStrip(0, 240);
+      setStrip(0, 220);
       window.setTimeout(() => { if (!panning && !animating) strip.classList.remove('moving'); }, 260);
     }
   }
   /** Slide to a neighbouring page (from where the finger left it). */
-  function slideTo(target: number, from = 0) {
+  function slideTo(target: number, from = 0, speed = 0) {
     if (animating) finishNow?.();
+    flushLayout();
     const dir = target > page ? 1 : -1;
     if (!strip.querySelector(`[data-page="${target}"]`)) {
       page = target;
@@ -471,7 +482,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     animating = true;
     strip.classList.add('moving');
-    const ms = Math.round(160 + 160 * (1 - Math.min(1, from / W())));
+    // Carry the finger's speed: the rest of the way at that speed (px/ms), between 140 and 300 ms.
+    const rest = Math.max(0, W() - from);
+    const ms = Math.round(Math.min(300, Math.max(140, speed > 0.3 ? (rest / speed) * 1.6 : 160 + 140 * (rest / W()))));
     setStrip(dir * W(), ms);
     let done = false;
     const finish = () => {
@@ -479,10 +492,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       done = true;
       finishNow = null;
       page = target;
+      place(); // the pages already in the strip move into their new places in the same frame
       setStrip(0);
       strip.classList.remove('moving');
       animating = false;
-      layout();
+      layoutSoon();
     };
     finishNow = finish;
     strip.addEventListener('transitionend', finish, { once: true });
@@ -491,6 +505,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   function go(p: number) {
     if (animating) finishNow?.();
+    flushLayout();
     if (!valid(p) || p === page) return;
     if (Math.abs(p - page) === 1) slideTo(p);
     else {
@@ -552,34 +567,35 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   function openMenu() {
     const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: t('menu.pagePlaceholder', { n: PAGE_COUNT }), inputmode: 'numeric' });
-    const d: HTMLDialogElement = sheet(sheetHead(t('mushaf.menu'), () => d.close()),
-      h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); } }, `🎧  ${t('menu.listen')}`),
+    const group = (title: string) => h('h3', { class: 'menu-group' }, title);
+    const d: HTMLDialogElement = sheet(sheetHead(t('me.title'), () => d.close()),
+      h('div', { class: 'menu sheet-menu' },
+        group(t('menu.gRead')),
         h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, `📖  ${t('menu.allSurahs')}`),
-        h('a', { class: 'menu-item', href: '#/drafts', onclick: () => d.close() }, `🎬  ${t('menu.drafts')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
-          toggleBar(false);
-          go(mushaf.pageOf(s, a));
-          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
-        }); } }, `✎  ${t('menu.reflections')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(circleCtx!); } }, `◯  ${t('menu.circles')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLampsHere?.(); } }, `✦  ${t('menu.lamps')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openSkyHere?.(); } }, `✶  ${t('menu.sky')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./gift').then((m) => m.openGifts()); } }, `🎁  ${t('menu.gifts')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
-        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
-          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
         h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
           e.preventDefault();
           const p = Math.round(Number(input.value));
           if (valid(p)) { d.close(); toggleBar(false); go(p); }
         } }, input, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
+        group(t('menu.gYours')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
+          toggleBar(false);
+          go(mushaf.pageOf(s, a));
+          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
+        }); } }, `✎  ${t('menu.reflections')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
+        group(t('menu.gTogether')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
+        group(t('menu.gSettings')),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./themePicker').then((m) => m.openThemePicker()); } }, `◐  ${t('theme.menu')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
+        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
+          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
         h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => {
           setTimeTint(!timeTintOn());
           d.close();
@@ -627,14 +643,20 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
+  void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {
     let returning = false;
     try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
     if (returning) markTourSeen();
-    else { touring = true; showTour(firstVisitHint); }
+    else { touring = true; void import('./welcome').then((m) => m.showWelcome(firstVisitHint)); } // language, reciter, theme
   } else firstVisitHint();
+  // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
+  const intent = takeTabIntent();
+  if (intent === 'listen') listenNow();
+  else if (intent === 'menu') openMenu();
+  else if (intent === 'pick') pickHint();
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
   // Never over the tour: the moment waits for the next start.
   {
@@ -648,14 +670,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   return () => {
     renderId++;
+    cancelAnimationFrame(pendingLayout);
+    cancelAnimationFrame(panRaf);
     clearInterval(tintTimer);
     window.removeEventListener('bookmarks-changed', repaintMarks);
     window.removeEventListener('reflections-changed', repaintMarks);
-    window.removeEventListener('circles-changed', decorate);
-    clearTimeout(readTimer);
-    circleCtx = null;
-    openLampsHere = null;
-    openSkyHere = null;
+    clearInterval(readTimer);
+    clearTimeout(recentTimer);
     listenHere = null;
     ramadanCtx = null;
     window.removeEventListener('prefs-synced', applyTimeTint);
@@ -663,7 +684,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(resizeTimer);
     sel.destroy();
     player.destroy();
-    document.body.classList.remove('mushaf-mode', 'listening');
+    document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };

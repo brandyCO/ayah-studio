@@ -9,6 +9,8 @@ import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
 import { t } from '../i18n';
 import type { NightSource } from './night';
+import { sampleButton, stopSample } from './voiceSample';
+import { addListen } from '../data/journey';
 
 interface Verse {
   a: number;
@@ -178,6 +180,20 @@ export function createPlayer(o: PlayerHooks) {
     paint();
   }
 
+  // Minutes listened (Me tab): recitation actually played, flushed every 30 s and on pause.
+  let heard = 0;
+  let lastT = -1;
+  const flush = () => { if (heard >= 1) { addListen(heard); heard = 0; } };
+  audio.addEventListener('timeupdate', () => {
+    const now = audio.currentTime;
+    const dt = now - lastT;
+    if (!audio.paused && lastT >= 0 && dt > 0 && dt < 2) heard += dt / (audio.playbackRate || 1);
+    lastT = now;
+    if (heard >= 30) flush();
+  });
+  audio.addEventListener('seeking', () => { lastT = -1; });
+  audio.addEventListener('pause', () => { lastT = -1; flush(); });
+  audio.addEventListener('emptied', () => { lastT = -1; flush(); });
   audio.addEventListener('play', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); paint(); });
   audio.addEventListener('pause', () => { cancelAnimationFrame(raf); loading = false; paint(); });
   audio.addEventListener('waiting', () => { loading = true; paint(); }); // buffering
@@ -209,8 +225,8 @@ export function createPlayer(o: PlayerHooks) {
           if (at) void playFrom(at.s, at.a);
           else paint();
         },
-      }, reciterPickerLabel(r)))));
-    d.addEventListener('close', () => d.remove());
+      }, h('span', {}, reciterPickerLabel(r)), sampleButton(r)))));
+    d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();

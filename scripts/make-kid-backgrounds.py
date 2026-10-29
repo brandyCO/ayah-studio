@@ -29,7 +29,7 @@ def save(arr, name):
     arr = arr + rng.normal(0, 1.2, arr.shape)  # fine grain against banding
     im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
     im.save(OUT / name, quality=88, optimize=True, progressive=True)
-    im.resize((216, 384), Image.LANCZOS).save(OUT / name.replace('.jpg', '-thumb.jpg'), quality=82, optimize=True)
+    im.resize((216, 384), Image.LANCZOS).save(OUT / name.replace('.jpg', '-thumb.webp'), 'WEBP', quality=80, method=6)
 
 
 def hills(img, layers, y=yy, x=xx, w=W, h=H, blur=2):
@@ -107,5 +107,5 @@ def clouds(t):
 
 
 encode('kid-clouds-loop.mp4', clouds, N, VW, VH)
-Image.fromarray(np.clip(clouds(0), 0, 255).astype(np.uint8)).resize((216, 384), Image.LANCZOS).save(OUT / 'kid-clouds-loop-thumb.jpg', quality=82)
+Image.fromarray(np.clip(clouds(0), 0, 255).astype(np.uint8)).resize((216, 384), Image.LANCZOS).save(OUT / 'kid-clouds-loop-thumb.webp', 'WEBP', quality=80, method=6)
 print('done')
