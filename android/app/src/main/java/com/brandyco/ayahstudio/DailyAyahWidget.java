@@ -109,6 +109,25 @@ public class DailyAyahWidget extends AppWidgetProvider {
         return it;
     }
 
+    /** The app's white-on-clear picture as an alpha mask ≤ 720 px wide (1 byte a pixel), tinted white
+     *  by the view: a full-size colour picture is too big to hand to the launcher. */
+    static Bitmap alphaPicture(File f) {
+        try {
+            Bitmap src = BitmapFactory.decodeFile(f.getPath());
+            if (src == null) return null;
+            if (src.getWidth() > 720) {
+                Bitmap s = Bitmap.createScaledBitmap(src, 720, Math.max(1, Math.round(src.getHeight() * 720f / src.getWidth())), true);
+                src.recycle();
+                src = s;
+            }
+            Bitmap a = src.extractAlpha();
+            src.recycle();
+            return a;
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
     static RemoteViews views(Context context, AppWidgetManager m, int id, Item it) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.daily_ayah_widget);
         org.json.JSONObject data = WidgetStore.data(context);
@@ -119,10 +138,11 @@ public class DailyAyahWidget extends AppWidgetProvider {
         Bitmap ar = null;
         if (it.arabic && !it.key.isEmpty()) {
             File f = picture(context, it.key);
-            if (f.exists()) ar = BitmapFactory.decodeFile(f.getPath());
+            if (f.exists()) ar = alphaPicture(f);
         }
         if (ar != null) {
             v.setImageViewBitmap(R.id.daily_ar, ar);
+            v.setInt(R.id.daily_ar, "setColorFilter", 0xFFFFFFFF);
             v.setViewVisibility(R.id.daily_ar, View.VISIBLE);
             v.setViewVisibility(R.id.daily_text, View.GONE);
             v.setViewVisibility(R.id.daily_credit, View.GONE);
