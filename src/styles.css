@@ -1374,7 +1374,17 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-tile b { font-size: 26px; line-height: 1.1; color: var(--accent); }
 .me-tile-n { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .me-tile-n .wk-diff { font-size: var(--fs-2xs); }
-.me-gear { margin-inline-start: auto; font-size: 20px; text-decoration: none; }
+.me-gear { font-size: 20px; text-decoration: none; }
+/* Light (Noor) count in a top bar (Me, the studio) */
+.lt-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px 0 8px; border-radius: 999px; flex: none;
+  font: inherit; font-size: 13px; color: var(--rw-hi); background: color-mix(in srgb, var(--rw-n1) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rw-n2) 35%, transparent); font-variant-numeric: tabular-nums; cursor: default; }
+button.lt-chip { cursor: pointer; }
+.lt-chip b { font-weight: 700; }
+.lt-chip-ic { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, var(--rw-core) 0 22%, var(--rw-n2) 40%, transparent 72%);
+  box-shadow: 0 0 10px var(--rw-n2); }
+.topbar .lt-chip { margin-inline-start: auto; }
+.studio-top .lt-chip { height: 28px; font-size: 12px; }
 .set-label { display: block; margin: 10px 0 6px; font-size: var(--fs-s); }
 .bd-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .bd-row .bd-tile .badge-art { width: 56px !important; height: 56px !important; }

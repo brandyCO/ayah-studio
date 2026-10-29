@@ -7,19 +7,16 @@ import { addRecentPage } from '../data/history';
 import { loadMeta, reference, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
-import { isNative } from '../native';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
-import { accountLabel, openAccount } from './account';
-import { openDebugPanel } from './debug';
 import { icon } from './icons';
 import { h, toast } from './dom';
-import { LANGS, lang, locale, setLang, surahName, t } from '../i18n';
-import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
+import { locale, surahName, t } from '../i18n';
+import { currentTranslation, translationInfo } from '../data/translations';
 import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
 import { tafsirToggle } from './tafsir';
-import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday, setTimeTint, timeTintOn } from './living';
+import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday } from './living';
 import { createPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
@@ -30,7 +27,6 @@ import { countPage, pageSeconds } from '../data/journey';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 // The family circles screens load on first use.
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
-const openCircles = () => void import('./circles').then((m) => m.openCircles());
 import { selectionController, type Sel } from './selection';
 import { pickHint, tabBar, takeTabIntent } from './tabs';
 
@@ -136,7 +132,6 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
     h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
-    h('button', { class: 'icon-btn', 'aria-label': t('mushaf.menu'), onclick: () => openMenu() }, '☰'),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
     bar.classList.toggle('show', show);
@@ -538,71 +533,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
   }
 
-  async function openTranslationPicker() {
-    const { translationList } = await import('./translationPicker');
-    const d: HTMLDialogElement = sheet(sheetHead(t('tr.title'), () => d.close()),
-      h('p', { class: 'muted small' }, t('tr.note')),
-      h('div', { class: 'sheet-scroll' }, translationList(currentTranslation, (id) => { setTranslation(id); d.close(); })));
-  }
-
-  function openLanguage() {
-    const d: HTMLDialogElement = sheet(sheetHead(t('lang.title'), () => d.close()),
-      h('p', { class: 'muted small' }, t('lang.note')),
-      h('div', { class: 'menu' }, ...LANGS.map((l) => h('button', {
-        class: `menu-item tr-item${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir,
-        onclick: () => { if (l.id !== lang()) setLang(l.id); else d.close(); },
-      }, h('span', { class: 'tr-name' }, l.name), h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : '')))));
-  }
-
-  const morning = () => { try { return JSON.parse(localStorage.getItem('morningAyah') ?? 'null') as { on?: boolean; time?: string } | null; } catch { return null; } };
-  const morningOn = () => !!morning()?.on;
-  const morningTime = () => morning()?.time ?? '';
-
   /** The first ayah that begins on the current page (or the one continuing onto it). */
   function firstAyahOnPage(): { s: number; a: number } {
     const segs = mushaf.pages[page - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
     const seg = segs.find((x) => mushaf.segStart.get(x) === 1) ?? segs[0];
     return seg ? { s: seg[0], a: seg[1] } : { s: n, a: 1 };
-  }
-
-  function openMenu() {
-    const input = h('input', { type: 'number', class: 'search', min: '1', max: String(PAGE_COUNT), placeholder: t('menu.pagePlaceholder', { n: PAGE_COUNT }), inputmode: 'numeric' });
-    const group = (title: string) => h('h3', { class: 'menu-group' }, title);
-    const d: HTMLDialogElement = sheet(sheetHead(t('me.title'), () => d.close()),
-      h('div', { class: 'menu sheet-menu' },
-        group(t('menu.gRead')),
-        h('a', { class: 'menu-item', href: '#/', onclick: () => d.close() }, `📖  ${t('menu.allSurahs')}`),
-        h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
-          e.preventDefault();
-          const p = Math.round(Number(input.value));
-          if (valid(p)) { d.close(); toggleBar(false); go(p); }
-        } }, input, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); setReaderMode('translation'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, `🔤  ${t('menu.translationView')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openBookmarks(); } }, `🔖  ${t('menu.bookmarks')}`),
-        group(t('menu.gYours')),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openReflections(meta, (s, a) => {
-          toggleBar(false);
-          go(mushaf.pageOf(s, a));
-          window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
-        }); } }, `✎  ${t('menu.reflections')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!)); } }, `☾  ${t('menu.ramadan')}`),
-        group(t('menu.gTogether')),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openCircles(); } }, `◯  ${t('menu.circles')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./kids').then((m) => m.openKidsSpace()); } }, `🌙  ${t('menu.kids')}`),
-        group(t('menu.gSettings')),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openAccount(); } }, accountLabel()),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void openTranslationPicker(); } }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./themePicker').then((m) => m.openThemePicker()); } }, `◐  ${t('theme.menu')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openLanguage(); } }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
-        isNative() && h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./morning').then((m) => m.openMorning()); } },
-          `✧  ${t('morning.menu', { state: morningOn() ? morningTime() : t('menu.off') })}`),
-        h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => {
-          setTimeTint(!timeTintOn());
-          d.close();
-          toast(timeTintOn() ? t('menu.timeTintOn') : t('menu.timeTintOff'));
-        } }, `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); toggleBar(false); showTour(); } }, `✧  ${t('menu.tour')}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openDebugPanel(); } }, `⚙  ${t('menu.deviceCheck')}`)));
   }
 
   const dateFmt = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
@@ -655,8 +590,16 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
   if (intent === 'listen') listenNow();
-  else if (intent === 'menu') openMenu();
   else if (intent === 'pick') pickHint();
+  // From Settings (the old ☰ menu's reading items live there now).
+  else if (intent === 'bookmarks') openBookmarks();
+  else if (intent === 'tour') showTour();
+  else if (intent === 'ramadan') void import('./ramadan').then((x) => x.openRamadan(ramadanCtx!));
+  else if (intent === 'reflections') void openReflections(meta, (s, a) => {
+    go(mushaf.pageOf(s, a));
+    window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
+  });
+  else if (intent?.startsWith('page:')) { const p = Number(intent.slice(5)); if (valid(p)) go(p); }
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
   // Never over the tour: the moment waits for the next start.
   {

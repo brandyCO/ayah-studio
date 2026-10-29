@@ -1204,6 +1204,15 @@ duas/reflections section in Me.
       (`src/together/relight.ts`: share sheet / copy link `#/relight/{code}`), friend's page
       `src/ui/relight.ts` (the ember catches; sign-in first, resumed after), the owner's app takes relights
       on start / resume / Me (`journey.revive()`: missed days → `revived`). Privacy page updated
+- [x] M3c (owner request 2026-10-29, part done): **location** via `@capacitor/geolocation` in the app (`src/data/location.ts`;
+      the WebView's own geolocation failed although the permission was granted), clear messages for denied / off /
+      timeout; the **☰ menu is gone** — its items live in Me → ⚙ (Reading, Prayer, Widgets, Reminders, Your Quran,
+      App; mushaf-bound ones open the mushaf with an intent: bookmarks, reflections, ramadan, tour, `page:N`); the
+      device check ⚙ on the surah list is now a Settings link (Device check stays in the studio's quality menu);
+      a **Light chip** (`src/ui/lightChip.ts`) in the Me and studio top bars; **streak + tasbih widgets redrawn**
+      in the theme colours (`WidgetArt.java`: night background, the app's flame, Mon–Sun checks, ring; data
+      `theme`, `streak.hist`, `letters`). Still to do: prayer + daily ayah widgets restyle, daily ayah widget in
+      Arabic (JS side `dailyWidgetLang()` / pictures in `morning.ts` ready, Java + setting not yet)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

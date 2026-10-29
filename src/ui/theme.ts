@@ -157,6 +157,7 @@ export function applyTheme(id = themeId()) {
   document.documentElement.dataset.theme = x.id;
   const dark = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="dark"]');
   if (dark) dark.content = x.id === DEFAULT_THEME ? '#07130f' : night(x).meta;
+  window.dispatchEvent(new Event('theme-changed')); // the Android widgets follow the colours
 }
 
 export function setTheme(id: string) {

@@ -7,7 +7,6 @@ import {
   type AyahHit, type Jump,
 } from '../data/search';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { openDebugPanel } from './debug';
 import { tabBar } from './tabs';
 import { h, skeletonRows } from './dom';
 import { lastRead } from './prefs';
@@ -282,7 +281,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, t('list.tagline'))),
       h('button', { class: 'chip', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, t('list.kids')),
-      h('button', { class: 'icon-btn', 'aria-label': t('list.deviceCheck'), title: t('list.deviceCheck'), onclick: openDebugPanel }, '⚙')),
+      h('a', { class: 'icon-btn', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
     form,
     recent,
     tabs,

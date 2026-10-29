@@ -3,7 +3,7 @@
 // texts in the chosen translation (DailyAyahWidget.java via DailyPlugin.java). Taps on either open
 // the ayah. The web build shows the ayah of the day on the Today card only.
 import { registerPlugin } from '@capacitor/core';
-import { loadMeta, reference, surahTranslation } from '../data/quran';
+import { loadMeta, reference, surahText, surahTranslation } from '../data/quran';
 import { loadDaily, pick } from '../data/daily';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { t } from '../i18n';
@@ -11,7 +11,7 @@ import { isNative } from '../native';
 import { h, toast } from './dom';
 
 const Daily = registerPlugin<{
-  store(o: { texts: Record<string, string>; names: Record<string, string>; credit: string }): Promise<void>;
+  store(o: { texts: Record<string, string>; names: Record<string, string>; credit: string; lang: DailyLang; images: Record<string, string> }): Promise<void>;
   takeLaunchHash(): Promise<{ hash?: string }>;
 }>('Daily');
 
@@ -71,10 +71,58 @@ export async function scheduleMorning(): Promise<boolean> {
   return true;
 }
 
-/** The widget shows the chosen translation: hand it the texts of the whole list. */
+export type DailyLang = 'ar' | 'tr';
+/** The daily ayah widget's text: the Arabic (drawn by the app in the Quran font) or the translation. */
+export function dailyWidgetLang(): DailyLang {
+  try { return localStorage.getItem('dailyWidgetLang') === 'ar' ? 'ar' : 'tr'; } catch { return 'tr'; }
+}
+export function setDailyWidgetLang(v: DailyLang) {
+  try { localStorage.setItem('dailyWidgetLang', v); } catch { /* ignore */ }
+  if (isNative()) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e));
+}
+
+const AR_DAYS = 21; // Arabic pictures are made for the next three weeks; the app renews them on start
+/** The ayat as a white picture (transparent background) in the KFGQPC font: the widget cannot use the
+ *  app's Quran font, and the Quran is never drawn in a system font. Wrapped only between words, never
+ *  cut (rule 1); the widget tints it and scales it to fit. */
+async function arabicPicture(text: string): Promise<string> {
+  const W = 960;
+  const font = (px: number) => `${px}px UthmanicHafs`;
+  await document.fonts.load(font(60), text).catch(() => {});
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d')!;
+  const words = text.split(' ');
+  const wrap = (px: number) => {
+    ctx.font = font(px);
+    const lines: string[] = [];
+    let cur = '';
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (cur && ctx.measureText(next).width > W) { lines.push(cur); cur = w; } else cur = next;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  };
+  let px = 64;
+  let lines = wrap(px);
+  while (px > 30 && lines.length * px * 1.75 > 470) lines = wrap(--px);
+  const lh = Math.round(px * 1.75);
+  c.width = W;
+  c.height = lines.length * lh + Math.round(px * 0.6);
+  ctx.font = font(px);
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#fff';
+  lines.forEach((l, i) => ctx.fillText(l, W / 2, i * lh + Math.round(px * 1.3)));
+  return c.toDataURL('image/png').split(',')[1];
+}
+
+/** The widget shows the chosen translation, or the Arabic as pictures: hand it the whole list. */
 async function storeWidgetTexts() {
   const [d, meta] = await Promise.all([loadDaily(), loadMeta()]);
   const info = translationInfo(currentTranslation());
+  const lang = dailyWidgetLang();
   const texts: Record<string, string> = {};
   const names: Record<string, string> = {};
   for (const x of d.items) {
@@ -82,7 +130,17 @@ async function storeWidgetTexts() {
     texts[key(x)] = tr.slice(x.from - 1, x.to).join(' ');
     names[String(x.s)] = meta[x.s - 1].en;
   }
-  await Daily.store({ texts, names, credit: info.translator });
+  const images: Record<string, string> = {};
+  if (lang === 'ar') {
+    const now = new Date();
+    for (let i = 0; i < AR_DAYS; i++) {
+      const x = pick(d, new Date(now.getFullYear(), now.getMonth(), now.getDate() + i));
+      if (images[key(x)]) continue;
+      const ar = await surahText(x.s);
+      images[key(x)] = await arabicPicture(ar.slice(x.from - 1, x.to).join(' '));
+    }
+  }
+  await Daily.store({ texts, names, credit: info.translator, lang, images });
 }
 
 /** App start (Android): taps on the widget or a notification open the ayah; keep the widget and the
@@ -103,7 +161,7 @@ export async function initDailyNative() {
   window.addEventListener('translation-changed', sync);
 }
 
-/** ☰ → Morning ayah (Android app): on/off and the time. */
+/** Settings → Morning ayah (Android app): on/off and the time. */
 export function openMorning() {
   const st = morningSettings();
   const time = h('input', { type: 'time', class: 'search', value: st.time, min: '06:00', max: '21:59' });
