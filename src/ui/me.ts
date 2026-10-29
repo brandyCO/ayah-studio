@@ -7,7 +7,8 @@ import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSecon
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
 import { badgeMoment } from '../data/claims';
-import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed } from '../data/journey';
+import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
+import { ALL_LIGHT, BADGE_LIGHT, dayLightMax, lightFor } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -158,17 +159,17 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     }
   };
   const claimGoalRow = (g: GoalProgress, from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') }, from)),
-    () => claimGoal(g.id));
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') }, from, lightFor(g))),
+    () => claimGoal(g.id, lightFor(g)));
   const claimAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') }, from)),
-    () => claimGoal('all'));
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') }, from, ALL_LIGHT)),
+    () => claimGoal('all', ALL_LIGHT));
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
       const k = badgeMoment(b);
-      return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b }, from);
+      return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b }, from, BADGE_LIGHT[b.tier]);
     }),
-    () => claimBadge(b.id));
+    () => claimBadge(b.id, BADGE_LIGHT[b.tier]));
 
   // --- today's goals ---
   const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
@@ -202,6 +203,30 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarHelp'))
           : g.kind === 'custom' && g.target === 1 ? (met ? t('goal.doneToday') : t('cg.mine')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
       act);
+  };
+  // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
+  // The lantern fills with this week's Light against what seven days of today's goals could give.
+  const lightStrip = () => {
+    const week = stats('week').light;
+    const month = stats('month').light;
+    const today = lightOn(dayKey());
+    const fill = Math.min(1, week / Math.max(1, 7 * dayLightMax()));
+    const lantern = h('span', { class: 'lt-lantern', 'aria-hidden': 'true' });
+    lantern.innerHTML = `<svg viewBox="0 0 32 44"><path d="M12 3h8M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><defs><clipPath id="lt-c"><rect x="5" y="7" width="22" height="31" rx="9"/></clipPath></defs><rect x="5" y="7" width="22" height="31" rx="9" class="lt-glass"/><rect x="5" y="${(7 + 31 * (1 - fill)).toFixed(2)}" width="22" height="${(31 * fill).toFixed(2)}" clip-path="url(#lt-c)" class="lt-fill"/><path d="M11 41h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    return h('button', { class: 'lt-strip', onclick: openLight },
+      lantern,
+      h('span', { class: 'lt-txt' },
+        h('b', {}, t('lt.today', { n: today })),
+        h('span', { class: 'muted small' }, t('lt.line', { week, month }))));
+  };
+  const openLight = () => {
+    const all = stats('all').light;
+    dialog(t('lt.title'),
+      h('div', { class: 'lt-sheet' },
+        h('div', { class: 'me-tiles' },
+          ...([['lt.tToday', lightOn(dayKey())], ['lt.tWeek', stats('week').light], ['lt.tMonth', stats('month').light], ['lt.tAll', all]] as [Key, number][])
+            .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, t(k))))),
+        h('p', { class: 'muted small' }, t('lt.help'))));
   };
   // A first pace (once), then the goals; at most one gentle suggestion a week.
   const paceCard = () => h('div', { class: 'pace' },
@@ -237,6 +262,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         ? h('button', { class: 'claim-all', onclick: (e: Event) => void claimAll(e.currentTarget as Element) }, `✦ ${t('cel.claimAll')}`)
         : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
+      list.length ? lightStrip() : '',
       h('div', { class: 'goal-links' },
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
@@ -335,6 +361,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'tabs me-tabs', role: 'tablist' },
         tab('week', t('me.week')), tab('month', t('me.month')), tab('all', t('me.all'))),
       h('div', { class: 'me-tiles' },
+        tile(String(st.light), t('me.light'), vs('light')),
         tile(String(st.pages), t('me.pages'), vs('pages')),
         tile(String(st.ayat), t('me.ayat'), vs('ayat')),
         tile(minutes(st.listen), t('me.listened'), vs('listen', (n) => minutes(n))),

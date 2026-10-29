@@ -1139,6 +1139,13 @@ duas/reflections section in Me.
       sheet, tasbih or reward is open), `src/ui/streakMoment.ts` plays: the flame springs up from a burst,
       the count rolls from yesterday's number to today's, today's circle stamps in its check, Continue
       (pref `flameSeen`; reduced motion → the still end picture)
+      **Light (Noor)** (owner decision 2026-10-28, "Light (Noor), private"): each claimed reward adds Light,
+      stored per claim in `DayRec.n` (id → amount; the same claim on two devices counts once, merged by max):
+      `lightFor()` in `goals.ts` (pages 10/page, memorise 15/ayah, reels 10, dhikr 5/10/20/40 for 33/100/300/1000,
+      adhkar 15, own goals a fixed 10), `ALL_LIGHT` 20 for every goal met, `BADGE_LIGHT` 25/50/100/200 by tier.
+      The moment shows "+N Light" counting up; under today's goals a strip with a lantern filling with this
+      week's Light (against 7 × `dayLightMax()`) + today / week / month, tap → "Your Light" sheet (+ all time,
+      a line that it is not a measure of reward); stats tile Light with ▲/▼. No leaderboard, never shared
       Speed: streak() and stats('all') are memoised per change, goals parsed once per change, rewards and
       the Me screen repaint at most once a frame, the streak card only when it changed
 - [x] M2 Daily goals (`src/data/goals.ts`, localStorage `goals`; Me → Today's goals + Edit): pages read
