@@ -25,6 +25,7 @@ import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
 import { markPanel, saveMark, savedMark } from './markPanel';
+import { markKeyAt, markPlaced } from '../engine/mark';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
 import { breathOf } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
@@ -1180,6 +1181,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       project,
       busy: () => !!exporting,
       duration: () => tl?.duration ?? 0,
+      time: () => t,
+      seek: (x) => { pause(); t = x; spine.reveal(x); dirty = true; refreshUI(); },
+      playAround: (a, b) => playAround(a, b),
+      refresh: () => refreshUI(),
       changed: (live) => {
         void loadLogo(project.mark?.logo).then(() => (dirty = true));
         cancelAnimationFrame(markRaf);
@@ -1652,7 +1657,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     setGap: (i, g) => { if (!exporting) setGap(i, g); },
     tail: () => project.tail ?? 0,
     setTail: (v) => { if (!exporting) setTail(v); },
-    keys: () => (layerSel ? keyTimes(layerSel) : []),
+    keys: () => (layerSel ? keyTimes(layerSel) : option?.id === 'watermark' ? project.mark?.anim?.keys.map((k) => k.t) ?? [] : []),
   });
 
   // Move and scale by touch on the preview (text block or background), keyframed when the layer has keys.
@@ -1672,7 +1677,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const m = project.mark;
       if (!m || exporting) return;
       const wasTop = m.pos === 'tl' || m.pos === 'tr';
-      m.x = Math.round(x * 1000) / 1000;
+      markPlaced(m, t, { x: Math.round(x * 1000) / 1000 }); // an animated mark gets a keyframe here
       m.pos = top ? (x < 0.5 ? 'tl' : 'tr') : x < 0.34 ? 'bl' : x > 0.66 ? 'br' : 'bc';
       saveMark(m);
       if (top !== wasTop) rebuild(); // the mark's strip moved: the text area changes
@@ -2057,6 +2062,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (guides) drawGuides(pctx, guides.centred);
     if (layerSel && !studio.classList.contains('watching')) drawSelection(pctx, layerSel, drawn);
     if (layerSel && (keyIndex(project.motion?.[layerSel], t) >= 0) !== shownOnKey) refreshUI();
+    if (option?.id === 'watermark' && project.mark) { // the watermark's keyframe button follows the playhead
+      const kb = studio.querySelector<HTMLElement>('.mk-key'), on = markKeyAt(project.mark, t) >= 0;
+      if (kb && kb.classList.contains('on') !== on) { kb.classList.toggle('on', on); kb.textContent = ui(on ? 'mv.key-remove' : 'mv.key-add'); }
+    }
     timeLabel.textContent = `${clock(t)} / ${clock(tl.duration)}`;
     if (!panel.hidden) {
       panelScrub.max = String(tl.duration);

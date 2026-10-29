@@ -517,6 +517,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       lead and an outro into ≥ 3 s tail. Lines that need an ending (dedication, series "Part k of N",
       Kids keepsake, Ramadan recap, translation credit) are drawn over the ending (`hasEnding()`,
       `giveEnding()` makes the tail ≥ `OUTRO`)
+- [x] Logo effects (owner request 2026-10-29): Layout → Watermark → **Comes in / Goes out**: None, Fade,
+      Scale in, Zoom, Slide, each 0.2–3 s (`mark.fxIn/fxOut/lenIn/lenOut`, `markFx()`; without `from` / `to`
+      an effect plays at the reel's start / end; picking one plays it). **Keyframes** (`mark.anim`, a
+      motion `Track`: x across the safe width 0–1, size 30–100 % of Size): add/remove at the playhead,
+      ‹ ›, Clear, "Size here"; dragging an animated mark sets a key; gold diamonds on the ruler while
+      the panel is open. Everything is drawn clipped to the mark's strip and the safe width (rule 6);
+      scaling grows from the side the mark sits against. Keyframes stay with the reel (not the device pref)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

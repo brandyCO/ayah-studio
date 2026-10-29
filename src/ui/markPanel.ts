@@ -1,7 +1,7 @@
 // Layout → Watermark: the small Ayah Studio mark on/off, the user's own mark (text or logo) with its
 // place, size and opacity, and one button that removes every watermark. The user's mark is kept on
 // this device for their next reels.
-import { cleanMarkText, defaultMark, MARK_POS, MARK_SIZE, MARK_TEXT_MAX, validMark, type Mark, type MarkKind, type MarkPos } from '../engine/mark';
+import { cleanMarkText, defaultMark, markAddKey, markKeyAt, markPlaced, markPose, markRemoveKey, MARK_FX, MARK_FX_LEN, MARK_KEY_S, MARK_POS, MARK_SIZE, MARK_TEXT_MAX, validMark, type Mark, type MarkFx, type MarkKind, type MarkPos } from '../engine/mark';
 import type { Project } from '../engine/project';
 import { addLogo, listLogos, loadLogo, removeLogo } from '../data/logos';
 import { t as ui } from '../i18n';
@@ -14,7 +14,9 @@ export function savedMark(): Mark | undefined {
   try { return validMark(JSON.parse(localStorage.getItem(PREF) ?? 'null')); } catch { return undefined; }
 }
 function saveMark(m: Mark) {
-  try { localStorage.setItem(PREF, JSON.stringify(m)); } catch { /* private window */ }
+  // Keyframes belong to this reel (its own length); the next reel gets the rest.
+  const { anim: _anim, ...keep } = m;
+  try { localStorage.setItem(PREF, JSON.stringify(keep)); } catch { /* private window */ }
 }
 
 export interface MarkPanelOptions {
@@ -23,6 +25,12 @@ export interface MarkPanelOptions {
   duration: () => number; // the reel's length in seconds (for the mark's start and end)
   /** After a change: relayout (the mark's strip may have changed) and record it. `live`: while dragging a slider. */
   changed: (live?: boolean) => void;
+  /** The playhead, moving it, and playing a stretch (to show an effect). */
+  time: () => number;
+  seek: (t: number) => void;
+  playAround: (a: number, b: number) => void;
+  /** Redraw the panel (keyframe buttons follow the playhead). */
+  refresh: () => void;
 }
 
 export { saveMark };
@@ -91,6 +99,8 @@ export function markPanel(o: MarkPanelOptions): Node[] {
     nodes.push(note(ui('mk.logo-note')));
   }
 
+  const D = Math.max(1, Math.round(o.duration() * 10) / 10);
+  const secs = (v: number) => `${v.toFixed(1)} s`;
   if (m.kind !== 'off') {
     const names: Record<MarkPos, string> = { tl: ui('mk.tl'), tr: ui('mk.tr'), bl: ui('mk.bl'), bc: ui('mk.bc'), br: ui('mk.br') };
     nodes.push(
@@ -99,8 +109,6 @@ export function markPanel(o: MarkPanelOptions): Node[] {
       ...slider(20, 100, 5, () => Math.round(m.opacity * 100), (v) => { m.opacity = v / 100; }, ui('mk.opacity'), (v) => `${Math.round(v)} %`),
     );
     // When it shows: from / until (the end slider's last step = to the very end).
-    const D = Math.max(1, Math.round(o.duration() * 10) / 10);
-    const secs = (v: number) => `${v.toFixed(1)} s`;
     nodes.push(
       ...slider(0, D, 0.1, () => Math.min(m.from ?? 0, D), (v) => { if (v > 0) m.from = v; else delete m.from; if (m.to !== undefined && m.to <= v + 0.5) m.to = Math.min(D, v + 0.5); },
         ui('mk.from'), (v) => (v > 0 ? secs(v) : ui('mk.start'))),
@@ -108,6 +116,42 @@ export function markPanel(o: MarkPanelOptions): Node[] {
         ui('mk.to'), (v) => (v >= D ? ui('mk.end') : secs(v))),
       note(ui('mk.drag-note')),
     );
+
+    // Comes in / goes out: a calm effect each, with its length; picking one plays it.
+    const fxNames: Record<MarkFx, string> = { none: ui('mk.fx-none'), fade: ui('mk.fx-fade'), scale: ui('mk.fx-scale'), zoom: ui('mk.fx-zoom'), slide: ui('mk.fx-slide') };
+    const fxRow = (label: string, get: () => MarkFx | undefined, put: (v: MarkFx) => void, len: () => number, putLen: (v: number) => void, show: () => void) => {
+      const nodes: Node[] = [row(label, chips<MarkFx>(MARK_FX.map((x) => [x, fxNames[x]]), () => get() ?? 'none', (v) => { set(() => put(v)); show(); }))];
+      if (get() && get() !== 'none') nodes.push(...slider(MARK_FX_LEN[0], MARK_FX_LEN[1], 0.1, len, putLen, ui('mk.fx-len'), secs));
+      return nodes;
+    };
+    const showIn = () => { const a = m.from ?? 0; o.playAround(a, a + (m.lenIn ?? 0.6)); };
+    const showOut = () => { const b = m.to ?? D; o.playAround(b - (m.lenOut ?? 0.6), b); };
+    nodes.push(
+      ...fxRow(ui('mk.in'), () => m.fxIn, (v) => { m.fxIn = v; }, () => m.lenIn ?? 0.6, (v) => { m.lenIn = v; }, showIn),
+      ...fxRow(ui('mk.out'), () => m.fxOut, (v) => { m.fxOut = v; }, () => m.lenOut ?? 0.6, (v) => { m.lenOut = v; }, showOut),
+    );
+
+    // Keyframes: place / size at moments of the reel; it glides between them along its strip.
+    const t = o.time();
+    const on = markKeyAt(m, t) >= 0;
+    const ks = m.anim?.keys.map((k) => k.t) ?? [];
+    const prev = [...ks].reverse().find((x) => x < t - 0.05), next = ks.find((x) => x > t + 0.05);
+    nodes.push(
+      row(ui('mk.keys'), h('div', { class: 'chips' },
+        h('button', { class: `chip mk-key${on ? ' on' : ''}`, onclick: () => {
+          const now = o.time(); // the playhead may have moved since the panel was drawn
+          set((x) => (markKeyAt(x, now) >= 0 ? markRemoveKey(x, now) : markAddKey(x, now)));
+          o.refresh();
+        } }, ui(on ? 'mv.key-remove' : 'mv.key-add')),
+        h('button', { class: 'chip', disabled: prev === undefined, 'aria-label': ui('mv.key-prev'), onclick: () => { if (prev !== undefined) o.seek(prev); } }, '‹'),
+        h('button', { class: 'chip', disabled: next === undefined, 'aria-label': ui('mv.key-next'), onclick: () => { if (next !== undefined) o.seek(next); } }, '›'),
+        h('button', { class: 'chip', disabled: !m.anim, onclick: () => { set((x) => { delete x.anim; }); o.refresh(); } }, ui('mk.keys-clear')))),
+    );
+    if (m.anim) {
+      nodes.push(...slider(MARK_KEY_S[0] * 100, MARK_KEY_S[1] * 100, 5, () => Math.round((markPose(m, o.time())?.s ?? 1) * 100),
+        (v) => markPlaced(m, o.time(), { s: v / 100 }), ui('mk.size-here'), (v) => `${Math.round(v)} %`));
+    }
+    nodes.push(note(ui(m.anim ? 'mk.keys-note-on' : 'mk.keys-note')));
   }
 
   nodes.push(
