@@ -1229,6 +1229,9 @@ duas/reflections section in Me.
       column in a pill); **daily ayah in Arabic** (Me → ⚙ → Widgets → Today's ayah: Arabic / translation,
       `dailyWidgetLang()`): the app draws the next 21 days' ayat in its Quran font as PNGs (`arabicPicture()` in
       `morning.ts`) → `DailyPlugin.store` writes `files/daily/{key}.png`; without a picture the translation shows
+      Prayer reminder sounds **Adhan (opening)** / **Full adhan** (`prayer_adhan_full.ogg`, channel `prayer_adhanFull`; swiping the notification stops it) (owner request 2026-10-29, default for new settings): the opening
+      "Allahu Akbar, Allahu Akbar" (21 s, faded, `res/raw/prayer_adhan.ogg`, channel `prayer_adhan`; a copy in
+      `public/sounds/` plays when the chip is tapped) cut from a recording the owner supplied and approved
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

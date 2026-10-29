@@ -27,7 +27,7 @@ import { accountLabel } from './account';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
 import { isNative } from '../native';
-import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, setPrayerAlerts } from './prayerAlerts';
+import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
 import { account } from '../cloud/auth';
 import { openAccount } from './account';
@@ -599,7 +599,7 @@ export function showMeSettings(root: HTMLElement): () => void {
       h('b', { class: 'set-label' }, t('pa.when')),
       chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
       h('b', { class: 'set-label' }, t('pa.sound')),
-      chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => save((c) => ({ ...c, sound: x }))),
+      chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => { previewSound(x); save((c) => ({ ...c, sound: x })); }),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),
