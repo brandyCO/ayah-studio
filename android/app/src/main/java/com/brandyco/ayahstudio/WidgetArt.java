@@ -60,7 +60,9 @@ final class WidgetArt {
     }
 
     static float density(Context c) {
-        return Math.min(c.getResources().getDisplayMetrics().density, 2.6f);
+        // Capped at 2: everything a widget shows travels to the launcher in one Binder call (≈ 1 MB);
+        // bigger pictures make the update fail and the launcher shows "Can't load widget".
+        return Math.min(c.getResources().getDisplayMetrics().density, 2f);
     }
 
     /** The widget's size in px (portrait: min width × max height), or the default in dp. */
@@ -78,16 +80,19 @@ final class WidgetArt {
         return new int[] { Math.max(80, Math.round(w * d)), Math.max(80, Math.round(h * d)) };
     }
 
-    /** The night card: a deep gradient in the theme's hue, a glow rising from the lower corner. */
-    static Bitmap background(Context c, Pal p, int w, int h) {
-        Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+    /** Longest side of the background picture. It is only soft gradients, so the launcher's scaling
+     *  up is invisible, and at 2 bytes a pixel it stays far below the Binder limit. */
+    private static final int BG_MAX = 360;
+
+    /** The night card: a deep gradient in the theme's hue, a glow rising from the lower corner.
+     *  Square and opaque (RGB 565): the rounded corners come from the layout's outline (widget_frame). */
+    static Bitmap background(Context c, Pal p, int fullW, int fullH) {
+        float k = Math.min(1f, BG_MAX / (float) Math.max(fullW, fullH));
+        int w = Math.max(16, Math.round(fullW * k)), h = Math.max(16, Math.round(fullH * k));
+        Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
         Canvas cv = new Canvas(b);
-        float r = 24 * density(c);
         RectF box = new RectF(0, 0, w, h);
-        Path clip = new Path();
-        clip.addRoundRect(box, r, r, Path.Direction.CW);
-        cv.clipPath(clip);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
         paint.setShader(new LinearGradient(0, 0, w * 0.35f, h, new int[] { p.night, p.night2, p.night3 }, new float[] { 0, 0.55f, 1 }, Shader.TileMode.CLAMP));
         cv.drawRect(box, paint);
         float big = Math.max(w, h);
@@ -97,12 +102,6 @@ final class WidgetArt {
         paint.setShader(new RadialGradient(w * 0.98f, -h * 0.15f, big * 0.6f,
             new int[] { alpha(p.n3, 0.16f), alpha(p.n3, 0) }, null, Shader.TileMode.CLAMP));
         cv.drawRect(box, paint);
-        paint.setShader(null);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(1.2f * density(c));
-        paint.setColor(Color.argb(30, 255, 255, 255));
-        float in = paint.getStrokeWidth() / 2;
-        cv.drawRoundRect(new RectF(in, in, w - in, h - in), r - in, r - in, paint);
         return b;
     }
 
