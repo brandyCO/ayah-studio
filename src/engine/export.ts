@@ -28,6 +28,8 @@ export interface ExportOptions {
   height: 1920 | 1280;
   onProgress: (fraction: number) => void;
   signal: AbortSignal;
+  /** The chosen cover frame as a JPEG (also embedded as the MP4's cover art). */
+  onCover?: (jpeg: Blob) => void;
 }
 
 let aacRegistered = false;
@@ -63,6 +65,19 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
   const audio = new AudioBufferSource({ codec: path.audioCodec, bitrate: 128_000 });
   output.addVideoTrack(video, { frameRate: FPS });
   output.addAudioTrack(audio);
+
+  // The cover frame: drawn first, embedded as cover art, handed back as an image.
+  const cover = o.project.cover;
+  if (cover !== undefined && cover <= o.timeline.duration) {
+    const spans0 = sceneSpans(o.timeline.scenes, o.project.transition);
+    await prepareScenes(spans0, cover, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
+    render(ctx, cover, o.project, o.timeline, o.media);
+    const jpeg = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, 'image/jpeg', 0.92));
+    if (jpeg) {
+      if (path.container === 'mp4') output.setMetadataTags({ images: [{ data: new Uint8Array(await jpeg.arrayBuffer()), mimeType: 'image/jpeg', kind: 'coverFront' }] });
+      o.onCover?.(jpeg);
+    }
+  }
 
   const abort = () => void output.cancel();
   o.signal.addEventListener('abort', abort);

@@ -847,7 +847,33 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   /** One-tap styles: a finished look (background, mood, text mode, highlight, finishing touches). */
   // My styles: the user's own looks, saved on this device and reapplied in one tap.
-  type MyStyle = { id: string; name: string; look: Look };
+  // Besides the look, a style keeps the finishing settings that are otherwise per device.
+  type StyleExtra = { cinema?: boolean; tajweed?: boolean; arSize?: number; slowmo?: number };
+  type MyStyle = { id: string; name: string; look: Look; extra?: StyleExtra };
+  const extraOf = (): StyleExtra => ({ cinema: !!project.cinema, tajweed: !!project.tajweed, arSize: project.arSize, slowmo: project.slowmo ?? 1 });
+  function applyExtra(x: StyleExtra | undefined) {
+    if (!x || typeof x !== 'object') return;
+    if (typeof x.cinema === 'boolean') project.cinema = x.cinema;
+    if (typeof x.tajweed === 'boolean') project.tajweed = x.tajweed;
+    if (typeof x.arSize === 'number' && Number.isFinite(x.arSize)) { project.arSize = clampArSize(x.arSize); project.textSize = nearestTextSize(project.arSize); }
+    if ((SLOWMO as readonly number[]).includes(x.slowmo as number)) project.slowmo = x.slowmo;
+  }
+  const renameStyle = (id: string, label: HTMLElement) => {
+    const st = myStyles().find((x) => x.id === id);
+    if (!st) return;
+    const input = h('input', { class: 'search my-style-name', type: 'text', maxlength: '24', value: st.name, 'aria-label': ui('ed.my-style-rename') });
+    const done = () => {
+      const v = input.value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+      if (v && v !== st.name) saveMyStyles(myStyles().map((x) => (x.id === id ? { ...x, name: v } : x)));
+      refreshUI();
+    };
+    input.addEventListener('change', done);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') refreshUI(); });
+    input.addEventListener('blur', done, { once: true });
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+  };
   const myStyles = (): MyStyle[] => { try { const v = JSON.parse(readPref('myStyles') ?? '[]'); return Array.isArray(v) ? v.filter((x) => x && typeof x.id === 'string' && x.look) : []; } catch { return []; } };
   const saveMyStyles = (list: MyStyle[]) => savePref('myStyles', JSON.stringify(list.slice(0, 8)));
   function myStylesRow(): Node {
@@ -859,10 +885,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
         return h('div', { class: 'my-style' },
           tile({
-            on: JSON.stringify(st.look) === mine, label: st.name,
+            on: JSON.stringify(st.look) === mine && (!st.extra || JSON.stringify(st.extra) === JSON.stringify(extraOf())), label: st.name,
             art: h('span', { class: 'style-art', style: bgCss }, h('span', { class: `style-words${st.look.highlight ? ' lit' : ''}`, style: `--hl:${st.look.colors?.hl ?? '#f2c46b'}` }, h('i', {}), h('i', {}), h('i', {}))),
             onclick: () => {
               applyLook(project, structuredClone(st.look), isBackground);
+              applyExtra(st.extra);
+              rebuild();
               fitClips();
               arrange();
               void loadScenes();
@@ -870,13 +898,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
               previewText();
             },
           }),
-          h('button', { class: 'mark-logo-x', 'aria-label': ui('ed.my-style-delete'), onclick: () => { saveMyStyles(myStyles().filter((x) => x.id !== st.id)); refreshUI(); } }, '✕'));
+          h('button', { class: 'mark-logo-x', 'aria-label': ui('ed.my-style-delete'), onclick: () => { saveMyStyles(myStyles().filter((x) => x.id !== st.id)); refreshUI(); } }, '✕'),
+          h('button', { class: 'mark-logo-x my-style-edit', 'aria-label': ui('ed.my-style-rename'), onclick: (e: Event) => {
+            const label = (e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLElement>('.tile');
+            if (label) renameStyle(st.id, label);
+          } }, '✎'));
       }),
       list.length < 8 ? tile({
         on: false, label: ui('ed.my-style-save'), art: h('span', { class: 'glyph' }, '+'),
         onclick: () => {
           const all = myStyles();
-          saveMyStyles([...all, { id: `s${Date.now().toString(36)}`, name: ui('ed.my-style-name', { n: all.length + 1 }), look: lookOf(project) }]);
+          saveMyStyles([...all, { id: `s${Date.now().toString(36)}`, name: ui('ed.my-style-name', { n: all.length + 1 }), look: lookOf(project), extra: extraOf() }]);
           toast(ui('ed.my-style-saved'));
           refreshUI();
         },
@@ -1201,6 +1233,25 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     refreshUI();
   }
 
+  /** Cover: the frame at the playhead becomes the video's cover (MP4 cover art + an image to upload). */
+  function coverPanel(): Node[] {
+    const has = project.cover !== undefined;
+    const at = has ? clock(project.cover!) : '';
+    return [
+      row(ui('ed.cover'), h('span', { class: 'clip-time' }, has ? at : ui('ed.cover-none'))),
+      h('div', { class: 'chips' },
+        h('button', { class: 'chip on', onclick: () => {
+          if (exporting) return;
+          project.cover = ms(t);
+          changed();
+          toast(ui('ed.cover-set', { t: clock(t) }));
+        } }, ui('ed.cover-here')),
+        has && h('button', { class: 'chip', onclick: () => { pause(); t = project.cover!; spine.reveal(t); dirty = true; } }, ui('ed.cover-go')),
+        has && h('button', { class: 'chip', onclick: () => { if (exporting) return; delete project.cover; changed(); } }, ui('ed.cover-clear'))),
+      note(ui('ed.cover-note')),
+    ];
+  }
+
   /** A dedication in the user's own words on the closing card (which it turns on). */
   function dedicationField(): Node[] {
     const input = h('input', { class: 'search', type: 'text', maxlength: String(DEDICATION_MAX), placeholder: ui('ed.dedication-ph'), value: project.dedication ?? '', 'aria-label': ui('ed.dedication') });
@@ -1459,6 +1510,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         note(ui('ed.the-reference-e-g-al-fatiha-1-1-always-s'))] },
       { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
       { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), panel: watermarkPanel },
+      { id: 'cover', icon: 'card', label: ui('ed.cover'), panel: coverPanel },
       { id: 'dedication', icon: 'card', label: ui('ed.dedication'), panel: dedicationField },
     ] },
   ];
@@ -2209,9 +2261,10 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const started = performance.now();
     try {
       const signal = exporting.signal;
+      let coverJpeg: Blob | null = null;
       const run = (p: typeof path) => exportVideo({
         project: structuredClone(project), timeline: tl!, audio: audio!, media: [...media], path: p, height: quality, signal,
-        onProgress: setProgress,
+        onProgress: setProgress, onCover: (b) => { coverJpeg = b; },
       });
       // Some hardware encoders reject a config they claimed to support: retry once in software.
       const blob = await run(path).catch((e) => {
@@ -2238,6 +2291,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
           canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+        coverJpeg ? coverButton(coverJpeg, name.replace(/\.\w+$/, '-cover.jpg')) : '',
         makeAnother(),
         h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, ui('ed.backToEditing')),
       );
@@ -2255,7 +2309,19 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
   }
 
+  /** Result page: the cover frame as an image, for apps that ask for a cover on upload. */
+  function coverButton(jpeg: Blob, name: string): Node {
+    if (isNative()) return h('button', { class: 'chip', onclick: () => {
+      void saveVideo(jpeg, name).then((f) => toast(ui('ed.cover-saved', { where: f.where })), () => toast(ui('ed.exportFailed', { msg: 'cover' })));
+    } }, ui('ed.cover-save'));
+    const url = URL.createObjectURL(jpeg);
+    coverUrls.push(url);
+    return h('a', { class: 'chip', href: url, download: name }, ui('ed.cover-save'));
+  }
+  const coverUrls: string[] = [];
+
   return () => {
+    for (const u of coverUrls) URL.revokeObjectURL(u);
     if (saveTimer) void saveNow(); // an edit not yet saved
     alive = false;
     document.removeEventListener('keydown', onKey);

@@ -488,6 +488,8 @@ body[data-view="reel"] {
 .mark-clear { margin-block-start: 10px; }
 .my-style { position: relative; }
 .my-style .tile { width: 100%; }
+.my-style-edit { inset-inline-end: auto; inset-inline-start: -6px; }
+.my-style-name { width: 100%; min-width: 0; font-size: var(--fs-xs); padding: 6px 8px; }
 .studio .transport {
   grid-area: transport; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   max-width: none; margin: 0; padding: 2px 6px 2px 14px;

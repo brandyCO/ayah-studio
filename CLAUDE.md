@@ -524,6 +524,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       ‹ ›, Clear, "Size here"; dragging an animated mark sets a key; gold diamonds on the ruler while
       the panel is open. Everything is drawn clipped to the mark's strip and the safe width (rule 6);
       scaling grows from the side the mark sits against. Keyframes stay with the reel (not the device pref)
+- [x] Cover frame + My styles pass (owner request 2026-10-29): Layout → **Cover** — "Use this frame" sets
+      `project.cover` (reel seconds; Go to cover / Use the first frame); the export draws that frame first,
+      embeds it as the MP4's cover art (Mediabunny `setMetadataTags`, `coverFront`; not in WebM) and the
+      result page offers **Save cover image** (JPEG, for apps that ask for a cover). **My styles** now also
+      keep Cinematic, Tajweed colours, the Arabic size and slow motion (`extra`), and can be renamed (✎)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

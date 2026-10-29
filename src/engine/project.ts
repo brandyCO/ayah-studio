@@ -72,6 +72,8 @@ export interface Project {
   /** A dedication in the user's own words ("For my mother"), on the closing card in the UI font, never
    *  near the ayah. Not in the look (each reel its own). */
   dedication?: string;
+  /** The cover frame (reel seconds): embedded in the MP4 as its cover art and offered as an image. */
+  cover?: number;
   /** The small "Ayah Studio" mark (off by default). */
   watermark: boolean;
   /** The user's own watermark: their text or logo (src/engine/mark.ts). Per device like cinema (not in
@@ -313,6 +315,7 @@ export function restoreProject(p: Project, saved: unknown, validBackground: (id:
   p.slowmo = (SLOWMO as readonly number[]).includes(d.slowmo as number) ? (d.slowmo as number) : 1;
   if (validClosing(d.closing)) p.closing = { title: d.closing.title, names: [...d.closing.names] };
   if (typeof d.dedication === 'string') p.dedication = cleanDedication(d.dedication);
+  if (typeof d.cover === 'number' && Number.isFinite(d.cover) && d.cover >= 0) p.cover = Math.min(d.cover, 3600);
   const mk = validMark(d.mark);
   if (mk) p.mark = mk;
   p.motion = validMotion(d.motion);
