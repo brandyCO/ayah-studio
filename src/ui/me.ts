@@ -14,6 +14,7 @@ import { loadMeta, reference, type SurahMeta } from '../data/quran';
 import { locale, surahName, t, type Key } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
+import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
 import { openMoreMenu, tabBar } from './tabs';
@@ -74,6 +75,28 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
   let heroSig = '';
+  let catchNext = false;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The streak moment: once a day, the first time Me is open with today's flame lit — and only
+  // while nothing else is open (the tasbih counter, a sheet, a reward moment), so it never cuts in.
+  let streakPlaying = false;
+  const maybeStreak = () => {
+    const s = streak();
+    if (streakPlaying || !s.litToday || s.days < 1 || document.hidden) return;
+    let seen = '';
+    try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
+    if (seen === dayKey()) return;
+    if (document.querySelector('dialog[open], .cel')) return;
+    try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
+    streakPlaying = true;
+    const week = s.week.map((w) => ({ ...w, label: dayFmt.format(parse(w.day)) }));
+    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).finally(() => {
+      streakPlaying = false;
+      catchNext = true;
+      heroSig = '';
+      paintHero();
+    });
+  };
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
@@ -82,15 +105,13 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
-      h('span', { class: 'me-pip-ic' }, w.state === 'lit' || w.state === 'revived' ? flame(1, 18, true) : w.state === 'frozen' ? '❄' : ''),
+      dayMark(w.state),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
-    // The first look at Me after today's flame was lit: it catches (flares up, sparks, the count ticks on).
-    let seen = '';
-    try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
-    const catchNow = s.litToday && seen !== dayKey() && s.days > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (s.litToday) try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
+    // After the streak moment, the card's flame catches (flares up, sparks, the count ticks on).
+    const catchNow = catchNext && s.litToday && !reduced;
+    catchNext = false;
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 76, still));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 76, reduced));
     hero.replaceChildren(
       h('div', { class: 'me-top' },
         flameBox,
@@ -397,7 +418,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   void import('../together/relight').then((m) => m.takeRelights());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); };
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
@@ -414,7 +435,11 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);
+  // A sheet or the tasbih counter closed: the streak moment may play now.
+  const onClose = () => setTimeout(maybeStreak, 350);
+  document.addEventListener('close', onClose, true);
   return () => {
+    document.removeEventListener('close', onClose, true);
     clearInterval(tick);
     cancelAnimationFrame(queued);
     window.removeEventListener('prayer-changed', onPrayer);
