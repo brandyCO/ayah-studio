@@ -9,8 +9,8 @@ scripts/align-batch.py on GitHub Actions) into checked app data:
 An ayah gets word times only when every check passes (rule 8: a reel with any other ayah stays in Ayah mode):
 - the model clearly heard the ayah (confidence ≥ MIN_CONF over its frames, ≥ MIN_LCONF over its letters);
 - every word with letters has a time, in reading order, inside the ayah (mp3quran: between its cuts);
-- no word but the last lasts more than LONG ms and no silence inside the ayah is longer than GAP ms — the
-  reciter repeating words (common, e.g. Alafasy 78:40) would otherwise stretch one word over the repeat.
+- no word but the last lasts more than LONG ms (8 s) — the reciter repeating words (common, e.g. Alafasy
+  78:40) would otherwise stretch one word over the repeat.
 Checked against Quran.com's own word times for Alafasy (same recording, 8 surahs, 1655 words): median
 difference 0.04 s, 90 % within 0.17 s once ayat with repetitions are left out.
 

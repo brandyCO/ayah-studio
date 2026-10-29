@@ -43,6 +43,10 @@ jobs:
       # (src/data/mushaf.ts); only the first pages ship in the APK.
       - name: Leave most page fonts out of the APK
         run: find dist/fonts/qcf-v2 -name 'p*.woff2' ! -name 'p1.woff2' ! -name 'p2.woff2' ! -name 'p3.woff2' -delete
+      # Word times for the aligned reciters (~34 MB) are fetched by the app when a reel needs them
+      # (src/data/alignedWords.ts).
+      - name: Leave the aligned word times out of the APK
+        run: rm -rf dist/data/words
       - run: npx cap sync android
       - name: Signing key
         if: env.KEYSTORE_B64 != ''

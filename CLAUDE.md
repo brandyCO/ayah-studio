@@ -385,6 +385,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       it); what precedes ayah 1 (basmala / isti'adha) is heard by a read-back (`opening()`), not chosen by score;
       long files in 8-min windows (identical results); VBR files: `seek` table (byte offset of every 50th frame)
       → `decodeMp3Span(…, seek)` Range-fetches exactly (lag 0 against a whole-file decode in Chromium)
+      Shipped 2026-10-29 (second run, `align2/`): 23 everyayah reciters with words for 6011–6232 ayat each (all
+      114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
+      (3562–4750 ayat; more surahs verified by the aligned cuts). The Android build leaves `data/words` out
+      of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
