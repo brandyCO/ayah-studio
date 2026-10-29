@@ -42,6 +42,9 @@ export interface SpineOptions {
   audioTrim: (i: number) => AudioTrim | null;
   trimAudio: (i: number, head: number, tail: number) => void;
   setGap: (i: number, gap: number) => void;
+  /** Quiet time after the last word (the reel's end, dragged from the last scene's end). */
+  tail: () => number;
+  setTail: (v: number) => void;
   /** Keyframes of the layer being moved (reel seconds), shown as diamonds on the ruler. */
   keys?: () => number[];
 }
@@ -68,7 +71,8 @@ type Drag =
   | { kind: 'scene-move'; index: number; dt: number }
   | { kind: 'audio-head'; index: number; trim: AudioTrim; head: number }
   | { kind: 'audio-tail'; index: number; trim: AudioTrim; tail: number }
-  | { kind: 'audio-move'; index: number; trim: AudioTrim; gap: number };
+  | { kind: 'audio-move'; index: number; trim: AudioTrim; gap: number }
+  | { kind: 'reel-end'; tail0: number; tail: number };
 
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 /** Ruler label: "00:03", or "00:03.2" between whole seconds when zoomed in. */
@@ -218,7 +222,7 @@ export function createSpine(o: SpineOptions) {
       const b = [0, ...sceneBounds(), tl.duration];
       if (sel?.kind === 'scene') {
         if (sel.index > 0 && near(b[sel.index])) return { kind: 'scene', index: sel.index, part: 'start' };
-        if (sel.index < b.length - 2 && near(b[sel.index + 1])) return { kind: 'scene', index: sel.index, part: 'end' };
+        if (near(b[sel.index + 1])) return { kind: 'scene', index: sel.index, part: 'end' }; // the last one's: the reel's end
       }
       for (let i = 0; i + 1 < b.length; i++) if (t >= b[i] && t < b[i + 1]) return { kind: 'scene', index: i, part: 'body' };
       return { kind: 'empty' };
@@ -324,7 +328,7 @@ export function createSpine(o: SpineOptions) {
     }
     if (sel?.kind === 'scene' && scenes[sel.index] && !moving) {
       const s = scenes[sel.index];
-      handles(s.x0, s.x1, Y_SC, SCENES, sel.index > 0, sel.index < scenes.length - 1);
+      handles(s.x0, s.x1, Y_SC, SCENES, sel.index > 0, true);
     }
     const ax = X(D) + 8;
     if (ax < w) {
@@ -424,12 +428,27 @@ export function createSpine(o: SpineOptions) {
       const bl = blocks[drag.index];
       // The silence left before the first word / after the last word (or the added pause), in ms.
       const ay = o.plan()?.ayat[drag.index];
-      const msg = drag.kind === 'audio-move' ? `pause ${drag.gap.toFixed(3)} s`
+      const msg = drag.kind === 'audio-move' ? `${drag.index ? 'pause' : 'quiet before'} ${drag.gap.toFixed(3)} s`
         : drag.kind === 'audio-head' ? `silence before words ${ay ? (ay.start - bl.a).toFixed(3) : '–'} s${drag.head >= drag.trim.maxHead - 1e-3 ? ' · first word' : ''}`
           : `silence after words ${ay ? (bl.b - ay.last).toFixed(3) : '–'} s${drag.tail >= drag.trim.maxTail - 1e-3 ? ' · last word' : ''}`;
       ctx.font = '600 11px system-ui, sans-serif';
       const mw = ctx.measureText(msg).width + 12;
       const mx = Math.min(Math.max(4, X(drag.kind === 'audio-tail' ? bl.b : bl.a) - mw / 2), w - mw - 4);
+      ctx.fillStyle = 'rgba(0,0,0,.75)';
+      round(mx, Y_AU + AUDIO + 6, mw, 20, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(msg, mx + 6, Y_AU + AUDIO + 10);
+    }
+    if (drag?.kind === 'reel-end') {
+      // The new end of the reel (the quiet after the last word), applied when let go.
+      const x = X(tl.duration + drag.tail - drag.tail0);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x - 1, Y_SC - 2, 2, TRACKS - Y_SC + 4);
+      const msg = `end +${drag.tail.toFixed(1)} s after the last word`;
+      ctx.font = '600 11px system-ui, sans-serif';
+      const mw = ctx.measureText(msg).width + 12;
+      const mx = Math.min(Math.max(4, x - mw / 2), w - mw - 4);
       ctx.fillStyle = 'rgba(0,0,0,.75)';
       round(mx, Y_AU + AUDIO + 6, mw, 20, 4);
       ctx.fill();
@@ -521,6 +540,7 @@ export function createSpine(o: SpineOptions) {
   function startDrag(at: Hit): Drag {
     const tl = o.timeline()!;
     if (at.kind === 'ruler') return { kind: 'scrub' };
+    if (at.kind === 'scene' && at.part === 'end' && at.index === tl.scenes.length - 1) return { kind: 'reel-end', tail0: o.tail(), tail: o.tail() };
     if (at.kind === 'scene' && at.part !== 'body') {
       return { kind: 'scene-edge', index: at.part === 'start' ? at.index - 1 : at.index, bounds: tl.scenes.slice(1).map((s) => s.start) };
     }
@@ -531,7 +551,7 @@ export function createSpine(o: SpineOptions) {
       const trim = o.audioTrim(at.index);
       if (trim && at.part === 'start') return { kind: 'audio-head', index: at.index, trim, head: trim.head };
       if (trim && at.part === 'end') return { kind: 'audio-tail', index: at.index, trim, tail: trim.tail };
-      if (trim && at.index > 0) return { kind: 'audio-move', index: at.index, trim, gap: trim.gap };
+      if (trim) return { kind: 'audio-move', index: at.index, trim, gap: trim.gap }; // the first: quiet before it
     }
     return { kind: 'pan', left0: left };
   }
@@ -616,6 +636,10 @@ export function createSpine(o: SpineOptions) {
       case 'audio-move':
         drag.gap = ms(Math.min(Math.max(drag.trim.gap + dx, 0), 10));
         break;
+      case 'reel-end':
+        // Only the quiet after the last word can go (the recitation is never cut).
+        drag.tail = Math.round(Math.min(Math.max(drag.tail0 + dx, 0), 10) * 10) / 10;
+        break;
     }
     dirty = true;
     if (drag.kind !== 'scrub' && drag.kind !== 'pan') tracksDirty = true;
@@ -666,6 +690,8 @@ export function createSpine(o: SpineOptions) {
         return o.trimAudio(d.index, d.trim.head, d.tail);
       case 'audio-move':
         return o.setGap(d.index, d.gap);
+      case 'reel-end':
+        return o.setTail(d.tail);
       case 'pan': {
         // Fling: keep gliding, slowing down.
         let v = performance.now() - d.lastT < 80 ? d.v : 0;

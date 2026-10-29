@@ -466,9 +466,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       only, rule 7); **open/close** — the background rises out of black (1.4 s) and settles to 85 % black
       over the last 1.6 s, drawn under the text and the reference (rule 2); **drift** — the background
       scales 1 → 1.07 over the reel; **depth** — a 1/10-size copy of the background laid over it while
-      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching**: the Play
-      button fades the tools away (full-screen preview, transport hidden); a tap on the preview, Esc or
-      the end pauses and brings them back
+      an ayah is on screen. Switch in Quick reel → Finish and Scenes → Cinematic. **Watching** (the premiere before
+      an export): the tools fade away (full-screen preview, transport hidden); a tap on the preview, Esc or
+      the end pauses and brings them back. Play while editing stays in place, like CapCut (owner, 2026-10-29)
 - [x] Own watermark, move by touch, faster studio (owner request 2026-10-28): **Layout → Watermark**
       (`src/ui/markPanel.ts`, `src/engine/mark.ts`): the small Ayah Studio mark on/off, the user's own
       mark — text (≤ 40 chars, UI font) or a logo (PNG/WebP/SVG/JPEG, scaled to ≤ 480 px, kept on this device
@@ -509,6 +509,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       Until** (`mark.from` / `mark.to`, 0.3 s fades); **Audio → Ending**: `project.tail` 0–10 s
       (`TAIL_MAX`) after the recitation, before the closing card — silent (rule 3), background, reference
       and marks continue (`Pacing.tail`, `arrangeReel`)
+- [x] No intro/end cards (owner decision 2026-10-29, "the user elongates the start and end"): the 3 s title
+      card and closing reference card are gone; **Audio → Start & end**: `project.lead` (quiet before the
+      first word) and `project.tail` (after the last word), 0–10 s each, silent (rule 3); also by dragging
+      the first audio block (lead) or the end of the timeline (tail, white line + "end +x s"). The reference
+      header stays on screen throughout (rule 2). Old drafts/looks: `dropCards()` turns an intro into ≥ 3 s
+      lead and an outro into ≥ 3 s tail. Lines that need an ending (dedication, series "Part k of N",
+      Kids keepsake, Ramadan recap, translation credit) are drawn over the ending (`hasEnding()`,
+      `giveEnding()` makes the tail ≥ `OUTRO`)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

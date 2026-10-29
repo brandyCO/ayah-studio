@@ -173,19 +173,18 @@ function drawNote(ctx: CanvasRenderingContext2D, n: TimedNote, alpha: number, pr
   ctx.globalAlpha = 1;
 }
 
-/** Opacity of the intro card (fully shown on the first frame, gone before the recitation) or the closing card. */
-function cardAt(tl: Timeline, t: number): { kind: 'intro' | 'outro'; alpha: number } | null {
-  if (tl.intro > 0 && t < tl.intro) return { kind: 'intro', alpha: smooth(clamp01((tl.intro - 0.15 - t) / 0.7)) };
+/** Opacity of the ending: its lines fade in once the ayah has left (the quiet time after the last word). */
+function cardAt(tl: Timeline, t: number): { kind: 'outro'; alpha: number } | null {
   const s = tl.duration - tl.outro;
   if (tl.outro > 0 && t >= s) return { kind: 'outro', alpha: easeOut(clamp01((t - s) / 0.9)) };
   return null;
 }
 
-/** Intro title card / closing reference card, centred in the frame. */
-function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha: number, project: Project, tl: Timeline) {
+/** The ending's lines, centred over the background; the surah name + reference stay in their place
+ *  (rule 2). Several surahs (a segmented reel): the reel's title (and date) instead. */
+function drawCard(ctx: CanvasRenderingContext2D, alpha: number, project: Project, tl: Timeline) {
   const c = project.colors.title;
   if (tl.segmented) {
-    // Several surahs: each segment showed its own reference; the card holds the reel's title (and date).
     setTextShadow(ctx, c);
     ctx.fillStyle = c;
     ctx.direction = 'ltr';
@@ -194,7 +193,7 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
       ctx.font = `italic 68px ${FONT_EN}`;
       const title = wrap(ctx, cl.title.split(' '), W * 0.8);
       const lh = 88;
-      let y = H * 0.46 - ((title.length + cl.names.length * 0.7) * lh) / 2 + (kind === 'outro' ? (1 - alpha) * 16 : 0);
+      let y = H * 0.46 - ((title.length + cl.names.length * 0.7) * lh) / 2 + (1 - alpha) * 16;
       ctx.globalAlpha = alpha;
       for (const l of title) { ctx.fillText(l, W / 2, y + lh / 2); y += lh; }
       ctx.save();
@@ -210,35 +209,18 @@ function drawCard(ctx: CanvasRenderingContext2D, kind: 'intro' | 'outro', alpha:
     ctx.globalAlpha = 1;
     return;
   }
-  const ref = reference(tl.surah, tl.ayat[0].ayah, tl.ayat[tl.ayat.length - 1].ayah);
-  const intro = kind === 'intro';
-  const cy = H * 0.46 + (intro ? 0 : (1 - alpha) * 16);
+  const top = H * 0.4 + (1 - alpha) * 16;
   setTextShadow(ctx, c);
   ctx.fillStyle = c;
-  ctx.globalAlpha = alpha;
-  ctx.direction = 'rtl';
-  ctx.font = `${intro ? 104 : 84}px ${FONT_NAME}`;
-  ctx.fillText(tl.surah.ar, W / 2, cy - (intro ? 80 : 70));
-  ctx.save();
-  ctx.shadowColor = 'transparent';
-  ctx.globalAlpha = alpha * 0.55;
-  ctx.fillRect(W / 2 - 110, cy - 1, 220, 2);
-  ctx.restore();
   ctx.direction = 'ltr';
-  ctx.font = `500 ${intro ? 46 : 44}px ${FONT_UI}`;
-  ctx.fillText(ref, W / 2, cy + 60);
   const notes: string[] = [];
-  if (intro) notes.push(tl.surah.tr);
   if (project.series) notes.push(`Part ${project.series.part} of ${project.series.of}`);
-  if (project.credit) notes.push(`Recited by ${reciterCredit(tl.reciter)}`);
-  if (!intro && project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : `Translation: ${tl.translation.credit}`);
+  if (project.showTranslation) notes.push(project.translationMode === 'words' ? 'Word meanings: Quran.com' : `Translation: ${tl.translation.credit}`);
   ctx.globalAlpha = alpha * 0.85;
-  notes.forEach((x, i) => {
-    ctx.font = i === 0 && intro ? `italic 36px ${FONT_EN}` : `500 32px ${FONT_UI}`;
-    ctx.fillText(x, W / 2, cy + 125 + i * 54);
-  });
+  ctx.font = `500 32px ${FONT_UI}`;
+  notes.forEach((x, i) => ctx.fillText(x, W / 2, top + i * 54));
   const closing = project.closing ?? (project.dedication ? { title: project.dedication, names: [] } : null);
-  if (!intro && closing) drawClosing(ctx, closing, cy + 125 + notes.length * 54 + 40, alpha);
+  if (closing) drawClosing(ctx, closing, top + notes.length * 54 + 20, alpha);
   ctx.globalAlpha = 1;
 }
 
@@ -475,12 +457,13 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   }
   });
 
-  // Intro / closing card; the surah name + reference make way for it (the card shows the reference).
+  // The ending's lines (after the last word); the surah name + reference stay (rule 2), except under a
+  // segmented reel's title, which names its surahs itself.
   const card = cardAt(tl, t);
-  if (card) drawCard(ctx, card.kind, card.alpha, project, tl);
+  if (card) drawCard(ctx, card.alpha, project, tl);
   const note = noteAt(tl, t);
   if (note) drawNote(ctx, note.note, note.alpha, project);
-  const under = 1 - Math.max(card?.alpha ?? 0, note?.alpha ?? 0);
+  const under = 1 - Math.max(tl.segmented ? card?.alpha ?? 0 : 0, note?.alpha ?? 0);
   const head = headerAyah(tl, t);
 
   // Surah name (optional) + reference (always visible, rule 2) at the chosen place and size.

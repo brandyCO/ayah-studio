@@ -151,8 +151,8 @@ export function planClipReel(from: number, durations: number[], words?: { texts:
 export interface Pacing {
   pause: number; // seconds of silence added between ayat
   hold: boolean; // keep an ayah's text on screen until just before the next ayah
-  intro: number; // seconds of intro card before the recitation
-  outro: number; // seconds of closing card after it
+  intro: number; // seconds of quiet before the recitation
+  outro: number; // seconds of ending (its lines) after it; the ayah text leaves before
   /** Seconds the video keeps going after the recitation (silent; background and marks continue). */
   tail?: number;
   /** Per ayah: seconds of silence added before it (≥ 0; the first ayah's entry is ignored). */
@@ -164,7 +164,7 @@ export interface Pacing {
 }
 
 /** Extra seconds the pacing adds to a reel of n ayat (for the length estimate). */
-export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro;
+export const pacingExtra = (o: Pacing, n: number) => o.intro + Math.max(0, n - 1) * o.pause + o.outro + (o.tail ?? 0);
 
 /**
  * Each ayah's audio before trimming (base reel seconds): the recording is cut in the middle of the

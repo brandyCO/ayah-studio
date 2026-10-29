@@ -121,7 +121,7 @@ const dateFmt = new Intl.DateTimeFormat(locale() ?? 'en-GB', { day: 'numeric', m
  */
 export async function makeKeepsake(n: number) {
   if (!(await parentGate(t('kids.keepsakeGate')))) return;
-  const [{ newProject, applyLook, MAX_AYAT }, { applyMood, MOODS }, drafts, meta] = await Promise.all([
+  const [{ newProject, applyLook, giveEnding, MAX_AYAT }, { applyMood, MOODS }, drafts, meta] = await Promise.all([
     import('../engine/project'), import('../engine/moods'), import('../data/drafts'), loadMeta()]);
   const s = meta[n - 1];
   const p = newProject(n, 1, Math.min(s.ayahs, MAX_AYAT), kidsReciter());
@@ -131,7 +131,7 @@ export async function makeKeepsake(n: number) {
   p.clips = [];
   p.sceneMode = 'single';
   p.sceneLengths = [];
-  p.outro = true;
+  giveEnding(p);
   const name = kidsSettings().name;
   const when = learned()[n] ?? Date.now();
   p.closing = { title: (name ? t('kids.keepsakeTitle', { name, surah: surahName(s) }) : t('kids.keepsakeTitleNoName', { surah: surahName(s) })).slice(0, 80), names: [dateFmt.format(when)] };
