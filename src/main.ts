@@ -7,6 +7,7 @@
 //   #/me               Me: streak flame, stats, reading time, settings
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
+//   #/me/widgets       the home-screen widgets (Add to home screen)
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
@@ -84,7 +85,8 @@ async function route() {
       c = await showRelight(screen, a);
     } else if (view === 'me') {
       const { showMe, showMeSettings } = await import('./ui/me');
-      c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
+      if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
+      else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);

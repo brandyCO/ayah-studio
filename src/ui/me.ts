@@ -22,6 +22,8 @@ import { openMoreMenu, tabBar } from './tabs';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
 import { isNative } from '../native';
+import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, setPrayerAlerts } from './prayerAlerts';
+import { widgetHint } from './widgetsPage';
 import { account } from '../cloud/auth';
 import { openAccount } from './account';
 
@@ -435,7 +437,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     if (next < 0) next = 0;
     const mins = Math.max(0, Math.round((nextAt.getTime() - now) / 60_000));
     prayerBox.replaceChildren(
-      h('div', { class: 'me-row' }, head, h('a', { class: 'chip', href: '#/me/settings' }, t('me.settings'))),
+      h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, `🔔 ${t(anyAlert() ? 'pa.on' : 'pa.short')}`)),
       h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
       h('div', { class: 'pr-list' }, ...times.map((x, i) => h('div', { class: `pr-row${i === next && !tomorrow ? ' next' : ''}${i === 1 ? ' sun' : ''}` },
         h('span', {}, t(`pr.${PRAYERS[i]}` as Key)), h('b', {}, timeFmt.format(x))))),
@@ -458,6 +460,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
     hero, goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
+  void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
@@ -518,6 +521,10 @@ export function showMeSettings(root: HTMLElement): () => void {
           },
         }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
+      alertsSection(),
+      h('section', { class: 'me-card menu' },
+        h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.title')}`),
+        h('p', { class: 'muted small' }, t('wg.setHelp'))),
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
@@ -527,12 +534,49 @@ export function showMeSettings(root: HTMLElement): () => void {
       h('section', { class: 'me-card menu' },
         h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)));
   };
+  const alertsSection = () => {
+    const a = prayerAlerts();
+    const ps = prayerSettings();
+    // Each change starts from the saved settings (two quick taps never undo each other).
+    const save = async (change: (cur: typeof a) => typeof a) => {
+      const done = setPrayerAlerts(change(prayerAlerts()));
+      haptic();
+      paint();
+      if (!(await done) && isNative()) toast(t('rem.denied'));
+    };
+    const box = section(t('pa.title'),
+      h('p', { class: 'muted small' }, t('pa.help')),
+      ps.lat === null ? h('p', { class: 'pa-warn small' }, t('pa.needLoc')) : '',
+      h('div', { class: 'chips pa-prayers' }, ...ALERT_PRAYERS.map((p) => h('button', {
+        class: `chip${a.on[p] ? ' on' : ''}`, 'aria-pressed': String(a.on[p]),
+        onclick: () => save((c) => ({ ...c, on: { ...c.on, [p]: !c.on[p] } })),
+      }, `${a.on[p] ? '🔔' : '🔕'} ${t(`pr.${p}` as Key)}${times ? ` · ${timeFmt.format(times[PRAYERS.indexOf(p)])}` : ''}`))),
+      h('b', { class: 'set-label' }, t('pa.when')),
+      chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
+      h('b', { class: 'set-label' }, t('pa.sound')),
+      chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => save((c) => ({ ...c, sound: x }))),
+      !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
+      isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
+        h('p', { class: 'muted small' }, t('pa.late')),
+        h('button', { class: 'chip', onclick: async () => { exact = await askExact(); void setPrayerAlerts(prayerAlerts()); paint(); } }, t('pa.exact'))) : '');
+    box.id = 'pa';
+    return box;
+  };
+  let times: Date[] | null = null;
+  let exact = true;
   paint();
+  void (async () => {
+    times = await prayerDay(new Date(), prayerSettings());
+    exact = await exactAllowed();
+    paint();
+    if (location.hash.endsWith('/pa')) document.getElementById('pa')?.scrollIntoView({ block: 'start' });
+  })();
   root.append(
     h('header', { class: 'topbar' },
       h('a', { class: 'icon-btn', href: '#/me', 'aria-label': t('me.title') }, '‹'),
       h('div', { class: 'brand' }, h('h1', {}, t('me.settings')))),
     body, tabBar('me'));
-  window.addEventListener('prayer-changed', paint);
-  return () => window.removeEventListener('prayer-changed', paint);
+  const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
+  window.addEventListener('prayer-changed', onPrayer);
+  return () => window.removeEventListener('prayer-changed', onPrayer);
 }

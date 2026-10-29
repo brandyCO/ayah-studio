@@ -23,7 +23,34 @@ interface WidgetData {
 const Widgets = registerPlugin<{
   update(d: WidgetData): Promise<void>;
   takeTasbih(): Promise<{ counts?: Record<string, Record<string, number>> }>;
+  status(): Promise<{ canPin: boolean; on: Record<WidgetKind, number> }>;
+  pin(o: { kind: WidgetKind }): Promise<{ ok: boolean }>;
 }>('Widgets');
+
+export const WIDGETS = ['streak', 'tasbih', 'prayer', 'daily'] as const;
+export type WidgetKind = (typeof WIDGETS)[number];
+export interface WidgetStatus { canPin: boolean; on: Record<WidgetKind, number> }
+const NONE: WidgetStatus = { canPin: false, on: { streak: 0, tasbih: 0, prayer: 0, daily: 0 } };
+/** Which widgets are on the home screen (Android); web: none, and none can be added. */
+export async function widgetStatus(): Promise<WidgetStatus> {
+  if (!isNative()) return NONE;
+  try {
+    const r = await Widgets.status();
+    return { canPin: !!r.canPin, on: { ...NONE.on, ...r.on } };
+  } catch {
+    return NONE; // an older app build without these calls
+  }
+}
+/** Asks the launcher to place a widget; false when it cannot (the page then shows the steps). */
+export async function pinWidget(kind: WidgetKind): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    syncWidgets(true);
+    return (await Widgets.pin({ kind })).ok;
+  } catch {
+    return false;
+  }
+}
 
 async function data(): Promise<WidgetData> {
   const s = streak();
@@ -122,6 +149,7 @@ export async function allowNotifications(): Promise<boolean> {
 /** Android app start: pull widget counts, keep the widgets in step from now on. */
 export function initWidgets() {
   if (!isNative()) return;
+  void import('./prayerAlerts').then((m) => m.initPrayerAlerts());
   const refresh = () => void pullTasbih().then(() => syncWidgets(true));
   refresh();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
