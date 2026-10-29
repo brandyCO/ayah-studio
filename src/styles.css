@@ -186,6 +186,7 @@ button { font: inherit; color: inherit; }
 .chip.on { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .chip:disabled { opacity: .4; cursor: not-allowed; }
 .sub-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 10px; }
+.panel-section { margin: 16px 0 0; font-size: var(--fs-xs); font-weight: 600; color: var(--text); opacity: .8; }
 .select {
   width: 100%; padding: 10px 12px; border-radius: var(--r-s); font: inherit; font-size: var(--fs-base);
   border: 1px solid var(--line); background: var(--card); color: var(--text);
@@ -565,6 +566,10 @@ section.sheet .sheet-head h2 { font-size: var(--fs-base); }
 
 /* panel contents */
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+/* Looks (styles, moods, vibes, grades): smaller cards, five in a row on a phone */
+.tiles.compact { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 8px; }
+.tiles.compact .tile-art { border-radius: var(--r-s); }
+.touch-art { width: 100%; height: 100%; display: block; }
 .tile {
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none;
   color: var(--muted); font-size: var(--fs-2xs); cursor: pointer;

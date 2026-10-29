@@ -27,6 +27,7 @@ export const STYLES: Style[] = [
 ];
 
 export function applyStyle(p: Project, s: Style) {
+  delete p.amounts; // a style brings its own darkening and grade
   const m = MOODS.find((x) => x.id === s.mood);
   if (m) applyMood(p, m);
   p.scenes = [s.scene];

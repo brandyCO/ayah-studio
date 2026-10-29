@@ -27,6 +27,7 @@ export function applyMood(p: Project, m: Mood) {
   const { colors, ...rest } = structuredClone(m.set);
   Object.assign(p, rest);
   p.colors = { ...p.colors, ...colors }; // the highlight colour is not part of a mood
+  delete p.amounts; // the mood's own darkening and grade, not earlier slider settings
 }
 
 /** The mood whose settings the project still has, if any. */
@@ -60,3 +61,9 @@ export const GRADES: Record<Project['grade'], { label: string; layers: [GlobalCo
 };
 
 export const SCRIM_STRENGTH: Record<Project['scrim'], number> = { light: 0.6, normal: 1, strong: 1.45 };
+/** Darken slider (0–1) ⇄ scrim strength: 0 = none, 1/3 = Normal, 1 = almost black. */
+export const darkK = (d: number) => (d <= 1 / 3 ? d * 3 : 1 + ((d - 1 / 3) / (2 / 3)) * 3.1);
+export const darkOf = (k: number) => (k <= 1 ? k / 3 : 1 / 3 + ((k - 1) / 3.1) * (2 / 3));
+/** Grain and vignette at the slider's middle (0.5) look as before. */
+export const GRAIN_DEFAULT = 0.5;
+export const VIGNETTE_DEFAULT = 0.5;

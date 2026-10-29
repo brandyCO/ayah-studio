@@ -133,3 +133,81 @@ export function polishAudio(src: AudioBuffer): AudioBuffer {
   }
   return out;
 }
+
+/** Echo on the reciter's own voice (nothing is added, rule 3): an algorithmic room (Freeverb-style
+ *  combs + all-passes) and optional repeats. All amounts 0–1; pure, so preview = export. */
+export interface Echo { amount: number; space: number; tail: number; repeat: number }
+export const ECHO_PRESETS: Record<'room' | 'hall' | 'masjid' | 'mountain', Echo> = {
+  room: { amount: 0.25, space: 0.25, tail: 0.3, repeat: 0 },
+  hall: { amount: 0.35, space: 0.6, tail: 0.6, repeat: 0 },
+  masjid: { amount: 0.45, space: 0.85, tail: 0.8, repeat: 0.1 },
+  mountain: { amount: 0.35, space: 0.7, tail: 0.5, repeat: 0.45 },
+};
+export function validEcho(v: unknown): Echo | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const o = v as Record<string, unknown>;
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? Math.min(1, Math.max(0, Math.round(x * 100) / 100)) : 0);
+  const e = { amount: n(o.amount), space: n(o.space), tail: n(o.tail), repeat: n(o.repeat) };
+  return e.amount > 0 ? e : undefined;
+}
+
+export function addEcho(src: AudioBuffer, e: Echo | undefined): AudioBuffer {
+  if (!e || e.amount <= 0) return src;
+  const R = src.sampleRate, n = src.length;
+  const k = R / 44100;
+  const size = 0.6 + e.space * 0.8; // room size scales the comb lengths
+  const fb = 0.7 + e.tail * 0.27; // how long it rings
+  const damp = 0.15 + (1 - e.tail) * 0.35; // brighter when long
+  const combs = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+  const alls = [556, 441, 341, 225];
+  const pre = Math.round((0.012 + e.space * 0.04) * R);
+  const echoD = Math.round((0.26 + e.space * 0.22) * R), echoFb = e.repeat * 0.55, echoMix = e.repeat * 0.6;
+  const dryIn = [src.getChannelData(0), src.getChannelData(Math.min(1, src.numberOfChannels - 1))];
+  const out = new AudioBuffer({ length: n, numberOfChannels: 2, sampleRate: R });
+  for (let c = 0; c < 2; c++) {
+    const dry = dryIn[c];
+    const spread = c ? Math.round(23 * k) : 0;
+    // Mono-ish input to the room, with the pre-delay.
+    const inp = new Float32Array(n);
+    for (let i = pre; i < n; i++) inp[i] = (dryIn[0][i - pre] + dryIn[1][i - pre]) * 0.5 * 0.015;
+    // Repeats: a feedback delay on the input (a voice coming back off far walls).
+    if (echoMix > 0) {
+      const d = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const back = i >= echoD ? d[i - echoD] : 0;
+        d[i] = inp[i] + back * echoFb;
+        inp[i] += back * echoMix;
+      }
+    }
+    const wet = new Float32Array(n);
+    for (const len0 of combs) {
+      const len = Math.max(1, Math.round((len0 * size + spread) * k));
+      const buf = new Float32Array(len);
+      let idx = 0, store = 0;
+      for (let i = 0; i < n; i++) {
+        const y = buf[idx];
+        store = y * (1 - damp) + store * damp;
+        buf[idx] = inp[i] + store * fb;
+        wet[i] += y;
+        if (++idx >= len) idx = 0;
+      }
+    }
+    for (const len0 of alls) {
+      const len = Math.max(1, Math.round((len0 + spread) * k));
+      const buf = new Float32Array(len);
+      let idx = 0;
+      for (let i = 0; i < n; i++) {
+        const b = buf[idx];
+        const x = wet[i];
+        buf[idx] = x + b * 0.5;
+        wet[i] = b - x;
+        if (++idx >= len) idx = 0;
+      }
+    }
+    const res = new Float32Array(n);
+    const w = e.amount * 3, d0 = 1 - e.amount * 0.35;
+    for (let i = 0; i < n; i++) res[i] = dry[i] * d0 + wet[i] * w;
+    out.copyToChannel(res, c);
+  }
+  return out;
+}

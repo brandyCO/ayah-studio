@@ -1,4 +1,7 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
+import { validEcho, type Echo } from '../data/audio';
+import { validAmbience, type Ambience } from '../data/ambience';
+import { validTouches, type Touch } from './touches';
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import { clampArSize, isFormat, type EnFont, type Format, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
 import { validTranslation } from '../data/translations';
@@ -86,6 +89,15 @@ export interface Project {
   /** Finishing touches over the background (never over the text). */
   grain: boolean;
   vignette: boolean;
+  /** Calm finishing touches (water, light, weather; src/engine/touches.ts), at most MAX_TOUCHES. */
+  touches: Touch[];
+  /** Echo on the reciter's voice (src/data/audio.ts addEcho), or none. */
+  echo?: Echo;
+  /** A nature sound quietly under the recitation (src/data/ambience.ts; rule 3, never music), or none. */
+  ambience?: Ambience;
+  /** Fine amounts set with sliders (0–1). Missing: from the preset (scrim step, full grade, default
+   *  grain / vignette). A mood or style resets them. */
+  amounts?: Amounts;
   /** The whole-ayah translation (an id from src/data/translationList.ts); missing = the reader's choice.
    *  Kept with the draft, not with the remembered look (gifts carry looks only). */
   translation?: string;
@@ -222,16 +234,28 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     highlight: false,
     grain: false,
     vignette: false,
+    touches: [],
     tightStart: true,
     cinema: true,
   };
+}
+
+export interface Amounts { dark?: number; grade?: number; grain?: number; vignette?: number }
+export function validAmounts(v: unknown): Amounts | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const out: Amounts = {};
+  for (const k of ['dark', 'grade', 'grain', 'vignette'] as const) {
+    const x = (v as Record<string, unknown>)[k];
+    if (typeof x === 'number' && Number.isFinite(x)) out[k] = Math.min(1, Math.max(0, Math.round(x * 100) / 100));
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** The look of a reel (everything but the selection and reciter), remembered for the next reel. */
 export const LOOK_KEYS = [
   'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes', 'clips',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
-  'credit', 'watermark', 'highlight', 'grain', 'vignette',
+  'credit', 'watermark', 'highlight', 'grain', 'vignette', 'touches', 'amounts', 'echo', 'ambience',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
 
@@ -276,8 +300,29 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
       const ok = (c: unknown) => c === null || (!!c && typeof c === 'object' && Number.isFinite((c as Clip).in) && (c as Clip).in >= 0 && ['loop', 'slow', 'hold'].includes((c as Clip).fit));
       if (Array.isArray(v) && v.every(ok)) {
         const list = v as (Clip | null)[];
-        p.clips = (kept ?? list.map((_, i) => i)).slice(0, MAX_SCENES).map((i) => (list[i] ? { in: list[i]!.in, fit: list[i]!.fit } : null));
+        const adj = (x: unknown, lo: number) => (typeof x === 'number' && Number.isFinite(x) && Math.abs(x) > 0.005 ? Math.min(1, Math.max(lo, Math.round(x * 100) / 100)) : undefined);
+        p.clips = (kept ?? list.map((_, i) => i)).slice(0, MAX_SCENES).map((i) => {
+          const c = list[i];
+          if (!c) return null;
+          const out: Clip = { in: c.in, fit: c.fit };
+          const b = adj(c.b, -1), bl = adj(c.blur, 0);
+          if (b !== undefined) out.b = b;
+          if (bl !== undefined) out.blur = bl;
+          return out;
+        });
       }
+    } else if (k === 'echo') {
+      const e = validEcho(v);
+      if (e) p.echo = e; else delete p.echo;
+    } else if (k === 'ambience') {
+      const a = validAmbience(v);
+      if (a) p.ambience = a; else delete p.ambience;
+    } else if (k === 'amounts') {
+      const a = validAmounts(v);
+      if (a) p.amounts = a; else delete p.amounts;
+    } else if (k === 'touches') {
+      const tv = validTouches(v);
+      if (tv) p.touches = tv;
     } else if (k === 'sceneLengths') {
       if (Array.isArray(v) && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x > 0)) p.sceneLengths = v.slice(0, MAX_SCENES);
     } else if (ALLOWED[k] ? ALLOWED[k]!.includes(v) : typeof v === typeof out[k]) {

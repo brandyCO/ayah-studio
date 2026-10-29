@@ -90,7 +90,9 @@ Engine edge cases:
 2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`). The Arabic surah name above it
    can be hidden (Layout → Surah name → Hide; owner decision 2026-10-08) — the reference line never.
    The reciter credit line is optional and off by default (owner decision).
-3. **No music and no sound effects** anywhere in exported videos. Recitation audio only.
+3. **No music and no sound effects** anywhere in exported videos. Recitation audio, plus (owner decision
+   2026-10-29) an optional calm nature sound (rain, wind, waves…) quietly underneath, always far below the
+   reciter. Never music, never instruments or voices.
 4. Default background library: calm nature/abstract media only, no people or faces.
 5. Arabic text is drawn by the browser (canvas / DOM) with a proper Quran font — never by
    FFmpeg `drawtext`.
@@ -529,6 +531,28 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       embeds it as the MP4's cover art (Mediabunny `setMetadataTags`, `coverFront`; not in WebM) and the
       result page offers **Save cover image** (JPEG, for apps that ask for a cover). **My styles** now also
       keep Cinematic, Tajweed colours, the Arabic size and slow motion (`extra`), and can be renamed (✎)
+- [x] Studio optimisation pass (owner request 2026-10-29, "optimise the whole studio"): every tool has at most
+      six options, related settings share one panel. **Look**: Quick reel · Looks (tabs My styles / Styles /
+      Mood) · Colours. **Text**: Mode (+ words per step, Learning reel) · Effect · Highlight · Tajweed · Size &
+      place (slider, position, Move) · Translation (on/off, sync, font, which one). **Audio**: Reciter · Remove
+      silences · Pauses (+ text between ayat) · Start & end (+ Start on voice) · Reset. **Scenes**: Add ·
+      Change · Arrange (mode, snap, slow motion, Move) · Transition · Adjust · Touches. **Layout**: Format ·
+      Names (surah name, reference, reciter name) · Watermark · Cover · Dedication. A selected scene: Split ·
+      Length · Replace · Adjust (brightness −1…+1 and blur 0…1 for this scene, `Clip.b` / `Clip.blur`, plus
+      the video controls) · Order · Delete. Look cards (styles, moods, vibes, grades) are smaller (5 a row).
+      **Sliders** instead of steps (`project.amounts`, 0–1, reset by a mood or style): Darken (none → almost
+      black; ⅓ = Normal; `darkK()`), grade strength, grain, vignette. **Touches** (`project.touches`, ≤ 4,
+      `src/engine/touches.ts`, pure in t, animated tiles): Water (background seen through moving water, rows
+      and columns shifted, before the scrim), Water light (caustics, light only, over the frame), Floating
+      light, Bokeh, Glow, Light leak, Mist, Rain, Snow; plus Cinematic, Grain, Vignette. Nothing moves or
+      bends the Quran text (rule 7)
+
+- [x] Echo + nature sounds (owner request 2026-10-29): Audio → **Sound**, tabs **Echo** (`project.echo`,
+      `addEcho()` in `src/data/audio.ts`: Off / Room / Hall / Masjid / Mountain + Amount, Space, Tail, Repeats
+      sliders; the reciter's own voice only) and **Nature** (`project.ambience`, `src/data/ambience.ts`: Rain,
+      Distant storm, Campfire, Waves, Wind, Stream, made from seeded noise — no files, preview = export;
+      Volume slider: −44 … −28 dBFS RMS under a voice polished to ≈ −18, 1.5 s fades). Both in the look.
+      The waveform and Cinematic breath follow the voice alone
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

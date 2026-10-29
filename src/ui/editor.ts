@@ -3,7 +3,8 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
-import { arrangeAudio, polishAudio } from '../data/audio';
+import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
+import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
@@ -15,7 +16,7 @@ import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout';
 import { FONT_EN, FONT_EN_ROUND, FONT_EN_SANS, AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
-import { applyMood, COLOURS, currentMood, GRADES, MOODS } from '../engine/moods';
+import { applyMood, COLOURS, currentMood, darkOf, GRADES, GRAIN_DEFAULT, MOODS, SCRIM_STRENGTH, VIGNETTE_DEFAULT } from '../engine/moods';
 import {
   applyLook, cleanDedication, DEDICATION_MAX, giveEnding, OUTRO, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
@@ -25,6 +26,7 @@ import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
 import { markPanel, saveMark, savedMark } from './markPanel';
+import { bloom, bokeh, caustics, leak, MAX_TOUCHES, mist, motes, rain, ripple, snow, TOUCHES, type Touch } from '../engine/touches';
 import { markKeyAt, markPlaced } from '../engine/mark';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
 import { breathOf } from '../engine/cinema';
@@ -133,6 +135,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let alive = true;
   let tl: Timeline | null = null;
   let audio: AudioBuffer | null = null;
+  /** The recitation alone (before a nature sound), for the waveform and Cinematic breath. */
+  let voice: AudioBuffer | null = null;
   let plan: ReelPlan | null = null;
   let base: Reel | null = null; // the recitation before edits (trims, pauses, cards)
   const measure = document.createElement('canvas').getContext('2d')!;
@@ -879,7 +883,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function myStylesRow(): Node {
     const list = myStyles();
     const mine = JSON.stringify(lookOf(project));
-    return h('div', { class: 'tiles my-styles' },
+    return h('div', { class: 'tiles compact my-styles' },
       ...list.map((st) => {
         const b = backgroundById(st.look.scenes?.[0] ?? '');
         const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
@@ -918,7 +922,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     row(ui('ed.my-styles'), h('span', {})),
     myStylesRow(),
     row(ui('ed.styles'), h('span', {})),
-    h('div', { class: 'tiles' }, ...STYLES.map((st) => {
+    h('div', { class: 'tiles compact' }, ...STYLES.map((st) => {
       const b = backgroundById(st.scene);
       const bgCss = 'thumb' in b ? `background-image:url(${b.thumb})` : b.kind === 'color' ? `background:${b.color}` : '';
       return tile({
@@ -1123,11 +1127,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         h('div', { class: 'chips quick-try' },
           h('button', { class: 'chip', onclick: () => tryAnother(pickStyle) }, icon('dice', 16), ui('qr.try')),
           quick.tries.length ? h('button', { class: 'chip', onclick: () => { const p = quick.tries.pop(); if (p) { const o = option; restore(p); option = o; quick.picked = null; changed(); } } }, icon('undo', 16), ui('qr.previous')) : null),
-        h('div', { class: 'tiles' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
+        h('div', { class: 'tiles compact' }, vibeTile(rec.vibe, true), ...VIBES.filter((v) => v !== rec.vibe).map((v) => vibeTile(v, false))),
         note(ui(keep ? 'qr.vibe-note-footage' : 'qr.vibe-note')),
         quick.own.size ? note(ui('qr.own-kept')) : null,
         h('p', { class: 'muted small' }, ui('qr.more-looks')),
-        h('div', { class: 'tiles' }, ...STYLES.map((st) => tile({
+        h('div', { class: 'tiles compact' }, ...STYLES.map((st) => tile({
           on: nowStyle ? nowStyle === st.id : !quick.picked && !now && currentStyle({ ...project, scenes: [keep ? st.scene : project.scenes[0]] }) === st.id, label: tOr(`style.${st.id}`, st.label),
           art: h('span', { class: `style-art${st.grain ? ' grain' : ''}${st.vignette ? ' vignette' : ''}`, style: `background-image:url(${(backgroundById(st.scene) as { thumb?: string }).thumb ?? ''})` },
             h('span', { class: `style-words${st.highlight ? ' lit' : ''}`, style: `--hl:${st.hl}` }, h('i', {}), h('i', {}), h('i', {}))),
@@ -1231,6 +1235,59 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     layerSel = null;
     option = tool.options.find((o) => o.id === 'watermark')!;
     refreshUI();
+  }
+
+  /** Touches: calm finishing effects (water, light, weather) plus Cinematic, grain and vignette.
+   *  Each tile plays the effect itself over a small dark scene while the panel is open. */
+  function touchTile(draw: (c: CanvasRenderingContext2D, t: number) => void): HTMLCanvasElement {
+    const c = h('canvas', { class: 'touch-art', width: '108', height: '108' }) as HTMLCanvasElement;
+    const g = c.getContext('2d')!;
+    const frame = (now: number) => {
+      if (c.dataset.started && !c.isConnected) return; // the panel closed
+      c.dataset.started = '1';
+      const t = now / 1000;
+      g.setTransform(108 / 1080, 0, 0, 108 / 1080, 0, 0);
+      const bg = g.createLinearGradient(0, 0, 0, 1080);
+      bg.addColorStop(0, '#2b4a63'); bg.addColorStop(0.55, '#173041'); bg.addColorStop(1, '#0b1720');
+      g.fillStyle = bg; g.fillRect(0, 0, 1080, 1080);
+      g.fillStyle = 'rgba(255,236,190,0.9)'; g.beginPath(); g.arc(760, 300, 110, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.22)'; for (let y = 620; y < 1080; y += 70) g.fillRect(0, y, 1080, 22);
+      draw(g, t);
+      if (!reducedMotion()) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return c;
+  }
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function touchesPanel(): Node[] {
+    const list = () => project.touches ?? [];
+    const toggle = (x: Touch) => {
+      if (exporting) return;
+      const cur = list();
+      if (cur.includes(x)) project.touches = cur.filter((y) => y !== x);
+      else if (cur.length >= MAX_TOUCHES) return toast(ui('ed.touches-max', { n: MAX_TOUCHES }));
+      else project.touches = [...cur, x];
+      changed();
+      if (!playing && project.touches.includes(x)) previewText();
+    };
+    const fns: Record<Touch, (c: CanvasRenderingContext2D, t: number) => void> = {
+      ripple: (c, t) => ripple(c, t, 6), caustics: (c, t) => caustics(c, t, 2.5), motes: (c, t) => motes(c, t), bokeh: (c, t) => bokeh(c, t), bloom: (c) => bloom(c),
+      leak: (c, t) => leak(c, t * 3), mist: (c, t) => { mist(c, t * 4); mist(c, t * 4 + 30); }, rain: (c, t) => rain(c, t), snow: (c, t) => snow(c, t),
+    };
+    const art = (_id: string, f: (c: CanvasRenderingContext2D, t: number) => void) => touchTile(f);
+    const flags: { id: string; label: string; on: () => boolean; set: (v: boolean) => void; draw: (c: CanvasRenderingContext2D, t: number) => void }[] = [
+      { id: 'cinema', label: ui('ed.cinema'), on: () => !!project.cinema, set: (v) => setCinema(v), draw: (c, t) => { c.fillStyle = `rgba(0,0,0,${0.25 + 0.25 * Math.sin(t)})`; c.fillRect(0, 0, 1080, 1080); } },
+      { id: 'grain', label: ui('ed.grain'), on: () => project.grain, set: (v) => { project.grain = v; }, draw: (c, t) => { const k = Math.floor(t * 12); for (let i = 0; i < 3000; i++) { c.fillStyle = `rgba(255,255,255,${((i * 7919 + k * 31) % 97) / 700})`; c.fillRect((i * 7919 + k * 131) % 1080, (i * 104729 + k * 57) % 1080, 6, 6); } } },
+      { id: 'vignette', label: ui('ed.vignette'), on: () => project.vignette, set: (v) => { project.vignette = v; }, draw: (c) => { const g = c.createRadialGradient(540, 540, 200, 540, 540, 780); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.85)'); c.fillStyle = g; c.fillRect(0, 0, 1080, 1080); } },
+    ];
+    return [
+      h('div', { class: 'tiles compact' },
+        ...TOUCHES.map((x) => tile({ on: list().includes(x), label: ui(`touch.${x}` as 'touch.ripple'), art: art(x, fns[x]), onclick: () => toggle(x) })),
+        ...flags.map((f) => tile({ on: f.on(), label: f.label, art: art(f.id, f.draw), onclick: () => { if (exporting) return; f.set(!f.on()); changed(); refreshUI(); } }))),
+      ...(project.grain ? amountSlider(ui('ed.grain'), () => project.amounts?.grain ?? GRAIN_DEFAULT, (v) => setAmount('grain', v)) : []),
+      ...(project.vignette ? amountSlider(ui('ed.vignette'), () => project.amounts?.vignette ?? VIGNETTE_DEFAULT, (v) => setAmount('vignette', v)) : []),
+      note(ui('ed.touches-note', { n: MAX_TOUCHES })),
+    ];
   }
 
   /** Cover: the frame at the playhead becomes the video's cover (MP4 cover art + an image to upload). */
@@ -1350,7 +1407,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   ];
 
   const moodPanel = () => [
-    h('div', { class: 'tiles' }, ...MOODS.map((m) => tile({
+    h('div', { class: 'tiles compact' }, ...MOODS.map((m) => tile({
       on: currentMood(project) === m.id, label: tOr(`mood.${m.id}`, m.label),
       art: h('span', { class: `mood-art grade-${m.set.grade}` }, dot(m.set.colors.ar), dot(m.set.colors.en), dot(m.set.colors.title)),
       onclick: () => { applyMood(project, m); arrange(); changed(); previewText(); },
@@ -1417,15 +1474,160 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     ];
   };
 
+  // --- shared panel pieces ---
+  const onOff = (get: () => boolean, set: (v: boolean) => void, enabled?: (v: 'on' | 'off') => boolean) =>
+    chips<'on' | 'off'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.on') }], () => (get() ? 'on' : 'off'), (v) => set(v === 'on'), enabled);
+  /** A 0–100 % slider for a fine amount; the preview follows while dragging. */
+  const amountSlider = (label: string, get: () => number, set: (v: number) => void): Node[] => {
+    const pct = (v: number) => `${Math.round(v * 100)} %`;
+    const out = h('span', { class: 'clip-time' }, pct(get()));
+    const el = h('input', { class: 'clip-slider', type: 'range', min: '0', max: '1', step: '0.01', value: String(get()), 'aria-label': label });
+    const apply = (done: boolean) => { if (exporting) return; const v = Number(el.value); out.textContent = pct(v); set(v); dirty = true; if (done) changed(false); };
+    el.addEventListener('input', () => apply(false));
+    el.addEventListener('change', () => apply(true));
+    return [row(label, out), el];
+  };
+  const setAmount = (k: keyof NonNullable<Project['amounts']>, v: number) => { project.amounts = { ...project.amounts, [k]: Math.round(v * 100) / 100 }; };
+  const section = (label: string) => h('p', { class: 'panel-section' }, label);
+
+  /** Look → Looks: My styles, the styles and the moods in one place (tabs). */
+  let lookTab: 'mine' | 'styles' | 'moods' = 'styles';
+  const looksPanel = (): Node[] => {
+    const tabs: [typeof lookTab, string][] = [['mine', ui('ed.my-styles')], ['styles', ui('ed.styles')], ['moods', ui('ed.mood')]];
+    const body = lookTab === 'mine' ? [myStylesRow()] : lookTab === 'moods' ? moodPanel() : stylePanel().slice(3);
+    return [h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => h('button', { class: `tab${k === lookTab ? ' on' : ''}`, onclick: () => { lookTab = k; refreshUI(); } }, label))), ...body];
+  };
+
+  /** Text → Mode: how the text steps along, words per step and the learning reel. */
+  const modePanel = (): Node[] => [
+    chips(MODES, mode, (v) => { if (v !== 'words') project.learn = false; project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
+    mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
+      () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
+    note(syncText),
+    ...learnRow(),
+  ].filter(Boolean) as Node[];
+
+  /** Text → Size & place: the Arabic size, where the block sits, and moving it by hand. */
+  const placePanel = (): Node[] => [
+    ...sizeSlider(),
+    row(ui('ed.position'), chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
+      () => project.textPos, (v) => { project.textPos = v; })),
+    h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => selectLayer('text') }, icon('move', 16), ui('ed.move-text'))),
+  ];
+
+  /** Text → Translation: on/off, synced or whole ayah, the font and which translation, in one panel. */
+  const translationPanel = (): Node[] => {
+    const on = project.showTranslation;
+    const nodes: Node[] = [row(ui('ed.translation'), onOff(() => project.showTranslation, (v) => { project.showTranslation = v; rebuild(); changed(); }))];
+    if (!on) return nodes;
+    nodes.push(
+      row(ui('ed.sync'), chips<TranslationMode>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }],
+        () => project.translationMode, (v) => { project.translationMode = v; rebuild(); })),
+      note(`Synced: word-by-word meanings (Quran.com, English) of the Arabic on screen. Whole ayah: ${translationInfo(project.translation).translator}.`),
+      row(ui('ed.font'), chips<EnFont>([ // each name drawn in its own font: a live preview
+        { value: 'serif', label: ui('ed.serif'), style: `font-family:${FONT_EN}` },
+        { value: 'sans', label: ui('ed.sans'), style: `font-family:${FONT_EN_SANS}` },
+        { value: 'round', label: ui('ed.round'), style: `font-family:${FONT_EN_ROUND};font-weight:600` }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })),
+      section(ui('tr.which')),
+      translationList(() => project.translation ?? currentTranslation(), (id) => {
+        project.translation = id;
+        if (project.translationMode === 'words') project.translationMode = 'ayah'; // the user wants this translation on screen
+        setTranslation(id); // the reader follows, and the next reel starts with it
+        rebuild();
+        changed();
+      }),
+    );
+    return nodes;
+  };
+
+  /** Scenes → Arrange: how scenes share the reel, snapping, slow motion and moving the background. */
+  const arrangePanel = (): Node[] => [
+    ...sceneLayoutPanel(),
+    row(ui('ed.snap'), onOff(() => project.sceneSnap, (v) => { project.sceneSnap = v; changed(); })),
+    slowmoRow(),
+    h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => selectLayer('bg') }, icon('move', 16), ui('ed.move-bg'))),
+  ];
+
+  /** Scenes → Adjust: how dark the background gets behind the text, and the colour grade with its strength. */
+  const adjustPanel = (): Node[] => [
+    ...amountSlider(ui('ed.darken'), () => project.amounts?.dark ?? darkOf(SCRIM_STRENGTH[project.scrim] ?? 1), (v) => setAmount('dark', v)),
+    note(ui('ed.darken-note')),
+    section(ui('ed.grade')),
+    h('div', { class: 'tiles compact' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
+      on: project.grade === g, label: tOr(`grade.${g}`, GRADES[g].label), art: h('span', { class: `mood-art grade-${g}` }),
+      onclick: () => { project.grade = g; changed(); },
+    }))),
+    ...(project.grade !== 'none' ? amountSlider(ui('ed.grade-amount'), () => project.amounts?.grade ?? 1, (v) => setAmount('grade', v)) : []),
+  ];
+
+  /** Audio → Echo: presets and four sliders; the reel's audio is remade when you let go. */
+  let echoTimer = 0;
+  const echoPanel = (): Node[] => {
+    const e = (): Echo => project.echo ?? { amount: 0, space: 0.5, tail: 0.5, repeat: 0 };
+    const apply = (next: Echo | undefined, live: boolean) => {
+      if (exporting) return;
+      project.echo = next && next.amount > 0 ? next : undefined;
+      clearTimeout(echoTimer);
+      if (live) echoTimer = window.setTimeout(() => arrange(), 350);
+      else { arrange(); changed(false); }
+    };
+    const names: [keyof typeof ECHO_PRESETS | 'off', string][] = [['off', ui('ed.off')], ['room', ui('ed.echo-room')], ['hall', ui('ed.echo-hall')], ['masjid', ui('ed.echo-masjid')], ['mountain', ui('ed.echo-mountain')]];
+    const curPreset = () => !project.echo ? 'off' : (Object.keys(ECHO_PRESETS) as (keyof typeof ECHO_PRESETS)[]).find((k) => JSON.stringify(ECHO_PRESETS[k]) === JSON.stringify(project.echo)) ?? null;
+    const slider = (key: keyof Echo, label: string): Node[] => {
+      const pct = (v: number) => `${Math.round(v * 100)} %`;
+      const out = h('span', { class: 'clip-time' }, pct(e()[key]));
+      const el = h('input', { class: 'clip-slider', type: 'range', min: '0', max: '1', step: '0.01', value: String(e()[key]), 'aria-label': label });
+      el.addEventListener('input', () => { out.textContent = pct(Number(el.value)); apply({ ...e(), [key]: Number(el.value), ...(key !== 'amount' && !project.echo ? { amount: 0.3 } : {}) }, true); });
+      el.addEventListener('change', () => apply({ ...e(), [key]: Number(el.value) }, false));
+      return [row(label, out), el];
+    };
+    return [
+      chips<string>(names.map(([v, label]) => ({ value: v, label })), curPreset, (v) => { apply(v === 'off' ? undefined : { ...ECHO_PRESETS[v as keyof typeof ECHO_PRESETS] }, false); refreshUI(); if (v !== 'off') previewText(); }),
+      ...slider('amount', ui('ed.echo-amount')),
+      ...slider('space', ui('ed.echo-space')),
+      ...slider('tail', ui('ed.echo-tail')),
+      ...slider('repeat', ui('ed.echo-repeat')),
+      note(ui('ed.echo-note')),
+    ];
+  };
+
+  /** Audio → Sound → Nature: one calm nature sound quietly under the recitation (owner decision
+   *  2026-10-29), with a level capped far under the voice. */
+  const naturePanel = (): Node[] => {
+    const apply = (next: Ambience | undefined, live: boolean) => {
+      if (exporting) return;
+      project.ambience = next && next.vol > 0 ? next : undefined;
+      clearTimeout(echoTimer);
+      if (live) echoTimer = window.setTimeout(() => arrange(), 350);
+      else { arrange(); changed(false); }
+    };
+    const names: [AmbienceId | 'off', string][] = [['off', ui('ed.off')], ...AMBIENCES.map((id) => [id, ui(`amb.${id}`)] as [AmbienceId, string])];
+    const vol = () => project.ambience?.vol ?? 0.4;
+    const out = h('span', { class: 'clip-time' }, `${Math.round(vol() * 100)} %`);
+    const el = h('input', { class: 'clip-slider', type: 'range', min: '0.05', max: '1', step: '0.01', value: String(vol()), 'aria-label': ui('ed.nature-vol') });
+    el.addEventListener('input', () => { out.textContent = `${Math.round(Number(el.value) * 100)} %`; if (project.ambience) apply({ ...project.ambience, vol: Number(el.value) }, true); });
+    el.addEventListener('change', () => { if (project.ambience) apply({ ...project.ambience, vol: Number(el.value) }, false); });
+    return [
+      chips<string>(names.map(([v, label]) => ({ value: v, label })), () => project.ambience?.id ?? 'off', (v) => {
+        apply(v === 'off' ? undefined : { id: v as AmbienceId, vol: vol() }, false); refreshUI(); if (v !== 'off') previewText();
+      }),
+      ...(project.ambience ? [row(ui('ed.nature-vol'), out), el] : []),
+      note(ui('ed.nature-note')),
+    ];
+  };
+  let soundTab: 'echo' | 'nature' = 'echo';
+  const soundPanel = (): Node[] => {
+    const tabs: [typeof soundTab, string][] = [['echo', ui('ed.echo')], ['nature', ui('ed.nature')]];
+    return [h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => h('button', { class: `tab${k === soundTab ? ' on' : ''}`, onclick: () => { soundTab = k; refreshUI(); } }, label))),
+      ...(soundTab === 'echo' ? echoPanel() : naturePanel())];
+  };
+
   // --- tools (bottom bar) ---
-  // Five tools, CapCut-style: what is touched most comes first in each.
+  // Five tools, CapCut-style, each with at most six options; what is touched most comes first.
   const TOOLS: Tool[] = [
-    { id: 'styles', icon: 'sparkle', label: ui('ed.styles'), options: [
+    { id: 'styles', icon: 'sparkle', label: ui('ed.look'), options: [
       { id: 'quick', icon: 'sparkle', label: ui('qr.title'), panel: quickPanel },
-      { id: 'styles', icon: 'mood', label: ui('ed.styles'), panel: stylePanel },
-      { id: 'mood', icon: 'mood', label: ui('ed.mood'), panel: moodPanel },
-      { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
-      { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
+      { id: 'styles', icon: 'mood', label: ui('ed.looks'), panel: looksPanel },
       { id: 'colours', icon: 'colours', label: ui('ed.colours'), panel: () => {
         const parts: [keyof TextColors, string, string][] = [['ar', ui('ed.ayah'), 'Ayah'], ['en', ui('ed.translation'), 'Translation'], ['title', ui('ed.surah-name'), 'Surah name']];
         const cur = parts.find((x) => x[0] === colourKey)!;
@@ -1437,78 +1639,46 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       } },
     ] },
     { id: 'text', icon: 'text', label: ui('ed.text'), options: [
-      { id: 'mode', icon: 'mode', label: ui('ed.text-mode'), panel: () => [
-        chips(MODES, mode, (v) => { project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
-        mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
-          () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
-        note(syncText),
-      ].filter(Boolean) as Node[] },
+      { id: 'mode', icon: 'mode', label: ui('ed.text-mode'), panel: modePanel },
+      { id: 'text-effect', icon: 'effects', label: ui('ed.text-effect'), panel: effectPanel },
       { id: 'highlight', icon: 'highlight', label: ui('ed.highlight'), panel: highlightPanel },
-      { id: 'learn', icon: 'mode', label: ui('ed.learn'), panel: learnRow },
       { id: 'tajweed', icon: 'colours', label: ui('ed.tajweed'), panel: () => [tajweedRow(), tajweedLegend(), note(ui('ed.tajweed-note'))] },
-      { id: 'size', icon: 'size', label: ui('ed.size'), panel: sizeSlider },
-      { id: 'position', icon: 'position', label: ui('ed.position'), panel: () => [chips<TextPos>([{ value: 'upper', label: ui('ed.higher') }, { value: 'center', label: ui('ed.centre') }, { value: 'lower', label: ui('ed.lower') }],
-        () => project.textPos, (v) => { project.textPos = v; })] },
-      { id: 'gap', icon: 'hold', label: ui('ed.between-ayat'), panel: () => [
-        chips<GapText>([{ value: 'hold', label: ui('ed.keep-the-ayah') }, { value: 'clear', label: ui('ed.clear') }], () => project.gap, (v) => { project.gap = v; arrange(); }),
-        note(ui('ed.what-the-text-does-in-the-pause-between-'))] },
-      { id: 'mv-text', icon: 'move', label: ui('mv.tool'), action: () => selectLayer('text') },
-      { id: 'tr-show', icon: 'translation', label: ui('ed.translation'), toggle: { get: () => project.showTranslation, set: (v) => { project.showTranslation = v; rebuild(); } } },
-      { id: 'tr-sync', icon: 'sync', label: ui('ed.sync'), disabled: () => !project.showTranslation, panel: () => [
-        chips<TranslationMode>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }],
-          () => project.translationMode, (v) => { project.translationMode = v; rebuild(); }),
-        note(`Synced: word-by-word meanings (Quran.com, English) of the Arabic on screen. Whole ayah: ${translationInfo(project.translation).translator}.`)] },
-      { id: 'tr-which', icon: 'translation', label: ui('tr.which'), disabled: () => !project.showTranslation, panel: () => [
-        translationList(() => project.translation ?? currentTranslation(), (id) => {
-          project.translation = id;
-          if (project.translationMode === 'words') project.translationMode = 'ayah'; // the user wants this translation on screen
-          setTranslation(id); // the reader follows, and the next reel starts with it
-          rebuild();
-          changed();
-        })] },
-      { id: 'tr-font', icon: 'font', label: ui('ed.font'), disabled: () => !project.showTranslation, panel: () => [
-        chips<EnFont>([ // each name drawn in its own font: a live preview
-          { value: 'serif', label: ui('ed.serif'), style: `font-family:${FONT_EN}` },
-          { value: 'sans', label: ui('ed.sans'), style: `font-family:${FONT_EN_SANS}` },
-          { value: 'round', label: ui('ed.round'), style: `font-family:${FONT_EN_ROUND};font-weight:600` }], () => project.enFont, (v) => { project.enFont = v; rebuild(); })] },
+      { id: 'size', icon: 'size', label: ui('ed.size-place'), panel: placePanel },
+      { id: 'translation', icon: 'translation', label: ui('ed.translation'), panel: translationPanel },
     ] },
     { id: 'audio', icon: 'audio', label: ui('ed.audio'), options: [
       { id: 'reciter', icon: 'mic', label: ui('ed.reciter'), panel: reciterPanel },
       { id: 'silences', icon: 'silence', label: ui('ed.remove-silences'), action: () => removeSilences() },
       { id: 'pause', icon: 'gap', label: ui('ed.pauses'), panel: () => [
         row(ui('ed.between-all-ayat'), chips<string>(PAUSES.map((x) => ({ value: String(x), label: x ? `+${x} s` : ui('ed.natural') })), () => String(project.pause), (v) => { project.pause = Number(v); arrange(); })),
-        note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli'))] },
-      { id: 'tail', icon: 'gap', label: ui('ed.tail'), panel: tailPanel },
-      { id: 'tight', icon: 'silence', label: ui('ed.tight-bar'), toggle: { get: () => !!project.tightStart, set: (v) => { setTightStart(v); arrange(); } } },
+        note(ui('ed.for-one-ayah-tap-its-audio-in-the-timeli')),
+        row(ui('ed.between-ayat'), chips<GapText>([{ value: 'hold', label: ui('ed.keep-the-ayah') }, { value: 'clear', label: ui('ed.clear') }], () => project.gap, (v) => { project.gap = v; arrange(); })),
+        note(ui('ed.what-the-text-does-in-the-pause-between-'))] },
+      { id: 'tail', icon: 'gap', label: ui('ed.tail'), panel: () => [
+        row(ui('ed.tight-bar'), onOff(() => !!project.tightStart, (v) => { setTightStart(v); arrange(); changed(); })),
+        ...tailPanel()] },
+      { id: 'echo', icon: 'audio', label: ui('ed.sound'), panel: soundPanel },
       { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
     { id: 'scenes', icon: 'scenes', label: ui('ed.scenes'), options: [
       { id: 'add', icon: 'plus', label: ui('ed.add'), panel: () => bgPicker(null) },
       { id: 'change', icon: 'replace', label: ui('ed.change'), panel: () => bgPicker(sceneAtPlayhead()) },
-      { id: 'layout', icon: 'layout', label: ui('ed.arrange'), panel: sceneLayoutPanel },
-      { id: 'mv-bg', icon: 'move', label: ui('mv.tool'), action: () => selectLayer('bg') },
-      { id: 'grade', icon: 'grade', label: ui('ed.grade'), panel: () => [h('div', { class: 'tiles' }, ...(Object.keys(GRADES) as Grade[]).map((g) => tile({
-        on: project.grade === g, label: tOr(`grade.${g}`, GRADES[g].label), art: h('span', { class: `mood-art grade-${g}` }), onclick: () => { project.grade = g; changed(); },
-      })))] },
-      { id: 'scrim', icon: 'darken', label: ui('ed.darken'), panel: () => [chips<Scrim>([{ value: 'light', label: ui('ed.light') }, { value: 'normal', label: ui('ed.normal') }, { value: 'strong', label: ui('ed.strong') }],
-        () => project.scrim, (v) => { project.scrim = v; }), note(ui('ed.darkens-the-background-behind-the-text-s'))] },
-      { id: 'snap', icon: 'magnet', label: ui('ed.snap'), toggle: { get: () => project.sceneSnap, set: (v) => { project.sceneSnap = v; } } },
-      { id: 'slowmo', icon: 'hold', label: ui('ed.slowmo'), panel: () => [slowmoRow(), note(ui('ed.slowmo-note'))] },
-      { id: 'cinema', icon: 'sparkle', label: ui('ed.cinema'), toggle: { get: () => !!project.cinema, set: (v) => setCinema(v) } },
-      { id: 'grain', icon: 'grain', label: ui('ed.grain'), toggle: { get: () => project.grain, set: (v) => { project.grain = v; } } },
-      { id: 'vignette', icon: 'vignette', label: ui('ed.vignette'), toggle: { get: () => project.vignette, set: (v) => { project.vignette = v; } } },
+      { id: 'layout', icon: 'layout', label: ui('ed.arrange'), panel: arrangePanel },
+      { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
+      { id: 'adjust', icon: 'darken', label: ui('ed.adjust'), panel: adjustPanel },
+      { id: 'touches', icon: 'sparkle', label: ui('ed.touches'), panel: touchesPanel },
     ] },
     { id: 'layout', icon: 'layout', label: ui('ed.layout'), options: [
       { id: 'format', icon: 'full', label: ui('ed.format'), panel: formatRow },
-      { id: 'title', icon: 'text', label: ui('ed.surah-name'), panel: () => [
+      { id: 'title', icon: 'text', label: ui('ed.names'), panel: () => [
         row(ui('ed.place'), chips<TitlePos>([{ value: 'top', label: ui('ed.top') }, { value: 'below', label: ui('ed.below-the-ayah') }, { value: 'bottom', label: ui('ed.bottom') }],
           () => project.titlePos, (v) => { project.titlePos = v; rebuild(); })),
         row(ui('ed.size'), chips<TitleSize>([{ value: 's', label: ui('ed.small') }, { value: 'm', label: ui('ed.medium') }, { value: 'l', label: ui('ed.large') }],
           () => project.titleSize, (v) => { project.titleSize = v; rebuild(); })),
         row(ui('ed.surah-name'), chips<'show' | 'hide'>([{ value: 'show', label: ui('ed.show') }, { value: 'hide', label: ui('ed.hide') }],
           () => (project.surahName ? 'show' : 'hide'), (v) => { project.surahName = v === 'show'; rebuild(); })),
-        note(ui('ed.the-reference-e-g-al-fatiha-1-1-always-s'))] },
-      { id: 'credit', icon: 'mic', label: ui('ed.reciter-name'), toggle: { get: () => project.credit, set: (v) => { project.credit = v; rebuild(); } } },
+        note(ui('ed.the-reference-e-g-al-fatiha-1-1-always-s')),
+        row(ui('ed.reciter-name'), onOff(() => project.credit, (v) => { project.credit = v; rebuild(); changed(); }))] },
       { id: 'watermark', icon: 'watermark', label: ui('ed.watermark'), panel: watermarkPanel },
       { id: 'cover', icon: 'card', label: ui('ed.cover'), panel: coverPanel },
       { id: 'dedication', icon: 'card', label: ui('ed.dedication'), panel: dedicationField },
@@ -1547,6 +1717,29 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let shownOnKey = false; // the keyframe button follows the playhead
   let moveHinted = false; // the how-to toast, once per visit
 
+  /** A selected scene's brightness and blur, and for a video its start and fit (one panel). */
+  function sceneAdjust(i: number): Node[] {
+    const entry = tl?.scenes[i]?.entry ?? i;
+    const clipOf = () => { const c = fitClips(); return (c[entry] ??= { in: 0, fit: 'loop' }); };
+    const cur = project.clips?.[entry];
+    const slider = (label: string, min: number, get: () => number, put: (v: number) => void, fmt: (v: number) => string): Node[] => {
+      const out = h('span', { class: 'clip-time' }, fmt(get()));
+      const el = h('input', { class: 'clip-slider', type: 'range', min: String(min), max: '1', step: '0.01', value: String(get()), 'aria-label': label });
+      const apply = (done: boolean) => { if (exporting) return; const v = Number(el.value); out.textContent = fmt(v); put(v); dirty = true; if (done) changed(false); };
+      el.addEventListener('input', () => apply(false));
+      el.addEventListener('change', () => apply(true));
+      return [row(label, out), el];
+    };
+    const signed = (v: number) => (Math.abs(v) < 0.005 ? '0' : `${v > 0 ? '+' : '−'}${Math.round(Math.abs(v) * 100)}`);
+    const nodes: Node[] = [
+      ...slider(ui('ed.brightness'), -1, () => cur?.b ?? 0, (v) => { const c = clipOf(); if (Math.abs(v) < 0.005) delete c.b; else c.b = Math.round(v * 100) / 100; }, signed),
+      ...slider(ui('ed.blur'), 0, () => cur?.blur ?? 0, (v) => { const c = clipOf(); if (v < 0.005) delete c.blur; else c.blur = Math.round(v * 100) / 100; }, (v) => `${Math.round(v * 100)} %`),
+      note(ui('ed.scene-adjust-note')),
+    ];
+    if (media[entry]?.video) nodes.push(section(ui('ed.video')), ...videoPanel(i));
+    return nodes;
+  }
+
   // --- block actions (when a block is selected in the timeline) ---
   function selectionOptions(sel: NonNullable<Selection>): Opt[] {
     const i = sel.index;
@@ -1556,10 +1749,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         { id: 'split', icon: 'split', label: ui('ed.split'), action: () => splitScene(i) },
         { id: 'length', icon: 'gap', label: ui('ed.length'), disabled: () => count < 2, panel: () => sceneTune(i) },
         { id: 'replace', icon: 'replace', label: ui('ed.replace'), panel: () => bgPicker(i) },
-        { id: 'video', icon: 'clip', label: ui('ed.video'), disabled: () => !media[tl?.scenes[i]?.entry ?? -1]?.video, panel: () => videoPanel(i) },
-        { id: 'left', icon: 'left', label: ui('ed.move-left'), disabled: () => i === 0, action: () => moveScene(i, i - 1) },
-        { id: 'right', icon: 'right', label: ui('ed.move-right'), disabled: () => i >= count - 1, action: () => moveScene(i, i + 1) },
-        { id: 'transition', icon: 'transition', label: ui('ed.transition'), panel: transitionPanel },
+        { id: 'adjust', icon: 'darken', label: ui('ed.adjust'), panel: () => sceneAdjust(i) },
+        { id: 'order', icon: 'right', label: ui('ed.order'), disabled: () => count < 2, panel: () => [
+          h('div', { class: 'chips' },
+            h('button', { class: 'chip', disabled: i === 0, onclick: () => moveScene(i, i - 1) }, icon('left', 16), ui('ed.move-left')),
+            h('button', { class: 'chip', disabled: i >= count - 1, onclick: () => moveScene(i, i + 1) }, ui('ed.move-right'), icon('right', 16))),
+          note(ui('ed.order-note'))] },
         { id: 'delete', icon: 'trash', label: ui('ed.delete'), disabled: () => count < 2, action: () => removeScene(i) },
       ];
     }
@@ -1870,8 +2065,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     pause();
     plan = arrangeReel(base.plan, pc);
     // Steady loudness + soft edges, the same for preview and export (polishAudio).
-    audio = polishAudio(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.tail || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio);
-    spine.setAudio(audio);
+    // Echo (the reciter's own voice in a room; nothing added, rule 3) before the polish.
+    // Then a nature sound, if picked, quietly underneath (after the polish, so the voice sets the level).
+    voice = polishAudio(addEcho(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.tail || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio, project.echo));
+    audio = addAmbience(voice, project.ambience);
+    spine.setAudio(voice); // the waveform shows the recitation, not the nature sound
     rebuild();
     if (was) void play();
   }
@@ -1902,7 +2100,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
-    if (audio) tl.breath = breathOf(audio);
+    if (voice ?? audio) tl.breath = breathOf((voice ?? audio)!);
     if (project.tajweed) {
       if (tajweedData) tl.ayat.forEach((a, i) => { a.tajweed = tajweedData![i]; });
       else ensureTajweed();
@@ -1935,6 +2133,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Drop the previous reel so its audio can never go out under this reciter's credit.
     plan = null;
     audio = null;
+    voice = null;
     spine.setAudio(null);
     base = null;
     tl = null;
