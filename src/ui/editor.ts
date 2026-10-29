@@ -3,7 +3,8 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
-import { arrangeAudio, polishAudio } from '../data/audio';
+import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
+import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
@@ -134,6 +135,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let alive = true;
   let tl: Timeline | null = null;
   let audio: AudioBuffer | null = null;
+  /** The recitation alone (before a nature sound), for the waveform and Cinematic breath. */
+  let voice: AudioBuffer | null = null;
   let plan: ReelPlan | null = null;
   let base: Reel | null = null; // the recitation before edits (trims, pauses, cards)
   const measure = document.createElement('canvas').getContext('2d')!;
@@ -1557,6 +1560,68 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     ...(project.grade !== 'none' ? amountSlider(ui('ed.grade-amount'), () => project.amounts?.grade ?? 1, (v) => setAmount('grade', v)) : []),
   ];
 
+  /** Audio → Echo: presets and four sliders; the reel's audio is remade when you let go. */
+  let echoTimer = 0;
+  const echoPanel = (): Node[] => {
+    const e = (): Echo => project.echo ?? { amount: 0, space: 0.5, tail: 0.5, repeat: 0 };
+    const apply = (next: Echo | undefined, live: boolean) => {
+      if (exporting) return;
+      project.echo = next && next.amount > 0 ? next : undefined;
+      clearTimeout(echoTimer);
+      if (live) echoTimer = window.setTimeout(() => arrange(), 350);
+      else { arrange(); changed(false); }
+    };
+    const names: [keyof typeof ECHO_PRESETS | 'off', string][] = [['off', ui('ed.off')], ['room', ui('ed.echo-room')], ['hall', ui('ed.echo-hall')], ['masjid', ui('ed.echo-masjid')], ['mountain', ui('ed.echo-mountain')]];
+    const curPreset = () => !project.echo ? 'off' : (Object.keys(ECHO_PRESETS) as (keyof typeof ECHO_PRESETS)[]).find((k) => JSON.stringify(ECHO_PRESETS[k]) === JSON.stringify(project.echo)) ?? null;
+    const slider = (key: keyof Echo, label: string): Node[] => {
+      const pct = (v: number) => `${Math.round(v * 100)} %`;
+      const out = h('span', { class: 'clip-time' }, pct(e()[key]));
+      const el = h('input', { class: 'clip-slider', type: 'range', min: '0', max: '1', step: '0.01', value: String(e()[key]), 'aria-label': label });
+      el.addEventListener('input', () => { out.textContent = pct(Number(el.value)); apply({ ...e(), [key]: Number(el.value), ...(key !== 'amount' && !project.echo ? { amount: 0.3 } : {}) }, true); });
+      el.addEventListener('change', () => apply({ ...e(), [key]: Number(el.value) }, false));
+      return [row(label, out), el];
+    };
+    return [
+      chips<string>(names.map(([v, label]) => ({ value: v, label })), curPreset, (v) => { apply(v === 'off' ? undefined : { ...ECHO_PRESETS[v as keyof typeof ECHO_PRESETS] }, false); refreshUI(); if (v !== 'off') previewText(); }),
+      ...slider('amount', ui('ed.echo-amount')),
+      ...slider('space', ui('ed.echo-space')),
+      ...slider('tail', ui('ed.echo-tail')),
+      ...slider('repeat', ui('ed.echo-repeat')),
+      note(ui('ed.echo-note')),
+    ];
+  };
+
+  /** Audio → Sound → Nature: one calm nature sound quietly under the recitation (owner decision
+   *  2026-10-29), with a level capped far under the voice. */
+  const naturePanel = (): Node[] => {
+    const apply = (next: Ambience | undefined, live: boolean) => {
+      if (exporting) return;
+      project.ambience = next && next.vol > 0 ? next : undefined;
+      clearTimeout(echoTimer);
+      if (live) echoTimer = window.setTimeout(() => arrange(), 350);
+      else { arrange(); changed(false); }
+    };
+    const names: [AmbienceId | 'off', string][] = [['off', ui('ed.off')], ...AMBIENCES.map((id) => [id, ui(`amb.${id}`)] as [AmbienceId, string])];
+    const vol = () => project.ambience?.vol ?? 0.4;
+    const out = h('span', { class: 'clip-time' }, `${Math.round(vol() * 100)} %`);
+    const el = h('input', { class: 'clip-slider', type: 'range', min: '0.05', max: '1', step: '0.01', value: String(vol()), 'aria-label': ui('ed.nature-vol') });
+    el.addEventListener('input', () => { out.textContent = `${Math.round(Number(el.value) * 100)} %`; if (project.ambience) apply({ ...project.ambience, vol: Number(el.value) }, true); });
+    el.addEventListener('change', () => { if (project.ambience) apply({ ...project.ambience, vol: Number(el.value) }, false); });
+    return [
+      chips<string>(names.map(([v, label]) => ({ value: v, label })), () => project.ambience?.id ?? 'off', (v) => {
+        apply(v === 'off' ? undefined : { id: v as AmbienceId, vol: vol() }, false); refreshUI(); if (v !== 'off') previewText();
+      }),
+      ...(project.ambience ? [row(ui('ed.nature-vol'), out), el] : []),
+      note(ui('ed.nature-note')),
+    ];
+  };
+  let soundTab: 'echo' | 'nature' = 'echo';
+  const soundPanel = (): Node[] => {
+    const tabs: [typeof soundTab, string][] = [['echo', ui('ed.echo')], ['nature', ui('ed.nature')]];
+    return [h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => h('button', { class: `tab${k === soundTab ? ' on' : ''}`, onclick: () => { soundTab = k; refreshUI(); } }, label))),
+      ...(soundTab === 'echo' ? echoPanel() : naturePanel())];
+  };
+
   // --- tools (bottom bar) ---
   // Five tools, CapCut-style, each with at most six options; what is touched most comes first.
   const TOOLS: Tool[] = [
@@ -1592,6 +1657,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       { id: 'tail', icon: 'gap', label: ui('ed.tail'), panel: () => [
         row(ui('ed.tight-bar'), onOff(() => !!project.tightStart, (v) => { setTightStart(v); arrange(); changed(); })),
         ...tailPanel()] },
+      { id: 'echo', icon: 'audio', label: ui('ed.sound'), panel: soundPanel },
       { id: 'reset', icon: 'reset', label: ui('ed.reset-audio'), disabled: () => !hasAudioEdits(), action: resetAudio },
     ] },
     { id: 'scenes', icon: 'scenes', label: ui('ed.scenes'), options: [
@@ -1999,8 +2065,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     pause();
     plan = arrangeReel(base.plan, pc);
     // Steady loudness + soft edges, the same for preview and export (polishAudio).
-    audio = polishAudio(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.tail || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio);
-    spine.setAudio(audio);
+    // Echo (the reciter's own voice in a room; nothing added, rule 3) before the polish.
+    // Then a nature sound, if picked, quietly underneath (after the polish, so the voice sets the level).
+    voice = polishAudio(addEcho(plan.pieces!.some((x) => x.from !== x.at) || pc.pause || pc.intro || pc.outro || pc.tail || pc.gaps.some(Boolean) ? arrangeAudio(base.audio, plan.pieces!, plan.duration) : base.audio, project.echo));
+    audio = addAmbience(voice, project.ambience);
+    spine.setAudio(voice); // the waveform shows the recitation, not the nature sound
     rebuild();
     if (was) void play();
   }
@@ -2031,7 +2100,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
-    if (audio) tl.breath = breathOf(audio);
+    if (voice ?? audio) tl.breath = breathOf((voice ?? audio)!);
     if (project.tajweed) {
       if (tajweedData) tl.ayat.forEach((a, i) => { a.tajweed = tajweedData![i]; });
       else ensureTajweed();
@@ -2064,6 +2133,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     // Drop the previous reel so its audio can never go out under this reciter's credit.
     plan = null;
     audio = null;
+    voice = null;
     spine.setAudio(null);
     base = null;
     tl = null;

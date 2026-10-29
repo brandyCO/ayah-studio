@@ -1,4 +1,6 @@
 // Project state: plain, serializable JSON. Everything the renderer needs besides decoded media.
+import { validEcho, type Echo } from '../data/audio';
+import { validAmbience, type Ambience } from '../data/ambience';
 import { validTouches, type Touch } from './touches';
 import { TEXT_EFFECTS, type TextEffect } from './effects';
 import { clampArSize, isFormat, type EnFont, type Format, type FrameStyle, type TextSize, type TitlePos, type TitleSize } from './layout';
@@ -89,6 +91,10 @@ export interface Project {
   vignette: boolean;
   /** Calm finishing touches (water, light, weather; src/engine/touches.ts), at most MAX_TOUCHES. */
   touches: Touch[];
+  /** Echo on the reciter's voice (src/data/audio.ts addEcho), or none. */
+  echo?: Echo;
+  /** A nature sound quietly under the recitation (src/data/ambience.ts; rule 3, never music), or none. */
+  ambience?: Ambience;
   /** Fine amounts set with sliders (0–1). Missing: from the preset (scrim step, full grade, default
    *  grain / vignette). A mood or style resets them. */
   amounts?: Amounts;
@@ -249,7 +255,7 @@ export function validAmounts(v: unknown): Amounts | undefined {
 export const LOOK_KEYS = [
   'textMode', 'wordsPerStep', 'showTranslation', 'translationMode', 'titlePos', 'titleSize', 'surahName', 'scenes', 'clips',
   'sceneMode', 'sceneLengths', 'sceneSnap', 'transition', 'textEffect', 'colors', 'grade', 'scrim', 'textSize', 'textPos', 'enFont', 'pause', 'gap', 'intro', 'outro',
-  'credit', 'watermark', 'highlight', 'grain', 'vignette', 'touches', 'amounts',
+  'credit', 'watermark', 'highlight', 'grain', 'vignette', 'touches', 'amounts', 'echo', 'ambience',
 ] as const;
 export type Look = Pick<Project, (typeof LOOK_KEYS)[number]>;
 
@@ -305,6 +311,12 @@ export function applyLook(p: Project, look: unknown, validBackground: (id: strin
           return out;
         });
       }
+    } else if (k === 'echo') {
+      const e = validEcho(v);
+      if (e) p.echo = e; else delete p.echo;
+    } else if (k === 'ambience') {
+      const a = validAmbience(v);
+      if (a) p.ambience = a; else delete p.ambience;
     } else if (k === 'amounts') {
       const a = validAmounts(v);
       if (a) p.amounts = a; else delete p.amounts;

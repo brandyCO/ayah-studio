@@ -90,7 +90,9 @@ Engine edge cases:
 2. **Always show the reference** on screen (e.g. `Al-Baqarah · 2:255`). The Arabic surah name above it
    can be hidden (Layout → Surah name → Hide; owner decision 2026-10-08) — the reference line never.
    The reciter credit line is optional and off by default (owner decision).
-3. **No music and no sound effects** anywhere in exported videos. Recitation audio only.
+3. **No music and no sound effects** anywhere in exported videos. Recitation audio, plus (owner decision
+   2026-10-29) an optional calm nature sound (rain, wind, waves…) quietly underneath, always far below the
+   reciter. Never music, never instruments or voices.
 4. Default background library: calm nature/abstract media only, no people or faces.
 5. Arabic text is drawn by the browser (canvas / DOM) with a proper Quran font — never by
    FFmpeg `drawtext`.
@@ -544,6 +546,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and columns shifted, before the scrim), Water light (caustics, light only, over the frame), Floating
       light, Bokeh, Glow, Light leak, Mist, Rain, Snow; plus Cinematic, Grain, Vignette. Nothing moves or
       bends the Quran text (rule 7)
+
+- [x] Echo + nature sounds (owner request 2026-10-29): Audio → **Sound**, tabs **Echo** (`project.echo`,
+      `addEcho()` in `src/data/audio.ts`: Off / Room / Hall / Masjid / Mountain + Amount, Space, Tail, Repeats
+      sliders; the reciter's own voice only) and **Nature** (`project.ambience`, `src/data/ambience.ts`: Rain,
+      Distant storm, Campfire, Waves, Wind, Stream, made from seeded noise — no files, preview = export;
+      Volume slider: −44 … −28 dBFS RMS under a voice polished to ≈ −18, 1.5 s fades). Both in the look.
+      The waveform and Cinematic breath follow the voice alone
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From
