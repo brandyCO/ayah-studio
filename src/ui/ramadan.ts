@@ -277,13 +277,12 @@ export function openRamadan(ctx: RamadanContext) {
 }
 
 function locate(save: (p: { lat: number; lng: number }) => void) {
-  if (!navigator.geolocation) return toast(tr('ram.noLocation'));
   toast(tr('ram.finding'));
-  navigator.geolocation.getCurrentPosition(
-    // Rounded: the reminder needs the town, not the street.
-    (pos) => save({ lat: Math.round(pos.coords.latitude * 100) / 100, lng: Math.round(pos.coords.longitude * 100) / 100 }),
-    () => toast(tr('ram.locationDenied')),
-    { maximumAge: 6 * 3600_000, timeout: 15_000 });
+  // Rounded: the reminder needs the town, not the street.
+  void import('../data/location').then((m) => m.getLocation(true)).then((r) => {
+    if (r.ok) save({ lat: r.lat, lng: r.lng });
+    else toast(r.why === 'unsupported' ? tr('ram.noLocation') : r.why === 'denied' ? tr('ram.locationDenied') : tr(`pr.fail.${r.why}` as Parameters<typeof tr>[0]));
+  });
 }
 
 // --- local reminders (Android app) ---

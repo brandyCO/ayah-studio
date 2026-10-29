@@ -32,6 +32,7 @@ final class Widgets {
         if (ids.length > 0) TasbihWidget.draw(c, m, ids);
         ids = m.getAppWidgetIds(new ComponentName(c, PrayerWidget.class));
         if (ids.length > 0) PrayerWidget.draw(c, m, ids);
+        DailyAyahWidget.refresh(c);
         prayerTick(c);
     }
 

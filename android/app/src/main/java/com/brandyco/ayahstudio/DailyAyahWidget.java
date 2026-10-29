@@ -7,6 +7,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Bundle;
+import android.view.View;
+import java.io.File;
 import android.widget.RemoteViews;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -16,8 +21,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Home-screen widget "Ayah of the day" (docs/grow.md, G2): the reference and the translation, in the
- * system font (never the Arabic: the Quran is drawn only with the app's Quran fonts). The pick is the
+ * Home-screen widget "Ayah of the day" (docs/grow.md, G2): the reference and the translation in the
+ * system font, or (Me → Settings → Widgets → Arabic) the ayah as a picture the app drew in its Quran
+ * font (files/daily/{key}.png, made for the next three weeks; the Quran is never drawn in a system
+ * font, so without a picture the translation is shown). On a night card in the theme colours. The pick is the
  * same as the app's (src/data/daily.ts): the curated list in the web assets (public/data/daily.json),
  * indexed by whole local days since its epoch. The translation is the one chosen in the app
  * (stored by DailyPlugin), else Saheeh International from the list. Tap → the ayah in the app.
@@ -28,7 +35,12 @@ public class DailyAyahWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         Item item = today(context);
-        for (int id : ids) manager.updateAppWidget(id, views(context, item));
+        for (int id : ids) manager.updateAppWidget(id, views(context, manager, id, item));
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
+        manager.updateAppWidget(id, views(context, manager, id, today(context)));
     }
 
     /** Redraws every placed widget (after the app stored another translation). */
@@ -37,7 +49,7 @@ public class DailyAyahWidget extends AppWidgetProvider {
         int[] ids = m.getAppWidgetIds(new ComponentName(context, DailyAyahWidget.class));
         if (ids.length == 0) return;
         Item item = today(context);
-        for (int id : ids) m.updateAppWidget(id, views(context, item));
+        for (int id : ids) m.updateAppWidget(id, views(context, m, id, item));
     }
 
     static final class Item {
@@ -45,6 +57,12 @@ public class DailyAyahWidget extends AppWidgetProvider {
         String text = "";
         String credit = "";
         String hash = "#/";
+        String key = "";
+        boolean arabic;
+    }
+
+    static File picture(Context context, String key) {
+        return new File(new File(context.getFilesDir(), "daily"), key.replace(':', '_') + ".png");
     }
 
     /** Days from 1970-01-01 to a civil date (H. Hinnant's algorithm; no time zones involved). */
@@ -83,17 +101,38 @@ public class DailyAyahWidget extends AppWidgetProvider {
             it.text = texts.optString(key, x.getString("en"));
             it.credit = texts.has(key) ? p.getString("credit", "") : "Saheeh International";
             it.hash = "#/s/" + s + "/" + from;
+            it.key = key;
+            it.arabic = "ar".equals(p.getString("lang", "tr"));
         } catch (Exception ex) {
             it.ref = "Ayah Studio";
         }
         return it;
     }
 
-    static RemoteViews views(Context context, Item it) {
+    static RemoteViews views(Context context, AppWidgetManager m, int id, Item it) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.daily_ayah_widget);
+        org.json.JSONObject data = WidgetStore.data(context);
+        WidgetArt.Pal pal = WidgetArt.pal(data);
+        int[] sz = WidgetArt.size(context, m, id, 250, 110);
+        v.setImageViewBitmap(R.id.daily_bg, WidgetArt.background(context, pal, sz[0], sz[1]));
         v.setTextViewText(R.id.daily_ref, it.ref);
-        v.setTextViewText(R.id.daily_text, it.text);
-        v.setTextViewText(R.id.daily_credit, it.credit);
+        Bitmap ar = null;
+        if (it.arabic && !it.key.isEmpty()) {
+            File f = picture(context, it.key);
+            if (f.exists()) ar = BitmapFactory.decodeFile(f.getPath());
+        }
+        if (ar != null) {
+            v.setImageViewBitmap(R.id.daily_ar, ar);
+            v.setViewVisibility(R.id.daily_ar, View.VISIBLE);
+            v.setViewVisibility(R.id.daily_text, View.GONE);
+            v.setViewVisibility(R.id.daily_credit, View.GONE);
+        } else {
+            v.setViewVisibility(R.id.daily_ar, View.GONE);
+            v.setViewVisibility(R.id.daily_text, View.VISIBLE);
+            v.setViewVisibility(R.id.daily_credit, View.VISIBLE);
+            v.setTextViewText(R.id.daily_text, it.text);
+            v.setTextViewText(R.id.daily_credit, it.credit);
+        }
         Intent open = new Intent(context, MainActivity.class);
         open.setAction(Intent.ACTION_VIEW);
         open.putExtra(MainActivity.EXTRA_HASH, it.hash);

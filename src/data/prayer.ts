@@ -2,6 +2,7 @@
 // user's location (rounded to ~1 km; it never leaves the device) and a calculation method (picked
 // from the time zone at first, changeable). localStorage `prayer`.
 import type { PrayerTimes as PT } from 'adhan';
+import { getLocation, type LocResult } from './location';
 
 export const METHODS = ['MuslimWorldLeague', 'UmmAlQura', 'Egyptian', 'Karachi', 'NorthAmerica', 'Dubai', 'Qatar',
   'Kuwait', 'Singapore', 'Turkey', 'Tehran', 'MoonsightingCommittee'] as const;
@@ -82,15 +83,8 @@ export async function nextPrayer(now = new Date()): Promise<{ name: PrayerName; 
 }
 
 /** Asks for the location (rounded to 0.01°, about 1 km) and saves it. */
-export function locatePrayer(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(false);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPrayerSettings({ ...prayerSettings(), lat: Math.round(pos.coords.latitude * 100) / 100, lng: Math.round(pos.coords.longitude * 100) / 100 });
-        resolve(true);
-      },
-      () => resolve(false),
-      { maximumAge: 6 * 3600_000, timeout: 15_000 });
-  });
+export async function locatePrayer(): Promise<LocResult> {
+  const r = await getLocation(true);
+  if (r.ok) setPrayerSettings({ ...prayerSettings(), lat: r.lat, lng: r.lng });
+  return r;
 }

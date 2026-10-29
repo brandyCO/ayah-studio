@@ -15,10 +15,10 @@ import { pendingRewards } from '../data/claims';
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
 export type Tab = 'read' | 'listen' | 'create' | 'me';
-type Intent = 'listen' | 'menu' | 'pick';
+export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}`;
 export interface TabHandlers { read?: () => void; listen?: () => void }
 
-const goMushaf = (intent?: Intent) => {
+export const goMushaf = (intent?: Intent) => {
   if (intent === 'pick' && document.body.classList.contains('mushaf-mode')) {
     // Already on the page: just put the bars away and say how to select.
     document.querySelector('.mushaf-bar')?.classList.remove('show');
@@ -37,7 +37,7 @@ export function takeTabIntent(): Intent | null {
   try {
     const v = sessionStorage.getItem('tabIntent');
     sessionStorage.removeItem('tabIntent');
-    return v === 'listen' || v === 'menu' || v === 'pick' ? v : null;
+    return v && /^(listen|pick|bookmarks|reflections|ramadan|tour|page:\d+)$/.test(v) ? (v as Intent) : null;
   } catch { return null; }
 }
 
@@ -87,8 +87,6 @@ export async function openCreate() {
   d.showModal();
 }
 
-/** Settings and the rest of the menu (it lives on the mushaf). */
-export const openMoreMenu = () => goMushaf('menu');
 
 /** After "Pick ayat": say how to select, near where the user will do it. */
 export const pickHint = () => toast(t('create.pickHint'));

@@ -1,81 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tasbih on the home screen (TasbihWidget): tap the middle to count, ⟳ for the next dhikr. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Tasbih on the home screen (TasbihWidget): the count inside a ring in the theme colours; tap the
+     ring to count, ⟳ for the next dhikr. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tb_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="10dp"
-    android:background="@drawable/daily_widget_bg">
+    android:background="@drawable/widget_frame"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/tb_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:contentDescription="@null" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-        <TextView
-            android:id="@+id/tb_en"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/daily_accent"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/tb_next"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:gravity="center"
-            android:text="⟳"
-            android:textColor="@color/daily_accent"
-            android:textSize="20sp"
-            android:contentDescription="@string/tasbih_next" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/tb_tap"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center"
-        android:background="@drawable/tasbih_tap_bg"
-        android:contentDescription="@string/tasbih_count">
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:id="@+id/tb_en"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:ellipsize="end" />
+            <TextView
+                android:id="@+id/tb_next"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:text="⟳"
+                android:background="@drawable/widget_chip"
+                android:textColor="#CCFFFFFF"
+                android:textSize="16sp"
+                android:contentDescription="@string/tasbih_next" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/tb_tap"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp"
+            android:contentDescription="@string/tasbih_count">
+            <ImageView
+                android:id="@+id/tb_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/tb_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="26sp"
+                    android:fontFamily="sans-serif-black"
+                    android:includeFontPadding="false" />
+                <TextView
+                    android:id="@+id/tb_goal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="10.5sp" />
+            </LinearLayout>
+        </FrameLayout>
+
         <TextView
             android:id="@+id/tb_ar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:gravity="center"
-            android:textColor="@color/daily_text"
-            android:textSize="18sp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
             android:textDirection="rtl"
             android:maxLines="1"
             android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="11sp"
-            android:autoSizeMaxTextSize="18sp" />
-        <TextView
-            android:id="@+id/tb_count"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/daily_text"
-            android:textSize="34sp"
-            android:textStyle="bold"
-            android:includeFontPadding="false" />
-        <TextView
-            android:id="@+id/tb_goal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/daily_muted"
-            android:textSize="11sp" />
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="15sp" />
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/tb_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginTop="6dp"
-        android:max="33"
-        android:progressTint="@color/daily_accent" />
-</LinearLayout>
+</FrameLayout>

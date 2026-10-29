@@ -143,19 +143,11 @@ async function relocate() {
   let last = 0;
   try { last = Number(localStorage.getItem('prayerLocAt') ?? 0); } catch { /* ignore */ }
   if (Date.now() - last < 6 * 3600_000) return;
-  try {
-    const q = await navigator.permissions?.query({ name: 'geolocation' as PermissionName });
-    if (q?.state !== 'granted') return;
-  } catch {
-    return;
-  }
-  navigator.geolocation?.getCurrentPosition((pos) => {
-    try { localStorage.setItem('prayerLocAt', String(Date.now())); } catch { /* ignore */ }
-    const lat = Math.round(pos.coords.latitude * 100) / 100;
-    const lng = Math.round(pos.coords.longitude * 100) / 100;
-    const cur = prayerSettings();
-    if (cur.lat !== lat || cur.lng !== lng) setPrayerSettings({ ...cur, lat, lng });
-  }, () => {}, { maximumAge: 3600_000, timeout: 20_000 });
+  const r = await (await import('../data/location')).getLocation(false);
+  if (!r.ok) return;
+  try { localStorage.setItem('prayerLocAt', String(Date.now())); } catch { /* ignore */ }
+  const cur = prayerSettings();
+  if (cur.lat !== r.lat || cur.lng !== r.lng) setPrayerSettings({ ...cur, lat: r.lat, lng: r.lng });
 }
 
 /** Android app start: keep the reminders scheduled ahead, and follow location and settings changes. */

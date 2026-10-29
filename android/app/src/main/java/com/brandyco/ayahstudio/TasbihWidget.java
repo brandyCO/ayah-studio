@@ -69,17 +69,28 @@ public class TasbihWidget extends AppWidgetProvider {
                 count = WidgetStore.todayCount(c, data, d.optString("id"));
             }
         }
+        WidgetArt.Pal pal = WidgetArt.pal(data);
+        float d = WidgetArt.density(c);
+        android.graphics.Bitmap ring = WidgetArt.ring(pal, goal > 0 ? Math.min(1f, count / (float) goal) : 0, Math.round(96 * d));
         for (int id : ids) {
+            int[] sz = WidgetArt.size(c, m, id, 150, 150);
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.tasbih_widget);
+            v.setImageViewBitmap(R.id.tb_bg, WidgetArt.background(c, pal, sz[0], sz[1]));
+            v.setImageViewBitmap(R.id.tb_ring, ring);
             v.setTextViewText(R.id.tb_ar, ar);
             v.setTextViewText(R.id.tb_en, en);
+            v.setTextColor(R.id.tb_en, pal.hi);
             v.setTextViewText(R.id.tb_count, String.valueOf(count));
-            v.setTextViewText(R.id.tb_goal, (count >= goal ? "✓ " : "") + Math.min(count, goal) + " / " + goal);
-            v.setProgressBar(R.id.tb_bar, goal, Math.min(count, goal), false);
+            v.setTextViewText(R.id.tb_goal, (count >= goal ? "✓ " : "") + "/ " + goal);
             v.setOnClickPendingIntent(R.id.tb_tap, broadcast(c, COUNT, 7420));
             v.setOnClickPendingIntent(R.id.tb_next, broadcast(c, NEXT, 7421));
             m.updateAppWidget(id, v);
         }
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, android.os.Bundle options) {
+        draw(context, manager, new int[] { id });
     }
 
     private static PendingIntent broadcast(Context c, String action, int code) {

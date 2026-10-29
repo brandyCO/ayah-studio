@@ -12,13 +12,18 @@ import { ALL_LIGHT, BADGE_LIGHT, dayLightMax, lightFor } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
-import { locale, surahName, t, type Key } from '../i18n';
+import { LANGS, lang, locale, setLang, surahName, t, type Key } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
-import { openMoreMenu, tabBar } from './tabs';
+import { goMushaf, tabBar } from './tabs';
+import { lightChip } from './lightChip';
+import { lastRead, setReaderMode } from './prefs';
+import { setTimeTint, timeTintOn } from './living';
+import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
+import { accountLabel } from './account';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
 import { isNative } from '../native';
@@ -423,7 +428,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const head = h('h2', { class: 'me-h' }, t('pr.title'));
     const locate = h('button', { class: 'chip', onclick: async () => {
       toast(t('pr.finding'));
-      if (!(await locatePrayer())) toast(t('pr.denied'));
+      const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
     } }, ps.lat === null ? t('pr.setLocation') : t('pr.update'));
     if (ps.lat === null) {
       prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate);
@@ -457,6 +462,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
+      lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
     hero, goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
@@ -497,14 +503,27 @@ export function showMeSettings(root: HTMLElement): () => void {
     ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
     body.replaceChildren(
       section(t('set.reading'),
-        h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
+        h('div', { class: 'menu' },
+          h('a', { class: 'menu-item', href: '#/' }, `📖  ${t('menu.allSurahs')}`),
+          h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
+            e.preventDefault();
+            const p = Math.round(Number(pageInput.value));
+            if (p >= 1 && p <= 604) goMushaf(`page:${p}`);
+          } }, pageInput, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
+          h('button', { class: 'menu-item', onclick: () => { setReaderMode('translation'); location.hash = lastRead(); } }, `🔤  ${t('menu.translationView')}`),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('bookmarks') }, `🔖  ${t('menu.bookmarks')}`),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('reflections') }, `✎  ${t('menu.reflections')}`),
+          h('button', { class: 'menu-item', onclick: openTranslations }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+          h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => { setTimeTint(!timeTintOn()); paint(); } },
+            `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`)),
         h('b', { class: 'set-label' }, t('me.pageTime')),
+        h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
         chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x))),
       section(t('pr.title'),
         h('p', { class: 'muted small' }, t('pr.locHelp')),
         h('button', { class: 'chip', onclick: async () => {
           toast(t('pr.finding'));
-          if (!(await locatePrayer())) toast(t('pr.denied'));
+          const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
         } }, ps.lat === null ? t('pr.setLocation') : t('pr.update')),
         h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
         h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
@@ -522,17 +541,43 @@ export function showMeSettings(root: HTMLElement): () => void {
         }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
       alertsSection(),
-      h('section', { class: 'me-card menu' },
-        h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.title')}`),
-        h('p', { class: 'muted small' }, t('wg.setHelp'))),
+      section(t('wg.title'),
+        h('p', { class: 'muted small' }, t('wg.setHelp')),
+        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.open')}`))),
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
             const next = rem.includes(tm) ? rem.filter((x) => x !== tm) : [...rem, tm];
             if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
           })) : '',
-      h('section', { class: 'me-card menu' },
-        h('button', { class: 'menu-item', onclick: () => openMoreMenu() }, `⚙  ${t('me.more')}`)));
+      isNative() ? h('section', { class: 'me-card menu' },
+        h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, `✧  ${t('morning.title')}`)) : '',
+      section(t('menu.gYours'),
+        h('div', { class: 'menu' },
+          h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, `☾  ${t('menu.ramadan')}`),
+          h('button', { class: 'menu-item', onclick: () => void import('./circles').then((m) => m.openCircles()) }, `◯  ${t('menu.circles')}`),
+          h('button', { class: 'menu-item', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, `🌙  ${t('menu.kids')}`))),
+      section(t('set.app'),
+        h('div', { class: 'menu' },
+          h('button', { class: 'menu-item', onclick: () => openAccount() }, accountLabel()),
+          h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
+          h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`))));
+  };
+  const pageInput = h('input', { type: 'number', class: 'search', min: '1', max: '604', placeholder: t('menu.pagePlaceholder', { n: 604 }), inputmode: 'numeric' }) as HTMLInputElement;
+  const openTranslations = async () => {
+    const { translationList } = await import('./translationPicker');
+    const d = dialog(t('tr.title'),
+      h('p', { class: 'muted small' }, t('tr.note')),
+      h('div', { class: 'sheet-scroll' }, translationList(currentTranslation, (id) => { setTranslation(id); d.close(); paint(); })));
+  };
+  const openLanguage = () => {
+    dialog(t('lang.title'),
+      h('p', { class: 'muted small' }, t('lang.note')),
+      h('div', { class: 'menu' }, ...LANGS.map((l) => h('button', {
+        class: `menu-item tr-item${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir,
+        onclick: (e: Event) => { if (l.id !== lang()) setLang(l.id); else (e.currentTarget as HTMLElement).closest('dialog')?.close(); },
+      }, h('span', { class: 'tr-name' }, l.name), h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : '')))));
   };
   const alertsSection = () => {
     const a = prayerAlerts();
