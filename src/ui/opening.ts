@@ -1,5 +1,5 @@
-// The opening (docs/light.md, L5): once per launch, a single band of light sweeps across the logo's
-// sound bars on the launch colour (it continues the Android splash), then fades — ≤ 1.2 s, never
+// The opening (docs/light.md, L5): once per launch, a single band of light sweeps across the app icon
+// on the launch colour (it continues the Android splash), then fades — ≤ 1.2 s, never
 // delaying the app (the mushaf loads underneath), skipped with reduced motion; tap ends it.
 import { h } from './dom';
 
