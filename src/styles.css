@@ -1843,3 +1843,17 @@ html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; backgro
 .day-card { display: flex; flex-direction: column; gap: 4px; border: 1px solid color-mix(in srgb, var(--rw-n1, var(--accent)) 35%, var(--line)); }
 .day-card .muted { margin: 0 0 6px; }
 .day-card-n { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+
+/* Me → Today: journey portion, Continue, Al-Kahf (src/ui/todayCard.ts) */
+.today-card .me-h { margin: 0 0 8px; }
+.tc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tc-bar { height: 8px; margin: 8px 0 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.tc-bar span { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--w)); border-radius: inherit;
+  background: linear-gradient(90deg, var(--rw-n3, var(--accent)), var(--rw-n1, var(--accent))); transition: transform var(--dur-3) var(--ease-spring); }
+[dir="rtl"] .tc-bar span { transform-origin: right; }
+.tc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tc-row .primary { flex: none; padding: 8px 18px; }
+.tc-start, .tc-kahf { margin-top: 8px; }
+.tc-change { display: block; margin: 8px 0 0 auto; background: none; border: 0; padding: 4px; cursor: pointer; text-decoration: underline; }
+.tc-done { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.tc-done .muted { margin: 0 0 6px; }

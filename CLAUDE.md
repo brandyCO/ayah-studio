@@ -1299,6 +1299,12 @@ duas/reflections section in Me.
       read → the mushaf; make your first reel), once each (`dayCard`). Android **app shortcuts** (long-press the
       icon: Continue reading, Today's goals `#/me`, Search `#/search`, My reels `#/drafts`; `res/xml/shortcuts.xml`,
       the address goes through `MainActivity.EXTRA_HASH` like a widget tap)
+- [x] M9 Journeys + Today card (owner request 2026-10-31, front-end plan step 7): Me → **Today** (`src/ui/todayCard.ts`)
+      under the streak: the journey's portion for today with a bar, "n pages today · read / total", Open (the first
+      unread page), or Continue reading + Start a journey; on Fridays "Read Al-Kahf" (first unread page of surah 18
+      today). Journeys (`src/data/journeys.ts`, localStorage `journeyPlan`, one at a time): Khatm in 30 days, Juz
+      'Amma in 30 days, Khatm in 6 months; progress = the plan's pages counted since it started
+      (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---
