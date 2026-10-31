@@ -72,6 +72,12 @@ export async function shareFile(uri: string, title: string, text?: string) {
   await Share.share({ files: [uri], dialogTitle: title, ...(text ? { text } : {}) });
 }
 
+/** Opens the share sheet for several saved files at once (WhatsApp Status takes them in order). */
+export async function shareFiles(uris: string[], title: string, text?: string) {
+  const { Share } = await import('@capacitor/share');
+  await Share.share({ files: uris, dialogTitle: title, ...(text ? { text } : {}) });
+}
+
 /** Writes a text file to the app's cache and opens the share sheet for it (data export). */
 export async function shareTextFile(name: string, text: string) {
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');

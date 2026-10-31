@@ -1827,3 +1827,9 @@ button.lt-chip { cursor: pointer; }
   .page-light-line { animation: pl-fade .8s 1.6s forwards; }
 }
 html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--card); }
+
+/* Export result: WhatsApp Status pieces */
+.status-box { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0 8px; }
+.status-box .muted { margin: 0; text-align: center; max-width: 320px; }
+.status-btn { border-color: #25d366; }
+.status-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
