@@ -1,8 +1,8 @@
 """One-off: generate the Ayah Studio logo, app icons and splash screens (original artwork).
 
-The mark ("sound a"): a lowercase "a" followed by two fading sound bars (the recitation), white on an
-emerald → teal gradient tile. The gradient is a brand moment only (icon, launch screen, name); no Quran
-text in the logo.
+The mark (owner pick "E", 2026-10-31): a soft light inside the end-of-ayah rosette (two rounded squares,
+one turned 45°, drawn as a thin teal line, with a fine ring inside), on a deep night-green tile. No Quran
+text in the logo. (Before: the "sound a", 2026-10-08.)
 
 Writes resources/ (source SVGs + 1024 px icon + splash), public/icon.svg + public/icon-180.png (favicon /
 home-screen icon) and the Android launcher icons (legacy, round, adaptive foreground/background,
@@ -20,10 +20,12 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 RES = ROOT / 'android' / 'app' / 'src' / 'main' / 'res'
-E0, E1 = '#05573d', '#22b3a0'   # emerald → teal (icon tile)
+E0, E1 = '#05573d', '#22b3a0'   # emerald → teal (brand gradient)
+N0, N1 = '#040c09', '#0b2019'   # icon tile: deep night green
+LINE, RING, GLOW = '#3dd1ad', '#1f8f78', '#3dd1ad'
 T0, T1 = '#34d399', '#5eead4'   # lighter pair for the name on dark
 DARK = '#07130f'                # launch screen
-WHITE, BAR = '#ffffff', '#c8f7ec'
+WHITE = '#ffffff'
 
 
 def chrome():
@@ -34,32 +36,42 @@ def chrome():
     return shutil.which('chromium') or shutil.which('google-chrome') or 'chromium'
 
 
-def mark(cx, cy, s, ink=WHITE, bar=BAR):
-    """The "sound a", centred on (cx, cy); s = 176 gives a ~320-unit-wide mark."""
-    k = s / 176
-    R, sw = 92 * k, 34 * k                 # bowl radius, stroke width
-    bx = cx - 48 * k                       # bowl centre (the bars sit to the right)
-    sx = bx + R                            # stem centre line
-    top, bot = cy - R - sw / 2, cy + R + sw / 2
-    out = (f'<circle cx="{bx:.2f}" cy="{cy:.2f}" r="{R:.2f}" fill="none" stroke="{ink}" stroke-width="{sw:.2f}"/>'
-           f'<rect x="{sx - sw / 2:.2f}" y="{top:.2f}" width="{sw:.2f}" height="{bot - top:.2f}" rx="{sw / 2:.2f}" fill="{ink}"/>')
-    for i, hf in ((1, 0.62), (2, 0.34)):
-        h, x, w = (bot - top) * hf, sx + i * sw * 1.55, sw * 0.76
-        out += f'<rect x="{x - w / 2:.2f}" y="{cy - h / 2:.2f}" width="{w:.2f}" height="{h:.2f}" rx="{w / 2:.2f}" fill="{bar}"/>'
+def mark(cx, cy, s, line=LINE, ring=RING, glow=True, mono=False):
+    """Light in the ayah marker, centred on (cx, cy); s = the width of the marker's two squares.
+
+    Two rounded squares (one turned 45°: the end-of-ayah rosette) drawn as a thin line, a fine ring inside,
+    and a soft light at the centre with a white core. mono = one flat colour for Android's themed icons."""
+    sw, rx, r = s * 0.055, s * 0.07, s * 0.33
+    sq = (f'<rect x="{cx - s / 2:.2f}" y="{cy - s / 2:.2f}" width="{s:.2f}" height="{s:.2f}" rx="{rx:.2f}"'
+          f' fill="none" stroke="{WHITE if mono else line}" stroke-width="{sw:.2f}" stroke-linejoin="round"')
+    out = ''
+    if glow and not mono:
+        out += (f'<radialGradient id="lg" cx="{cx}" cy="{cy}" r="{s * 0.62:.2f}" gradientUnits="userSpaceOnUse">'
+                f'<stop offset="0" stop-color="{GLOW}" stop-opacity=".95"/><stop offset=".22" stop-color="{GLOW}" stop-opacity=".55"/>'
+                f'<stop offset=".6" stop-color="{GLOW}" stop-opacity=".12"/><stop offset="1" stop-color="{GLOW}" stop-opacity="0"/></radialGradient>'
+                f'<radialGradient id="lc" cx="{cx}" cy="{cy}" r="{s * 0.11:.2f}" gradientUnits="userSpaceOnUse">'
+                f'<stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/>'
+                f'<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
+                f'<circle cx="{cx}" cy="{cy}" r="{s * 0.62:.2f}" fill="url(#lg)"/>')
+    out += sq + '/>' + sq + f' transform="rotate(45 {cx} {cy})"/>'
+    out += (f'<circle cx="{cx}" cy="{cy}" r="{r:.2f}" fill="none" stroke="{WHITE if mono else ring}"'
+            f' stroke-width="{sw * (0.9 if mono else 0.55):.2f}"{"" if mono else " opacity=\".8\""}/>')
+    if mono:
+        out += f'<circle cx="{cx}" cy="{cy}" r="{s * 0.085:.2f}" fill="{WHITE}"/>'
+    else:
+        out += f'<circle cx="{cx}" cy="{cy}" r="{s * 0.11:.2f}" fill="url(#lc)"/>'
     return out
 
 
 def tile(w, h, rx=0, circle=False):
-    """Emerald → teal gradient (bottom-left → top-right) with a soft highlight top-left."""
-    defs = (f'<defs><linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="{E0}"/>'
-            f'<stop offset="1" stop-color="{E1}"/></linearGradient>'
-            f'<radialGradient id="th" cx="22%" cy="12%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".16"/>'
-            f'<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>')
+    """Deep night green, a touch lighter in the middle (the light's room)."""
+    defs = (f'<defs><radialGradient id="tg" cx="50%" cy="46%" r="75%"><stop offset="0" stop-color="{N1}"/>'
+            f'<stop offset="1" stop-color="{N0}"/></radialGradient></defs>')
     if circle:
         shape = lambda f: f'<circle cx="{w / 2}" cy="{h / 2}" r="{w / 2}" fill="{f}"/>'
     else:
         shape = lambda f: f'<rect width="{w}" height="{h}" rx="{rx}" fill="{f}"/>'
-    return defs + shape('url(#tg)') + shape('url(#th)')
+    return defs + shape('url(#tg)')
 
 
 def svg(w, h, body):
@@ -68,12 +80,12 @@ def svg(w, h, body):
 
 def icon_svg(rx=0, circle=False):
     """Full icon (tile + mark), 512 units."""
-    return svg(512, 512, tile(512, 512, rx, circle) + mark(256, 256, 172))
+    return svg(512, 512, tile(512, 512, rx, circle) + mark(256, 256, 236))
 
 
 def adaptive_fg(mono=False):
-    """Adaptive-icon foreground, 108 dp canvas (432 units): the mark inside the 66 dp safe circle."""
-    return svg(432, 432, mark(216, 216, 104, bar=WHITE if mono else BAR))
+    """Adaptive-icon foreground, 108 dp canvas (432 units): the marker inside the 66 dp safe circle."""
+    return svg(432, 432, mark(216, 216, 172, mono=mono))
 
 
 def splash_svg(w, h):
@@ -88,7 +100,7 @@ def splash_svg(w, h):
         f'<clipPath id="tc"><rect width="512" height="512" rx="115"/></clipPath></defs>'
         f'<rect width="{w}" height="{h}" fill="{DARK}"/><rect width="{w}" height="{h}" fill="url(#glow)"/>'
         f'<svg x="{x0:.1f}" y="{y0:.1f}" width="{ts:.1f}" height="{ts:.1f}" viewBox="0 0 512 512"><g clip-path="url(#tc)">'
-        f'{tile(512, 512)}{mark(256, 256, 172)}</g></svg>'
+        f'{tile(512, 512)}{mark(256, 256, 236)}</g></svg>'
         f'<text x="{w / 2}" y="{y0 + ts + ts * 0.36:.1f}" text-anchor="middle" font-family="Inter Display, Inter, sans-serif"'
         f' font-weight="700" letter-spacing="-0.02em" font-size="{ts * 0.21:.1f}" fill="url(#name)">ayah studio</text>')
 
@@ -119,8 +131,8 @@ def downscale(src, out, size):
 def main():
     res = ROOT / 'resources'
     res.mkdir(exist_ok=True)
-    (res / 'logo.svg').write_text(svg(512, 512, mark(256, 256, 240)) + '\n')
-    (res / 'logo-dark.svg').write_text(svg(512, 512, mark(256, 256, 240, ink=E0, bar=E1)) + '\n')
+    (res / 'logo.svg').write_text(svg(512, 512, mark(256, 256, 300)) + '\n')
+    (res / 'logo-dark.svg').write_text(svg(512, 512, mark(256, 256, 300, line=E0, ring=E1)) + '\n')
     (res / 'icon.svg').write_text(icon_svg() + '\n')
     (res / 'splash.svg').write_text(splash_svg(1284, 2778) + '\n')
     (ROOT / 'public' / 'icon.svg').write_text(icon_svg(rx=115) + '\n')

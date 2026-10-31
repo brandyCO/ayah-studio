@@ -646,8 +646,10 @@ save to gallery / share sheet; offline audio cache; settings.
       android` after `npm run build`). `.github/workflows/android.yml` (push to main, PRs, manual) builds
       the debug APK → artifact **ayah-studio-apk** (debug-signed, for sideloading; Play signing later).
       App icon + splash: see "Logo" below
-- [x] Logo (owner-approved 2026-10-08, "sound a"): lowercase "a" + two fading sound bars (the
-      recitation), white on an emerald → teal tile (`#05573d` → `#22b3a0`). The gradient is a brand
+- [x] Logo (owner pick "E", 2026-10-31; was the "sound a" of 2026-10-08): a soft light inside the
+      end-of-ayah rosette (two rounded squares, one turned 45°, thin teal `#3dd1ad` line, fine ring inside,
+      white core) on a deep night-green tile (`#040c09` → `#0b2019`); themed icon = the same in one colour.
+      The emerald → teal gradient (`#05573d` → `#22b3a0`) stays the brand gradient. The gradient is a brand
       moment only (icon, launch screen, the name, later Export / "Turn into reel" / selected chips /
       progress bars) — never on the mushaf page, the Arabic text, the reel or big backgrounds behind
       text. `scripts/make-icons.py` (Pillow + headless Chromium) writes `resources/` (SVG sources, 1024 px
