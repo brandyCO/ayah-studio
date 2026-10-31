@@ -1,6 +1,7 @@
 {
-  "_note": "The owner's weekly pick, shown as \"Trending\" in the reciter picker and on the Today card. Edit by hand (e.g. from TikTok Creative Center or hashtags); empty values show nothing. reciter = an id from src/data/reciters.ts; ayah = \"s:a\" or \"s:a-b\" (at most 10 ayat).",
+  "_note": "The owner's weekly pick, shown as \"Trending\" in the reciter picker and on the Today card. Edit by hand (e.g. from TikTok Creative Center or hashtags); empty values show nothing. reciter = an id from src/data/reciters.ts; ayah = \"s:a\" or \"s:a-b\" (at most 10 ayat). look (optional) = \"vibe:<id>\" or \"style:<id>\" from src/engine/styles.ts: with ayah set, the Create sheet offers it as \"This week's template\".",
   "week": "",
   "reciter": null,
-  "ayah": ""
+  "ayah": "",
+  "look": ""
 }

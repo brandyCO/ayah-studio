@@ -47,7 +47,7 @@ import { ayahLength, planSeries } from '../engine/series';
 import { qdcSurah } from '../data/qdc';
 import { liteMode } from '../lite';
 import { perfRecord, perfStart } from '../perf';
-import { exportGuard, isNative, saveVideo, shareFile, type SavedFile } from '../native';
+import { exportGuard, isNative, saveVideo, shareableLink, shareFile, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { lightChip } from './lightChip';
 import { h, toast } from './dom';
@@ -107,7 +107,15 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
   to = Math.max(from, Math.min(to || from, s.ayahs, from + MAX_AYAT - 1));
-  const project = newProject(n, from, to, reciterFor(reelReciter(DEFAULT_RECITER), n).id);
+  // A template link (`#/t/…`, from a shared reel's caption): its reciter and look for this new reel.
+  let template: { reciter: number; look: string } | null = null;
+  if (!draftId) try {
+    const v = JSON.parse(sessionStorage.getItem('reelTemplate') ?? 'null');
+    sessionStorage.removeItem('reelTemplate');
+    if (v && typeof v.reciter === 'number' && typeof v.look === 'string') template = v;
+  } catch { /* private window */ }
+  const tplReciter = template && RECITERS.find((r) => r.id === template!.reciter && covers(r, n));
+  const project = newProject(n, from, to, tplReciter ? tplReciter.id : reciterFor(reelReciter(DEFAULT_RECITER), n).id);
   applyLook(project, reelLook(), isBackground);
   if (draft) restoreProject(project, draft.project, isBackground, (id) => RECITERS.some((r) => r.id === id && covers(r, n)));
   else try {
@@ -2036,7 +2044,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     option = tool.options[0];
     let keepLook = false;
     try { keepLook = sessionStorage.getItem('reelKeepLook') === '1'; sessionStorage.removeItem('reelKeepLook'); } catch { /* private window */ }
-    if (keepLook) { quick.styled = true; quick.step = 'finish'; } // "Make another like this": the look as it was, ready to export
+    const tplVibe = template?.look.startsWith('vibe:') ? VIBES.find((v) => `vibe:${v.id}` === template!.look) : undefined;
+    const tplStyle = template?.look.startsWith('style:') ? STYLES.find((x) => `style:${x.id}` === template!.look) : undefined;
+    if (template) {
+      // Opened from a shared reel: its look (when it was one of ours), then straight to Finish.
+      savePref('studioSeen', '1');
+      if (tplVibe) { quick.picked = `vibe:${tplVibe.id}`; keepOwn(() => applyVibe(project, tplVibe)); }
+      else if (tplStyle) { quick.picked = `style:${tplStyle.id}`; keepOwn(() => applyStyle(project, tplStyle)); }
+      fitClips();
+      quick.styled = true;
+      quick.step = 'finish';
+    } else if (keepLook) { quick.styled = true; quick.step = 'finish'; } // "Make another like this": the look as it was, ready to export
     else if (!readPref('studioSeen')) {
       savePref('studioSeen', '1');
       firstReel = true;
@@ -2394,10 +2412,22 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (credits.size) lines.push(`${ui('ed.cap-background')}: ${[...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ')}`);
     const tag = (x: string) => '#' + x.normalize('NFKD').replace(/[^A-Za-z0-9]/g, '');
     lines.push('', ['#Quran', '#QuranRecitation', tag(s.en), tag(r.short ?? r.name)].filter((x) => x.length > 2).join(' '));
+    lines.push('', ui('ed.cap-make', { link: templateLink() }));
     return lines.join('\n');
   }
+  /** A link that opens this reel (ayat, reciter, and the look when it is one of our styles or vibes)
+   *  as a new reel in Ayah Studio: anyone who sees the post can make their own. */
+  function templateLink(): string {
+    const vibe = currentVibe(project);
+    const style = vibe ? null : currentStyle(project);
+    const look = vibe ? `vibe:${vibe}` : style ? `style:${style}` : '';
+    const range = project.to > project.from ? `${project.from}-${project.to}` : String(project.from);
+    return shareableLink(`#/t/${n}/${range}/${project.reciterId}${look ? `/${look}` : ''}`);
+  }
+  let captionEl: HTMLTextAreaElement | null = null;
   function captionBlock(): Node {
     const box = h('textarea', { class: 'caption-text', rows: '7', 'aria-label': ui('ed.caption') });
+    captionEl = box as HTMLTextAreaElement;
     box.value = captionText();
     return h('div', { class: 'caption-box' },
       h('p', { class: 'small muted' }, ui('ed.caption-note')),
@@ -2454,9 +2484,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return h('div', { class: 'export-actions' }, saveBtn,
       h('button', {
         class: 'primary alt',
-        onclick: () => void save().then((r) => shareFile(r.uri, ui('ed.shareTitle')).catch((e) => {
-          if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail(ui('ed.shareFailed'))(e);
-        }), fail(ui('ed.saveFailed'))),
+        onclick: () => void save().then((r) => {
+          // The caption goes along (WhatsApp, YouTube keep it) and onto the clipboard for apps that drop it.
+          const text = captionEl?.value ?? captionText();
+          void navigator.clipboard?.writeText(text).then(() => toast(ui('ed.caption-shared')), () => {});
+          return shareFile(r.uri, ui('ed.shareTitle'), text).catch((e) => {
+            if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail(ui('ed.shareFailed'))(e);
+          });
+        }, fail(ui('ed.saveFailed'))),
       }, icon('share', 18), ui('ed.share')));
   }
   async function doExport() {
