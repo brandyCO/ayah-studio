@@ -1260,6 +1260,17 @@ duas/reflections section in Me.
       Prayer reminder sounds **Adhan (opening)** / **Full adhan** (`prayer_adhan_full.ogg`, channel `prayer_adhanFull`; swiping the notification stops it) (owner request 2026-10-29, default for new settings): the opening
       "Allahu Akbar, Allahu Akbar" (21 s, faded, `res/raw/prayer_adhan.ogg`, channel `prayer_adhan`; a copy in
       `public/sounds/` plays when the chip is tapped) cut from a recording the owner supplied and approved
+- [x] M6 Goal notes + butter pass (owner request 2026-10-31, front-end plan step 1): `src/ui/nudges.ts` — when a
+      goal or every goal is met, a soft banner at the top in the app (tap → Me; not on Me, the studio, the Kids
+      space or over a dialog) or, with the app in the background (listening), an Android local notification
+      (id 3200, ≤ 2 a day, none 22:00–06:00); "your freeze kept your flame" once in the app; **evening reminder**
+      (ids 3100–3106) at a chosen time 18:00–22:00 for the next 7 days, today's skipped once the flame is lit,
+      rescheduled on every journey change / return (a week without the app ends them). Me → ⚙ → **Goal notes**
+      (each kind on/off, the time); asked once after the first Claim (`nudgeAsked`). Rewards check runs on a
+      timer while hidden. **Butter pass**: motion tokens (`--dur-1…4`, `--ease-spring` via `linear()`), press
+      feedback (`scale` on chips, buttons, tabs, tiles), goal rings and the Light lantern fill from their last
+      value (`@property --ring-p`), a ring pops when met; reading: a line of light along the page's bottom edge
+      + "3 / 5 pages today" when a page counts, and a **surah / juz finished** card (`src/ui/pageMoments.ts`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---
