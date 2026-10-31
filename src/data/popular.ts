@@ -68,3 +68,17 @@ export function loadPopular(): Promise<Popular> {
 }
 
 export const popularReciters = () => loadPopular().then((p) => p.reciters);
+
+/** This week's template (the owner's pick in trending.json: ayat + reciter + an optional look such as
+ *  "vibe:fajr"), offered in the Create sheet as one tap to a finished reel. Null when none is set. */
+export async function weeklyTemplate(): Promise<{ surah: number; from: number; to: number; reciter: number; look: string } | null> {
+  try {
+    const pick = await fetch(`${base}data/trending.json?v=${__DATA_VERSION__}`).then((r) => (r.ok ? r.json() : null)) as { reciter?: unknown; ayah?: unknown; look?: unknown } | null;
+    const r = parseRange(pick?.ayah);
+    if (!r) return null;
+    const look = typeof pick?.look === 'string' && /^(vibe|style):[a-z-]+$/.test(pick.look) ? pick.look : '';
+    return { ...r, reciter: known(pick?.reciter) ? pick!.reciter as number : 0, look };
+  } catch {
+    return null;
+  }
+}

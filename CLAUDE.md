@@ -1271,6 +1271,13 @@ duas/reflections section in Me.
       feedback (`scale` on chips, buttons, tabs, tiles), goal rings and the Light lantern fill from their last
       value (`@property --ring-p`), a ring pops when met; reading: a line of light along the page's bottom edge
       + "3 / 5 pages today" when a page counts, and a **surah / juz finished** card (`src/ui/pageMoments.ts`)
+- [x] M7 Every reel is an ad (owner request 2026-10-31, front-end plan step 2): the export caption ends with
+      "Make this reel yourself in Ayah Studio: {link}" — `#/t/{s}/{a-b}/{reciter}[/vibe:id|style:id]` (the look only
+      when the reel still matches one of our vibes/styles, `currentVibe()` / `currentStyle()`); the route stores
+      it in sessionStorage `reelTemplate` and opens `#/reel/…` as a new reel with that reciter (if it covers the
+      surah) and look, on Quick reel → Finish. Share (Android) sends the caption with the video and copies it to
+      the clipboard (Instagram/TikTok drop shared text). **Template of the week**: `look` in
+      `public/data/trending.json` (+ its `ayah`, `reciter`) → Create sheet "This week's template" (`weeklyTemplate()`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

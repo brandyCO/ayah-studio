@@ -37,7 +37,7 @@ async function route() {
   const id = ++routeId;
   cleanup?.();
   cleanup = null;
-  const [view, a, b, c4] = location.hash.replace(/^#\/?/, '').split('/');
+  const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
   // The Kids space is on: only its own screens (and a page the parent opened through the gate).
   if (kidsOn() && view !== 'kids' && !usePass(location.hash)) {
     history.replaceState(null, '', '#/kids');
@@ -64,6 +64,12 @@ async function route() {
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
+    } else if (view === 't' && Number(a) && b) {
+      // "Make this reel yourself" (a link in a shared reel's caption): the same ayat, reciter and look,
+      // opened in the studio as a new reel. The editor checks every part before using it.
+      try { sessionStorage.setItem('reelTemplate', JSON.stringify({ reciter: Number(c4) || 0, look: d5 ?? '' })); } catch { /* private window */ }
+      history.replaceState(null, '', `#/reel/${Number(a)}/${b.replace(/[^0-9-]/g, '')}`);
+      return void route();
     } else if (view === 'join' && a) {
       const { showJoin } = await import('./ui/circles');
       c = await showJoin(screen, a);

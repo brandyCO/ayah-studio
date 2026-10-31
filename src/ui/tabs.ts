@@ -5,6 +5,7 @@
 // (sessionStorage `tabIntent`).
 import { draftHash, listDrafts } from '../data/drafts';
 import { todaysAyah } from '../data/daily';
+import { weeklyTemplate } from '../data/popular';
 import { loadMeta, reference } from '../data/quran';
 import { t } from '../i18n';
 import { h, haptic, toast } from './dom';
@@ -56,8 +57,8 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
 
 /** The Create sheet: start from today's ayah, continue a draft, or pick ayat in the mushaf. */
 export async function openCreate() {
-  const [meta, drafts, daily] = await Promise.all([
-    loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null)]);
+  const [meta, drafts, daily, tpl] = await Promise.all([
+    loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null), weeklyTemplate()]);
   const close = () => d.close();
   const link = (href: string, title: string, sub: string, ic: string) =>
     h('a', { class: 'menu-item create-item', href, onclick: close },
@@ -75,6 +76,8 @@ export async function openCreate() {
         },
       }, h('span', { class: 'create-ic brand' }, icon('plus', 22)),
       h('span', { class: 'create-txt' }, h('b', {}, t('create.pick')), h('span', { class: 'muted small' }, t('create.pickSub')))),
+      tpl && link(`#/t/${tpl.surah}/${tpl.from}-${tpl.to}/${tpl.reciter}${tpl.look ? `/${tpl.look}` : ''}`, t('create.template'),
+        reference(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle'),
       daily && link(`#/reel/${daily.s}/${daily.from}-${daily.to}`, t('create.today'),
         reference(meta[daily.s - 1], daily.from, daily.to), 'sparkle'),
       last && link(draftHash(last.project, last.id),
