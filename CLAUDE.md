@@ -620,6 +620,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
       preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
 - [x] Performance timings (`src/perf.ts`, this device only, Device check)
+- [x] Speed guard (owner request 2026-10-31, front-end plan step 6): `scripts/check-size.mjs` (`npm run size`, run by
+      pages.yml after the build) fails when the first-load JS + CSS (entry, its preloads, stylesheet; gzip) passes
+      135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
+      page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
+      streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 

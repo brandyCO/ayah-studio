@@ -30,6 +30,7 @@ jobs:
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
+      - run: node scripts/check-size.mjs # speed budget: first-load JS + CSS
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
