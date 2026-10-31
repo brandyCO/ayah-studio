@@ -1,7 +1,7 @@
 // Per-device UI preferences (best effort: storage can be unavailable). The ones in SYNCED_PREFS
 // follow the user's account across devices (src/cloud/sync.ts): each change records when it was made,
 // and the newest change wins.
-export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation', 'brandTheme'] as const;
+export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation', 'brandTheme', 'journeyPlan', 'pageSeconds'] as const;
 type SyncedPref = (typeof SYNCED_PREFS)[number];
 
 function prefTimes(): Record<string, number> {
@@ -21,6 +21,17 @@ export function touchPref(key: SyncedPref) {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent('prefs-changed', { detail: key }));
+}
+
+/** Gives a synced preference set before it was synced a change time (only when it has none). */
+export function seedPrefTime(key: SyncedPref, at: number) {
+  const times = prefTimes();
+  if (times[key] || !(at > 0)) return;
+  try {
+    localStorage.setItem('prefsAt', JSON.stringify({ ...times, [key]: at }));
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Synced preferences with their change times (for syncing). */
