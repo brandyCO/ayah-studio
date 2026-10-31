@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="sc_read">اقرأ</string>
+    <string name="sc_read_long">تابع القراءة</string>
+    <string name="sc_goals">الأهداف</string>
+    <string name="sc_goals_long">أهداف اليوم</string>
+    <string name="sc_search">بحث</string>
+    <string name="sc_search_long">ابحث في القرآن</string>
+    <string name="sc_reels">مقاطعي</string>
+    <string name="sc_reels_long">مقاطعي</string>
+</resources>

@@ -1833,3 +1833,13 @@ html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; backgro
 .status-box .muted { margin: 0; text-align: center; max-width: 320px; }
 .status-btn { border-color: #25d366; }
 .status-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+/* First days (src/ui/firstSteps.ts) */
+.pace-sheet { text-align: center; }
+.pace-sheet h2 { margin: 6px 0 4px; }
+.pace-sheet .pace { text-align: start; margin: 12px 0; }
+.pace-sheet-art { width: 56px; height: 56px; margin: 4px auto 0; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 10%, var(--rw-n1, var(--accent)) 26%, color-mix(in srgb, var(--rw-n3, var(--accent)) 35%, transparent) 58%, transparent 70%); }
+.day-card { display: flex; flex-direction: column; gap: 4px; border: 1px solid color-mix(in srgb, var(--rw-n1, var(--accent)) 35%, var(--line)); }
+.day-card .muted { margin: 0 0 6px; }
+.day-card-n { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
