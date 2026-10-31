@@ -1229,7 +1229,12 @@ duas/reflections section in Me.
       like any goal. **Sync** when signed in (`src/cloud/sync.ts`): each device's journey + reading log as
       its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
       and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
-      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins. Sync fix
+      (owner report 2026-10-31): the missed days are settled again when another device's journey arrives
+      (`resettle()`; the app opens before the pull, so a new or stale device showed the flame out or used a
+      freeze), an extra freeze counts only where a day still needed it, a waiting push is sent when the app
+      is hidden (timers stop there), another account's devices are dropped on an account switch, and the
+      journey plan + page reading time are synced prefs (`journeyPlan`, `pageSeconds`).
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);

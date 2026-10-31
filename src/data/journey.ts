@@ -1,6 +1,7 @@
 // Your journey (Me tab): the daily streak, the weekly streak, the free weekly streak freeze and the
-// stats (pages, ayat, minutes listened, surahs finished, reels made). This device only
-// (localStorage `journey`); pages per day come from the reading log (readLog.ts).
+// stats (pages, ayat, minutes listened, surahs finished, reels made). Kept on the device (localStorage
+// `journey`) and, when signed in, synced: each device's own record, read combined (see the bottom);
+// pages per day come from the reading log (readLog.ts).
 //
 // Honest counting: a page counts only after it has been open on screen for the reading time the
 // user picked (default 1½ min, timer paused while the app is hidden); swiping past does not count.
@@ -14,6 +15,7 @@
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
 import type { Mushaf } from './mushaf';
+import { touchPref } from '../ui/prefs';
 
 const KEY = 'journey';
 const KEEP_DAYS = 400;
@@ -182,6 +184,7 @@ function covered(s = view()): Set<string> {
 function settle(s: State, k: string) {
   if (s.settled === k) return;
   s.settled = k;
+  if (s.lost?.at === k) delete s.lost; // worked out again below (another device's days may cover it now)
   const v = view();
   const cov = covered(v);
   let last = '';
@@ -470,6 +473,7 @@ export function setPageSeconds(sec: number) {
   } catch {
     /* ignore */
   }
+  touchPref('pageSeconds'); // follows the account (cloud/sync.ts)
 }
 
 /** A friend relit the flame: the missed days count as covered again. */
@@ -576,9 +580,38 @@ export function mergeJourney(remote: unknown, device: string): boolean {
   }
   setOtherLogs(Object.values(all).map((x) => x.log));
   ver++;
+  resettle();
   window.dispatchEvent(new Event('journey-changed'));
   window.dispatchEvent(new Event('readlog-changed'));
   return true;
+}
+
+/** Today's missed days were settled before the other devices' days arrived (the app opens before the
+ *  sync's pull): settle them again with what is known now, so a day lit elsewhere is not frozen and
+ *  missed days the other devices left are covered. */
+function resettle() {
+  const s = load();
+  const k = s.settled; // the day the app was last opened (today, or the next open settles anyway)
+  if (!k) return;
+  delete s.settled;
+  settle(s, k);
+  ver++;
+  s.best = Math.max(s.best, streakOn(k, covered()));
+  save();
+}
+
+/** Signed in with another account: the previous account's devices are not this one's. */
+export function clearOtherJourneys() {
+  others = {};
+  try {
+    localStorage.removeItem(OTHERS);
+  } catch {
+    /* ignore */
+  }
+  setOtherLogs([]);
+  ver++;
+  window.dispatchEvent(new Event('journey-changed'));
+  window.dispatchEvent(new Event('readlog-changed'));
 }
 
 const union = <T,>(a: T[] = [], b: T[] = []) => [...new Set([...a, ...b])];
@@ -633,6 +666,8 @@ function view(): State {
   // A day lit on any device needs no freeze; a flame kept alive elsewhere was not lost.
   v.frozen = v.frozen.filter((d) => !v.days[d]?.f);
   v.revived = v.revived.filter((d) => !v.days[d]?.f);
+  // An extra freeze is used only where a day still needed one.
+  v.extra = (v.extra ?? []).filter((d) => v.frozen.includes(d));
   if (v.lost && v.lost.days.every((d) => v.days[d]?.f || v.frozen.includes(d) || v.revived.includes(d))) delete v.lost;
   viewMemo = { ver, v };
   return v;
