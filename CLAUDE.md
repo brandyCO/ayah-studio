@@ -1266,7 +1266,8 @@ duas/reflections section in Me.
       (id 3200, ≤ 2 a day, none 22:00–06:00); "your freeze kept your flame" once in the app; **evening reminder**
       (ids 3100–3106) at a chosen time 18:00–22:00 for the next 7 days, today's skipped once the flame is lit,
       rescheduled on every journey change / return (a week without the app ends them). Me → ⚙ → **Goal notes**
-      (each kind on/off, the time); asked once after the first Claim (`nudgeAsked`). Rewards check runs on a
+      (each kind on/off, the time); asked once after the first Claim (`nudgeAsked`). Tapping a note (banner or
+      notification, `extra.focus`) opens Me with the waiting Claim scrolled into view and glowing (`meFocus`). Rewards check runs on a
       timer while hidden. **Butter pass**: motion tokens (`--dur-1…4`, `--ease-spring` via `linear()`), press
       feedback (`scale` on chips, buttons, tabs, tiles), goal rings and the Light lantern fill from their last
       value (`@property --ring-p`), a ring pops when met; reading: a line of light along the page's bottom edge

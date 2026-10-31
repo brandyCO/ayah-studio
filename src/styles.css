@@ -1762,6 +1762,10 @@ button.lt-chip { cursor: pointer; }
 @keyframes ring-met { from { scale: .6; } }
 .toast { transition: transform var(--dur-2) var(--ease-spring); }
 
+/* Opened from a goal note: the waiting Claim glows twice (src/ui/me.ts, meFocus) */
+.claim.focus, .claim-all.focus, .claim-badge.focus { animation: claim-focus 1.2s var(--ease-out) 2; }
+@keyframes claim-focus { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rw-n1, var(--accent)) 70%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
+
 /* Goal notes: the in-app banner (src/ui/nudges.ts) */
 .nudge {
   position: fixed; z-index: 30; inset-inline: 12px; top: calc(10px + env(safe-area-inset-top)); margin: 0 auto; max-width: 460px;
