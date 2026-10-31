@@ -839,6 +839,11 @@ cloud. Build in this order:
       2026-10-09: repo variable `TURNSTILE_SITE_KEY` + secret key in Supabase; a guest sign-in without a
       token or with a fake one is refused, Google sign-in (web + id-token) unaffected, the check passed
       on the owner's phone
+      Ramadan 2027 pass (owner request 2026-10-31, front-end plan step 4): Today card in the 30 days before
+      Ramadan "Ramadan in N days · plan your Khatm" (the plan can be set early); during Ramadan **Iftar at … /
+      Suhoor ends at …** with a countdown from the prayer times (only with a location, never guessed; also in the
+      Ramadan sheet); **taraweeh**: after Isha a Today line marks tonight, the sheet has a toggle, the recap counts
+      the nights (`RamadanData.taraweeh`, `setTaraweeh()`)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 

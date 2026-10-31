@@ -12,12 +12,13 @@ import { draftHash, newDraftId, saveDraft } from '../data/drafts';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { loadMeta, reference, surahText } from '../data/quran';
 import {
-  daysToRamadan, mostReturned, PAGES, planPages, ramadanData, ramadanNow, ramadanSettings, setPlan, setRamadanSettings, setRecapSeen,
+  daysToRamadan, mostReturned, setTaraweeh, PAGES, planPages, ramadanData, ramadanNow, ramadanSettings, setPlan, setRamadanSettings, setRecapSeen,
   setWelcomed, todayPortion, type Plan,
 } from '../data/ramadan';
 import { DEFAULT_RECITER, reciterById, reciterFor } from '../data/reciters';
 import { MOODS, applyMood } from '../engine/moods';
 import { applyLook, giveEnding, newProject } from '../engine/project';
+import { PRAYERS, prayerDay, prayerSettings } from '../data/prayer';
 import { isNative } from '../native';
 import { h, toast } from './dom';
 import { lastRead, reelLook, reelReciter } from './prefs';
@@ -76,6 +77,22 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
     if (l) items.push({ icon: '☾', text: tr('ram.todaysPortion', { text: l.text }), onClick: () => (l.page ? ctx.goToPage(l.page) : openRamadan(ctx)) });
   }
   if (now.day && !d.plan) items.push({ icon: '☾', text: tr('ram.choose'), onClick: () => openRamadan(ctx) });
+  // Before Ramadan (the last 30 days): a countdown and a plan made early.
+  if (!now.day && !now.eid) {
+    const n = daysToRamadan();
+    if (n && n <= 30) items.push({ icon: '☾', text: d.plan ? tr('ram.soonPlanned', { n }) : tr('ram.soon', { n }), onClick: () => openRamadan(ctx) });
+  }
+  // Iftar and suhoor from today's prayer times (only with a location; never guessed).
+  if (now.day) {
+    const fast = await fastTimes();
+    if (fast) items.push({ icon: '◔', text: fast, onClick: () => { location.hash = '#/me'; } });
+    // Taraweeh: after Isha, one tap marks tonight (and again takes it back).
+    const isha = await prayerTime('isha');
+    if (isha && Date.now() >= isha.getTime()) {
+      const done = (d.taraweeh ?? []).includes(now.day);
+      items.push({ icon: done ? '✓' : '☾', text: done ? tr('ram.taraweehDone') : tr('ram.taraweehAsk'), onClick: () => { setTaraweeh(now.day!, !done); window.dispatchEvent(new Event('journey-changed')); toast(done ? tr('ram.taraweehUndo') : tr('ram.taraweehMarked')); } });
+    }
+  }
   if (now.day && new Date().getHours() >= 16) {
     const t = await tonightsAyah();
     const meta = await loadMeta();
@@ -83,6 +100,27 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
   }
   if (now.eid && (d.days.length || d.khatms)) items.push({ icon: '☾', text: tr('ram.eidYours'), onClick: () => void openRecap() });
   return items;
+}
+
+async function prayerTime(name: (typeof PRAYERS)[number], date = new Date()): Promise<Date | null> {
+  const t = await prayerDay(date, prayerSettings()).catch(() => null);
+  return t ? t[PRAYERS.indexOf(name)] : null;
+}
+const clockFmt = () => new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
+const inTime = (ms: number) => {
+  const m = Math.max(1, Math.round(ms / 60_000));
+  return m >= 60 ? tr('ram.inHM', { h: Math.floor(m / 60), m: m % 60 }) : tr('ram.inM', { m });
+};
+/** "Iftar at 17:42 · in 2 h 10 min" before Maghrib, "Suhoor ends at 04:51" after it (null without a location). */
+async function fastTimes(): Promise<string | null> {
+  const now = new Date();
+  const fajr = await prayerTime('fajr');
+  const maghrib = await prayerTime('maghrib');
+  if (!fajr || !maghrib) return null;
+  if (now < fajr) return tr('ram.suhoorEnds', { t: clockFmt().format(fajr), in: inTime(fajr.getTime() - now.getTime()) });
+  if (now < maghrib) return tr('ram.iftarAt', { t: clockFmt().format(maghrib), in: inTime(maghrib.getTime() - now.getTime()) });
+  const next = await prayerTime('fajr', new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  return next ? tr('ram.suhoorEnds', { t: clockFmt().format(next), in: inTime(next.getTime() - now.getTime()) }) : null;
 }
 
 /** An ayah from today's portion (or, keeping company, from the page last read). */
@@ -179,6 +217,7 @@ export async function openRecap() {
     h('h2', {}, tr('ram.yours')),
     h('p', { class: 'recap-line' }, days ? tr(days === 1 ? 'ram.days1' : 'ram.days', { n: days }) : tr('ram.eid')),
     d.khatms ? h('p', { class: 'recap-line' }, d.khatms === 1 ? tr('ram.khatm1Complete') : tr('ram.khatmsComplete', { n: d.khatms })) : '',
+    d.taraweeh?.length ? h('p', { class: 'recap-line' }, tr('ram.taraweehNights', { n: d.taraweeh.length })) : '',
     ayahBlock,
     h('div', { class: 'moment-actions' },
       most ? h('button', { class: 'primary brand-btn', onclick: () => {
@@ -226,6 +265,17 @@ export function openRamadan(ctx: RamadanContext) {
         portion.page ? h('button', { class: 'primary brand-btn', onclick: () => { d.close(); ctx.goToPage(portion.page!); } }, tr('ram.open')) : ''));
     }
     if (total) nodes.push(h('p', { class: 'muted small' }, tr('ram.pagesRead', { n: Math.min(done, total), total })));
+    if (now.day) {
+      const fast = await fastTimes();
+      nodes.push(h('p', { class: 'muted small' }, fast ?? tr('ram.fastNeedsLocation')));
+      const tw = new Set(data.taraweeh ?? []);
+      nodes.push(h('p', { class: 'circle-sub' }, tr('ram.taraweeh')),
+        h('button', {
+          class: `chip${tw.has(now.day) ? ' on' : ''}`, 'aria-pressed': String(tw.has(now.day)),
+          onclick: () => { setTaraweeh(now.day!, !tw.has(now.day!)); void draw(); },
+        }, tw.has(now.day) ? tr('ram.taraweehDone') : tr('ram.taraweehTonight')),
+        tw.size ? h('p', { class: 'muted small' }, tr('ram.taraweehNights', { n: tw.size })) : '');
+    }
 
     // Reminder before Maghrib (Android app: local notifications).
     nodes.push(h('p', { class: 'circle-sub' }, tr('ram.reminder')));
