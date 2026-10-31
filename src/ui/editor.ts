@@ -3,6 +3,8 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
+import { starButton } from './favourite';
+import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
 import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
@@ -812,6 +814,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       },
     }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
       r.qdc === false && !hasAlignedWords(r, n) ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
+    starButton(r, n, () => { if (option?.id === 'reciter') refreshUI(); }), // ★ favourite + download
     sampleButton(r), // hear the voice before choosing
     r.id === project.reciterId ? icon('check', 18) : null);
   /** mp3quran reciters whose recording is not verified for this reel's ayat (filled when the picker opens). */
@@ -849,7 +852,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
       reciterSearch(),
-      h('div', { class: 'list reciter-list' }, ...RECITERS.filter(offered).map((r) => reciterButton(r))),
+      h('div', { class: 'list reciter-list' }, ...favouritesFirst(RECITERS.filter(offered)).map((r) => reciterButton(r))),
     ].filter(Boolean) as Node[];
   };
 

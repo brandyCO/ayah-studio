@@ -2,6 +2,7 @@
 // its ayat, ~1 MB a minute), so a reel opened before also works offline and opens faster. The least
 // recently used entries are dropped beyond MAX_ENTRIES or MAX_BYTES.
 import { keepNewest, keepUnderBytes, tx } from './db';
+import { keptBlob } from './keptAudio';
 
 const MAX_ENTRIES = 150;
 const MAX_BYTES = 300 * 1024 * 1024;
@@ -30,6 +31,15 @@ async function store(key: string, bytes: Uint8Array) {
 
 /** The bytes for `key` from the device if kept before, else from `load()` (then kept). */
 export async function cachedBytes(key: string, load: () => Promise<Uint8Array>): Promise<Uint8Array> {
+  // A favourite reciter's file kept whole on the device (`{url}|all` or `{url}|{a}-{b}`).
+  const bar = key.lastIndexOf('|');
+  const kept = await keptBlob(key.slice(0, bar));
+  if (kept) {
+    const part = key.slice(bar + 1);
+    if (part === 'all') return new Uint8Array(await kept.arrayBuffer());
+    const [a, b] = part.split('-').map(Number);
+    if (a < kept.size) return new Uint8Array(await kept.slice(a, b + 1).arrayBuffer());
+  }
   try {
     const hit = await tx<Entry | undefined>('audio', 'readonly', (s) => s.get(key));
     if (hit?.bytes) {

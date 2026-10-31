@@ -4,6 +4,9 @@
 // Quran.com reciters stream their full-surah file; mp3quran ones their checked surah file (cut points
 // from public/data/mp3quran); everyayah ones play the per-ayah files one after another. Words are lit
 // only where real timings exist (QDC, or aligned and checked: public/data/words; rule 8).
+import { starButton } from './favourite';
+import { favouritesFirst } from '../data/reciterDownload';
+import { playableUrl } from '../data/keptAudio';
 import { qdcSurah } from '../data/qdc';
 import { mp3quranSurah } from '../data/mp3quran';
 import { alignedWords } from '../data/alignedWords';
@@ -132,11 +135,13 @@ export function createPlayer(o: PlayerHooks) {
         a: i + 1, from: 0, to: 0, words: SHIFTED.has(`${s}:${i + 1}`) ? [] : validSegs(words[i + 1]),
       }));
     }
+    const src = url ? await playableUrl(url) : ''; // a favourite's kept copy
+    if (id !== req) return false;
     perAyah = !url;
     using = r;
     surah = s;
     loadedFor = key;
-    if (url) audio.src = url;
+    if (src) audio.src = src;
     return true;
   }
 
@@ -153,7 +158,7 @@ export function createPlayer(o: PlayerHooks) {
       if (perAyah) {
         playing = v.a;
         ahead.pause();
-        audio.src = everyayahUrl(using!, s, v.a);
+        audio.src = await playableUrl(everyayahUrl(using!, s, v.a));
         preload(v.a + 1);
       } else await seekTo(v.from / 1000);
       await audio.play();
@@ -169,10 +174,16 @@ export function createPlayer(o: PlayerHooks) {
   function preload(a: number) {
     aheadFor = 0;
     if (!perAyah || !using || a > verses.length) return;
-    ahead.src = everyayahUrl(using, surah, a);
-    ahead.load();
-    aheadFor = a;
+    const want = `${using.id}/${surah}/${a}`;
+    aheadWant = want;
+    void playableUrl(everyayahUrl(using, surah, a)).then((src) => {
+      if (aheadWant !== want) return;
+      ahead.src = src;
+      ahead.load();
+      aheadFor = a;
+    });
   }
+  let aheadWant = '';
 
   /** everyayah: start the next ayah's file 40 ms before this one ends (crossfaded by the overlap). */
   function switchOver() {
@@ -293,7 +304,7 @@ export function createPlayer(o: PlayerHooks) {
   function pickReciter() {
     const d = h('dialog', { class: 'sheet bottom' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...RECITERS.filter((r) => !surah || covers(r, surah)).map((r) => h('button', {
+      h('div', { class: 'menu' }, ...favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))).map((r) => h('button', {
         class: `menu-item${r.id === (using ?? reciter()).id ? ' on' : ''}`,
         onclick: () => {
           d.close();
@@ -304,7 +315,7 @@ export function createPlayer(o: PlayerHooks) {
           if (at) void playFrom(at.s, at.a);
           else paint();
         },
-      }, h('span', {}, reciterPickerLabel(r)), sampleButton(r)))));
+      }, h('span', {}, reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)))));
     d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);

@@ -2,6 +2,9 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { favouritesSection } from './favourite';
+import { favouriteIds } from '../data/reciterDownload';
+import { reciterById } from '../data/reciters';
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
@@ -541,6 +544,8 @@ export function showMeSettings(root: HTMLElement): () => void {
         }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
       alertsSection(),
+      section(t('fav.section'),
+        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp'))),
       section(t('wg.title'),
         h('p', { class: 'muted small' }, t('wg.setHelp')),
         h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.open')}`))),

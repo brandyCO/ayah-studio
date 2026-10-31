@@ -1728,3 +1728,13 @@ button.lt-chip { cursor: pointer; }
 .lt-fill { fill: var(--rw-n2); filter: drop-shadow(0 0 5px var(--rw-n2)); }
 .lt-sheet { padding: 0 16px 16px; }
 .lt-sheet .me-tiles { grid-template-columns: 1fr 1fr; }
+
+/* ★ favourite reciters */
+.fav-star { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; margin-inline-start: auto; border-radius: 50%; font-size: 20px; color: var(--muted); cursor: pointer; }
+.fav-star.on { color: var(--accent); }
+.fav-star:focus-visible { outline: 2px solid var(--accent); }
+.fav-star + .voice-sample { margin-inline-start: 4px; }
+.fav-opt { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fav-list .menu-item { min-height: 40px; font-size: var(--fs-m, 15px); }
+.fav-go { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.menu-item.danger { color: #c0392b; }

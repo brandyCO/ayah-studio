@@ -387,7 +387,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       → `decodeMp3Span(…, seek)` Range-fetches exactly (lag 0 against a whole-file decode in Chromium)
       Shipped 2026-10-29 (second run, `align2/`): 23 everyayah reciters with words for 6011–6232 ayat each (all
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
-      (3562–4750 ayat; more surahs verified by the aligned cuts). The Android build leaves `data/words` out
+      (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
+      Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
+      the deadline; rerun for the rest started). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
@@ -984,6 +986,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. No cap on
       kept page fonts any more (app cache; service worker `MAX_PAGE_FONTS` 700). The reader loads fonts 10 pages
       ahead / 6 back (was 3 / 2) and keeps ±12 in memory
+      **Favourite reciters** (owner request 2026-10-31; decision "ask each time"): ☆ beside each reciter in the
+      Listen picker and the studio's reciter list (favourites listed first) → "Download {name}?" sheet: Whole
+      Quran / Juz 'Amma / this surah / chosen surahs / just a favourite, each with its size (mp3quran exact, else
+      pages × 66 s × bitrate) and the free space. `src/data/reciterDownload.ts` keeps the files exactly as served
+      in Cache Storage `kept-reciter-{id}` (never trimmed; Quran.com timings pinned there too, so they match the
+      recording), Wi‑Fi only, while the app is open, one surah at a time (everyayah 3 files at once), resumed on
+      start / online / visible. `src/data/keptAudio.ts`: every audio read checks it first (reel Range slices and
+      whole files via `cachedBytes()`, file sizes, the Listen tab via a blob URL). Me → ⚙ → Favourite reciters:
+      progress, size, download more, remove (deletes the cache). This device only
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
