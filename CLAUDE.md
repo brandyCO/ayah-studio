@@ -968,8 +968,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       (index.html, `unicode-range` over the Arabic blocks) is fetched only when the system font cannot
       draw a cluster, so English starts no longer download AmiriQuran. The rest of first load is the
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
-- [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
-      < 16 MB) — postponed by the owner (2026-10-09)
+- [x] G5b "Export for WhatsApp Status" preset (owner go-ahead 2026-10-31, front-end plan step 3): export result
+      page → **WhatsApp Status · n parts**: `statusParts()` (`src/engine/status.ts`) cuts the reel into pieces of
+      ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
+      each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
+      then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
+      caption is copied too
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
