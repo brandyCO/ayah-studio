@@ -36,6 +36,7 @@ import { account } from '../cloud/auth';
 import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
+import { todayCard } from './todayCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 
 const minutes = (sec: number) => {
@@ -483,7 +484,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, dayCard() ?? '', goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
