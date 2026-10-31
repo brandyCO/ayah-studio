@@ -121,6 +121,8 @@ if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
+// Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
+setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();

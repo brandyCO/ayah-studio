@@ -15,14 +15,14 @@ const conn = (): Conn | undefined => (navigator as Navigator & { connection?: Co
 
 /** Wi-Fi or a wired connection. Without the Network Information API (desktop Safari/Firefox) a
  *  computer counts as unmetered, a phone does not. */
-function unmetered(): boolean {
+export function unmetered(): boolean {
   const c = conn();
   if (c?.saveData) return false;
   if (c?.type) return c.type === 'wifi' || c.type === 'ethernet';
   return !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 }
 
-const idle = () => new Promise<void>((r) => ('requestIdleCallback' in window
+export const idle = () => new Promise<void>((r) => ('requestIdleCallback' in window
   ? requestIdleCallback(() => r(), { timeout: 2000 }) : setTimeout(r, 200)));
 
 /** Start (or resume) the background download around `near()`, the page being read. */
