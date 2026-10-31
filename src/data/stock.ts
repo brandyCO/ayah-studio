@@ -2,6 +2,7 @@
 // (proxy/pixabay-worker.js; the repo is public, so API keys never ship in the app), then download
 // the picked file into the local library. Terms: searches are cached (24 h at the proxy), the source
 // is shown wherever results are, creators are credited, and files are downloaded, not hotlinked.
+import { EDGE, installId } from '../net';
 import { hasMedia, importDownload } from './library';
 
 export type StockSource = 'pixabay' | 'pexels';
@@ -34,7 +35,7 @@ export interface StockSources {
   collections: { id: string; label: string }[];
 }
 
-const PROXY = (import.meta.env.VITE_PIXABAY_PROXY ?? '').replace(/\/+$/, '');
+const PROXY = EDGE;
 export const stockEnabled = () => PROXY !== '';
 
 /** Calm search ideas, used when the proxy has no curated collections (rule 4: nature/abstract, no people). */
@@ -68,19 +69,44 @@ export function searchStock(s: StockQuery): Promise<StockPage> {
   else params.set('q', (s.q ?? '').trim().slice(0, 100));
   const key = params.toString().toLowerCase();
   if (!pages.has(key)) {
-    const p = fetch(`${PROXY}/search?${params}`).then(async (r) => {
+    const kept = keptPage(key);
+    const p = kept ? Promise.resolve(kept) : fetch(`${PROXY}/search?${params}&i=${installId()}`).then(async (r) => {
       if (!r.ok) {
         const msg = ((await r.json().catch(() => null)) as { error?: string } | null)?.error;
         throw new Error(r.status === 429 ? msg ?? 'Too many searches — try again in a minute' : msg ?? `Search failed (${r.status})`);
       }
       const page = (await r.json()) as StockPage;
       for (const h of page.hits) h.source ??= s.source;
+      keepPage(key, page);
       return page;
     });
     p.catch(() => pages.delete(key));
     pages.set(key, p);
   }
   return pages.get(key)!;
+}
+
+// The last searches are kept on the phone for a day (the proxy's own cache time), so reopening the
+// library or a collection costs no request at all.
+const KEPT = 'stockPages';
+const KEPT_MAX = 16;
+type Kept = Record<string, { at: number; page: StockPage }>;
+const readKept = (): Kept => {
+  try {
+    return (JSON.parse(localStorage.getItem(KEPT) ?? '{}') as Kept) ?? {};
+  } catch {
+    return {};
+  }
+};
+function keptPage(key: string): StockPage | null {
+  const k = readKept()[key];
+  return k && Date.now() - k.at < 86400e3 && Array.isArray(k.page?.hits) ? k.page : null;
+}
+function keepPage(key: string, page: StockPage) {
+  const all = readKept();
+  all[key] = { at: Date.now(), page };
+  const keep = Object.entries(all).sort((a, b) => b[1].at - a[1].at).slice(0, KEPT_MAX);
+  try { localStorage.setItem(KEPT, JSON.stringify(Object.fromEntries(keep))); } catch { /* full: fine */ }
 }
 
 export const stockId = (h: StockHit) => `${h.source === 'pexels' ? 'pe' : 'px'}:${h.type}:${h.id}`;
@@ -90,7 +116,7 @@ export async function downloadHit(h: StockHit, onProgress?: (fraction: number) =
   const id = stockId(h);
   if (await hasMedia(id)) return id;
   // Straight from the library's CDN; the second URL, then the proxy's relay, if that fails.
-  const relay = () => fetch(`${PROXY}/file?${new URLSearchParams({ url: h.src })}`);
+  const relay = () => fetch(`${PROXY}/file?${new URLSearchParams({ url: h.src, i: installId() })}`);
   const r = await fetch(h.src)
     .then((x) => (x.ok || !h.alt ? x : fetch(h.alt)))
     .catch(() => (h.alt ? fetch(h.alt).catch(relay) : relay()));

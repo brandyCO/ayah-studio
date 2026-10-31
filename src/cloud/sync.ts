@@ -14,6 +14,7 @@ import type { Project } from '../engine/project';
 import { mergePrefs, prefRecords } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
+import { installId, jitter, remoteConfig } from '../net';
 
 type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
 interface Row {
@@ -67,18 +68,7 @@ function saveMeta(m: Meta) {
     /* ignore */
   }
 }
-function deviceId(): string {
-  try {
-    let id = localStorage.getItem('deviceId');
-    if (!id) {
-      id = crypto.randomUUID().slice(0, 18);
-      localStorage.setItem('deviceId', id);
-    }
-    return id;
-  } catch {
-    return 'unknown';
-  }
-}
+const deviceId = installId;
 
 // --- merging what other devices wrote ---
 async function applyRemote(rows: Row[], meta: Meta) {
@@ -160,6 +150,7 @@ async function round() {
   if (!acc) return setStatus({ state: 'off' });
   if (!navigator.onLine) return setStatus({ state: 'offline' });
   setStatus({ state: 'syncing', error: undefined });
+  lastRound = Date.now();
   try {
     const sb = await supabase();
     const meta = loadMeta(acc.id);
@@ -188,19 +179,34 @@ async function round() {
       saveMeta(meta);
     }
     setStatus({ state: 'ok', at: Date.now() });
+    failures = 0;
   } catch (e) {
     console.warn('Sync failed', e);
+    // Wait longer after each failure (30 s → 15 min, spread randomly), so a server that comes back
+    // after an outage is not met by every phone at once.
+    if (navigator.onLine) {
+      failures++;
+      soon(0);
+    }
     setStatus({ state: navigator.onLine ? 'error' : 'offline', error: e instanceof Error ? e.message : String(e) });
   }
 }
 
 // --- when to sync ---
 let timer = 0;
+let lastRound = 0;
+let failures = 0;
+const backoff = () => (failures ? jitter(Math.min(15 * 60e3, 30e3 * 2 ** (failures - 1))) : 0);
 const soon = (ms = 4000) => {
   if (!account()) return;
   clearTimeout(timer);
-  timer = window.setTimeout(() => void syncNow(), ms);
+  timer = window.setTimeout(() => void syncNow(), Math.max(ms, backoff()));
 };
+/** Back in the app or online again: a round, but not more often than the remote setting allows
+ *  (a minute by default), a few random seconds later so phones don't arrive together. */
+const onReturn = () => void remoteConfig().then((c) => {
+  if (Date.now() - lastRound >= c.syncMinutes * 60e3) soon(jitter(3000));
+});
 
 let started = false;
 /** Starts syncing whenever an account is signed in (call once at startup). */
@@ -219,8 +225,8 @@ export function startSync() {
   // The studio saves its draft ~1 s after every edit: sync once the editing has rested a while,
   // not a pull + push round after each pause (leaving the studio still syncs within 20 s).
   window.addEventListener('drafts-changed', () => soon(20_000));
-  window.addEventListener('online', () => soon(500));
+  window.addEventListener('online', onReturn);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') soon(500);
+    if (document.visibilityState === 'visible') onReturn();
   });
 }

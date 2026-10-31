@@ -1,7 +1,31 @@
-# Deploy with: npx wrangler deploy   (then: npx wrangler secret put PIXABAY_KEY)
+# Deployed by .github/workflows/proxy.yml (or by hand: npx wrangler deploy; then
+# npx wrangler secret put PIXABAY_KEY). Everything below works on Cloudflare's free plan.
 name = "ayah-studio-pixabay"
 main = "pixabay-worker.js"
 compatibility_date = "2026-09-01"
+# Variables set in the dashboard (e.g. FLAGS) survive a deploy.
+keep_vars = true
 
 [vars]
 ALLOWED_ORIGINS = "https://brandyco.github.io,https://localhost,http://localhost,http://tauri.localhost,tauri://localhost,http://localhost:5173,http://localhost:4173"
+# The app's Supabase project and its publishable key (public by design, as in src/cloud/config.ts).
+SUPABASE_URL = "https://jposubjybzstfmnngews.supabase.co"
+SUPABASE_KEY = "sb_publishable_Su6KSbkC7LHqqLwoKbrj6w_aevj2aY9"
+
+# Builds every collection and the Quick reel searches once a day (03:17 UTC).
+[triggers]
+crons = ["17 3 * * *"]
+
+# One worldwide counter per library, so all copies of the worker together stay under its limit.
+[[durable_objects.bindings]]
+name = "BUDGET"
+class_name = "Budget"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Budget"]
+
+# The worldwide search cache (KV). The deploy workflow finds or creates the namespace and adds:
+# [[kv_namespaces]]
+# binding = "STOCK_KV"
+# id = "<namespace id>"
