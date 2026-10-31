@@ -662,6 +662,11 @@ save to gallery / share sheet; offline audio cache; settings.
       accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
       deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
+      Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
+      hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
+      gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
+      goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
+      shine plays once; the streak keeps a softer glow
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
