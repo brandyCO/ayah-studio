@@ -6,6 +6,7 @@ import { checkBadges } from '../data/badges';
 import { anyGoalMet, checkGoals } from '../data/goals';
 import { pendingRewards } from '../data/claims';
 import { lightFlame, todayRec } from '../data/journey';
+import { checkNudges } from './nudges';
 
 /** Puts the dot on every Me tab while a reward waits. */
 export function paintRewardDots() {
@@ -23,6 +24,7 @@ function check() {
     checkGoals();
     checkBadges();
     paintRewardDots();
+    checkNudges();
   } finally {
     busy = false;
   }
@@ -33,7 +35,9 @@ let queued = false;
 const soon = () => {
   if (queued) return;
   queued = true;
-  requestAnimationFrame(() => { queued = false; check(); });
+  // In the background (listening with the screen off) frames do not come: use a timer instead.
+  if (document.hidden) setTimeout(() => { queued = false; check(); }, 50);
+  else requestAnimationFrame(() => { queued = false; check(); });
 };
 
 export function watchRewards() {

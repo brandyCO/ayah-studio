@@ -24,7 +24,7 @@ import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
-import { countPage, pageSeconds } from '../data/journey';
+import { countPage, pageSeconds, todayRec } from '../data/journey';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 // The family circles screens load on first use.
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
@@ -228,7 +228,18 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       if (seen === 20 && ramadan) markRamadanRead(p);
       if (seen >= need) {
         clearInterval(readTimer);
-        if (logPageRead(p)) countPage(mushaf, p);
+        if (logPageRead(p)) {
+          const was = todayRec();
+          const [s0, j0] = [was.s?.length ?? 0, was.j?.length ?? 0];
+          countPage(mushaf, p);
+          const now = todayRec();
+          const surahs = (now.s ?? []).slice(s0).map((n) => meta[n - 1]).filter(Boolean);
+          const juz = (now.j ?? []).slice(j0);
+          void import('./pageMoments').then((m) => {
+            m.pageCounted(area);
+            m.finished(surahs, juz);
+          });
+        }
       }
     }, 1000);
   };

@@ -2,6 +2,7 @@
 // api.qurancdn.com is the documented host; api.quran.com serves the same API (also with CORS).
 import type { VerseTiming } from '../engine/words';
 import { keepNewest, tx } from './db';
+import { keptCache } from './keptAudio';
 
 const HOSTS = ['https://api.qurancdn.com', 'https://api.quran.com'];
 
@@ -39,6 +40,8 @@ const FRESH_MS = 3 * 24 * 3600 * 1000;
 
 /** The copy kept on the device while fresh; else network first (then kept), the old copy when offline. */
 async function fetchJson(path: string): Promise<AudioFilesResponse> {
+  const pin = await pinned(path);
+  if (pin) return pin;
   const kept = await tx<{ data: AudioFilesResponse; used: number; fetched?: number } | undefined>('timings', 'readonly', (s) => s.get(path)).catch(() => undefined);
   if (kept?.data && Date.now() - (kept.fetched ?? 0) < FRESH_MS) return kept.data;
   try {
@@ -53,11 +56,34 @@ async function fetchJson(path: string): Promise<AudioFilesResponse> {
   }
 }
 
+const pathOf = (reciterId: number, surah: number) => `/api/qdc/audio/reciters/${reciterId}/audio_files?chapter=${surah}&segments=true`;
+/** A favourite reciter's timings are kept with their audio (in its own cache, never trimmed), so the
+ *  timings always match the kept recording and need no network. */
+const pinUrl = (path: string) => `https://kept.invalid${path}`;
+async function pinned(path: string): Promise<AudioFilesResponse | undefined> {
+  if (typeof caches === 'undefined') return undefined;
+  try {
+    const res = await caches.match(pinUrl(path));
+    return res ? await res.json() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+/** Keeps this surah's timings for a favourite reciter; returns its audio URL. */
+export async function pinQdc(reciterId: number, surah: number): Promise<string> {
+  const path = pathOf(reciterId, surah);
+  const d = await fetchJson(path);
+  const url = d.audio_files?.[0]?.audio_url;
+  if (!url) throw new Error('No recording for this surah');
+  await (await caches.open(keptCache(reciterId))).put(pinUrl(path), new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json' } }));
+  return url;
+}
+
 /** Audio URL and timings of one surah for one reciter (cached in memory and kept on the device). */
 export function qdcSurah(reciterId: number, surah: number): Promise<QdcSurah> {
   const key = `${reciterId}/${surah}`;
   if (!cache.has(key)) {
-    const p = fetchJson(`/api/qdc/audio/reciters/${reciterId}/audio_files?chapter=${surah}&segments=true`).then((d) => {
+    const p = fetchJson(pathOf(reciterId, surah)).then((d) => {
       const f = d.audio_files?.[0];
       if (!f?.audio_url || !Array.isArray(f.verse_timings)) throw new Error('No recording for this surah');
       return {

@@ -28,6 +28,7 @@ import { initErrors } from './errors';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
+import { watchVitals } from './perf';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -37,7 +38,7 @@ async function route() {
   const id = ++routeId;
   cleanup?.();
   cleanup = null;
-  const [view, a, b, c4] = location.hash.replace(/^#\/?/, '').split('/');
+  const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
   // The Kids space is on: only its own screens (and a page the parent opened through the gate).
   if (kidsOn() && view !== 'kids' && !usePass(location.hash)) {
     history.replaceState(null, '', '#/kids');
@@ -64,6 +65,12 @@ async function route() {
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
+    } else if (view === 't' && Number(a) && b) {
+      // "Make this reel yourself" (a link in a shared reel's caption): the same ayat, reciter and look,
+      // opened in the studio as a new reel. The editor checks every part before using it.
+      try { sessionStorage.setItem('reelTemplate', JSON.stringify({ reciter: Number(c4) || 0, look: d5 ?? '' })); } catch { /* private window */ }
+      history.replaceState(null, '', `#/reel/${Number(a)}/${b.replace(/[^0-9-]/g, '')}`);
+      return void route();
     } else if (view === 'join' && a) {
       const { showJoin } = await import('./ui/circles');
       c = await showJoin(screen, a);
@@ -121,13 +128,17 @@ if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
 void initI18n().then(route);
+// Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
+setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 void import('./ui/rewards').then((m) => m.watchRewards());
+watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
+if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.

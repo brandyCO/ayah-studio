@@ -75,14 +75,14 @@ export const RECITERS: Reciter[] = [
   { id: 1028, name: 'Idrees Abkar', short: 'Abkar', qdc: false, mp3quran: { read: 12, surahs: '1-5,8-20,22-25,27-31,34,38-64,66-67,78-102,104,109-111,114' }, words: '1-5,8-20,22-25,27-30,38-60' },
   { id: 1029, name: 'Raad Al-Kurdi', short: 'Al-Kurdi', qdc: false, mp3quran: { read: 221, surahs: '1-17,19-36,38-111,113-114' }, words: '1-17,19-29,38-102,104-111,113-114' },
   { id: 1030, name: 'Khalid Al-Jaleel', short: 'Al-Jaleel', qdc: false, mp3quran: { read: 20, surahs: '1-6,8-13,16-81,83-84,86,88-90,92-99,102-108,110-112,114' }, words: '1-6,8-13,16-35,38-81' },
-  { id: 1031, name: 'Bandar Baleela', short: 'Baleela', qdc: false, mp3quran: { read: 217, surahs: '1-41,43-55,57-68,71,74-75,77-80,82-100,102-106,108-114' }, words: '1-37' },
-  { id: 1032, name: 'Haitham Al-Dukhain', short: 'Al-Dukhain', qdc: false, mp3quran: { read: 273, surahs: '1-39,41-86,88-90,93-114' } },
-  { id: 1033, name: 'Wadee Al-Yamani', short: 'Al-Yamani', qdc: false, mp3quran: { read: 219, surahs: '2-18,20-24,26-69,71-75,77-78,81,83,85-86,88-90,93-95,97-99,101-102,104-106,109,111-112,114' } },
-  { id: 1034, name: 'Mansour Al-Salimi', short: 'Al-Salimi', qdc: false, mp3quran: { read: 245, surahs: '1-90,93-112,114' } },
-  { id: 1035, name: 'Abdulrahman Al-Majed', short: 'Al-Majed', qdc: false, mp3quran: { read: 236, surahs: '2-52,54-68,70-95,97-112,114' } },
-  { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '2-3,5-6,8,12,16,21-22,24,26-32,34-35,37,39,41-42,44,47,67,87-88,93-94,98,103,110' } },
+  { id: 1031, name: 'Bandar Baleela', short: 'Baleela', qdc: false, mp3quran: { read: 217, surahs: '1-71,74-75,77-80,82-100,102-106,108-114' }, words: '1-70' },
+  { id: 1032, name: 'Haitham Al-Dukhain', short: 'Al-Dukhain', qdc: false, mp3quran: { read: 273, surahs: '1-86,88-90,93-114' }, words: '1-5,8-78' },
+  { id: 1033, name: 'Wadee Al-Yamani', short: 'Al-Yamani', qdc: false, mp3quran: { read: 219, surahs: '1-75,77-78,81,83,85-86,88-90,93-95,97-99,101-102,104-106,109,111-112,114' }, words: '1-17,19-72' },
+  { id: 1034, name: 'Mansour Al-Salimi', short: 'Al-Salimi', qdc: false, mp3quran: { read: 245, surahs: '1-90,93-112,114' }, words: '1-17,19-30,38-65' },
+  { id: 1035, name: 'Abdulrahman Al-Majed', short: 'Al-Majed', qdc: false, mp3quran: { read: 236, surahs: '1-95,97-112,114' }, words: '1-36,38-84' },
+  { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '1-6,8-10,12-13,15-16,19-32,34-35,37-67,87-88,93-94,98,103,110' }, words: '1-5,8-10,12-13,15-16,19-30,38-67' },
   // mp3quran.net without ayah times: made by alignment and checked (scripts/make-mp3quran-timings.py).
-  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1,13-15,19,31-32,34-36,41-42,44,46,50-51,53,55-56,58-64,66-69,71,73,77,81-85,88-90,94-95,97-98,102-103,105,107,109-114' } },
+  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1-17,19-36,38,41-44,46-64,66-85,88-90,94-95,97-98,102-103,105,107,109-114' }, words: '1-17,19-33,38,41-44,46-64,66-82' },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */

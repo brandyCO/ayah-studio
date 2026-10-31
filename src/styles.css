@@ -7,7 +7,15 @@
   --fs-h3: 18px; --fs-h2: 20px; --fs-h1: 24px;
   --tap: 44px; --tap-s: 40px;
   --ease-out: cubic-bezier(.22, .8, .24, 1);
+  /* Motion (butter pass): one set of durations and curves for every screen. --ease-spring settles with
+     a 2–3 % overshoot like a soft spring; browsers without linear() get a close cubic curve. */
+  --dur-1: 120ms; --dur-2: 260ms; --dur-3: 700ms; --dur-4: 1200ms;
+  --ease-spring: cubic-bezier(.2, .9, .25, 1.04);
 }
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --ease-spring: linear(0, .063, .22 4.8%, .586 11.2%, .834 17.6%, .958 24%, 1.012 31.2%, 1.025 37.6%, 1.017 46.4%, 1.004 60%, .999 76%, 1); }
+}
+@property --ring-p { syntax: '<number>'; inherits: false; initial-value: 0; }
 :root {
   --bg: #f6f4ef;
   --card: #ffffff;
@@ -1423,9 +1431,9 @@ button.lt-chip { cursor: pointer; }
 .me-row .me-h { margin: 0; }
 .goals { display: flex; flex-direction: column; gap: 6px; }
 .goal { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-radius: var(--r-m); }
-.goal-ring { --p: 0; flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+.goal-ring { --ring-p: 0; flex: none; transition: --ring-p var(--dur-3) var(--ease-spring); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
   font-weight: 800; color: var(--accent-ink);
-  background: radial-gradient(closest-side, var(--card) 72%, transparent 74%), conic-gradient(var(--accent) calc(var(--p) * 1turn), var(--line) 0); }
+  background: radial-gradient(closest-side, var(--card) 72%, transparent 74%), conic-gradient(var(--accent) calc(var(--ring-p) * 1turn), var(--line) 0); }
 .goal.met .goal-ring { background: linear-gradient(135deg, var(--rw-n1), var(--rw-n3)); color: var(--rw-ink); box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n1) 45%, transparent); }
 .goal-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .goal-txt .muted { margin: 0; }
@@ -1725,6 +1733,127 @@ button.lt-chip { cursor: pointer; }
 .lt-lantern { flex: none; width: 26px; height: 36px; color: color-mix(in srgb, var(--rw-n2) 70%, #888); }
 .lt-lantern svg { width: 100%; height: 100%; overflow: visible; }
 .lt-glass { fill: color-mix(in srgb, var(--rw-n1) 10%, transparent); stroke: currentColor; stroke-width: 1.6; }
-.lt-fill { fill: var(--rw-n2); filter: drop-shadow(0 0 5px var(--rw-n2)); }
+.lt-fill { fill: var(--rw-n2); filter: drop-shadow(0 0 5px var(--rw-n2)); transform-box: fill-box; transform-origin: 50% 100%;
+  transform: scaleY(var(--fill, 0)); transition: transform var(--dur-3) var(--ease-spring); }
 .lt-sheet { padding: 0 16px 16px; }
 .lt-sheet .me-tiles { grid-template-columns: 1fr 1fr; }
+
+/* ★ favourite reciters */
+.fav-star { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; margin-inline-start: auto; border-radius: 50%; font-size: 20px; color: var(--muted); cursor: pointer; }
+.fav-star.on { color: var(--accent); }
+.fav-star:focus-visible { outline: 2px solid var(--accent); }
+.fav-star + .voice-sample { margin-inline-start: 4px; }
+.fav-opt { flex-direction: column; align-items: flex-start; gap: 2px; }
+.fav-list .menu-item { min-height: 40px; font-size: var(--fs-m, 15px); }
+.fav-go { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.menu-item.danger { color: #c0392b; }
+
+/* Butter pass (2026-10-31): press feedback on everything tappable — a soft press-down that springs
+   back (the individual `scale` property, so it never fights an element's own transform). */
+:where(.chip, .primary, .icon-btn, .tab-btn, .lt-strip, .me-tile, .claim-all, .claim-badge, .pace-opt, .bd-tile, .tb-btn) {
+  transition: scale var(--dur-2) var(--ease-spring);
+}
+:where(.chip, .primary, .icon-btn, .tab-btn, .lt-strip, .me-tile, .claim-all, .claim-badge, .pace-opt, .bd-tile):active:not(:disabled) {
+  scale: .95; transition-duration: var(--dur-1);
+}
+:where(.menu-item) { transition: scale var(--dur-2) var(--ease-spring), background-color var(--dur-1); }
+:where(.menu-item):active { scale: .985; transition-duration: var(--dur-1); }
+.goal-ring.pop { animation: ring-met var(--dur-3) var(--ease-spring) both; }
+@keyframes ring-met { from { scale: .6; } }
+.toast { transition: transform var(--dur-2) var(--ease-spring); }
+
+/* Opened from a goal note: the waiting Claim glows twice (src/ui/me.ts, meFocus) */
+.claim.focus, .claim-all.focus, .claim-badge.focus { animation: claim-focus 1.2s var(--ease-out) 2; }
+@keyframes claim-focus { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rw-n1, var(--accent)) 70%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
+
+/* Goal notes: the in-app banner (src/ui/nudges.ts) */
+.nudge {
+  position: fixed; z-index: 30; inset-inline: 12px; top: calc(10px + env(safe-area-inset-top)); margin: 0 auto; max-width: 460px;
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--card) 92%, transparent); color: var(--text); text-decoration: none;
+  border: 1px solid color-mix(in srgb, var(--rw-n1, var(--accent)) 35%, var(--line));
+  box-shadow: var(--shadow), 0 0 22px color-mix(in srgb, var(--rw-n1, var(--accent)) 22%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  transform: translateY(calc(-100% - 30px)); opacity: 0;
+  transition: transform var(--dur-3) var(--ease-spring), opacity var(--dur-2);
+}
+.nudge.show { transform: none; opacity: 1; }
+.nudge-spark { flex: none; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 14%, var(--rw-n1, var(--accent)) 30%, color-mix(in srgb, var(--rw-n3, var(--accent)) 40%, transparent) 62%, transparent 72%);
+  animation: nudge-glow 1.6s ease-in-out infinite alternate; }
+@keyframes nudge-glow { from { scale: .85; opacity: .8; } to { scale: 1.08; opacity: 1; } }
+.nudge-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--fs-s); line-height: 1.35; }
+.nudge-txt b { font-size: var(--fs-m); }
+.nudge-txt span { color: var(--muted); }
+.nudge-go { flex: none; font-size: var(--fs-s); font-weight: 700; color: var(--accent); }
+.nudge-ask { text-align: center; }
+.nudge-ask h2 { margin: 6px 0 4px; font-size: var(--fs-h3); }
+.nudge-ask-art { width: 64px; height: 64px; margin: 6px auto 0; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 10%, var(--rw-n1, var(--accent)) 26%, color-mix(in srgb, var(--rw-n3, var(--accent)) 35%, transparent) 58%, transparent 70%); }
+.nudge-ask-row { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+
+/* Reading: the page-counted light and the surah-finished card (src/ui/pageMoments.ts). Both stay off
+   the Arabic: the light runs along the page's bottom edge, the card rises from the bottom. */
+.page-light { position: absolute; inset-inline: 0; bottom: 0; height: 48px; pointer-events: none; z-index: 3;
+  display: flex; justify-content: center; align-items: flex-end; padding-bottom: 6px; }
+.page-light-line { position: absolute; inset-inline: 10%; bottom: 2px; height: 2px; border-radius: 2px;
+  background: linear-gradient(to left, transparent, var(--rw-n1, var(--accent)) 30%, #fff 50%, var(--rw-n1, var(--accent)) 70%, transparent);
+  box-shadow: 0 0 10px var(--rw-n1, var(--accent)); transform-origin: right;
+  animation: pl-sweep 1.4s var(--ease-out) both, pl-fade .8s 1.6s ease-in forwards; }
+@keyframes pl-sweep { from { transform: scaleX(0); opacity: 0; } 25% { opacity: 1; } to { transform: scaleX(1); } }
+@keyframes pl-fade { to { opacity: 0; } }
+.page-light-pill { position: relative; margin-bottom: 10px; padding: 3px 10px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600;
+  background: color-mix(in srgb, var(--card) 88%, transparent); color: var(--muted); box-shadow: var(--shadow);
+  animation: pl-pill 2.9s var(--ease-spring) both; }
+.page-light-pill.met { color: var(--rw-ink, #fff); background: linear-gradient(135deg, var(--rw-n1, var(--accent)), var(--rw-n3, var(--accent))); }
+@keyframes pl-pill { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 15%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.done-card { position: fixed; z-index: 25; inset-inline: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); margin: 0 auto; max-width: 440px;
+  padding: 22px 18px 16px; border-radius: 22px; text-align: center; overflow: hidden;
+  background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 0 40px color-mix(in srgb, var(--rw-n1, var(--accent)) 25%, transparent);
+  transform: translateY(calc(100% + 40px)); transition: transform var(--dur-3) var(--ease-spring); }
+.done-card.show { transform: none; }
+.done-glow { position: absolute; inset-inline: 0; top: -60px; height: 120px; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--rw-n1, var(--accent)) 45%, transparent), transparent); }
+.done-card.show .done-glow { animation: done-breathe 3s ease-in-out infinite alternate; }
+@keyframes done-breathe { from { opacity: .6; } to { opacity: 1; } }
+.done-ar { position: relative; margin: 0; font-size: 30px; line-height: 1.5; font-family: 'AmiriQuran', serif; }
+.done-card h2 { position: relative; margin: 2px 0 2px; font-size: var(--fs-h3); }
+.done-card .muted { margin: 0; }
+.done-row { position: relative; display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nudge, .done-card, .goal-ring, .lt-fill { transition: none; }
+  .nudge-spark, .done-glow, .goal-ring.pop { animation: none; }
+  .page-light-line { animation: pl-fade .8s 1.6s forwards; }
+}
+html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--card); }
+
+/* Export result: WhatsApp Status pieces */
+.status-box { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0 8px; }
+.status-box .muted { margin: 0; text-align: center; max-width: 320px; }
+.status-btn { border-color: #25d366; }
+.status-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+/* First days (src/ui/firstSteps.ts) */
+.pace-sheet { text-align: center; }
+.pace-sheet h2 { margin: 6px 0 4px; }
+.pace-sheet .pace { text-align: start; margin: 12px 0; }
+.pace-sheet-art { width: 56px; height: 56px; margin: 4px auto 0; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 10%, var(--rw-n1, var(--accent)) 26%, color-mix(in srgb, var(--rw-n3, var(--accent)) 35%, transparent) 58%, transparent 70%); }
+.day-card { display: flex; flex-direction: column; gap: 4px; border: 1px solid color-mix(in srgb, var(--rw-n1, var(--accent)) 35%, var(--line)); }
+.day-card .muted { margin: 0 0 6px; }
+.day-card-n { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+
+/* Me → Today: journey portion, Continue, Al-Kahf (src/ui/todayCard.ts) */
+.today-card .me-h { margin: 0 0 8px; }
+.tc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tc-bar { height: 8px; margin: 8px 0 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.tc-bar span { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--w)); border-radius: inherit;
+  background: linear-gradient(90deg, var(--rw-n3, var(--accent)), var(--rw-n1, var(--accent))); transition: transform var(--dur-3) var(--ease-spring); }
+[dir="rtl"] .tc-bar span { transform-origin: right; }
+.tc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tc-row .primary { flex: none; padding: 8px 18px; }
+.tc-start, .tc-kahf { margin-top: 8px; }
+.tc-change { display: block; margin: 8px 0 0 auto; background: none; border: 0; padding: 4px; cursor: pointer; text-decoration: underline; }
+.tc-done { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.tc-done .muted { margin: 0 0 6px; }

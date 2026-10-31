@@ -8,6 +8,7 @@ import type { VerseTiming } from '../engine/words';
 import type { SeekTable } from './mp3';
 import { alignedWords } from './alignedWords';
 import { covers, type Reciter } from './reciters';
+import { keptBlob } from './keptAudio';
 
 interface Checked {
   folder: string;
@@ -35,11 +36,11 @@ const sizes = new Map<string, Promise<number | null>>();
  *  mp3quran redirects it to another reciter's folder, as it does for surahs a reciter lacks). */
 function sizeOf(url: string): Promise<number | null> {
   if (!sizes.has(url)) {
-    sizes.set(url, fetch(url, { method: 'HEAD' }).then((r) => {
+    sizes.set(url, keptBlob(url).then((k) => k ? k.size : fetch(url, { method: 'HEAD' }).then((r) => {
       if (r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
       const n = Number(r.headers.get('Content-Length'));
       return r.ok && n > 0 ? n : null;
-    }, () => null));
+    }, () => null)));
   }
   return sizes.get(url)!;
 }
@@ -79,4 +80,12 @@ export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3Quran
     if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b, segments: words[k] });
   }
   return { audioUrl, timings, fileDuration: s.vbr ?? null, seek: s.seek };
+}
+
+/** File size (bytes) of each verified surah recording, for download estimates. */
+export async function mp3quranSizes(r: Reciter): Promise<Record<string, number>> {
+  if (!r.mp3quran) return {};
+  const out: Record<string, number> = {};
+  for (const [k, s] of Object.entries((await checked(r.mp3quran.read)).surahs)) out[k] = s.size;
+  return out;
 }

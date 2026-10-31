@@ -67,9 +67,15 @@ export async function saveVideo(blob: Blob, name: string, onProgress?: (f: numbe
 }
 
 /** Opens the Android share sheet (Instagram, TikTok, WhatsApp …) for a saved file. */
-export async function shareFile(uri: string, title: string) {
+export async function shareFile(uri: string, title: string, text?: string) {
   const { Share } = await import('@capacitor/share');
-  await Share.share({ files: [uri], dialogTitle: title });
+  await Share.share({ files: [uri], dialogTitle: title, ...(text ? { text } : {}) });
+}
+
+/** Opens the share sheet for several saved files at once (WhatsApp Status takes them in order). */
+export async function shareFiles(uris: string[], title: string, text?: string) {
+  const { Share } = await import('@capacitor/share');
+  await Share.share({ files: uris, dialogTitle: title, ...(text ? { text } : {}) });
 }
 
 /** Writes a text file to the app's cache and opens the share sheet for it (data export). */

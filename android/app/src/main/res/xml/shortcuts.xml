@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon: Continue reading, My goals, Search, My reels. The address is handed to the
+     web app like a widget tap (MainActivity.EXTRA_HASH → DailyPlugin.takeLaunchHash). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="read" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_read" android:shortcutLongLabel="@string/sc_read_long">
+        <intent android:action="android.intent.action.VIEW"
+            android:targetPackage="com.brandyco.ayahstudio" android:targetClass="com.brandyco.ayahstudio.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="goals" android:enabled="true" android:icon="@drawable/ic_flame"
+        android:shortcutShortLabel="@string/sc_goals" android:shortcutLongLabel="@string/sc_goals_long">
+        <intent android:action="android.intent.action.VIEW"
+            android:targetPackage="com.brandyco.ayahstudio" android:targetClass="com.brandyco.ayahstudio.MainActivity">
+            <extra android:name="ayahstudio.hash" android:value="#/me" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="search" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_search" android:shortcutLongLabel="@string/sc_search_long">
+        <intent android:action="android.intent.action.VIEW"
+            android:targetPackage="com.brandyco.ayahstudio" android:targetClass="com.brandyco.ayahstudio.MainActivity">
+            <extra android:name="ayahstudio.hash" android:value="#/search" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="reels" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_reels" android:shortcutLongLabel="@string/sc_reels_long">
+        <intent android:action="android.intent.action.VIEW"
+            android:targetPackage="com.brandyco.ayahstudio" android:targetClass="com.brandyco.ayahstudio.MainActivity">
+            <extra android:name="ayahstudio.hash" android:value="#/drafts" />
+        </intent>
+    </shortcut>
+</shortcuts>

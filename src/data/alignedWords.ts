@@ -30,7 +30,7 @@ export function alignedWords(r: Reciter, surah: number): Promise<Record<string, 
 const WORDS_CACHE = 'words';
 
 /** Web: the bundled file. Android app: the word times (~34 MB in all) are left out of the APK, so they come
- *  from the Pages site on first use and are kept in Cache Storage (newest 400 surahs) for offline reels. */
+ *  from the Pages site on first use and are kept in Cache Storage (newest 1500 surahs: favourite reciters' too) for offline reels. */
 async function wordsFile(path: string): Promise<Response> {
   if (!Capacitor.isNativePlatform()) return fetch(path);
   const url = PUBLIC_URL + path.replace(/^\.\//, '');
@@ -41,6 +41,6 @@ async function wordsFile(path: string): Promise<Response> {
   if (!res.ok) return res;
   await cache.put(url, res.clone());
   const keys = await cache.keys();
-  for (const k of keys.slice(0, Math.max(0, keys.length - 400))) await cache.delete(k);
+  for (const k of keys.slice(0, Math.max(0, keys.length - 1500))) await cache.delete(k);
   return res;
 }

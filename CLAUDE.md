@@ -387,7 +387,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       → `decodeMp3Span(…, seek)` Range-fetches exactly (lag 0 against a whole-file decode in Chromium)
       Shipped 2026-10-29 (second run, `align2/`): 23 everyayah reciters with words for 6011–6232 ayat each (all
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
-      (3562–4750 ayat; more surahs verified by the aligned cuts). The Android build leaves `data/words` out
+      (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
+      Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
+      the deadline; rerun for the rest started). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
@@ -618,6 +620,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
       preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
 - [x] Performance timings (`src/perf.ts`, this device only, Device check)
+- [x] Speed guard (owner request 2026-10-31, front-end plan step 6): `scripts/check-size.mjs` (`npm run size`, run by
+      pages.yml after the build) fails when the first-load JS + CSS (entry, its preloads, stylesheet; gzip) passes
+      135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
+      page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
+      streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 
@@ -856,6 +863,11 @@ cloud. Build in this order:
       2026-10-09: repo variable `TURNSTILE_SITE_KEY` + secret key in Supabase; a guest sign-in without a
       token or with a fake one is refused, Google sign-in (web + id-token) unaffected, the check passed
       on the owner's phone
+      Ramadan 2027 pass (owner request 2026-10-31, front-end plan step 4): Today card in the 30 days before
+      Ramadan "Ramadan in N days · plan your Khatm" (the plan can be set early); during Ramadan **Iftar at … /
+      Suhoor ends at …** with a countdown from the prayer times (only with a location, never guessed; also in the
+      Ramadan sheet); **taraweeh**: after Isha a Today line marks tonight, the sheet has a toggle, the recap counts
+      the nights (`RamadanData.taraweeh`, `setTaraweeh()`)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
@@ -985,8 +997,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       (index.html, `unicode-range` over the Arabic blocks) is fetched only when the system font cannot
       draw a cluster, so English starts no longer download AmiriQuran. The rest of first load is the
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
-- [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
-      < 16 MB) — postponed by the owner (2026-10-09)
+- [x] G5b "Export for WhatsApp Status" preset (owner go-ahead 2026-10-31, front-end plan step 3): export result
+      page → **WhatsApp Status · n parts**: `statusParts()` (`src/engine/status.ts`) cuts the reel into pieces of
+      ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
+      each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
+      then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
+      caption is copied too
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
@@ -1003,6 +1019,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. No cap on
       kept page fonts any more (app cache; service worker `MAX_PAGE_FONTS` 700). The reader loads fonts 10 pages
       ahead / 6 back (was 3 / 2) and keeps ±12 in memory
+      **Favourite reciters** (owner request 2026-10-31; decision "ask each time"): ☆ beside each reciter in the
+      Listen picker and the studio's reciter list (favourites listed first) → "Download {name}?" sheet: Whole
+      Quran / Juz 'Amma / this surah / chosen surahs / just a favourite, each with its size (mp3quran exact, else
+      pages × 66 s × bitrate) and the free space. `src/data/reciterDownload.ts` keeps the files exactly as served
+      in Cache Storage `kept-reciter-{id}` (never trimmed; Quran.com timings pinned there too, so they match the
+      recording), Wi‑Fi only, while the app is open, one surah at a time (everyayah 3 files at once), resumed on
+      start / online / visible. `src/data/keptAudio.ts`: every audio read checks it first (reel Range slices and
+      whole files via `cachedBytes()`, file sizes, the Listen tab via a blob URL). Me → ⚙ → Favourite reciters:
+      progress, size, download more, remove (deletes the cache). This device only
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
@@ -1268,6 +1293,37 @@ duas/reflections section in Me.
       Prayer reminder sounds **Adhan (opening)** / **Full adhan** (`prayer_adhan_full.ogg`, channel `prayer_adhanFull`; swiping the notification stops it) (owner request 2026-10-29, default for new settings): the opening
       "Allahu Akbar, Allahu Akbar" (21 s, faded, `res/raw/prayer_adhan.ogg`, channel `prayer_adhan`; a copy in
       `public/sounds/` plays when the chip is tapped) cut from a recording the owner supplied and approved
+- [x] M6 Goal notes + butter pass (owner request 2026-10-31, front-end plan step 1): `src/ui/nudges.ts` — when a
+      goal or every goal is met, a soft banner at the top in the app (tap → Me; not on Me, the studio, the Kids
+      space or over a dialog) or, with the app in the background (listening), an Android local notification
+      (id 3200, ≤ 2 a day, none 22:00–06:00); "your freeze kept your flame" once in the app; **evening reminder**
+      (ids 3100–3106) at a chosen time 18:00–22:00 for the next 7 days, today's skipped once the flame is lit,
+      rescheduled on every journey change / return (a week without the app ends them). Me → ⚙ → **Goal notes**
+      (each kind on/off, the time); asked once after the first Claim (`nudgeAsked`). Tapping a note (banner or
+      notification, `extra.focus`) opens Me with the waiting Claim scrolled into view and glowing (`meFocus`). Rewards check runs on a
+      timer while hidden. **Butter pass**: motion tokens (`--dur-1…4`, `--ease-spring` via `linear()`), press
+      feedback (`scale` on chips, buttons, tabs, tiles), goal rings and the Light lantern fill from their last
+      value (`@property --ring-p`), a ring pops when met; reading: a line of light along the page's bottom edge
+      + "3 / 5 pages today" when a page counts, and a **surah / juz finished** card (`src/ui/pageMoments.ts`)
+- [x] M7 Every reel is an ad (owner request 2026-10-31, front-end plan step 2): the export caption ends with
+      "Make this reel yourself in Ayah Studio: {link}" — `#/t/{s}/{a-b}/{reciter}[/vibe:id|style:id]` (the look only
+      when the reel still matches one of our vibes/styles, `currentVibe()` / `currentStyle()`); the route stores
+      it in sessionStorage `reelTemplate` and opens `#/reel/…` as a new reel with that reciter (if it covers the
+      surah) and look, on Quick reel → Finish. Share (Android) sends the caption with the video and copies it to
+      the clipboard (Instagram/TikTok drop shared text). **Template of the week**: `look` in
+      `public/data/trending.json` (+ its `ayah`, `reciter`) → Create sheet "This week's template" (`weeklyTemplate()`)
+- [x] M8 First days (owner request 2026-10-31, front-end plan step 5): `src/ui/firstSteps.ts` — when the tour
+      closes and no pace is set, **How much each day?** (Gentle / Steady / Devoted, Later) so the first flame can be
+      lit on day one; on the 2nd and 3rd day the app was opened a **Day 2 / Day 3** card on Me (listen while you
+      read → the mushaf; make your first reel), once each (`dayCard`). Android **app shortcuts** (long-press the
+      icon: Continue reading, Today's goals `#/me`, Search `#/search`, My reels `#/drafts`; `res/xml/shortcuts.xml`,
+      the address goes through `MainActivity.EXTRA_HASH` like a widget tap)
+- [x] M9 Journeys + Today card (owner request 2026-10-31, front-end plan step 7): Me → **Today** (`src/ui/todayCard.ts`)
+      under the streak: the journey's portion for today with a bar, "n pages today · read / total", Open (the first
+      unread page), or Continue reading + Start a journey; on Fridays "Read Al-Kahf" (first unread page of surah 18
+      today). Journeys (`src/data/journeys.ts`, localStorage `journeyPlan`, one at a time): Khatm in 30 days, Juz
+      'Amma in 30 days, Khatm in 6 months; progress = the plan's pages counted since it started
+      (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

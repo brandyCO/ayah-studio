@@ -10,6 +10,7 @@
 // unless the caller has a seek table for the file (`SeekTable`: byte offset of every n-th audio frame,
 // measured offline from the file itself), which makes a VBR file exact too.
 import { cachedBytes } from './audioCache';
+import { keptBlob } from './keptAudio';
 
 interface Frame {
   len: number;
@@ -232,6 +233,8 @@ async function decodeSeek(url: string, info: Mp3Info, seek: SeekTable, t0: numbe
 
 /** The file's size (bytes), from a one-byte Range request. */
 async function probeSize(url: string): Promise<number> {
+  const kept = await keptBlob(url);
+  if (kept) return kept.size;
   const res = await fetch(url, { headers: { Range: 'bytes=0-0' } });
   const n = Number(res.headers.get('Content-Range')?.split('/')[1]);
   if (!n) throw new Error('Unknown file size');

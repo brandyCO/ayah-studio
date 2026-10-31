@@ -2,6 +2,9 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { favouritesSection } from './favourite';
+import { favouriteIds } from '../data/reciterDownload';
+import { reciterById } from '../data/reciters';
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setAdhkar, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
@@ -31,6 +34,10 @@ import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayer
 import { widgetHint } from './widgetsPage';
 import { account } from '../cloud/auth';
 import { openAccount } from './account';
+import { goalLabel, goalText } from './goalName';
+import { dayCard } from './firstSteps';
+import { todayCard } from './todayCard';
+import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -38,7 +45,6 @@ const minutes = (sec: number) => {
 };
 const timeLabel = (sec: number) => (sec % 60 ? t('me.minHalf', { n: Math.floor(sec / 60) }) : t('me.minN', { n: sec / 60 }));
 /** "Read 2 pages", "Read 1 page"… (a goal's name for an amount). */
-const goalText = (kind: string, n: number) => t((n === 1 && ['pages', 'memorise', 'reels'].includes(kind) ? `goal.${kind}1` : `goal.${kind}`) as Key, { n });
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 
 let period: Period = 'week';
@@ -68,6 +74,10 @@ export function openBadge(b: BadgeState, fresh = false) {
         ? h('p', { class: 'bd-when' }, t('bd.earned', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(parse(b.earned)) }))
         : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, `${b.have} / ${n}`))));
 }
+
+// What the goal rings and the Light lantern showed last (this session), so they fill on from there.
+const ringWas = new Map<string, number>();
+let lanternWas: number | undefined;
 
 export async function showMe(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
@@ -163,6 +173,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     } finally {
       playing = false;
       mark();
+      void import('./nudges').then((m) => m.maybeAskNudges());
     }
   };
   const claimGoalRow = (g: GoalProgress, from?: Element) => play(
@@ -179,10 +190,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     () => claimBadge(b.id, BADGE_LIGHT[b.tier]));
 
   // --- today's goals ---
-  const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
-    ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)
-    : g.kind === 'custom' ? g.custom!.name
-      : goalText(g.kind, g.target);
+  // Rings fill from where they were (0 the first time this session) to where they are now.
+  const ring = (id: string, pct: number, met: boolean) => {
+    const pop = met && !still && ringWas.has(id) && ringWas.get(id)! < 1;
+    const el = h('span', { class: `goal-ring${pop ? ' pop' : ''}`, style: `--ring-p:${still ? pct : (ringWas.get(id) ?? 0)}` }, met ? '✓' : '');
+    if (!still && ringWas.get(id) !== pct) requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty('--ring-p', String(pct))));
+    ringWas.set(id, pct);
+    return el;
+  };
   const goalRow = (g: GoalProgress) => {
     const met = g.done >= g.target;
     const pct = Math.min(1, g.done / g.target);
@@ -204,7 +219,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     }
     if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: (e: Event) => void claimGoalRow(g, e.currentTarget as Element) }, `✦ ${t('cel.claim')}`);
     return h('div', { class: `goal${met ? ' met' : ''}` },
-      h('span', { class: 'goal-ring', style: `--p:${pct}` }, met ? '✓' : ''),
+      ring(g.id, pct, met),
       h('span', { class: 'goal-txt' },
         h('b', {}, goalLabel(g)),
         h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarHelp'))
@@ -219,7 +234,12 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const today = lightOn(dayKey());
     const fill = Math.min(1, week / Math.max(1, 7 * dayLightMax()));
     const lantern = h('span', { class: 'lt-lantern', 'aria-hidden': 'true' });
-    lantern.innerHTML = `<svg viewBox="0 0 32 44"><path d="M12 3h8M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><defs><clipPath id="lt-c"><rect x="5" y="7" width="22" height="31" rx="9"/></clipPath></defs><rect x="5" y="7" width="22" height="31" rx="9" class="lt-glass"/><rect x="5" y="${(7 + 31 * (1 - fill)).toFixed(2)}" width="22" height="${(31 * fill).toFixed(2)}" clip-path="url(#lt-c)" class="lt-fill"/><path d="M11 41h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    lantern.innerHTML = `<svg viewBox="0 0 32 44"><path d="M12 3h8M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><defs><clipPath id="lt-c"><rect x="5" y="7" width="22" height="31" rx="9"/></clipPath></defs><rect x="5" y="7" width="22" height="31" rx="9" class="lt-glass"/><rect x="5" y="7" width="22" height="31" clip-path="url(#lt-c)" class="lt-fill" style="--fill:${still ? fill : (lanternWas ?? 0)}"/><path d="M11 41h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    if (!still && lanternWas !== fill) {
+      const r = lantern.querySelector<SVGElement>('.lt-fill')!;
+      requestAnimationFrame(() => requestAnimationFrame(() => r.style.setProperty('--fill', String(fill))));
+    }
+    lanternWas = fill;
     return h('button', { class: 'lt-strip', onclick: openLight },
       lantern,
       h('span', { class: 'lt-txt' },
@@ -464,10 +484,23 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
+  // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
+  try {
+    if (sessionStorage.getItem('meFocus') === 'claim') {
+      sessionStorage.removeItem('meFocus');
+      setTimeout(() => {
+        const c = goalsBox.querySelector<HTMLElement>('.claim-all, .chip.claim') ?? root.querySelector<HTMLElement>('.claim-badge');
+        if (!c) return;
+        c.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+        c.classList.add('focus');
+        setTimeout(() => c.classList.remove('focus'), 2600);
+      }, 450);
+    }
+  } catch { /* private window */ }
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);
@@ -541,9 +574,12 @@ export function showMeSettings(root: HTMLElement): () => void {
         }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
       alertsSection(),
+      section(t('fav.section'),
+        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp'))),
       section(t('wg.title'),
         h('p', { class: 'muted small' }, t('wg.setHelp')),
         h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.open')}`))),
+      nudgeSection(),
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
@@ -606,6 +642,32 @@ export function showMeSettings(root: HTMLElement): () => void {
         h('button', { class: 'chip', onclick: async () => { exact = await askExact(); void setPrayerAlerts(prayerAlerts()); paint(); } }, t('pa.exact'))) : '');
     box.id = 'pa';
     return box;
+  };
+  // Goal notes (src/ui/nudges.ts): which ones, and the evening reminder's time.
+  const nudgeSection = () => {
+    const n = nudgeSettings();
+    const toggle = (k: 'goal' | 'all' | 'freeze' | 'risk', label: string) => h('button', {
+      class: `menu-item${n[k] ? ' on' : ''}`, 'aria-pressed': String(n[k]),
+      onclick: async () => {
+        const on = !nudgeSettings()[k];
+        if (on && isNative() && (k === 'risk' || k === 'goal' || k === 'all') && !(await allowNotifications())) toast(t('rem.denied'));
+        setNudgeSettings({ ...nudgeSettings(), [k]: on });
+        haptic();
+        paint();
+      },
+    }, `${n[k] ? '🔔' : '🔕'}  ${label}`);
+    return section(t('nudge.section'),
+      h('p', { class: 'muted small' }, t(isNative() ? 'nudge.help' : 'nudge.helpWeb')),
+      h('div', { class: 'menu' },
+        toggle('goal', t('nudge.setGoal')),
+        toggle('all', t('nudge.setAll')),
+        toggle('freeze', t('nudge.setFreeze')),
+        isNative() ? toggle('risk', t('nudge.setRisk')) : ''),
+      isNative() && n.risk ? h('div', {},
+        h('b', { class: 'set-label' }, t('nudge.riskWhen')),
+        chips(RISK_TIMES, (x) => x === n.riskAt, (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), 0)),
+          (x) => setNudgeSettings({ ...nudgeSettings(), riskAt: x }))) : '',
+      h('p', { class: 'muted small' }, t('nudge.calm')));
   };
   let times: Date[] | null = null;
   let exact = true;
