@@ -486,6 +486,19 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
+  // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
+  try {
+    if (sessionStorage.getItem('meFocus') === 'claim') {
+      sessionStorage.removeItem('meFocus');
+      setTimeout(() => {
+        const c = goalsBox.querySelector<HTMLElement>('.claim-all, .chip.claim') ?? root.querySelector<HTMLElement>('.claim-badge');
+        if (!c) return;
+        c.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+        c.classList.add('focus');
+        setTimeout(() => c.classList.remove('focus'), 2600);
+      }, 450);
+    }
+  } catch { /* private window */ }
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);

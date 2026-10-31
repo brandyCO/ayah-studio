@@ -102,7 +102,7 @@ async function notifyNow(title: string, body: string) {
     await LocalNotifications.schedule({ notifications: [{
       id: NOW_ID, title, body, smallIcon: 'ic_stat_crescent',
       schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true },
-      extra: { hash: '#/me' },
+      extra: { hash: '#/me', focus: 'claim' },
     }] });
   } catch { /* an older build or notifications off */ }
 }
@@ -110,7 +110,7 @@ async function notifyNow(title: string, body: string) {
 /** The in-app note: slides down from the top, stays ~4 s, tap → Me. Never over a dialog. */
 export function banner(title: string, body: string) {
   document.querySelector('.nudge')?.remove();
-  const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => el.remove() },
+  const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
     h('span', { class: 'nudge-spark', 'aria-hidden': 'true' }),
     h('span', { class: 'nudge-txt' }, h('b', {}, title), h('span', {}, body)),
     h('span', { class: 'nudge-go' }, t('nudge.open')));
@@ -162,8 +162,16 @@ export async function scheduleRisk() {
 }
 
 /** App start (Android): keep the evening reminder in step. */
+/** Me opens with the waiting Claim in view (read once by Me). */
+const focusClaim = () => { try { sessionStorage.setItem('meFocus', 'claim'); } catch { /* private window */ } };
+
 export function initNudges() {
   if (!isNative()) return;
+  // A goal note tapped in the notification shade: Me opens (widgets.ts follows the hash) on the Claim.
+  void import('@capacitor/local-notifications').then(({ LocalNotifications }) =>
+    LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
+      if (e.notification.extra?.focus === 'claim') { focusClaim(); if (location.hash === '#/me') window.dispatchEvent(new HashChangeEvent('hashchange')); }
+    })).catch(() => {});
   void scheduleRisk();
   window.addEventListener('journey-changed', scheduleRiskSoon);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRiskSoon(); });
