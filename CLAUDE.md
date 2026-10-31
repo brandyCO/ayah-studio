@@ -1288,6 +1288,12 @@ duas/reflections section in Me.
       surah) and look, on Quick reel → Finish. Share (Android) sends the caption with the video and copies it to
       the clipboard (Instagram/TikTok drop shared text). **Template of the week**: `look` in
       `public/data/trending.json` (+ its `ayah`, `reciter`) → Create sheet "This week's template" (`weeklyTemplate()`)
+- [x] M8 First days (owner request 2026-10-31, front-end plan step 5): `src/ui/firstSteps.ts` — when the tour
+      closes and no pace is set, **How much each day?** (Gentle / Steady / Devoted, Later) so the first flame can be
+      lit on day one; on the 2nd and 3rd day the app was opened a **Day 2 / Day 3** card on Me (listen while you
+      read → the mushaf; make your first reel), once each (`dayCard`). Android **app shortcuts** (long-press the
+      icon: Continue reading, Today's goals `#/me`, Search `#/search`, My reels `#/drafts`; `res/xml/shortcuts.xml`,
+      the address goes through `MainActivity.EXTRA_HASH` like a widget tap)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---
