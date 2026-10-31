@@ -116,6 +116,15 @@ export function reelLook(): unknown {
         localStorage.setItem('reelLook', JSON.stringify(look));
       }
     }
+    // Owner decision 2026-10-31: the small Ayah Studio mark is on by default. It was off before, so a look
+    // remembered from then turns it on once; turning it off afterwards stays off.
+    if (look && typeof look === 'object' && !localStorage.getItem('markDefault')) {
+      localStorage.setItem('markDefault', '1');
+      if ((look as { watermark?: boolean }).watermark === false) {
+        (look as { watermark?: boolean }).watermark = true;
+        localStorage.setItem('reelLook', JSON.stringify(look));
+      }
+    }
     return look;
   } catch {
     return null;

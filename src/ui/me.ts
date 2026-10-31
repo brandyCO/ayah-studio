@@ -118,7 +118,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.week, s.lost]);
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost]);
     if (sig === heroSig) return;
     heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
@@ -145,6 +145,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
+        h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
