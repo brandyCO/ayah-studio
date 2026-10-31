@@ -28,6 +28,7 @@ import { initErrors } from './errors';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
+import { watchVitals } from './perf';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -135,6 +136,7 @@ markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 void import('./ui/rewards').then((m) => m.watchRewards());
+watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
 if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
 setupOffline();

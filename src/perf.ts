@@ -48,3 +48,24 @@ export function perfSummary(): { name: string; last: number; median: number; n: 
     return { name, last: v[v.length - 1], median: s[Math.floor(s.length / 2)], n: v.length };
   });
 }
+
+/** Real-use speed on this device (Web Vitals, measured by the browser): how long the biggest thing on the
+ *  first screen took to show (LCP) and the slowest tap response of the visit (INP, ≥ 40 ms only). Both are
+ *  recorded when the page is hidden; shown in Device check with the other timings. */
+export function watchVitals() {
+  if (typeof PerformanceObserver === 'undefined') return;
+  let lcp = 0;
+  let inp = 0;
+  const watch = (type: string, fn: (e: PerformanceEntry) => void, extra: Record<string, unknown> = {}) => {
+    try { new PerformanceObserver((l) => l.getEntries().forEach(fn)).observe({ type, buffered: true, ...extra } as PerformanceObserverInit); } catch { /* not supported */ }
+  };
+  watch('largest-contentful-paint', (e) => { lcp = e.startTime; });
+  watch('event', (e) => { if ((e as PerformanceEventTiming).interactionId) inp = Math.max(inp, e.duration); }, { durationThreshold: 40 });
+  let sent = false;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden' || sent) return;
+    sent = true;
+    if (lcp) perfRecord('First screen drawn (LCP)', lcp);
+    if (inp) perfRecord('Slowest tap response (INP)', inp);
+  });
+}
