@@ -621,6 +621,25 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 
+### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
+Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
+Pro and a load test come later, when the owner decides to pay).
+- [x] Edge proxy (`proxy/pixabay-worker.js`): searches cached per data center and worldwide (KV `STOCK_KV`),
+      collections + Quick reel footage built daily (Cron Trigger), one worldwide call budget per library
+      (Durable Object `Budget`; `PIXABAY_PER_MIN` / `PEXELS_PER_HOUR`), fair limits per app install (`i`,
+      = sync's `deviceId`) and 10× looser per address; `/popular` (cached 10 min) and `POST /reel` (rate-limited)
+      in front of Supabase; `/config` remote switches from the variable `FLAGS` (`stock`, `popular`,
+      `mushafDownload`, `syncMinutes`). Deployed by `.github/workflows/proxy.yml` (secrets
+      `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); all optional bindings, works on the free plan
+- [x] App: `src/net.ts` (`EDGE`, `installId()`, `jitter()`, `remoteConfig()` kept 1 h); library pages kept on the
+      phone 24 h (localStorage `stockPages`, 16); popular + reel counter through the proxy; sync after a return
+      at most every `syncMinutes` (1) with a random delay, 30 s → 15 min back-off after failures; the whole-mushaf
+      download starts 4 s–3 min after launch and rests 5–15 min when pages fail; Sentry samples 25 % of errors
+      (`VITE_SENTRY_RATE`)
+- [x] Reel counter split into 16 shards (`20261031000000_scale_reel_counts.sql`, pgTAP `scale_reel_counts.test.sql`)
+- [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
+- [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
+
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
 save to gallery / share sheet; offline audio cache; settings.
