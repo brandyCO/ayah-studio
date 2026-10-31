@@ -339,7 +339,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
       `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
-      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
+      "Popular this week · ref" → Make this reel. Watermark on by default (owner decision 2026-10-31; a look remembered from before turns it on once, `markDefault`). Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
       no verified source with CORS (not on everyayah or QDC), so not added. 2026-10-13: 20 more everyayah
       reciters (ids 1007–1026: Hudhaify, Ayyoub, Jibreel, Budair, Qahtani, Bukhatir, Basfar, Matroud, Salamah,
       Husary + Minshawi Mujawwad, Tablawi, Ali Jaber, Muhsin Al-Qasim, Neana, Alaqimy, Sowaid, Alili, Sahl
@@ -1196,7 +1196,8 @@ duas/reflections section in Me.
 - [x] M1 Me screen `#/me` (`src/ui/me.ts`, the Me tab now opens it; ☰ still opens the menu, and
       Me → Settings and more opens it on the mushaf): flame (`src/ui/flame.ts`, SVG + CSS, tiers at 7 / 30
       days, out = ember + smoke, still with reduced motion / old-phone mode), this week's days, weeks in a
-      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; if the
+      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; plus
+      one **extra freeze every 30 days** for a second missed day in a week, owner decision 2026-10-31, `State.extra`; if the
       missed days cannot all be covered the flame goes out and `lost` is kept 2 days for a friend's
       relight), best. `src/data/journey.ts` (localStorage `journey`, this device): `recordOpen()` (main.ts,
       on start and when the app comes back; not in the Kids space), `countPage()` (ayat starting on the
