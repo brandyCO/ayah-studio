@@ -389,8 +389,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
       (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
       Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
-      the deadline). Rerun 2026-10-31: the mp3quran reciters now have words for 100–114 surahs each (gaps mostly
-      in 6–7 and 31–37, rerun started). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
+      the deadline). Rerun 2026-10-31: the mp3quran reciters now have words for 100–114 surahs each ; a last rerun of
+      1–37 filled the gaps: each has words for 109–114 surahs, every surah it has a checked recording of). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
