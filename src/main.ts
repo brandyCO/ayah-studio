@@ -130,6 +130,7 @@ document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 void import('./ui/rewards').then((m) => m.watchRewards());
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
+if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
 setupOffline();
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
