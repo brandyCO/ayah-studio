@@ -584,6 +584,7 @@ const en = {
   'ed.noTimings': 'Word timings are not available for this reciter here, so only Ayah mode is offered.',
   'ed.noTimingsEveryayah': 'Word timings are not available for this reciter here, so only Ayah mode is offered (audio: everyayah.com).',
   'ed.noTimingsMp3quran': 'Word timings are not available for this reciter, so only Ayah mode is offered (audio: mp3quran.net, ayah times checked against the recording).',
+  'ed.joined': 'Recited in one breath with {ref}, so it is in the reel too',
   'ed.reciter-unchecked': '{name}’s recording is not verified for these ayat, so the default reciter is used',
   'ed.loadingBackground': 'Loading background…',
   'ed.audioFailed': '{msg}. Check your connection and pick the reciter again.',

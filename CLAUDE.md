@@ -401,6 +401,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       per-ayah files are joined directly (`GAP` −0.04 s, crossfaded in `mixdown()`; was 0.25 s of silence), and
       where a piece meets added silence its echo fades out over the quiet after the last word (≤ 0.9 s, quadratic)
       and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
+      **One breath** (owner request 2026-11-02, "keep it as it is"): ayat a reciter joins without a pause are never cut
+      apart. `breathJoins()` hears it in the reel's audio (no 0.18 s stretch 18 dB under the speech level before the next
+      ayah; at the reel's end: still sounding where it was cut; word times cannot tell, Quran.com's last word runs on to
+      the next ayah) → `ReelPlan.joins`: no pause or trim inside a breath, and a selection that ends inside one takes in
+      the next ayah with a toast (once per range, `joinKept:` in sessionStorage, so taking it out again is kept).
+      Checked on everyayah Minshawi Mujawwad 37:8–9
       **No added pause by default** (owner decision 2026-10-29): every mood and vibe has `pause: 0`; a look
       remembered from before loses its pause once (`pauseReset`); users add one under Audio → Pauses
       **Every ayah, every Bismillah** (owner request 2026-11-02, "no ayah skipped, a surah always starts with the
