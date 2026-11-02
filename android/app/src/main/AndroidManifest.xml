@@ -22,7 +22,7 @@
         <!-- The launcher entries: one per theme colour, so the icon follows the theme (AppIcons.java).
              ".MainActivity" (Emerald) keeps the name of the old launcher activity, so home-screen icons
              from earlier versions keep working. -->
-        <!-- theme icons (scripts/make-icons.py --themes) -->
+        <!-- theme icons (scripts/make-icons.py, themes mode) -->
         <activity-alias
             android:name=".MainActivity"
             android:targetActivity=".AppActivity"
