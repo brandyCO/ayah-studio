@@ -150,9 +150,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   // --- listening: the recited ayah is tinted, the recited word coloured; pages turn with it ---
   let playing: { s: number; a: number; w: number | null } | null = null;
+  let doneLater: (() => void) | null = null; // a "surah finished" card held until the recitation ends it
   const player = createPlayer({
     meta,
     onPosition: (pos) => {
+      if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
       playing = pos;
       if (pos && !panning && !animating) {
         const target = mushaf.wordPage(pos.s, pos.a, pos.w ?? 1);
@@ -237,7 +239,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           const juz = (now.j ?? []).slice(j0);
           void import('./pageMoments').then((m) => {
             m.pageCounted(area);
-            m.finished(surahs, juz);
+            // While listening, "surah finished" waits until the recitation has finished it too.
+            const last = surahs[surahs.length - 1];
+            if (last && playing && playing.s <= last.n) doneLater = () => m.finished(surahs, juz);
+            else m.finished(surahs, juz);
           });
         }
       }
