@@ -8,7 +8,7 @@ import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
 import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { covers, DEFAULT_RECITER, groupRecordings, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary, smallImage } from '../data/library';
@@ -62,6 +62,7 @@ import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
 import { t as ui, tOr } from '../i18n';
 import { translationList } from './translationPicker';
+import { recordingChips } from './recordings';
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: ui('ed.ayah') },
@@ -811,17 +812,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   // --- panels ---
-  const reciterButton = (r: Reciter, tag?: string) =>
+  const pickReciter = (r: Reciter) => {
+    if (exporting || r.id === project.reciterId) return;
+    project.reciterId = r.id;
+    setReelReciter(r.id);
+    changed();
+    void loadAudio();
+  };
+  const reciterButton = (r: Reciter, tag?: string, grouped = false) =>
     h('button', {
       class: `list-item${r.id === project.reciterId ? ' on' : ''}`,
-      onclick: () => {
-        if (exporting || r.id === project.reciterId) return;
-        project.reciterId = r.id;
-        setReelReciter(r.id);
-        changed();
-        void loadAudio();
-      },
-    }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
+      onclick: () => pickReciter(r),
+    }, h('span', {}, grouped ? r.name : reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
       r.qdc === false && !hasAlignedWords(r, n) ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
     starButton(r, n, () => { if (option?.id === 'reciter') refreshUI(); }), // ★ favourite + download
     sampleButton(r), // hear the voice before choosing
@@ -849,7 +851,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     input.addEventListener('input', () => {
       const q = input.value.trim().toLowerCase();
       const list = input.nextElementSibling;
-      list?.querySelectorAll<HTMLElement>('button').forEach((b) => { b.hidden = !!q && !(b.textContent ?? '').toLowerCase().includes(q); });
+      list?.querySelectorAll<HTMLElement>(':scope > .rec-group').forEach((b) => { b.hidden = !!q && !(b.textContent ?? '').toLowerCase().includes(q); });
     });
     return input;
   };
@@ -861,7 +863,11 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
       reciterSearch(),
-      h('div', { class: 'list reciter-list' }, ...favouritesFirst(RECITERS.filter(offered)).map((r) => reciterButton(r))),
+      // One row per reciter; several recordings of one reciter are chips under the name.
+      h('div', { class: 'list reciter-list' }, ...groupRecordings(favouritesFirst(RECITERS.filter(offered))).map((g) => {
+        const r = g.find((x) => x.id === project.reciterId) ?? g[0];
+        return h('div', { class: 'rec-group' }, reciterButton(r, undefined, g.length > 1), recordingChips(g, project.reciterId, pickReciter));
+      })),
     ].filter(Boolean) as Node[];
   };
 

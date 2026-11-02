@@ -17,6 +17,8 @@ export interface Reciter {
   name: string; // shown in the on-screen credit
   short: string; // compact label (selection bar)
   style?: string; // Muallim / Mujawwad: part of the credit
+  /** Picker label of this recording among the reciter's others (same `name`); default: the style, else Murattal. */
+  recording?: string;
   note?: string; // picker only
   everyayah?: string;
   qdc?: false; // no QDC recording or word timings: Ayah mode only
@@ -30,7 +32,7 @@ export interface Reciter {
 
 export const RECITERS: Reciter[] = [
   { id: 7, name: 'Mishary Rashid Alafasy', short: 'Alafasy', everyayah: 'Alafasy_128kbps' },
-  { id: 173, name: 'Mishary Rashid Alafasy', short: 'Alafasy (2)', note: 'second recording', everyayah: 'Alafasy_128kbps' },
+  { id: 173, name: 'Mishary Rashid Alafasy', short: 'Alafasy (2)', note: 'second recording', recording: 'Murattal 2', everyayah: 'Alafasy_128kbps' },
   { id: 3, name: 'Abdur-Rahman as-Sudais', short: 'Sudais', everyayah: 'Abdurrahmaan_As-Sudais_192kbps' },
   { id: 10, name: "Sa'ud ash-Shuraim", short: 'Shuraim', everyayah: 'Saood_ash-Shuraym_128kbps' },
   { id: 6, name: 'Mahmoud Khalil Al-Husary', short: 'Husary', everyayah: 'Husary_128kbps' },
@@ -83,6 +85,18 @@ export const RECITERS: Reciter[] = [
   { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '1-10,12-13,15-106,108-114' }, words: '1-10,12-13,15-106,108-114' },
   // mp3quran.net without ayah times: made by alignment and checked (scripts/make-mp3quran-timings.py).
   { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1-36,38,41-44,46-64,66-114' }, words: '1-36,38,41-44,46-64,66-114' },
+  // Second recordings of reciters above (owner request 2026-11-02), mp3quran.net, told apart from ours by
+  // comparing their sound; shown as Recording chips under the reciter's name. Ayah times verified (Sudais,
+  // Budair, Basfar, Muaiqly Mujawwad) or made by alignment (the rest); surahs filled in once checked.
+  { id: 1038, name: 'Abdur-Rahman as-Sudais', short: 'Sudais (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 54, surahs: '' } },
+  { id: 1039, name: 'Salah Al-Budair', short: 'Budair (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 43, surahs: '' } },
+  { id: 1040, name: 'Abdullah Basfar', short: 'Basfar (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 60, surahs: '' } },
+  { id: 1041, name: 'Yaser Salamah', short: 'Salamah (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 152, surahs: '' } },
+  { id: 1042, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 133, surahs: '' } },
+  { id: 1043, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 103, surahs: '' } },
+  { id: 1044, name: 'Mohamed Siddiq al-Minshawi', short: 'Minshawi (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 114, surahs: '' } },
+  { id: 1045, name: 'Mohammad Al-Tablawi', short: 'Tablawi (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 10912, surahs: '' } },
+  { id: 1046, name: 'Muhammad Ayyoub', short: 'Ayyoub (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 320, surahs: '' } },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */
@@ -127,6 +141,20 @@ export const timedReciterById = (id: number) => TIMED_RECITERS.find((r) => r.id 
 
 /** Credit line: the name plus the style when one reciter has several recordings. */
 export const reciterCredit = (r: Reciter) => (r.style ? `${r.name} (${r.style})` : r.name);
+
+/** Label of one recording among a reciter's recordings (entries with the same name). */
+export const recordingLabel = (r: Reciter) => r.recording ?? r.style ?? 'Murattal';
+
+/** The list as one entry per reciter, each with its recordings, in the order they first appear. */
+export function groupRecordings(list: Reciter[]): Reciter[][] {
+  const by = new Map<string, Reciter[]>();
+  for (const r of list) {
+    const g = by.get(r.name);
+    if (g) g.push(r);
+    else by.set(r.name, [r]);
+  }
+  return [...by.values()];
+}
 
 export const reciterPickerLabel = (r: Reciter) => [reciterCredit(r), r.note].filter(Boolean).join(' · ');
 
