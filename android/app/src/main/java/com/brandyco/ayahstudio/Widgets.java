@@ -37,9 +37,9 @@ final class Widgets {
     }
 
     static PendingIntent openApp(Context c, String hash, int code) {
-        Intent open = new Intent(c, MainActivity.class);
+        Intent open = new Intent(c, AppActivity.class);
         open.setAction(Intent.ACTION_VIEW);
-        open.putExtra(MainActivity.EXTRA_HASH, hash);
+        open.putExtra(AppActivity.EXTRA_HASH, hash);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(c, code, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }

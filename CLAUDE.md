@@ -689,6 +689,18 @@ save to gallery / share sheet; offline audio cache; settings.
       accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
       deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
+      Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
+      hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
+      gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
+      goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
+      shine plays once; the streak keeps a softer glow
+      **App icon follows the theme** (owner request 2026-11-02): one launcher icon per theme (the same light in the
+      ayah marker: night tile tinted to the theme's hue, marker + glow in its night accent, inner ring its deep colour; `scripts/make-icons.py --themes` reads `theme.ts` and writes the vector
+      backgrounds `drawable/ic_bg_{id}.xml`, adaptive `ic_launcher_{id}` + `_round`, 192 px PNGs for Android 7 and
+      the manifest's activity-aliases). The real activity is `AppActivity`; the launcher entries are aliases
+      (`.MainActivity` = Emerald, so old home-screen icons keep working; `.Icon{Id}`), exactly one enabled.
+      `AppIconPlugin` stores the choice and `AppIcons.apply()` switches when the app leaves the screen (`onStop`).
+      Web: the tab icon is drawn in the theme's colours (`setFavicon()`). Splash and notification icons stay Emerald
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
