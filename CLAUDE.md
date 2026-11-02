@@ -667,6 +667,13 @@ save to gallery / share sheet; offline audio cache; settings.
       gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
       goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
       shine plays once; the streak keeps a softer glow
+      **App icon follows the theme** (owner request 2026-11-02): one launcher icon per theme (same mark on the
+      theme's deep stops → first neon stop; `scripts/make-icons.py --themes` reads `theme.ts` and writes the vector
+      backgrounds `drawable/ic_bg_{id}.xml`, adaptive `ic_launcher_{id}` + `_round`, 192 px PNGs for Android 7 and
+      the manifest's activity-aliases). The real activity is `AppActivity`; the launcher entries are aliases
+      (`.MainActivity` = Emerald, so old home-screen icons keep working; `.Icon{Id}`), exactly one enabled.
+      `AppIconPlugin` stores the choice and `AppIcons.apply()` switches when the app leaves the screen (`onStop`).
+      Web: the tab icon is drawn in the theme's colours (`setFavicon()`). Splash and notification icons stay Emerald
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native

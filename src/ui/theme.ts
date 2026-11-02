@@ -3,6 +3,7 @@
 // the accent colour. Same rule as the original emerald: never on the mushaf page, the Arabic text,
 // the reel itself or big backgrounds behind text. The Kids space keeps its own sky palette.
 // Picked per device and synced with the account (pref `brandTheme`).
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { touchPref } from './prefs';
 
 export interface BrandTheme {
@@ -151,6 +152,41 @@ function rewardCss(x: BrandTheme): string {
 }`;
 }
 
+// The launcher icon follows the theme (Android: one activity-alias per theme, switched when the app
+// leaves the screen — AppIcons.java; icons by scripts/make-icons.py --themes).
+const AppIcon = registerPlugin<{ set(o: { id: string }): Promise<void> }>('AppIcon');
+
+/** The tile gradient of a theme's icon (same stops as scripts/make-icons.py `theme_stops`). */
+function iconStops(x: BrandTheme): [number, string][] {
+  if (x.id === DEFAULT_THEME) return [[0, '#05573d'], [1, '#22b3a0']];
+  return [[0, x.fill[0]], ...(x.fill.length > 1 ? [[0.55, x.fill[x.fill.length - 1]] as [number, string]] : []), [1, x.neon[0]]];
+}
+
+/** The web tab / bookmark icon in the theme's colours (the mark of public/icon.svg). */
+function setFavicon(x: BrandTheme) {
+  const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!link) return;
+  if (x.id === DEFAULT_THEME) {
+    link.href = './icon.svg';
+    return;
+  }
+  const stops = iconStops(x).map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">${stops}</linearGradient></defs>`
+    + `<rect width="512" height="512" rx="115" fill="url(#g)"/><circle cx="209.09" cy="256" r="89.91" fill="none" stroke="#fff" stroke-width="33.23"/>`
+    + `<rect x="282.39" y="149.48" width="33.23" height="213.05" rx="16.61" fill="#fff"/>`
+    + `<rect x="337.88" y="189.96" width="25.25" height="132.09" rx="12.63" fill="#fff" opacity=".78"/>`
+    + `<rect x="389.38" y="219.78" width="25.25" height="72.44" rx="12.63" fill="#fff" opacity=".78"/></svg>`;
+  link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+let iconFor = '';
+function setAppIcon(x: BrandTheme) {
+  if (iconFor === x.id) return;
+  iconFor = x.id;
+  if (Capacitor.isNativePlatform()) void AppIcon.set({ id: x.id }).catch(() => {});
+  else setFavicon(x);
+}
+
 /** Applies the saved theme (call once at start, before the first screen). */
 export function applyTheme(id = themeId()) {
   const x = themeById(id);
@@ -164,6 +200,7 @@ export function applyTheme(id = themeId()) {
   document.documentElement.dataset.theme = x.id;
   const dark = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="dark"]');
   if (dark) dark.content = night(x).meta;
+  setAppIcon(x);
   window.dispatchEvent(new Event('theme-changed')); // the Android widgets follow the colours
 }
 

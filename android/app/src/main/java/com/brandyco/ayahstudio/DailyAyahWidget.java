@@ -153,9 +153,9 @@ public class DailyAyahWidget extends AppWidgetProvider {
             v.setTextViewText(R.id.daily_text, it.text);
             v.setTextViewText(R.id.daily_credit, it.credit);
         }
-        Intent open = new Intent(context, MainActivity.class);
+        Intent open = new Intent(context, AppActivity.class);
         open.setAction(Intent.ACTION_VIEW);
-        open.putExtra(MainActivity.EXTRA_HASH, it.hash);
+        open.putExtra(AppActivity.EXTRA_HASH, it.hash);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         v.setOnClickPendingIntent(R.id.daily_root, pi);
