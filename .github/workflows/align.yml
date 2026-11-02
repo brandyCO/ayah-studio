@@ -16,7 +16,7 @@ on:
         required: false
         default: ''
       scan:
-        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py)'
+        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py); openings = the same for the mp3quran reciters (scripts/fix-openings.py)'
         required: false
         default: 'no'
 
@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   plan:
-    if: inputs.scan != 'yes' && inputs.scan != 'qdc'
+    if: inputs.scan != 'yes' && inputs.scan != 'qdc' && inputs.scan != 'openings'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -174,6 +174,60 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add qdc-open && git commit -qm "QDC openings: ${{ matrix.id }}"
+          for i in 1 2 3 4 5 6 7 8; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
+
+  openings:
+    if: inputs.scan == 'openings'
+    name: Openings · ${{ matrix.key }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        key: ['3', '12', '20', '217', '219', '221', '236', '245', '259', '273', 'islam-sobhi']
+    env:
+      ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
+      GH_TOKEN: ${{ github.token }}
+      KEY: ${{ matrix.key }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/align.yml
+      - name: Install ffmpeg and the model's libraries
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+          pip install -q transformers==5.19.0 numpy huggingface_hub
+      - uses: actions/cache@v4
+        with:
+          path: .cache/align-model
+          key: align-model-rabah2026-v_final
+      - name: Download the model (Apache-2.0)
+        run: |
+          [ -f "$ALIGN_MODEL/model.safetensors" ] || python3 -c "from huggingface_hub import snapshot_download as d; d('rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final', local_dir='$ALIGN_MODEL')"
+      - name: Results so far
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          git -C "$RUNNER_TEMP/res" sparse-checkout set "align2/$KEY" openings
+      - run: rm -f public/data/basmala.json && python3 scripts/fix-openings.py "$RUNNER_TEMP/res" "$KEY"
+      - name: Save results
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/res"
+          mkdir -p "openings/$KEY"
+          cp "$GITHUB_WORKSPACE/public/data/basmala.json" "openings/$KEY/basmala.json" 2>/dev/null || exit 0
+          git -C "$GITHUB_WORKSPACE" diff --name-only -- "public/data/words/$KEY" | while read f; do cp "$GITHUB_WORKSPACE/$f" "openings/$KEY/"; done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add openings && git commit -qm "Openings: $KEY"
           for i in 1 2 3 4 5 6 7 8; do
             git push -q origin HEAD:align-results && exit 0
             sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
