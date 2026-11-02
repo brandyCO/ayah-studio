@@ -9,12 +9,14 @@ import glob, json, os, re, shutil, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 res = sys.argv[1]
+OWN_IN_AYAH1 = {'1026'}
 out = {}
 rec = open(os.path.join(ROOT, 'src', 'data', 'reciters.ts')).read()
 for line in rec.splitlines():
   m = re.search(r"\{ id: (\d+),", line)
   if m and 'qdc: false' in line and 'mp3quran:' not in line and 'everyayah:' in line:
-    out[m.group(1)] = {'missing': 'all', 'src': 'everyayah'}
+    # 1026: its ayah-1 files already begin with the Bismillah (heard in surahs 2, 18, 36, 67, 112)
+    out[m.group(1)] = {'missing': ''} if m.group(1) in OWN_IN_AYAH1 else {'missing': 'all', 'src': 'everyayah'}
 for d in sorted(glob.glob(os.path.join(res, 'openings', '*'))):
   key = os.path.basename(d)
   b = json.load(open(os.path.join(d, 'basmala.json')))
