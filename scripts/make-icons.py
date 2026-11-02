@@ -231,7 +231,7 @@ def theme_icons():
         aliases += ALIAS.format(name='Icon' + tid.capitalize(), icon=f'ic_launcher_{tid}', enabled='false')
     man = ROOT / 'android' / 'app' / 'src' / 'main' / 'AndroidManifest.xml'
     text = man.read_text()
-    start, end = '        <!-- theme icons (scripts/make-icons.py --themes) -->\n', '        <!-- /theme icons -->\n'
+    start, end = '        <!-- theme icons (scripts/make-icons.py, themes mode) -->\n', '        <!-- /theme icons -->\n'
     assert start in text and end in text, 'AndroidManifest.xml: theme icon markers missing'
     text = re.sub(re.escape(start) + '.*?' + re.escape(end), lambda _: start + aliases + end, text, flags=re.S)
     man.write_text(text)
