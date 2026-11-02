@@ -108,7 +108,10 @@ def main():
   rec = open(rec_path).read()
   bpath = os.path.join(ROOT, 'public', 'data', 'basmala.json')
   out = json.load(open(bpath)) if os.path.exists(bpath) else {}
-  for line in rec.splitlines():
+  # Recordings not in the app yet (scripts/new-recordings.json): their surahs and cuts from the alignment itself.
+  newrec = {r['key']: r for r in json.load(open(os.path.join(HERE, 'new-recordings.json')))}
+  lines = rec.splitlines() + ["{ id: 0, qdc: false, mp3quran: { read: '%s', surahs: '' } }" % k for k in newrec if k in only]
+  for line in lines:
     m = re.search(r"\{ id: (\d+),", line)
     if not m or 'qdc: false' not in line: continue
     rid = m.group(1)
@@ -120,7 +123,13 @@ def main():
       continue
     wdir = os.path.join(ROOT, 'public', 'data', 'words', key)
     words_ok = os.path.isdir(wdir)
-    doc = json.load(open(os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)))
+    if key in newrec:
+      doc = {'folder': newrec[key]['folder'], 'surahs': {}}
+      for f in sorted(os.listdir(os.path.join(res, 'align2', key))) if os.path.isdir(os.path.join(res, 'align2', key)) else []:
+        r = json.load(open(os.path.join(res, 'align2', key, f)))
+        if r.get('c') and not r.get('error'): doc['surahs'][str(int(f[:3]))] = {'c': r['c'], 'size': r.get('size')}
+    else:
+      doc = json.load(open(os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)))
     prev = out.get(key, {})
     missing = [x for x in expand(prev.get('missing', '')) if x not in ONLY_S] if ONLY_S else []
     spans = {k_: v_ for k_, v_ in prev.get('spans', {}).items() if ONLY_S and int(k_) not in ONLY_S}
