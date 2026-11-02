@@ -20,7 +20,7 @@ on:
         required: false
         default: '1'
       scan:
-        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py); openings = the same for the mp3quran reciters (scripts/fix-openings.py)'
+        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); find = look on archive.org for the surahs Islam Sobhi lacks (scripts/find-surahs.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py); openings = the same for the mp3quran reciters (scripts/fix-openings.py)'
         required: false
         default: 'no'
 
@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   plan:
-    if: inputs.scan != 'yes' && inputs.scan != 'qdc' && inputs.scan != 'openings'
+    if: inputs.scan != 'yes' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -183,6 +183,28 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sources && git commit -qm "Source scan" && git push -q origin HEAD:align-results
+
+  find:
+    if: inputs.scan == 'find'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/find-surahs.py find.json "Islam Sobhi|Islam Sobhy|Islam Subhi|إسلام صبحي|اسلام صبحي|اسلام صبحى|إسلام صبحى" 37,39,40,45,65
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f find.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" sources/find-islam-sobhi.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Find: Islam Sobhi surahs" && git push -q origin HEAD:align-results
 
   qdc-openings:
     if: inputs.scan == 'qdc'
