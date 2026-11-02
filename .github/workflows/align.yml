@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: 'Reciter keys, comma-separated (empty = all)'
+        description: 'Reciter keys, comma-separated (empty = all; new:1 … new:4 = a batch of scripts/new-recordings.json)'
         required: false
         default: ''
       surahs:
@@ -24,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: align-${{ inputs.scan }}
+  group: align-${{ inputs.scan }}-${{ inputs.only }}
   cancel-in-progress: false
 
 jobs:
