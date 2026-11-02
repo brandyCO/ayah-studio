@@ -14,7 +14,7 @@ interface Checked {
   folder: string;
   /** `seek`: a variable-bitrate file's seek table (`vbr`: its length in seconds, decoded whole);
    *  `aligned`: times made by alignment. */
-  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean }>;
+  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean; l?: Record<string, number> }>;
 }
 
 const files = new Map<number | string, Promise<Checked>>();
@@ -65,7 +65,9 @@ export interface Mp3QuranSurah {
   seek?: SeekTable;
 }
 
-export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3QuranSurah> {
+/** `listen`: also the ayat whose start cut is unknown, from where the alignment heard their first word
+ *  (`l`, scripts/make-listen-starts.py) — for Listen only; a reel never starts or ends there. */
+export async function mp3quranSurah(r: Reciter, surah: number, listen = false): Promise<Mp3QuranSurah> {
   if (!r.mp3quran || !covers(r, surah)) throw new Error(`No verified recording of surah ${surah} for ${r.name}`);
   const data = await checked(r.mp3quran.read);
   const s = data.surahs[String(surah)];
@@ -75,8 +77,10 @@ export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3Quran
   if (size !== null && size !== s.size) throw new Error(`The recording of surah ${surah} changed since it was checked`);
   const words = await alignedWords(r, surah);
   const timings = new Map<string, VerseTiming>();
-  for (let k = 1; k < s.c.length; k++) {
-    const a = s.c[k - 1], b = s.c[k];
+  // Listening: an unknown cut is the aligned start of the ayah after it; after the last ayah, the file's end.
+  const c = listen ? s.c.map((x, i) => x ?? s.l?.[String(i + 1)] ?? (i === s.c.length - 1 ? 1e9 : null)) : s.c;
+  for (let k = 1; k < c.length; k++) {
+    const a = c[k - 1], b = c[k];
     if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b, segments: words[k] });
   }
   return { audioUrl, timings, fileDuration: s.vbr ?? null, seek: s.seek };

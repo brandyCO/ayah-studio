@@ -10,8 +10,10 @@ import { playableUrl } from '../data/keptAudio';
 import { qdcSurah } from '../data/qdc';
 import { mp3quranSurah } from '../data/mp3quran';
 import { alignedWords } from '../data/alignedWords';
+import { basmalaBefore, type Basmala } from '../data/basmala';
 import type { SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, groupRecordings, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { recordingChips } from './recordings';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -93,7 +95,7 @@ export function createPlayer(o: PlayerHooks) {
   let loading = false;
   let pending: { s: number; a: number } | null = null;
   function paint() {
-    const playing = !audio.paused;
+    const playing = !audio.paused || (introOn && !intro.paused);
     playBtn.replaceChildren(loading ? h('span', { class: 'spinner' }) : icon(playing ? 'pause' : 'play', 22));
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
@@ -119,7 +121,7 @@ export function createPlayer(o: PlayerHooks) {
     const id = ++req;
     let url = '';
     if (r.qdc !== false || r.mp3quran) {
-      const q = r.qdc !== false ? await qdcSurah(r.id, s) : await mp3quranSurah(r, s);
+      const q = r.qdc !== false ? await qdcSurah(r.id, s) : await mp3quranSurah(r, s, true);
       if (id !== req) return false;
       verses = [...q.timings.values()].map((v) => ({
         a: Number(v.verse_key.split(':')[1]),
@@ -147,6 +149,7 @@ export function createPlayer(o: PlayerHooks) {
 
   /** Play from the start of surah:ayah. */
   async function playFrom(s: number, a: number) {
+    introDone?.(false); // a Bismillah still playing gives way
     show(true);
     loading = true;
     pending = { s, a };
@@ -169,6 +172,13 @@ export function createPlayer(o: PlayerHooks) {
         audio.src = await playableUrl(everyayahUrl(using!, s, v.a));
         preload(v.a + 1);
       } else await seekTo(at / 1000);
+      // A recording that starts straight at ayah 1: the reciter's own Bismillah first.
+      if (a <= 1) {
+        const mine = req;
+        const b = await basmalaBefore(using!, s).catch(() => null);
+        if (mine !== req) return;
+        if (b && !(await playIntro(b))) return;
+      }
       await audio.play();
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
@@ -176,6 +186,44 @@ export function createPlayer(o: PlayerHooks) {
     }
     loading = false;
     paint();
+  }
+
+  // The Bismillah played before a surah whose recording has none (data/basmala.ts).
+  const intro = new Audio();
+  intro.preload = 'auto';
+  let introOn = false;
+  let introDone: ((played: boolean) => void) | null = null;
+  /** Plays the Bismillah; true when it finished, false when listening was stopped or moved on meanwhile. */
+  async function playIntro(b: Basmala): Promise<boolean> {
+    const mine = req;
+    intro.src = await playableUrl(b.url);
+    if (mine !== req) return false;
+    await new Promise<void>((resolve, reject) => {
+      if (intro.readyState >= 1) return resolve();
+      intro.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      intro.addEventListener('error', () => reject(new Error('the audio could not be loaded')), { once: true });
+    });
+    intro.currentTime = b.from;
+    const end = b.to;
+    return new Promise<boolean>((resolve) => {
+      const finish = (played: boolean) => {
+        intro.removeEventListener('timeupdate', check);
+        intro.removeEventListener('ended', ended);
+        intro.pause();
+        introOn = false;
+        introDone = null;
+        resolve(played && mine === req);
+      };
+      const check = () => { if (end !== null && intro.currentTime >= end) finish(true); };
+      const ended = () => finish(true);
+      intro.addEventListener('timeupdate', check);
+      intro.addEventListener('ended', ended);
+      introDone = finish;
+      introOn = true;
+      loading = false;
+      void intro.play().then(() => paint(), () => finish(true));
+      paint();
+    });
   }
 
   /** Load ayah `a` of the playing surah into the spare element. */
@@ -223,6 +271,12 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   function toggle() {
+    if (introOn) {
+      if (intro.paused) void intro.play().catch(() => {});
+      else intro.pause();
+      paint();
+      return;
+    }
     if (!surah) return;
     if (audio.paused) void audio.play().catch(() => toast('Could not play the recitation'));
     else audio.pause();
@@ -238,6 +292,7 @@ export function createPlayer(o: PlayerHooks) {
 
   function stop() {
     req++;
+    introDone?.(false);
     loading = false;
     audio.pause();
     ahead.pause();
@@ -310,20 +365,27 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   function pickReciter() {
+    const now = (using ?? reciter()).id;
+    const choose = (r: Reciter) => {
+      d.close();
+      if (r.id === reciter().id) return;
+      setReelReciter(r.id); // also the default for the next reel
+      const at = cur;
+      loadedFor = '';
+      if (at) void playFrom(at.s, at.a);
+      else paint();
+    };
+    // One row per reciter; a reciter with several recordings lists them as chips under the name.
+    const groups = groupRecordings(favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))));
     const d = h('dialog', { class: 'sheet bottom' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))).map((r) => h('button', {
-        class: `menu-item${r.id === (using ?? reciter()).id ? ' on' : ''}`,
-        onclick: () => {
-          d.close();
-          if (r.id === reciter().id) return;
-          setReelReciter(r.id); // also the default for the next reel
-          const at = cur;
-          loadedFor = '';
-          if (at) void playFrom(at.s, at.a);
-          else paint();
-        },
-      }, h('span', {}, reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)))));
+      h('div', { class: 'menu' }, ...groups.map((g) => {
+        const r = g.find((x) => x.id === now) ?? g[0];
+        return h('div', { class: 'rec-group' },
+          h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
+            h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
+          recordingChips(g, now, choose));
+      })));
     d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
