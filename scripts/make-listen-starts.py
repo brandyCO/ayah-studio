@@ -26,7 +26,10 @@ for path in sorted(glob.glob(os.path.join(ROOT, 'public', 'data', 'mp3quran', '*
     except Exception: continue
     if 'ay' not in a or a.get('size') != v['size'] or len(a['ay']) != len(c) - 1: continue
     starts = {}
-    for i in range(len(c) - 1):
+    # Before ayah 1 a recording may hold an isti'adha and the Bismillah, which the model can take for the opening
+    # letters (Alif Lam Mim…): the first ayah simply starts with the file.
+    if c[0] is None: starts['1'] = 0
+    for i in range(1, len(c) - 1):
       if c[i] is not None or a['lconf'][i] <= -1.5: continue
       t = a['ay'][i][0] - LEAD
       if i > 0: t = max(t, a['ay'][i - 1][1])  # never inside the previous ayah's last word
