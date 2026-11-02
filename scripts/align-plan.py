@@ -18,6 +18,13 @@ jobs = []
 # "new:N": batch N (60 recordings, 240 jobs: under GitHub's 256 per matrix) of scripts/new-recordings.json, the
 # mp3quran Hafs recordings not in the app yet (aligned first, judged and added afterwards).
 lines = src.splitlines()
+# "ia:ITEM": an archive.org upload laid out like an mp3quran folder ({SSS}.mp3), for surahs our source lacks
+# (Islam Sobhi 37, 39, 40, 45, 65 unless `surahs` says otherwise); compared with our recording by compare-ia.py.
+if any(o.startswith('ia:') for o in only):
+  item = next(o for o in only if o.startswith('ia:'))[3:]
+  print(json.dumps([dict(kind='mp3quran', key='ia-' + item.replace('/', '-').replace('.', '-'),
+                         source='https://archive.org/download/%s/' % item, surahs=fixed or '37,39,40,45,65')]))
+  sys.exit()
 if any(o.startswith('new:') for o in only):
   n = int(next(o for o in only if o.startswith('new:'))[4:])
   new = json.load(open(os.path.join(ROOT, 'scripts', 'new-recordings.json')))[(n - 1) * 60:n * 60]
