@@ -732,6 +732,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'fav.section': "القرّاء المفضلون",
   'fav.sectionHelp': "اضغط ☆ بجانب القارئ (في الاستماع أو الاستوديو) للاحتفاظ بتلاوته على هذا الجهاز.",
   'pl.reel': 'اصنع مقطعًا من هذه الآية',
+  'pl.follow': 'العودة إلى الصفحة التي تُتلى',
   'pl.notHere': 'لا يوجد تسجيل مُتحقَّق لـ{name} لهذه السورة، لذا يُتلى بصوت {other}',
   'night.open': 'استماع ليلي',
   'night.close': 'إنهاء الاستماع الليلي',

@@ -417,6 +417,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `scripts/new-recordings.json`: 187 more mp3quran Hafs recordings, aligned in batches (`only = new:N`; a run
       restarts itself until every surah has a result, then checks the openings and starts the next batch) for the
       owner to pick from. Surah-finished card waits until the recitation leaves the surah
+      **Listen anywhere** (owner request 2026-11-02): one player for the whole app (`sharedPlayer()` in
+      `src/ui/player.ts`); the mushaf attaches to it (`attachPlayer()`: page tracking, lit words) and on any other
+      screen (Me: claims, tasbih; surah list; drafts) the bar sits above the tab bar (`body.listening-away`) with
+      a book button / the Listen tab back to the page being recited (`followAlong()`); the studio pauses it, the
+      Kids space stops it. Reciter pickers have a search box (`reciterSearchBox()`, letters only) and every
+      reciter a ▶ voice preview (mp3quran ones: the start of their first checked surah, `mp3quranSample()`)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

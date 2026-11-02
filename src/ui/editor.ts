@@ -62,7 +62,7 @@ import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
 import { t as ui, tOr } from '../i18n';
 import { translationList } from './translationPicker';
-import { recordingChips } from './recordings';
+import { recordingChips, reciterSearchBox } from './recordings';
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: ui('ed.ayah') },
@@ -845,29 +845,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
   let popular: { id: number; trending: boolean }[] = [];
   void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
-  /** Filters the list below it by name (there are ~40 reciters). */
-  const reciterSearch = () => {
-    const input = h('input', { class: 'search', type: 'search', placeholder: ui('ed.reciter-search'), 'aria-label': ui('ed.reciter-search') });
-    input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
-      const list = input.nextElementSibling;
-      list?.querySelectorAll<HTMLElement>(':scope > .rec-group').forEach((b) => { b.hidden = !!q && !(b.textContent ?? '').toLowerCase().includes(q); });
-    });
-    return input;
-  };
   const reciterPanel = () => {
     checkRanges();
     const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id && offered(x)), trending: p.trending })).filter((x) => x.r).slice(0, 3);
+    // One row per reciter; several recordings of one reciter are chips under the name.
+    const list = h('div', { class: 'list reciter-list' }, ...groupRecordings(favouritesFirst(RECITERS.filter(offered))).map((g) => {
+      const r = g.find((x) => x.id === project.reciterId) ?? g[0];
+      return h('div', { class: 'rec-group' }, reciterButton(r, undefined, g.length > 1), recordingChips(g, project.reciterId, pickReciter));
+    }));
+    const search = reciterSearchBox(list, ui('ed.reciter-search'));
     return [
       top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
-      reciterSearch(),
-      // One row per reciter; several recordings of one reciter are chips under the name.
-      h('div', { class: 'list reciter-list' }, ...groupRecordings(favouritesFirst(RECITERS.filter(offered))).map((g) => {
-        const r = g.find((x) => x.id === project.reciterId) ?? g[0];
-        return h('div', { class: 'rec-group' }, reciterButton(r, undefined, g.length > 1), recordingChips(g, project.reciterId, pickReciter));
-      })),
+      search, list,
     ].filter(Boolean) as Node[];
   };
 

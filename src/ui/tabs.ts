@@ -12,6 +12,7 @@ import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { lastRead } from './prefs';
 import { pendingRewards } from '../data/claims';
+import { followAlong, playerActive } from './player';
 
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
@@ -50,7 +51,8 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
     }, icon(ic, 24), h('span', {}, label));
   return h('nav', { class: `tabbar${auto ? ' auto' : ''}`, 'aria-label': t('tab.nav') },
     btn('read', 'book', t('tab.read'), on.read ?? (() => goMushaf())),
-    btn('listen', 'listen', t('tab.listen'), on.listen ?? (() => goMushaf('listen'))),
+    // Listening from another screen: Listen goes back to the page being recited (the bar pauses).
+    btn('listen', 'listen', t('tab.listen'), on.listen ?? (() => (playerActive() ? followAlong() : goMushaf('listen')))),
     btn('create', 'create', t('tab.create'), () => void openCreate()),
     btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }

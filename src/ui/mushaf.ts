@@ -18,7 +18,7 @@ import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
 import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday } from './living';
-import { createPlayer } from './player';
+import { attachPlayer, replayPosition, sharedPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
@@ -151,8 +151,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // --- listening: the recited ayah is tinted, the recited word coloured; pages turn with it ---
   let playing: { s: number; a: number; w: number | null } | null = null;
   let doneLater: (() => void) | null = null; // a "surah finished" card held until the recitation ends it
-  const player = createPlayer({
-    meta,
+  // The app's one player: it keeps playing on other screens; here it tracks the page and lights the words.
+  const player = sharedPlayer(meta);
+  const detachPlayer = attachPlayer({
     onPosition: (pos) => {
       if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
       playing = pos;
@@ -214,7 +215,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
   };
   const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow }, true);
-  root.append(bar, area, sel.bar, player.bar, tabs);
+  root.append(bar, area, sel.bar, tabs);
 
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
@@ -602,6 +603,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
+  replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   keepWholeMushaf(() => page);
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
@@ -651,7 +653,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(hintTimer);
     clearTimeout(resizeTimer);
     sel.destroy();
-    player.destroy();
+    detachPlayer(); // the recitation carries on (the bar moves above the tab bar)
     document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);

@@ -29,6 +29,7 @@ import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
 import { watchVitals } from './perf';
+import { quietPlayer } from './ui/player';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -45,6 +46,8 @@ async function route() {
     return void route();
   }
   if (view === 'kids') clearPass();
+  // Listening carries on across screens, but not into the studio (its own sound) or the Kids space.
+  if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
   document.body.dataset.view = view || 'home';
