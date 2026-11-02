@@ -707,7 +707,9 @@ save to gallery / share sheet; offline audio cache; settings.
       (`src/ui/theme.ts`: Emerald (default), Aurora, Ultraviolet, Synthwave, Neon Sunset, Deep Ocean,
       Royal Gold, Rose Quartz, Cyber Lime, Nebula, Arctic Ice, Ember). Each sets the brand tokens, the
       accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
-      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
+      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme` (fix 2026-11-02: each synced pref is its own
+      `user_docs` row `setting/pref:{key}`, so another device writing its reading place can no longer put back an old
+      theme; a device holding a newer choice than a pulled row sends it again; the old `prefs` row is still written). Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
       Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
       hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
