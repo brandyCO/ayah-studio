@@ -1,0 +1,8619 @@
+[
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Awad al-Juhani",
+  "url": "https://download.quranicaudio.com/quran/abdullaah_3awwaad_al-juhaynee/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Basfar",
+  "url": "https://download.quranicaudio.com/quran/abdullaah_basfar/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdullah Basfar",
+  "scores": {
+   "1013": [
+    0.441,
+    0.686
+   ],
+   "1040": [
+    1.0,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1040"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abu Bakr al-Shatri",
+  "url": "https://download.quranicaudio.com/quran/abu_bakr_ash-shaatree/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sa`ud ash-Shuraym",
+  "url": "https://download.quranicaudio.com/quran/sa3ood_al-shuraym/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mishari Rashid al-`Afasy",
+  "url": "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Siddiq al-Minshawi",
+  "url": "https://download.quranicaudio.com/quran/muhammad_siddeeq_al-minshaawee/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rahman as-Sudais",
+  "url": "https://download.quranicaudio.com/quran/abdurrahmaan_as-sudays/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.97,
+    0.941
+   ],
+   "1038": [
+    0.56,
+    0.741
+   ]
+  },
+  "same_as": [
+   "3"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ali Abdur-Rahman al-Huthaify",
+  "url": "https://download.quranicaudio.com/quran/huthayfi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Khalid al-Qahtani",
+  "url": "https://download.quranicaudio.com/quran/khaalid_al-qahtaanee/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.986,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Nabil ar-Rifai",
+  "url": "https://download.quranicaudio.com/quran/nabil_rifa3i/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.543,
+    0.783
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulMuhsin al-Qasim",
+  "url": "https://download.quranicaudio.com/quran/abdul_muhsin_alqasim/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Jibreel",
+  "url": "https://download.quranicaudio.com/quran/muhammad_jibreel/complete/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.999
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Saad al-Ghamdi",
+  "url": "https://download.quranicaudio.com/quran/sa3d_al-ghaamidi/complete/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Sa'd Al-Ghamdi",
+  "scores": {
+   "1003": [
+    0.992,
+    0.981
+   ]
+  },
+  "same_as": [
+   "1003"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Fares Abbad",
+  "url": "https://download.quranicaudio.com/quran/fares/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.993,
+    0.966
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBari ath-Thubaity",
+  "url": "https://download.quranicaudio.com/quran/thubaity/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khaleel Al-Husary",
+  "url": "https://download.quranicaudio.com/quran/mahmood_khaleel_al-husaree/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.997,
+    1.0
+   ],
+   "12": [
+    0.591,
+    0.868
+   ],
+   "1016": [
+    0.549,
+    0.812
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sahl Yasin",
+  "url": "https://download.quranicaudio.com/quran/sahl_yaaseen/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Salah Bukhatir",
+  "url": "https://download.quranicaudio.com/quran/salaah_bukhaatir/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.974,
+    0.966
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ahmed ibn Ali al-Ajmy",
+  "url": "https://download.quranicaudio.com/quran/ahmed_ibn_3ali_al-3ajamy/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sudais and Shuraym",
+  "url": "https://download.quranicaudio.com/quran/sodais_and_shuraim/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.887,
+    0.839
+   ],
+   "1038": [
+    0.462,
+    0.721
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulAzeez al-Ahmad",
+  "url": "https://download.quranicaudio.com/quran/abdulazeez_al-ahmad/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Ayyoob",
+  "url": "https://download.quranicaudio.com/quran/muhammad_ayyoob/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Tawfeeq ibn Sa`id as-Sawa'igh",
+  "url": "https://download.quranicaudio.com/quran/tawfeeq_bin_saeed-as-sawaaigh/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Ali Jabir [Taraweeh]",
+  "url": "https://download.quranicaudio.com/quran/abdullaah_alee_jaabir/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1419",
+  "url": "https://download.quranicaudio.com/quran/madinah_1419/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad al-Mehysni",
+  "url": "https://download.quranicaudio.com/quran/mehysni/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hani ar-Rifai",
+  "url": "https://download.quranicaudio.com/quran/rifai/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.928,
+    0.983
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ibrahim Al-Jibrin",
+  "url": "https://download.quranicaudio.com/quran/jibreen/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1426",
+  "url": "https://download.quranicaudio.com/quran/makkah_1426/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1426",
+  "url": "https://download.quranicaudio.com/quran/madinah_1426/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Saad al-Ghamdi (Partial)",
+  "url": "https://download.quranicaudio.com/quran/sa3d_al-ghaamidi/hidayah/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Sa'd Al-Ghamdi",
+  "scores": {
+   "1003": [
+    0.997,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1003"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Jibreel (Partial)",
+  "url": "https://download.quranicaudio.com/quran/muhammad_jibreel/hidayah/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.78,
+    0.688
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1427",
+  "url": "https://download.quranicaudio.com/quran/madinah_1427/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1427",
+  "url": "https://download.quranicaudio.com/quran/makkah_1427/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Saleh al Taleb",
+  "url": "https://download.quranicaudio.com/quran/saleh_al_taleb/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sudais and Shuraym with Aslam Athar [Pickthall Translation]",
+  "url": "https://download.quranicaudio.com/quran/sudais_shuraim_and_english/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.591,
+    0.585
+   ],
+   "1038": [
+    0.501,
+    0.751
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBaset AbdulSamad [Murattal]",
+  "url": "https://download.quranicaudio.com/quran/abdul_basit_murattal/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.987,
+    0.997
+   ],
+   "1": [
+    0.455,
+    0.574
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Ayyub with Mikaal Waters [Muhsin Khan Translation]",
+  "url": "https://download.quranicaudio.com/quran/muhammad_ayub_and_mikaal_waters/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulWadud Haneef",
+  "url": "https://download.quranicaudio.com/quran/abdulwadood_haneef/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Siddiq al-Minshawi [Mujawwad]",
+  "url": "https://download.quranicaudio.com/quran/minshawi_mujawwad/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.542,
+    0.764
+   ],
+   "1017": [
+    0.992,
+    0.995
+   ],
+   "1044": [
+    0.75,
+    0.73
+   ]
+  },
+  "same_as": [
+   "1017"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Shakir Qasami with Aslam Athar [Pickthall Translation]",
+  "url": "https://download.quranicaudio.com/quran/shakir_qasami_with_english/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Salah al-Budair",
+  "url": "https://download.quranicaudio.com/quran/salahbudair/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Salah Al-Budair",
+  "scores": {
+   "1010": [
+    0.994,
+    0.968
+   ],
+   "1039": [
+    0.791,
+    0.718
+   ]
+  },
+  "same_as": [
+   "1010"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Aziz Alili",
+  "url": "https://download.quranicaudio.com/quran/aziz_alili/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.989,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1024"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1425",
+  "url": "https://download.quranicaudio.com/quran/makkah_1425/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1423",
+  "url": "https://download.quranicaudio.com/quran/madinah_1423/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBaset AbdulSamad with Naeem Sultan [Pickthall Translation]",
+  "url": "https://download.quranicaudio.com/quran/abdulbaset_with_naeem_sultan_pickthall/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sudais and Shuraym with Naeem Sultan [Pickthall Translation]",
+  "url": "https://download.quranicaudio.com/quran/sudais_shuraim_with_naeem_sultan_pickthall/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.788,
+    0.9
+   ],
+   "1038": [
+    0.54,
+    0.74
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mishari ibn Rashid al-`Afasy with Saabir [Muhsin Khan Translation]",
+  "url": "https://download.quranicaudio.com/quran/mishaari_with_saabir_mkhan/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBaset AbdulSamad [Mujawwad]",
+  "url": "https://download.quranicaudio.com/quran/abdulbaset_mujawwad/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.511,
+    0.826
+   ],
+   "1": [
+    0.983,
+    0.977
+   ]
+  },
+  "same_as": [
+   "1"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Maher al-Muaiqly [Assorted]",
+  "url": "https://download.quranicaudio.com/quran/maher_almu3aiqly/year1424-1425/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Maher al-Muaiqly [1422-1423]",
+  "url": "https://download.quranicaudio.com/quran/maher_almu3aiqly/year1422-1423/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad al-Luhaidan",
+  "url": "https://download.quranicaudio.com/quran/muhammad_alhaidan/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBaset AbdulSamad [Warsh]",
+  "url": "https://download.quranicaudio.com/quran/abdulbaset_warsh/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.782,
+    0.779
+   ],
+   "1": [
+    0.471,
+    0.592
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Al-Hussayni Al-'Azazy (with Children)",
+  "url": "https://download.quranicaudio.com/quran/alhusaynee_al3azazee_with_children/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ibrahim Al-Jibreen [1426-1427]",
+  "url": "https://download.quranicaudio.com/quran/jibreen/jibreen_1426-1427/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation]",
+  "url": "https://download.quranicaudio.com/quran/abdulbasit_w_ibrahim_walk_si/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mishari ibn Rashid al-`Afasy with Ibrahim Walk [Saheeh Intl Translation]",
+  "url": "https://download.quranicaudio.com/quran/mishaari_w_ibrahim_walk_si/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1428",
+  "url": "https://download.quranicaudio.com/quran/makkah_1428/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [Soosi]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_soosi_rec/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sadaqat `Ali",
+  "url": "https://download.quranicaudio.com/quran/sadaqat_ali/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [Khalaf]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_-_khalaf_3an_7amza_recitation/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1424",
+  "url": "https://download.quranicaudio.com/quran/makkah_1424/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hamad Sinan",
+  "url": "https://download.quranicaudio.com/quran/hamad_sinan/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Maher al-Muaiqly",
+  "url": "https://download.quranicaudio.com/quran/maher_256/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "1001": [
+    0.696,
+    0.744
+   ],
+   "1042": [
+    0.533,
+    0.931
+   ],
+   "1043": [
+    0.61,
+    0.78
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Basfar with Ibrahim Walk [Saheeh Intl Translation]",
+  "url": "https://download.quranicaudio.com/quran/abdullah_basfar_w_ibrahim_walk_si/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdullah Basfar",
+  "scores": {
+   "1013": [
+    0.992,
+    0.988
+   ],
+   "1040": [
+    0.737,
+    0.921
+   ]
+  },
+  "same_as": [
+   "1013"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sudais and Shuraym [Urdu Translation]",
+  "url": "https://download.quranicaudio.com/quran/sudais_and_shuraim_with_urdu/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.698,
+    0.569
+   ],
+   "1038": [
+    0.492,
+    0.801
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Razaq bin Abtan al-Dulaimi [Mujawwad]",
+  "url": "https://download.quranicaudio.com/quran/abdulrazaq_bin_abtan_al_dulaimi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Ali Jabir",
+  "url": "https://download.quranicaudio.com/quran/abdullaah_alee_jaabir_studio/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Abdul-Kareem",
+  "url": "https://download.quranicaudio.com/quran/muhammad_abdulkareem/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mustafa al-`Azawi",
+  "url": "https://download.quranicaudio.com/quran/mustafa_al3azzawi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Khayat",
+  "url": "https://download.quranicaudio.com/quran/khayat/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1428",
+  "url": "https://download.quranicaudio.com/quran/madinah_1428/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Dr. Shawqy Hamed [Murattal]",
+  "url": "https://download.quranicaudio.com/quran/dr.shawqy_7amed/murattal/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Dr. Shawqy Hamed [Mujawwad]",
+  "url": "https://download.quranicaudio.com/quran/dr.shawqy_7amed/mujawwad/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1429",
+  "url": "https://download.quranicaudio.com/quran/makkah_1429/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khalil Al-Husary [Doori]",
+  "url": "https://download.quranicaudio.com/quran/mahmood_khaleel_al-husaree_doori/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.728,
+    0.742
+   ],
+   "12": [
+    0.562,
+    0.908
+   ],
+   "1016": [
+    0.494,
+    0.791
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Hassan",
+  "url": "https://download.quranicaudio.com/quran/mu7ammad_7assan/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Salah Al-Hashim",
+  "url": "https://download.quranicaudio.com/quran/salah_alhashim/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Adel Kalbani",
+  "url": "https://download.quranicaudio.com/quran/adel_kalbani/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1430",
+  "url": "https://download.quranicaudio.com/quran/makkah_1430/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1431",
+  "url": "https://download.quranicaudio.com/quran/makkah_1431/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1431",
+  "url": "https://download.quranicaudio.com/quran/madinah_1431/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/collection/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid - Taraweeh 1432",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/taraweeh1432/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid - Taraweeh 1431",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/taraweeh1431/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mostafa Ismaeel",
+  "url": "https://download.quranicaudio.com/quran/mostafa_ismaeel/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Sulaiman Patel",
+  "url": "https://download.quranicaudio.com/quran/muhammad_patel/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mohammad Al-Tablawi",
+  "url": "https://download.quranicaudio.com/quran/mohammad_altablawi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.998,
+    0.988
+   ],
+   "1045": [
+    0.631,
+    0.488
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mohammad Ismaeel Al-Muqaddim",
+  "url": "https://download.quranicaudio.com/quran/mohammad_ismaeel_almuqaddim/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Imad Zuhair Hafez",
+  "url": "https://download.quranicaudio.com/quran/imad_zuhair_hafez/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1432",
+  "url": "https://download.quranicaudio.com/quran/makkah_1432/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mishari al-`Afasy - Taraweeh 1430",
+  "url": "https://download.quranicaudio.com/quran/mishaari_california/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid - Taraweeh 1433",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/taraweeh1433/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Yasser ad-Dussary",
+  "url": "https://download.quranicaudio.com/quran/yasser_ad-dussary/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1433",
+  "url": "https://download.quranicaudio.com/quran/makkah_1433/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1429",
+  "url": "https://download.quranicaudio.com/quran/madinah_1429/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1430",
+  "url": "https://download.quranicaudio.com/quran/madinah_1430/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1432",
+  "url": "https://download.quranicaudio.com/quran/madinah_1432/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1433",
+  "url": "https://download.quranicaudio.com/quran/madinah_1433/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ibrahim Al Akhdar",
+  "url": "https://download.quranicaudio.com/quran/ibrahim_al_akhdar/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Nasser Al Qatami",
+  "url": "https://download.quranicaudio.com/quran/nasser_bin_ali_alqatami/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Nasser Al-Qatami",
+  "scores": {
+   "1002": [
+    0.97,
+    0.989
+   ]
+  },
+  "same_as": [
+   "1002"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Khalid Al Ghamdi",
+  "url": "https://download.quranicaudio.com/quran/khalid_alghamdi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Sa'd Al-Ghamdi",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulKareem Al Hazmi",
+  "url": "https://download.quranicaudio.com/quran/abdulkareem_al_hazmi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.532,
+    0.79
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Ayyoob [Taraweeh]",
+  "url": "https://download.quranicaudio.com/quran/muhammad_ayyoob_hq/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdul-Mun'im Abdul-Mubdi'",
+  "url": "https://download.quranicaudio.com/quran/abdulmun3im_abdulmubdi2/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [Abi al-Haarith an al-Kasaa'ee]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_abi_al7arith/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [ad-Doori an Abi Amr]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_doori/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [Shu'bah an Asim]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_shu3ba/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ahmad al-Huthaify",
+  "url": "https://download.quranicaudio.com/quran/ahmad_alhuthayfi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ali al-Huthaify [Qaloon]",
+  "url": "https://download.quranicaudio.com/quran/huthayfi_qaloon/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abu Bakr al-Shatri [Taraweeh]",
+  "url": "https://download.quranicaudio.com/quran/abu_bakr_ash-shatri_tarawee7/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.454,
+    0.832
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Idrees Abkar",
+  "url": "https://download.quranicaudio.com/quran/idrees_abkar/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Idrees Abkar",
+  "scores": {
+   "1028": [
+    0.987,
+    0.997
+   ]
+  },
+  "same_as": [
+   "1028"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Bandar Baleela",
+  "url": "https://download.quranicaudio.com/quran/bandar_baleela/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Bandar Baleela",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Masjid Quba Taraweeh 1434",
+  "url": "https://download.quranicaudio.com/quran/masjid_quba_1434/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad Khaleel",
+  "url": "https://download.quranicaudio.com/quran/muhammad_khaleel/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1434",
+  "url": "https://download.quranicaudio.com/quran/makkah_1434/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Muhammad al-Mehysni - Taraweeh 1435",
+  "url": "https://download.quranicaudio.com/quran/muhaisny_1435/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khaleel Al-Husary",
+  "url": "https://download.quranicaudio.com/quran/mahmood_khaleel_al-husaree_iza3a/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.58,
+    0.646
+   ],
+   "12": [
+    0.69,
+    0.949
+   ],
+   "1016": [
+    0.48,
+    0.709
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1435",
+  "url": "https://download.quranicaudio.com/quran/madinah_1435/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Matroud",
+  "url": "https://download.quranicaudio.com/quran/abdullah_matroud/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdullah Al-Matroud",
+  "scores": {
+   "1014": [
+    0.965,
+    0.982
+   ]
+  },
+  "same_as": [
+   "1014"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "AbdulWadood Haneef",
+  "url": "https://download.quranicaudio.com/quran/abdul_wadood_haneef_rare/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ahmad Nauina",
+  "url": "https://download.quranicaudio.com/quran/ahmad_nauina/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Akram Al-Alaqmi",
+  "url": "https://download.quranicaudio.com/quran/akram_al_alaqmi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ali Hajjaj Alsouasi",
+  "url": "https://download.quranicaudio.com/quran/ali_hajjaj_alsouasi/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmood Ali Al-Bana",
+  "url": "https://download.quranicaudio.com/quran/mahmood_ali_albana/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Wadee Hammadi Al Yamani",
+  "url": "https://download.quranicaudio.com/quran/wadee_hammadi_al-yamani/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1435",
+  "url": "https://download.quranicaudio.com/quran/makkah_1435/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1436",
+  "url": "https://download.quranicaudio.com/quran/makkah_1436/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1437",
+  "url": "https://download.quranicaudio.com/quran/makkah_1437/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Asim Abdul Aleem",
+  "url": "https://download.quranicaudio.com/quran/asim_abdulaleem/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdallah Abdal",
+  "url": "https://download.quranicaudio.com/quran/abdallah_abdal/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdur-Rashid Sufi [Soosi, 2020]",
+  "url": "https://download.quranicaudio.com/quran/abdurrashid_sufi_soosi_2020/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Adel Kalbani",
+  "url": "https://download.quranicaudio.com/quran/adel_kalbani_1437/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid - Taraweeh 1430",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/taraweeh1430/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Hatem Farid - Taraweeh 1434",
+  "url": "https://download.quranicaudio.com/quran/hatem_farid/taraweeh1434/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khaleel Al-Husary (Muallam)",
+  "url": "https://download.quranicaudio.com/quran/husary_muallim/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.503,
+    0.696
+   ],
+   "12": [
+    0.986,
+    0.999
+   ],
+   "1016": [
+    0.426,
+    0.698
+   ]
+  },
+  "same_as": [
+   "12"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khaleel Al-Husary (with Children)",
+  "url": "https://download.quranicaudio.com/quran/husary_muallim_kids_repeat/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.552,
+    0.715
+   ],
+   "12": [
+    0.876,
+    0.97
+   ],
+   "1016": [
+    0.495,
+    0.673
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1434",
+  "url": "https://download.quranicaudio.com/quran/madinah_1434/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1436",
+  "url": "https://download.quranicaudio.com/quran/madinah_1436/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1437",
+  "url": "https://download.quranicaudio.com/quran/madinah_1437/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1439",
+  "url": "https://download.quranicaudio.com/quran/madinah_1439/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1440",
+  "url": "https://download.quranicaudio.com/quran/madinah_1440/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1441",
+  "url": "https://download.quranicaudio.com/quran/madinah_1441/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1442",
+  "url": "https://download.quranicaudio.com/quran/madinah_1442/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1438",
+  "url": "https://download.quranicaudio.com/quran/makkah_1438/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1439",
+  "url": "https://download.quranicaudio.com/quran/makkah_1439/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1440",
+  "url": "https://download.quranicaudio.com/quran/makkah_1440/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1441",
+  "url": "https://download.quranicaudio.com/quran/makkah_1441/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1442",
+  "url": "https://download.quranicaudio.com/quran/makkah_1442/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Noreen Siddiq [ad-Doori an Abi Amr]",
+  "url": "https://download.quranicaudio.com/quran/noreen_siddiq/",
+  "section": 3,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sa`ud ash-Shuraym [older recitation]",
+  "url": "https://download.quranicaudio.com/quran/sa3ood_al-shuraym/older/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Sudais and Shuraym [older recitation]",
+  "url": "https://download.quranicaudio.com/quran/sodais_and_shuraim/older/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.447,
+    0.631
+   ],
+   "1038": [
+    0.916,
+    0.914
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdullah Ali Jabir",
+  "url": "https://download.quranicaudio.com/quran/ali_jaber/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Maher al-Muaiqly",
+  "url": "https://download.quranicaudio.com/quran/maher_almu3aiqly/year1440/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "1001": [
+    0.52,
+    0.755
+   ],
+   "1042": [
+    0.988,
+    1.0
+   ],
+   "1043": [
+    0.59,
+    0.77
+   ]
+  },
+  "same_as": [
+   "1042"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Bandar Baleela",
+  "url": "https://download.quranicaudio.com/quran/bandar_baleela/complete/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Bandar Baleela",
+  "scores": {
+   "1031": [
+    0.995,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1031"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Khalifah Taniji",
+  "url": "https://download.quranicaudio.com/quran/khalifah_taniji/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdulrahman al-Shahat",
+  "url": "https://download.quranicaudio.com/quran/abdulrahman_al_shahat/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Abdulaziz bin Saleh al-Zahrani",
+  "url": "https://download.quranicaudio.com/quran/abdulaziz_bin_saleh_alzahrani/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Mahmoud Khaleel Al-Husary [Mujawwad]",
+  "url": "https://download.quranicaudio.com/quran/generated/husary_mujawwad/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.69,
+    0.845
+   ],
+   "12": [
+    0.555,
+    0.874
+   ],
+   "1016": [
+    1.0,
+    0.988
+   ]
+  },
+  "same_as": [
+   "1016"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ibrahim Walk",
+  "url": "https://download.quranicaudio.com/quran/ibrahim_walk/",
+  "section": 4,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Alijon Qari",
+  "url": "https://download.quranicaudio.com/quran/alijon_qari/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Badr Al Turki",
+  "url": "https://download.quranicaudio.com/quran/badr_al_turki/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Raad Mohammad al-Kurdi",
+  "url": "https://download.quranicaudio.com/quran/raad_mohammad_al_kurdi/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Raad Al-Kurdi",
+  "scores": {
+   "1029": [
+    0.953,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1029"
+  ]
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Peshawa Qadir al-Kurdi",
+  "url": "https://download.quranicaudio.com/quran/peshawa_qadir_al-kurdi/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": "Raad Al-Kurdi",
+  "scores": {
+   "1029": [
+    0.507,
+    0.895
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Farman Shawani",
+  "url": "https://download.quranicaudio.com/quran/farman_shawani/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1443",
+  "url": "https://download.quranicaudio.com/quran/madinah_1443/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1444",
+  "url": "https://download.quranicaudio.com/quran/madinah_1444/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1445",
+  "url": "https://download.quranicaudio.com/quran/madinah_1445/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1446",
+  "url": "https://download.quranicaudio.com/quran/madinah_1446/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1443",
+  "url": "https://download.quranicaudio.com/quran/makkah_1443/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1444",
+  "url": "https://download.quranicaudio.com/quran/makkah_1444/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1445",
+  "url": "https://download.quranicaudio.com/quran/makkah_1445/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1446",
+  "url": "https://download.quranicaudio.com/quran/makkah_1446/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Makkah Taraweeh 1447",
+  "url": "https://download.quranicaudio.com/quran/makkah_1447/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Madinah Taraweeh 1447",
+  "url": "https://download.quranicaudio.com/quran/madinah_1447/mp3/",
+  "section": 2,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "quranicaudio",
+  "title": "Ahmad Tahoun",
+  "url": "https://download.quranicaudio.com/quran/ahmad_tahoun/mp3/",
+  "section": 1,
+  "licence": "quranicaudio.com (free use)",
+  "reciter": null
+ },
+ {
+  "source": "archive.org",
+  "title": "القرآن الكريم كاملا - الشيخ مشاري راشد العفاسي - مرتل | Full Quran - Mishary Rashid Alafasy - Murattal (Hafs) MP3",
+  "item": "quran-mishary-alafasy-murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran-mishary-alafasy-murattal/113.mp3",
+   "114": "https://archive.org/download/quran-mishary-alafasy-murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mishary Rashid Alafasy",
+  "reciter": "Mishary Rashid Alafasy",
+  "scores": {
+   "7": [
+    0.537,
+    0.857
+   ],
+   "173": [
+    0.537,
+    0.857
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Mishary Rashid Alafasy - الشيخ مشاري راشد العفاسي",
+  "item": "gpsarab.com_3",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/gpsarab.com_3/113.mp3",
+   "114": "https://archive.org/download/gpsarab.com_3/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mishary Rashid Alafasy",
+  "reciter": "Mishary Rashid Alafasy",
+  "scores": {
+   "7": [
+    0.542,
+    0.855
+   ],
+   "173": [
+    0.542,
+    0.855
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran - Mishary Rashid Alafasy & Rasim Balayev - Alikhan Musayev",
+  "item": "QuranAlafasyRasimBalayev",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranAlafasyRasimBalayev/113.mp3",
+   "114": "https://archive.org/download/QuranAlafasyRasimBalayev/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mishary Rashid Alafasy",
+  "reciter": "Mishary Rashid Alafasy",
+  "scores": {
+   "7": [
+    0.984,
+    0.982
+   ],
+   "173": [
+    0.984,
+    0.982
+   ]
+  },
+  "same_as": [
+   "7",
+   "173"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "[MP3] 🎧 Quran Recitation by Shaykh Mishary Rashid Alafasy (رحمه الله)",
+  "item": "quran-tilawah-mishary-rashid-alafasy",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran-tilawah-mishary-rashid-alafasy/113.mp3",
+   "114": "https://archive.org/download/quran-tilawah-mishary-rashid-alafasy/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mishary Rashid Alafasy",
+  "reciter": "Mishary Rashid Alafasy",
+  "scores": {
+   "7": [
+    0.542,
+    0.855
+   ],
+   "173": [
+    0.542,
+    0.855
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Abdur-Rahman As-Sudais old version",
+  "item": "sheikh-abdur-rahman-as-sudais-old-version",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/sheikh-abdur-rahman-as-sudais-old-version/113.mp3",
+   "114": "https://archive.org/download/sheikh-abdur-rahman-as-sudais-old-version/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.961,
+    0.929
+   ],
+   "1038": [
+    0.554,
+    0.739
+   ]
+  },
+  "same_as": [
+   "3"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Abdul Rahman Al-Sudais (murattal, Hafs)",
+  "item": "quranpro-abdurrahman-as-sudais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-abdurrahman-as-sudais/113.mp3",
+   "114": "https://archive.org/download/quranpro-abdurrahman-as-sudais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.438,
+    0.655
+   ],
+   "1038": [
+    1.0,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل للقارئ الشيخ عبد الرحمن السديس - The Holy Quran Recited by Sheikh Abdul Rahman Al-Sudais",
+  "item": "Abdulrahman_Alsudais_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdulrahman_Alsudais_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/Abdulrahman_Alsudais_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 111,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.439,
+    0.654
+   ],
+   "1038": [
+    0.98,
+    0.995
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdur Rahman as-Sudais",
+  "item": "smsbilal_gmail_002_20180724_1040",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180724_1040/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180724_1040/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.97,
+    0.941
+   ],
+   "1038": [
+    0.56,
+    0.741
+   ]
+  },
+  "same_as": [
+   "3"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdul Rahman Al Sudais",
+  "item": "002_20220131_20220131_1709",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20220131_20220131_1709/113.mp3",
+   "114": "https://archive.org/download/002_20220131_20220131_1709/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.439,
+    0.654
+   ],
+   "1038": [
+    0.98,
+    0.995
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdur-Rahman as-Sudais Quran Recitation",
+  "item": "002_20240827",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20240827/113.mp3",
+   "114": "https://archive.org/download/002_20240827/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.439,
+    0.654
+   ],
+   "1038": [
+    0.98,
+    0.995
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdur Rahman As-Sudais",
+  "item": "AbdurRahmanAs-Sudais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdurRahmanAs-Sudais/113.mp3",
+   "114": "https://archive.org/download/AbdurRahmanAs-Sudais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.446,
+    0.653
+   ],
+   "1038": [
+    0.979,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1038"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Al-Quranul Karim - Sheikh Abdur-Rahman as-Sudais",
+  "item": "al-quranul-karim-sheikh-abdur-rahman-as-sudais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/al-quranul-karim-sheikh-abdur-rahman-as-sudais/113.mp3",
+   "114": "https://archive.org/download/al-quranul-karim-sheikh-abdur-rahman-as-sudais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.97,
+    0.941
+   ],
+   "1038": [
+    0.56,
+    0.741
+   ]
+  },
+  "same_as": [
+   "3"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Tilawah 30 Juz Abdur-Rahman as-Sudais",
+  "item": "Tilawah_30Juz_Abdur-Rahman_as-Sudais",
+  "licence": "http://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/Tilawah_30Juz_Abdur-Rahman_as-Sudais/113.mp3",
+   "114": "https://archive.org/download/Tilawah_30Juz_Abdur-Rahman_as-Sudais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdur-Rahman as-Sudais",
+  "reciter": "Abdur-Rahman as-Sudais",
+  "scores": {
+   "3": [
+    0.97,
+    0.941
+   ],
+   "1038": [
+    0.56,
+    0.741
+   ]
+  },
+  "same_as": [
+   "3"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Saud Ash-Shuraim",
+  "item": "SaudAsh-Shuraim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SaudAsh-Shuraim/113.mp3",
+   "114": "https://archive.org/download/SaudAsh-Shuraim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sa'ud ash-Shuraim",
+  "reciter": "Sa'ud ash-Shuraim",
+  "scores": {
+   "10": [
+    0.646,
+    0.559
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Sa'ud Ash-Shuraim",
+  "item": "SheikhSaudAsh-Shuraim_201905",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SheikhSaudAsh-Shuraim_201905/113.mp3",
+   "114": "https://archive.org/download/SheikhSaudAsh-Shuraim_201905/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sa'ud ash-Shuraim",
+  "reciter": "Sa'ud ash-Shuraim",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Ash-Shuraim (1 - 114)",
+  "item": "shuraim_20140604",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/shuraim_20140604/113.mp3",
+   "114": "https://archive.org/download/shuraim_20140604/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sa'ud ash-Shuraim",
+  "reciter": "Sa'ud ash-Shuraim",
+  "scores": {
+   "10": [
+    0.97,
+    0.984
+   ]
+  },
+  "same_as": [
+   "10"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Mahmoud Khalil Al-Husary (muallim (teaching), Hafs)",
+  "item": "quranpro-mahmoud-al-husary-muallim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-mahmoud-al-husary-muallim/113.mp3",
+   "114": "https://archive.org/download/quranpro-mahmoud-al-husary-muallim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.503,
+    0.696
+   ],
+   "12": [
+    0.986,
+    0.999
+   ],
+   "1016": [
+    0.426,
+    0.698
+   ]
+  },
+  "same_as": [
+   "12"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Mahmoud Khalil Al-Husary (murattal, Hafs)",
+  "item": "quranpro-mahmoud-al-husary-murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-mahmoud-al-husary-murattal/113.mp3",
+   "114": "https://archive.org/download/quranpro-mahmoud-al-husary-murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    1.0,
+    0.989
+   ],
+   "12": [
+    0.595,
+    0.868
+   ],
+   "1016": [
+    0.552,
+    0.805
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary",
+  "item": "Mahmoud-Khalil-Al-Husary",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mahmoud-Khalil-Al-Husary/113.mp3",
+   "114": "https://archive.org/download/Mahmoud-Khalil-Al-Husary/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.997,
+    1.0
+   ],
+   "12": [
+    0.591,
+    0.868
+   ],
+   "1016": [
+    0.549,
+    0.812
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Shaykh Mahmoud Khalil al-Husary/Mujawwad",
+  "item": "ShaykhMahmoudKhalilAl-husaryMujawwad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/ShaykhMahmoudKhalilAl-husaryMujawwad/113.mp3",
+   "114": "https://archive.org/download/ShaykhMahmoudKhalilAl-husaryMujawwad/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.678,
+    0.852
+   ],
+   "12": [
+    0.576,
+    0.875
+   ],
+   "1016": [
+    0.994,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1016"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "القرآن الكريم كاملا - الشيخ محمود خليل الحصري - مرتل | Full Quran - Mahmoud Khalil Al-Husary - Murattal (Hafs) MP3",
+  "item": "quran-mahmoud-khalil-alhusary-murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran-mahmoud-khalil-alhusary-murattal/113.mp3",
+   "114": "https://archive.org/download/quran-mahmoud-khalil-alhusary-murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.98,
+    0.987
+   ],
+   "12": [
+    0.589,
+    0.868
+   ],
+   "1016": [
+    0.551,
+    0.804
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Tamil Quran Audio | Mahmoud Khalil Al-Husary & Muhammed Ismail Imdadi | IFT Translation",
+  "item": "al-husary-ismail-imdadi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/al-husary-ismail-imdadi/sura-113.mp3",
+   "114": "https://archive.org/download/al-husary-ismail-imdadi/sura-114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.973,
+    0.984
+   ],
+   "12": [
+    0.614,
+    0.871
+   ],
+   "1016": [
+    0.588,
+    0.778
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary versi Doori",
+  "item": "persurah51_201907",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/persurah51_201907/113.mp3",
+   "114": "https://archive.org/download/persurah51_201907/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.728,
+    0.742
+   ],
+   "12": [
+    0.562,
+    0.908
+   ],
+   "1016": [
+    0.494,
+    0.791
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary - Quran, Murattal (mp3 128 kbps)",
+  "item": "dalail-quran-husary",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/dalail-quran-husary/audio/husary/113.mp3",
+   "114": "https://archive.org/download/dalail-quran-husary/audio/husary/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Tilawah Mahmoud Khalil Al-Husary",
+  "item": "tilawah-mahmoud-khalil-al-husary",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/tilawah-mahmoud-khalil-al-husary/mahmoud-khalil-al-husary-surah-113.mp3",
+   "114": "https://archive.org/download/tilawah-mahmoud-khalil-al-husary/mahmoud-khalil-al-husary-surah-114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.58,
+    0.646
+   ],
+   "12": [
+    0.69,
+    0.949
+   ],
+   "1016": [
+    0.48,
+    0.709
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary",
+  "item": "MahmoudKhalilAl-Husary_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MahmoudKhalilAl-Husary_201712/113.mp3",
+   "114": "https://archive.org/download/MahmoudKhalilAl-Husary_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.997,
+    0.998
+   ],
+   "12": [
+    0.591,
+    0.868
+   ],
+   "1016": [
+    0.546,
+    0.813
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary",
+  "item": "MahmoudKhalilAl-Husary_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MahmoudKhalilAl-Husary_201801/113.mp3",
+   "114": "https://archive.org/download/MahmoudKhalilAl-Husary_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.993,
+    0.998
+   ],
+   "12": [
+    0.586,
+    0.868
+   ],
+   "1016": [
+    0.547,
+    0.811
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud-Khalil-Al-Husary-Murattal",
+  "item": "quranq7",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/quranq7/113.mp3",
+   "114": "https://archive.org/download/quranq7/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    1.0,
+    0.989
+   ],
+   "12": [
+    0.595,
+    0.868
+   ],
+   "1016": [
+    0.552,
+    0.805
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary [Doori]",
+  "item": "mahmoud-khalil-al-husary-doori_202408",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/mahmoud-khalil-al-husary-doori_202408/113.mp3",
+   "114": "https://archive.org/download/mahmoud-khalil-al-husary-doori_202408/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.728,
+    0.742
+   ],
+   "12": [
+    0.562,
+    0.908
+   ],
+   "1016": [
+    0.494,
+    0.791
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Recitation - Mahmoud Khalil Al-Husary - Complete Surahs",
+  "item": "aldiaa-quran-husary",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/aldiaa-quran-husary/113.mp3",
+   "114": "https://archive.org/download/aldiaa-quran-husary/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.997,
+    1.0
+   ],
+   "12": [
+    0.591,
+    0.868
+   ],
+   "1016": [
+    0.549,
+    0.812
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil al-Husary [Doori]",
+  "item": "smsbilal_gmail_002_20180719",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180719/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180719/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.728,
+    0.742
+   ],
+   "12": [
+    0.562,
+    0.908
+   ],
+   "1016": [
+    0.494,
+    0.791
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Shaykh Mahmoud Khalil al-Husary / Murattal / Egypt Radio Version",
+  "item": "MahmoudKhalilAl-husary",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MahmoudKhalilAl-husary/113.mp3",
+   "114": "https://archive.org/download/MahmoudKhalilAl-husary/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.58,
+    0.646
+   ],
+   "12": [
+    0.69,
+    0.949
+   ],
+   "1016": [
+    0.48,
+    0.709
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary - Quran, Murattal (FLAC)",
+  "item": "dalail-quran-husary-flac",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/dalail-quran-husary-flac/audio/husary-flac/113.mp3",
+   "114": "https://archive.org/download/dalail-quran-husary-flac/audio/husary-flac/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.983,
+    0.985
+   ],
+   "12": [
+    0.588,
+    0.868
+   ],
+   "1016": [
+    0.551,
+    0.804
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary",
+  "item": "PerSurah51",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah51/113.mp3",
+   "114": "https://archive.org/download/PerSurah51/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.997,
+    1.0
+   ],
+   "12": [
+    0.591,
+    0.868
+   ],
+   "1016": [
+    0.549,
+    0.812
+   ]
+  },
+  "same_as": [
+   "6"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud Khalil Al-Husary [Doori]",
+  "item": "Mahmoud-Khalil-Al-Husary-Doori",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mahmoud-Khalil-Al-Husary-Doori/113.mp3",
+   "114": "https://archive.org/download/Mahmoud-Khalil-Al-Husary-Doori/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.728,
+    0.742
+   ],
+   "12": [
+    0.562,
+    0.908
+   ],
+   "1016": [
+    0.494,
+    0.791
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mahmoud-Khalil-Al-Husary-Muallim",
+  "item": "quranq17",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/quranq17/113.mp3",
+   "114": "https://archive.org/download/quranq17/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mahmoud Khalil Al-Husary",
+  "reciter": "Mahmoud Khalil Al-Husary",
+  "scores": {
+   "6": [
+    0.503
+   ],
+   "12": [
+    0.986
+   ],
+   "1016": [
+    0.426
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "torrent---mp3quran----114--sora--80kb----mushaf------quran----by-AbdulBaset AbdulSamad with Naeem Sultan [Pickthall Translation](ENGLISH)",
+  "item": "torrent---mp3quran----114--sora--80kb----mushaf------quran----by-AbdulBaset_31",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/torrent---mp3quran----114--sora--80kb----mushaf------quran----by-AbdulBaset_31/113.mp3",
+   "114": "https://archive.org/download/torrent---mp3quran----114--sora--80kb----mushaf------quran----by-AbdulBaset_31/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran kareem القرآن الكريم AbdulBaset AbdulSamad عبد الباسط عبد الصمد",
+  "item": "TheHolyQuranAbdulbaset_abdulsamad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/TheHolyQuranAbdulbaset_abdulsamad/113.mp3",
+   "114": "https://archive.org/download/TheHolyQuranAbdulbaset_abdulsamad/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.966,
+    0.999
+   ],
+   "1": [
+    0.453,
+    0.575
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran\\[Quran] AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation] [192Kbps]",
+  "item": "QuranQuranAbdulBasetAbdulSamadWithIbrahimWalkSaheehIntlTranslation192Kbps_002",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranQuranAbdulBasetAbdulSamadWithIbrahimWalkSaheehIntlTranslation192Kbps_002/113.mp3",
+   "114": "https://archive.org/download/QuranQuranAbdulBasetAbdulSamadWithIbrahimWalkSaheehIntlTranslation192Kbps_002/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad Recitation with Naeem Sultan Pickthall English Translation",
+  "item": "Abdulbaset_abdulsamad_with_naeem_sultan_pickthallTranslation_mp3_quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdulbaset_abdulsamad_with_naeem_sultan_pickthallTranslation_mp3_quran/113.mp3",
+   "114": "https://archive.org/download/Abdulbaset_abdulsamad_with_naeem_sultan_pickthallTranslation_mp3_quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran kareem القرآن الكريم AbdulBaset AbdulSamad عبد الباسط عبد الصمد",
+  "item": "QuranKareemAbdulbasetAbdulsamad_193",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranKareemAbdulbasetAbdulsamad_193/113.mp3",
+   "114": "https://archive.org/download/QuranKareemAbdulbasetAbdulsamad_193/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.966,
+    0.999
+   ],
+   "1": [
+    0.453,
+    0.575
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quranicaudio.com-torrent------direct--mp3--quran--Quran] AbdulBaset AbdulSamad with Naeem Sultan [Pickthall Translation] [80Kbps].torrent",
+  "item": "Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbasetAbdulsamad_793",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbasetAbdulsamad_793/113.mp3",
+   "114": "https://archive.org/download/Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbasetAbdulsamad_793/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Kareem Abdulbaset abdulsamad",
+  "item": "QuranKareemAbdulbasetAbdulsamad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranKareemAbdulbasetAbdulsamad/113.mp3",
+   "114": "https://archive.org/download/QuranKareemAbdulbasetAbdulsamad/114.mp3"
+  },
+  "n_mp3": 112,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.966,
+    0.999
+   ],
+   "1": [
+    0.453,
+    0.575
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "QURAN MUSHAF ALTAGWEED+AbdulBaset_AbdulSamad_with_Naeem_Sultan_[Pickthall Translation]_(MP3_Quran)",
+  "item": "AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation----MP3---Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation----MP3---Quran/113.mp3",
+   "114": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation----MP3---Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Shaikh AbdulBaset AbdulSamad [English]",
+  "item": "QuranInEnglish",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranInEnglish/113.mp3",
+   "114": "https://archive.org/download/QuranInEnglish/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation]",
+  "item": "abdulbaset-abdulsamad-with-ibrahim-walk-saheeh-intl-translation",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulbaset-abdulsamad-with-ibrahim-walk-saheeh-intl-translation/113.mp3",
+   "114": "https://archive.org/download/abdulbaset-abdulsamad-with-ibrahim-walk-saheeh-intl-translation/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "full quran mogawad by abdulbaset abdulsamad mixed translation english pickthall by na3eem sultan 32kb",
+  "item": "csiy2018_gmail_002_201807",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/csiy2018_gmail_002_201807/113.mp3",
+   "114": "https://archive.org/download/csiy2018_gmail_002_201807/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.504,
+    0.781
+   ],
+   "1": [
+    0.41,
+    0.729
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Abdulbaset-Abdulsamad",
+  "item": "KL-Abdulbaset-Abdulsamad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Abdulbaset-Abdulsamad/113.mp3",
+   "114": "https://archive.org/download/KL-Abdulbaset-Abdulsamad/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad [Murattal]",
+  "item": "AbdulBasetAbdulSamad-Murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulBasetAbdulSamad-Murattal/113.mp3",
+   "114": "https://archive.org/download/AbdulBasetAbdulSamad-Murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.987,
+    0.638
+   ],
+   "1": [
+    0.4,
+    0.425
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset_AbdulSamad_with_Ibrahim_Walk_[Saheeh Intl Translation]_(MP3_Quran)",
+  "item": "AbdulBaset_AbdulSamad_with_Ibrahim_Walk_SaheehIntlTranslation_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Ibrahim_Walk_SaheehIntlTranslation_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Ibrahim_Walk_SaheehIntlTranslation_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset_AbdulSamad_with_Naeem_Sultan_[Pickthall Translation]_(MP3_Quran)",
+  "item": "AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation_MP3_Quran_201905",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation_MP3_Quran_201905/113.mp3",
+   "114": "https://archive.org/download/AbdulBaset_AbdulSamad_with_Naeem_Sultan_PickthallTranslation_MP3_Quran_201905/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad with Ibrahim Walk (English Quran )",
+  "item": "AbdulbasetAbdulsamadWithIbrahimWalkenglishQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulbasetAbdulsamadWithIbrahimWalkenglishQuran/113.mp3",
+   "114": "https://archive.org/download/AbdulbasetAbdulsamadWithIbrahimWalkenglishQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "torrent---mp3quran----114--sora--192kb----mushaf------quran----by-AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation(ENGLISH)]",
+  "item": "torrent---mp3quran----114--sora--192kb----mushaf------quran----by-AbdulBaset_526",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/torrent---mp3quran----114--sora--192kb----mushaf------quran----by-AbdulBaset_526/113.mp3",
+   "114": "https://archive.org/download/torrent---mp3quran----114--sora--192kb----mushaf------quran----by-AbdulBaset_526/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset_Mohammad_AbdulSamad",
+  "item": "AbdulBaset_Mohammad_AbdulSamad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulBaset_Mohammad_AbdulSamad/113.mp3",
+   "114": "https://archive.org/download/AbdulBaset_Mohammad_AbdulSamad/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.987,
+    0.997
+   ],
+   "1": [
+    0.455,
+    0.574
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad with Naeem Sultan [Pickthall Translation]",
+  "item": "abdulbaset-abdulsamad-with-naeem-sultan-pickthall-translation",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulbaset-abdulsamad-with-naeem-sultan-pickthall-translation/113.mp3",
+   "114": "https://archive.org/download/abdulbaset-abdulsamad-with-naeem-sultan-pickthall-translation/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.499,
+    0.782
+   ],
+   "1": [
+    0.409,
+    0.728
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quranicaudio.com-torrent------direct--mp3--quran--/[Quran] AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation] [192Kbps].torrent",
+  "item": "Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbaset_778",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbaset_778/113.mp3",
+   "114": "https://archive.org/download/Quranicaudio.com-torrent------direct--mp3--quran--quranAbdulbaset_778/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Khawagah_AbdulBaset_AbdulSamad_Quran_Kareem_Khawagah",
+  "item": "Khawagah_AbdulBaset_AbdulSamad_Quran_Kareem_Khawagah_201802",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khawagah_AbdulBaset_AbdulSamad_Quran_Kareem_Khawagah_201802/113.mp3",
+   "114": "https://archive.org/download/Khawagah_AbdulBaset_AbdulSamad_Quran_Kareem_Khawagah_201802/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.966,
+    0.999
+   ],
+   "1": [
+    0.453,
+    0.575
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset_AbdulSamad_m_vbr_mp3",
+  "item": "nordarby_20151007_1920",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151007_1920/113.mp3",
+   "114": "https://archive.org/download/nordarby_20151007_1920/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.515,
+    0.825
+   ],
+   "1": [
+    0.991,
+    0.979
+   ]
+  },
+  "same_as": [
+   "1"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad, Ibrahim Walk-el-moslem.com-عبد الباسط عبد الصمد مع ترجمة إبراهيم والك",
+  "item": "abdulbasit-w-ibrahim_walk-el-moslem.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulbasit-w-ibrahim_walk-el-moslem.com/113.mp3",
+   "114": "https://archive.org/download/abdulbasit-w-ibrahim_walk-el-moslem.com/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset-AbdulSamad-Murattal",
+  "item": "quranq5",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/quranq5/113.mp3",
+   "114": "https://archive.org/download/quranq5/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.995,
+    0.992
+   ],
+   "1": [
+    0.458,
+    0.573
+   ]
+  },
+  "same_as": [
+   "2"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset-AbdulSamad-Mujawwad",
+  "item": "quranq6",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/quranq6/113.mp3",
+   "114": "https://archive.org/download/quranq6/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.509,
+    0.828
+   ],
+   "1": [
+    0.985,
+    0.995
+   ]
+  },
+  "same_as": [
+   "1"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad [Warsh]",
+  "item": "abdulbaset-abdulsamad-warsh",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulbaset-abdulsamad-warsh/113.mp3",
+   "114": "https://archive.org/download/abdulbaset-abdulsamad-warsh/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.782,
+    0.779
+   ],
+   "1": [
+    0.471,
+    0.592
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulBaset AbdulSamad with Ibrahim Walk [Saheeh Intl Translation]",
+  "item": "smsbilal_gmail_002_20180723",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180723/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180723/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "AbdulBaset AbdulSamad",
+  "reciter": "AbdulBaset AbdulSamad",
+  "scores": {
+   "2": [
+    0.478,
+    0.82
+   ],
+   "1": [
+    0.904,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed_Siddiq_Al-Minshawi_(MP3_Quran)",
+  "item": "mohammed_siddiq_al-minshawi_mp3_quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/mohammed_siddiq_al-minshawi_mp3_quran/113.mp3",
+   "114": "https://archive.org/download/mohammed_siddiq_al-minshawi_mp3_quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Siddiq Al-Minshawi Musshaf",
+  "item": "002_20260926_202609",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20260926_202609/113.mp3",
+   "114": "https://archive.org/download/002_20260926_202609/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل النادر للشيخ محمد صديق المنشاوي - نسخة الإذاعة المصرية كاملة",
+  "item": "002_20260605",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/002_20260605/113.mp3",
+   "114": "https://archive.org/download/002_20260605/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.923,
+    0.958
+   ],
+   "1017": [
+    0.611,
+    0.509
+   ],
+   "1044": [
+    0.503,
+    0.943
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Siddiq al-Minshawi",
+  "item": "PerSurah63",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah63/113.mp3",
+   "114": "https://archive.org/download/PerSurah63/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed_Siddiq_Al-Minshawi",
+  "item": "Mohammed_Siddiq_Al-Minshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammed_Siddiq_Al-Minshawi/113.mp3",
+   "114": "https://archive.org/download/Mohammed_Siddiq_Al-Minshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Surah 1 - Mohamed Siddiq Al-Minshawi",
+  "item": "qurantvapp-minshawi-hafs-1387",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/qurantvapp-minshawi-hafs-1387/113.mp3",
+   "114": "https://archive.org/download/qurantvapp-minshawi-hafs-1387/114.mp3"
+  },
+  "n_mp3": 108,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.833,
+    0.944
+   ],
+   "1017": [
+    0.637,
+    0.533
+   ],
+   "1044": [
+    0.518,
+    0.947
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Siddiq al-Minshawi",
+  "item": "MuhammadSiddiqAl-Minshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhammadSiddiqAl-Minshawi/113.mp3",
+   "114": "https://archive.org/download/MuhammadSiddiqAl-Minshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Islamhome.info_Mohammed_Siddiq_Al-Minshawi",
+  "item": "Islamhome.info_Mohammed_Siddiq_Al-Minshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Islamhome.info_Mohammed_Siddiq_Al-Minshawi/113.mp3",
+   "114": "https://archive.org/download/Islamhome.info_Mohammed_Siddiq_Al-Minshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.967,
+    0.993
+   ],
+   "1017": [
+    0.683,
+    0.507
+   ],
+   "1044": [
+    0.493,
+    0.94
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohamed Siddiq El Minshawi",
+  "item": "2_20191208_20191208_0339",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/2_20191208_20191208_0339/113.mp3",
+   "114": "https://archive.org/download/2_20191208_20191208_0339/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.979,
+    0.995
+   ],
+   "1017": [
+    0.674,
+    0.506
+   ],
+   "1044": [
+    0.487,
+    0.94
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed_Siddiq_AlMinshawi_alro7_net",
+  "item": "Mohammed_Siddiq_AlMinshawi_alro7_net",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammed_Siddiq_AlMinshawi_alro7_net/113.mp3",
+   "114": "https://archive.org/download/Mohammed_Siddiq_AlMinshawi_alro7_net/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.967,
+    0.993
+   ],
+   "1017": [
+    0.683,
+    0.507
+   ],
+   "1044": [
+    0.493,
+    0.94
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Siddiq al-Minshawi",
+  "item": "MuhammadSiddiqAl-Minshawi_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhammadSiddiqAl-Minshawi_201801/113.mp3",
+   "114": "https://archive.org/download/MuhammadSiddiqAl-Minshawi_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.523,
+    0.764
+   ],
+   "1017": [
+    0.988,
+    0.988
+   ],
+   "1044": [
+    0.744,
+    0.729
+   ]
+  },
+  "same_as": [
+   "1017"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Recitation - Mohamed Siddiq El-Minshawi - Complete Surahs",
+  "item": "aldiaa-quran-minshawy",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/aldiaa-quran-minshawy/113.mp3",
+   "114": "https://archive.org/download/aldiaa-quran-minshawy/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Siddiq al-Minshawi",
+  "item": "MuhammadSiddiqAl-Minshawi_201506",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhammadSiddiqAl-Minshawi_201506/113.mp3",
+   "114": "https://archive.org/download/MuhammadSiddiqAl-Minshawi_201506/114.mp3"
+  },
+  "n_mp3": 112,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Almjod Koran is divided into pages for the reader Muhammad Siddiq Minshawi high-quality",
+  "item": "nordarby_20151110_1907",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151110_1907/P_113.mp3",
+   "114": "https://archive.org/download/nordarby_20151110_1907/P_114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.62,
+    0.823
+   ],
+   "1017": [
+    0.766,
+    0.797
+   ],
+   "1044": [
+    0.763,
+    0.802
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Full MP3 - الشيخ محمد صديق المنشاوي | Al Minshawi Complete Quran 114 Surahs HQ",
+  "item": "minshawi-quran-full-hq-mp3",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/minshawi-quran-full-hq-mp3/113.mp3",
+   "114": "https://archive.org/download/minshawi-quran-full-hq-mp3/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.907,
+    0.956
+   ],
+   "1017": [
+    0.609,
+    0.508
+   ],
+   "1044": [
+    0.502,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed_Siddiq_Al-Minshawi",
+  "item": "Mohammed_Siddiq_Al-Minshawi_201808",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammed_Siddiq_Al-Minshawi_201808/113.mp3",
+   "114": "https://archive.org/download/Mohammed_Siddiq_Al-Minshawi_201808/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Complete Holy Quran - Sheikh Muhammad Siddiq Minshawi || القرآن الكريم كاملاً - الشيخ محمد صديق المنشاوي",
+  "item": "Muhammad_SiddiqMinshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Muhammad_SiddiqMinshawi/113.mp3",
+   "114": "https://archive.org/download/Muhammad_SiddiqMinshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.758,
+    0.925
+   ],
+   "1017": [
+    0.695,
+    0.536
+   ],
+   "1044": [
+    0.535,
+    0.937
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad_Siddiq_Al-Minshawi",
+  "item": "Muhammad_Siddiq_Al-Minshawi_879",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Muhammad_Siddiq_Al-Minshawi_879/113.mp3",
+   "114": "https://archive.org/download/Muhammad_Siddiq_Al-Minshawi_879/114.mp3"
+  },
+  "n_mp3": 602,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.555,
+    0.779
+   ],
+   "1017": [
+    0.765,
+    0.776
+   ],
+   "1044": [
+    0.672,
+    0.755
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed Siddiq Al-Minshawi - محمد صديق المنشاوي مرتل رواية حفص عن عاصم",
+  "item": "MohammedSiddiqAl-Minshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohammedSiddiqAl-Minshawi/113.mp3",
+   "114": "https://archive.org/download/MohammedSiddiqAl-Minshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.986,
+    0.99
+   ],
+   "1017": [
+    0.691,
+    0.505
+   ],
+   "1044": [
+    0.496,
+    0.942
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed Siddiq Al-Minshawi - محمد صديق المنشاوي مجود رواية حفص عن عاصم",
+  "item": "MohammedSiddiqAl-Minshawi_mujawad",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohammedSiddiqAl-Minshawi_mujawad/113.mp3",
+   "114": "https://archive.org/download/MohammedSiddiqAl-Minshawi_mujawad/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.545,
+    0.766
+   ],
+   "1017": [
+    0.997,
+    0.999
+   ],
+   "1044": [
+    0.743,
+    0.725
+   ]
+  },
+  "same_as": [
+   "1017"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "القرآن الكريم كاملا - الشيخ محمد صديق المنشاوي - مرتل | Full Quran - Muhammad Siddiq Al-Minshawi - Murattal (Hafs) MP3",
+  "item": "quran-minshawi-murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran-minshawi-murattal/113.mp3",
+   "114": "https://archive.org/download/quran-minshawi-murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.995,
+    1.0
+   ],
+   "1017": [
+    0.686,
+    0.506
+   ],
+   "1044": [
+    0.493,
+    0.939
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohamed Siddiq El-Minshawi",
+  "item": "MohamedSiddiqEl-minshawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohamedSiddiqEl-minshawi/113.mp3",
+   "114": "https://archive.org/download/MohamedSiddiqEl-minshawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.923,
+    0.958
+   ],
+   "1017": [
+    0.611,
+    0.509
+   ],
+   "1044": [
+    0.503,
+    0.943
+   ]
+  },
+  "same_as": [
+   "9"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed Siddiq Al-Minshawi - محمد صديق المنشاوي مرتل رواية حفص عن عاصم 2026",
+  "item": "MohammedSiddiqAl-Minshawi2026",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohammedSiddiqAl-Minshawi2026/113.mp3",
+   "114": "https://archive.org/download/MohammedSiddiqAl-Minshawi2026/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohamed Siddiq al-Minshawi",
+  "reciter": "Mohamed Siddiq al-Minshawi",
+  "scores": {
+   "9": [
+    0.812,
+    0.945
+   ],
+   "1017": [
+    0.65,
+    0.545
+   ],
+   "1044": [
+    0.506,
+    0.919
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Abu Bakr Ash-Shatri (murattal, Hafs)",
+  "item": "quranpro-abu-bakr-ash-shatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-abu-bakr-ash-shatri/113.mp3",
+   "114": "https://archive.org/download/quranpro-abu-bakr-ash-shatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.993,
+    1.0
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Islamhome.info_Abu_Bakr_Al_Shatri",
+  "item": "Islamhome.info_Yasser_Al-Dosari",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Islamhome.info_Yasser_Al-Dosari/113.mp3",
+   "114": "https://archive.org/download/Islamhome.info_Yasser_Al-Dosari/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.979,
+    0.987
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Koran Psalmist divided into pages for the reader Abu Bakr Al Shatri",
+  "item": "nordarby_20151111_1705",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151111_1705/P_113.mp3",
+   "114": "https://archive.org/download/nordarby_20151111_1705/P_114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.598,
+    0.858
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu_Bakr_Al_Shatri_vbr_mp3",
+  "item": "nordarby_20151007",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151007/113.mp3",
+   "114": "https://archive.org/download/nordarby_20151007/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.956,
+    0.995
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr Al Shatri - أبوبكر الشاطري - مصحف مرتل - رواية حفص عن عاصم - مصحف كامل 114 سورة",
+  "item": "abubakralshatriQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abubakralshatriQuran/113.mp3",
+   "114": "https://archive.org/download/abubakralshatriQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr Al-Shatri studio",
+  "item": "abu-bakr-al-shatri-studio",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/abu-bakr-al-shatri-studio/113.mp3",
+   "114": "https://archive.org/download/abu-bakr-al-shatri-studio/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "PerSurah24",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah24/113.mp3",
+   "114": "https://archive.org/download/PerSurah24/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "shatri-allnasheed.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/shatri-allnasheed.com/113.mp3",
+   "114": "https://archive.org/download/shatri-allnasheed.com/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.454,
+    0.832
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr As-Shatri",
+  "item": "STQR_003_Abu_Bakr_Shatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/STQR_003_Abu_Bakr_Shatri/113.mp3",
+   "114": "https://archive.org/download/STQR_003_Abu_Bakr_Shatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu-Bakr-al-Shatri-Murattal",
+  "item": "quranq11",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/quranq11/113.mp3",
+   "114": "https://archive.org/download/quranq11/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.993
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr Al Shatri",
+  "item": "002_20220215_202202",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20220215_202202/113.mp3",
+   "114": "https://archive.org/download/002_20220215_202202/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr Al Shatri Vbr Mp 3 أبو بكر الشاطرى اسم الرواية: حفص عن عاصم",
+  "item": "AbuBakrAlShatriVbrMp3",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbuBakrAlShatriVbrMp3/113.mp3",
+   "114": "https://archive.org/download/AbuBakrAlShatriVbrMp3/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.956,
+    0.995
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Islamhome.info_Abu_Bakr_Al_Shatri",
+  "item": "Islamhome.info_Abu_Bakr_Al_Shatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Islamhome.info_Abu_Bakr_Al_Shatri/113.mp3",
+   "114": "https://archive.org/download/Islamhome.info_Abu_Bakr_Al_Shatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.979,
+    0.987
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran — abu-bakr-al-shatri",
+  "item": "islamicloud-quran-abu-bakr-al-shatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/islamicloud-quran-abu-bakr-al-shatri/abu-bakr-al-shatri/113.mp3",
+   "114": "https://archive.org/download/islamicloud-quran-abu-bakr-al-shatri/abu-bakr-al-shatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.952,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "AbuBakrAl-Shatri_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbuBakrAl-Shatri_201801/113.mp3",
+   "114": "https://archive.org/download/AbuBakrAl-Shatri_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.979,
+    0.987
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "AbuBakrAl-Shatri_201506",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbuBakrAl-Shatri_201506/113.mp3",
+   "114": "https://archive.org/download/AbuBakrAl-Shatri_201506/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.454,
+    0.832
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "smsbilal_gmail_002_20180718_1110",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180718_1110/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180718_1110/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "abu-bakr-al-shatri_202602",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abu-bakr-al-shatri_202602/113.mp3",
+   "114": "https://archive.org/download/abu-bakr-al-shatri_202602/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.979,
+    0.987
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri",
+  "item": "Abu-Bakr-al-Shatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abu-Bakr-al-Shatri/113.mp3",
+   "114": "https://archive.org/download/Abu-Bakr-al-Shatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abu Bakr al-Shatri - Quran Complete - Audio",
+  "item": "AbuBakrAl-Shatri-CompleteQuran-Audio",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbuBakrAl-Shatri-CompleteQuran-Audio/113.mp3",
+   "114": "https://archive.org/download/AbuBakrAl-Shatri-CompleteQuran-Audio/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wrattel Mushaf 1Audio Abu Bakr Shatri",
+  "item": "Wrattel.Audio.abu_bakr_alshatri",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Wrattel.Audio.abu_bakr_alshatri/113.mp3",
+   "114": "https://archive.org/download/Wrattel.Audio.abu_bakr_alshatri/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abu Bakr al-Shatri",
+  "reciter": "Abu Bakr al-Shatri",
+  "scores": {
+   "4": [
+    0.951,
+    0.992
+   ]
+  },
+  "same_as": [
+   "4"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Hani Ar-Rifai (murattal, Hafs)",
+  "item": "quranpro-hani-ar-rifai",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-hani-ar-rifai/113.mp3",
+   "114": "https://archive.org/download/quranpro-hani-ar-rifai/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.962,
+    0.982
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Hani_Rifai_64kbps_009",
+  "item": "quran_Hani_Rifai_64kbps_009",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Hani_Rifai_64kbps_009/113.mp3",
+   "114": "https://archive.org/download/quran_Hani_Rifai_64kbps_009/114.mp3"
+  },
+  "n_mp3": 129,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.547,
+    0.523
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Hani_Rifai_64kbps_004",
+  "item": "quran_Hani_Rifai_64kbps_004",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Hani_Rifai_64kbps_004/113.mp3",
+   "114": "https://archive.org/download/quran_Hani_Rifai_64kbps_004/114.mp3"
+  },
+  "n_mp3": 176,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.499,
+    0.619
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Hani_Rifai_64kbps_016",
+  "item": "quran_Hani_Rifai_64kbps_016",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Hani_Rifai_64kbps_016/113.mp3",
+   "114": "https://archive.org/download/quran_Hani_Rifai_64kbps_016/114.mp3"
+  },
+  "n_mp3": 128,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.526,
+    0.56
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Hani_Ar-Rifai_Moroccovoice",
+  "item": "Hani_Ar-Rifai_Moroccovoice",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Hani_Ar-Rifai_Moroccovoice/113.mp3",
+   "114": "https://archive.org/download/Hani_Ar-Rifai_Moroccovoice/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.956,
+    0.978
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Hani Ar-Rifai",
+  "item": "HaniAr-Rifai_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/HaniAr-Rifai_201712/113.mp3",
+   "114": "https://archive.org/download/HaniAr-Rifai_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.984,
+    0.974
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Hani Ar Rifai",
+  "item": "HaniArRifai_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/HaniArRifai_201801/113.mp3",
+   "114": "https://archive.org/download/HaniArRifai_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.928,
+    0.983
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل للقارئ الشيخ هاني الرفاعي - The Holy Quran Recited by Sheikh Hani Al-Rifai",
+  "item": "Hani_Arrifai_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Hani_Arrifai_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/Hani_Arrifai_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.928,
+    0.983
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Hani_Ar-Rifai_vbr_mp3",
+  "item": "nordarby_20151003_1730",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151003_1730/113.mp3",
+   "114": "https://archive.org/download/nordarby_20151003_1730/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Hani ar-Rifai",
+  "reciter": "Hani ar-Rifai",
+  "scores": {
+   "5": [
+    0.957,
+    0.979
+   ]
+  },
+  "same_as": [
+   "5"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser Al Dossari",
+  "item": "Yasser_Al_Dossari",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Yasser_Al_Dossari/113.mp3",
+   "114": "https://archive.org/download/Yasser_Al_Dossari/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser_Al-Dossari",
+  "item": "Yasser_Al-Dossari",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Yasser_Al-Dossari/113.mp3",
+   "114": "https://archive.org/download/Yasser_Al-Dossari/114.mp3"
+  },
+  "n_mp3": 112,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.596,
+    0.649
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser_Al-Dossari",
+  "item": "Yasser_Al-Dossari_Quran_848",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Yasser_Al-Dossari_Quran_848/113.mp3",
+   "114": "https://archive.org/download/Yasser_Al-Dossari_Quran_848/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.596,
+    0.649
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser Al Dossari",
+  "item": "002_20211219_20211219",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20211219_20211219/113.mp3",
+   "114": "https://archive.org/download/002_20211219_20211219/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.994,
+    0.988
+   ]
+  },
+  "same_as": [
+   "97"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser Al Dossari",
+  "item": "YasserAlDossari",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/YasserAlDossari/113.mp3",
+   "114": "https://archive.org/download/YasserAlDossari/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.994,
+    0.988
+   ]
+  },
+  "same_as": [
+   "97"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Yasser Al Dossari | ياسر الدوسري",
+  "item": "www.elahmad.com_76",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/www.elahmad.com_76/113.mp3",
+   "114": "https://archive.org/download/www.elahmad.com_76/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.596,
+    0.649
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Yasser-Dossari",
+  "item": "KL-Yasser-Dossari",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Yasser-Dossari/113.mp3",
+   "114": "https://archive.org/download/KL-Yasser-Dossari/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yasser Ad-Dossari",
+  "reciter": "Yasser Ad-Dossari",
+  "scores": {
+   "97": [
+    0.994,
+    0.988
+   ]
+  },
+  "same_as": [
+   "97"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalifa-Al-Tunaiji المصحف المرتل للقارئ الشيخ خليفة الطنيجي بجودة عالية جدا - Recited Mushaf for Reciter Sheikh Khalifa Al-Tunaiji high quality by خليفة الطنيجي",
+  "item": "002_20220522",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20220522/113.mp3",
+   "114": "https://archive.org/download/002_20220522/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.968,
+    0.978
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalifa_Tunaiji",
+  "item": "Khalifa_Tunaiji",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalifa_Tunaiji/113.mp3",
+   "114": "https://archive.org/download/Khalifa_Tunaiji/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.965,
+    0.973
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل للقارئ الشيخ خليفة الطنيجي - The Holy Quran Recited by Sheikh Khalifa Al-Tunaiji",
+  "item": "Khalifah_At-Tonaeijy_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalifah_At-Tonaeijy_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/Khalifah_At-Tonaeijy_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.959,
+    0.976
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Murattal Khalifa at-Tunaiji",
+  "item": "khalifa_202105",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/khalifa_202105/113.mp3",
+   "114": "https://archive.org/download/khalifa_202105/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.959,
+    0.976
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran — khalifa-al-tunaiji",
+  "item": "islamicloud-quran-khalifa-al-tunaiji",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/islamicloud-quran-khalifa-al-tunaiji/khalifa-al-tunaiji/113.mp3",
+   "114": "https://archive.org/download/islamicloud-quran-khalifa-al-tunaiji/khalifa-al-tunaiji/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.956,
+    0.976
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalifa Al Tunaiji",
+  "item": "KhalifaAlTunaiji",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KhalifaAlTunaiji/113.mp3",
+   "114": "https://archive.org/download/KhalifaAlTunaiji/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.923,
+    0.985
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalifa-Al-Tunaiji",
+  "item": "Khalifa-Al-Tunaiji",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalifa-Al-Tunaiji/113.mp3",
+   "114": "https://archive.org/download/Khalifa-Al-Tunaiji/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.873,
+    0.967
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalifa_Al_Tunaiji",
+  "item": "Khalifa_Al_Tunaiji",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalifa_Al_Tunaiji/113.mp3",
+   "114": "https://archive.org/download/Khalifa_Al_Tunaiji/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalifa Al-Tunaiji",
+  "reciter": "Khalifa Al-Tunaiji",
+  "scores": {
+   "161": [
+    0.965,
+    0.973
+   ]
+  },
+  "same_as": [
+   "161"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "waltaqwa.com - Maher Al-Muaiqly",
+  "item": "waltaqwa.com-Maher.Al-Muaiqly",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/waltaqwa.com-Maher.Al-Muaiqly/113.mp3",
+   "114": "https://archive.org/download/waltaqwa.com-Maher.Al-Muaiqly/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "1001": [
+    0.701,
+    0.749
+   ],
+   "1042": [
+    0.539,
+    0.95
+   ],
+   "1043": [
+    0.611,
+    0.778
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "ماهر المعيقلي - Maher Al-Muaiqly Nour El-Hadidy",
+  "item": "maher-al-muaiqly-nour-el-hadidy",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/maher-al-muaiqly-nour-el-hadidy/113.mp3",
+   "114": "https://archive.org/download/maher-al-muaiqly-nour-el-hadidy/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "1001": [
+    0.689,
+    0.749
+   ],
+   "1042": [
+    0.533,
+    0.949
+   ],
+   "1043": [
+    0.614,
+    0.781
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Maher Al-Muaiqly The Complete Holy Quran",
+  "item": "MaherAl-muaiqlyTheCompleteHolyQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MaherAl-muaiqlyTheCompleteHolyQuran/113.mp3",
+   "114": "https://archive.org/download/MaherAl-muaiqlyTheCompleteHolyQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "1001": [
+    0.689,
+    0.749
+   ],
+   "1042": [
+    0.533,
+    0.949
+   ],
+   "1043": [
+    0.614,
+    0.781
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Maher Al Muaiqly Quran with urdu translation download",
+  "item": "c3687113_trbvm_002",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/c3687113_trbvm_002/113.mp3",
+   "114": "https://archive.org/download/c3687113_trbvm_002/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل للقارئ الشيخ ماهر المعيقلي - The Holy Quran Recited by Sheikh Maher Al-Muaiqly",
+  "item": "Maher_Al-Muaiqly_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Maher_Al-Muaiqly_Quran/113.mp3",
+   "114": "https://archive.org/download/Maher_Al-Muaiqly_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Maher---Al---Muaiqly ---MP3---quran ---2013 المصحف كامل للشيخ ماهر المعقيلي",
+  "item": "Maher---Al---Muaiqly---MP3---quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Maher---Al---Muaiqly---MP3---quran/113.mp3",
+   "114": "https://archive.org/download/Maher---Al---Muaiqly---MP3---quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Maher Al-Muaiqly",
+  "reciter": "Maher Al-Muaiqly",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Nasser Al Qatami",
+  "item": "Nasseralqatami-allnasheed.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Nasseralqatami-allnasheed.com/113.mp3",
+   "114": "https://archive.org/download/Nasseralqatami-allnasheed.com/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Nasser Al-Qatami",
+  "reciter": "Nasser Al-Qatami",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Nasser Al Qatami 1440 Taraweeh",
+  "item": "nasser-al-qatami-1440-taraweeh",
+  "licence": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/nasser-al-qatami-1440-taraweeh/113.mp3",
+   "114": "https://archive.org/download/nasser-al-qatami-1440-taraweeh/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Nasser Al-Qatami",
+  "reciter": "Nasser Al-Qatami",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Nasser Al Qatami",
+  "item": "NasserAlQatami_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/NasserAlQatami_201801/113.mp3",
+   "114": "https://archive.org/download/NasserAlQatami_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Nasser Al-Qatami",
+  "reciter": "Nasser Al-Qatami",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Nasser_Al-Qatami-forsan-alkhair",
+  "item": "Nasser_Al-Qatami-forsan-alkhair",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Nasser_Al-Qatami-forsan-alkhair/113.mp3",
+   "114": "https://archive.org/download/Nasser_Al-Qatami-forsan-alkhair/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Nasser Al-Qatami",
+  "reciter": "Nasser Al-Qatami",
+  "scores": {
+   "1002": [
+    0.97,
+    0.989
+   ]
+  },
+  "same_as": [
+   "1002"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_ahmed_ibn_ali_al_ajamy_128kbps_020",
+  "item": "quran_ahmed_ibn_ali_al_ajamy_128kbps_020",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_020/113.mp3",
+   "114": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_020/114.mp3"
+  },
+  "n_mp3": 125,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "1004": [
+    0.433,
+    0.553
+   ],
+   "1047": [
+    0.435,
+    0.582
+   ],
+   "1048": [
+    0.453,
+    0.536
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_ahmed_ibn_ali_al_ajamy_128kbps_005",
+  "item": "quran_ahmed_ibn_ali_al_ajamy_128kbps_005",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_005/113.mp3",
+   "114": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_005/114.mp3"
+  },
+  "n_mp3": 121,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Ahmed ibn Ali al-Ajamy",
+  "item": "PerHalaman8",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerHalaman8/Page113.mp3",
+   "114": "https://archive.org/download/PerHalaman8/Page114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "1004": [
+    0.585
+   ],
+   "1047": [
+    0.557
+   ],
+   "1048": [
+    0.577
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_ahmed_ibn_ali_al_ajamy_128kbps_026",
+  "item": "quran_ahmed_ibn_ali_al_ajamy_128kbps_026",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_026/113.mp3",
+   "114": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_026/114.mp3"
+  },
+  "n_mp3": 228,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "1004": [
+    0.345,
+    0.594
+   ],
+   "1047": [
+    0.432,
+    0.55
+   ],
+   "1048": [
+    0.43,
+    0.687
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_ahmed_ibn_ali_al_ajamy_128kbps_037",
+  "item": "quran_ahmed_ibn_ali_al_ajamy_128kbps_037",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_037/113.mp3",
+   "114": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_037/114.mp3"
+  },
+  "n_mp3": 182,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "1004": [
+    0.497,
+    0.637
+   ],
+   "1047": [
+    0.462,
+    0.62
+   ],
+   "1048": [
+    0.406,
+    0.601
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_ahmed_ibn_ali_al_ajamy_128kbps_011",
+  "item": "quran_ahmed_ibn_ali_al_ajamy_128kbps_011",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_011/113.mp3",
+   "114": "https://archive.org/download/quran_ahmed_ibn_ali_al_ajamy_128kbps_011/114.mp3"
+  },
+  "n_mp3": 124,
+  "guess": "Ahmed Al-Ajamy",
+  "reciter": "Ahmed Al-Ajamy",
+  "scores": {
+   "1004": [
+    0.526,
+    0.579
+   ],
+   "1047": [
+    0.432,
+    0.688
+   ],
+   "1048": [
+    0.52,
+    0.68
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "تلاوات القرآن الكريم بصوت فارس عباد | Quran Recitations by Fares Abbad",
+  "item": "002_20230515_20230515",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20230515_20230515/113.mp3",
+   "114": "https://archive.org/download/002_20230515_20230515/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.989,
+    0.964
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Fares_Abbad_64kbps_011",
+  "item": "quran_Fares_Abbad_64kbps_011",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Fares_Abbad_64kbps_011/113.mp3",
+   "114": "https://archive.org/download/quran_Fares_Abbad_64kbps_011/114.mp3"
+  },
+  "n_mp3": 124,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.385
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Fares Abbad: Comple Quran Audio",
+  "item": "lifeways11_gmail_001_20180131_2345",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/lifeways11_gmail_001_20180131_2345/113.mp3",
+   "114": "https://archive.org/download/lifeways11_gmail_001_20180131_2345/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.976,
+    0.98
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Fares_Abbad_el-moslem.com_vbr_mp3",
+  "item": "nordarby_20151003_1452",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151003_1452/113.mp3",
+   "114": "https://archive.org/download/nordarby_20151003_1452/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.989,
+    0.964
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Fares Abbad",
+  "item": "FaresAbbad_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/FaresAbbad_201801/113.mp3",
+   "114": "https://archive.org/download/FaresAbbad_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.993
+   ],
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Fares_Abbad_64kbps_020",
+  "item": "quran_Fares_Abbad_64kbps_020",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Fares_Abbad_64kbps_020/113.mp3",
+   "114": "https://archive.org/download/quran_Fares_Abbad_64kbps_020/114.mp3"
+  },
+  "n_mp3": 136,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.506,
+    0.662
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Fares_Abbad_64kbps_007",
+  "item": "quran_Fares_Abbad_64kbps_007",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Fares_Abbad_64kbps_007/113.mp3",
+   "114": "https://archive.org/download/quran_Fares_Abbad_64kbps_007/114.mp3"
+  },
+  "n_mp3": 207,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.523,
+    0.394
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Fares Abbad",
+  "item": "PerSurah43",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah43/113.mp3",
+   "114": "https://archive.org/download/PerSurah43/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.993,
+    0.966
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Fares Abbad",
+  "item": "002_20220217_202202",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20220217_202202/113.mp3",
+   "114": "https://archive.org/download/002_20220217_202202/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Fares Abbad",
+  "reciter": "Fares Abbad",
+  "scores": {
+   "1005": [
+    0.989,
+    0.964
+   ]
+  },
+  "same_as": [
+   "1005"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Murottal Abdullah Al-Juhany",
+  "item": "abdullah-al-juhany",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdullah-al-juhany/113.mp3",
+   "114": "https://archive.org/download/abdullah-al-juhany/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Abdullah Al-Juhany",
+  "reciter": "Abdullah Al-Juhany",
+  "scores": {
+   "1006": [
+    0.434,
+    0.575
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Ali Al-Hudhaify",
+  "item": "AliAl-Hudhaify",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AliAl-Hudhaify/113.mp3",
+   "114": "https://archive.org/download/AliAl-Hudhaify/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Al-Hudhaify",
+  "reciter": "Ali Al-Hudhaify",
+  "scores": {
+   "1007": [
+    0.999,
+    1.0
+   ],
+   "1049": [
+    0.863,
+    0.957
+   ]
+  },
+  "same_as": [
+   "1007"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Muhammad Ayyoub",
+  "item": "SheikhMuhammadAyyoub",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SheikhMuhammadAyyoub/113.mp3",
+   "114": "https://archive.org/download/SheikhMuhammadAyyoub/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.989,
+    0.988
+   ],
+   "1046": [
+    0.678,
+    0.866
+   ]
+  },
+  "same_as": [
+   "1008"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mouhammad Ayyoub",
+  "item": "MouhammadAyyoub_201601",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MouhammadAyyoub_201601/113.mp3",
+   "114": "https://archive.org/download/MouhammadAyyoub_201601/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.912,
+    0.856
+   ],
+   "1046": [
+    0.618,
+    0.86
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Qur'an recited by Mohammad Ayyoub",
+  "item": "MohammadAyyoub",
+  "licence": "http://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/MohammadAyyoub/Quran_Mohammed_Ayyub-113.mp3",
+   "114": "https://archive.org/download/MohammadAyyoub/Quran_Mohammed_Ayyub-114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.999,
+    0.97
+   ],
+   "1046": [
+    0.678,
+    0.864
+   ]
+  },
+  "same_as": [
+   "1008"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mouhammad Ayyoub",
+  "item": "MouhammadAyyoub",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MouhammadAyyoub/113.mp3",
+   "114": "https://archive.org/download/MouhammadAyyoub/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.912,
+    0.856
+   ],
+   "1046": [
+    0.618,
+    0.86
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Ayyoub",
+  "item": "PerHalaman26",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerHalaman26/Page113.mp3",
+   "114": "https://archive.org/download/PerHalaman26/Page114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.601,
+    0.629
+   ],
+   "1046": [
+    0.606,
+    0.852
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "[1372-1437 H] MOUHAMMAD AYYOÛB - محمد أيوب",
+  "item": "002_20260917",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20260917/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D9%8A%D9%88%D8%A8%20-%20%D8%B1%D9%88%D8%A7%D9%8A%D8%A9%20%D8%AD%D9%81%D8%B5%20%D8%B9%D9%86%20%D8%B9%D8%A7%D8%B5%D9%85%20113.mp3",
+   "114": "https://archive.org/download/002_20260917/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D9%8A%D9%88%D8%A8%20-%20%D8%B1%D9%88%D8%A7%D9%8A%D8%A9%20%D8%AD%D9%81%D8%B5%20%D8%B9%D9%86%20%D8%B9%D8%A7%D8%B5%D9%85%20114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Ayyoub",
+  "reciter": "Muhammad Ayyoub",
+  "scores": {
+   "1008": [
+    0.999,
+    0.97
+   ],
+   "1046": [
+    0.678,
+    0.864
+   ]
+  },
+  "same_as": [
+   "1008"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran — mohammed-jibreel",
+  "item": "islamicloud-quran-mohammed-jibreel",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/islamicloud-quran-mohammed-jibreel/mohammed-jibreel/113.mp3",
+   "114": "https://archive.org/download/islamicloud-quran-mohammed-jibreel/mohammed-jibreel/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.998,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Jibreel",
+  "item": "Mohammad_Jibreel_201808",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammad_Jibreel_201808/113.mp3",
+   "114": "https://archive.org/download/Mohammad_Jibreel_201808/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad_Jibreel_vbr_mp3",
+  "item": "nordarby_20151008_1308",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151008_1308/113.mp3",
+   "114": "https://archive.org/download/nordarby_20151008_1308/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.997,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed Jibreel - محمد جبريل رواية حفص عن عاصم من طريق الشاطبية",
+  "item": "MohammedJibreel_chatibya",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohammedJibreel_chatibya/113.mp3",
+   "114": "https://archive.org/download/MohammedJibreel_chatibya/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.714,
+    0.689
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Jibreel",
+  "item": "MuhammadJibreel_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhammadJibreel_201712/113.mp3",
+   "114": "https://archive.org/download/MuhammadJibreel_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.999
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Jibreel-JomKuliah.com",
+  "item": "Mohammad_Jibreel-BacaQuran.tk",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammad_Jibreel-BacaQuran.tk/113.mp3",
+   "114": "https://archive.org/download/Mohammad_Jibreel-BacaQuran.tk/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Jibreel",
+  "item": "MuhammadJibreel_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhammadJibreel_201801/113.mp3",
+   "114": "https://archive.org/download/MuhammadJibreel_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.912,
+    0.955
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Jibreel_(MP3_Quran)",
+  "item": "mohammad_jibreel_mp3_quran_202002",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/mohammad_jibreel_mp3_quran_202002/113.mp3",
+   "114": "https://archive.org/download/mohammad_jibreel_mp3_quran_202002/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Kuranyurdu.blogspot.com Muhammad Jibreel Kur'an-ı Kerim Mp3 Hatim Seti",
+  "item": "Kuranyurdu.blogspot.comMuhammadJibreelKuran-KerimMp3HatimSeti",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Kuranyurdu.blogspot.comMuhammadJibreelKuran-KerimMp3HatimSeti/113.mp3",
+   "114": "https://archive.org/download/Kuranyurdu.blogspot.comMuhammadJibreelKuran-KerimMp3HatimSeti/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.993,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed Jibreel - محمد جبريل رواية حفص عن عاصم",
+  "item": "MohammedJibreel",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohammedJibreel/113.mp3",
+   "114": "https://archive.org/download/MohammedJibreel/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quransound.net_mohamed_jibreel",
+  "item": "quransound.net_mohamed_jibreel",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quransound.net_mohamed_jibreel/113.mp3",
+   "114": "https://archive.org/download/quransound.net_mohamed_jibreel/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.992,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhammad Jibreel | محمد جبريل",
+  "item": "www.elahmad.com_73",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/www.elahmad.com_73/113.mp3",
+   "114": "https://archive.org/download/www.elahmad.com_73/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.999,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad Jibreel - Complete Quran",
+  "item": "mohammad_jibreel_202205",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/mohammad_jibreel_202205/113.mp3",
+   "114": "https://archive.org/download/mohammad_jibreel_202205/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.812,
+    0.686
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Mohammed-Jibreel",
+  "item": "KL-Mohammed-Jibreel",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Mohammed-Jibreel/113.mp3",
+   "114": "https://archive.org/download/KL-Mohammed-Jibreel/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad Jibreel",
+  "reciter": "Muhammad Jibreel",
+  "scores": {
+   "1009": [
+    0.997,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1009"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Budair",
+  "item": "salah_bdair",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/salah_bdair/113.mp3",
+   "114": "https://archive.org/download/salah_bdair/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Al-Budair",
+  "reciter": "Salah Al-Budair",
+  "scores": {
+   "1010": [
+    0.765,
+    0.614
+   ],
+   "1039": [
+    0.993,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1039"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah al-Budair",
+  "item": "salahalbudair-allnasheed.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/salahalbudair-allnasheed.com/113.mp3",
+   "114": "https://archive.org/download/salahalbudair-allnasheed.com/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Al-Budair",
+  "reciter": "Salah Al-Budair",
+  "scores": {
+   "1010": [
+    0.994,
+    0.968
+   ],
+   "1039": [
+    0.791,
+    0.718
+   ]
+  },
+  "same_as": [
+   "1010"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah__Al-Budair",
+  "item": "Salah__Al-Budair",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Salah__Al-Budair/113.mp3",
+   "114": "https://archive.org/download/Salah__Al-Budair/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Al-Budair",
+  "reciter": "Salah Al-Budair",
+  "scores": {
+   "1010": [
+    0.994,
+    0.968
+   ],
+   "1039": [
+    0.791,
+    0.718
+   ]
+  },
+  "same_as": [
+   "1010"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Salah Budair",
+  "item": "Wrattel.Audio.salah_budair",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Wrattel.Audio.salah_budair/113.mp3",
+   "114": "https://archive.org/download/Wrattel.Audio.salah_budair/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Al-Budair",
+  "reciter": "Salah Al-Budair",
+  "scores": {
+   "1010": [
+    0.994,
+    0.968
+   ],
+   "1039": [
+    0.791,
+    0.718
+   ]
+  },
+  "same_as": [
+   "1010"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "QuranRabbi.com_khalid_al_qahtani",
+  "item": "QuranRabbi.com_khalid_al_qahtani",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/QuranRabbi.com_khalid_al_qahtani/113.mp3",
+   "114": "https://archive.org/download/QuranRabbi.com_khalid_al_qahtani/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Koran Psalmist divided into pages for the reader Khalid Al Qahtani",
+  "item": "nordarby_20151115",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20151115/P_113.mp3",
+   "114": "https://archive.org/download/nordarby_20151115/P_114.mp3"
+  },
+  "n_mp3": 493,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.729,
+    0.9
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalid_Al_Qahtani",
+  "item": "Khalid_Al_Qahtani",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalid_Al_Qahtani/113.mp3",
+   "114": "https://archive.org/download/Khalid_Al_Qahtani/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalid al-Qahtani",
+  "item": "KhalidAl-Qahtanii",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KhalidAl-Qahtanii/113.mp3",
+   "114": "https://archive.org/download/KhalidAl-Qahtanii/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.986,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalid Al Qahtani",
+  "item": "KhalidAlQahtani_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KhalidAlQahtani_201712/113.mp3",
+   "114": "https://archive.org/download/KhalidAlQahtani_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.972,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalid al-Qahtani",
+  "item": "PerSurah48",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah48/113.mp3",
+   "114": "https://archive.org/download/PerSurah48/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.986,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Khalid al-Qahtani",
+  "item": "Khalid-al-Qahtani",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Khalid-al-Qahtani/113.mp3",
+   "114": "https://archive.org/download/Khalid-al-Qahtani/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Qahtani",
+  "reciter": "Khalid Al-Qahtani",
+  "scores": {
+   "1011": [
+    0.986,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1011"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Bukhatir",
+  "item": "smsbilal_gmail_004_201807",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_004_201807/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_004_201807/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.996,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah__Bukhatir",
+  "item": "Salah__Bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Salah__Bukhatir/113.mp3",
+   "114": "https://archive.org/download/Salah__Bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.996,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Bukhatir",
+  "item": "SalahBukhatir_201506",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SalahBukhatir_201506/113.mp3",
+   "114": "https://archive.org/download/SalahBukhatir_201506/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.996,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Bukhatir",
+  "item": "salahbukhatir-allnasheed.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/salahbukhatir-allnasheed.com/113.mp3",
+   "114": "https://archive.org/download/salahbukhatir-allnasheed.com/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.996,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Salah Bukhatir (murattal, Hafs)",
+  "item": "quranpro-salah-bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-salah-bukhatir/113.mp3",
+   "114": "https://archive.org/download/quranpro-salah-bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.988,
+    0.946
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "تلاوات القرآن الكريم بصوت صلاح بو خاطر | Quran Recitations by Salah Bukhatir mp3",
+  "item": "002_20250502_20250502",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20250502_20250502/113.mp3",
+   "114": "https://archive.org/download/002_20250502_20250502/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.98,
+    0.968
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran — salah-bukhatir",
+  "item": "islamicloud-quran-salah-bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/islamicloud-quran-salah-bukhatir/salah-bukhatir/113.mp3",
+   "114": "https://archive.org/download/islamicloud-quran-salah-bukhatir/salah-bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.993,
+    0.935
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Islamhome.info_Salah_Bukhatir",
+  "item": "Islamhome.info_Salah_Bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Islamhome.info_Salah_Bukhatir/113.mp3",
+   "114": "https://archive.org/download/Islamhome.info_Salah_Bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.982,
+    0.964
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah-Bukhatir",
+  "item": "Salah-Bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Salah-Bukhatir/113.mp3",
+   "114": "https://archive.org/download/Salah-Bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.984,
+    0.951
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Abdulrahman Bukhatir",
+  "item": "SalahAbdulrahmanBukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SalahAbdulrahmanBukhatir/113.mp3",
+   "114": "https://archive.org/download/SalahAbdulrahmanBukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "err": "no audio"
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Bukhatir: Complete Quran Audio",
+  "item": "lifeways11_gmail_001_20180201_0057",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/lifeways11_gmail_001_20180201_0057/113.mp3",
+   "114": "https://archive.org/download/lifeways11_gmail_001_20180201_0057/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.98,
+    0.968
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "listen-to-quran.com_Salah-Bukhatir",
+  "item": "listen-to-quran.com_Salah-Bukhatir",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/listen-to-quran.com_Salah-Bukhatir/113.mp3",
+   "114": "https://archive.org/download/listen-to-quran.com_Salah-Bukhatir/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.98,
+    0.968
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Salah Bukhatir | صلاح بو خاطر",
+  "item": "www.elahmad.com_71",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/www.elahmad.com_71/113.mp3",
+   "114": "https://archive.org/download/www.elahmad.com_71/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Salah Bukhatir",
+  "reciter": "Salah Bukhatir",
+  "scores": {
+   "1012": [
+    0.996,
+    0.939
+   ]
+  },
+  "same_as": [
+   "1012"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdullah Matroud",
+  "item": "AbdullahMatroud",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdullahMatroud/113.mp3",
+   "114": "https://archive.org/download/AbdullahMatroud/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdullah Al-Matroud",
+  "reciter": "Abdullah Al-Matroud",
+  "scores": {
+   "1014": [
+    0.965,
+    0.982
+   ]
+  },
+  "same_as": [
+   "1014"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Abdullah-Al-Matroud",
+  "item": "KL-Abdullah-Al-Matroud",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Abdullah-Al-Matroud/113.mp3",
+   "114": "https://archive.org/download/KL-Abdullah-Al-Matroud/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdullah Al-Matroud",
+  "reciter": "Abdullah Al-Matroud",
+  "scores": {
+   "1014": [
+    0.588,
+    0.79
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdullah_Matroud-MoroccoVoice",
+  "item": "Abdullah_Matroud-MoroccoVoice",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdullah_Matroud-MoroccoVoice/113.mp3",
+   "114": "https://archive.org/download/Abdullah_Matroud-MoroccoVoice/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdullah Al-Matroud",
+  "reciter": "Abdullah Al-Matroud",
+  "scores": {
+   "1014": [
+    0.965,
+    0.982
+   ]
+  },
+  "same_as": [
+   "1014"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdullah Matroud",
+  "item": "PerHalaman5",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerHalaman5/Page113.mp3",
+   "114": "https://archive.org/download/PerHalaman5/Page114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Abdullah Al-Matroud",
+  "reciter": "Abdullah Al-Matroud",
+  "scores": {
+   "1014": [
+    0.74,
+    0.808
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "yaser__salamah---reeding-full-quran-a-m-r-mobile-gawal--small-size",
+  "item": "yaser__salamah---reeding-full-quran-a-m-r-mobile-gawal--small-size",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/yaser__salamah---reeding-full-quran-a-m-r-mobile-gawal--small-size/113.mp3",
+   "114": "https://archive.org/download/yaser__salamah---reeding-full-quran-a-m-r-mobile-gawal--small-size/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yaser Salamah",
+  "reciter": "Yaser Salamah",
+  "scores": {
+   "1015": [
+    0.422,
+    0.615
+   ],
+   "1041": [
+    0.587,
+    0.69
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Yaser Salamah",
+  "item": "YaserSalamah",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/YaserSalamah/113.mp3",
+   "114": "https://archive.org/download/YaserSalamah/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yaser Salamah",
+  "reciter": "Yaser Salamah",
+  "scores": {
+   "1015": [
+    0.916,
+    0.981
+   ],
+   "1041": [
+    0.732,
+    0.835
+   ]
+  },
+  "same_as": [
+   "1015"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Yaser-Salamah",
+  "item": "KL-Yaser-Salamah",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Yaser-Salamah/113.mp3",
+   "114": "https://archive.org/download/KL-Yaser-Salamah/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Yaser Salamah",
+  "reciter": "Yaser Salamah",
+  "scores": {
+   "1015": [
+    0.422,
+    0.615
+   ],
+   "1041": [
+    0.587,
+    0.69
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohamed Tablawi",
+  "item": "MohamedTablawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MohamedTablawi/113.mp3",
+   "114": "https://archive.org/download/MohamedTablawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.998,
+    0.988
+   ],
+   "1045": [
+    0.631,
+    0.488
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammed_Mahmoud_Al_Tablawi",
+  "item": "Mohammed_Mahmoud_Al_Tablawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammed_Mahmoud_Al_Tablawi/113.mp3",
+   "114": "https://archive.org/download/Mohammed_Mahmoud_Al_Tablawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.999,
+    0.998
+   ],
+   "1045": [
+    0.629,
+    0.492
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Mohamed Al-Tablawi (murattal, Hafs)",
+  "item": "quranpro-muhammad-al-tablawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-muhammad-al-tablawi/113.mp3",
+   "114": "https://archive.org/download/quranpro-muhammad-al-tablawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.998,
+    0.988
+   ],
+   "1045": [
+    0.631,
+    0.488
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "holy-quran-mojawwad-by-altablawi-tablawi-full-114sora-128kb-high-quality",
+  "item": "holy-quran-mojawwad-by-altablawi-tablawi-full-114sora-128kb-high-quality",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/holy-quran-mojawwad-by-altablawi-tablawi-full-114sora-128kb-high-quality/113.mp3",
+   "114": "https://archive.org/download/holy-quran-mojawwad-by-altablawi-tablawi-full-114sora-128kb-high-quality/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.94,
+    0.767
+   ],
+   "1045": [
+    1.0,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1045"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "listen-to-quran.com_Mohamed-Mahmoud-Tablawi",
+  "item": "listen-to-quran.com_Mohamed-Mahmoud-Tablawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/listen-to-quran.com_Mohamed-Mahmoud-Tablawi/113.mp3",
+   "114": "https://archive.org/download/listen-to-quran.com_Mohamed-Mahmoud-Tablawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    0.995,
+    0.988
+   ],
+   "1045": [
+    0.633,
+    0.489
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Mohammed-Al-Tablawi",
+  "item": "KL-Mohammed-Al-Tablawi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Mohammed-Al-Tablawi/113.mp3",
+   "114": "https://archive.org/download/KL-Mohammed-Al-Tablawi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Mohammad Al-Tablawi",
+  "reciter": "Mohammad Al-Tablawi",
+  "scores": {
+   "1018": [
+    1.0,
+    0.987
+   ],
+   "1045": [
+    0.634,
+    0.488
+   ]
+  },
+  "same_as": [
+   "1018"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Complete Holy Quran – Recitation by Sheikh Ali Jaber | القرآن الكريم كاملاً بصوت الشيخ علي جابر",
+  "item": "002_20260212_202602",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20260212_202602/113.mp3",
+   "114": "https://archive.org/download/002_20260212_202602/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.921,
+    0.905
+   ]
+  },
+  "same_as": [
+   "1019"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Ali Jaber_Geeldile",
+  "item": "SheikhAliJaber_geeldile",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SheikhAliJaber_geeldile/113.mp3",
+   "114": "https://archive.org/download/SheikhAliJaber_geeldile/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.961,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1019"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Qur'an recited by Ali Abdallah Jaber",
+  "item": "Ali_Abdallah_Jaber",
+  "licence": "http://creativecommons.org/publicdomain/mark/1.0/",
+  "files": {
+   "113": "https://archive.org/download/Ali_Abdallah_Jaber/Quran_Ali_Jaber_studio-113.mp3",
+   "114": "https://archive.org/download/Ali_Abdallah_Jaber/Quran_Ali_Jaber_studio-114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.971,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1019"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ali_Jaber_64kbps_023",
+  "item": "quran_Ali_Jaber_64kbps_023",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ali_Jaber_64kbps_023/113.mp3",
+   "114": "https://archive.org/download/quran_Ali_Jaber_64kbps_023/114.mp3"
+  },
+  "n_mp3": 119,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.475,
+    0.781
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Ali_Jaber_(Update5)_(MP3_Quran)",
+  "item": "ali_jaber_update5_mp3_quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/ali_jaber_update5_mp3_quran/113.mp3",
+   "114": "https://archive.org/download/ali_jaber_update5_mp3_quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.971,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1019"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Murotta Syaikh Ali Jaber",
+  "item": "ali-jaber_202105",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/ali-jaber_202105/113.mp3",
+   "114": "https://archive.org/download/ali-jaber_202105/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.961,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1019"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ali_Jaber_64kbps_005",
+  "item": "quran_Ali_Jaber_64kbps_005",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ali_Jaber_64kbps_005/113.mp3",
+   "114": "https://archive.org/download/quran_Ali_Jaber_64kbps_005/114.mp3"
+  },
+  "n_mp3": 121,
+  "guess": "Ali Jaber",
+  "reciter": "Ali Jaber",
+  "scores": {
+   "1019": [
+    0.434,
+    0.85
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Sheikh Abdul Muhsin Al Qasim",
+  "item": "HaramainQasim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/HaramainQasim/113.mp3",
+   "114": "https://archive.org/download/HaramainQasim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.487,
+    0.723
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdul Muhsin al-Qasim",
+  "item": "PerSurah7",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah7/113.mp3",
+   "114": "https://archive.org/download/PerSurah7/114.mp3"
+  },
+  "n_mp3": 126,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhsin Al Qasim",
+  "item": "MuhsinAlQasim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/MuhsinAlQasim/113.mp3",
+   "114": "https://archive.org/download/MuhsinAlQasim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.997,
+    0.973
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdul Muhsin al-Qasim",
+  "item": "Abdul-Muhsin-al-Qasim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdul-Muhsin-al-Qasim/113.mp3",
+   "114": "https://archive.org/download/Abdul-Muhsin-al-Qasim/114.mp3"
+  },
+  "n_mp3": 126,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdul Muhsin al-Qasim",
+  "item": "smsbilal_gmail_002_20180724",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180724/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180724/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdul Muhsin Al Qasim",
+  "item": "AbdulMuhsinAlQasim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulMuhsinAlQasim/113.mp3",
+   "114": "https://archive.org/download/AbdulMuhsinAlQasim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Holy Qur'an - Abdul Muhsin Al-Qasim (murattal, Hafs)",
+  "item": "quranpro-abdul-muhsin-al-qasim",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranpro-abdul-muhsin-al-qasim/113.mp3",
+   "114": "https://archive.org/download/quranpro-abdul-muhsin-al-qasim/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.967,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Muhsin Al Qasim",
+  "item": "perhalaman28",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/perhalaman28/Page113.mp3",
+   "114": "https://archive.org/download/perhalaman28/Page114.mp3"
+  },
+  "n_mp3": 604,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.496,
+    0.643
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Murottal Abdul muhsin al qasim — Quranify Backup",
+  "item": "quranify-backup-r67",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranify-backup-r67/113.mp3",
+   "114": "https://archive.org/download/quranify-backup-r67/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhsin Al-Qasim",
+  "reciter": "Muhsin Al-Qasim",
+  "scores": {
+   "1020": [
+    0.979,
+    0.979
+   ]
+  },
+  "same_as": [
+   "1020"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ahmed_Neana_128kbps_002",
+  "item": "quran_Ahmed_Neana_128kbps_002",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ahmed_Neana_128kbps_002/113.mp3",
+   "114": "https://archive.org/download/quran_Ahmed_Neana_128kbps_002/114.mp3"
+  },
+  "n_mp3": 287,
+  "guess": "Ahmed Neana",
+  "reciter": "Ahmed Neana",
+  "scores": {
+   "1021": [
+    0.757,
+    0.644
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ahmed_Neana_128kbps_005",
+  "item": "quran_Ahmed_Neana_128kbps_005",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ahmed_Neana_128kbps_005/113.mp3",
+   "114": "https://archive.org/download/quran_Ahmed_Neana_128kbps_005/114.mp3"
+  },
+  "n_mp3": 121,
+  "guess": "Ahmed Neana",
+  "reciter": "Ahmed Neana",
+  "scores": {
+   "1021": [
+    0.742,
+    0.573
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ahmed_Neana_128kbps_016",
+  "item": "quran_Ahmed_Neana_128kbps_016",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ahmed_Neana_128kbps_016/113.mp3",
+   "114": "https://archive.org/download/quran_Ahmed_Neana_128kbps_016/114.mp3"
+  },
+  "n_mp3": 129,
+  "guess": "Ahmed Neana",
+  "reciter": "Ahmed Neana",
+  "scores": {
+   "1021": [
+    0.781,
+    0.566
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_Ahmed_Neana_128kbps_020",
+  "item": "quran_Ahmed_Neana_128kbps_020",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_Ahmed_Neana_128kbps_020/113.mp3",
+   "114": "https://archive.org/download/quran_Ahmed_Neana_128kbps_020/114.mp3"
+  },
+  "n_mp3": 136,
+  "guess": "Ahmed Neana",
+  "reciter": "Ahmed Neana",
+  "scores": {
+   "1021": [
+    0.732,
+    0.555
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Akram Al Alaqimy",
+  "item": "AkramAlAlaqimy",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AkramAlAlaqimy/113.mp3",
+   "114": "https://archive.org/download/AkramAlAlaqimy/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Akram Al-Alaqimy",
+  "reciter": "Akram Al-Alaqimy",
+  "scores": {
+   "1022": [
+    0.997,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1022"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "[1388 H] 'AZÎZ 'ALÎLÎ - عزيز عليلي",
+  "item": "002_20260913_20260913",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20260913_20260913/%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%B9%D9%84%D9%8A%D9%84%D9%8A%20-%20%D8%B1%D9%88%D8%A7%D9%8A%D8%A9%20%D8%AD%D9%81%D8%B5%20%D8%B9%D9%86%20%D8%B9%D8%A7%D8%B5%D9%85%20113.mp3",
+   "114": "https://archive.org/download/002_20260913_20260913/%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%B9%D9%84%D9%8A%D9%84%D9%8A%20-%20%D8%B1%D9%88%D8%A7%D9%8A%D8%A9%20%D8%AD%D9%81%D8%B5%20%D8%B9%D9%86%20%D8%B9%D8%A7%D8%B5%D9%85%20114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.989,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1024"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_007",
+  "item": "quran_aziz_alili_128kbps_007",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_007/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_007/114.mp3"
+  },
+  "n_mp3": 167,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.453,
+    0.64
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_011",
+  "item": "quran_aziz_alili_128kbps_011",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_011/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_011/114.mp3"
+  },
+  "n_mp3": 124,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.526,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Aziz Alili",
+  "item": "AzizAlili_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AzizAlili_201712/113.mp3",
+   "114": "https://archive.org/download/AzizAlili_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.992,
+    0.997
+   ]
+  },
+  "same_as": [
+   "1024"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Aziz Alili",
+  "item": "smsbilal_gmail_002_20180718_1258",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/smsbilal_gmail_002_20180718_1258/113.mp3",
+   "114": "https://archive.org/download/smsbilal_gmail_002_20180718_1258/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.989,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1024"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_020",
+  "item": "quran_aziz_alili_128kbps_020",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_020/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_020/114.mp3"
+  },
+  "n_mp3": 136,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.472,
+    0.854
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_003",
+  "item": "quran_aziz_alili_128kbps_003",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_003/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_003/114.mp3"
+  },
+  "n_mp3": 174,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.577,
+    0.656
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_016",
+  "item": "quran_aziz_alili_128kbps_016",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_016/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_016/114.mp3"
+  },
+  "n_mp3": 129,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.677,
+    0.895
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_023",
+  "item": "quran_aziz_alili_128kbps_023",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_023/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_023/114.mp3"
+  },
+  "n_mp3": 119,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.596,
+    0.781
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "quran_aziz_alili_128kbps_006",
+  "item": "quran_aziz_alili_128kbps_006",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quran_aziz_alili_128kbps_006/113.mp3",
+   "114": "https://archive.org/download/quran_aziz_alili_128kbps_006/114.mp3"
+  },
+  "n_mp3": 137,
+  "guess": "Aziz Alili",
+  "reciter": "Aziz Alili",
+  "scores": {
+   "1024": [
+    0.607,
+    0.809
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Sahl Yassin",
+  "item": "SahlYassin_201712",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/SahlYassin_201712/113.mp3",
+   "114": "https://archive.org/download/SahlYassin_201712/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.999,
+    0.967
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "TvQuran.com__Sahl-Yassin",
+  "item": "nordarby_20150831_1429",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/nordarby_20150831_1429/113.mp3",
+   "114": "https://archive.org/download/nordarby_20150831_1429/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sahl Yassin",
+  "item": "TvQuran.com__Sahl-Yassin",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/TvQuran.com__Sahl-Yassin/113.mp3",
+   "114": "https://archive.org/download/TvQuran.com__Sahl-Yassin/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "TvQuran.com__Sahl-Yassin سهل ياسين",
+  "item": "Sahl-Yassin",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Sahl-Yassin/113.mp3",
+   "114": "https://archive.org/download/Sahl-Yassin/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sahl_Yassin_alro7_net",
+  "item": "Sahl_Yassin_alro7_net",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Sahl_Yassin_alro7_net/113.mp3",
+   "114": "https://archive.org/download/Sahl_Yassin_alro7_net/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "المصحف المرتل للقارئ الشيخ سهل ياسين - The Holy Quran Recited by Sheikh Sahl Yassin",
+  "item": "Sahl_Yaaseen_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Sahl_Yaaseen_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/Sahl_Yaaseen_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sahl_Yassin",
+  "item": "Sahl_Yassin",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Sahl_Yassin/113.mp3",
+   "114": "https://archive.org/download/Sahl_Yassin/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Sahl Yassin - سهل ياسين",
+  "item": "sahlyassinQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/sahlyassinQuran/113.mp3",
+   "114": "https://archive.org/download/sahlyassinQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "KL-Sahl-Yassin",
+  "item": "KL-Sahl-Yassin",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/KL-Sahl-Yassin/113.mp3",
+   "114": "https://archive.org/download/KL-Sahl-Yassin/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.974,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "listen-to-quran.com_Sahl-Yassin",
+  "item": "listen-to-quran.com_Sahl-Yassin",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/listen-to-quran.com_Sahl-Yassin/113.mp3",
+   "114": "https://archive.org/download/listen-to-quran.com_Sahl-Yassin/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran Recitation: By Sahl Yassin",
+  "item": "lifeways11_gmail_001_20180216_0050",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/lifeways11_gmail_001_20180216_0050/113.mp3",
+   "114": "https://archive.org/download/lifeways11_gmail_001_20180216_0050/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Sahl Yassin",
+  "reciter": "Sahl Yassin",
+  "scores": {
+   "1025": [
+    0.99,
+    0.987
+   ]
+  },
+  "same_as": [
+   "1025"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Abdulkareem",
+  "item": "Mohammad_Abdulkareem",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammad_Abdulkareem/113.mp3",
+   "114": "https://archive.org/download/Mohammad_Abdulkareem/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.957,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1026"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulKareem Al Hazmi",
+  "item": "AbdulKareemAlHazmi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulKareemAlHazmi/113.mp3",
+   "114": "https://archive.org/download/AbdulKareemAlHazmi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.532,
+    0.79
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Abdulkareem-JomKuliah.com",
+  "item": "Mohammad_Abdulkareem-BacaQuran.tk",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Mohammad_Abdulkareem-BacaQuran.tk/113.mp3",
+   "114": "https://archive.org/download/Mohammad_Abdulkareem-BacaQuran.tk/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.957,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1026"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdulkareem Alhazmi - عبد الكريم الحازمي",
+  "item": "abdulkareemalhazmiQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulkareemalhazmiQuran/113.mp3",
+   "114": "https://archive.org/download/abdulkareemalhazmiQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.567,
+    0.69
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "AbdulKareem Al Hazmi",
+  "item": "abdulkareem-allnasheed.com",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/abdulkareem-allnasheed.com/113.mp3",
+   "114": "https://archive.org/download/abdulkareem-allnasheed.com/114.mp3"
+  },
+  "n_mp3": 113,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.532,
+    0.79
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Mohammad_Abdulkareem_(MP3_Quran)",
+  "item": "mohammad_abdulkareem_mp3_quran_202002",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/mohammad_abdulkareem_mp3_quran_202002/113.mp3",
+   "114": "https://archive.org/download/mohammad_abdulkareem_mp3_quran_202002/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.957,
+    0.99
+   ]
+  },
+  "same_as": [
+   "1026"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Surah 1 - Abdulkareem Alhazmi",
+  "item": "qurantvapp-abdulkareem-alhazmi-hafs-murattal",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/qurantvapp-abdulkareem-alhazmi-hafs-murattal/113.mp3",
+   "114": "https://archive.org/download/qurantvapp-abdulkareem-alhazmi-hafs-murattal/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.567,
+    0.69
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Murottal Abdulkareem Alhazmi — Quranify Backup",
+  "item": "quranify-backup-r304",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranify-backup-r304/113.mp3",
+   "114": "https://archive.org/download/quranify-backup-r304/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Muhammad AbdulKareem",
+  "reciter": "Muhammad AbdulKareem",
+  "scores": {
+   "1026": [
+    0.567,
+    0.69
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Holy Quran - Aḥmad Al-Nufais",
+  "item": "coranpro-ahmad-alnufais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/coranpro-ahmad-alnufais/113.mp3",
+   "114": "https://archive.org/download/coranpro-ahmad-alnufais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ahmad Al-Nufais",
+  "reciter": "Ahmad Al-Nufais",
+  "scores": {
+   "1027": [
+    0.997,
+    0.999
+   ]
+  },
+  "same_as": [
+   "1027"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Ahmad Al Nufais - أحمد النفيس - مصحف مرتل - رواية حفص عن عاصم - مصحف كامل 114 سورة",
+  "item": "ahmadalnufais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/ahmadalnufais/113.mp3",
+   "114": "https://archive.org/download/ahmadalnufais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ahmad Al-Nufais",
+  "reciter": "Ahmad Al-Nufais",
+  "scores": {
+   "1027": [
+    0.955,
+    0.992
+   ]
+  },
+  "same_as": [
+   "1027"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Quran — ahmad-al-nufais",
+  "item": "islamicloud-quran-ahmad-al-nufais",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/islamicloud-quran-ahmad-al-nufais/ahmad-al-nufais/113.mp3",
+   "114": "https://archive.org/download/islamicloud-quran-ahmad-al-nufais/ahmad-al-nufais/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ahmad Al-Nufais",
+  "reciter": "Ahmad Al-Nufais",
+  "scores": {
+   "1027": [
+    0.983,
+    0.996
+   ]
+  },
+  "same_as": [
+   "1027"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "إدريس بن مـحـمـد أبكر · Idrees Abkar quran beautiful recitation",
+  "item": "alfirdwsiy20gf65765768767654hgf56657687434218_gmail_002_201806",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/alfirdwsiy20gf65765768767654hgf56657687434218_gmail_002_201806/113.mp3",
+   "114": "https://archive.org/download/alfirdwsiy20gf65765768767654hgf56657687434218_gmail_002_201806/114.mp3"
+  },
+  "n_mp3": 111,
+  "guess": "Idrees Abkar",
+  "reciter": "Idrees Abkar",
+  "scores": {
+   "1028": [
+    0.998,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1028"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "353-idrees-abkar-353-do3aa-telawat-khashe3a--anasheed-ad3eyah",
+  "item": "353-idrees-abkar-353-do3aa-telawat-khashe3a--anasheed-ad3eyah",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/353-idrees-abkar-353-do3aa-telawat-khashe3a--anasheed-ad3eyah/Idrees-abkar113.mp3",
+   "114": "https://archive.org/download/353-idrees-abkar-353-do3aa-telawat-khashe3a--anasheed-ad3eyah/Idrees-abkar114.mp3"
+  },
+  "n_mp3": 353,
+  "guess": "Idrees Abkar",
+  "reciter": "Idrees Abkar",
+  "scores": {
+   "1028": [
+    0.71,
+    0.849
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "QURAN KORAN BY IDREES ABKAR 115 MP3",
+  "item": "alfirdwsiy1433_gmail_001111111111111111111111111111111113465654563453651711",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/alfirdwsiy1433_gmail_001111111111111111111111111111111113465654563453651711/113.mp3",
+   "114": "https://archive.org/download/alfirdwsiy1433_gmail_001111111111111111111111111111111113465654563453651711/114.mp3"
+  },
+  "n_mp3": 115,
+  "guess": "Idrees Abkar",
+  "reciter": "Idrees Abkar",
+  "scores": {
+   "1028": [
+    0.987,
+    0.997
+   ]
+  },
+  "same_as": [
+   "1028"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Raad Al-kurdi",
+  "item": "raad-al-kurdi_202609",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/raad-al-kurdi_202609/113.mp3",
+   "114": "https://archive.org/download/raad-al-kurdi_202609/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Raad Al-Kurdi",
+  "reciter": "Raad Al-Kurdi",
+  "scores": {
+   "1029": [
+    0.497,
+    0.932
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Raad Al-Kurdi - Quran Recitation",
+  "item": "002_20220520_202205",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20220520_202205/Raad%20Al-Kurdi/113.mp3",
+   "114": "https://archive.org/download/002_20220520_202205/Raad%20Al-Kurdi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Raad Al-Kurdi",
+  "reciter": "Raad Al-Kurdi",
+  "scores": {
+   "1029": [
+    0.467,
+    0.863
+   ]
+  },
+  "same_as": []
+ },
+ {
+  "source": "archive.org",
+  "title": "Raad Al Kurdi - رعد محمد الكردي",
+  "item": "RaadAlKurdi",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/RaadAlKurdi/113.mp3",
+   "114": "https://archive.org/download/RaadAlKurdi/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Raad Al-Kurdi",
+  "reciter": "Raad Al-Kurdi",
+  "scores": {
+   "1029": [
+    0.98,
+    0.998
+   ]
+  },
+  "same_as": [
+   "1029"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "The Complete Holy Quran - Khalid Al-Jaleel | القرآن الكريم كاملاً بصوت خالد الجليل mp3",
+  "item": "002_20250807",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/002_20250807/113.mp3",
+   "114": "https://archive.org/download/002_20250807/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Khalid Al-Jaleel",
+  "reciter": "Khalid Al-Jaleel",
+  "scores": {
+   "1030": [
+    0.987,
+    0.992
+   ]
+  },
+  "same_as": [
+   "1030"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wadee Hammadi Al Yamani",
+  "item": "WadeeHammadiAlYamani_201801",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/WadeeHammadiAlYamani_201801/113.mp3",
+   "114": "https://archive.org/download/WadeeHammadiAlYamani_201801/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wadee Hammadi Al-Yamani",
+  "item": "PerSurah89",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/PerSurah89/113.mp3",
+   "114": "https://archive.org/download/PerSurah89/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Murottal Wadee Hammadi Al-Yamani (Per Surah)",
+  "item": "murottal-wadee-hammadi-al-yamani-per-surah",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/murottal-wadee-hammadi-al-yamani-per-surah/113.mp3",
+   "114": "https://archive.org/download/murottal-wadee-hammadi-al-yamani-per-surah/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.999,
+    0.999
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wadee Hammadi al-Yamani Quran",
+  "item": "WadeeHammadialYamani",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/WadeeHammadialYamani/113.mp3",
+   "114": "https://archive.org/download/WadeeHammadialYamani/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wadee Al-Yamani القاريء وديع اليمني",
+  "item": "koonoz_blogspot_com_Wadee_Al_Yamani",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/koonoz_blogspot_com_Wadee_Al_Yamani/113.mp3",
+   "114": "https://archive.org/download/koonoz_blogspot_com_Wadee_Al_Yamani/114.mp3"
+  },
+  "n_mp3": 104,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Wadee Hammadi al-Yamani",
+  "item": "wadee",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/wadee/113.mp3",
+   "114": "https://archive.org/download/wadee/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Wadee Al-Yamani",
+  "reciter": "Wadee Al-Yamani",
+  "scores": {
+   "1033": [
+    0.992,
+    0.994
+   ]
+  },
+  "same_as": [
+   "1033"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdulrahman_Al-Majed",
+  "item": "Abdulrahman_Al-Majed",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdulrahman_Al-Majed/113.mp3",
+   "114": "https://archive.org/download/Abdulrahman_Al-Majed/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdulrahman Al-Majed",
+  "reciter": "Abdulrahman Al-Majed",
+  "scores": {
+   "1035": [
+    0.991,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1035"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdulrahman Al-Majed - عبد الرحمن الماجد",
+  "item": "AbdulrahmanAlMajed",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/AbdulrahmanAlMajed/113.mp3",
+   "114": "https://archive.org/download/AbdulrahmanAlMajed/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdulrahman Al-Majed",
+  "reciter": "Abdulrahman Al-Majed",
+  "scores": {
+   "1035": [
+    0.991,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1035"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Abdulrahman_Al-Majed_(MP3_Quran)",
+  "item": "Abdulrahman_Al-Majed_MP3_Quran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/Abdulrahman_Al-Majed_MP3_Quran/113.mp3",
+   "114": "https://archive.org/download/Abdulrahman_Al-Majed_MP3_Quran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdulrahman Al-Majed",
+  "reciter": "Abdulrahman Al-Majed",
+  "scores": {
+   "1035": [
+    0.991,
+    0.993
+   ]
+  },
+  "same_as": [
+   "1035"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Murottal Abdulrahman Al-Majed — Quranify Backup",
+  "item": "quranify-backup-r236",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/quranify-backup-r236/113.mp3",
+   "114": "https://archive.org/download/quranify-backup-r236/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Abdulrahman Al-Majed",
+  "reciter": "Abdulrahman Al-Majed",
+  "scores": {
+   "1035": [
+    1.0,
+    1.0
+   ]
+  },
+  "same_as": [
+   "1035"
+  ]
+ },
+ {
+  "source": "archive.org",
+  "title": "Ibrahim Al-Asiri - إبراهيم العسيري",
+  "item": "ibrahimal-asiriQuran",
+  "licence": null,
+  "files": {
+   "113": "https://archive.org/download/ibrahimal-asiriQuran/113.mp3",
+   "114": "https://archive.org/download/ibrahimal-asiriQuran/114.mp3"
+  },
+  "n_mp3": 114,
+  "guess": "Ibrahim Al-Asiri",
+  "reciter": "Ibrahim Al-Asiri",
+  "scores": {
+   "1036": [
+    0.978,
+    0.982
+   ]
+  },
+  "same_as": [
+   "1036"
+  ]
+ }
+]
