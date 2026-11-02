@@ -1,3 +1,4 @@
+import { MagicTrees, SURAH_PAGES } from './magicTrees';
 // The juz gardens' art (Learn tab), all drawn in code on a 2D canvas: an island of grass squares
 // seen at an angle, a tree per surah and the decorations. Each surah's tree takes its kind and
 // colours from the surah number (seeded), so the same surah always grows the same tree; a bought
@@ -238,13 +239,43 @@ export interface TreeLook {
 }
 
 /** Height of a full tree in tile widths, for hit tests and layout. */
-export const treeHeight = (s: number) => ({ palm: 1.75, olive: 1.15, cypress: 1.95, broad: 1.5, blossom: 1.4, fruit: 1.35 })[speciesOf(s)]
-  * shapeOf(s).h + (shapeOf(s).tiers === 2 && !['palm', 'cypress'].includes(speciesOf(s)) ? 0.42 : 0);
+export const treeHeight = (s: number) => 2.3 * (0.7 + 0.6 * magicSize(s));
 /** Height of a tree at a stage, in tile widths. */
 export const STAGE_SCALE = [0, 0.66, 0.62, 0.8, 1];
 export const stageHeight = (s: number, stage: Stage) => (stage === 0 ? 0.3 : stage === 1 ? 0.42 : treeHeight(s) * STAGE_SCALE[stage]);
 
+/** 0–1 by the surah's length in pages (a long surah grows a bigger, fuller tree). */
+export const magicSize = (s: number) => Math.min(1, Math.log(SURAH_PAGES[s - 1] * 2 + 1) / Math.log(97));
+const built = new Map<number, unknown>();
+const magic = (s: number) => built.get(s) ?? (built.set(s, MagicTrees.build(s, SURAH_PAGES[s - 1])), built.get(s));
+/** Growth for each stage: seed, sprout, young, growing (first fruit ripening), full. */
+const STAGE_G = [0.04, 0.4, 0.68, 0.86, 1];
+const pics = new Map<string, HTMLCanvasElement>();
+
+/** A surah's magic tree, its ground point at (cx, cy); u = tile width. Cached as a picture per stage. */
 export function drawTree(ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number, k: TreeLook) {
+  const H = treeHeight(k.s) * u, f = H / 480, dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+  const g0 = k.stage > 0 ? STAGE_G[k.stage - 1] : 0, g = g0 + (STAGE_G[k.stage] - g0) * (k.grow ?? 1);
+  const px = Math.max(24, Math.round(H * dpr / 8) * 8), key = `${k.s}|${k.stage}|${k.thirsty ? 1 : 0}|${px}`;
+  let pic = k.grow !== undefined && k.grow < 1 ? undefined : pics.get(key);
+  if (!pic) {
+    pic = document.createElement('canvas'); const sc = px / 480; pic.width = Math.ceil(500 * sc); pic.height = Math.ceil(625 * sc);
+    const c = pic.getContext('2d')!; c.scale(sc, sc); c.translate(0, -40);
+    const T = magic(k.s) as { fit: number };
+    c.save(); MagicTrees.fitTo(c, T); MagicTrees.drawTree(c, T, g, { t: 0, thirst: k.thirsty ? 1 : 0 }); c.restore();
+    if (k.grow === undefined || k.grow >= 1) { if (pics.size > 400) pics.clear(); pics.set(key, pic); }
+  }
+  ctx.save();
+  ctx.translate(cx, cy - (k.lifted ? u * 0.25 : 0));
+  ctx.fillStyle = k.night ? 'rgba(0,0,0,.28)' : 'rgba(30,50,20,.2)';
+  ctx.beginPath(); ctx.ellipse(u * 0.04, 0, u * (0.12 + 0.25 * g), u * (0.06 + 0.12 * g), 0, 0, Math.PI * 2); ctx.fill();
+  if (!k.thirsty) ctx.rotate(Math.sin(k.t * 0.8 + k.s) * 0.012);
+  ctx.drawImage(pic, -250 * f, -(520 - 40) * f, 500 * f, 625 * f);
+  ctx.restore();
+}
+
+/** The earlier hand-drawn trees (six species), kept for reference. */
+export function drawSimpleTree(ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number, k: TreeLook) {
   const sp = speciesOf(k.s);
   const p = palette(k.s, k.v, sp, k.thirsty, k.night);
   const r = rng(k.s * 104729 + 11);

@@ -1401,7 +1401,15 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       only (rule 8); tap a word: Quran.com meaning + its sound where timed. Juz 'Amma recordings kept on the device
       (`kidsRecitation`), longer surahs streamed. `addMemorised()` feeds the Me tab's memorise goal; rewards play
       `celebrate()` (lantern / star, own kicker)
+- [x] The 114 magic trees (owner request 2026-11-02, "nothing better than another"): `src/ui/magicTrees.ts` — every
+      surah its own combination of 12 shapes × 14 leaves × 14 fruits × 10 barks × 24 colour sets (no two share three of
+      the five, neighbours never share shape/leaf/fruit) and its own seed (12 bodies × 8 marks); growth is continuous
+      (`STAGE_G`: seed → full, fruit ripening from the growing stage); size follows the surah's pages (`SURAH_PAGES`,
+      `magicSize()`); drawn once per surah + stage as a cached picture (`drawTree()` in `gardenArt.ts`; the six
+      hand-drawn species stay as `drawSimpleTree`). Gallery to review: Artifact "The 114 Trees"
 - [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
+- [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
+      joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
 - [ ] Later: finished juz gardens joined into one world; Kids version
 
 ---
