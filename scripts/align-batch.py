@@ -64,7 +64,11 @@ def main():
   stop = time.time() + float(os.environ.get('DEADLINE', 1e9))  # seconds: start no surah after this
   for s in surahs_of(spec):
     path = os.path.join(outdir, key, '%03d.json' % s)
-    if os.path.exists(path): continue
+    if os.path.exists(path):
+      # A later round tries again where the network failed (the recording itself was never heard).
+      if not os.environ.get('RETRY_ERRORS'): continue
+      err = str(json.load(open(path)).get('error', ''))
+      if not any(w in err.lower() for w in ('timed out', 'urlopen', 'connection', 'http error 5', 'temporar', 'reset', 'ffmpeg')): continue
     if time.time() > stop: print('deadline: stopping before surah %d' % s); break
     t = time.time()
     try:

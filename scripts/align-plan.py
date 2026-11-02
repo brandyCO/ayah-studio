@@ -15,13 +15,24 @@ only = set(filter(None, (sys.argv[1] if len(sys.argv) > 1 else '').split(',')))
 fixed = sys.argv[2] if len(sys.argv) > 2 else ''
 
 jobs = []
-for line in src.splitlines():
+# "new:N": batch N (60 recordings, 240 jobs: under GitHub's 256 per matrix) of scripts/new-recordings.json, the
+# mp3quran Hafs recordings not in the app yet (aligned first, judged and added afterwards).
+lines = src.splitlines()
+if any(o.startswith('new:') for o in only):
+  n = int(next(o for o in only if o.startswith('new:'))[4:])
+  new = json.load(open(os.path.join(ROOT, 'scripts', 'new-recordings.json')))[(n - 1) * 60:n * 60]
+  lines = ["{ id: 0, qdc: false, mp3quran: { read: '%s' } }" % r['key'] for r in new]
+  folders = {r['key']: r['folder'] for r in new}
+  only = set()
+else:
+  folders = {}
+for line in lines:
   if 'qdc: false' not in line or not re.search(r'\{ id: \d+', line): continue
   rid = re.search(r'id: (\d+)', line).group(1)
   m = re.search(r"mp3quran: \{ read: '?([\w-]+)'?", line)
   if m:
     key = m.group(1)
-    folder = json.load(open(os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)))['folder']
+    folder = folders.get(key) or json.load(open(os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)))['folder']
     kind, source = 'mp3quran', folder
   else:
     kind, key, source = 'everyayah', rid, re.search(r"everyayah: '([^']+)'", line).group(1)

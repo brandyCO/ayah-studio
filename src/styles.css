@@ -402,6 +402,7 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 
 /* listening: the ayah being recited is tinted, its word being recited coloured */
 .mp-line .w.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); border-radius: 0; }
+.mp-basmala.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); transition: background 0.3s; }
 .mp-line .w.play-word { color: var(--accent); }
 body.listening .mushaf { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .player {
@@ -1861,3 +1862,6 @@ html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; backgro
 .tc-change { display: block; margin: 8px 0 0 auto; background: none; border: 0; padding: 4px; cursor: pointer; text-decoration: underline; }
 .tc-done { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .tc-done .muted { margin: 0 0 6px; }
+/* Several recordings of one reciter: chips under the name in the pickers. */
+.rec-chips { padding: 0 12px 10px; }
+.rec-chips .chip { padding: 4px 10px; font-size: var(--fs-s); }

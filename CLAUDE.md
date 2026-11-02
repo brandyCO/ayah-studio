@@ -403,6 +403,20 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
       **No added pause by default** (owner decision 2026-10-29): every mood and vibe has `pause: 0`; a look
       remembered from before loses its pause once (`pauseReset`); users add one under Audio → Pauses
+      **Every ayah, every Bismillah** (owner request 2026-11-02, "no ayah skipped, a surah always starts with the
+      Bismillah"): Listen starts a surah at the very start of its file; mp3quran cuts left null get a start from the
+      alignment (`l` in `public/data/mp3quran/*.json`, `scripts/make-listen-starts.py`; reels may use them too); an
+      ayah still without one plays from the previous ayah. `public/data/basmala.json` (`src/data/basmala.ts`): per
+      recording the surahs whose file lacks the Bismillah (`missing`) → the reciter's own Bismillah is played first
+      (everyayah 001001, a span of another surah, or for Quran.com files — which never have it — his Al-Fatiha's ayah
+      1); `spans` light the Bismillah line in the mushaf (`.mp-basmala[data-s]`, position a = 0 to the mushaf only);
+      `skip` passes spoken announcements (Al-Yamani 48–56); `first` = ayah 1's first word after the Bismillah.
+      Made by `scripts/fix-openings.py` / `qdc-openings.py` on GitHub (`align.yml` scan = openings / qdc) and
+      `scripts/merge-openings.py`. **Recordings**: a reciter's other recordings are chips under his name (Listen and
+      studio pickers, `groupRecordings()`, `recording`); ids 1038–1049 (migration `20261102000000_more_recordings.sql`).
+      `scripts/new-recordings.json`: 187 more mp3quran Hafs recordings, aligned in batches (`only = new:N`; a run
+      restarts itself until every surah has a result, then checks the openings and starts the next batch) for the
+      owner to pick from. Surah-finished card waits until the recitation leaves the surah
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
