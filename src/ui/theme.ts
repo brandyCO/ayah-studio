@@ -158,13 +158,8 @@ const AppIcon = registerPlugin<{ set(o: { id: string }): Promise<void> }>('AppIc
 
 /** The web tab / bookmark icon in the theme's colours: public/icon.svg (light in the ayah marker) on the
  *  theme's night tile, with the colours scripts/make-icons.py `theme_colors` uses for the app icons. */
-function setFavicon(x: BrandTheme) {
-  const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (!link) return;
-  if (x.id === DEFAULT_THEME) {
-    link.href = './icon.svg';
-    return;
-  }
+export function themeIconUrl(x = themeById(themeId())): string {
+  if (x.id === DEFAULT_THEME) return `${import.meta.env.BASE_URL}icon.svg`;
   const h = x.hue, line = x.accentDark, ring = x.fill[x.fill.length - 1];
   const glow = (id: string, r: number, stops: string) => `<radialGradient id="${id}" cx="256" cy="256" r="${r}" gradientUnits="userSpaceOnUse">${stops}</radialGradient>`;
   const sq = `<rect x="138" y="138" width="236" height="236" rx="16.52" fill="none" stroke="${line}" stroke-width="12.98" stroke-linejoin="round"`;
@@ -175,7 +170,12 @@ function setFavicon(x: BrandTheme) {
     + `</defs><rect width="512" height="512" rx="115" fill="url(#tg)"/><circle cx="256" cy="256" r="146.32" fill="url(#lg)"/>`
     + `${sq}/>${sq} transform="rotate(45 256 256)"/>`
     + `<circle cx="256" cy="256" r="77.88" fill="none" stroke="${ring}" stroke-width="7.14" opacity=".8"/><circle cx="256" cy="256" r="25.96" fill="url(#lc)"/></svg>`;
-  link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function setFavicon(x: BrandTheme) {
+  const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (link) link.href = themeIconUrl(x);
 }
 
 let iconFor = '';
