@@ -16,7 +16,7 @@ on:
         required: false
         default: ''
       scan:
-        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py)'
+        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py)'
         required: false
         default: 'no'
 
@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   plan:
-    if: inputs.scan != 'yes'
+    if: inputs.scan != 'yes' && inputs.scan != 'qdc'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -129,3 +129,53 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sources && git commit -qm "Source scan" && git push -q origin HEAD:align-results
+
+  qdc-openings:
+    if: inputs.scan == 'qdc'
+    name: QDC openings · ${{ matrix.id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        id: [1, 2, 3, 4, 5, 6, 7, 9, 10, 12, 97, 161, 173]
+    env:
+      ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/align.yml
+      - name: Install ffmpeg and the model's libraries
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+          pip install -q transformers==5.19.0 numpy huggingface_hub
+      - uses: actions/cache@v4
+        with:
+          path: .cache/align-model
+          key: align-model-rabah2026-v_final
+      - name: Download the model (Apache-2.0)
+        run: |
+          [ -f "$ALIGN_MODEL/model.safetensors" ] || python3 -c "from huggingface_hub import snapshot_download as d; d('rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final', local_dir='$ALIGN_MODEL')"
+      - run: python3 scripts/qdc-openings.py ${{ matrix.id }} out
+      - name: Save results
+        if: always()
+        run: |
+          [ -f out/qdc${{ matrix.id }}.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set qdc-open
+          mkdir -p qdc-open && cp "$GITHUB_WORKSPACE/out/qdc${{ matrix.id }}.json" qdc-open/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qdc-open && git commit -qm "QDC openings: ${{ matrix.id }}"
+          for i in 1 2 3 4 5 6 7 8; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
