@@ -25,6 +25,12 @@ if any(o.startswith('ia:') for o in only):
   print(json.dumps([dict(kind='mp3quran', key='ia-' + item.replace('/', '-').replace('.', '-'),
                          source='https://archive.org/download/%s/' % item, surahs=fixed or '37,39,40,45,65')]))
   sys.exit()
+# "ea:FOLDER": an everyayah folder not in the app as its own reciter, as a test against Quran.com's word times of
+# the same recording (e.g. Abdul_Basit_Mujawwad_128kbps = Quran.com reciter 1).
+if any(o.startswith('ea:') for o in only):
+  folder = next(o for o in only if o.startswith('ea:'))[3:]
+  print(json.dumps([dict(kind='everyayah', key='ea-' + folder, source=folder, surahs=fixed or '1,36,55,67,78,89-93')]))
+  sys.exit()
 if any(o.startswith('new:') for o in only):
   n = int(next(o for o in only if o.startswith('new:'))[4:])
   new = json.load(open(os.path.join(ROOT, 'scripts', 'new-recordings.json')))[(n - 1) * 60:n * 60]
