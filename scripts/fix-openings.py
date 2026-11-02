@@ -46,11 +46,11 @@ def retime(x, s, a, lo, hi):
   return mw.ayah_words(Q[s - 1][a - 1], words, conf, lconf, round(lo * 1000), round(hi * 1000))
 
 
-MARKS = ('بس', 'بسم', 'بسن', 'بمل', 'رحيم', 'رحمـن', 'رحمن', 'لرحي', 'ممنل', 'منلرح')
+MARKS = ('بس', 'بسم', 'بسن', 'بمل', 'رحيم', 'رحمن', 'لرحي', 'ممنل', 'منلرح')
 
 
 def norm(t):
-  return t.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ٱ', 'ا')
+  return t.replace('ـ', '').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ٱ', 'ا')
 
 
 def isti(h):
@@ -64,14 +64,15 @@ def has_bismillah(heard, s, start=None):
   h = norm(heard)
   if s == 1:
     pre = h[:h.find('الحمد')] if 'الحمد' in h else h[:30]
-    return any(m in pre for m in ('بس', 'سمل', 'رحيم', 'رحمـن'))
+    return any(m in pre for m in ('بس', 'سمل', 'رحيم', 'رحمن', 'لرح'))
   if start is not None and start > 2500 and not isti(h): return True
   k = h.find('شيط')
   if 0 <= k <= 30: h = h[k + 5:]
   elif isti(h): h = h[18:]
   region = h[:22]
   if 'سمل' in region[:12] or 'سمال' in region[:12]: return True
-  own = norm(''.join(c for c in Q[s - 1][0].rsplit('\xa0', 1)[0] if 'ء' <= c <= 'ي' or c == 'ٱ'))[:24]
+  # the surah's own opening words (ayat 1–3: a short first ayah such as حمٓ is followed by words like الرحمن)
+  own = norm(''.join(c for a in Q[s - 1][:3] for c in a.rsplit('\xa0', 1)[0] if 'ء' <= c <= 'ي' or c == 'ٱ'))[:40]
   if region.startswith('ب') or (region[1:2] == 'ب' and region[:1] in 'ميرن'): return True
   return any(m in region and m not in own for m in MARKS)
 

@@ -13,7 +13,7 @@ interface Entry {
   /** Surahs ("2-8,10") whose recording has no Bismillah of its own; "all" for per-ayah files. */
   missing: string;
   /** The reciter's own Bismillah: everyayah's file, or ms from..to of his recording of `surah`. */
-  src?: 'everyayah' | { surah: number; from: number; to: number };
+  src?: 'everyayah' | 'fatiha' | { surah: number; from: number; to: number };
   /** Where each surah file that has its own Bismillah recites it: {surah: [fromMs, toMs]}. */
   spans?: Record<string, [number, number]>;
   /** A spoken announcement before the recitation in a few uploads: ms to start from. */
@@ -53,6 +53,13 @@ export async function basmalaBefore(r: Reciter, s: number): Promise<Basmala | nu
     if (s === 1) return null;
   }
   if (e.src === 'everyayah') return r.everyayah ? { url: everyayahUrl(r, 1, 1), from: 0, to: null } : null;
+  if (e.src === 'fatiha') {
+    // Quran.com recordings: the reciter's Al-Fatiha, whose ayah 1 is the Bismillah, timed on its own.
+    if (s === 1) return null;
+    const q = await qdcSurah(r.id, 1);
+    const v = q.timings.get('1:1');
+    return v ? { url: q.audioUrl, from: v.timestamp_from / 1000, to: v.timestamp_to / 1000 } : null;
+  }
   const { surah, from, to } = e.src;
   const q = r.mp3quran ? await mp3quranSurah(r, surah) : await qdcSurah(r.id, surah);
   return { url: q.audioUrl, from: from / 1000, to: to / 1000 };

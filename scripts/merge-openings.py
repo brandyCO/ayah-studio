@@ -29,11 +29,16 @@ def ranges(xs):
     if o and x == o[-1][1] + 1: o[-1][1] = x
     else: o.append([x, x])
   return ','.join(str(a) if a == b else '%d-%d' % (a, b) for a, b in o)
+import importlib.util
+sp = importlib.util.spec_from_file_location('fo', os.path.join(ROOT, 'scripts', 'fix-openings.py'))
+fo = importlib.util.module_from_spec(sp); sp.loader.exec_module(fo)
 for f in sorted(glob.glob(os.path.join(res, 'qdc-open', 'qdc*.json'))):
   d = json.load(open(f))
-  e = {'missing': ranges(d['missing']), 'spans': d['spans'], 'first': d['first']}
-  best = max(d['spans'], key=lambda s: d['conf'][s][0], default=None)
-  if best: e['src'] = {'surah': int(best), 'from': d['spans'][best][0], 'to': d['spans'][best][1]}
+  # judged again from what was heard (the checks may have improved since the run)
+  missing = [int(s) for s, h in d['heard'].items() if int(s) not in (1, 9) and not fo.has_bismillah(h, int(s), None)]
+  e = {'missing': ranges(missing), 'spans': d['spans'], 'first': d['first']}
+  # its own Bismillah: Al-Fatiha's ayah 1 (Quran.com times it on its own)
+  if missing: e['src'] = 'fatiha'
   out[os.path.basename(f)[:-5]] = e
 json.dump(out, open(os.path.join(ROOT, 'public', 'data', 'basmala.json'), 'w'), separators=(',', ':'), sort_keys=True)
 print(len(out), 'recordings')
