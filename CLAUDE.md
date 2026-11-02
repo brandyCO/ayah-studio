@@ -1369,6 +1369,49 @@ duas/reflections section in Me.
       (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
+### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
+Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the juz gardens").
+- [x] Tab bar **Read · Learn · Create · Me**: Listen left the bar (▶ in the mushaf's top bar `mushaf.listen`, ▶ on a
+      selected ayah; while listening elsewhere Read goes back to the page being recited; a one-time toast
+      `listenMoved` tells returning users). Learn = `#/learn` (garden) and `#/learn/{s}` (lesson), both lazy-loaded
+      with their own strings (`src/i18n/learn.ts`, `lt()`) and CSS (`src/ui/learn.css`) so first load stays small
+- [x] Data `src/data/garden.ts` (localStorage `garden`, synced as `user_docs` state/garden, merged per tree /
+      decoration, newest wins, learned counts never go back, purchases add up; in Export my data): one garden per
+      juz (a surah grows in the juz holding its ayah 1, `surahJuz()`; grid 5–8, `gridSize()`), a tree per surah
+      (`x/y`, variety, chunk size 1/2/3 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
+      ayah 1, `linked`, `full`, review `step`, `water`). Stages seed → sapling → small → medium → full (only after the
+      whole surah from memory). Thirsty: a full tree after 1/3/7/14/30 days then monthly (`WATER_DAYS`; a smooth
+      recitation moves the next one further, slips closer), a growing tree after 3 days without a lesson.
+      Light (journey `claimGoal('gl:…')`): new chunk 5, link 5, full 30, watering 10; wallet = all Light earned −
+      spent here. Store: varieties per surah Autumn 40 / Moonlit 80 / Light 120; decorations common 30 (flowers,
+      stones, lamp, bench), rare 120 (pond, fountain), epic 300 (arch, pavilion), legendary 800 (moon gate, well of light)
+- [x] Garden `src/ui/garden.ts` + art `src/ui/gardenArt.ts` (2D canvas, angled grid island, all drawn in code; no
+      figures): 6 kinds of tree by surah number, and each surah its own shape (`shapeOf()`: lean, height, width,
+      clumps/fronds, second crown, twin stem or forked trunk, fruit/blossom colour); gentle sway, thirsty = paler,
+      drooping, water-drop bubble; growing moment after a lesson (old stage shrinks, new one springs up, sparks);
+      night motes; a juz with every tree full glows (light in the seams, warm sky). Hold/drag trees and decorations
+      anywhere (snap to squares, grab point kept), pinch / ctrl+wheel / double-tap zoom; seed store (30 juz sections,
+      first seed of every surah free) and decorations → a tray: drag onto a square or tap to plant near the middle.
+      Under the garden: Today (thirsty trees first, then the next lesson), the trees of this juz (screen readers),
+      How it works. Tree card: progress, status, next lesson, chunk size, kinds, back to the store
+- [x] Lesson `src/ui/lesson.ts`: New (Listen ×1/3/5 with a turn after each round → Practise with fading hints: all
+      words → first word of each ayah → none → From memory: hidden words keep their place, tap to peek → reveal →
+      Not yet / A few slips / I had it) → Link (1..learned from memory) → Whole surah → full tree; Water for a full
+      thirsty tree; a thirsty growing tree starts with Link then goes on to New. Words lit from QDC word timings
+      only (rule 8); tap a word: Quran.com meaning + its sound where timed. Juz 'Amma recordings kept on the device
+      (`kidsRecitation`), longer surahs streamed. `addMemorised()` feeds the Me tab's memorise goal; rewards play
+      `celebrate()` (lantern / star, own kicker)
+- [x] The 114 magic trees (owner request 2026-11-02, "nothing better than another"): `src/ui/magicTrees.ts` — every
+      surah its own combination of 12 shapes × 14 leaves × 14 fruits × 10 barks × 24 colour sets (no two share three of
+      the five, neighbours never share shape/leaf/fruit) and its own seed (12 bodies × 8 marks); growth is continuous
+      (`STAGE_G`: seed → full, fruit ripening from the growing stage); size follows the surah's pages (`SURAH_PAGES`,
+      `magicSize()`); drawn once per surah + stage as a cached picture (`drawTree()` in `gardenArt.ts`; the six
+      hand-drawn species stay as `drawSimpleTree`). Gallery to review: Artifact "The 114 Trees"
+- [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
+- [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
+      joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
+- [ ] Later: finished juz gardens joined into one world; Kids version
+
 ---
 
 ## Repository layout (target)

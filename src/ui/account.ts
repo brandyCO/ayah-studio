@@ -140,6 +140,7 @@ async function exportData() {
       bookmarks: bookmarkRecords(),
       reflections: reflections().map((r) => ({ ayah: `${r.s}:${r.a}`, paragraphs: r.entries.filter((e) => !e.deleted).map((e) => ({ date: new Date(e.at).toISOString(), text: e.text })) })),
       settings: prefRecords(),
+      learnGarden: stored('garden', {}),
       // Left from the removed Gifts and revision lamps features, kept so nothing is lost.
       giftsReceived: stored('giftsReceived', []),
       revisionLamps: stored('lamps', {}),

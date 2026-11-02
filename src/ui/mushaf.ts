@@ -132,6 +132,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('mushaf.listen'), title: t('mushaf.listen'), onclick: () => listenNow() }, icon('listen', 20)),
     h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
@@ -214,7 +215,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (player.active()) player.toggle();
     else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
   };
-  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow }, true);
+  const tabs = tabBar('read', { read: () => toggleBar(false) }, true);
   root.append(bar, area, sel.bar, tabs);
 
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
@@ -616,6 +617,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
+  // Listening moved from the tab bar into the reading view (2026-11-02): say where it is, once.
+  if (!touring && !intent) {
+    try {
+      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (localStorage.getItem('mushafHint')) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
+    } catch { /* ignore */ }
+  }
   if (intent === 'listen') listenNow();
   else if (intent === 'pick') pickHint();
   // From Settings (the old ☰ menu's reading items live there now).

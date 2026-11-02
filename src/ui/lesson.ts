@@ -1,0 +1,502 @@
+// A lesson in the Learn tab (#/learn/{surah}): grows the surah's tree (src/data/garden.ts).
+//   New    the next chunk: Listen (the reciter, words lit, a turn to repeat after each round) →
+//          Practise (the text, hints fading: all words → first word of each ayah → none) →
+//          From memory (the text hidden; recite, reveal, check yourself)
+//   Link   everything learned so far, from ayah 1, from memory
+//   Whole  the whole surah from memory, once: the tree is full grown
+//   Water  a full tree that is thirsty: the whole surah again
+// The text is the bundled Quran text, split only at its spaces and never changed (rule 1); hidden words
+// keep their place. The reference is always on screen (rule 2). Words are lit only from the reciter's
+// word timings (rule 8). Tap a word: its Quran.com meaning and, where timed, its sound.
+import './learn.css';
+import {
+  LIGHT, ayahPlaces, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
+} from '../data/garden';
+import { addMemorised, claimGoal } from '../data/journey';
+import { dayKey } from '../data/readLog';
+import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
+import { currentTranslation, translationInfo } from '../data/translations';
+import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
+import { surahName, t, } from '../i18n';
+import { lt, type LearnKey } from '../i18n/learn';
+import { celebrate } from './celebrate';
+import { h, haptic, toast } from './dom';
+import { drawTree, stageHeight, vignette } from './gardenArt';
+import { holdSeed, noteGrowth } from './garden';
+import { icon } from './icons';
+import { reelReciter } from './prefs';
+
+type Step = 'new' | 'link' | 'whole' | 'water';
+type Phase = 'listen' | 'practice' | 'memory' | 'check' | 'done';
+interface AyahAudio { src: string; from: number; to: number; words: WordTiming | null; heard: boolean[] }
+
+const TURN_EXTRA = 1.5;
+const night = () => matchMedia('(prefers-color-scheme: dark)').matches;
+
+function pref<T extends string>(key: string, ok: readonly T[], d: T): T {
+  try { const v = localStorage.getItem(key) as T; return ok.includes(v) ? v : d; } catch { return d; }
+}
+function setPref(key: string, v: string) { try { localStorage.setItem(key, v); } catch { /* ignore */ } }
+const learnReciter = () => {
+  try { const v = Number(localStorage.getItem('learnReciter')); if (TIMED_RECITERS.some((r) => r.id === v)) return v; } catch { /* ignore */ }
+  return timedReciterById(reelReciter(DEFAULT_RECITER)).id;
+};
+
+export async function showLesson(root: HTMLElement, s: number): Promise<() => void> {
+  if (!tree(s) || tree(s)!.x < 0) {
+    // Not planted yet: the seed waits in the garden's tray.
+    holdSeed(s);
+    location.replace('#/learn');
+    return () => {};
+  }
+  const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
+    loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
+    surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
+  const m = meta[s - 1];
+  const words = arabic.map((x) => displayWords(x));
+  const tInfo = translationInfo(currentTranslation());
+  const places = async () => ayahPlaces(await (await import('../data/mushaf')).loadMushaf(), s);
+  root.classList.add('learn', 'lesson');
+
+  // --- which step today ---
+  let step: Step = 'new';
+  let range: [number, number] = [1, 1];
+  let reviewFirst = false; // a growing tree was thirsty: Link first, then on to New
+  async function plan(after?: Step): Promise<void> {
+    const tr = tree(s)!;
+    if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
+    if (tr.full) { step = 'water'; range = [1, m.ayahs]; return; }
+    if (!after && thirsty(tr) && tr.learned > 0) { step = 'link'; range = [1, tr.learned]; reviewFirst = true; return; }
+    const next = nextChunk(tr.learned, m.ayahs, tr.chunk, typeof tr.chunk === 'number' ? [] : await places());
+    if (next) { step = 'new'; range = next; return; }
+    step = 'whole';
+    range = [1, m.ayahs];
+  }
+  await plan();
+
+  // --- screen ---
+  const ref = h('p', { class: 'ls-ref', dir: 'ltr' });
+  const stepsEl = h('ol', { class: 'ls-steps' });
+  const phaseEl = h('p', { class: 'ls-phase' });
+  const textEl = h('div', { class: 'ls-text', lang: 'ar', dir: 'rtl' });
+  const pop = h('div', { class: 'ls-pop', hidden: true, 'aria-live': 'polite' });
+  const status = h('p', { class: 'ls-status', 'aria-live': 'polite' });
+  const ring = h('span', { class: 'ls-ring', 'aria-hidden': 'true' });
+  const actions = h('div', { class: 'ls-actions' });
+  const doneEl = h('section', { class: 'ls-done', hidden: true });
+  const playBtn = h('button', { class: 'ls-play', 'aria-label': lt('learn.listen'), onclick: () => (playing ? stopAll() : void listen()) });
+  const speedBtn = h('button', { class: 'chip', onclick: () => { setPref('learnSpeed', pref('learnSpeed', ['1', '0.75'], '1') === '1' ? '0.75' : '1'); paintChips(); } });
+  const repBtn = h('button', { class: 'chip', onclick: () => { const v = pref('learnReps', ['1', '3', '5'], '3'); setPref('learnReps', v === '1' ? '3' : v === '3' ? '5' : '1'); paintChips(); } });
+  const meaningBtn = h('button', { class: 'chip', onclick: () => { setPref('learnMeaning', showMeaning() ? 'off' : 'on'); paintChips(); paintText(); } });
+  const reciterSel = h('select', { class: 'ls-reciter', 'aria-label': lt('learn.reciter'), onchange: () => { setPref('learnReciter', reciterSel.value); audios = null; stopAll(); } },
+    ...TIMED_RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === learnReciter() }, reciterCredit(r))));
+  const tools = h('div', { class: 'ls-tools' }, playBtn, speedBtn, repBtn, meaningBtn, reciterSel);
+  const art = h('span', { class: 'ls-tree' });
+  root.append(
+    h('header', { class: 'ls-head' },
+      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToGarden') }, icon('back', 22)),
+      h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
+      art),
+    stepsEl, phaseEl,
+    h('main', { class: 'ls-main' }, textEl, pop),
+    h('div', { class: 'ls-turn' }, ring, status),
+    actions, tools, doneEl);
+
+  let phase: Phase = 'listen';
+  let level = 0; // 0 all words · 1 the first word of each ayah · 2 none
+  const peeked = new Set<string>();
+  const wordEls = new Map<string, HTMLElement>();
+  const showMeaning = () => pref('learnMeaning', ['on', 'off'], 'on') === 'on';
+  const speed = () => Number(pref('learnSpeed', ['1', '0.75'], '1'));
+  const reps = () => Number(pref('learnReps', ['1', '3', '5'], '3'));
+
+  function paintChips() {
+    speedBtn.textContent = speed() === 1 ? '1×' : '0.75×';
+    speedBtn.setAttribute('aria-label', lt(speed() === 1 ? 'learn.speedNormal' : 'learn.speedSlow'));
+    repBtn.textContent = `×${reps()}`;
+    repBtn.setAttribute('aria-label', lt('learn.repsAria', { n: reps() }));
+    meaningBtn.textContent = lt('learn.meaning');
+    meaningBtn.classList.toggle('on', showMeaning());
+    meaningBtn.setAttribute('aria-pressed', String(showMeaning()));
+  }
+  function paintHead() {
+    ref.textContent = reference(m, range[0], range[1]);
+    const tr = tree(s)!;
+    art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
+    const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
+    stepsEl.replaceChildren(...list.map(([id, k]) => h('li', { class: id === step ? 'on' : '' , 'aria-current': id === step ? 'step' : false }, lt(k))));
+  }
+
+  const hiddenWord = (a: number, i: number) => {
+    if (phase === 'check' || phase === 'done') return false;
+    if (peeked.has(`${a}:${i}`)) return false;
+    const lv = phase === 'memory' ? 2 : phase === 'listen' ? 0 : level;
+    return lv === 2 || (lv === 1 && i > 0);
+  };
+  function paintText() {
+    wordEls.clear();
+    const blocks: Node[] = [];
+    for (let a = range[0]; a <= range[1]; a++) {
+      const p = h('p', { class: 'ls-ayah' });
+      words[a - 1].forEach((w, i) => {
+        const el = h('span', { class: `lw${hiddenWord(a, i) ? ' hid' : ''}`, role: 'button', tabindex: '0', onclick: () => tapWord(a, i) }, w);
+        wordEls.set(`${a}:${i}`, el);
+        p.append(i ? ' ' : '', el);
+      });
+      blocks.push(p);
+      if (showMeaning() && trans[a - 1] && (phase === 'listen' || phase === 'practice' || phase === 'check')) {
+        blocks.push(h('p', { class: 'ls-tr', lang: tInfo.lang, dir: tInfo.dir }, h('span', { class: 'ls-n' }, `${a}. `), trans[a - 1]));
+      }
+    }
+    textEl.replaceChildren(...blocks);
+  }
+  function refreshHidden() {
+    for (const [k, el] of wordEls) { const [a, i] = k.split(':').map(Number); el.classList.toggle('hid', hiddenWord(a, i)); }
+  }
+
+  function paintActions() {
+    const b = (label: string, on: () => void, cls = 'chip') => h('button', { class: cls, onclick: on }, label);
+    const primary = (label: string, on: () => void) => b(label, on, 'primary brand-btn');
+    const n = range[1] - range[0] + 1;
+    const phases: [Phase, LearnKey][] = step === 'new' ? [['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['memory', 'learn.phMemory']] : [];
+    phaseEl.replaceChildren(
+      h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n })),
+      phases.length ? h('span', { class: 'ls-phases' }, ...phases.map(([p, k], i) => h('span', { class: p === phase || (p === 'memory' && phase === 'check') ? 'on' : '' }, `${i + 1} ${lt(k)}`))) : '');
+    if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
+    else if (phase === 'practice') actions.replaceChildren(
+      b(lt(level === 0 ? 'learn.hideSome' : level === 1 ? 'learn.hideAll' : 'learn.showAll'), () => { level = (level + 1) % 3; peeked.clear(); refreshHidden(); paintActions(); }),
+      primary(lt('learn.fromMemory'), () => go('memory')));
+    else if (phase === 'memory') actions.replaceChildren(
+      h('p', { class: 'ls-hint muted small' }, lt('learn.memoryHint')),
+      b(lt('learn.practiseFirst'), () => go('practice')), primary(lt('learn.reveal'), () => go('check')));
+    else if (phase === 'check') {
+      const slips: HTMLButtonElement = b(lt('learn.someSlips'), () => void pass(false, slips));
+      const had: HTMLButtonElement = primary(lt('learn.hadIt'), () => void pass(true, had));
+      actions.replaceChildren(
+        h('p', { class: 'ls-hint' }, lt('learn.howDid')),
+        b(lt('learn.notYet'), () => { level = Math.max(0, level - 1); go('practice'); }),
+        slips, had);
+    } else actions.replaceChildren();
+  }
+
+  function go(p: Phase) {
+    stopAll();
+    phase = p;
+    pop.hidden = true;
+    peeked.clear();
+    if (p === 'memory' || p === 'check') textEl.scrollTop = 0;
+    paintText();
+    paintActions();
+    status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
+    root.classList.toggle('ls-memory', p === 'memory');
+  }
+
+  function startStep() {
+    doneEl.hidden = true;
+    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
+    level = 0;
+    paintHead();
+    go(step === 'new' ? 'listen' : 'memory');
+  }
+
+  // --- recitation ---
+  let audios: AyahAudio[] | null = null;
+  let blobUrl = '';
+  let playing = false;
+  let run = 0;
+  let raf = 0;
+  let turnTimer = 0;
+  const audio = new Audio();
+  audio.preload = 'auto';
+  (audio as HTMLAudioElement & { preservesPitch: boolean }).preservesPitch = true;
+
+  async function ensureAudio(): Promise<boolean> {
+    if (audios) return true;
+    const reciter = timedReciterById(learnReciter());
+    status.textContent = t('common.loading');
+    playBtn.replaceChildren(h('span', { class: 'spinner' }));
+    try {
+      let src: string;
+      let q;
+      if (s >= 78) {
+        // Juz 'Amma: the whole short recording is kept on the device (shared with the Kids space).
+        const { kidsRecitation } = await import('../data/kidsAudio');
+        const r = await kidsRecitation(reciter.id, s);
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        blobUrl = r.src;
+        src = r.src;
+        q = r.qdc;
+      } else {
+        const { qdcSurah } = await import('../data/qdc');
+        q = await qdcSurah(reciter.id, s);
+        src = q.audioUrl; // streamed: the server answers Range requests
+      }
+      audios = words.map((ws, i) => {
+        const v = q.timings.get(`${s}:${i + 1}`);
+        const fallback: AyahAudio = { src: everyayahUrl(reciter, s, i + 1), from: 0, to: Infinity, words: null, heard: ws.map(() => false) };
+        if (!v || !(v.timestamp_to > v.timestamp_from)) return fallback;
+        const spans = parseSpans(wordMap[`${s}:${i + 1}`]);
+        const wt = wordTimings(ws.length, v, spans);
+        const heard = new Array(ws.length).fill(false);
+        for (const [p] of validSegments(v.segments, spans ? spans.length : ws.length)) {
+          const [f, l] = spans ? spans[p - 1] : [p - 1, p - 1];
+          for (let w = f; w <= l; w++) heard[w] = true;
+        }
+        if (ws.length === 1 && wt) heard[0] = true;
+        const to = v.timestamp_to / 1000;
+        return { src, from: v.timestamp_from / 1000, to: i === words.length - 1 && wt ? Math.min(to, wt.last + 0.8) : to, words: wt, heard: wt ? heard : heard.fill(false) };
+      });
+      status.textContent = '';
+      return true;
+    } catch (e) {
+      console.warn('Lesson recitation failed', e);
+      status.textContent = navigator.onLine ? t('kids.playFailed') : t('kids.needsInternet');
+      return false;
+    } finally {
+      paintPlay();
+    }
+  }
+  function paintPlay() {
+    playBtn.replaceChildren(icon(playing ? 'pause' : 'play', 26));
+    playBtn.setAttribute('aria-label', playing ? lt('learn.pause') : lt('learn.listen'));
+  }
+
+  async function seek(src: string, at: number) {
+    if (audio.src !== src) {
+      audio.src = src;
+      await new Promise<void>((resolve, reject) => {
+        const ok = () => { off(); resolve(); };
+        const bad = () => { off(); reject(new Error(t('kids.loadFailed'))); };
+        const off = () => { audio.removeEventListener('loadedmetadata', ok); audio.removeEventListener('error', bad); };
+        audio.addEventListener('loadedmetadata', ok);
+        audio.addEventListener('error', bad);
+      });
+    }
+    if (Math.abs(audio.currentTime - at) > 0.12) audio.currentTime = at;
+  }
+
+  /** Plays one span (an ayah or a word); resolves when it ends, or false when stopped. */
+  function playSpan(my: number, x: AyahAudio, from: number, to: number, light: (w: number | null) => void, wordOnly = false): Promise<boolean> {
+    return new Promise((resolve) => {
+      let stillT = -1, stillAt = performance.now();
+      const finish = (ok: boolean) => { cancelAnimationFrame(raf); audio.removeEventListener('ended', onEnd); resolve(ok); };
+      const onEnd = () => finish(my === run);
+      const follow = () => {
+        if (my !== run) { finish(false); return; }
+        raf = requestAnimationFrame(follow);
+        const tm = audio.currentTime;
+        if (x.words && !wordOnly) {
+          let w: number | null = null;
+          for (const [i, a, b] of x.words.seq) if (a <= tm && tm < b) w = i;
+          light(w);
+        }
+        const now = performance.now();
+        if (tm !== stillT || audio.seeking) { stillT = tm; stillAt = now; }
+        const lastEnd = x.words && !wordOnly ? x.words.last : to;
+        const atEnd = Number.isFinite(audio.duration) && tm >= audio.duration - 0.05;
+        if (tm >= to || atEnd || (now - stillAt > 1500 && tm >= lastEnd - 1) || (now - stillAt > 8000)) finish(true);
+      };
+      audio.addEventListener('ended', onEnd);
+      void (async () => {
+        try {
+          await seek(x.src, from);
+          if (my !== run) { finish(false); return; }
+          audio.playbackRate = speed();
+          if (audio.paused) await audio.play();
+          raf = requestAnimationFrame(follow);
+        } catch (e) {
+          if ((e as Error).name !== 'AbortError') status.textContent = navigator.onLine ? t('kids.playFailed') : t('kids.needsInternet');
+          finish(false);
+        }
+      })();
+    });
+  }
+
+  let lit: HTMLElement | null = null;
+  const lightWord = (a: number) => (w: number | null) => {
+    const el = w === null ? null : wordEls.get(`${a}:${w}`) ?? null;
+    if (el === lit) return;
+    lit?.classList.remove('on');
+    lit = el;
+    if (el) {
+      el.classList.add('on');
+      const r = el.getBoundingClientRect(), box = textEl.getBoundingClientRect();
+      if (r.top < box.top + 8 || r.bottom > box.bottom - 8) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  };
+
+  /** Listens to the range: `rounds` times, with a turn to repeat after each round in the Listen phase. */
+  async function listen(rounds = false) {
+    if (!(await ensureAudio())) return;
+    const my = ++run;
+    playing = true;
+    paintPlay();
+    paintActions();
+    pop.hidden = true;
+    const total = rounds && phase === 'listen' ? reps() : 1;
+    for (let r = 1; r <= total; r++) {
+      status.textContent = total > 1 ? lt('learn.round', { r, n: total }) : '';
+      for (let a = range[0]; a <= range[1]; a++) {
+        const x = audios![a - 1];
+        const ok = await playSpan(my, x, x.from, x.to, lightWord(a));
+        lightWord(a)(null);
+        if (!ok || my !== run) return;
+      }
+      if (rounds && phase === 'listen') {
+        // The learner's turn: as long as the range took, plus a breath.
+        audio.pause();
+        let len = 0;
+        for (let a = range[0]; a <= range[1]; a++) { const x = audios![a - 1]; len += Number.isFinite(x.to) ? x.to - x.from : 6; }
+        len /= speed();
+        status.textContent = t('kids.yourTurn');
+        root.classList.add('ls-your-turn');
+        ring.style.setProperty('--turn', `${len + TURN_EXTRA}s`);
+        const done = await new Promise<boolean>((res) => { turnTimer = window.setTimeout(() => res(my === run), (len + TURN_EXTRA) * 1000); });
+        root.classList.remove('ls-your-turn');
+        if (!done || my !== run) return;
+      }
+    }
+    audio.pause();
+    playing = false;
+    paintPlay();
+    status.textContent = '';
+    if (rounds && phase === 'listen') go('practice');
+    else paintActions();
+  }
+
+  function stopAll() {
+    run++;
+    clearTimeout(turnTimer);
+    cancelAnimationFrame(raf);
+    audio.pause();
+    playing = false;
+    root.classList.remove('ls-your-turn');
+    lit?.classList.remove('on');
+    lit = null;
+    paintPlay();
+    status.textContent = '';
+  }
+
+  /** Quran.com word meanings of the API positions inside display word i. */
+  function meaningOf(a: number, i: number): string {
+    const list = (meanings[a - 1] ?? '').split('|');
+    const spans = parseSpans(wordMap[`${s}:${a}`]);
+    if (!spans) return list[i] ?? '';
+    return spans.map(([f, l], p) => (i >= f && i <= l ? list[p] : '')).filter(Boolean).join(' ');
+  }
+
+  let peekTimer = 0;
+  async function tapWord(a: number, i: number) {
+    const el = wordEls.get(`${a}:${i}`);
+    if (!el) return;
+    if (el.classList.contains('hid')) {
+      // From memory: a peek at one word, for a moment.
+      peeked.add(`${a}:${i}`);
+      el.classList.remove('hid');
+      el.classList.add('peek');
+      haptic(6);
+      clearTimeout(peekTimer);
+      peekTimer = window.setTimeout(() => { peeked.delete(`${a}:${i}`); el.classList.remove('peek'); refreshHidden(); }, 1800);
+      return;
+    }
+    const mean = meaningOf(a, i);
+    pop.hidden = false;
+    pop.replaceChildren(h('span', { class: 'ls-pop-ar', lang: 'ar', dir: 'rtl' }, words[a - 1][i]), h('span', { class: 'ls-pop-en' }, mean || lt('learn.noMeaning')),
+      h('span', { class: 'muted small' }, `${s}:${a} · ${lt('learn.wbwCredit')}`));
+    if (!(await ensureAudio())) return;
+    const x = audios![a - 1];
+    if (!x.words || !x.heard[i]) return; // rule 8: no timing of its own → its meaning only
+    stopAll();
+    const my = run;
+    lightWord(a)(i);
+    await playSpan(my, x, x.words.start[i], x.words.end[i] + 0.06, () => {}, true);
+    audio.pause();
+    lightWord(a)(null);
+  }
+
+  // --- passing a step ---
+  async function pass(smooth: boolean, from: Element | null) {
+    stopAll();
+    const before = tree(s)!;
+    const stage0 = stageOf(before, m.ayahs);
+    const today = dayKey(new Date());
+    const ref0 = reference(m, range[0], range[1]);
+    let moment: Promise<void> | null = null;
+    if (step === 'new') {
+      const n = range[1] - before.learned;
+      learnTo(s, range[1]);
+      if (n > 0) addMemorised(n);
+      claimGoal(`gl:n:${s}:${range[1]}`, LIGHT.new);
+      moment = celebrate({ kind: 'lantern', kicker: lt('learn.celNew'), title: ref0, sub: lt('learn.celNewSub') }, from, LIGHT.new);
+    } else if (step === 'link') {
+      const wasDry = thirsty(before);
+      const fresh = range[1] > before.linked;
+      linkTo(s, range[1]);
+      const light = fresh ? LIGHT.link : wasDry ? LIGHT.water : 0;
+      if (light) claimGoal(fresh ? `gl:l:${s}:${range[1]}` : `gl:wa:${s}:${today}`, light);
+      moment = celebrate({ kind: 'lantern', kicker: lt(wasDry && !fresh ? 'learn.celWater' : 'learn.celLink'), title: ref0, sub: lt('learn.celLinkSub') }, from, light);
+    } else {
+      const first = !before.full;
+      const wasDry = thirsty(before);
+      reciteWhole(s, m.ayahs, smooth);
+      if (first) {
+        claimGoal(`gl:w:${s}`, LIGHT.whole);
+        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub') }, from, LIGHT.whole);
+      } else {
+        const light = wasDry ? LIGHT.water : 0;
+        if (light) claimGoal(`gl:wa:${s}:${today}`, light);
+        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
+      }
+    }
+    const after = tree(s)!;
+    const stage1 = stageOf(after, m.ayahs);
+    if (stage1 !== stage0) noteGrowth(s, stage0);
+    await moment;
+    const was = step;
+    if (was === 'new' && range[0] > 1) { await plan('new'); startStep(); return; }
+    if (was === 'link' && reviewFirst) {
+      // Watered by reciting what was learned: on to the next new ayat, as a day's lesson goes.
+      reviewFirst = false;
+      await plan('link');
+      if (step === 'new') { startStep(); return; }
+    }
+    void showDone(after, was);
+  }
+
+  async function showDone(tr: Readonly<Tree>, was: Step) {
+    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    status.textContent = '';
+    doneEl.hidden = false;
+    paintHead();
+    const next = tr.full ? null : nextChunk(tr.learned, m.ayahs, tr.chunk, typeof tr.chunk === 'number' ? [] : await places());
+    const label = tr.full ? null : next ? lt(next[0] === next[1] ? 'learn.goAyah' : 'learn.goAyat', { a: next[0], b: next[1] }) : lt('learn.goWhole');
+    doneEl.replaceChildren(
+      vignette(150, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: false, t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))),
+      h('h2', {}, lt(tr.full ? (was === 'whole' ? 'learn.doneFull' : 'learn.doneWatered') : 'learn.doneToday')),
+      h('p', { class: 'muted' }, tr.full ? lt('learn.doneFullSub') : lt('learn.doneSub', { n: tr.learned, of: m.ayahs })),
+      h('div', { class: 'ls-done-actions' },
+        h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToGarden')),
+        label ? h('button', { class: 'primary brand-btn', onclick: () => void plan().then(startStep) }, lt('learn.moreToday', { what: label })) : ''));
+  }
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === ' ' && !(e.target instanceof HTMLButtonElement) && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); if (playing) stopAll(); else void listen(phase === 'listen'); }
+    if (e.key === 'Escape') pop.hidden = true;
+  };
+  document.addEventListener('keydown', onKey);
+  const onHide = () => { if (document.hidden) stopAll(); };
+  document.addEventListener('visibilitychange', onHide);
+  paintChips();
+  paintPlay();
+  startStep();
+  if (tree(s)!.learned === 0 && step === 'new') toast(lt('learn.firstLesson'));
+  return () => {
+    stopAll();
+    audio.removeAttribute('src');
+    audio.load();
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    document.removeEventListener('keydown', onKey);
+    document.removeEventListener('visibilitychange', onHide);
+  };
+}
