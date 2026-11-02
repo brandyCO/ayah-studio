@@ -111,6 +111,7 @@ jobs:
 
   # Finish every job: while any planned surah has no result yet (a job stopped at its deadline or was cancelled),
   # the workflow starts itself again with the same inputs; surahs already done are skipped (up to 12 rounds).
+  # A batch of new recordings (only = new:N) that is complete starts batch N + 1.
   next:
     needs: [plan, align]
     if: always() && needs.plan.result == 'success'
@@ -146,6 +147,15 @@ jobs:
           echo "${{ steps.left.outputs.left }} surahs left: round $(( ${{ inputs.round }} + 1 ))"
           gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="${{ inputs.only }}" -f surahs="${{ inputs.surahs }}" \
             -f round="$(( ${{ inputs.round }} + 1 ))"
+      - name: Done; start the next batch
+        if: steps.left.outputs.left == '0' && startsWith(inputs.only, 'new:')
+        run: |
+          n=$(( ${INPUT_ONLY#new:} + 1 ))
+          total=$(( ( $(python3 -c "import json;print(len(json.load(open('scripts/new-recordings.json'))))") + 59 ) / 60 ))
+          [ "$n" -le "$total" ] || { echo "all batches done"; exit 0; }
+          gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="new:$n" -f round=1
+        env:
+          INPUT_ONLY: ${{ inputs.only }}
 
   scan:
     if: inputs.scan == 'yes'
