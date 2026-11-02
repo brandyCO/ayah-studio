@@ -97,6 +97,10 @@ export const RECITERS: Reciter[] = [
   { id: 1044, name: 'Mohamed Siddiq al-Minshawi', short: 'Minshawi (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 114, surahs: '' } },
   { id: 1045, name: 'Mohammad Al-Tablawi', short: 'Tablawi (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 10912, surahs: '' } },
   { id: 1046, name: 'Muhammad Ayyoub', short: 'Ayyoub (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 320, surahs: '' } },
+  // Second recordings on everyayah.com (per-ayah files), told apart from ours the same way.
+  { id: 1047, name: 'Ahmed Al-Ajamy', short: 'Ajamy (2)', recording: 'Murattal 2', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_64kbps_QuranExplorer.Com', qdc: false },
+  { id: 1048, name: 'Ahmed Al-Ajamy', short: 'Ajamy (3)', recording: 'Murattal 3', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net', qdc: false },
+  { id: 1049, name: 'Ali Al-Hudhaify', short: 'Hudhaify (2)', recording: 'Murattal 2', everyayah: 'Hudhaify_32kbps', qdc: false },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */
