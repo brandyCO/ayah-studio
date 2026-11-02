@@ -4,6 +4,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
+//   #/learn[/N]        Learn: the juz gardens, and a lesson that grows surah N's tree
 //   #/me               Me: streak flame, stats, reading time, settings
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
@@ -97,6 +98,9 @@ async function route() {
       const { showMe, showMeSettings } = await import('./ui/me');
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
+    } else if (view === 'learn') {
+      if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
+      else c = await (await import('./ui/garden')).showGarden(screen);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);

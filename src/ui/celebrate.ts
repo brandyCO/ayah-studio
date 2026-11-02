@@ -24,7 +24,7 @@ import { rewardPalette, rgba } from './theme';
 let P = rewardPalette();
 
 export type Moment =
-  | { kind: 'lantern' | 'star'; title: string; sub: string }
+  | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
 
@@ -146,7 +146,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   let count: HTMLElement | null = null;
   if (m.kind === 'lantern' || m.kind === 'star') {
     stage.append(m.kind === 'lantern' ? lanternArt() : starArt());
-    kicker = t(m.kind === 'lantern' ? 'cel.goal' : 'cel.all');
+    kicker = m.kicker ?? t(m.kind === 'lantern' ? 'cel.goal' : 'cel.all');
     title = m.title; sub = m.sub;
   } else {
     const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' }>).badge;

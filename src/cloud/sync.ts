@@ -4,7 +4,7 @@
 // older all-in-one `prefs` document for older app versions. Synced: the Me tab (each device's journey — streak days, counts, badges, reading
 // log — as its own document, read combined; goals: the newest set wins), bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
-// travel as tombstones) and reflections (one document per ayah's note, merged per paragraph: the
+// travel as tombstones), the Learn gardens (one document: trees, decorations, purchases) and reflections (one document per ayah's note, merged per paragraph: the
 // newest edit wins). Thumbnails and own media never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
@@ -93,6 +93,8 @@ async function applyRemote(rows: Row[], meta: Meta) {
       else meta.pushed[key] = String(r.data.at); // already on the server: don't send it back
     } else if (r.kind === 'state' && r.id.startsWith('journey:')) {
       mergeJourney(r.data, r.id.slice(8)); // kept per device and read combined
+    } else if (r.kind === 'state' && r.id === 'garden') {
+      (await import('../data/garden')).mergeGarden(r.data); // per tree / decoration, newest wins; purchases add up (pushed back merged)
     } else if (r.kind === 'setting' && r.id === 'goals') {
       mergeGoals(r.data.goals);
     } else if (r.kind === 'reflection') {
@@ -118,6 +120,7 @@ async function applyRemote(rows: Row[], meta: Meta) {
 }
 
 // --- this device's documents ---
+const hasGarden = () => { try { return !!localStorage.getItem('garden'); } catch { return false; } };
 async function localRows(user: string): Promise<{ key: string; print: string; row: Row }[]> {
   const dev = deviceId();
   const out: { key: string; print: string; row: Row }[] = [];
@@ -131,6 +134,8 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
   for (const [k, r] of Object.entries(prefs)) if (r.at > 0) add('setting', `pref:${k}`, r, String(r.at));
   const journey = journeyRecord();
   add('state', `journey:${dev}`, journey, JSON.stringify(journey));
+  const garden = hasGarden() ? (await import('../data/garden')).gardenRecord() : null;
+  if (garden) add('state', 'garden', garden as unknown as Record<string, unknown>, JSON.stringify(garden));
   const g = goalsRecord();
   if (g) add('setting', 'goals', { goals: g }, String(g.at));
   await loadReflections();
@@ -245,7 +250,7 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'reflections-changed', 'garden-changed']) window.addEventListener(ev, () => soon());
   // The Me tab (streak, goals, counts) changes often while counting dhikr: sync once it rests.
   for (const ev of ['journey-changed', 'readlog-changed']) window.addEventListener(ev, () => soon(20_000));
   // The reel look is remembered at every studio edit, like the draft below.

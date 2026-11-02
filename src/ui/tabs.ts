@@ -1,8 +1,9 @@
-// Bottom tab bar: Read · Listen · Create · Me. One tap to the four things people come for.
+// Bottom tab bar: Read · Learn · Create · Me. One tap to the four things people come for.
 // On the mushaf the bar stays hidden until the page is tapped (the page stays clean); on the
-// surah list, drafts and Me it is always shown. Me is its own screen (#/me: streak, stats). Listen
-// acts on the mushaf: from another screen it opens the last page read and then starts
-// (sessionStorage `tabIntent`).
+// surah list, drafts, Learn and Me it is always shown. Listening lives in Read (owner decision
+// 2026-11-02): ▶ in the mushaf's top bar or on a selected ayah; while listening elsewhere, Read goes
+// back to the page being recited. Learn is the juz gardens (#/learn). Me is its own screen (#/me).
+// A tab tapped on another screen can ask the mushaf to act once it opens (sessionStorage `tabIntent`).
 import { draftHash, listDrafts } from '../data/drafts';
 import { todaysAyah } from '../data/daily';
 import { weeklyTemplate } from '../data/popular';
@@ -16,9 +17,9 @@ import { followAlong, playerActive } from './player';
 
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
-export type Tab = 'read' | 'listen' | 'create' | 'me';
+export type Tab = 'read' | 'learn' | 'create' | 'me';
 export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}`;
-export interface TabHandlers { read?: () => void; listen?: () => void }
+export interface TabHandlers { read?: () => void }
 
 export const goMushaf = (intent?: Intent) => {
   if (intent === 'pick' && document.body.classList.contains('mushaf-mode')) {
@@ -50,9 +51,9 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
       onclick: () => { haptic(); act(); },
     }, icon(ic, 24), h('span', {}, label));
   return h('nav', { class: `tabbar${auto ? ' auto' : ''}`, 'aria-label': t('tab.nav') },
-    btn('read', 'book', t('tab.read'), on.read ?? (() => goMushaf())),
-    // Listening from another screen: Listen goes back to the page being recited (the bar pauses).
-    btn('listen', 'listen', t('tab.listen'), on.listen ?? (() => (playerActive() ? followAlong() : goMushaf('listen')))),
+    // Listening from another screen: Read goes back to the page being recited.
+    btn('read', 'book', t('tab.read'), on.read ?? (() => (playerActive() ? followAlong() : goMushaf()))),
+    btn('learn', 'sprout', t('tab.learn'), () => { if (location.hash !== '#/learn') location.hash = '#/learn'; }),
     btn('create', 'create', t('tab.create'), () => void openCreate()),
     btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }
