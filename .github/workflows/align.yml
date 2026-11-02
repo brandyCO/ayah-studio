@@ -15,6 +15,10 @@ on:
         description: 'Only these surahs, one job per reciter (e.g. 112-114; empty = all, 4 jobs per reciter)'
         required: false
         default: ''
+      round:
+        description: 'Round of this alignment (set by the workflow when it starts itself again to finish)'
+        required: false
+        default: '1'
       scan:
         description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); qdc = how the Quran.com recordings open (scripts/qdc-openings.py); openings = the same for the mp3quran reciters (scripts/fix-openings.py)'
         required: false
@@ -61,6 +65,7 @@ jobs:
       SOURCE: ${{ matrix.job.source }}
       SURAHS: ${{ matrix.job.surahs }}
       GH_TOKEN: ${{ github.token }}
+      RETRY_ERRORS: ${{ inputs.round != '1' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -103,6 +108,44 @@ jobs:
             sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
           done
           exit 1
+
+  # Finish every job: while any planned surah has no result yet (a job stopped at its deadline or was cancelled),
+  # the workflow starts itself again with the same inputs; surahs already done are skipped (up to 12 rounds).
+  next:
+    needs: [plan, align]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      JOBS: ${{ needs.plan.outputs.jobs }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything left?
+        id: left
+        run: |
+          git clone -q --depth 1 --filter=blob:none --no-checkout --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          git -C "$RUNNER_TEMP/res" ls-tree -r --name-only HEAD align2 > "$RUNNER_TEMP/done.txt"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          done = set(open(os.environ['RUNNER_TEMP'] + '/done.txt').read().split())
+          left = 0
+          for j in json.loads(os.environ['JOBS']):
+            for part in j['surahs'].split(','):
+              a, _, b = part.partition('-')
+              for s in range(int(a), int(b or a) + 1):
+                if 'align2/%s/%03d.json' % (j['key'], s) not in done: left += 1
+          print('left=%d' % left)
+          PY
+      - name: Start the next round
+        if: steps.left.outputs.left != '0' && fromJson(inputs.round) < 12
+        run: |
+          echo "${{ steps.left.outputs.left }} surahs left: round $(( ${{ inputs.round }} + 1 ))"
+          gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="${{ inputs.only }}" -f surahs="${{ inputs.surahs }}" \
+            -f round="$(( ${{ inputs.round }} + 1 ))"
 
   scan:
     if: inputs.scan == 'yes'
