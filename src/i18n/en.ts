@@ -675,6 +675,7 @@ const en = {
   'fav.section': "Favourite reciters",
   'fav.sectionHelp': "Tap ☆ next to a reciter (Listen tab or the studio) to keep their recitation on this device.",
   'pl.reel': 'Make a reel of this ayah',
+  'pl.follow': 'Back to the page being recited',
   'pl.notHere': '{name} has no checked recording of this surah, so {other} plays here',
   'night.open': 'Night listening',
   'night.close': 'Leave night listening',

@@ -97,3 +97,14 @@ export async function mp3quranSizes(r: Reciter): Promise<Record<string, number>>
   for (const [k, s] of Object.entries((await checked(r.mp3quran.read)).surahs)) out[k] = s.size;
   return out;
 }
+
+/** A file to preview the voice from (the reciter picker's ▶): Al-Fatiha when checked, else the first surah
+ *  that is; played from its start (isti'adha / Bismillah / ayah 1). */
+export async function mp3quranSample(r: Reciter): Promise<string | null> {
+  if (!r.mp3quran) return null;
+  const data = await checked(r.mp3quran.read);
+  const keys = Object.keys(data.surahs).map(Number).filter((s) => covers(r, s)).sort((a, b) => a - b);
+  if (!keys.length) return null;
+  const s = keys[0];
+  return `${data.folder}${String(s).padStart(3, '0')}.mp3`;
+}

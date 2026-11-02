@@ -719,6 +719,7 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .chip.danger { color: #c62828; }
 @media (prefers-color-scheme: dark) { .chip.danger { color: #ff7b7b; } }
 .reflections-sheet .search { width: 100%; box-sizing: border-box; margin: 10px 0 4px; }
+.reciter-sheet .search { width: 100%; box-sizing: border-box; margin: 6px 0 8px; }
 .rf-list { max-height: 60vh; }
 .rf-group { margin: 14px 0 2px; font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
 .rf-row { flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -1221,6 +1222,13 @@ body[data-view="kids"] {
 body.tabs-up .tabbar.auto { transform: none; }
 body.has-selbar .tabbar.auto { transform: translateY(110%); }
 body.tabs-up .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
+/* Listening from another screen (Me, surah list…): the bar sits above the tab bar, with a way back to the page. */
+.pl-follow { display: none !important; }
+body.listening-away .pl-follow { display: inline-flex !important; color: var(--accent); }
+body.listening-away .pl-extra { display: none; } /* reel + night view: from the page */
+body.listening-away .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
+body.listening-away .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.listening-away:not(:has(.tabbar)) .player.show { bottom: max(10px, env(safe-area-inset-bottom)); }
 body.tabs-up .rf-hint { opacity: 0; }
 
 /* Me sheet: grouped menu */
@@ -1865,3 +1873,5 @@ html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; backgro
 /* Several recordings of one reciter: chips under the name in the pickers. */
 .rec-chips { padding: 0 12px 10px; }
 .rec-chips .chip { padding: 4px 10px; font-size: var(--fs-s); }
+/* The studio has its own sound and controls: the paused listening bar waits until the user comes back. */
+body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; }

@@ -13,7 +13,7 @@ import { alignedWords } from '../data/alignedWords';
 import { basmalaBefore, openingOf, type Basmala } from '../data/basmala';
 import type { SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, groupRecordings, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
-import { recordingChips } from './recordings';
+import { recordingChips, reciterSearchBox } from './recordings';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -85,10 +85,12 @@ export function createPlayer(o: PlayerHooks) {
     playBtn,
     h('button', { class: 'icon-btn', 'aria-label': 'Next ayah', onclick: () => step(1) }, icon('right', 20)),
     h('div', { class: 'pl-info' }, label, who),
+    // Listening from another screen (Me, tasbih…): back to the page being recited, words lit as it goes.
+    h('button', { class: 'icon-btn pl-follow', 'aria-label': t('pl.follow'), title: t('pl.follow'), onclick: () => followAlong() }, icon('book', 20)),
     // Turn what is playing into a reel (this reciter, the ayah being recited).
-    h('button', { class: 'icon-btn', 'aria-label': t('pl.reel'), title: t('pl.reel'), onclick: () => makeReel() }, icon('create', 20)),
+    h('button', { class: 'icon-btn pl-extra', 'aria-label': t('pl.reel'), title: t('pl.reel'), onclick: () => makeReel() }, icon('create', 20)),
     // Night listening (docs/light.md, L1): loaded only when opened.
-    h('button', { class: 'icon-btn', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
+    h('button', { class: 'icon-btn pl-extra', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
 
   // Starting or buffering: a spinner on the play button and "Loading…" (the recording streams).
@@ -400,15 +402,17 @@ export function createPlayer(o: PlayerHooks) {
     };
     // One row per reciter; a reciter with several recordings lists them as chips under the name.
     const groups = groupRecordings(favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))));
-    const d = h('dialog', { class: 'sheet bottom' },
+    const list = h('div', { class: 'menu' }, ...groups.map((g) => {
+      const r = g.find((x) => x.id === now) ?? g[0];
+      return h('div', { class: 'rec-group' },
+        h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
+          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
+        recordingChips(g, now, choose));
+    }));
+    const search = reciterSearchBox(list, t('ed.reciter-search'));
+    const d = h('dialog', { class: 'sheet bottom reciter-sheet' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...groups.map((g) => {
-        const r = g.find((x) => x.id === now) ?? g[0];
-        return h('div', { class: 'rec-group' },
-          h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
-            h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
-          recordingChips(g, now, choose));
-      })));
+      search, list);
     d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
@@ -442,11 +446,65 @@ export function createPlayer(o: PlayerHooks) {
     playFrom,
     active: () => shown,
     toggle,
-    position: () => cur,
+    pause: () => { if (introOn) intro.pause(); audio.pause(); },
+    stop,
+    position: () => cur ?? pending,
     destroy() {
       stop();
       for (const el of [audio, ahead]) { el.removeAttribute('src'); el.load(); }
       if ('mediaSession' in navigator) for (const a of ['play', 'pause', 'previoustrack', 'nexttrack'] as const) navigator.mediaSession.setActionHandler(a, null);
     },
   };
+}
+
+// One player for the whole app: the recitation carries on while the user goes to Me (claims, tasbih),
+// the surah list or anywhere else; the mushaf attaches to it while it is open (page tracking and lit
+// words), and elsewhere the bar sits above the tab bar with a button back to the page being recited.
+type Player = ReturnType<typeof createPlayer>;
+type PlayerView = Pick<PlayerHooks, 'onPosition' | 'onShow'>;
+let shared: Player | null = null;
+let view: PlayerView | null = null;
+const markAway = () => document.body.classList.toggle('listening-away', !!shared?.active() && !view);
+
+export function sharedPlayer(meta: SurahMeta[]): Player {
+  if (!shared) {
+    shared = createPlayer({
+      meta,
+      onPosition: (pos) => view?.onPosition(pos),
+      onShow: (on) => { view?.onShow(on); markAway(); },
+    });
+    document.body.append(shared.bar);
+  }
+  return shared;
+}
+
+/** The mushaf follows the recitation while it is open; returns the detach. */
+export function attachPlayer(v: PlayerView): () => void {
+  view = v;
+  markAway();
+  return () => { if (view === v) { view = null; markAway(); } };
+}
+
+/** Once the attached view is built: what is playing now (the bar's room, the page, the lit ayah). */
+export function replayPosition() {
+  if (!view || !shared?.active()) return;
+  view.onShow(true);
+  const pos = shared.position();
+  if (pos) view.onPosition({ s: pos.s, a: pos.a, w: null });
+}
+
+export const playerActive = () => !!shared?.active();
+
+/** Open the page being recited (the mushaf then tracks it). */
+export function followAlong() {
+  const pos = shared?.position();
+  if (!pos) return;
+  try { sessionStorage.removeItem('tabIntent'); } catch { /* ignore */ }
+  location.hash = `#/s/${pos.s}/${Math.max(1, pos.a)}`;
+}
+
+/** Screens with their own sound (the studio) pause it; the Kids space stops it. */
+export function quietPlayer(stop = false) {
+  if (!shared?.active()) return;
+  if (stop) shared.stop(); else shared.pause();
 }
