@@ -30,11 +30,19 @@ def main():
       if not name.lower().endswith('.mp3') or (prefix and not name.startswith(prefix + '/')): continue
       m = re.match(r'0*(\d{1,3})\D', name.split('/')[-1] + ' ')
       if m and 1 <= int(m.group(1)) <= 114: files.setdefault(int(m.group(1)), (name, int(f.get('size') or 0), f.get('length')))
+    # Re-encoded copies differ in bytes: then the lengths tell. Our files are CBR, so their length is their size
+    # over one bitrate: the same recording gives the same length / size ratio for every surah.
+    ratios = sorted(float(ln) / sizes[s] for s, (_, _, ln) in files.items() if s in sizes and ln)
+    spread = None
+    if len(ratios) > 4:
+      mid = ratios[len(ratios) // 2]
+      spread = {'median': mid, 'within_0.5%': sum(abs(r / mid - 1) < 0.005 for r in ratios), 'of': len(ratios),
+                'off': sorted(s for s, (_, _, ln) in files.items() if s in sizes and ln and abs(float(ln) / sizes[s] / mid - 1) >= 0.005)}
     same = [s for s, (_, size, _) in files.items() if sizes.get(s) == size]
     differ = [s for s, (_, size, _) in files.items() if s in sizes and sizes[s] != size]
     report.append({'item': spec, 'files': len(files), 'compared': len(same) + len(differ), 'same': sorted(same),
-                   'differ': sorted(differ), 'targets': {s: files[s] for s in (37, 39, 40, 45, 65) if s in files}})
-    print(spec, 'files', len(files), 'same bytes', len(same), 'different', len(differ), differ[:20])
+                   'differ': sorted(differ), 'lengths': spread, 'targets': {s: files[s] for s in (37, 39, 40, 45, 65) if s in files}})
+    print(spec, 'files', len(files), 'same bytes', len(same), 'different', len(differ), 'lengths', spread)
   json.dump(report, open(out, 'w'), ensure_ascii=False, indent=1)
 
 

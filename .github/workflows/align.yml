@@ -208,7 +208,12 @@ jobs:
           mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ inputs.only == 'compare' && 'compare' || 'find' }}-islam-sobhi.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sources && git commit -qm "Find: Islam Sobhi surahs" && git push -q origin HEAD:align-results
+          git add sources && git commit -qm "Find: Islam Sobhi surahs"
+          for i in 1 2 3 4 5 6; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
 
   audit-plan:
     if: inputs.scan == 'audit'
