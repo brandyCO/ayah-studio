@@ -14,8 +14,9 @@ import { keptBlob } from './keptAudio';
 interface Checked {
   folder: string;
   /** `seek`: a variable-bitrate file's seek table (`vbr`: its length in seconds, decoded whole);
-   *  `aligned`: times made by alignment. */
-  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean; l?: Record<string, number> }>;
+   *  `aligned`: times made by alignment; `url`: a surah mp3quran.net lacks, from another source (archive.org,
+   *  Islam Sobhi 37, 39, 40, 45, 65: scripts/find-surahs.py + align-plan.py "ia:"). */
+  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean; l?: Record<string, number>; url?: string }>;
 }
 
 const files = new Map<number | string, Promise<Checked>>();
@@ -38,7 +39,8 @@ const sizes = new Map<string, Promise<number | null>>();
 function sizeOf(url: string): Promise<number | null> {
   if (!sizes.has(url)) {
     sizes.set(url, keptBlob(url).then((k) => k ? k.size : fetch(url, { method: 'HEAD' }).then((r) => {
-      if (r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
+      // (archive.org always sends a download on to the server that holds it: the same file)
+      if (!url.includes('archive.org/') && r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
       const n = Number(r.headers.get('Content-Length'));
       return r.ok && n > 0 ? n : null;
     }, () => null)));
@@ -77,7 +79,7 @@ export async function mp3quranSurah(r: Reciter, surah: number, listen = false): 
   const data = await checked(r.mp3quran.read);
   const s = data.surahs[String(surah)];
   if (!s) throw new Error(`No verified recording of surah ${surah} for ${r.name}`);
-  const audioUrl = `${data.folder}${String(surah).padStart(3, '0')}.mp3`;
+  const audioUrl = s.url ?? `${data.folder}${String(surah).padStart(3, '0')}.mp3`;
   const size = await sizeOf(audioUrl);
   if (size !== null && size !== s.size) throw new Error(`The recording of surah ${surah} changed since it was checked`);
   const words = await alignedWords(r, surah);
@@ -106,5 +108,5 @@ export async function mp3quranSample(r: Reciter): Promise<string | null> {
   const keys = Object.keys(data.surahs).map(Number).filter((s) => covers(r, s)).sort((a, b) => a - b);
   if (!keys.length) return null;
   const s = keys[0];
-  return `${data.folder}${String(s).padStart(3, '0')}.mp3`;
+  return data.surahs[String(s)].url ?? `${data.folder}${String(s).padStart(3, '0')}.mp3`;
 }

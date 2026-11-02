@@ -84,7 +84,7 @@ export const RECITERS: Reciter[] = [
   { id: 1035, name: 'Abdulrahman Al-Majed', short: 'Al-Majed', qdc: false, mp3quran: { read: 236, surahs: '1-114' }, words: '1-114' },
   { id: 1036, name: 'Ibrahim Al-Asiri', short: 'Al-Asiri', qdc: false, mp3quran: { read: 3, surahs: '1-10,12-13,15-106,108-114' }, words: '1-10,12-13,15-106,108-114' },
   // mp3quran.net without ayah times: made by alignment and checked (scripts/make-mp3quran-timings.py).
-  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1-36,38,41-44,46-64,66-114' }, words: '1-36,38,41-44,46-64,66-114' },
+  { id: 1037, name: 'Islam Sobhi', short: 'Islam Sobhi', qdc: false, mp3quran: { read: 'islam-sobhi', surahs: '1-114' }, words: '1-114' },
   // Second recordings of reciters above (owner request 2026-11-02), mp3quran.net, told apart from ours by
   // comparing their sound; shown as Recording chips under the reciter's name. Ayah times verified (Sudais,
   // Budair, Basfar, Muaiqly Mujawwad) or made by alignment (the rest); surahs filled in once checked.
