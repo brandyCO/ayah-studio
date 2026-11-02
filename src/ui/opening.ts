@@ -2,10 +2,11 @@
 // on the launch colour (it continues the Android splash), then fades — ≤ 1.2 s, never
 // delaying the app (the mushaf loads underneath), skipped with reduced motion; tap ends it.
 import { h } from './dom';
+import { themeIconUrl } from './theme';
 
 export function playOpening() {
   if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const icon = `${import.meta.env.BASE_URL}icon.svg`;
+  const icon = themeIconUrl(); // the chosen theme's icon, like the launcher icon and the splash
   const sweep = h('div', { class: 'app-opening-sweep' });
   sweep.style.setProperty('--icon', `url("${icon}")`);
   const el = h('div', { class: 'app-opening', 'aria-hidden': 'true' },
