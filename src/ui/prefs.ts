@@ -48,6 +48,14 @@ export function prefRecords(): Record<string, { v: string | null; at: number }> 
   return out;
 }
 
+/** True when this device holds a newer choice than `remote` for any of `keys` (default: all synced
+ *  preferences), so the document has to be sent again. */
+export function prefsBehind(remote: unknown, keys: readonly string[] = SYNCED_PREFS): boolean {
+  const times = prefTimes();
+  const r = remote && typeof remote === 'object' ? (remote as Record<string, { at?: unknown }>) : {};
+  return keys.some((k) => (times[k] ?? 0) > (typeof r[k]?.at === 'number' ? (r[k].at as number) : 0));
+}
+
 /** Takes the newer value of each preference from another device. Returns true if any changed. */
 export function mergePrefs(remote: unknown): boolean {
   if (!remote || typeof remote !== 'object') return false;

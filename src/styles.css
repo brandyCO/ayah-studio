@@ -1066,20 +1066,24 @@ body[data-view="kids"] {
 .lantern-progress .lp-cap { fill: #c98b3e; }
 .lantern-progress .lp-string { stroke: rgba(255, 241, 214, .5); stroke-width: 1.5; }
 
-/* Opening: a light sweep across the logo (docs/light.md, L5) */
+/* Opening: the mark drawn line by line in the theme's colours (src/ui/opening.ts). The drawing is a
+   worker's canvas; only transform/opacity animate here, so the compositor keeps them smooth. */
 .app-opening {
   position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #07130f;
-  animation: opening-out .3s ease .9s both;
+  animation: op-out .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: opacity;
 }
-@keyframes opening-out { to { opacity: 0; visibility: hidden; } }
-.app-opening-logo { position: relative; width: 112px; height: 112px; }
-.app-opening-logo img { width: 100%; height: 100%; display: block; }
-.app-opening-sweep {
-  position: absolute; inset: 0; -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
-  background: linear-gradient(105deg, transparent 30%, rgba(255, 246, 222, .85) 50%, transparent 70%) no-repeat;
-  background-size: 250% 100%; animation: opening-sweep .85s cubic-bezier(.45, .05, .35, 1) .05s both; mix-blend-mode: screen;
+@keyframes op-out { to { opacity: 0; visibility: hidden; } }
+.op-stage { display: grid; justify-items: center; gap: 0; animation: op-lift .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: transform; }
+@keyframes op-lift { to { transform: scale(1.04); } }
+.op-mark { width: 200px; height: 200px; margin-bottom: -16px; }
+.op-name { display: flex; font: 700 22px/1 "Inter Display", Inter, system-ui, sans-serif; letter-spacing: -.01em; direction: ltr; }
+.op-name span {
+  white-space: pre; background: var(--op-name); background-size: 600% 100%; background-position: calc(var(--i) * 10%) 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0; transform: translateY(8px); will-change: transform, opacity;
+  animation: op-letter .55s cubic-bezier(.2, .7, .3, 1) calc(2.05s + var(--i) * 40ms) forwards;
 }
-@keyframes opening-sweep { from { background-position: 120% 0; } to { background-position: -20% 0; } }
+@keyframes op-letter { to { opacity: 1; transform: none; } }
 
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */

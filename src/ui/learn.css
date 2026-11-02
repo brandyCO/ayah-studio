@@ -1,0 +1,154 @@
+/* ---------- Learn tab: the juz gardens (src/ui/garden.ts) and lessons (src/ui/lesson.ts) ---------- */
+.screen-learn { max-width: 680px; margin: 0 auto; padding-inline: 16px; }
+.learn-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(14px + env(safe-area-inset-top)) 0 4px; }
+.learn-head h1 { margin: 0; font-size: var(--fs-h1); }
+.learn-head p { margin: 2px 0 0; }
+.learn-wallet { cursor: pointer; color: var(--text); }
+.learn-nav { display: flex; align-items: center; gap: 4px; margin: 6px 0 8px; }
+.learn-nav-t { flex: 1; text-align: center; min-width: 0; }
+.learn-nav-t h2 { margin: 0; font-size: var(--fs-h3); }
+.learn-nav-t p { margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.learn-nav .icon-btn:disabled { opacity: .3; }
+.garden-wrap {
+  position: relative; border-radius: 22px; overflow: hidden; margin: 0 -4px 14px;
+  background: radial-gradient(120% 80% at 50% 0%, #fdf8ea 0%, #e7f2ea 55%, #dcece2 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+}
+.garden-wrap.magic { background: radial-gradient(120% 90% at 50% 0%, #fff4d6 0%, #f3e3c0 35%, #cfe8dc 100%); }
+.garden-canvas { display: block; width: 100%; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
+.garden-store-btn {
+  position: absolute; inset-inline-end: 10px; top: 10px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px 8px 10px; border-radius: 999px; border: 0; background: rgba(255,255,255,.86); color: #1d3b30; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(20,50,40,.14); cursor: pointer; backdrop-filter: blur(8px);
+}
+.garden-tray {
+  position: absolute; inset-inline: 10px; bottom: 10px; display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 18px; background: rgba(255,255,255,.94); color: #1d2a25; box-shadow: 0 8px 24px rgba(20,50,40,.2);
+  animation: tray-in var(--dur-2) var(--ease-spring);
+}
+.garden-tray .muted { color: #5d6b66; }
+.garden-tray .icon-btn { color: #1d2a25; }
+.tray-item { flex: none; border-radius: 14px; background: #eef6f0; touch-action: none; cursor: grab; animation: tray-bob 2.4s ease-in-out infinite; }
+.tray-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
+@keyframes tray-in { from { transform: translateY(16px); opacity: 0; } }
+@keyframes tray-bob { 50% { transform: translateY(-3px); } }
+.learn-card { margin-bottom: 14px; padding: 14px 16px; border-radius: var(--r-l); background: var(--card); border: 1px solid var(--line); }
+.learn-card h3 { margin: 0 0 8px; font-size: var(--fs-l); }
+.learn-card h3 + p { margin-top: 0; }
+.learn-card .primary { width: 100%; }
+.learn-next { display: flex; align-items: center; gap: 12px; padding: 8px 6px; margin: 0 -6px; border-radius: var(--r-m); color: inherit; text-decoration: none; }
+.learn-next:active { background: var(--sel); }
+.learn-next canvas, .learn-row canvas { flex: none; border-radius: 12px; }
+.learn-next-t, .learn-row-t { flex: 1; display: grid; gap: 2px; min-width: 0; text-align: start; }
+.learn-next.dry b { color: #2f86c9; }
+.learn-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px; margin: 0 -6px; border: 0; background: none; color: inherit; border-radius: var(--r-m); cursor: pointer; font: inherit; }
+.learn-row:active { background: var(--sel); }
+.learn-row-ar { font-family: 'AmiriQuran', serif; font-size: var(--fs-h3); flex: none; }
+.learn-shelf { display: flex; gap: 8px; flex-wrap: wrap; }
+.learn-shelf-item { display: grid; justify-items: center; gap: 2px; padding: 6px; border: 1px solid var(--line); border-radius: var(--r-m); background: none; color: inherit; cursor: pointer; }
+.learn-how summary { cursor: pointer; font-weight: 600; }
+.learn-how ol { margin: 10px 0 0; padding-inline-start: 20px; display: grid; gap: 8px; line-height: 1.5; }
+.learn-sheet { max-height: 88vh; overflow-y: auto; overscroll-behavior: contain; }
+.learn-sheet h3 { margin: 16px 0 8px; font-size: var(--fs-m); color: var(--muted); font-weight: 600; }
+.learn-tree-top { display: flex; gap: 14px; align-items: center; }
+.learn-tree-top > div { flex: 1; min-width: 0; }
+.learn-tree-top p { margin: 4px 0; }
+.learn-tree-ar { font-family: 'AmiriQuran', serif; font-size: var(--fs-h1); }
+.learn-bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 8px 0 4px; }
+.learn-bar i { display: block; height: 100%; border-radius: inherit; background: var(--brand-bar); transition: width var(--dur-3) var(--ease-out); }
+.learn-status.dry { color: #2f86c9; font-weight: 600; }
+.learn-go { display: block; text-align: center; margin-top: 14px; text-decoration: none; }
+.learn-varieties { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.learn-variety, .learn-seed { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border: 1px solid var(--line); border-radius: var(--r-m); background: none; color: inherit; cursor: pointer; font: inherit; }
+.learn-variety.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.learn-variety.locked canvas { opacity: .82; filter: saturate(.8); }
+.learn-price { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
+.learn-variety.r-rare .learn-price, .learn-rarity.r-rare { color: #3b82c4; }
+.learn-variety.r-legendary .learn-price, .learn-rarity.r-legendary { color: #c08a12; }
+.learn-rarity.r-epic { color: #8b5cc6; }
+.learn-rarity { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.learn-sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
+.learn-bal { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 4px 0 10px; }
+.learn-bal .muted { flex-basis: 100%; }
+.learn-store .tabs-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.learn-juz { border-top: 1px solid var(--line); padding: 10px 0; }
+.learn-juz summary { display: flex; justify-content: space-between; align-items: baseline; cursor: pointer; list-style: none; }
+.learn-juz summary::-webkit-details-marker { display: none; }
+.learn-juz summary::after { content: '›'; color: var(--muted); margin-inline-start: 8px; transition: transform var(--dur-2); }
+.learn-juz[open] summary::after { transform: rotate(90deg); }
+.learn-juz summary > b { flex: 1; }
+.learn-seeds { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 10px; }
+.learn-seed b { font-size: var(--fs-s); text-align: center; line-height: 1.2; }
+.learn-seed-ar { font-family: 'AmiriQuran', serif; font-size: var(--fs-l); line-height: 1.9; }
+.learn-seed.has { border-color: var(--accent); }
+.learn-tag { font-size: var(--fs-2xs); font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); }
+.learn-tag.free { background: var(--sel); color: var(--accent); }
+.learn-decos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.learn-deco-card { display: grid; justify-items: center; gap: 4px; padding: 10px 8px; border: 1px solid var(--line); border-radius: var(--r-m); text-align: center; }
+.learn-deco-card.r-legendary { background: linear-gradient(180deg, rgba(232,199,106,.12), transparent); border-color: rgba(192,138,18,.4); }
+.learn-deco-card.r-epic { border-color: rgba(139,92,198,.35); }
+.learn-deco-card .chip { margin-top: 4px; }
+@media (prefers-color-scheme: dark) {
+  .garden-wrap { background: radial-gradient(120% 80% at 50% 0%, #15302a 0%, #0c1d19 55%, #08130f 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
+  .garden-wrap.magic { background: radial-gradient(120% 90% at 50% 0%, #3a3320 0%, #1a2a24 45%, #0a1512 100%); }
+  .garden-store-btn { background: rgba(20,40,34,.86); color: #e6ebe8; }
+  .garden-tray { background: rgba(16,30,26,.96); color: #e6ebe8; }
+  .garden-tray .muted { color: #8e9f98; }
+  .garden-tray .icon-btn { color: #e6ebe8; }
+  .tray-item { background: #13261f; }
+  .learn-next.dry b, .learn-status.dry { color: #7cc8f2; }
+}
+
+/* Lesson */
+.screen-learn.lesson { display: flex; flex-direction: column; min-height: 100dvh; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.ls-head { display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 0 4px; }
+.ls-title { flex: 1; min-width: 0; text-align: center; }
+.ls-title h1 { margin: 0; font-size: var(--fs-h3); }
+.ls-ref { margin: 2px 0 0; font-size: var(--fs-s); color: var(--muted); }
+.ls-tree { flex: none; width: 56px; height: 56px; }
+.ls-steps { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 6px 0; }
+.ls-steps li { padding: 4px 12px; border-radius: 99px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); background: var(--line); }
+.ls-steps li.on { background: var(--brand-fill); color: #fff; }
+.ls-phase { display: grid; justify-items: center; gap: 6px; margin: 6px 0 4px; text-align: center; }
+.ls-goal { font-weight: 600; }
+.ls-phases { display: flex; gap: 12px; font-size: var(--fs-xs); color: var(--muted); }
+.ls-phases .on { color: var(--accent); font-weight: 700; }
+.ls-main { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ls-text {
+  flex: 1; overflow-y: auto; max-height: 52vh; padding: 10px 4px; text-align: center;
+  font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(26px, 7.4vw, 40px); line-height: 2.05; overscroll-behavior: contain;
+}
+.ls-ayah { margin: 0 0 4px; direction: rtl; overflow-wrap: break-word; }
+.ls-tr { margin: 0 0 14px; font-family: var(--font-en, 'Noto Serif', Georgia, serif); font-size: var(--fs-base); line-height: 1.55; color: var(--muted); }
+.ls-n { font-weight: 600; }
+.lw { border-radius: 8px; padding: 0 .06em; cursor: pointer; transition: background-color .3s, color .3s, box-shadow .3s; }
+.lw.on { background: var(--sel); box-shadow: 0 0 0 2px var(--sel); color: var(--accent); }
+.lw.hid { color: transparent; background: color-mix(in srgb, var(--text) 10%, transparent); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--text) 8%, transparent); }
+.lw.hid.on { color: var(--accent); background: var(--sel); }
+.lw.peek { animation: peek 1.8s ease-out; }
+@keyframes peek { 0% { background: var(--sel); } 100% { background: transparent; } }
+.lw:focus-visible { outline: 2px solid var(--accent); }
+.ls-pop { display: grid; justify-items: center; gap: 2px; margin: 4px auto 0; padding: 10px 16px; border-radius: var(--r-l); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); max-width: 90%; text-align: center; animation: tray-in var(--dur-2) var(--ease-spring); }
+.ls-pop-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: var(--fs-h1); line-height: 1.6; }
+.ls-pop-en { font-weight: 600; }
+.ls-turn { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 30px; }
+.ls-status { margin: 0; color: var(--muted); font-size: var(--fs-s); }
+.ls-ring { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+.ls-your-turn .ls-ring { opacity: 1; animation: ls-breathe 3.2s ease-in-out infinite; }
+.ls-your-turn .ls-status { color: var(--accent); font-weight: 700; }
+@keyframes ls-breathe { 50% { transform: scale(1.6); opacity: .45; } }
+.ls-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px 0; }
+.ls-actions .primary { flex: 1 1 180px; }
+.ls-hint { flex-basis: 100%; text-align: center; margin: 0 0 2px; }
+.ls-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.ls-play { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--brand-fill); color: #fff; display: inline-grid; place-items: center; cursor: pointer; box-shadow: 0 4px 14px var(--brand-glow); }
+.ls-reciter { max-width: 46vw; height: 36px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 0 10px; font: inherit; font-size: var(--fs-s); }
+.ls-memory .ls-text { background: radial-gradient(60% 50% at 50% 40%, var(--sel), transparent); border-radius: var(--r-l); }
+.ls-done { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 24px 8px; animation: tray-in var(--dur-3) var(--ease-spring); }
+.ls-done h2 { margin: 8px 0 0; }
+.ls-done p { max-width: 34ch; margin: 0; }
+.ls-done-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+.ls-done-actions a { text-decoration: none; }
+@media (prefers-reduced-motion: reduce) {
+  .tray-item, .ls-your-turn .ls-ring { animation: none; }
+}
