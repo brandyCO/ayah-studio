@@ -157,7 +157,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
       playing = pos;
       if (pos && !panning && !animating) {
-        const target = mushaf.wordPage(pos.s, pos.a, pos.w ?? 1);
+        const target = mushaf.wordPage(pos.s, Math.max(1, pos.a), pos.w ?? 1); // a = 0: the Bismillah before ayah 1
         if (target !== page) go(target);
       }
       paintPlaying();
@@ -170,6 +170,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   function paintPlaying() {
     for (const el of strip.querySelectorAll('.play-ayah, .play-word')) el.classList.remove('play-ayah', 'play-word');
     if (!playing) return;
+    if (playing.a === 0) {
+      for (const el of strip.querySelectorAll(`.mp-basmala[data-s="${playing.s}"]`)) el.classList.add('play-ayah');
+      return;
+    }
     for (const el of strip.querySelectorAll<HTMLElement>(`.w[data-s="${playing.s}"][data-a="${playing.a}"]`)) {
       el.classList.add('play-ayah');
       if (playing.w !== null && Number(el.dataset.p) === playing.w) el.classList.add('play-word');
@@ -310,13 +314,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   applyTimeTint();
   const tintTimer = window.setInterval(applyTimeTint, 10 * 60_000);
 
+  let lineSurah = 0; // the surah whose header was drawn last: its Bismillah follows
   const line = (l: MushafLine) => {
     if (l[0] === 'h') {
+      lineSurah = Number(l[1]);
       return h('div', { class: 'mp-line mp-surah' },
         h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0'))));
     }
     if (l[0] === 'b') {
-      const el = h('div', { class: 'mp-line mp-basmala' });
+      const el = h('div', { class: 'mp-line mp-basmala', 'data-s': String(lineSurah) });
       el.innerHTML = svg; // bundled file (public/fonts/bismillah.svg)
       return el;
     }

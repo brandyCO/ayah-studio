@@ -10,7 +10,7 @@ import { playableUrl } from '../data/keptAudio';
 import { qdcSurah } from '../data/qdc';
 import { mp3quranSurah } from '../data/mp3quran';
 import { alignedWords } from '../data/alignedWords';
-import { basmalaBefore, type Basmala } from '../data/basmala';
+import { basmalaBefore, openingOf, type Basmala } from '../data/basmala';
 import type { SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, groupRecordings, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { recordingChips } from './recordings';
@@ -114,6 +114,10 @@ export function createPlayer(o: PlayerHooks) {
     o.onShow(on);
   }
 
+  // Where the loaded recording recites its own Bismillah (lit in the mushaf) and where it starts (past a
+  // spoken announcement in a few uploads), in seconds.
+  let opening: { span: [number, number] | null; start: number } = { span: null, start: 0 };
+
   async function load(s: number): Promise<boolean> {
     const r = reciterIn(s);
     const key = `${r.id}/${s}`;
@@ -130,7 +134,10 @@ export function createPlayer(o: PlayerHooks) {
         words: r.qdc === false && SHIFTED.has(v.verse_key) ? [] : validSegs(v.segments),
       })).sort((x, y) => x.from - y.from);
       url = q.audioUrl;
+      opening = await openingOf(r, s).catch(() => ({ span: null, start: 0 }));
+      if (id !== req) return false;
     } else {
+      opening = { span: null, start: 0 };
       const words = await alignedWords(r, s);
       if (id !== req) return false;
       verses = Array.from({ length: o.meta[s - 1].ayahs }, (_, i) => ({
@@ -164,7 +171,7 @@ export function createPlayer(o: PlayerHooks) {
       let at = v.from;
       if (!perAyah && (a <= 1 || v.a !== a)) {
         const before = a <= 1 ? undefined : verses.filter((x) => x.a < a).pop();
-        at = before ? before.from : 0;
+        at = before ? before.from : opening.start * 1000;
       }
       if (perAyah) {
         playing = v.a;
@@ -220,6 +227,9 @@ export function createPlayer(o: PlayerHooks) {
       intro.addEventListener('ended', ended);
       introDone = finish;
       introOn = true;
+      // Al-Fatiha's ayah 1 is the Bismillah; before any other surah it lights the Bismillah line (a = 0).
+      if (surah === 1) { cur = { s: 1, a: 1, w: null }; last = '1:1:null'; tell(cur); }
+      else { last = `${surah}:0`; o.onPosition({ s: surah, a: 0, w: null }); }
       loading = false;
       void intro.play().then(() => paint(), () => finish(true));
       paint();
@@ -309,6 +319,12 @@ export function createPlayer(o: PlayerHooks) {
     raf = requestAnimationFrame(tick);
     switchOver();
     const t = audio.currentTime * 1000;
+    // The recording's own Bismillah: its line is lit in the mushaf (a = 0; not a position for other listeners).
+    if (!perAyah && opening.span && surah !== 1 && t >= opening.span[0] * 1000 && t < opening.span[1] * 1000) {
+      const k = `${surah}:0`;
+      if (k !== last) { last = k; o.onPosition({ s: surah, a: 0, w: null }); }
+      return;
+    }
     let v: Verse | null = null;
     if (perAyah) v = verses[playing - 1] ?? null;
     else for (const x of verses) {
