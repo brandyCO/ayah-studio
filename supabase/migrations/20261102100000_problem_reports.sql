@@ -20,6 +20,7 @@ create index if not exists problem_reports_created on public.problem_reports (cr
 
 create or replace function public.send_report(kind text, note text, context jsonb, install text) returns void
 language plpgsql security definer set search_path = '' as $$
+#variable_conflict use_variable
 declare
   n int;
 begin
