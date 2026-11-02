@@ -17,6 +17,9 @@ export function initErrors() {
       // No user details, cookies, headers, query strings or bodies.
       dataCollection: { userInfo: false, cookies: false, httpHeaders: false, httpBodies: [], urlQueryParams: false },
       tracesSampleRate: 0,
+      // A share of the error reports is plenty to see a problem, and keeps a large crowd within the
+      // free plan. VITE_SENTRY_RATE (0–1) changes it; default 0.25.
+      sampleRate: Math.min(1, Math.max(0, Number(import.meta.env.VITE_SENTRY_RATE) || 0.25)),
       // Addresses can hold a draft id or a page: keep only the screen ("#/reel", "#/s").
       beforeSend(event) {
         if (event.request?.url) event.request.url = event.request.url.replace(/#\/([a-z]+).*/, '#/$1');

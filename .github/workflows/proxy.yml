@@ -1,0 +1,56 @@
+name: Deploy edge proxy
+
+# Deploys proxy/ (the Cloudflare Worker for Pixabay/Pexels, "Popular this week" and remote switches)
+# when it changes on main. Needs the repo secrets CLOUDFLARE_API_TOKEN (template "Edit Cloudflare
+# Workers") and CLOUDFLARE_ACCOUNT_ID; without them the job is skipped and the worker can still be
+# pasted by hand (proxy/README.md). The API keys stay Cloudflare secrets and are never in the repo.
+
+on:
+  push:
+    branches: [main]
+    paths: ['proxy/**', '.github/workflows/proxy.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN_RAW: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_RAW: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CF_TOKEN_RAW != ''
+      - uses: actions/setup-node@v4
+        if: env.CF_TOKEN_RAW != ''
+        with:
+          node-version: 22
+      # Pasted secrets often carry a space or line break at the end, which wrangler refuses.
+      - name: Tidy the Cloudflare secrets
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          token=$(printf %s "$CF_TOKEN_RAW" | tr -d '[:space:]')
+          account=$(printf %s "$CF_ACCOUNT_RAW" | tr -d '[:space:]')
+          echo "::add-mask::$token"
+          echo "::add-mask::$account"
+          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
+      - name: Worldwide search cache (KV namespace)
+        if: env.CF_TOKEN_RAW != ''
+        working-directory: proxy
+        run: |
+          find_id() { npx --yes wrangler@4 kv namespace list | jq -r '[.[] | select(.title | test("ayah-studio-stock"))][0].id // empty'; }
+          id=$(find_id)
+          if [ -z "$id" ]; then npx --yes wrangler@4 kv namespace create ayah-studio-stock; id=$(find_id); fi
+          test -n "$id"
+          printf '\n[[kv_namespaces]]\nbinding = "STOCK_KV"\nid = "%s"\n' "$id" >> wrangler.toml
+      - name: Deploy
+        if: env.CF_TOKEN_RAW != ''
+        working-directory: proxy
+        run: npx --yes wrangler@4 deploy

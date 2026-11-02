@@ -16,6 +16,7 @@ import type { Project } from './project';
 import { render } from './render';
 import { prepareScenes, sceneSpans } from './scenes';
 import type { Timeline } from './timeline';
+import { sliceAudio } from './status';
 
 export const FPS = 30;
 
@@ -30,6 +31,8 @@ export interface ExportOptions {
   signal: AbortSignal;
   /** The chosen cover frame as a JPEG (also embedded as the MP4's cover art). */
   onCover?: (jpeg: Blob) => void;
+  /** Only this part of the reel (seconds), e.g. one WhatsApp Status piece; the audio is cut to match. */
+  range?: { from: number; to: number };
 }
 
 let aacRegistered = false;
@@ -67,7 +70,7 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
   output.addAudioTrack(audio);
 
   // The cover frame: drawn first, embedded as cover art, handed back as an image.
-  const cover = o.project.cover;
+  const cover = o.range ? undefined : o.project.cover;
   if (cover !== undefined && cover <= o.timeline.duration) {
     const spans0 = sceneSpans(o.timeline.scenes, o.project.transition);
     await prepareScenes(spans0, cover, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
@@ -83,21 +86,24 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
   o.signal.addEventListener('abort', abort);
   try {
     await output.start();
-    await audio.add(o.audio);
+    const t0 = o.range?.from ?? 0;
+    const t1 = o.range?.to ?? o.timeline.duration;
+    await audio.add(o.range ? sliceAudio(o.audio, t0, t1) : o.audio);
     audio.close();
 
-    const frames = Math.ceil(o.timeline.duration * FPS);
+    const first = Math.round(t0 * FPS);
+    const frames = Math.ceil(t1 * FPS) - first;
     const spans = sceneSpans(o.timeline.scenes, o.project.transition);
     // Pipelined: while frame i is being encoded, the background video is already decoding frame i + 1
     // (`video.add` copies the canvas at once, so the next frame can be prepared straight away).
-    const prep = (i: number) => prepareScenes(spans, i / FPS, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
+    const prep = (i: number) => prepareScenes(spans, (first + i) / FPS, o.media, o.project.clips ?? [], false, o.project.slowmo ?? 1);
     let ready = prep(0);
     for (let i = 0; i < frames; i++) {
       if (o.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
-      const t = i / FPS;
+      const t = (first + i) / FPS;
       await ready;
       render(ctx, t, o.project, o.timeline, o.media);
-      const encoded = video.add(t, 1 / FPS);
+      const encoded = video.add(i / FPS, 1 / FPS);
       ready = i + 1 < frames ? prep(i + 1) : null;
       await encoded;
       if (i % 5 === 0) o.onProgress(i / frames);

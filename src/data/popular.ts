@@ -1,9 +1,12 @@
 // "Popular this week": which reciters and ayat people made reels of in the last 7 days (anonymous
 // daily counts in Supabase: supabase/migrations/20261015000000_studio_styles_popular.sql), plus the
-// owner's weekly pick (public/data/trending.json, shown as "Trending"). Plain fetch to the database's
-// REST endpoint, so nobody downloads the Supabase client for this. Nothing about the person is sent:
+// owner's weekly pick (public/data/trending.json, shown as "Trending"). Through the edge proxy when
+// the build has one (the answer cached there 10 minutes for everyone, and the counter rate-limited,
+// so a large crowd never reaches the database directly); else a plain fetch to the database's REST
+// endpoint, so nobody downloads the Supabase client for this. Nothing about the person is sent:
 // only the reciter id and the ayah range of an exported reel.
 import { SUPABASE_KEY, SUPABASE_URL } from '../cloud/config';
+import { EDGE, installId, remoteConfig } from '../net';
 import { RECITERS } from './reciters';
 
 const base = import.meta.env.BASE_URL;
@@ -22,7 +25,12 @@ const rpc = (fn: string, body: object = {}) => fetch(`${SUPABASE_URL}/rest/v1/rp
 /** Count an exported reel (fire and forget; offline or failing is fine). */
 export async function recordReel(reciterId: number, surah: number, from: number, to: number) {
   try {
-    await rpc('record_reel', { reciter_id: reciterId, s: surah, a_from: from, a_to: to });
+    if (!(await remoteConfig()).popular) return;
+    // text/plain: a "simple" request, so no extra preflight round trip.
+    // An older proxy without /reel answers 404/405: count directly then.
+    const viaEdge = EDGE ? await fetch(`${EDGE}/reel?i=${installId()}`, { method: 'POST', body: JSON.stringify({ r: reciterId, s: surah, a: from, b: to }) })
+      .then((r) => r.ok || r.status === 429 || r.status === 400, () => false) : false;
+    if (!viaEdge) await rpc('record_reel', { reciter_id: reciterId, s: surah, a_from: from, a_to: to });
   } catch {
     /* offline */
   }
@@ -48,7 +56,13 @@ export function loadPopular(): Promise<Popular> {
       if (c && Date.now() - c.at < TTL && Array.isArray(c.p?.reciters) && Array.isArray(c.p?.ayat)) return c.p;
     } catch { /* no storage */ }
     const [counts, pick] = await Promise.all([
-      rpc('popular_this_week').then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ reciters?: { id: unknown }[]; ayat?: { key: unknown }[] } | null>,
+      remoteConfig().then(async (c) => {
+        if (!c.popular) return null;
+        // An older proxy without /popular: ask the database directly.
+        const r = EDGE ? await fetch(`${EDGE}/popular`).catch(() => null) : null;
+        return r?.ok ? r : rpc('popular_this_week');
+      })
+        .then((r) => (r?.ok ? r.json() : null)).catch(() => null) as Promise<{ reciters?: { id: unknown }[]; ayat?: { key: unknown }[] } | null>,
       fetch(`${base}data/trending.json?v=${__DATA_VERSION__}`).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ reciter?: unknown; ayah?: unknown } | null>,
     ]);
     const p: Popular = { reciters: [], ayat: [] };

@@ -35,6 +35,8 @@ export function showTour(done?: () => void) {
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('hashchange', onRoute);
     done?.();
+    // The first time: one question about the daily pace, so the first flame can be lit today.
+    void import('./firstSteps').then((m) => setTimeout(m.openPaceSheet, 450));
   };
   // Leaving the mushaf for another screen (surah list, Kids space…) counts as skipping the tour.
   const view = (h: string) => h.replace(/^#\/?/, '').split('/')[0];

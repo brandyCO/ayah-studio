@@ -339,7 +339,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
       `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
-      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
+      "Popular this week · ref" → Make this reel. Watermark on by default (owner decision 2026-10-31; a look remembered from before turns it on once, `markDefault`). Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
       no verified source with CORS (not on everyayah or QDC), so not added. 2026-10-13: 20 more everyayah
       reciters (ids 1007–1026: Hudhaify, Ayyoub, Jibreel, Budair, Qahtani, Bukhatir, Basfar, Matroud, Salamah,
       Husary + Minshawi Mujawwad, Tablawi, Ali Jaber, Muhsin Al-Qasim, Neana, Alaqimy, Sowaid, Alili, Sahl
@@ -389,7 +389,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
       (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
       Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
-      the deadline; rerun for the rest started). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
+      the deadline). Rerun 2026-10-31: the mp3quran reciters now have words for 100–114 surahs each ; a last rerun of
+      1–37 filled the gaps: each has words for 109–114 surahs, every surah it has a checked recording of). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
@@ -620,8 +621,32 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
       preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
 - [x] Performance timings (`src/perf.ts`, this device only, Device check)
+- [x] Speed guard (owner request 2026-10-31, front-end plan step 6): `scripts/check-size.mjs` (`npm run size`, run by
+      pages.yml after the build) fails when the first-load JS + CSS (entry, its preloads, stylesheet; gzip) passes
+      135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
+      page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
+      streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
+
+### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
+Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
+Pro and a load test come later, when the owner decides to pay).
+- [x] Edge proxy (`proxy/pixabay-worker.js`): searches cached per data center and worldwide (KV `STOCK_KV`),
+      collections + Quick reel footage built daily (Cron Trigger), one worldwide call budget per library
+      (Durable Object `Budget`; `PIXABAY_PER_MIN` / `PEXELS_PER_HOUR`), fair limits per app install (`i`,
+      = sync's `deviceId`) and 10× looser per address; `/popular` (cached 10 min) and `POST /reel` (rate-limited)
+      in front of Supabase; `/config` remote switches from the variable `FLAGS` (`stock`, `popular`,
+      `mushafDownload`, `syncMinutes`). Deployed by `.github/workflows/proxy.yml` (secrets
+      `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); all optional bindings, works on the free plan
+- [x] App: `src/net.ts` (`EDGE`, `installId()`, `jitter()`, `remoteConfig()` kept 1 h); library pages kept on the
+      phone 24 h (localStorage `stockPages`, 16); popular + reel counter through the proxy; sync after a return
+      at most every `syncMinutes` (1) with a random delay, 30 s → 15 min back-off after failures; the whole-mushaf
+      download starts 4 s–3 min after launch and rests 5–15 min when pages fail; Sentry samples 25 % of errors
+      (`VITE_SENTRY_RATE`)
+- [x] Reel counter split into 16 shards (`20261031000000_scale_reel_counts.sql`, pgTAP `scale_reel_counts.test.sql`)
+- [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
+- [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
@@ -641,8 +666,10 @@ save to gallery / share sheet; offline audio cache; settings.
       android` after `npm run build`). `.github/workflows/android.yml` (push to main, PRs, manual) builds
       the debug APK → artifact **ayah-studio-apk** (debug-signed, for sideloading; Play signing later).
       App icon + splash: see "Logo" below
-- [x] Logo (owner-approved 2026-10-08, "sound a"): lowercase "a" + two fading sound bars (the
-      recitation), white on an emerald → teal tile (`#05573d` → `#22b3a0`). The gradient is a brand
+- [x] Logo (owner pick "E", 2026-10-31; was the "sound a" of 2026-10-08): a soft light inside the
+      end-of-ayah rosette (two rounded squares, one turned 45°, thin teal `#3dd1ad` line, fine ring inside,
+      white core) on a deep night-green tile (`#040c09` → `#0b2019`); themed icon = the same in one colour.
+      The emerald → teal gradient (`#05573d` → `#22b3a0`) stays the brand gradient. The gradient is a brand
       moment only (icon, launch screen, the name, later Export / "Turn into reel" / selected chips /
       progress bars) — never on the mushaf page, the Arabic text, the reel or big backgrounds behind
       text. `scripts/make-icons.py` (Pillow + headless Chromium) writes `resources/` (SVG sources, 1024 px
@@ -851,6 +878,11 @@ cloud. Build in this order:
       2026-10-09: repo variable `TURNSTILE_SITE_KEY` + secret key in Supabase; a guest sign-in without a
       token or with a fake one is refused, Google sign-in (web + id-token) unaffected, the check passed
       on the owner's phone
+      Ramadan 2027 pass (owner request 2026-10-31, front-end plan step 4): Today card in the 30 days before
+      Ramadan "Ramadan in N days · plan your Khatm" (the plan can be set early); during Ramadan **Iftar at … /
+      Suhoor ends at …** with a countdown from the prayer times (only with a location, never guessed; also in the
+      Ramadan sheet); **taraweeh**: after Isha a Today line marks tonight, the sheet has a toggle, the recap counts
+      the nights (`RamadanData.taraweeh`, `setTaraweeh()`)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
@@ -980,8 +1012,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       (index.html, `unicode-range` over the Arabic blocks) is fetched only when the system font cannot
       draw a cluster, so English starts no longer download AmiriQuran. The rest of first load is the
       page's QCF font, SuraNames and `mushaf.json` (≈ 81 KB gzip), all needed for the first page)
-- [ ] G5b "Export for WhatsApp Status" preset (720p, parts ≤ 30 s cut between ayat/word groups,
-      < 16 MB) — postponed by the owner (2026-10-09)
+- [x] G5b "Export for WhatsApp Status" preset (owner go-ahead 2026-10-31, front-end plan step 3): export result
+      page → **WhatsApp Status · n parts**: `statusParts()` (`src/engine/status.ts`) cuts the reel into pieces of
+      ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
+      each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
+      then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
+      caption is copied too
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
@@ -1173,7 +1209,8 @@ duas/reflections section in Me.
 - [x] M1 Me screen `#/me` (`src/ui/me.ts`, the Me tab now opens it; ☰ still opens the menu, and
       Me → Settings and more opens it on the mushaf): flame (`src/ui/flame.ts`, SVG + CSS, tiers at 7 / 30
       days, out = ember + smoke, still with reduced motion / old-phone mode), this week's days, weeks in a
-      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; if the
+      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; plus
+      one **extra freeze every 30 days** for a second missed day in a week, owner decision 2026-10-31, `State.extra`; if the
       missed days cannot all be covered the flame goes out and `lost` is kept 2 days for a friend's
       relight), best. `src/data/journey.ts` (localStorage `journey`, this device): `recordOpen()` (main.ts,
       on start and when the app comes back; not in the Kids space), `countPage()` (ayat starting on the
@@ -1205,7 +1242,12 @@ duas/reflections section in Me.
       like any goal. **Sync** when signed in (`src/cloud/sync.ts`): each device's journey + reading log as
       its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
       and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
-      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins. Sync fix
+      (owner report 2026-10-31): the missed days are settled again when another device's journey arrives
+      (`resettle()`; the app opens before the pull, so a new or stale device showed the flame out or used a
+      freeze), an extra freeze counts only where a day still needed it, a waiting push is sent when the app
+      is hidden (timers stop there), another account's devices are dropped on an account switch, and the
+      journey plan + page reading time are synced prefs (`journeyPlan`, `pageSeconds`).
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
@@ -1291,6 +1333,18 @@ duas/reflections section in Me.
       surah) and look, on Quick reel → Finish. Share (Android) sends the caption with the video and copies it to
       the clipboard (Instagram/TikTok drop shared text). **Template of the week**: `look` in
       `public/data/trending.json` (+ its `ayah`, `reciter`) → Create sheet "This week's template" (`weeklyTemplate()`)
+- [x] M8 First days (owner request 2026-10-31, front-end plan step 5): `src/ui/firstSteps.ts` — when the tour
+      closes and no pace is set, **How much each day?** (Gentle / Steady / Devoted, Later) so the first flame can be
+      lit on day one; on the 2nd and 3rd day the app was opened a **Day 2 / Day 3** card on Me (listen while you
+      read → the mushaf; make your first reel), once each (`dayCard`). Android **app shortcuts** (long-press the
+      icon: Continue reading, Today's goals `#/me`, Search `#/search`, My reels `#/drafts`; `res/xml/shortcuts.xml`,
+      the address goes through `MainActivity.EXTRA_HASH` like a widget tap)
+- [x] M9 Journeys + Today card (owner request 2026-10-31, front-end plan step 7): Me → **Today** (`src/ui/todayCard.ts`)
+      under the streak: the journey's portion for today with a bar, "n pages today · read / total", Open (the first
+      unread page), or Continue reading + Start a journey; on Fridays "Read Al-Kahf" (first unread page of surah 18
+      today). Journeys (`src/data/journeys.ts`, localStorage `journeyPlan`, one at a time): Khatm in 30 days, Juz
+      'Amma in 30 days, Khatm in 6 months; progress = the plan's pages counted since it started
+      (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ---

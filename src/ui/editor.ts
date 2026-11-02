@@ -16,6 +16,7 @@ import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeM
 import { capabilities, describePath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
+import { STATUS_LIMIT, statusParts } from '../engine/status';
 import { FORMATS, H, isFormat, setFrame, W, type Format } from '../engine/layout';
 import { FONT_EN, FONT_EN_ROUND, FONT_EN_SANS, AR_SIZE_MAX, AR_SIZE_MEDIUM, AR_SIZE_MIN, clampArSize, nearestTextSize, type EnFont, type TitlePos, type TitleSize } from '../engine/layout';
 import { applyMood, COLOURS, currentMood, darkOf, GRADES, GRAIN_DEFAULT, MOODS, SCRIM_STRENGTH, VIGNETTE_DEFAULT } from '../engine/moods';
@@ -47,7 +48,7 @@ import { ayahLength, planSeries } from '../engine/series';
 import { qdcSurah } from '../data/qdc';
 import { liteMode } from '../lite';
 import { perfRecord, perfStart } from '../perf';
-import { exportGuard, isNative, saveVideo, shareableLink, shareFile, type SavedFile } from '../native';
+import { exportGuard, isNative, saveVideo, shareableLink, shareFile, shareFiles, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { lightChip } from './lightChip';
 import { h, toast } from './dom';
@@ -2551,6 +2552,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
           canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+        statusBlock(name),
         coverJpeg ? coverButton(coverJpeg, name.replace(/\.\w+$/, '-cover.jpg')) : '',
         makeAnother(),
         h('button', { class: 'chip done', onclick: () => { overlay.hidden = true; } }, ui('ed.backToEditing')),
@@ -2567,6 +2569,63 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       exporting = null;
       dirty = true;
     }
+  }
+
+  /** Result page: the reel again as WhatsApp Status pieces — 720P, at most 30 s each (≈ 14 MB), cut in
+   *  the reciter's pauses (between ayat when possible, never mid-word) — then shared together. */
+  function statusBlock(name: string): Node | string {
+    if (!tl || !audio) return '';
+    const parts = statusParts(tl);
+    const label = () => (parts.length > 1 ? ui('st.button', { n: parts.length }) : ui('st.buttonOne'));
+    const btn = h('button', { class: 'chip status-btn' }, icon('share', 16), label()) as HTMLButtonElement;
+    const links = h('div', { class: 'status-links' });
+    let made: { blob: Blob; name: string }[] | null = null;
+    const send = async () => {
+      const text = captionEl?.value ?? captionText();
+      void navigator.clipboard?.writeText(text).catch(() => {});
+      if (isNative()) {
+        const saved: string[] = [];
+        for (const m of made!) saved.push((await saveVideo(m.blob, m.name)).uri);
+        await shareFiles(saved, ui('st.title'), text);
+        return;
+      }
+      const files = made!.map((m) => new File([m.blob], m.name, { type: m.blob.type }));
+      if (navigator.canShare?.({ files })) { await navigator.share({ files, text }).catch(() => {}); return; }
+      links.replaceChildren(...made!.map((m, i) => {
+        const url = URL.createObjectURL(m.blob);
+        coverUrls.push(url);
+        return h('a', { class: 'chip', href: url, download: m.name }, ui('st.part', { k: i + 1, n: made!.length }));
+      }));
+    };
+    btn.onclick = async () => {
+      if (made) return void send().catch((e) => toast(ui('ed.exportFailed', { msg: e instanceof Error ? e.message : String(e) })));
+      btn.disabled = true;
+      try {
+        const { path } = await capabilities();
+        if (!path) throw new Error(ui('ed.exportUnsupported'));
+        const out: { blob: Blob; name: string }[] = [];
+        for (const [k, r] of parts.entries()) {
+          const blob = await exportVideo({
+            project: structuredClone(project), timeline: tl!, audio: audio!, media: [...media], path: { ...path }, height: 1280,
+            signal: new AbortController().signal, range: r,
+            onProgress: (f) => { btn.lastChild!.textContent = ui('st.making', { k: k + 1, n: parts.length, p: Math.round(f * 100) }); },
+          });
+          out.push({ blob, name: name.replace(/\.(\w+)$/, parts.length > 1 ? `-status-${k + 1}.$1` : '-status.$1') });
+        }
+        made = out;
+        btn.lastChild!.textContent = ui('st.ready', { n: out.length });
+        await send();
+      } catch (e) {
+        btn.lastChild!.textContent = label();
+        toast(ui('ed.exportFailed', { msg: e instanceof Error ? e.message : String(e) }));
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    return h('div', { class: 'status-box' },
+      btn,
+      h('p', { class: 'muted small' }, ui('st.help', { s: STATUS_LIMIT })),
+      links);
   }
 
   /** Result page: the cover frame as an image, for apps that ask for a cover on upload. */

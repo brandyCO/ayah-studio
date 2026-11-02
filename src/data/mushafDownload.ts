@@ -3,7 +3,10 @@
 // idle, nearest to the page being read first, and kept for good (Cache Storage). Only on Wi-Fi (or a
 // computer's connection); on mobile data the reader still fetches the pages around it as before.
 // Stops while the app is hidden or offline and carries on later; once all are kept it never runs again.
+// For a large crowd (a launch, an update): it starts after a random 4 s – 3 min, can be switched off
+// remotely (`mushafDownload`), and when the server says it is busy or failing it rests 5–15 minutes.
 import { PAGE_COUNT, keepPageFont, pageFontKept } from './mushaf';
+import { remoteConfig } from '../net';
 
 const DONE = 'mushafKept';
 let running = false;
@@ -35,12 +38,17 @@ export function keepWholeMushaf(reading: () => number) {
   conn()?.addEventListener?.('change', go);
   window.addEventListener('online', go);
   document.addEventListener('visibilitychange', go);
-  setTimeout(go, 4000); // after the first page and its neighbours
+  // After the first page and its neighbours, spread over a few minutes across phones.
+  setTimeout(go, 4000 + Math.random() * 176e3);
 }
 
+let restUntil = 0;
+
 async function run() {
+  if (Date.now() < restUntil) return;
   running = true;
   try {
+    if (!(await remoteConfig()).mushafDownload) return;
     const left = new Set<number>();
     for (let p = 1; p <= PAGE_COUNT; p++) if (!(await pageFontKept(p))) left.add(p);
     while (left.size) {
@@ -49,7 +57,12 @@ async function run() {
       const at = near();
       const next = [...left].sort((a, b) => Math.abs(a - at) - Math.abs(b - at)).slice(0, 2);
       await Promise.all(next.map((p) => keepPageFont(p).then(() => left.delete(p), () => {})));
-      if (next.every((p) => left.has(p))) return; // both failed: try again later
+      if (next.every((p) => left.has(p))) {
+        // Both failed (busy server, bad connection): rest a while, then carry on.
+        restUntil = Date.now() + 5 * 60e3 + Math.random() * 10 * 60e3;
+        setTimeout(() => { if (!running && document.visibilityState === 'visible') void run(); }, restUntil - Date.now() + 100);
+        return;
+      }
     }
     try { localStorage.setItem(DONE, '1'); } catch { /* ignore */ }
   } finally {

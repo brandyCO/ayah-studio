@@ -4,4 +4,12 @@
     <string name="title_activity_main">Ayah Studio</string>
     <string name="package_name">com.brandyco.ayahstudio</string>
     <string name="custom_url_scheme">com.brandyco.ayahstudio</string>
+    <string name="sc_read">Read</string>
+    <string name="sc_read_long">Continue reading</string>
+    <string name="sc_goals">Goals</string>
+    <string name="sc_goals_long">Today\'s goals</string>
+    <string name="sc_search">Search</string>
+    <string name="sc_search_long">Search the Quran</string>
+    <string name="sc_reels">Reels</string>
+    <string name="sc_reels_long">My reels</string>
 </resources>

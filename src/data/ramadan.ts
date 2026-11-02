@@ -26,6 +26,8 @@ export interface RamadanData {
   today: { day: number; pages: number[] } | null; // today's portion, fixed at the day's first look
   ayat: Record<string, number>; // 's:a' → times the user came back to it (listened, selected, reflected)
   recapSeen: boolean;
+  /** Ramadan days (nights) the user marked taraweeh prayed. */
+  taraweeh?: number[];
 }
 export interface RamadanSettings {
   shift: -1 | 0 | 1;
@@ -125,6 +127,15 @@ export function setWelcomed() {
   d.welcomed = true;
   save(d);
 }
+/** Taraweeh prayed on this Ramadan night (or taken back). */
+export function setTaraweeh(day: number, on: boolean) {
+  const d = ramadanData();
+  const set = new Set(d.taraweeh ?? []);
+  if (on) set.add(day); else set.delete(day);
+  d.taraweeh = [...set].sort((a, b) => a - b);
+  save(d);
+}
+
 export function setRecapSeen() {
   const d = ramadanData();
   d.recapSeen = true;

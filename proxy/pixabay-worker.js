@@ -1,22 +1,37 @@
-// Ayah Studio · stock media proxy (Cloudflare Worker, free tier): Pixabay and Pexels.
+// Ayah Studio · edge proxy (Cloudflare Worker): Pixabay and Pexels search, plus the few calls every
+// phone makes to Supabase ("Popular this week", the anonymous reel counter) and remote switches.
 // Holds the API keys (secrets PIXABAY_KEY and, optionally, PEXELS_KEY) so they never ship in the
 // public app, caches every search for 24 h (Pixabay API terms; also saves Pexels' hourly quota),
 // filters out results that show people (rule 4) and returns only the fields the app needs.
 //
 //   GET /sources                                  →  { pixabay, pexels, collections: [{ id, label }] }
-//   GET /search?source=pixabay|pexels&type=image|video&q=clouds&page=1
+//   GET /search?source=pixabay|pexels&type=image|video&q=clouds&page=1[&i=<install id>]
 //   GET /search?source=…&type=…&collection=skies&page=1   (a curated calm collection)
 //        →  { total, hits: [{ id, source, type, thumb, src, width, height, user, page, tags, duration? }] }
 //   GET /file?url=<a Pixabay/Pexels file URL>     →  the file with CORS headers (only used when the
 //                                                    browser cannot fetch it directly)
+//   GET /popular                                  →  Supabase popular_this_week(), cached 10 min
+//   POST /reel?i=<install id>  (text/plain JSON {r, s, a, b}) →  Supabase record_reel(), rate-limited
+//   GET /config                                   →  remote switches for the app (variable FLAGS)
 //
-// Limits: each visitor (IP) may make 30 searches a minute that are not already cached, and 20
-// file relays a minute. Uncached calls to each source are also capped below its own limit
-// (Pixabay 100/min, Pexels 200/h), so one busy visitor can never use up the key for everyone.
-// Optional variable ALLOWED_ORIGINS: comma-separated origins allowed to call it. Unset → any.
+// Built to hold a very large crowd on free plans and to grow by adding bindings, no code change:
+// - Searches are cached in this data center (Cache API) and, with a KV namespace bound as STOCK_KV,
+//   worldwide, so "clouds" searched in London is not a fresh Pixabay call in Jakarta.
+// - A daily scheduled run (Cron Trigger) builds every curated collection and the Quick reel footage
+//   searches ahead of time, so browsing them never waits on (or spends) the library's limit.
+// - The calls to each library are counted in one place for the whole world when a Durable Object is
+//   bound as BUDGET (class Budget below), so all copies of the worker together stay under the key's
+//   limit (Pixabay 100 a minute, Pexels 200 an hour; PIXABAY_PER_MIN / PEXELS_PER_HOUR once raised).
+//   Without it each copy keeps its own count, which is only a rough guard.
+// - Fair use per person: counted per app install (the `i` parameter) and, more loosely, per address
+//   (mobile networks put many people behind one address). With a rate-limiting binding RATE_LIMITER
+//   the per-install limit holds across the whole network.
+// Variables: ALLOWED_ORIGINS (comma-separated; unset → any), SUPABASE_URL + SUPABASE_KEY (the
+// publishable key, public by design), FLAGS (JSON, e.g. {"stock":false,"popular":false}).
 
 const PER_PAGE = 30;
 const DAY = 86400;
+const POPULAR_TTL = 600; // s
 
 /** Curated calm collections: tuned searches (nature/abstract, no people). */
 const COLLECTIONS = {
@@ -33,6 +48,8 @@ const COLLECTIONS = {
   sunset: { label: 'Sunset', q: 'sunset sky', pexels: 'sunset sky' },
   flowers: { label: 'Flowers', q: 'flowers nature', pexels: 'flowers nature' },
 };
+/** Quick reel footage searches (src/engine/styles.ts FOOTAGE) not already among the collections. */
+const FOOTAGE_EXTRA = ['mountains mist', 'sunlight rays'];
 
 /** Words that mean a result shows people (matched against tags / descriptions). */
 const PEOPLE = new Set(('people person persons woman women man men girl girls boy boys child children kid kids baby ' +
@@ -41,8 +58,7 @@ const PEOPLE = new Set(('people person persons woman women man men girl girls bo
   'athlete runner surfer hiker tourist tourists swimmer bikini wedding').split(' '));
 const showsPeople = (text) => (text ?? '').toLowerCase().split(/[^a-z]+/).some((w) => PEOPLE.has(w));
 
-// Per-isolate counters (good enough as a guard; a Cloudflare rate-limiting binding can be added as
-// RATE_LIMITER for exact per-visitor limits across the whole network).
+// Per-copy sliding-window counters: the fallback when no binding is set, and the loose per-address guard.
 const windows = new Map();
 function allow(key, limit, ms) {
   const now = Date.now();
@@ -57,6 +73,96 @@ function allow(key, limit, ms) {
   return true;
 }
 
+/** One counter for the whole world (a Durable Object has exactly one instance per name). */
+export class Budget {
+  constructor() {
+    this.win = new Map();
+  }
+  async fetch(request) {
+    const u = new URL(request.url);
+    const limit = Number(u.searchParams.get('limit')) || 1;
+    const ms = Number(u.searchParams.get('ms')) || 60e3;
+    const now = Date.now();
+    let w = this.win.get(ms);
+    if (!w || now - w.start >= ms) w = { start: now, n: 0 };
+    const ok = w.n < limit;
+    if (ok) w.n++;
+    this.win.set(ms, w);
+    return new Response(JSON.stringify({ ok, wait: ok ? 0 : Math.ceil((ms - (now - w.start)) / 1000) }));
+  }
+}
+
+const limits = (env, source) => (source === 'pexels'
+  ? [Math.max(1, Number(env.PEXELS_PER_HOUR) || 200) * 0.9, 3600e3]
+  : [Math.max(1, Number(env.PIXABAY_PER_MIN) || 100) * 0.9, 60e3]);
+
+/** May we make one more call to this library right now (worldwide when BUDGET is bound)? */
+async function upstreamOk(env, source) {
+  const [limit, ms] = limits(env, source);
+  if (env.BUDGET) {
+    try {
+      const stub = env.BUDGET.get(env.BUDGET.idFromName(source));
+      const r = await stub.fetch(`https://budget/take?limit=${Math.floor(limit)}&ms=${ms}`);
+      return (await r.json()).ok;
+    } catch {
+      /* the counter is unreachable: fall back to this copy's own count */
+    }
+  }
+  return allow(`upstream:${source}`, Math.floor(limit), ms);
+}
+
+const flagsOf = (env) => {
+  try {
+    return { stock: true, popular: true, ...JSON.parse(env.FLAGS || '{}') };
+  } catch {
+    return { stock: true, popular: true };
+  }
+};
+
+/** A cached answer: this data center first, then the worldwide KV copy. */
+async function readCache(env, key) {
+  const local = await caches.default.match(new Request(`https://edge-proxy.cache/${key}`));
+  if (local) return local.text();
+  if (!env.STOCK_KV) return null;
+  try {
+    const kv = await env.STOCK_KV.get(key);
+    // Keep a copy here too, so this data center answers the next caller without KV.
+    if (kv) await writeCache(env, key, kv, key === 'popular' ? POPULAR_TTL : 3600, { kv: false });
+    return kv;
+  } catch {
+    return null;
+  }
+}
+async function writeCache(env, key, body, ttl, { local = true, kv = true } = {}) {
+  const jobs = [];
+  if (local) jobs.push(caches.default.put(new Request(`https://edge-proxy.cache/${key}`), new Response(body, { headers: { 'Cache-Control': `public, max-age=${ttl}` } })));
+  // KV: free plan 1,000 writes a day (paid: 1 million a month); a refused write only costs a later miss.
+  if (kv && env.STOCK_KV) jobs.push(env.STOCK_KV.put(key, body, { expirationTtl: Math.max(60, ttl) }));
+  await Promise.allSettled(jobs);
+}
+
+const norm = (q) => q.toLowerCase().replace(/\s+/g, ' ').trim();
+const searchKey = (source, type, q, page) => `search/${source}/${type}/${page}/${encodeURIComponent(norm(q))}`;
+
+/** Fetches a search from the library (if the budget allows) and caches it everywhere. */
+async function fetchSearch(env, source, type, q, page) {
+  const key = source === 'pexels' ? env.PEXELS_KEY : env.PIXABAY_KEY;
+  if (!(await upstreamOk(env, source))) {
+    const e = new Error(`${source === 'pexels' ? 'Pexels' : 'Pixabay'} is busy — try a collection, the other library or again shortly`);
+    e.status = 429;
+    throw e;
+  }
+  const out = source === 'pexels' ? await pexels(key, type, q, page) : await pixabay(key, type, q, page);
+  const body = JSON.stringify(out);
+  await writeCache(env, searchKey(source, type, q, page), body, DAY);
+  return body;
+}
+
+const installId = (url) => {
+  const i = url.searchParams.get('i') ?? '';
+  return /^[a-z0-9-]{8,40}$/i.test(i) ? i : '';
+};
+
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') ?? '';
@@ -70,22 +176,47 @@ export default {
       });
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Max-Age': String(DAY) } });
+      return new Response(null, { status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Max-Age': String(DAY) } });
     }
     if (!allowOrigin) return reply(403, { error: 'origin not allowed' });
-    if (request.method !== 'GET') return reply(405, { error: 'GET only' });
 
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    const limited = async (key, limit) => {
-      if (env.RATE_LIMITER) return !(await env.RATE_LIMITER.limit({ key: `${key}:${ip}` })).success;
-      return !allow(`${key}:${ip}`, limit, 60e3);
-    };
     const url = new URL(request.url);
+    const who = installId(url);
+    /** Per person: per install (exact with RATE_LIMITER), and 10× looser per address. */
+    const limited = async (key, limit) => {
+      if (!allow(`${key}:ip:${ip}`, limit * 10, 60e3)) return true;
+      const id = who ? `i:${who}` : `ip:${ip}`;
+      if (env.RATE_LIMITER) return !(await env.RATE_LIMITER.limit({ key: `${key}:${id}` })).success;
+      return !allow(`${key}:${id}`, limit, 60e3);
+    };
+    const flags = flagsOf(env);
+
+    if (url.pathname === '/reel' && request.method === 'POST') return reel(request, env, ctx, reply, limited, flags);
+    if (request.method !== 'GET') return reply(405, { error: 'GET only' });
+
+    if (url.pathname === '/config') {
+      const { stock, popular, ...app } = flags;
+      return reply(200, { stock, popular, ...app }, { 'Cache-Control': 'public, max-age=300' });
+    }
+
+    if (url.pathname === '/popular') {
+      if (!flags.popular || !env.SUPABASE_URL || !env.SUPABASE_KEY) return reply(200, { total: 0, reciters: [], ayat: [] }, { 'Cache-Control': 'public, max-age=300' });
+      const hit = await readCache(env, 'popular');
+      if (hit) return reply(200, hit, { 'Cache-Control': `public, max-age=${POPULAR_TTL}` });
+      const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/popular_this_week`, {
+        method: 'POST', headers: { apikey: env.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}',
+      }).catch(() => null);
+      if (!r?.ok) return reply(502, { error: 'popular unavailable' });
+      const body = await r.text();
+      ctx.waitUntil(writeCache(env, 'popular', body, POPULAR_TTL));
+      return reply(200, body, { 'Cache-Control': `public, max-age=${POPULAR_TTL}` });
+    }
 
     if (url.pathname === '/sources') {
       return reply(200, {
-        pixabay: !!env.PIXABAY_KEY,
-        pexels: !!env.PEXELS_KEY,
+        pixabay: flags.stock && !!env.PIXABAY_KEY,
+        pexels: flags.stock && !!env.PEXELS_KEY,
         collections: Object.entries(COLLECTIONS).map(([id, c]) => ({ id, label: c.label })),
       }, { 'Cache-Control': 'public, max-age=3600' });
     }
@@ -108,37 +239,74 @@ export default {
     }
 
     if (url.pathname !== '/search') return reply(404, { error: 'not found' });
+    if (!flags.stock) return reply(503, { error: 'The free library is resting for a while — your own photos and the built-in scenes still work' });
     const source = url.searchParams.get('source') === 'pexels' ? 'pexels' : 'pixabay';
     const type = url.searchParams.get('type') === 'video' ? 'video' : 'image';
     const col = COLLECTIONS[url.searchParams.get('collection') ?? ''];
     const q = col ? (source === 'pexels' ? col.pexels : col.q) : (url.searchParams.get('q') ?? '').trim().slice(0, 100);
     const page = Math.min(10, Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1));
-    if (!q) return reply(400, { error: 'empty search' });
-    const key = source === 'pexels' ? env.PEXELS_KEY : env.PIXABAY_KEY;
-    if (!key) return reply(501, { error: `${source === 'pexels' ? 'Pexels' : 'Pixabay'} is not set up` });
+    if (!norm(q)) return reply(400, { error: 'empty search' });
+    if (!(source === 'pexels' ? env.PEXELS_KEY : env.PIXABAY_KEY)) return reply(501, { error: `${source === 'pexels' ? 'Pexels' : 'Pixabay'} is not set up` });
 
     // One cache entry per normalized search (independent of the caller's origin).
-    const cacheKey = new Request(`https://stock-proxy.cache/search?s=${source}&type=${type}&q=${encodeURIComponent(q.toLowerCase())}&page=${page}`);
-    const cache = caches.default;
-    const hit = await cache.match(cacheKey);
-    if (hit) return reply(200, await hit.text(), { 'Cache-Control': `public, max-age=${DAY}` });
+    const key = searchKey(source, type, q, page);
+    const hit = await readCache(env, key);
+    if (hit) {
+      return reply(200, hit, { 'Cache-Control': `public, max-age=${DAY}` });
+    }
 
     // Only searches that reach the library count against the limits.
     if (await limited('search', 30)) return reply(429, { error: 'Too many searches — try again in a minute' });
-    const budget = source === 'pexels' ? allow('upstream:pexels', 180, 3600e3) : allow('upstream:pixabay', 90, 60e3);
-    if (!budget) return reply(429, { error: `${source === 'pexels' ? 'Pexels' : 'Pixabay'} is busy — try the other library or again shortly` });
-
-    let out;
     try {
-      out = source === 'pexels' ? await pexels(key, type, q, page) : await pixabay(key, type, q, page);
+      const body = await fetchSearch(env, source, type, q, page);
+      return reply(200, body, { 'Cache-Control': `public, max-age=${DAY}` });
     } catch (e) {
-      return reply(e.status === 429 ? 429 : 502, { error: e.status === 429 ? 'The library is busy — try again shortly' : e.message });
+      return reply(e.status === 429 ? 429 : 502, { error: e.status === 429 ? e.message : e.message || 'Search failed' });
     }
-    const body = JSON.stringify(out);
-    ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Cache-Control': `public, max-age=${DAY}` } })));
-    return reply(200, body, { 'Cache-Control': `public, max-age=${DAY}` });
+  },
+
+  /** Cron Trigger (daily): build every collection and the Quick reel searches ahead of time. */
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(warm(env));
   },
 };
+
+async function warm(env) {
+  const jobs = [];
+  for (const source of ['pixabay', 'pexels']) {
+    if (!(source === 'pexels' ? env.PEXELS_KEY : env.PIXABAY_KEY)) continue;
+    const qs = Object.values(COLLECTIONS).map((c) => (source === 'pexels' ? c.pexels : c.q));
+    for (const q of qs) for (const type of ['video', 'image']) jobs.push([source, type, q]);
+    for (const q of FOOTAGE_EXTRA) jobs.push([source, 'video', q]);
+  }
+  // One after another, well inside each library's limit.
+  for (const [source, type, q] of jobs) {
+    try {
+      await fetchSearch(env, source, type, q, 1);
+    } catch {
+      /* busy or failing: that search is fetched on demand instead */
+    }
+  }
+}
+
+/** The anonymous reel counter, through the edge so nobody can call the database thousands of times. */
+async function reel(request, env, ctx, reply, limited, flags) {
+  if (!flags.popular || !env.SUPABASE_URL || !env.SUPABASE_KEY) return reply(202, '{}');
+  let b;
+  try {
+    b = JSON.parse((await request.text()).slice(0, 300));
+  } catch {
+    return reply(400, { error: 'bad body' });
+  }
+  const int = (x) => (Number.isInteger(x) ? x : NaN);
+  const body = { reciter_id: int(b?.r), s: int(b?.s), a_from: int(b?.a), a_to: int(b?.b) };
+  if (Object.values(body).some(Number.isNaN)) return reply(400, { error: 'bad body' });
+  if (await limited('reel', 6)) return reply(429, { error: 'slow down' });
+  ctx.waitUntil(fetch(`${env.SUPABASE_URL}/rest/v1/rpc/record_reel`, {
+    method: 'POST', headers: { apikey: env.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).catch(() => {}));
+  return reply(202, '{}');
+}
 
 function upstreamError(name, r) {
   const e = new Error(`${name} answered ${r.status}`);
