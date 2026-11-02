@@ -122,8 +122,12 @@ def main():
       if 'error' in raw: continue
       text, got = quran[s - 1], {}
       if mp3:
-        c = doc['surahs'].get(str(s), {}).get('c')
+        sd = doc['surahs'].get(str(s), {})
+        c = sd.get('c')
         if not c: continue
+        # a cut with no pause (two ayat in one breath) is where the next ayah's first word was heard
+        # (`l`, scripts/make-listen-starts.py): the words of both ayat can still be bounded by it
+        c = [x if x is not None else sd.get('l', {}).get(str(i + 1)) for i, x in enumerate(c)]
         for k in range(len(text)):
           n_all += 1
           if c[k] is None or c[k + 1] is None: continue
