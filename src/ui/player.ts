@@ -116,7 +116,7 @@ export function createPlayer(o: PlayerHooks) {
 
   // Where the loaded recording recites its own Bismillah (lit in the mushaf) and where it starts (past a
   // spoken announcement in a few uploads), in seconds.
-  let opening: { span: [number, number] | null; start: number } = { span: null, start: 0 };
+  let opening: { span: [number, number] | null; start: number; first: number | null } = { span: null, start: 0, first: null };
 
   async function load(s: number): Promise<boolean> {
     const r = reciterIn(s);
@@ -134,10 +134,17 @@ export function createPlayer(o: PlayerHooks) {
         words: r.qdc === false && SHIFTED.has(v.verse_key) ? [] : validSegs(v.segments),
       })).sort((x, y) => x.from - y.from);
       url = q.audioUrl;
-      opening = await openingOf(r, s).catch(() => ({ span: null, start: 0 }));
+      const op = await openingOf(r, s).catch(() => null);
       if (id !== req) return false;
+      opening = op ?? { span: null, start: 0, first: null };
+      // Ayah 1's first word starts after the Bismillah (Quran.com times it from 0)
+      const v1 = verses.find((v) => v.a === 1);
+      if (opening.first !== null && v1?.words.length) {
+        const f = opening.first;
+        v1.words = v1.words.map((w, i) => (i === 0 && w[1] < f && f < w[2] ? [w[0], f, w[2]] : w));
+      }
     } else {
-      opening = { span: null, start: 0 };
+      opening = { span: null, start: 0, first: null };
       const words = await alignedWords(r, s);
       if (id !== req) return false;
       verses = Array.from({ length: o.meta[s - 1].ayahs }, (_, i) => ({

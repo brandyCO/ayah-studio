@@ -18,6 +18,8 @@ interface Entry {
   spans?: Record<string, [number, number]>;
   /** A spoken announcement before the recitation in a few uploads: ms to start from. */
   skip?: Record<string, number>;
+  /** Quran.com recordings: where ayah 1's first word really starts (ms; their timings start it at 0, under the Bismillah). */
+  first?: Record<string, number>;
 }
 
 let data: Promise<Record<string, Entry>> | null = null;
@@ -57,8 +59,8 @@ export async function basmalaBefore(r: Reciter, s: number): Promise<Basmala | nu
 }
 
 /** How this surah's recording opens: where its own Bismillah is recited (seconds) and where to start listening. */
-export async function openingOf(r: Reciter, s: number): Promise<{ span: [number, number] | null; start: number }> {
+export async function openingOf(r: Reciter, s: number): Promise<{ span: [number, number] | null; start: number; first: number | null }> {
   const e = (await load())[keyOf(r)];
   const sp = e?.spans?.[String(s)];
-  return { span: sp ? [sp[0] / 1000, sp[1] / 1000] : null, start: (e?.skip?.[String(s)] ?? 0) / 1000 };
+  return { span: sp ? [sp[0] / 1000, sp[1] / 1000] : null, start: (e?.skip?.[String(s)] ?? 0) / 1000, first: e?.first?.[String(s)] ?? null };
 }
