@@ -423,6 +423,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       a book button / the Listen tab back to the page being recited (`followAlong()`); the studio pauses it, the
       Kids space stops it. Reciter pickers have a search box (`reciterSearchBox()`, letters only) and every
       reciter a ▶ voice preview (mp3quran ones: the start of their first checked surah, `mp3quranSample()`)
+      **Report a problem** (owner request 2026-11-02, "super easy for users to report every single thing at the time
+      it happens"): player ⋯ → Report a problem (also Me → ⚙ → App), `src/ui/report.ts`: pick what went wrong (ayah
+      doesn't start at its beginning, highlight off, ayah skipped, wrong voice, audio cuts, text, reel, app, other)
+      + optional note; sent with the reciter, surah:ayah, word, ms in the recording, file, screen, build
+      (`__BUILD__`), device type, install id → `send_report()` (migration `20261102100000_problem_reports.sql`,
+      table `problem_reports`, no app read access, 20 a day per install; pgTAP `problem_reports.test.sql`);
+      offline → kept (`reportQueue`) and sent when online. The player's reel / Night listening / Report sit under ⋯.
+      **Timing audit** (owner report 2026-11-02: Alafasy 37:113–114 start at the second word, highlight sometimes
+      off): `scripts/qdc-audit.py` (`align.yml` scan = audit) aligns every ayah of the Quran.com recordings on its
+      own and writes the ones whose start or word times are off (`qdc-audit/{id}/{SSS}.json` on `align-results`)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

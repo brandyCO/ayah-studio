@@ -12,7 +12,11 @@ for (const f of (readdirSync('public/data', { recursive: true }) as string[]).so
 // Relative base so the same build works on GitHub Pages, Capacitor and Tauri.
 export default defineConfig({
   base: './',
-  define: { __DATA_VERSION__: JSON.stringify(hash.digest('hex').slice(0, 12)) },
+  define: {
+    __DATA_VERSION__: JSON.stringify(hash.digest('hex').slice(0, 12)),
+    // Which build a problem report came from (the commit on GitHub's runners, else the build date).
+    __BUILD__: JSON.stringify((process.env.GITHUB_SHA ?? '').slice(0, 7) || new Date().toISOString().slice(0, 16)),
+  },
   // Mediabunny and its optional WASM AAC encoder are large but loaded lazily by the editor.
   build: { chunkSizeWarningLimit: 1100 },
 });
