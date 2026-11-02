@@ -123,9 +123,18 @@ export function drawGround(ctx: CanvasRenderingContext2D, iso: Iso, n: number, n
 }
 
 /** Outline of one cell (drag target). */
-export function drawCellMark(ctx: CanvasRenderingContext2D, iso: Iso, x: number, y: number, ok: boolean) {
+export function drawCellMark(ctx: CanvasRenderingContext2D, iso: Iso, x: number, y: number, ok: boolean, t = 0) {
   const c = cellCenter(iso, x, y);
   ctx.save();
+  if (ok) {
+    // A breathing spot of light where the seed will go, with a ring opening out from it.
+    const br = 0.5 + 0.5 * Math.sin(t * 3.2), ring = (t * 0.9) % 1;
+    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, iso.tw * 0.45);
+    g.addColorStop(0, `rgba(255,244,200,${0.45 + 0.35 * br})`); g.addColorStop(1, 'rgba(255,244,200,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(c.x, c.y, iso.tw * 0.45, iso.th * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,250,225,${0.8 * (1 - ring)})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, iso.tw * (0.1 + 0.35 * ring), iso.th * (0.1 + 0.35 * ring), 0, 0, Math.PI * 2); ctx.stroke();
+  }
   ctx.beginPath();
   ctx.moveTo(c.x, c.y - iso.th / 2); ctx.lineTo(c.x + iso.tw / 2, c.y); ctx.lineTo(c.x, c.y + iso.th / 2); ctx.lineTo(c.x - iso.tw / 2, c.y);
   ctx.closePath();

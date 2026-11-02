@@ -148,7 +148,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     drawGround(ctx, iso, n, isNight, magic, time);
     if (drag?.cell && inGrid(drag.cell.x, drag.cell.y)) {
       const ex = drag.it ? keyOf(drag.it) : undefined;
-      drawCellMark(ctx, iso, drag.cell.x, drag.cell.y, !occupied(drag.cell.x, drag.cell.y, ex));
+      drawCellMark(ctx, iso, drag.cell.x, drag.cell.y, !occupied(drag.cell.x, drag.cell.y, ex), time);
     }
     const list = items().filter((it) => !drag?.it || keyOf(it) !== keyOf(drag.it)).sort((a, b) => posOf(a).x + posOf(a).y - (posOf(b).x + posOf(b).y));
     const thirstyAt: { x: number; y: number }[] = [];
