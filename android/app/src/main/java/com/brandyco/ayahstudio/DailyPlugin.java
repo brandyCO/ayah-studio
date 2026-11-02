@@ -53,7 +53,7 @@ public class DailyPlugin extends Plugin {
     @PluginMethod
     public void takeLaunchHash(PluginCall call) {
         JSObject r = new JSObject();
-        String h = MainActivity.takeHash();
+        String h = AppActivity.takeHash();
         if (h != null) r.put("hash", h);
         call.resolve(r);
     }

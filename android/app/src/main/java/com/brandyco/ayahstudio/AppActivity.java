@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
+public class AppActivity extends BridgeActivity {
     static final String EXTRA_HASH = "ayahstudio.hash";
     private static String pendingHash = null;
 
@@ -26,8 +26,15 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DailyPlugin.class);
         registerPlugin(ExportServicePlugin.class);
         registerPlugin(WidgetsPlugin.class);
+        registerPlugin(AppIconPlugin.class);
         keepHash(getIntent());
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        AppIcons.apply(this); // the icon of the chosen theme colours (AppIcons)
     }
 
     @Override

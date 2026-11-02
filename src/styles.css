@@ -1358,7 +1358,7 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-pip-ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); font-size: 15px; color: #9fd8ff; }
 .me-pip.lit .me-pip-ic, .me-pip.revived .me-pip-ic { background: linear-gradient(160deg, var(--rw-n1), var(--rw-n3)); border-color: transparent;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n2) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, .35); }
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rw-n2) 32%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .me-pip-ic svg { width: 70%; height: 70%; overflow: visible; }
 .me-pip.lit .me-pip-d, .me-pip.revived .me-pip-d { color: var(--rw-hi); font-weight: 700; }
 /* A check that stamps in: the circle pops, the tick draws itself. */
@@ -1434,7 +1434,7 @@ button.lt-chip { cursor: pointer; }
 .goal-ring { --ring-p: 0; flex: none; transition: --ring-p var(--dur-3) var(--ease-spring); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
   font-weight: 800; color: var(--accent-ink);
   background: radial-gradient(closest-side, var(--card) 72%, transparent 74%), conic-gradient(var(--accent) calc(var(--ring-p) * 1turn), var(--line) 0); }
-.goal.met .goal-ring { background: linear-gradient(135deg, var(--rw-n1), var(--rw-n3)); color: var(--rw-ink); box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n1) 45%, transparent); }
+.goal.met .goal-ring { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .goal-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .goal-txt .muted { margin: 0; }
 .goal-step { display: flex; gap: 6px; }
@@ -1537,7 +1537,7 @@ button.lt-chip { cursor: pointer; }
 .wg-hint .wg-text b { font-size: var(--fs-m, 15px); }
 .wg-pv > .wg-dots { display: flex; flex-direction: row; gap: 5px; }
 .wg-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / .25); }
-.wg-dots i.on { background: var(--rw-n2, #3dd1ad); box-shadow: 0 0 6px var(--rw-n2, #3dd1ad); }
+.wg-dots i.on { background: var(--rw-n2, #3dd1ad); }
 .wg-daily { align-items: flex-end; background: linear-gradient(160deg, #1b3a30, #0a1813); }
 .wg-steps { margin: 0; padding-inline-start: 20px; line-height: 1.7; }
 .wg-hint { display: flex; align-items: center; gap: 12px; position: relative; padding-inline-end: 40px; }
@@ -1593,7 +1593,7 @@ button.lt-chip { cursor: pointer; }
 .cel-text h2 { margin: 4px 0 2px; font-size: 26px; animation: cel-title .7s .6s cubic-bezier(.2, 1.3, .4, 1) both; }
 .cel-sub { margin: 0; color: color-mix(in srgb, var(--rw-hi) 60%, #bbb); font-size: var(--fs-s); animation: cel-up .6s .8s ease-out both; }
 .cel-ok { margin-top: 14px; min-width: 180px; padding: 12px 22px; border-radius: var(--r-pill); border: 0; font: inherit; font-weight: 700;
-  color: var(--rw-ink); background: linear-gradient(180deg, var(--rw-hi), var(--rw-n2)); box-shadow: 0 6px 24px color-mix(in srgb, var(--rw-n1) 40%, transparent); cursor: pointer;
+  color: #fff; background: var(--rw-hero); box-shadow: var(--rw-hero-glow); cursor: pointer;
   animation: cel-up .6s 1.05s cubic-bezier(.2, 1.4, .4, 1) both; }
 .cel-mote { opacity: 0; transform-box: fill-box; animation: cel-mote 2.2s var(--d) ease-out both; }
 .cel-burst { transform-box: fill-box; transform-origin: center; opacity: .8; animation: cel-burst 1.4s .9s ease-out both; }
@@ -1649,10 +1649,13 @@ button.lt-chip { cursor: pointer; }
 @keyframes cel-turn { to { transform: rotate(360deg); } }
 
 /* Claim buttons (Me): a met goal or a new badge waits here with a soft shimmer. */
-.chip.claim, .claim-all, .claim-badge { position: relative; overflow: hidden; border: 0; font-weight: 700; color: var(--rw-ink);
-  background: linear-gradient(135deg, var(--rw-hi), var(--rw-n2) 60%, var(--rw-n3)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rw-hi) 50%, transparent), 0 4px 16px color-mix(in srgb, var(--rw-n1) 35%, transparent); }
+/* Calm hierarchy: one bright action per screen (the "every goal" banner), the rest tonal — a soft tint
+   of the accent with accent text, no glow — so the eye has somewhere to rest. The shine plays once. */
+.chip.claim, .claim-all, .claim-badge { position: relative; overflow: hidden; font-weight: 700; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.claim-all { border: 0; color: #fff; background: var(--rw-hero); box-shadow: var(--rw-hero-glow); }
 .chip.claim::after, .claim-all::after, .claim-badge::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%);
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .7) 50%, transparent 70%); animation: claim-shine 2.8s ease-in-out infinite; }
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); animation: claim-shine 2.8s .4s ease-in-out 1 both; }
 @keyframes claim-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @media (prefers-reduced-motion: reduce) { .chip.claim::after, .claim-all::after, .claim-badge::after { animation: none; } }
 .claim-all { display: flex; width: 100%; justify-content: center; gap: 8px; margin: 4px 0 10px; padding: 12px; border-radius: var(--r-m); font: inherit; font-weight: 700; cursor: pointer; }
@@ -1663,7 +1666,7 @@ button.lt-chip { cursor: pointer; }
 .claim-badge .cb-go { font-size: var(--fs-s); }
 .tab-btn.me { position: relative; }
 .tab-btn.me.has-dot::after { content: ''; position: absolute; top: 6px; inset-inline-start: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%;
-  background: var(--rw-n2); box-shadow: 0 0 0 2px var(--bg), 0 0 8px color-mix(in srgb, var(--rw-n1) 80%, transparent); }
+  background: var(--rw-n2); box-shadow: 0 0 0 2px var(--bg); }
 
 /* Goals: the first pace, the weekly suggestion, the user's own goals. */
 .pace { display: flex; flex-direction: column; gap: 8px; }
@@ -1674,6 +1677,7 @@ button.lt-chip { cursor: pointer; }
 .goal-tip { margin: 0 0 10px; padding: 10px 12px; border-radius: var(--r-m); background: color-mix(in srgb, var(--accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 .goal-tip p { margin: 0 0 8px; font-size: var(--fs-s); }
+.goal-tip .chip.on { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
 .goal-links { display: flex; flex-wrap: wrap; }
 .goal-links .menu-item { flex: 1 1 auto; }
 .cg-actions { margin-top: 10px; align-items: center; }
