@@ -156,13 +156,8 @@ function rewardCss(x: BrandTheme): string {
 // leaves the screen — AppIcons.java; icons by scripts/make-icons.py --themes).
 const AppIcon = registerPlugin<{ set(o: { id: string }): Promise<void> }>('AppIcon');
 
-/** The tile gradient of a theme's icon (same stops as scripts/make-icons.py `theme_stops`). */
-function iconStops(x: BrandTheme): [number, string][] {
-  if (x.id === DEFAULT_THEME) return [[0, '#05573d'], [1, '#22b3a0']];
-  return [[0, x.fill[0]], ...(x.fill.length > 1 ? [[0.55, x.fill[x.fill.length - 1]] as [number, string]] : []), [1, x.neon[0]]];
-}
-
-/** The web tab / bookmark icon in the theme's colours (the mark of public/icon.svg). */
+/** The web tab / bookmark icon in the theme's colours: public/icon.svg (light in the ayah marker) on the
+ *  theme's night tile, with the colours scripts/make-icons.py `theme_colors` uses for the app icons. */
 function setFavicon(x: BrandTheme) {
   const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (!link) return;
@@ -170,12 +165,16 @@ function setFavicon(x: BrandTheme) {
     link.href = './icon.svg';
     return;
   }
-  const stops = iconStops(x).map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">${stops}</linearGradient></defs>`
-    + `<rect width="512" height="512" rx="115" fill="url(#g)"/><circle cx="209.09" cy="256" r="89.91" fill="none" stroke="#fff" stroke-width="33.23"/>`
-    + `<rect x="282.39" y="149.48" width="33.23" height="213.05" rx="16.61" fill="#fff"/>`
-    + `<rect x="337.88" y="189.96" width="25.25" height="132.09" rx="12.63" fill="#fff" opacity=".78"/>`
-    + `<rect x="389.38" y="219.78" width="25.25" height="72.44" rx="12.63" fill="#fff" opacity=".78"/></svg>`;
+  const h = x.hue, line = x.accentDark, ring = x.fill[x.fill.length - 1];
+  const glow = (id: string, r: number, stops: string) => `<radialGradient id="${id}" cx="256" cy="256" r="${r}" gradientUnits="userSpaceOnUse">${stops}</radialGradient>`;
+  const sq = `<rect x="138" y="138" width="236" height="236" rx="16.52" fill="none" stroke="${line}" stroke-width="12.98" stroke-linejoin="round"`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="tg" cx="50%" cy="46%" r="75%">`
+    + `<stop offset="0" stop-color="${hslHex(h, 49, 8.4)}"/><stop offset="1" stop-color="${hslHex(h, 50, 3.1)}"/></radialGradient>`
+    + glow('lg', 146.32, `<stop offset="0" stop-color="${line}" stop-opacity=".95"/><stop offset=".22" stop-color="${line}" stop-opacity=".55"/><stop offset=".6" stop-color="${line}" stop-opacity=".12"/><stop offset="1" stop-color="${line}" stop-opacity="0"/>`)
+    + glow('lc', 25.96, '<stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>')
+    + `</defs><rect width="512" height="512" rx="115" fill="url(#tg)"/><circle cx="256" cy="256" r="146.32" fill="url(#lg)"/>`
+    + `${sq}/>${sq} transform="rotate(45 256 256)"/>`
+    + `<circle cx="256" cy="256" r="77.88" fill="none" stroke="${ring}" stroke-width="7.14" opacity=".8"/><circle cx="256" cy="256" r="25.96" fill="url(#lc)"/></svg>`;
   link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
