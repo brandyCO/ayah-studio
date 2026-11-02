@@ -12,30 +12,40 @@ Writes `l` per surah into public/data/mp3quran/{key}.json: {ayah: ms} for ayat w
 import glob, json, os, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RES = sys.argv[1]
 LEAD = 120  # ms before the first word (its onset is a little late)
 
-for path in sorted(glob.glob(os.path.join(ROOT, 'public', 'data', 'mp3quran', '*.json'))):
-  key = os.path.basename(path)[:-5]
-  d = json.load(open(path))
-  added = 0
-  for s, v in d['surahs'].items():
-    v.pop('l', None)
-    c = v['c']
-    try: a = json.load(open(os.path.join(RES, 'align2', key, '%03d.json' % int(s))))
-    except Exception: continue
-    if 'ay' not in a or a.get('size') != v['size'] or len(a['ay']) != len(c) - 1: continue
-    starts = {}
-    # Before ayah 1 a recording may hold an isti'adha and the Bismillah, which the model can take for the opening
-    # letters (Alif Lam Mim…): the first ayah simply starts with the file.
-    if c[0] is None: starts['1'] = 0
-    for i in range(1, len(c) - 1):
-      if c[i] is not None or a['lconf'][i] <= -1.5: continue
-      t = a['ay'][i][0] - LEAD
-      if i > 0: t = max(t, a['ay'][i - 1][1])  # never inside the previous ayah's last word
-      lo = max([x for x in c[:i] if x is not None] + [0])
-      hi = min([x for x in c[i + 1:] if x is not None] + [10 ** 9])
-      if lo < t < hi: starts[str(i + 1)] = int(t)
-    if starts: v['l'] = starts; added += len(starts)
-  with open(path, 'w') as f: json.dump(d, f, separators=(',', ':'))
-  print(key, added)
+def listen_starts(v, a):
+  """{ayah: ms} for the ayat of surah record `v` ({size, c}) whose start cut is null, from alignment result `a`."""
+  c = v['c']
+  if 'ay' not in a or a.get('size') != v['size'] or len(a['ay']) != len(c) - 1: return {}
+  starts = {}
+  # Before ayah 1 a recording may hold an isti'adha and the Bismillah, which the model can take for the opening
+  # letters (Alif Lam Mim…): the first ayah simply starts with the file.
+  if c[0] is None: starts['1'] = 0
+  for i in range(1, len(c) - 1):
+    if c[i] is not None or a['lconf'][i] <= -1.5: continue
+    t = max(a['ay'][i][0] - LEAD, a['ay'][i - 1][1])  # never inside the previous ayah's last word
+    lo = max([x for x in c[:i] if x is not None] + [0])
+    hi = min([x for x in c[i + 1:] if x is not None] + [10 ** 9])
+    if lo < t < hi: starts[str(i + 1)] = int(t)
+  return starts
+
+
+def main():
+  res = sys.argv[1]
+  for path in sorted(glob.glob(os.path.join(ROOT, 'public', 'data', 'mp3quran', '*.json'))):
+    key = os.path.basename(path)[:-5]
+    d = json.load(open(path))
+    added = 0
+    for s, v in d['surahs'].items():
+      v.pop('l', None)
+      try: a = json.load(open(os.path.join(res, 'align2', key, '%03d.json' % int(s))))
+      except Exception: continue
+      starts = listen_starts(v, a)
+      if starts: v['l'] = starts; added += len(starts)
+    with open(path, 'w') as f: json.dump(d, f, separators=(',', ':'))
+    print(key, added)
+
+
+if __name__ == '__main__':
+  main()

@@ -75,7 +75,7 @@ export const RECITERS: Reciter[] = [
   // mp3quran.net, verified surahs only (scripts/verify-mp3quran.py).
   { id: 1027, name: 'Ahmad Al-Nufais', short: 'Nufais', qdc: false, mp3quran: { read: 259, surahs: '1-67,69-114' }, words: '1-67,69-114' },
   { id: 1028, name: 'Idrees Abkar', short: 'Abkar', qdc: false, mp3quran: { read: 12, surahs: '1-20,22-25,27-31,33-35,38-114' }, words: '1-20,22-25,27-31,33-35,38-114' },
-  { id: 1029, name: 'Raad Al-Kurdi', short: 'Al-Kurdi', qdc: false, mp3quran: { read: 221, surahs: '1-111,113-114' }, words: '1-102,104-111,113-114' },
+  { id: 1029, name: 'Raad Al-Kurdi', short: 'Al-Kurdi', qdc: false, mp3quran: { read: 221, surahs: '1-111,113-114' }, words: '1-111,113-114' },
   { id: 1030, name: 'Khalid Al-Jaleel', short: 'Al-Jaleel', qdc: false, mp3quran: { read: 20, surahs: '1-13,16-114' }, words: '1-13,16-114' },
   { id: 1031, name: 'Bandar Baleela', short: 'Baleela', qdc: false, mp3quran: { read: 217, surahs: '1-114' }, words: '1-114' },
   { id: 1032, name: 'Haitham Al-Dukhain', short: 'Al-Dukhain', qdc: false, mp3quran: { read: 273, surahs: '1-114' }, words: '1-114' },
