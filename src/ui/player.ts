@@ -155,12 +155,20 @@ export function createPlayer(o: PlayerHooks) {
       if (!(await load(s))) return;
       const v = verses.find((x) => x.a === a) ?? verses[0];
       if (!v) throw new Error('No timings for this surah');
+      // From the top of a surah: the very start of its recording, so the Bismillah (and an isti'adha) is
+      // always heard, also where an ayah's start time is unknown (mp3quran cuts that are null). An ayah with
+      // no known start plays from the nearest earlier ayah that has one, never from the surah's first timed ayah.
+      let at = v.from;
+      if (!perAyah && (a <= 1 || v.a !== a)) {
+        const before = a <= 1 ? undefined : verses.filter((x) => x.a < a).pop();
+        at = before ? before.from : 0;
+      }
       if (perAyah) {
         playing = v.a;
         ahead.pause();
         audio.src = await playableUrl(everyayahUrl(using!, s, v.a));
         preload(v.a + 1);
-      } else await seekTo(v.from / 1000);
+      } else await seekTo(at / 1000);
       await audio.play();
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
