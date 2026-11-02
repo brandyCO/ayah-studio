@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """List the recordings on free sources — of the reciters we have (new recordings) and of reciters we do not
 have yet — and look for more recordings of the reciters we have, on free sources this app may use, and tell apart
-recordings we already have from new ones by their sound. Run by .github/workflows/scan-sources.yml (GitHub's
+recordings we already have from new ones by their sound. Run by .github/workflows/align.yml (input scan = yes) (GitHub's
 runners reach sites the cloud workspace cannot); writes OUT (JSON) for a person to review — nothing is added
 to the app here.
 

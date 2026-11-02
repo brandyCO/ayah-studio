@@ -15,16 +15,21 @@ on:
         description: 'Only these surahs, one job per reciter (e.g. 112-114; empty = all, 4 jobs per reciter)'
         required: false
         default: ''
+      scan:
+        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py)'
+        required: false
+        default: 'no'
 
 permissions:
   contents: write
 
 concurrency:
-  group: align
+  group: align-${{ inputs.scan }}
   cancel-in-progress: false
 
 jobs:
   plan:
+    if: inputs.scan != 'yes'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -98,3 +103,29 @@ jobs:
             sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
           done
           exit 1
+
+  scan:
+    if: inputs.scan == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg && pip install -q numpy
+      - run: python3 scripts/scan-sources.py scan.json
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f scan.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/scan.json" sources/scan.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Source scan" && git push -q origin HEAD:align-results
