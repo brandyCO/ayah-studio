@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   plan:
-    if: inputs.scan != 'yes' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find' && inputs.scan != 'audit'
+    if: inputs.scan != 'yes' && inputs.scan != 'seek' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find' && inputs.scan != 'audit'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -158,6 +158,35 @@ jobs:
         env:
           INPUT_ONLY: ${{ inputs.only }}
 
+  # scan = seek: does a seek in Chromium's <audio> land where currentTime says, for each Quran.com recording?
+  seek:
+    if: inputs.scan == 'seek'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg && pip install -q numpy
+      - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - run: node scripts/seek-check.cjs seek ${{ inputs.surahs || '2' }} && python3 scripts/seek-check.py seek
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f seek/result.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/seek/result.json" sources/seek.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Seek check"
+          for i in 1 2 3 4 5 6; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+
   scan:
     if: inputs.scan == 'yes'
     runs-on: ubuntu-latest
@@ -193,18 +222,18 @@ jobs:
       # only = zailai: every archive.org upload of Yasser Az-Zailai (owner request 2026-11-03), all surahs
       - if: inputs.only == 'zailai'
         run: python3 scripts/find-surahs.py find.json "Zailai|Zailaee|Zailaie|Zaylai|Zaylaee|Zeilai|Zailaey|الزيلعي|الزيلعى" $(seq -s, 1 114)
-      - if: inputs.only != 'compare' && inputs.only != 'voice' && inputs.only != 'zailai'
+      - if: inputs.only != 'compare' && inputs.only != 'voice' && inputs.only != 'zailai' && inputs.only != 'voice-zailai'
         run: python3 scripts/find-surahs.py find.json "Islam Sobhi|Islam Sobhy|Islam Subhi|إسلام صبحي|اسلام صبحي|اسلام صبحى|إسلام صبحى" 37,39,40,45,65
       # only = compare: are the archive.org uploads found the same recording as our checked mp3quran one?
       - if: inputs.only == 'compare'
         run: python3 scripts/compare-ia.py find.json public/data/mp3quran/islam-sobhi.json islamsobhiquran surquran.com/islam islam-sobhi_202405 islam-sobhi_202404 islamicloud-quran-islam-sobhi/islam-sobhi
       # only = voice: is the archive.org upload his voice? (speaker embeddings against his mp3quran files)
-      - if: inputs.only == 'voice'
+      - if: inputs.only == 'voice' || inputs.only == 'voice-zailai'
         run: |
           sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null
           pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -q speechbrain numpy
-          python3 scripts/voice-check.py find.json
+          python3 scripts/voice-check.py find.json ${{ inputs.only == 'voice-zailai' && 'zailai' || '' }}
       - name: Save the report
         if: always()
         env:
@@ -215,7 +244,7 @@ jobs:
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
           cd "$RUNNER_TEMP/res"
           git sparse-checkout set sources
-          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ (inputs.only == 'compare' || inputs.only == 'voice') && inputs.only || 'find' }}-${{ inputs.only == 'zailai' && 'zailai' || 'islam-sobhi' }}.json"
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ (inputs.only == 'compare' || inputs.only == 'voice' || inputs.only == 'voice-zailai') && inputs.only || 'find' }}-${{ inputs.only == 'zailai' && 'zailai' || 'islam-sobhi' }}.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sources && git commit -qm "Find: Islam Sobhi surahs"

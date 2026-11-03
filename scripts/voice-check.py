@@ -60,8 +60,25 @@ def ia_files(item):
   return [f['name'] for f in meta['files'] if f['name'].lower().endswith('.mp3') and f.get('source') == 'original']
 
 
+def zailai(out):
+  """Every file of archive.org YasserAl-Zailai against the As-Saffat the owner recognised as his (2026-11-03)."""
+  ref = embed('https://archive.org/download/islamsobhiquran/037.mp3')
+  oth = {o: embed(MP3 + o + '/037.mp3') for o in OTHERS + ['islam-sobhi/r1']}
+  oth = {k: v for k, v in oth.items() if v is not None}
+  rep = {'others_to_ref_max': max(float(ref @ v) for v in oth.values()), 'files': {}}
+  for name in ia_files('YasserAl-Zailai'):
+    v = embed('https://archive.org/download/YasserAl-Zailai/' + urllib.parse.quote(name))
+    if v is None: continue
+    best = max(oth.items(), key=lambda kv: float(v @ kv[1]))
+    rep['files'][name] = {'zailai': float(v @ ref), 'closest_other': best[0], 'other': float(v @ best[1])}
+  vals = [r['zailai'] - r['other'] for r in rep['files'].values()]
+  rep['summary'] = {'files': len(vals), 'margin_min': min(vals), 'not_him': [n for n, r in rep['files'].items() if r['other'] >= r['zailai']]}
+  json.dump(rep, open(out, 'w'), indent=1); print(json.dumps(rep['summary'], indent=1))
+
+
 def main():
   out = sys.argv[1]
+  if sys.argv[2:] == ['zailai']: return zailai(out)
   sob = {s: embed(u) for s, u in SOBHI.items()}
   sob = {s: v for s, v in sob.items() if v is not None}
   oth = {}
