@@ -198,6 +198,7 @@ jobs:
       # only = voice: is the archive.org upload his voice? (speaker embeddings against his mp3quran files)
       - if: inputs.only == 'voice'
         run: |
+          sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null
           pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -q speechbrain numpy
           python3 scripts/voice-check.py find.json
