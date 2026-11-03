@@ -103,7 +103,7 @@ export const RECITERS: Reciter[] = [
   { id: 1049, name: 'Ali Al-Hudhaify', short: 'Hudhaify (2)', recording: 'Murattal 2', everyayah: 'Hudhaify_32kbps', qdc: false, words: '1-114' },
   // archive.org upload of Yasser Az-Zailai (the owner recognised his voice, 2026-11-03; every file voice-checked,
   // scripts/voice-check.py zailai): no published times, so ayah cuts and words come from alignment.
-  { id: 1050, name: 'Yasser Az-Zailai', short: 'Az-Zailai', qdc: false, mp3quran: { read: 'ia-YasserAl-Zailai', surahs: '18-19,31,35-38,42,45-46,50,52-57,59,61-64,66-70,72-79,81-82,87-88,91' }, words: '18-19,31,35-38,42,45-46,50,52-57,59,61-64,66-70,72-79,81-82,87-88,91' },
+  { id: 1050, name: 'Yasser Az-Zailai', short: 'Az-Zailai', qdc: false, mp3quran: { read: 'ia-YasserAl-Zailai', surahs: '18-19,31,35-38,42,45-46,50,52-57,59,61-64,66-70,72-79,81-82,87-88,91-92,97' }, words: '18-19,31,35-38,42,45-46,50,52-57,59,61-64,66-70,72-79,81-82,87-88,91-92,97' },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */
