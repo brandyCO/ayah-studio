@@ -2,12 +2,16 @@
 """Is a recording found elsewhere the same reciter as our checked one? Speaker embeddings (SpeechBrain
 ECAPA, VoxCeleb) of 20 s windows from the first minutes of each file, averaged per file, compared by cosine.
 
+2026-11-03: the owner heard that archive.org `islamsobhiquran` is Yasser Az-Zailai, not Islam Sobhi. So the
+report also says whether every file of that upload is one voice (a whole Quran of Az-Zailai) and whether
+the As-Saffat / Al-Jathiya / At-Talaq files of `islam-sobhi_202405` are Islam Sobhi.
+
 The method is checked on the references themselves: each of the reciter's own files against his other
 files must score above every other reciter's files, else the report says the test cannot tell.
 
   python3 scripts/voice-check.py OUT.json
 """
-import json, os, subprocess, sys, tempfile, urllib.request
+import json, os, re, subprocess, sys, tempfile, urllib.parse, urllib.request
 
 import numpy as np
 import torch
@@ -49,6 +53,12 @@ def embed(url):
   m = np.mean(vs, 0); print('ok', url, len(vs)); return m / np.linalg.norm(m)
 
 
+def ia_files(item):
+  meta = json.load(urllib.request.urlopen(urllib.request.Request(
+    'https://archive.org/metadata/' + item, headers={'User-Agent': 'ayah-studio-voice-check'}), timeout=60))
+  return [f['name'] for f in meta['files'] if f['name'].lower().endswith('.mp3') and f.get('source') == 'original']
+
+
 def main():
   out = sys.argv[1]
   sob = {s: embed(u) for s, u in SOBHI.items()}
@@ -73,6 +83,28 @@ def main():
       rep[name][s] = {'sobhi': to_sobhi, 'closest_other': best[0], 'other': cos(v, best[1]),
                       'verdict': 'Islam Sobhi' if to_sobhi >= rep['own_min'] - 0.02 and to_sobhi > cos(v, best[1]) + 0.1
                       else 'not him' if cos(v, best[1]) > to_sobhi else 'unclear'}
+  # The whole upload: one voice? (each file against the centroid of the others)
+  item = {}
+  for name in ia_files('islamsobhiquran'):
+    v = embed('https://archive.org/download/islamsobhiquran/' + urllib.parse.quote(name))
+    if v is not None: item[name] = v
+  if item:
+    c = np.mean(list(item.values()), 0)
+    rep['item'] = {n: {'item': float(v @ ((c * len(item) - v) / np.linalg.norm(c * len(item) - v))),
+                       'sobhi': float(np.mean([cos(v, w) for w in sob.values()])),
+                       'other': max(cos(v, w) for w in oth.values())} for n, v in sorted(item.items())}
+    vals = [r['item'] for r in rep['item'].values()]
+    rep['item_summary'] = {'files': len(item), 'min': min(vals), 'mean': float(np.mean(vals)),
+                           'outliers': [n for n, r in rep['item'].items() if r['item'] < rep['own_min'] - 0.05]}
+  # Another upload named after Islam Sobhi: his voice?
+  rep['sobhi_202405'] = {}
+  for name in ia_files('islam-sobhi_202405'):
+    if not re.match(r'0(37|39|40|45|65) ', name): continue
+    v = embed('https://archive.org/download/islam-sobhi_202405/' + urllib.parse.quote(name))
+    if v is None: continue
+    best = max(oth.items(), key=lambda kv: cos(v, kv[1]))
+    rep['sobhi_202405'][name] = {'sobhi': float(np.mean([cos(v, w) for w in sob.values()])),
+                                 'closest_other': best[0], 'other': cos(v, best[1])}
   json.dump(rep, open(out, 'w'), indent=1); print(json.dumps(rep, indent=1))
 
 
