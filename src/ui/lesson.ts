@@ -84,6 +84,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const phaseEl = h('p', { class: 'ls-phase' });
   const textEl = h('div', { class: 'ls-text', lang: 'ar', dir: 'rtl' });
   const pop = h('div', { class: 'ls-pop', hidden: true, 'aria-live': 'polite' });
+  const trEl = h('div', { class: 'ls-trs' }); // page view: the chunk's translation, kept on screen under the page
   const status = h('p', { class: 'ls-status', 'aria-live': 'polite' });
   const ring = h('span', { class: 'ls-ring', 'aria-hidden': 'true' });
   const actions = h('div', { class: 'ls-actions' });
@@ -103,7 +104,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
       art),
     stepsEl, phaseEl,
-    h('main', { class: 'ls-main' }, textEl, pop),
+    h('main', { class: 'ls-main' }, textEl, pop), trEl,
     h('div', { class: 'ls-turn' }, ring, status),
     actions, tools, doneEl);
 
@@ -198,11 +199,12 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       els.push(el);
       void mushafMod.loadPageFont(p).catch(() => {}).then(() => requestAnimationFrame(() => fitPage(el)));
     }
-    const blocks: Node[] = [h('div', { class: 'ls-pages' }, ...els)];
+    const trs: Node[] = [];
     if (showMeaning() && (phase === 'listen' || phase === 'practice' || phase === 'check')) {
-      for (let a = range[0]; a <= range[1]; a++) if (trans[a - 1]) blocks.push(h('p', { class: 'ls-tr', lang: tInfo.lang, dir: tInfo.dir }, h('span', { class: 'ls-n' }, `${a}. `), trans[a - 1]));
+      for (let a = range[0]; a <= range[1]; a++) if (trans[a - 1]) trs.push(h('p', { class: 'ls-tr', lang: tInfo.lang, dir: tInfo.dir }, h('span', { class: 'ls-n' }, `${a}. `), trans[a - 1]));
     }
-    textEl.replaceChildren(...blocks);
+    textEl.replaceChildren(h('div', { class: 'ls-pages' }, ...els));
+    trEl.replaceChildren(...trs);
   }
   /** Same fit as the reader: the widest line spans the page, 15 lines over the height. */
   function fitPage(el: HTMLElement) {
@@ -220,7 +222,9 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     if (first && el === textEl.querySelector('.ls-page:has(.lw)')) first.scrollIntoView({ block: 'center' });
   }
   function paintText() {
+    root.classList.toggle('ls-pageview', pageView());
     if (pageView()) { paintPage(); return; }
+    trEl.replaceChildren();
     wordEls.clear(); moreEls.length = 0;
     const blocks: Node[] = [];
     for (let a = range[0]; a <= range[1]; a++) {
@@ -271,7 +275,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     phase = p;
     pop.hidden = true;
     peeked.clear();
-    if (p === 'memory' || p === 'check') textEl.scrollTop = 0;
+    if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
     paintText();
     paintActions();
     status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
@@ -407,7 +411,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     lit = el;
     if (el) {
       el.classList.add('on');
-      const r = el.getBoundingClientRect(), box = textEl.getBoundingClientRect();
+      const r = el.getBoundingClientRect(), box = (pageView() ? textEl.parentElement! : textEl).getBoundingClientRect();
       if (r.top < box.top + 8 || r.bottom > box.bottom - 8) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   };

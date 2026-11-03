@@ -17,7 +17,7 @@ import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { tabBar } from './tabs';
 import {
-  cellAt, cellCenter, decoHeight, stageHeight, drawCellMark, drawDeco, drawGround, drawThirst, drawTree, rng, treeHeight, vignette, type Iso,
+  cellAt, cellCenter, decoHeight, stageHeight, drawCellMark, drawDeco, drawGround, drawThirst, drawTree, drawSeedAt, rng, seedPic, treeHeight, vignette, type Iso,
 } from './gardenArt';
 
 const DAY = 86_400_000;
@@ -191,7 +191,11 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       else {
         const s = it?.kind === 'tree' ? it.t.s : (hd as { s: number }).s;
         const tr = tree(s);
-        drawTree(ctx, px, py, iso.tw, { s, v: tr?.v ?? 0, stage: tr ? stageOf(tr, meta[s - 1].ayahs) : 0, thirsty: false, t: time, night: isNight, lifted: true });
+        const st = tr ? stageOf(tr, meta[s - 1].ayahs) : 0;
+        if (st === 0) { // a seed is tiny on its square: show it large above the finger, the square marked below
+          ctx.save(); ctx.globalAlpha = 0.5; drawTree(ctx, cell.x, cell.y, iso.tw, { s, v: tr?.v ?? 0, stage: 0, thirsty: false, t: time, night: isNight }); ctx.restore();
+          drawSeedAt(ctx, s, w.x, w.y - 40 / zoom, 90 / zoom, time);
+        } else drawTree(ctx, px, py, iso.tw, { s, v: tr?.v ?? 0, stage: st, thirsty: false, t: time, night: isNight, lifted: true });
       }
     }
     // Light: motes drifting up at night or over a finished juz; sparks when a tree grows.
@@ -264,10 +268,12 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     for (const it of list) {
       const p = cellCenter(iso, posOf(it).x, posOf(it).y);
       const hgt = it.kind === 'deco' ? decoHeight(it.d.k) : stageHeight(it.t.s, stageOf(it.t, meta[it.t.s - 1].ayahs));
-      const half = iso.tw * (it.kind === 'deco' ? 0.4 : 0.32);
-      if (w.x > p.x - half && w.x < p.x + half && w.y > p.y - Math.max(hgt, 0.35) * iso.tw && w.y < p.y + iso.th * 0.5) return it;
+      const half = iso.tw * (it.kind === 'deco' ? 0.4 : 0.4);
+      if (w.x > p.x - half && w.x < p.x + half && w.y > p.y - Math.max(hgt, 0.7) * iso.tw && w.y < p.y + iso.th * 0.6) return it;
     }
-    return null;
+    // a finger on the square itself (seeds and saplings are small): whatever stands there
+    const c = cellAt(iso, w.x, w.y);
+    return list.find((it) => posOf(it).x === c.x && posOf(it).y === c.y) ?? null;
   }
   const cellOf = (x: number, y: number) => { const w = toWorld(x, y); return cellAt(iso, w.x, w.y); };
 
@@ -312,7 +318,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     }
     if (!press || press.id !== e.pointerId) return;
     const dx = p.x - press.x, dy = p.y - press.y;
-    if (!press.moved && Math.hypot(dx, dy) > 7) {
+    if (!press.moved && Math.hypot(dx, dy) > 12) {
       press.moved = true;
       clearTimeout(press.timer);
       if (press.it && !press.lifted) liftPress();
@@ -380,43 +386,47 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     if (!held) return;
     const hd = held;
     const art = hd.kind === 'seed'
-      ? vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s: hd.s, v: tree(hd.s)?.v ?? 0, stage: 0, thirsty: false, t: 0, night: night() }), night(), stageHeight(hd.s, 0))
+      ? seedPic(hd.s, 56)
       : vignette(56, (c, x, y, u) => drawDeco(c, hd.k, x, y, u, 0, night()), night(), decoHeight(hd.k));
-    const grip = h('div', { class: 'tray-item', role: 'button', tabindex: '0', 'aria-label': lt('learn.trayAuto') }, art);
-    grip.addEventListener('pointerdown', (e) => {
-      grip.setPointerCapture(e.pointerId);
-      const p = local(e);
-      drag = { held: hd, x: p.x, y: p.y, cell: null };
-      const startX = e.clientX, startY = e.clientY;
-      let moved = false;
-      const move = (ev: PointerEvent) => {
-        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) moved = true;
-        const q = local(ev);
-        drag = { held: hd, x: q.x, y: q.y, cell: cellOf(q.x, q.y) };
-        dirty = true;
-      };
-      const up = (ev: PointerEvent) => {
-        grip.removeEventListener('pointermove', move);
-        grip.removeEventListener('pointerup', up);
-        grip.removeEventListener('pointercancel', up);
-        const q = local(ev);
-        const c = cellOf(q.x, q.y);
-        drag = null;
-        dirty = true;
-        if (ev.type !== 'pointerup') return;
-        if (!moved) { autoPlace(); return; } // a tap: the nearest free square to the middle
-        if (inGrid(c.x, c.y) && !occupied(c.x, c.y)) placeHeld(c.x, c.y);
-        else if (q.y >= 0 && q.y <= H) toast(lt('learn.cellTaken'));
-      };
-      grip.addEventListener('pointermove', move);
-      grip.addEventListener('pointerup', up);
-      grip.addEventListener('pointercancel', up);
-    });
+    const grip = h('div', { class: 'tray-item', role: 'button', tabindex: '0', 'aria-label': lt('learn.trayAuto') }, art, h('span', { class: 'tray-finger', 'aria-hidden': 'true' }));
+    grip.addEventListener('pointerdown', (e) => dragHeld(hd, e, true));
     grip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); autoPlace(); } });
     const name = hd.kind === 'seed' ? lt('learn.seedOf', { name: surahName(meta[hd.s - 1]) }) : decoName(hd.k);
     tray.replaceChildren(grip,
       h('div', { class: 'tray-txt' }, h('b', {}, name), h('span', { class: 'muted small' }, lt('learn.trayHint'))),
       h('button', { class: 'icon-btn', 'aria-label': t('common.cancel'), onclick: () => { held = null; paintTray(); } }, '✕'));
+  }
+  /** Follow the finger with a held seed or decoration until it is let go over a square (window listeners,
+   *  so a drag started in the store goes on after the store closes). A tap without moving plants it nearby. */
+  function dragHeld(hd: Held, e: PointerEvent, tapPlants: boolean) {
+    held = hd;
+    paintTray();
+    const id = e.pointerId, startX = e.clientX, startY = e.clientY;
+    let moved = false;
+    const at = (ev: PointerEvent) => { const q = local(ev); drag = { held: hd, x: q.x, y: q.y, cell: moved ? cellOf(q.x, q.y) : null }; dirty = true; };
+    at(e);
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) moved = true;
+      at(ev);
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const q = local(ev);
+      const c = cellOf(q.x, q.y);
+      drag = null;
+      dirty = true;
+      if (ev.type !== 'pointerup') return;
+      if (!moved) { if (tapPlants) autoPlace(); return; }
+      if (inGrid(c.x, c.y) && !occupied(c.x, c.y)) placeHeld(c.x, c.y);
+      else if (q.y >= 0 && q.y <= H && inGrid(c.x, c.y)) toast(lt('learn.cellTaken'));
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }
   function autoPlace() {
     const c = freeCell();
@@ -607,35 +617,73 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       paintTray();
       void 0;
     };
-    const seeds = () => {
-      const out: Node[] = [];
-      for (let j = 1; j <= 30; j++) {
-        const list = surahsOf(j);
-        const planted = list.filter((m) => (tree(m.n)?.x ?? -1) >= 0).length;
-        const sec = h('details', { class: 'learn-juz' }, h('summary', {}, h('b', {}, lt('learn.juzN', { n: j })),
-          h('span', { class: 'muted small' }, list.length ? lt('learn.plantedOf', { n: planted, of: list.length }) : lt('learn.noSurahHere'))));
-        const fill = () => {
-          if (sec.dataset.filled) return;
-          sec.dataset.filled = '1';
-          if (!list.length) {
-            const inside = meta.filter((m) => juzOf[m.n - 1] < j).pop()!;
-            sec.append(h('p', { class: 'muted small' }, lt('learn.insideSurah', { name: surahName(inside), n: juzOf[inside.n - 1] })));
-            return;
-          }
-          sec.append(h('div', { class: 'learn-seeds' }, ...list.map((m) => {
-            const tr = tree(m.n);
-            const state = tr && tr.x >= 0 ? lt('learn.inGarden') : tr ? lt('learn.inStore') : lt('learn.free');
-            return h('button', { class: `learn-seed${tr && tr.x >= 0 ? ' has' : ''}`, onclick: () => pick(m.n) },
-              vignette(70, (c, x, y, u) => drawTree(c, x, y, u, { s: m.n, v: tr?.v ?? 0, stage: tr ? Math.max(2, stageOf(tr, m.ayahs)) as Stage : 4, thirsty: false, t: 0, night: night() }), night(), stageHeight(m.n, tr ? Math.max(2, stageOf(tr, m.ayahs)) as Stage : 4)),
-              h('b', {}, surahName(m)), h('span', { class: 'learn-seed-ar', lang: 'ar' }, m.ar),
-              h('span', { class: 'muted small' }, t('common.ayat', { n: m.ayahs })), h('span', { class: `learn-tag${tr ? '' : ' free'}` }, state));
-          })));
-        };
-        sec.addEventListener('toggle', () => { if (sec.open) fill(); });
-        if (j === juz) { sec.open = true; fill(); }
-        out.push(sec);
+    /** A seed packet: the surah's own seed (never its tree), its name, and Free / In your garden.
+     *  Press and drag it out of the store onto a square; a tap puts it in the tray (or opens a planted tree). */
+    const seedCard = (m: SurahMeta) => {
+      const tr = tree(m.n);
+      const planted = !!tr && tr.x >= 0;
+      const art = h('span', { class: 'learn-seed-art' }, seedPic(m.n, 76));
+      const card = h('button', { class: `learn-seed${planted ? ' has' : ''}`, type: 'button', 'aria-label': `${lt('learn.seedOf', { name: surahName(m) })} · ${planted ? lt('learn.inGarden') : lt('learn.dragSeed')}` },
+        art, h('b', {}, surahName(m)), h('span', { class: 'learn-seed-ar', lang: 'ar' }, m.ar),
+        h('span', { class: 'muted small' }, t('common.ayat', { n: m.ayahs })),
+        h('span', { class: `learn-tag${planted ? '' : ' free'}` }, planted ? lt('learn.inGarden') : tr ? lt('learn.inStore') : lt('learn.free')));
+      let timer = 0, sx = 0, sy = 0, started = false;
+      const begin = (e: PointerEvent) => {
+        if (started) return;
+        started = true;
+        clearTimeout(timer);
+        haptic(12);
+        d.close();
+        if (juzOf[m.n - 1] !== juz) setJuz(juzOf[m.n - 1]);
+        dragHeld({ kind: 'seed', s: m.n }, e, false);
+      };
+      card.addEventListener('click', (e) => { if (started) { e.preventDefault(); return; } pick(m.n); });
+      if (!planted) {
+        card.addEventListener('pointerdown', (e) => {
+          started = false; sx = e.clientX; sy = e.clientY;
+          clearTimeout(timer);
+          timer = window.setTimeout(() => begin(e), 260); // press and hold: lift it
+        });
+        card.addEventListener('pointermove', (e) => {
+          if (started || !timer) return;
+          const dx = e.clientX - sx, dy = e.clientY - sy;
+          if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) begin(e); // a sideways pull lifts it at once
+          else if (Math.hypot(dx, dy) > 8 && !(e.target as Element).closest('.learn-seed-art')) { clearTimeout(timer); timer = 0; } // scrolling the store
+          else if (Math.hypot(dx, dy) > 8) begin(e); // dragged from the seed itself
+        });
+        const stop = () => { clearTimeout(timer); timer = 0; };
+        card.addEventListener('pointerup', stop);
+        card.addEventListener('pointercancel', stop);
+        // once a seed is lifted the store must not scroll under the finger
+        card.addEventListener('touchmove', (e) => { if (started && e.cancelable) e.preventDefault(); }, { passive: false });
+        card.addEventListener('contextmenu', (e) => e.preventDefault());
       }
-      return out;
+      return card;
+    };
+    /** One shelf at a time: a row of juz chips (this garden's juz first picked), its seed packets below. */
+    let shelfJuz = juz;
+    const seeds = () => {
+      const shelf = h('div', { class: 'learn-shelf' });
+      const chips = h('div', { class: 'learn-juz-chips', role: 'tablist', 'aria-label': lt('learn.pickJuz') });
+      const fill = () => {
+        const list = surahsOf(shelfJuz);
+        const planted = list.filter((m) => (tree(m.n)?.x ?? -1) >= 0).length;
+        if (!list.length) {
+          const inside = meta.filter((m) => juzOf[m.n - 1] < shelfJuz).pop()!;
+          shelf.replaceChildren(h('p', { class: 'muted small' }, lt('learn.insideSurah', { name: surahName(inside), n: juzOf[inside.n - 1] })));
+        } else {
+          shelf.replaceChildren(
+            h('p', { class: 'learn-shelf-head' }, h('b', {}, lt('learn.juzN', { n: shelfJuz })), h('span', { class: 'muted small' }, lt('learn.plantedOf', { n: planted, of: list.length }))),
+            h('div', { class: 'learn-seeds' }, ...list.map((m) => seedCard(m))));
+        }
+        chips.querySelectorAll('button').forEach((c) => { const on = Number(c.dataset.j) === shelfJuz; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
+      };
+      for (let j = 1; j <= 30; j++) {
+        chips.append(h('button', { class: 'chip', role: 'tab', 'data-j': String(j), onclick: () => { shelfJuz = j; fill(); } }, String(j)));
+      }
+      fill();
+      requestAnimationFrame(() => chips.querySelector<HTMLElement>('.on')?.scrollIntoView({ inline: 'center', block: 'nearest' }));
+      return [h('p', { class: 'learn-juz-label muted small' }, lt('learn.pickJuz')), chips, shelf];
     };
     const decoTab = () => {
       const shelf = unplacedDecos();
@@ -666,7 +714,9 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       tabs.replaceChildren(
         h('button', { class: `tab${which === 'seeds' ? ' on' : ''}`, role: 'tab', 'aria-selected': String(which === 'seeds'), onclick: () => show('seeds') }, lt('learn.seeds')),
         h('button', { class: `tab${which === 'decos' ? ' on' : ''}`, role: 'tab', 'aria-selected': String(which === 'decos'), onclick: () => show('decos') }, lt('learn.decos')));
-      body.replaceChildren(...(which === 'seeds' ? [h('p', { class: 'muted small' }, lt('learn.seedsSub')), ...seeds()] : decoTab()));
+      body.replaceChildren(...(which === 'seeds' ? [
+        h('div', { class: 'learn-drag-hint' }, h('span', { class: 'learn-drag-demo', 'aria-hidden': 'true' }, h('i', {}), h('b', {})), h('div', {}, h('b', {}, lt('learn.dragTitle')), h('span', { class: 'muted small' }, lt('learn.dragHow')))),
+        ...seeds()] : decoTab()));
     };
     show(tab);
     const d = sheet('learn-store', lt('learn.store'), bal, tabs, body);

@@ -720,3 +720,21 @@ export function vignette(size: number, draw: (ctx: CanvasRenderingContext2D, cx:
   c.setAttribute('aria-hidden', 'true');
   return c;
 }
+
+/** A surah's own seed, large (the store's packets, the seed under the finger); `size` = its glow's width. */
+export function drawSeedAt(ctx: CanvasRenderingContext2D, s: number, x: number, y: number, size: number, t = 0) {
+  const u = size / 200;
+  (MagicTrees.drawSeed as (c: CanvasRenderingContext2D, x: number, y: number, u: number, T: unknown, t: number) => void)(ctx, x, y + 34 * u, u, magic(s), t);
+}
+/** A seed as a small picture for the store. */
+export function seedPic(s: number, size: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = c.height = Math.round(size * dpr);
+  c.style.width = c.style.height = `${size}px`;
+  const ctx = c.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  drawSeedAt(ctx, s, size / 2, size / 2, size);
+  c.setAttribute('aria-hidden', 'true');
+  return c;
+}
