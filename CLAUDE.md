@@ -1455,6 +1455,14 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       (30 %, never black), so half a page dims the other half; listening lights the words, hints / hiding / tap-to-peek
       work on the page words (`displayIndex()` maps mushaf word positions to display words, word-map aware); the meaning
       shows under the page. Chip **Page / Ayat** (pref `lessonView`, default page) switches to the ayah + translation view
+- [x] Phone-test fixes (owner, 2026-11-03): the lesson page is the reader's own size (full width, screen height,
+      scrolled in the middle; `.ls-pageview`), with the steps, Listen / hide / reveal buttons and tools always on
+      screen below it and the chunk's translation in a strip (`.ls-trs`). The seed store shows **seeds**, never trees
+      (`seedPic()` / `drawSeedAt()`: each surah's own seed), one juz shelf at a time (juz chips), and a "Press a seed
+      and drag it into your garden" hint with a small animation; press and hold (or pull sideways / drag the seed)
+      lifts it out of the store straight onto a square (`dragHeld()`, window listeners; the tray uses the same), the
+      seed shown large above the finger. Tapping a small tree or seed on the grid: bigger touch area + the square
+      itself, 12 px before a tap becomes a drag
 - [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
