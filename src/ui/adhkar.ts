@@ -12,6 +12,7 @@ import { surahMeta } from '../data/quran';
 import { akt } from '../i18n/adhkar';
 import { lang, t } from '../i18n';
 import { h, haptic, toast } from './dom';
+import { chest } from './chest';
 
 const R = 54;
 const C = 2 * Math.PI * R;
@@ -105,19 +106,18 @@ export async function openAdhkar(p: AdhkarPeriod) {
   const paintDone = () => {
     const goalOn = goals().adhkar;
     const canClaim = goalOn && !goalClaimed(goalId);
-    const claim = h('button', {
-      class: 'primary brand-btn ak-claim',
-      onclick: async () => {
+    const light = lightFor({ kind: 'adhkar', target: list.length });
+    const open = async () => {
         // The session is a modal dialog: close it first so the moment plays above the Me screen.
-        const light = lightFor({ kind: 'adhkar', target: list.length });
         const m = await import('./celebrate');
         dialog.close();
-        await m.celebrate({ kind: 'lantern', title, sub: akt('ak.doneSub') }, null, light);
+        await m.celebrate({ kind: 'chest', title, sub: akt('ak.doneSub') }, null, light);
         claimGoal(goalId, light);
-      },
-    }, akt('ak.claim'));
+    };
+    const claim = h('button', { class: 'primary brand-btn ak-claim', onclick: open }, akt('ak.claim'));
     body.replaceChildren(h('div', { class: 'ak-done' },
-      h('div', { class: 'ak-done-mark', 'aria-hidden': 'true' }, '✓'),
+      canClaim ? chest(light, 'ready', t('chest.open', { n: light }), () => void open())
+        : h('div', { class: 'ak-done-mark', 'aria-hidden': 'true' }, '✓'),
       h('h3', {}, akt(p === 'm' ? 'ak.doneTitleM' : 'ak.doneTitleS')),
       h('p', { class: 'muted' }, akt('ak.doneSub')),
       canClaim ? claim : h('button', { class: 'primary', onclick: () => dialog.close() }, akt('ak.close')),

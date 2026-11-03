@@ -18,6 +18,7 @@ import { h } from './dom';
 import { badgeArt } from './badge';
 import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
+import { chestArt, chestTier } from './chest';
 import { rewardPalette, rgba } from './theme';
 
 /** The theme's reward colours, read when a moment starts (so a theme change shows at once). */
@@ -25,6 +26,7 @@ let P = rewardPalette();
 
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string }
+  | { kind: 'chest'; title: string; sub: string; kicker?: string }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
 
@@ -144,12 +146,19 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const stage = h('div', { class: 'cel-stage' });
   let kicker = '', title = '', sub = '';
   let count: HTMLElement | null = null;
-  if (m.kind === 'lantern' || m.kind === 'star') {
+  // A chest: dropped in, shaken (a bigger one more times, harder, slower), then it bursts open.
+  const tier = chestTier(light);
+  const chestBox = m.kind === 'chest' ? h('div', { class: 'cel-chest-box', style: `--n:${tier + 2};--w:${6 + tier}deg;--sk:${(0.38 + tier * 0.04).toFixed(2)}s` }, chestArt(tier)) : null;
+  if (m.kind === 'chest') {
+    stage.append(h('span', { class: 'cel-chest-rays', 'aria-hidden': 'true' }), h('span', { class: 'cel-chest-beam', 'aria-hidden': 'true' }), chestBox!);
+    kicker = m.kicker ?? t('cel.goal');
+    title = m.title; sub = m.sub;
+  } else if (m.kind === 'lantern' || m.kind === 'star') {
     stage.append(m.kind === 'lantern' ? lanternArt() : starArt());
     kicker = m.kicker ?? t(m.kind === 'lantern' ? 'cel.goal' : 'cel.all');
     title = m.title; sub = m.sub;
   } else {
-    const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' }>).badge;
+    const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' | 'chest' }>).badge;
     title = t(b.name as Key, { n: b.need });
     sub = t(b.goal as Key, { n: b.need });
     if (m.kind === 'flame') {
@@ -208,6 +217,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
+      if (light > 0 && !still) flyLight(stage, tier);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -246,20 +256,30 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     later(BURST, () => {
       el.classList.add('go');
       fx = sparks(canvas, sparkColors);
-      const big = m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'star' || m.kind === 'flame';
+      const big = m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'star' || m.kind === 'flame' || (m.kind === 'chest' && tier >= 2);
       const sb = stage.getBoundingClientRect();
       const cr = canvas.getBoundingClientRect();
       fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
       vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' || m.kind === 'khatm' ? [24, 90, 14] : [22]);
       // A second beat when the badge lands / the star fills / the lantern opens.
-      const beat = m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
+      const shakes = 600 + (tier + 2) * (380 + tier * 40);
+      const beat = m.kind === 'chest' ? shakes : m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
+      if (m.kind === 'chest') for (let k = 0; k < tier + 2; k++) later(600 + k * (380 + tier * 40) + 90, () => vibrate([6 + tier * 3]));
       later(beat, () => {
         const b2 = stage.getBoundingClientRect();
+        if (m.kind === 'chest') {
+          // The lid bursts open: light pours up out of it, sparks fly from the mouth, a heavier thud.
+          chestBox!.classList.add('open');
+          stage.classList.add('opened');
+          fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height * 0.45 - cr.top, 50 + tier * 22, 0.85 + tier * 0.1);
+          vibrate(tier >= 3 ? [30, 60, 20, 60, 14] : tier >= 1 ? [26, 70, 14] : [22]);
+          return;
+        }
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
         vibrate([14]);
       });
       later(beat + 300, () => fx?.motes(true));
-      later(beat + 150, countLight);
+      later(beat + (m.kind === 'chest' ? 350 : 150), countLight);
       if (count && m.kind === 'flame') {
         const target = m.days;
         const t0 = performance.now() + 350;
@@ -272,4 +292,32 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       }
     });
   });
+}
+
+/** The Light just claimed flies from the moment up into the Light counter (when one is on screen), which bumps. */
+function flyLight(from: Element, tier: number) {
+  const chip = [...document.querySelectorAll<HTMLElement>('.lt-chip')].find((c) => c.getClientRects().length);
+  if (!chip) return;
+  const a = from.getBoundingClientRect();
+  const b = chip.getBoundingClientRect();
+  const x0 = a.left + a.width / 2, y0 = a.top + a.height * 0.45;
+  const x1 = b.left + 14, y1 = b.top + b.height / 2;
+  const n = 6 + tier * 3;
+  for (let i = 0; i < n; i++) {
+    const dot = h('span', { class: 'lt-fly', 'aria-hidden': 'true' });
+    document.body.append(dot);
+    const sx = x0 + Math.cos(i * 2.4) * (18 + (i % 4) * 10);
+    const sy = y0 + Math.sin(i * 2.4) * (18 + (i % 4) * 10);
+    const mx = (sx + x1) / 2 + (i % 2 ? 60 : -60), my = Math.min(sy, y1) - 40;
+    const anim = dot.animate([
+      { transform: `translate(${x0}px, ${y0}px) scale(.3)`, opacity: 0 },
+      { transform: `translate(${sx}px, ${sy}px) scale(1.2)`, opacity: 1, offset: .25 },
+      { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: .6 },
+      { transform: `translate(${x1}px, ${y1}px) scale(.5)`, opacity: .9 },
+    ], { duration: 820 + i * 45, easing: 'cubic-bezier(.5, 0, .3, 1)', fill: 'forwards' });
+    anim.onfinish = () => {
+      dot.remove();
+      if (i === n - 1) { chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); }
+    };
+  }
 }
