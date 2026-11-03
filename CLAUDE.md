@@ -368,7 +368,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and applies the verifier's rules (pause ≥ 12 dB under speech or null, ≤ 10 % null, pace) plus a
       confidence check (mean log-probability per ayah ≥ −1.5); `public/data/mp3quran/islam-sobhi.json`
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
-      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); 2026-11-02: those five aligned from an archive.org upload (`islamsobhiquran`, commit 39742ab3; `url` per surah supported, archive.org's own redirect allowed), held back until the voice is confirmed (`scripts/voice-check.py`, `align.yml` scan = find, only = voice); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
+      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); 2026-11-02: those five aligned from an archive.org upload (`islamsobhiquran`, commit 39742ab3; `url` per surah supported, archive.org's own redirect allowed), not him: the owner heard As-Saffat as Yasser Az-Zailai and `scripts/voice-check.py` (SpeechBrain ECAPA speaker
+      embeddings, `align.yml` scan = find, only = voice) put 37/39/40/45 nearer other voices, so Islam Sobhi stays at 109 surahs
+      (rule: a recording found by name is added only after the voice check and the owner's ear). **Yasser Az-Zailai** (id 1050,
+      owner request 2026-11-03): no complete Quran exists; archive.org `YasserAl-Zailai` (45 files, all one voice by
+      `voice-check.py zailai`) → 42 surahs aligned like Islam Sobhi (`public/data/mp3quran/ia-YasserAl-Zailai.json`, 1839 of 1892
+      ayat with words; 49 has mixed bitrates, 3 is gone, 39 only partial elsewhere); archive.org checked from Chromium
+      (`scripts/cors-check.cjs`, scan = cors: HEAD, Range 206, crossorigin audio plays); migration `20261103000000_zailai.sql`; still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
       99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037). **Word times for every reciter** (owner request
       2026-10-13, "all modes for all reciters"): the same aligner gives each word's time. `.github/workflows/align.yml`
