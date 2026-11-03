@@ -58,3 +58,4 @@
   background: var(--brand-fill, var(--accent)); box-shadow: 0 10px 40px color-mix(in srgb, var(--accent) 45%, transparent); }
 .ak-credit { max-width: 420px; }
 @media (prefers-reduced-motion: reduce) { .ak-count.bump .ak-num, .ak-gain.show { animation: none; } }
+.ak-done .chest { width: 104px; height: 104px; } .ak-done .chest .ck-amt { font-size: var(--fs-m); }

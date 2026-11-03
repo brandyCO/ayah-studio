@@ -1396,6 +1396,15 @@ duas/reflections section in Me.
       Al-Baqarah 285–286 in the evening, Al-Ikhlas / Al-Falaq / An-Nas ×3) from our own KFGQPC text + Saheeh
       International; the book's own evening wording replaces the words it names; counts checked against the book
       (25 morning, 23 evening; strings `src/i18n/adhkar.ts`)
+- [x] M11 Reward chests (owner request 2026-11-03, "like Duolingo"): every goal row in Me has a progress bar and a
+      chest holding its Light (`src/ui/chest.ts`, SVG drawn in code): wood ≤ 10, brass 15–20, cedar with a star 25–45,
+      emerald and gold 50–99, pearl and gold with light 100+ (`chestTier()`). Resting (breathing, muted) until the goal is
+      met, then shaking with the lid peeking and light behind it (heavier chests shake harder and slower), open once
+      claimed. The amount inside is always shown, never random (no loot boxes). A day chest row for every goal met
+      (`ALL_LIGHT`) replaces the Claim-all button; the adhkar session's finish shows its chest too. Tap → full-screen
+      moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
+      Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
+      their medal moments
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

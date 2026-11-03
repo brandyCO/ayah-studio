@@ -39,6 +39,7 @@ import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
 import { todayCard } from './todayCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
+import { chest } from './chest';
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -180,10 +181,10 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   };
   const openAdhkarSession = (p: 's' | 'm') => { haptic(); void import('./adhkar').then((m) => m.openAdhkar(p)); };
   const claimGoalRow = (g: GoalProgress, from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'lantern', title: goalLabel(g), sub: t('cel.goalSub') }, from, lightFor(g))),
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: goalLabel(g), sub: t('cel.goalSub') }, from, lightFor(g))),
     () => claimGoal(g.id, lightFor(g)));
   const claimAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'star', title: t('cel.allTitle'), sub: t('cel.allSub') }, from, ALL_LIGHT)),
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from, ALL_LIGHT)),
     () => claimGoal('all', ALL_LIGHT));
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
@@ -193,13 +194,18 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     () => claimBadge(b.id, BADGE_LIGHT[b.tier]));
 
   // --- today's goals ---
-  // Rings fill from where they were (0 the first time this session) to where they are now.
-  const ring = (id: string, pct: number, met: boolean) => {
-    const pop = met && !still && ringWas.has(id) && ringWas.get(id)! < 1;
-    const el = h('span', { class: `goal-ring${pop ? ' pop' : ''}`, style: `--ring-p:${still ? pct : (ringWas.get(id) ?? 0)}` }, met ? '✓' : '');
-    if (!still && ringWas.get(id) !== pct) requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty('--ring-p', String(pct))));
+  // Bars fill from where they were (0 the first time this session) to where they are now.
+  const bar = (id: string, pct: number) => {
+    const fill = h('i', { style: `--p:${still ? pct : (ringWas.get(id) ?? 0)}` });
+    if (!still && ringWas.get(id) !== pct) requestAnimationFrame(() => requestAnimationFrame(() => fill.style.setProperty('--p', String(pct))));
     ringWas.set(id, pct);
-    return el;
+    return h('span', { class: 'goal-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct * 100)) }, fill);
+  };
+  // A goal's chest: resting until the goal is met, then shaking to be opened; open once claimed.
+  const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void) => {
+    const claimed = goalClaimed(id);
+    const state = claimed ? 'open' : met ? 'ready' : 'locked';
+    return chest(light, state, t(claimed ? 'chest.opened' : met ? 'chest.open' : 'chest.locked', { n: light }), open);
   };
   const goalRow = (g: GoalProgress) => {
     const met = g.done >= g.target;
@@ -221,14 +227,27 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
           h('button', { class: 'chip', 'aria-label': t('goal.less'), onclick: () => { addCustom(c.id, -1, c.target); haptic(); } }, '−'),
           h('button', { class: 'chip', 'aria-label': t('goal.more'), onclick: () => { addCustom(c.id, 1, c.target); haptic(); } }, '+'));
     }
-    if (met && !goalClaimed(g.id)) act = h('button', { class: 'chip claim', onclick: (e: Event) => void claimGoalRow(g, e.currentTarget as Element) }, `✦ ${t('cel.claim')}`);
+    // Once met, only the adhkar keep their button (to read them again); the chest is the claim.
+    if (met && g.kind !== 'adhkar') act = '';
     return h('div', { class: `goal${met ? ' met' : ''}` },
-      ring(g.id, pct, met),
       h('span', { class: 'goal-txt' },
         h('b', {}, goalLabel(g)),
+        bar(g.id, pct),
         h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarOf', { n: g.done, of: g.target }))
           : g.kind === 'custom' && g.target === 1 ? (met ? t('goal.doneToday') : t('cg.mine')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
-      act);
+      act,
+      goalChest(g.id, lightFor(g), met, (el) => void claimGoalRow(g, el)));
+  };
+  // The day's chest: every goal met today.
+  const dayRow = (list: GoalProgress[]) => {
+    const n = list.filter((g) => g.done >= g.target).length;
+    const all = n === list.length;
+    return h('div', { class: `goal-day${all ? ' met' : ''}` },
+      h('span', { class: 'goal-txt' },
+        h('b', {}, t('chest.day')),
+        bar('all', n / list.length),
+        h('span', { class: 'muted small' }, all && goalClaimed('all') ? t('goal.allMet') : `${n} / ${list.length}`)),
+      goalChest('all', ALL_LIGHT, all, (el) => void claimAll(el)));
   };
   // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
   // The lantern fills with this week's Light against what seven days of today's goals could give.
@@ -289,9 +308,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
       tip ? tipCard(tip) : '',
-      all && list.length > 1 && !goalClaimed('all')
-        ? h('button', { class: 'claim-all', onclick: (e: Event) => void claimAll(e.currentTarget as Element) }, `✦ ${t('cel.claimAll')}`)
-        : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
+      list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
       list.length ? lightStrip() : '',
       h('div', { class: 'goal-links' },
@@ -503,7 +520,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     if (sessionStorage.getItem('meFocus') === 'claim') {
       sessionStorage.removeItem('meFocus');
       setTimeout(() => {
-        const c = goalsBox.querySelector<HTMLElement>('.claim-all, .chip.claim') ?? root.querySelector<HTMLElement>('.claim-badge');
+        const c = goalsBox.querySelector<HTMLElement>('.chest.ready') ?? root.querySelector<HTMLElement>('.claim-badge');
         if (!c) return;
         c.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
         c.classList.add('focus');
