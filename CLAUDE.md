@@ -1445,6 +1445,11 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       (`STAGE_G`: seed → full, fruit ripening from the growing stage); size follows the surah's pages (`SURAH_PAGES`,
       `magicSize()`); drawn once per surah + stage as a cached picture (`drawTree()` in `gardenArt.ts`; the six
       hand-drawn species stay as `drawSimpleTree`). Gallery to review: Artifact "The 114 Trees"
+- [x] Full-screen garden (owner request 2026-11-03): Learn opens on the garden filling the screen above the tab bar
+      (`.garden-full`; the island fits between the top bar and Today's card, zoom 1–4×, drag / pinch); floating top bar
+      (‹ Juz n ›, Light); round icon buttons down the side: seed store (sprout), decorations (sparkle), trees in this
+      garden + how it works (book, a sheet), show the whole garden (fit); Today's next step floats at the bottom (the
+      tray takes its place while planting); tapping a tree or decoration opens the same card as before
 - [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

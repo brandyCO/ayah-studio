@@ -152,3 +152,40 @@
 @media (prefers-reduced-motion: reduce) {
   .tray-item, .ls-your-turn .ls-ring { animation: none; }
 }
+
+/* Full-screen garden: the island fills the screen above the tab bar; controls float over it. */
+.garden-wrap.garden-full {
+  position: fixed; inset: 0; bottom: calc(68px + max(6px, env(safe-area-inset-bottom))); margin: 0; border-radius: 0; z-index: 1;
+}
+.garden-full .garden-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.garden-top {
+  position: absolute; inset-inline: 10px; top: calc(8px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 20px; background: rgba(255,255,255,.72); backdrop-filter: blur(10px); color: #1d2a25;
+  box-shadow: 0 4px 16px rgba(20,50,40,.12);
+}
+.garden-top .learn-nav { flex: 1; margin: 0; min-width: 0; }
+.garden-top .muted { color: #5d6b66; }
+.garden-top .icon-btn { color: #1d2a25; }
+.garden-side { position: absolute; inset-inline-end: 12px; top: calc(84px + env(safe-area-inset-top)); display: grid; gap: 10px; }
+.garden-fab {
+  width: 46px; height: 46px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.88); color: #1d3b30; box-shadow: 0 4px 14px rgba(20,50,40,.16); backdrop-filter: blur(8px);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+.garden-fab:first-child { background: var(--brand-fill); color: #fff; box-shadow: 0 6px 18px rgba(5,87,61,.35); }
+.garden-fab:active { transform: scale(.92); }
+.garden-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.garden-bottom { position: absolute; inset-inline: 10px; bottom: 10px; display: grid; gap: 8px; pointer-events: none; }
+.garden-bottom > * { pointer-events: auto; }
+.garden-full .garden-tray { position: static; }
+.garden-full .learn-today {
+  margin: 0; padding: 8px 12px; max-height: 34vh; overflow-y: auto; background: rgba(255,255,255,.9); color: #1d2a25;
+  border: 0; box-shadow: 0 8px 24px rgba(20,50,40,.16); backdrop-filter: blur(10px);
+}
+.garden-full .learn-today h3 { margin: 4px 0 2px; font-size: var(--fs-s, .9rem); color: #5d6b66; }
+.garden-full .learn-today .muted { color: #5d6b66; }
+@media (prefers-color-scheme: dark) {
+  .garden-top, .garden-fab:not(:first-child), .garden-full .learn-today { background: rgba(14,22,19,.78); color: #e8f1ec; }
+  .garden-top .muted, .garden-full .learn-today .muted, .garden-full .learn-today h3 { color: #a9b8b1; }
+  .garden-top .icon-btn { color: #e8f1ec; }
+}
