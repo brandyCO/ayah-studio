@@ -368,7 +368,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and applies the verifier's rules (pause ≥ 12 dB under speech or null, ≤ 10 % null, pace) plus a
       confidence check (mean log-probability per ayah ≥ −1.5); `public/data/mp3quran/islam-sobhi.json`
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
-      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
+      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); 2026-11-02: those five aligned from an archive.org upload (`islamsobhiquran`, commit 39742ab3; `url` per surah supported, archive.org's own redirect allowed), held back until the voice is confirmed (`scripts/voice-check.py`, `align.yml` scan = find, only = voice); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
       99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037). **Word times for every reciter** (owner request
       2026-10-13, "all modes for all reciters"): the same aligner gives each word's time. `.github/workflows/align.yml`
@@ -390,7 +390,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
       Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
       the deadline). Rerun 2026-10-31: the mp3quran reciters now have words for 100–114 surahs each ; a last rerun of
-      1–37 filled the gaps: each has words for 109–114 surahs, every surah it has a checked recording of). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
+      1–37 filled the gaps: each has words for 109–114 surahs, every surah it has a checked recording of). Without words: Juhany. Mujawwad (2026-11-02, owner: "don't tell me there is no way"): Abdul Basit Mujawwad aligned vs Quran.com's times for the same recording: median 0.07 s; Husary Mujawwad 1016 words for 6199 ayat (all 114), Minshawi Mujawwad 1017 6195 ayat (all 114). The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
@@ -401,6 +401,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       per-ayah files are joined directly (`GAP` −0.04 s, crossfaded in `mixdown()`; was 0.25 s of silence), and
       where a piece meets added silence its echo fades out over the quiet after the last word (≤ 0.9 s, quadratic)
       and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
+      **One breath** (owner request 2026-11-02, "keep it as it is"): ayat a reciter joins without a pause are never cut
+      apart. `breathJoins()` hears it in the reel's audio (no 0.18 s stretch 18 dB under the speech level before the next
+      ayah; at the reel's end: still sounding where it was cut; word times cannot tell, Quran.com's last word runs on to
+      the next ayah) → `ReelPlan.joins`: no pause or trim inside a breath, and a selection that ends inside one takes in
+      the next ayah with a toast (once per range, `joinKept:` in sessionStorage, so taking it out again is kept).
+      Checked on everyayah Minshawi Mujawwad 37:8–9
       **No added pause by default** (owner decision 2026-10-29): every mood and vibe has `pause: 0`; a look
       remembered from before loses its pause once (`pauseReset`); users add one under Audio → Pauses
       **Every ayah, every Bismillah** (owner request 2026-11-02, "no ayah skipped, a surah always starts with the
@@ -423,6 +429,16 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       a book button / the Listen tab back to the page being recited (`followAlong()`); the studio pauses it, the
       Kids space stops it. Reciter pickers have a search box (`reciterSearchBox()`, letters only) and every
       reciter a ▶ voice preview (mp3quran ones: the start of their first checked surah, `mp3quranSample()`)
+      **Report a problem** (owner request 2026-11-02, "super easy for users to report every single thing at the time
+      it happens"): player ⋯ → Report a problem (also Me → ⚙ → App), `src/ui/report.ts`: pick what went wrong (ayah
+      doesn't start at its beginning, highlight off, ayah skipped, wrong voice, audio cuts, text, reel, app, other)
+      + optional note; sent with the reciter, surah:ayah, word, ms in the recording, file, screen, build
+      (`__BUILD__`), device type, install id → `send_report()` (migration `20261102100000_problem_reports.sql`,
+      table `problem_reports`, no app read access, 20 a day per install; pgTAP `problem_reports.test.sql`);
+      offline → kept (`reportQueue`) and sent when online. The player's reel / Night listening / Report sit under ⋯.
+      **Timing audit** (owner report 2026-11-02: Alafasy 37:113–114 start at the second word, highlight sometimes
+      off): `scripts/qdc-audit.py` (`align.yml` scan = audit) aligns every ayah of the Quran.com recordings on its
+      own and writes the ones whose start or word times are off (`qdc-audit/{id}/{SSS}.json` on `align-results`)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

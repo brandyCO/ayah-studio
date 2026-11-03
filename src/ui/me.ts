@@ -599,7 +599,8 @@ export function showMeSettings(root: HTMLElement): () => void {
           h('button', { class: 'menu-item', onclick: () => openAccount() }, accountLabel()),
           h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
           h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`))));
+          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`),
+          h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, `⚑  ${t('set.report')}`))));
   };
   const pageInput = h('input', { type: 'number', class: 'search', min: '1', max: '604', placeholder: t('menu.pagePlaceholder', { n: 604 }), inputmode: 'numeric' }) as HTMLInputElement;
   const openTranslations = async () => {

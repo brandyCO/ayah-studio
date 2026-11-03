@@ -24,7 +24,7 @@ import {
   applyLook, cleanDedication, DEDICATION_MAX, giveEnding, OUTRO, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, audioSpans, breathJoins, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
@@ -2167,6 +2167,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // Recitation per reciter (kept while the editor is open, so switching back is instant).
   const reels = new Map<number, Promise<Reel>>();
+  /** Ayat the reciter joins in one breath are never cut apart (owner request 2026-11-02): a selection that
+   *  ends inside one breath takes in the next ayah, once per range — taking it out again is kept. */
+  function keepBreath(plan: ReelPlan): boolean {
+    const j = plan.joins;
+    if (!j || exporting) return false;
+    const key = `joinKept:${n}:${from}-${to}`;
+    try { if (sessionStorage.getItem(key)) return false; } catch { return false; }
+    if (!j[j.length - 1] || to >= s.ayahs || to - from + 1 >= MAX_AYAT) return false;
+    try { sessionStorage.setItem(key, '1'); } catch { /* private window */ }
+    toast(ui('ed.joined', { ref: `${n}:${to + 1}` }));
+    goRange(from, to + 1);
+    return true;
+  }
+
   let audioReq = 0;
   async function loadAudio() {
     const req = ++audioReq;
@@ -2193,7 +2207,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (req !== audioReq || !alive) return;
       // Where the voice really starts (the start can be trimmed to MIN_LEAD before it).
       if (reel.plan.onset === undefined) reel.plan.onset = voiceOnset(reel.audio.getChannelData(0), reel.audio.sampleRate, reel.plan.ayat[0].start);
+      if (!reel.plan.joins) reel.plan.joins = breathJoins(reel.plan, reel.audio.getChannelData(0), reel.audio.sampleRate, s.ayahs);
       base = reel;
+      if (keepBreath(reel.plan)) return;
       syncText = base.plan.wordTimed
         ? ui('ed.wordSynced')
         : ui(base.plan.source === 'everyayah' ? 'ed.noTimingsEveryayah' : base.plan.source === 'mp3quran' ? 'ed.noTimingsMp3quran' : 'ed.noTimings');

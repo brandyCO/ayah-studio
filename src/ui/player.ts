@@ -87,10 +87,8 @@ export function createPlayer(o: PlayerHooks) {
     h('div', { class: 'pl-info' }, label, who),
     // Listening from another screen (Me, tasbih…): back to the page being recited, words lit as it goes.
     h('button', { class: 'icon-btn pl-follow', 'aria-label': t('pl.follow'), title: t('pl.follow'), onclick: () => followAlong() }, icon('book', 20)),
-    // Turn what is playing into a reel (this reciter, the ayah being recited).
-    h('button', { class: 'icon-btn pl-extra', 'aria-label': t('pl.reel'), title: t('pl.reel'), onclick: () => makeReel() }, icon('create', 20)),
-    // Night listening (docs/light.md, L1): loaded only when opened.
-    h('button', { class: 'icon-btn pl-extra', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
+    // More: a reel of what is playing, Night listening, and Report a problem (with what is playing right now).
+    h('button', { class: 'icon-btn pl-more', 'aria-label': t('pl.more'), title: t('pl.more'), onclick: () => more() }, '⋯'),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
 
   // Starting or buffering: a spinner on the play button and "Loading…" (the recording streams).
@@ -417,6 +415,35 @@ export function createPlayer(o: PlayerHooks) {
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();
+  }
+
+  /** ⋯: the less frequent actions, so the bar keeps room for the reference on small phones. */
+  function more() {
+    const away = document.body.classList.contains('listening-away');
+    const item = (label: string, ic: string, f: () => void) => h('button', { class: 'menu-item', onclick: () => { d.close(); f(); } },
+      h('span', { class: 'mi-ic' }, icon(ic, 20)), label);
+    const d = h('dialog', { class: 'sheet bottom' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, label.textContent || t('pl.more')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('div', { class: 'menu' },
+        away ? item(t('pl.follow'), 'book', followAlong) : null,
+        item(t('pl.reel'), 'create', makeReel),
+        item(t('night.open'), 'moon', openNightView),
+        item(t('pl.report'), 'flag', report)));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /** The report sheet, with what is playing now. */
+  function report() {
+    const at = cur ?? pending;
+    const r = using ?? reciter();
+    const ms = Math.round((introOn ? intro.currentTime : audio.currentTime) * 1000);
+    void import('./report').then((m) => m.openReport({
+      r: r.id, rn: r.short, s: at?.s, a: at?.a, w: cur?.w ?? null, ms, intro: introOn, playing: !audio.paused,
+      src: r.qdc !== false ? 'qdc' : r.mp3quran ? 'mp3quran' : 'everyayah', url: (introOn ? intro.src : audio.src).slice(0, 160),
+    }, { listening: true, summary: at ? `${o.meta[at.s - 1].en} ${at.s}:${at.a} · ${r.short}` : r.short }));
   }
 
   /** The ayah being recited (or about to be) as a new reel in this reciter's voice. */

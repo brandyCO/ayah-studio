@@ -147,6 +147,8 @@ watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
 if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
 setupOffline();
+// Problem reports made offline go out now (src/ui/report.ts).
+setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();

@@ -49,6 +49,9 @@ export interface ReelPlan {
   /** Where the reciter's voice really starts in the base reel's audio (seconds; `voiceOnset`), or null
    *  when it could not be told from the audio. Unset until measured. */
   onset?: number | null;
+  /** Ayat recited in one breath (owner request 2026-11-02: never cut them apart), from the audio (`breathJoins`):
+   *  `joins[k]` = no pause between ayah from+k-1 and from+k; k = 0 before the first ayah, k = n after the last. */
+  joins?: boolean[];
 }
 
 /** Base reel seconds from..to are played at reel second `at`. */
@@ -193,9 +196,10 @@ export const voiceStart = (base: ReelPlan) => base.onset ?? base.ayat[0].start;
 export function trimLimits(base: ReelPlan, i: number): [number, number] {
   const A = base.ayat, n = A.length;
   const [a, b] = audioSpans(base)[i];
+  // Inside one breath nothing is trimmed (ayat the reciter joined stay joined).
   return [
-    Math.max(0, i === 0 ? voiceStart(base) - a - MIN_LEAD : A[i].start - a - MIN_SILENCE),
-    Math.max(0, b - A[i].last - (i === n - 1 ? MIN_EDGE : MIN_SILENCE)),
+    i > 0 && base.joins?.[i] ? 0 : Math.max(0, i === 0 ? voiceStart(base) - a - MIN_LEAD : A[i].start - a - MIN_SILENCE),
+    i < n - 1 && base.joins?.[i + 1] ? 0 : Math.max(0, b - A[i].last - (i === n - 1 ? MIN_EDGE : MIN_SILENCE)),
   ];
 }
 
@@ -215,7 +219,8 @@ export function arrangeReel(base: ReelPlan, o: Pacing): ReelPlan {
     const head = Math.min(Math.max(0, o.trims?.[i]?.[0] ?? 0), maxHead);
     const tail = Math.min(Math.max(0, o.trims?.[i]?.[1] ?? 0), maxTail);
     const prev = pieces[i - 1];
-    const at = i === 0 ? o.intro : prev.at + (prev.to - prev.from) + Math.max(0, o.pause + (o.gaps?.[i] ?? 0));
+    // Never a pause inside one breath: ayat the reciter joined stay joined.
+    const at = i === 0 ? o.intro : prev.at + (prev.to - prev.from) + (base.joins?.[i] ? 0 : Math.max(0, o.pause + (o.gaps?.[i] ?? 0)));
     pieces.push({ from: a + head, to: b - tail, at });
   });
   // Where a piece meets silence (a pause, the lead or the ending), let the recording's own echo fade out
@@ -274,3 +279,43 @@ export function voiceOnset(data: Float32Array, rate: number, timed: number): num
   for (let i = ti; i < Math.min(n - 2, ti + 80); i++) if (loud(i) && loud(i + 1) && loud(i + 2)) return i * 0.01;
   return null;
 }
+
+/**
+ * Where the reciter joins ayat in one breath, heard in the base reel's audio (the word timings cannot tell:
+ * Quran.com's last word often runs on to the next ayah's first). Between two ayat: no quiet stretch of
+ * QUIET_RUN s (BREATH_DB under the speech level) in the second before the next ayah starts. At the reel's
+ * end: the recording is still sounding where it was cut (only where a next ayah exists).
+ */
+export function breathJoins(plan: ReelPlan, data: Float32Array, rate: number, surahAyahs: number): boolean[] {
+  const win = Math.round(rate * 0.02);
+  const n = Math.floor(data.length / win);
+  const rms = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    let e = 0;
+    for (let j = k * win; j < (k + 1) * win; j++) e += data[j] * data[j];
+    rms[k] = Math.sqrt(e / win);
+  }
+  const sorted = Array.from(rms).filter((x) => x > 1e-4).sort((a, b) => a - b);
+  const speech = sorted[Math.floor(sorted.length * 0.9)] ?? 0;
+  const quiet = speech * 10 ** (-BREATH_DB / 20);
+  const at = (t: number) => Math.max(0, Math.min(n - 1, Math.floor(t / 0.02)));
+  const hasPause = (a: number, b: number) => {
+    let run = 0;
+    for (let k = at(a); k <= at(b); k++) if (rms[k] < quiet) { if (++run * 0.02 >= QUIET_RUN) return true; } else run = 0;
+    return false;
+  };
+  const loud = (a: number, b: number) => { for (let k = at(a); k <= at(b); k++) if (rms[k] >= quiet) return true; return false; };
+  const A = plan.ayat, cut = audioSpans(plan);
+  if (!speech || !A.length) return A.map(() => false).concat(false);
+  const last = A[A.length - 1].ayah;
+  // The recitation's own audio ends where the tail of silence begins.
+  const end = plan.offsets ? plan.duration - TAIL : LEAD_IN + (plan.clip ? plan.clip[1] - plan.clip[0] : 0);
+  const joins = A.map((a, i) => i > 0 && !hasPause(Math.max(A[i - 1].start, cut[i][0] - 1), Math.max(cut[i][0], a.start) + 0.3));
+  // Before the first ayah: not told (the slice starts at its first word either way; no audio before it).
+  joins[0] = false;
+  joins.push(last < surahAyahs && loud(end - 0.08, end - 0.02));
+  return joins;
+}
+/** Quieter than the speech level by this much (dB) for QUIET_RUN seconds = a pause between ayat. */
+export const BREATH_DB = 18;
+export const QUIET_RUN = 0.18;

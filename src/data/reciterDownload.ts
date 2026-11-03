@@ -169,7 +169,7 @@ async function keepSurah(r: Reciter, s: number): Promise<number> {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // mp3quran sends a surah a reciter lacks from another reciter's folder: never keep that.
-      if (res.url && res.url.slice(0, res.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) throw new Error('redirected');
+      if (!url.includes('archive.org/') && res.url && res.url.slice(0, res.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) throw new Error('redirected');
       const blob = await res.blob();
       await cache.put(url, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(blob.size) } }));
       bytes += blob.size;
