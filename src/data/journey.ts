@@ -43,8 +43,10 @@ interface DayRec {
   dk?: Record<string, number>;
   /** Ayat memorised (marked by the user). */
   m?: number;
-  /** Morning adhkar done (marked by the user). */
+  /** Morning adhkar all said in the app's adhkar session. */
   ad?: 1;
+  /** Evening adhkar all said. */
+  am?: 1;
   /** Every daily goal was met. */
   g?: 1;
   /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
@@ -390,10 +392,11 @@ export function addCustom(id: string, n: number, max: number, now = new Date()) 
   save();
 }
 
-/** The morning adhkar done today (or not). */
-export function setAdhkar(done: boolean, now = new Date()) {
+/** The morning ('s') or evening ('m') adhkar all said today (set by the adhkar session). */
+export function setAdhkar(done: boolean, period: 's' | 'm' = 's', now = new Date()) {
   const d = today(now);
-  if (done) d.ad = 1; else delete d.ad;
+  const f = period === 'm' ? 'am' : 'ad';
+  if (done) d[f] = 1; else delete d[f];
   save();
 }
 
@@ -526,7 +529,7 @@ function cleanOther(v: unknown): Other | null {
     if (!isDay(k) || !d0 || typeof d0 !== 'object') continue;
     const d = d0 as Record<string, unknown>;
     const o: DayRec = {};
-    for (const f of ['o', 'f', 'g', 'ad'] as const) if (d[f]) o[f] = 1;
+    for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (d[f]) o[f] = 1;
     for (const f of ['ay', 'l', 'r', 'm'] as const) if (num(d[f])) o[f] = num(d[f]);
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
@@ -642,7 +645,7 @@ function view(): State {
   for (const o of devs) {
     for (const [k, b] of Object.entries(o.days)) {
       const a = (v.days[k] ??= {});
-      for (const f of ['o', 'f', 'g', 'ad'] as const) if (b[f]) a[f] = 1;
+      for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (b[f]) a[f] = 1;
       for (const f of ['ay', 'l', 'r', 'm'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);

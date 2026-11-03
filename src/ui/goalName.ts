@@ -9,4 +9,5 @@ export const goalText = (kind: string, n: number) =>
 export const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
   ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)
   : g.kind === 'custom' ? g.custom!.name
+    : g.kind === 'adhkar' ? t(g.period === 'm' ? 'goal.adhkarM' : 'goal.adhkar')
     : goalText(g.kind, g.target);

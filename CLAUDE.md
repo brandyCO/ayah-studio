@@ -1367,6 +1367,19 @@ duas/reflections section in Me.
       today). Journeys (`src/data/journeys.ts`, localStorage `journeyPlan`, one at a time): Khatm in 30 days, Juz
       'Amma in 30 days, Khatm in 6 months; progress = the plan's pages counted since it started
       (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
+- [x] M10 Morning & evening adhkar in the app (owner request 2026-11-03, "loyalty: say them here, not in another app"):
+      no more "Mark done". The goal opens a full-screen session (`src/ui/adhkar.ts`): one dhikr at a time with its
+      meaning, its count and its source, a big counter tapped each time it is said, dots to jump, swipe / ‹ › to move,
+      text size, meaning on/off; a dhikr said in full adds Light (2 / 3 / 5 / 10 by count, `dhikrLight()`, claim id
+      `ak:{s|m}:{id}`) and moves on; all said → `DayRec.ad` (morning) / `am` (evening), then Claim (20 Light) in the
+      session or on Me. Progress is kept for the day (localStorage `adhkarProgress`). **Evening adhkar** appear in the
+      goals from Asr (`eveningFrom()`: today's Asr from the prayer settings, kept in `asrToday`; 15:00 without a
+      location); Me also has Morning / Evening adhkar links even when the goal is off. Data `public/data/adhkar.json`
+      by `scripts/make-adhkar.mjs`: Hisn al-Muslim ch. 27 (Arabic: hisnmuslim.com via YousefAsalya/Islamic-Pro-azkar-API,
+      MIT; English: Darussalam via @kazishariar/morning-evening-adhkar-data, CC BY 4.0); Quran parts (Ayat al-Kursi,
+      Al-Baqarah 285–286 in the evening, Al-Ikhlas / Al-Falaq / An-Nas ×3) from our own KFGQPC text + Saheeh
+      International; the book's own evening wording replaces the words it names; counts checked against the book
+      (25 morning, 23 evening; strings `src/i18n/adhkar.ts`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
