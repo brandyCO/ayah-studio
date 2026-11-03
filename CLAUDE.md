@@ -1450,6 +1450,11 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       (‹ Juz n ›, Light); round icon buttons down the side: seed store (sprout), decorations (sparkle), trees in this
       garden + how it works (book, a sheet), show the whole garden (fit); Today's next step floats at the bottom (the
       tray takes its place while planting); tapping a tree or decoration opens the same card as before
+- [x] Lessons on the mushaf page (owner request 2026-11-03, visual memory): the lesson shows the real Madinah page(s)
+      holding the chunk (QCF page font, same fit as the reader); the chunk stays lit, everything else on the page dims
+      (30 %, never black), so half a page dims the other half; listening lights the words, hints / hiding / tap-to-peek
+      work on the page words (`displayIndex()` maps mushaf word positions to display words, word-map aware); the meaning
+      shows under the page. Chip **Page / Ayat** (pref `lessonView`, default page) switches to the ayah + translation view
 - [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

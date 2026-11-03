@@ -189,3 +189,11 @@
   .garden-top .muted, .garden-full .learn-today .muted, .garden-full .learn-today h3 { color: #a9b8b1; }
   .garden-top .icon-btn { color: #e8f1ec; }
 }
+
+/* Lesson on the mushaf page: the chunk lit, the rest of the page dimmed (never black). */
+.ls-pages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 4px 0 8px; line-height: 1; }
+.ls-page.mushaf-page { position: relative; inset: auto; width: 100%; min-width: 0; overflow: hidden; aspect-ratio: 0.62; max-width: 560px; margin: 0 auto; border-radius: 6px; }
+.ls-page .dim { opacity: .3; transition: opacity var(--dur-3) var(--ease-out); }
+.ls-page .lw { border-radius: 4px; padding: 0; }
+.ls-page .lw.hid { background: color-mix(in srgb, var(--ink, #222) 12%, transparent); box-shadow: none; }
+.ls-text:has(.ls-pages) { max-height: none; padding-top: 4px; }

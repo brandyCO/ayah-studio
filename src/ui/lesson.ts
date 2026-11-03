@@ -56,7 +56,10 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const m = meta[s - 1];
   const words = arabic.map((x) => displayWords(x));
   const tInfo = translationInfo(currentTranslation());
-  const places = async () => ayahPlaces(await (await import('../data/mushaf')).loadMushaf(), s);
+  const mushafMod = await import('../data/mushaf');
+  const mushaf = await mushafMod.loadMushaf();
+  const places = async () => ayahPlaces(mushaf, s);
+  const basmalaSvg = fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()).catch(() => '');
   root.classList.add('learn', 'lesson');
 
   // --- which step today ---
@@ -88,10 +91,11 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const playBtn = h('button', { class: 'ls-play', 'aria-label': lt('learn.listen'), onclick: () => (playing ? stopAll() : void listen()) });
   const speedBtn = h('button', { class: 'chip', onclick: () => { setPref('learnSpeed', pref('learnSpeed', ['1', '0.75'], '1') === '1' ? '0.75' : '1'); paintChips(); } });
   const repBtn = h('button', { class: 'chip', onclick: () => { const v = pref('learnReps', ['1', '3', '5'], '3'); setPref('learnReps', v === '1' ? '3' : v === '3' ? '5' : '1'); paintChips(); } });
+  const viewBtn = h('button', { class: 'chip', onclick: () => { setPref('lessonView', pageView() ? 'ayat' : 'page'); paintChips(); paintText(); } });
   const meaningBtn = h('button', { class: 'chip', onclick: () => { setPref('learnMeaning', showMeaning() ? 'off' : 'on'); paintChips(); paintText(); } });
   const reciterSel = h('select', { class: 'ls-reciter', 'aria-label': lt('learn.reciter'), onchange: () => { setPref('learnReciter', reciterSel.value); audios = null; stopAll(); } },
     ...TIMED_RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === learnReciter() }, reciterCredit(r))));
-  const tools = h('div', { class: 'ls-tools' }, playBtn, speedBtn, repBtn, meaningBtn, reciterSel);
+  const tools = h('div', { class: 'ls-tools' }, playBtn, speedBtn, repBtn, viewBtn, meaningBtn, reciterSel);
   const art = h('span', { class: 'ls-tree' });
   root.append(
     h('header', { class: 'ls-head' },
@@ -107,6 +111,10 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   let level = 0; // 0 all words · 1 the first word of each ayah · 2 none
   const peeked = new Set<string>();
   const wordEls = new Map<string, HTMLElement>();
+  /** Learn on the real mushaf page (visual memory) or ayah by ayah with the translation. */
+  const pageView = () => pref('lessonView', ['page', 'ayat'], 'page') === 'page';
+  /** Extra page words that show the same display word (the few ayat whose word positions differ). */
+  const moreEls: [string, HTMLElement][] = [];
   const showMeaning = () => pref('learnMeaning', ['on', 'off'], 'on') === 'on';
   const speed = () => Number(pref('learnSpeed', ['1', '0.75'], '1'));
   const reps = () => Number(pref('learnReps', ['1', '3', '5'], '3'));
@@ -116,6 +124,8 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     speedBtn.setAttribute('aria-label', lt(speed() === 1 ? 'learn.speedNormal' : 'learn.speedSlow'));
     repBtn.textContent = `×${reps()}`;
     repBtn.setAttribute('aria-label', lt('learn.repsAria', { n: reps() }));
+    viewBtn.textContent = lt(pageView() ? 'learn.viewAyat' : 'learn.viewPage');
+    viewBtn.setAttribute('aria-label', lt(pageView() ? 'learn.viewAyatAria' : 'learn.viewPageAria'));
     meaningBtn.textContent = lt('learn.meaning');
     meaningBtn.classList.toggle('on', showMeaning());
     meaningBtn.setAttribute('aria-pressed', String(showMeaning()));
@@ -134,8 +144,84 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     const lv = phase === 'memory' ? 2 : phase === 'listen' ? 0 : level;
     return lv === 2 || (lv === 1 && i > 0);
   };
+  /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
+  function displayIndex(a: number, pos: number): number {
+    const spans = parseSpans(wordMap[`${s}:${a}`]);
+    const i = spans ? (spans[pos - 1]?.[0] ?? -1) : pos - 1;
+    return i >= 0 && i < words[a - 1].length ? i : -1;
+  }
+  /** The page(s) holding the chunk, everything outside it dimmed; the chunk's words work like the ayah view. */
+  function paintPage() {
+    wordEls.clear(); moreEls.length = 0;
+    type Seg = [number, number, string];
+    const inChunk = (seg: Seg) => seg[0] === s && seg[1] >= range[0] && seg[1] <= range[1];
+    const segsOf = (p: number) => mushaf.pages[p - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
+    const pages = [mushaf.pageOf(s, range[0])];
+    while (pages.length < 3 && pages[pages.length - 1] < mushafMod.PAGE_COUNT && segsOf(pages[pages.length - 1] + 1).some(inChunk)) pages.push(pages[pages.length - 1] + 1);
+    const els: HTMLElement[] = [];
+    for (const p of pages) {
+      const el = h('div', { class: `mushaf-page ls-page${p <= 2 ? ' opening' : ''}`, dir: 'rtl', lang: 'ar', 'data-page': String(p) });
+      el.style.fontFamily = `qcf-p${p}`;
+      let headSurah = 0;
+      for (const l of mushaf.pages[p - 1].lines) {
+        if (l[0] === 'h') {
+          headSurah = Number(l[1]);
+          el.append(h('div', { class: `mp-line mp-surah${headSurah === s && range[0] === 1 ? '' : ' dim'}` },
+            h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0')))));
+          continue;
+        }
+        if (l[0] === 'b') {
+          const b = h('div', { class: `mp-line mp-basmala${headSurah === s && range[0] === 1 ? '' : ' dim'}` });
+          void basmalaSvg.then((x) => { b.innerHTML = x; }); // bundled file
+          el.append(b);
+          continue;
+        }
+        const line = h('div', { class: 'mp-line text' });
+        for (const seg of l as Seg[]) {
+          let pos = mushaf.segStart.get(seg) ?? 1;
+          for (const g of seg[2].split(' ')) {
+            const a = seg[1], here = inChunk(seg), i = here ? displayIndex(a, pos) : -1;
+            const w = h('span', { class: `w${here ? '' : ' dim'}` }, g);
+            if (i >= 0) {
+              w.className = `w lw${hiddenWord(a, i) ? ' hid' : ''}`;
+              w.setAttribute('role', 'button'); w.tabIndex = 0;
+              w.addEventListener('click', () => tapWord(a, i));
+              const key = `${a}:${i}`;
+              if (wordEls.has(key)) moreEls.push([key, w]); else wordEls.set(key, w);
+            }
+            line.append(w);
+            pos++;
+          }
+        }
+        el.append(line);
+      }
+      els.push(el);
+      void mushafMod.loadPageFont(p).catch(() => {}).then(() => requestAnimationFrame(() => fitPage(el)));
+    }
+    const blocks: Node[] = [h('div', { class: 'ls-pages' }, ...els)];
+    if (showMeaning() && (phase === 'listen' || phase === 'practice' || phase === 'check')) {
+      for (let a = range[0]; a <= range[1]; a++) if (trans[a - 1]) blocks.push(h('p', { class: 'ls-tr', lang: tInfo.lang, dir: tInfo.dir }, h('span', { class: 'ls-n' }, `${a}. `), trans[a - 1]));
+    }
+    textEl.replaceChildren(...blocks);
+  }
+  /** Same fit as the reader: the widest line spans the page, 15 lines over the height. */
+  function fitPage(el: HTMLElement) {
+    if (!el.isConnected) return;
+    const lh = Math.floor((el.clientHeight - 10) / 15);
+    el.style.setProperty('--lh', `${lh}px`);
+    el.style.setProperty('--f', '30px');
+    el.classList.add('measuring');
+    const widest = Math.max(1, ...[...el.querySelectorAll<HTMLElement>('.mp-line.text')].map((l) => l.scrollWidth));
+    el.classList.remove('measuring');
+    const cs = getComputedStyle(el);
+    const width = (el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) * (el.classList.contains('opening') ? 0.8 : 1);
+    el.style.setProperty('--f', `${Math.floor(Math.min((30 * width) / widest, lh * 0.72) * 4) / 4}px`);
+    const first = el.querySelector<HTMLElement>('.lw');
+    if (first && el === textEl.querySelector('.ls-page:has(.lw)')) first.scrollIntoView({ block: 'center' });
+  }
   function paintText() {
-    wordEls.clear();
+    if (pageView()) { paintPage(); return; }
+    wordEls.clear(); moreEls.length = 0;
     const blocks: Node[] = [];
     for (let a = range[0]; a <= range[1]; a++) {
       const p = h('p', { class: 'ls-ayah' });
@@ -152,7 +238,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     textEl.replaceChildren(...blocks);
   }
   function refreshHidden() {
-    for (const [k, el] of wordEls) { const [a, i] = k.split(':').map(Number); el.classList.toggle('hid', hiddenWord(a, i)); }
+    for (const [k, el] of [...wordEls, ...moreEls]) { const [a, i] = k.split(':').map(Number); el.classList.toggle('hid', hiddenWord(a, i)); }
   }
 
   function paintActions() {
