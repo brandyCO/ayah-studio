@@ -88,19 +88,19 @@ export const RECITERS: Reciter[] = [
   // Second recordings of reciters above (owner request 2026-11-02), mp3quran.net, told apart from ours by
   // comparing their sound; shown as Recording chips under the reciter's name. Ayah times verified (Sudais,
   // Budair, Basfar, Muaiqly Mujawwad) or made by alignment (the rest); surahs filled in once checked.
-  { id: 1038, name: 'Abdur-Rahman as-Sudais', short: 'Sudais (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 54, surahs: '' } },
-  { id: 1039, name: 'Salah Al-Budair', short: 'Budair (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 43, surahs: '' } },
-  { id: 1040, name: 'Abdullah Basfar', short: 'Basfar (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 60, surahs: '' } },
-  { id: 1041, name: 'Yaser Salamah', short: 'Salamah (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 152, surahs: '' } },
-  { id: 1042, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 133, surahs: '' } },
-  { id: 1043, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 103, surahs: '' } },
-  { id: 1044, name: 'Mohamed Siddiq al-Minshawi', short: 'Minshawi (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 114, surahs: '' } },
-  { id: 1045, name: 'Mohammad Al-Tablawi', short: 'Tablawi (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 10912, surahs: '' } },
-  { id: 1046, name: 'Muhammad Ayyoub', short: 'Ayyoub (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 320, surahs: '' } },
+  { id: 1038, name: 'Abdur-Rahman as-Sudais', short: 'Sudais (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 54, surahs: '1-85,87-90,92-103,105-114' }, words: '1-85,87-90,92-103,105-114' },
+  { id: 1039, name: 'Salah Al-Budair', short: 'Budair (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 43, surahs: '1-8,11-16,18-20,22-24,26-51,55-64,66-68,70-77,82-83,85-114' }, words: '1-8,11-16,18-20,22-24,26-51,55-64,66-68,70-77,82-83,85-114' },
+  { id: 1040, name: 'Abdullah Basfar', short: 'Basfar (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 60, surahs: '1-114' }, words: '1-114' },
+  { id: 1041, name: 'Yaser Salamah', short: 'Salamah (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 152, surahs: '1-114' }, words: '1-114' },
+  { id: 1042, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 133, surahs: '1-114' }, words: '1-114' },
+  { id: 1043, name: 'Maher Al-Muaiqly', short: 'Muaiqly (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 103, surahs: '1,103,108,110' }, words: '1' },
+  { id: 1044, name: 'Mohamed Siddiq al-Minshawi', short: 'Minshawi (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 114, surahs: '1-2,8,10-12,19-23,38-39,41-51' }, words: '1-2,8,10-12,19-23,38-39,41-51' },
+  { id: 1045, name: 'Mohammad Al-Tablawi', short: 'Tablawi (Mujawwad)', style: 'Mujawwad', qdc: false, mp3quran: { read: 10912, surahs: '1-2,8-12,19-24,38-46' }, words: '1-2,8-12,19-24,38-46' },
+  { id: 1046, name: 'Muhammad Ayyoub', short: 'Ayyoub (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 320, surahs: '1-114' }, words: '1-114' },
   // Second recordings on everyayah.com (per-ayah files), told apart from ours the same way.
-  { id: 1047, name: 'Ahmed Al-Ajamy', short: 'Ajamy (2)', recording: 'Murattal 2', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_64kbps_QuranExplorer.Com', qdc: false },
-  { id: 1048, name: 'Ahmed Al-Ajamy', short: 'Ajamy (3)', recording: 'Murattal 3', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net', qdc: false },
-  { id: 1049, name: 'Ali Al-Hudhaify', short: 'Hudhaify (2)', recording: 'Murattal 2', everyayah: 'Hudhaify_32kbps', qdc: false },
+  { id: 1047, name: 'Ahmed Al-Ajamy', short: 'Ajamy (2)', recording: 'Murattal 2', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_64kbps_QuranExplorer.Com', qdc: false, words: '1-114' },
+  { id: 1048, name: 'Ahmed Al-Ajamy', short: 'Ajamy (3)', recording: 'Murattal 3', everyayah: 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net', qdc: false, words: '1-114' },
+  { id: 1049, name: 'Ali Al-Hudhaify', short: 'Hudhaify (2)', recording: 'Murattal 2', everyayah: 'Hudhaify_32kbps', qdc: false, words: '1-114' },
 ];
 
 /** Reciters with QDC full-surah audio and word timings (the mushaf player, the Kids space). */
