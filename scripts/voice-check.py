@@ -41,10 +41,11 @@ def embed(url):
     pcm = subprocess.run(['ffmpeg', '-v', 'quiet', '-i', f.name, '-ac', '1', '-ar', '16000', '-f', 'f32le', '-'],
                          capture_output=True).stdout
   x = np.frombuffer(pcm, np.float32)
-  vs = []
-  for a in range(START, STOP, WIN):
-    seg = x[a * 16000:(a + WIN) * 16000]
-    if len(seg) < WIN * 16000 * 0.9: break
+  vs, dur = [], len(x) / 16000
+  first = START if dur >= START + WIN else 1  # short surahs: from the start
+  spans = [(a, a + WIN) for a in range(first, int(min(STOP, dur)) - WIN + 1, WIN)] or ([(1, dur)] if dur > 6 else [])
+  for a, b in spans:
+    seg = x[int(a * 16000):int(b * 16000)]
     if np.sqrt(np.mean(seg ** 2)) < 0.005: continue  # silence
     with torch.no_grad():
       v = enc.encode_batch(torch.from_numpy(seg.copy())[None]).squeeze().numpy()
@@ -72,8 +73,8 @@ def main():
   # Calibration: each Sobhi file against his other files vs against every other reciter.
   own = [np.mean([cos(v, w) for t, w in sob.items() if t != s]) for s, v in sob.items()]
   cross = [cos(v, w) for v in sob.values() for w in oth.values()]
-  rep = {'own_min': min(own), 'own_mean': float(np.mean(own)), 'others_max': max(cross),
-         'others_mean': float(np.mean(cross)), 'separable': min(own) > max(cross), 'targets': {}, 'same_item': {}}
+  rep = {'own_min': float(min(own)), 'own_mean': float(np.mean(own)), 'others_max': float(max(cross)),
+         'others_mean': float(np.mean(cross)), 'separable': bool(min(own) > max(cross)), 'targets': {}, 'same_item': {}}
   for name, urls in (('targets', TARGETS), ('same_item', SAME_ITEM)):
     for s, u in urls.items():
       v = embed(u)
@@ -92,9 +93,9 @@ def main():
     c = np.mean(list(item.values()), 0)
     rep['item'] = {n: {'item': float(v @ ((c * len(item) - v) / np.linalg.norm(c * len(item) - v))),
                        'sobhi': float(np.mean([cos(v, w) for w in sob.values()])),
-                       'other': max(cos(v, w) for w in oth.values())} for n, v in sorted(item.items())}
+                       'other': float(max(cos(v, w) for w in oth.values()))} for n, v in sorted(item.items())}
     vals = [r['item'] for r in rep['item'].values()]
-    rep['item_summary'] = {'files': len(item), 'min': min(vals), 'mean': float(np.mean(vals)),
+    rep['item_summary'] = {'files': len(item), 'min': float(min(vals)), 'mean': float(np.mean(vals)),
                            'outliers': [n for n, r in rep['item'].items() if r['item'] < rep['own_min'] - 0.05]}
   # Another upload named after Islam Sobhi: his voice?
   rep['sobhi_202405'] = {}

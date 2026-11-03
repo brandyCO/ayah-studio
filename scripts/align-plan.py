@@ -25,6 +25,11 @@ if any(o.startswith('ia:') for o in only):
   print(json.dumps([dict(kind='mp3quran', key='ia-' + item.replace('/', '-').replace('.', '-'),
                          source='https://archive.org/download/%s/' % item, surahs=fixed or '37,39,40,45,65')]))
   sys.exit()
+# "url:KEY:SURAH:URL": one file of one surah anywhere (e.g. archive.org islam-sobhi_202405 As-Saffat, 2026-11-03).
+if any(o.startswith('url:') for o in only):
+  print(json.dumps([dict(kind='mp3quran', key=k, source=u, surahs=s)
+                    for k, s, u in (o.split(':', 3)[1:] for o in sorted(only) if o.startswith('url:'))]))
+  sys.exit()
 # "ea:FOLDER": an everyayah folder not in the app as its own reciter, as a test against Quran.com's word times of
 # the same recording (e.g. Abdul_Basit_Mujawwad_128kbps = Quran.com reciter 1).
 if any(o.startswith('ea:') for o in only):
