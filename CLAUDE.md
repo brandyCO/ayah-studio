@@ -438,7 +438,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       offline → kept (`reportQueue`) and sent when online. The player's reel / Night listening / Report sit under ⋯.
       **Timing audit** (owner report 2026-11-02: Alafasy 37:113–114 start at the second word, highlight sometimes
       off): `scripts/qdc-audit.py` (`align.yml` scan = audit) aligns every ayah of the Quran.com recordings on its
-      own and writes the ones whose start or word times are off (`qdc-audit/{id}/{SSS}.json` on `align-results`)
+      own and writes the ones whose start or word times are off (`qdc-audit/{id}/{SSS}.json` on `align-results`); `scripts/make-qdc-fixes.py` turns them into `public/data/qdc-fix/{id}/{SSS}.json` (+ `index.json`), which
+      `qdcSurah()` applies to Quran.com's timings everywhere (`applyFixes()`: heard start/end/words; an unclear ayah between
+      two neighbours moved alike moves with them; the ayah before is cut / joined at the new start). Seeking itself was
+      checked accurate on all 13 Quran.com recordings (`scripts/seek-check.*`, `align.yml` scan = seek), so a tap that
+      plays from mid-ayah is always a timing error. First: Alafasy 19–38 (37:112–115 were 2.4 s late)
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

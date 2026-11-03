@@ -86,14 +86,64 @@ export function qdcSurah(reciterId: number, surah: number): Promise<QdcSurah> {
     const p = fetchJson(pathOf(reciterId, surah)).then((d) => {
       const f = d.audio_files?.[0];
       if (!f?.audio_url || !Array.isArray(f.verse_timings)) throw new Error('No recording for this surah');
-      return {
+      return fixesFor(reciterId, surah).then((fx) => ({
         audioUrl: f.audio_url,
         duration: f.duration ? f.duration / 1000 : null,
-        timings: new Map(f.verse_timings.map((v) => [v.verse_key, v])),
-      };
+        timings: new Map(applyFixes(f.verse_timings, fx).map((v) => [v.verse_key, v])),
+      }));
     });
     p.catch(() => cache.delete(key));
     cache.set(key, p);
   }
   return cache.get(key)!;
+}
+
+/** Corrections from our timing audit (scripts/qdc-audit.py → make-qdc-fixes.py): some of Quran.com's ayat start
+ *  late or early, or their words are off (owner report 2026-11-02: Alafasy 37:113 started 2.4 s late, so a tap
+ *  on the ayah played from its middle). `w`: the words as heard; `d`: Quran.com's word times moved by d ms. */
+interface Fix { f?: number; t?: number; w?: [number, number, number][]; d?: number }
+let fixIndex: Promise<Record<string, string>> | null = null;
+
+async function fixesFor(reciterId: number, surah: number): Promise<Record<string, Fix>> {
+  fixIndex ??= fetch(`./data/qdc-fix/index.json?v=${__BUILD__}`).then((r) => (r.ok ? r.json() : {}), () => ({}));
+  const list = (await fixIndex)[reciterId];
+  if (!list || !list.split(',').includes(String(surah))) return {};
+  return fetch(`./data/qdc-fix/${reciterId}/${String(surah).padStart(3, '0')}.json?v=${__BUILD__}`)
+    .then((r) => (r.ok ? r.json() : {}), () => ({}));
+}
+
+const seg = (s: unknown): [number, number, number] | null =>
+  Array.isArray(s) && s.length >= 3 && s.slice(0, 3).every((x) => typeof x === 'number') ? (s as [number, number, number]) : null;
+/** Ends this ayah's audio and words at `at` ms. */
+function endAt(v: VerseTiming, at: number) {
+  v.timestamp_to = at;
+  v.segments = (v.segments ?? []).map((s) => {
+    const g = seg(s);
+    return g && g[2] > at ? [g[0], Math.min(g[1], at - 1), at] : s;
+  });
+}
+
+export function applyFixes(timings: VerseTiming[], fx: Record<string, Fix>): VerseTiming[] {
+  if (!Object.keys(fx).length) return timings;
+  const out = timings.map((v) => ({ ...v }));
+  const order = [...out].sort((a, b) => a.timestamp_from - b.timestamp_from);
+  for (let i = 0; i < order.length; i++) {
+    const v = order[i];
+    const e = fx[v.verse_key.split(':')[1]];
+    if (!e) continue;
+    const old = v.timestamp_from;
+    const d = e.d ?? 0;
+    v.timestamp_from = e.f ?? old + d;
+    if (e.w) v.segments = e.w.map((w) => [...w]);
+    else if (d) v.segments = (v.segments ?? []).map((s) => { const g = seg(s); return g ? [g[0], g[1] + d, g[2] + d] : s; });
+    const last = Math.max(0, ...(v.segments ?? []).map((s) => seg(s)?.[2] ?? 0));
+    v.timestamp_to = Math.max(e.t ?? v.timestamp_to + d, last);
+    // The ayah before ends where this one really starts: cut where they overlap, joined up where they met.
+    const p = order[i - 1];
+    if (p && (p.timestamp_to > v.timestamp_from || Math.abs(p.timestamp_to - old) <= 50)) endAt(p, v.timestamp_from);
+    // …and this one never runs into the next.
+    const n = order[i + 1];
+    if (n && !fx[n.verse_key.split(':')[1]] && v.timestamp_to > n.timestamp_from) endAt(v, n.timestamp_from);
+  }
+  return out;
 }
