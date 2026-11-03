@@ -1,0 +1,26 @@
+{
+ "https://archive.org/download/YasserAl-Zailai/067.mp3": {
+  "head": [
+   200,
+   "6135405",
+   "https://dn721602.ca.archive.org/0/items/YasserAl-Zailai/067.mp3"
+  ],
+  "range": [
+   206,
+   1000
+  ],
+  "play": 1.497687
+ },
+ "https://archive.org/download/YasserAl-Zailai/018.mp3": {
+  "head": [
+   200,
+   "24672716",
+   "https://dn721602.ca.archive.org/0/items/YasserAl-Zailai/018.mp3"
+  ],
+  "range": [
+   206,
+   1000
+  ],
+  "play": 1.50059
+ }
+}
