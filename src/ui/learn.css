@@ -81,6 +81,22 @@
 .learn-seed b { font-size: var(--fs-s); text-align: center; line-height: 1.2; }
 .learn-seed-ar { font-family: 'AmiriQuran', serif; font-size: var(--fs-l); line-height: 1.9; }
 .learn-seed.has { border-color: var(--accent); }
+/* The store: seed packets on a soft shelf, the seed itself the handle to drag */
+.learn-seeds { gap: 10px; }
+.learn-seed { position: relative; padding: 10px 6px 8px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--card)), var(--card)); box-shadow: 0 2px 8px rgba(20,50,40,.08); touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.learn-seed-art { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%); touch-action: none; cursor: grab; }
+.learn-seed:not(.has) .learn-seed-art { animation: tray-bob 2.6s ease-in-out infinite; }
+.learn-tag.free { background: var(--brand-fill); color: #fff; }
+.learn-drag-hint { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.learn-drag-hint > div { display: grid; gap: 2px; }
+.learn-drag-demo { position: relative; flex: none; width: 46px; height: 46px; }
+.learn-drag-demo i { position: absolute; left: 6px; bottom: 4px; width: 34px; height: 12px; border-radius: 50%; border: 2px dashed var(--accent); opacity: .7; }
+.learn-drag-demo b { position: absolute; left: 16px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: #8a6a3e; box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent); animation: drag-demo 2.4s var(--ease-out, ease-out) infinite; }
+@keyframes drag-demo { 0% { transform: translate(-10px, -2px) scale(1); } 15% { transform: translate(-10px, -2px) scale(1.25); } 70% { transform: translate(0, 26px) scale(1.25); } 85%, 100% { transform: translate(0, 26px) scale(1); opacity: .2; } }
+.tray-item { position: relative; }
+.tray-finger { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: rgba(255,255,255,.75); box-shadow: 0 0 0 3px rgba(61,209,173,.55); pointer-events: none; animation: tray-finger 2.6s ease-in-out infinite; }
+@keyframes tray-finger { 0%, 10% { transform: none; opacity: 0; } 20% { opacity: 1; transform: scale(.85); } 70% { transform: translateY(-46px) scale(.85); opacity: 1; } 85%, 100% { transform: translateY(-46px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .learn-drag-demo b, .tray-finger, .learn-seed-art { animation: none !important; } }
 .learn-tag { font-size: var(--fs-2xs); font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); }
 .learn-tag.free { background: var(--sel); color: var(--accent); }
 .learn-decos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
@@ -152,3 +168,73 @@
 @media (prefers-reduced-motion: reduce) {
   .tray-item, .ls-your-turn .ls-ring { animation: none; }
 }
+
+/* Full-screen garden: the island fills the screen above the tab bar; controls float over it. */
+.garden-wrap.garden-full {
+  position: fixed; inset: 0; bottom: calc(68px + max(6px, env(safe-area-inset-bottom))); margin: 0; border-radius: 0; z-index: 1;
+}
+.garden-full .garden-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.garden-top {
+  position: absolute; inset-inline: 10px; top: calc(8px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 20px; background: rgba(255,255,255,.72); backdrop-filter: blur(10px); color: #1d2a25;
+  box-shadow: 0 4px 16px rgba(20,50,40,.12);
+}
+.garden-top .learn-nav { flex: 1; margin: 0; min-width: 0; }
+.garden-top .muted { color: #5d6b66; }
+.garden-top .icon-btn { color: #1d2a25; }
+.garden-side { position: absolute; inset-inline-end: 12px; top: calc(84px + env(safe-area-inset-top)); display: grid; gap: 10px; }
+.garden-fab {
+  width: 46px; height: 46px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.88); color: #1d3b30; box-shadow: 0 4px 14px rgba(20,50,40,.16); backdrop-filter: blur(8px);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+.garden-fab:first-child { background: var(--brand-fill); color: #fff; box-shadow: 0 6px 18px rgba(5,87,61,.35); }
+.garden-fab:active { transform: scale(.92); }
+.garden-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.garden-bottom { position: absolute; inset-inline: 10px; bottom: 10px; display: grid; gap: 8px; pointer-events: none; }
+.garden-bottom > * { pointer-events: auto; }
+.garden-full .garden-tray { position: static; }
+.garden-full .learn-today {
+  margin: 0; padding: 8px 12px; max-height: 34vh; overflow-y: auto; background: rgba(255,255,255,.9); color: #1d2a25;
+  border: 0; box-shadow: 0 8px 24px rgba(20,50,40,.16); backdrop-filter: blur(10px);
+}
+.garden-full .learn-today h3 { margin: 4px 0 2px; font-size: var(--fs-s, .9rem); color: #5d6b66; }
+.garden-full .learn-today .muted { color: #5d6b66; }
+@media (prefers-color-scheme: dark) {
+  .garden-top, .garden-fab:not(:first-child), .garden-full .learn-today { background: rgba(14,22,19,.78); color: #e8f1ec; }
+  .garden-top .muted, .garden-full .learn-today .muted, .garden-full .learn-today h3 { color: #a9b8b1; }
+  .garden-top .icon-btn { color: #e8f1ec; }
+}
+
+/* Lesson on the mushaf page: the chunk lit, the rest of the page dimmed (never black). */
+.ls-pages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 4px 0 8px; line-height: 1; }
+.ls-page.mushaf-page { position: relative; inset: auto; width: 100%; min-width: 0; overflow: hidden; aspect-ratio: 0.62; max-width: 560px; margin: 0 auto; border-radius: 6px; }
+.ls-page .dim { opacity: .3; transition: opacity var(--dur-3) var(--ease-out); }
+.ls-page .lw { border-radius: 4px; padding: 0; }
+.ls-page .lw.hid { background: color-mix(in srgb, var(--ink, #222) 12%, transparent); box-shadow: none; }
+.ls-text:has(.ls-pages) { max-height: none; padding-top: 4px; }
+/* Page view: the page at the reader's own size (the screen's width and height), scrolled inside the
+   middle; the steps, actions and tools stay on screen below it. */
+.screen-learn.lesson.ls-pageview { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.ls-pageview .ls-head { padding-top: calc(4px + env(safe-area-inset-top)); padding-bottom: 0; }
+.ls-pageview .ls-tree { width: 40px; height: 40px; }
+.ls-pageview .ls-steps { margin: 2px 0; }
+.ls-pageview .ls-phase { margin: 2px 0; gap: 2px; }
+.ls-pageview .ls-main { overflow-y: auto; overscroll-behavior: contain; margin-inline: -16px; background: var(--paper, transparent); }
+.ls-pageview .ls-text { flex: none; overflow: visible; max-height: none; padding: 0; }
+.ls-pageview .ls-pages { gap: 0; padding: 0; }
+.ls-pageview .ls-page.mushaf-page { aspect-ratio: auto; height: 100dvh; max-width: none; border-radius: 0; }
+.ls-trs { max-height: 18vh; overflow-y: auto; padding: 6px 0 0; }
+.ls-trs .ls-tr { margin: 0 0 6px; font-size: var(--fs-s); text-align: center; }
+.ls-trs:empty { display: none; }
+.ls-pageview .ls-turn { min-height: 24px; }
+.ls-pageview .ls-actions { margin: 4px 0; }
+.ls-pageview .ls-tools { padding-top: 6px; }
+
+.learn-juz-label { margin: 0 0 4px; }
+.learn-juz-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; }
+.learn-juz-chips::-webkit-scrollbar { display: none; }
+.learn-juz-chips .chip { flex: none; min-width: 40px; justify-content: center; }
+.learn-shelf-head { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 0; }
+.learn-shelf { display: block; width: 100%; }
+.learn-store-body { display: block; }
