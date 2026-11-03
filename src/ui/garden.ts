@@ -59,24 +59,30 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
 
   // --- screen ---
   const walletBtn = h('button', { class: 'lt-chip learn-wallet', type: 'button', onclick: () => openStore('seeds') });
-  const head = h('header', { class: 'learn-head' },
-    h('div', {}, h('h1', {}, lt('learn.title')), h('p', { class: 'muted small' }, lt('learn.sub'))),
-    walletBtn);
   const juzTitle = h('h2', {});
   const juzSub = h('p', { class: 'muted small' });
   const prevJ = h('button', { class: 'icon-btn', 'aria-label': lt('learn.prevJuz'), onclick: () => setJuz(juz - 1) }, icon(dir() === 'rtl' ? 'right' : 'left', 22));
   const nextJ = h('button', { class: 'icon-btn', 'aria-label': lt('learn.nextJuz'), onclick: () => setJuz(juz + 1) }, icon(dir() === 'rtl' ? 'left' : 'right', 22));
   const nav = h('div', { class: 'learn-nav' }, prevJ, h('div', { class: 'learn-nav-t' }, juzTitle, juzSub), nextJ);
   const canvas = h('canvas', { class: 'garden-canvas', role: 'img' });
-  const storeBtn = h('button', { class: 'garden-store-btn', type: 'button', onclick: () => openStore('seeds') }, icon('sprout', 20), h('span', {}, lt('learn.store')));
+  // Full-screen garden: the juz and Light on top, round icon buttons down the side, today's step and the tray below.
+  const fab = (ic: Parameters<typeof icon>[0], label: string, onclick: () => void) =>
+    h('button', { class: 'garden-fab', type: 'button', 'aria-label': label, title: label, onclick }, icon(ic, 22));
+  const side = h('div', { class: 'garden-side' },
+    fab('sprout', lt('learn.store'), () => openStore('seeds')),
+    fab('sparkle', lt('learn.decos'), () => openStore('decos')),
+    fab('book', lt('learn.treesHere'), () => openTrees()),
+    fab('full', lt('learn.fit'), () => { zoom = 1; panX = panY = 0; dirty = true; }));
+  const top = h('div', { class: 'garden-top' }, nav, walletBtn);
   const tray = h('div', { class: 'garden-tray', hidden: true });
-  const wrap = h('div', { class: 'garden-wrap' }, canvas, storeBtn, tray);
+  const wrap = h('div', { class: 'garden-wrap garden-full' }, canvas, top, side, h('div', { class: 'garden-bottom' }, tray));
   const today = h('section', { class: 'learn-card learn-today' });
   const list = h('section', { class: 'learn-card learn-list' });
   const how = h('details', { class: 'learn-card learn-how' },
     h('summary', {}, lt('learn.howTitle')),
     h('ol', {}, ...(['learn.how1', 'learn.how2', 'learn.how3', 'learn.how4', 'learn.how5'] as LearnKey[]).map((k) => h('li', {}, lt(k)))));
-  root.append(head, nav, wrap, today, list, how, tabBar('learn'));
+  root.append(wrap, tabBar('learn'));
+  wrap.querySelector('.garden-bottom')!.prepend(today);
 
   // --- the garden's geometry ---
   const ctx = canvas.getContext('2d')!;
@@ -86,13 +92,15 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
   function layout() {
     n = gridSize(surahsOf(juz).length);
     W = wrap.clientWidth || 360;
-    const tw = Math.min(96, W / (n + 0.6));
-    const top = tw * 2.05;
-    H = Math.round(top + n * tw / 2 + tw * 0.62 + 18);
+    H = wrap.clientHeight || 640;
+    // Fit the whole island between the top bar and the card below, then zoom in for the details.
+    const room = Math.max(200, H - 230);
+    const tw = Math.min(140, W / (n + 0.8), room / (n / 2 + 2.7));
+    const gh = tw * 2.05 + n * tw / 2 + tw * 0.62;
+    const top = 80 + Math.max(0, (room - gh) / 2) + tw * 2.05;
     dpr = Math.min(2.5, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    canvas.style.height = `${H}px`;
     iso = { tw, th: tw / 2, ox: W / 2, oy: top };
     clampPan();
     dirty = true;
@@ -242,7 +250,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
   raf = requestAnimationFrame(loop);
   const onResize = () => layout();
   window.addEventListener('resize', onResize);
-  const ro = new ResizeObserver(() => { if (Math.abs(wrap.clientWidth - W) > 1) layout(); });
+  const ro = new ResizeObserver(() => { if (Math.abs(wrap.clientWidth - W) > 1 || Math.abs(wrap.clientHeight - H) > 1) layout(); });
   ro.observe(wrap);
 
   // --- touch: tap a tree, drag it anywhere, pinch to zoom ---
@@ -295,7 +303,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     if (pinch && pts.size >= 2) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      zoom = Math.max(1, Math.min(2.4, pinch.z * (d / Math.max(1, pinch.d))));
+      zoom = Math.max(1, Math.min(4, pinch.z * (d / Math.max(1, pinch.d))));
       panX = pinch.px + ((a.x + b.x) / 2 - pinch.mx);
       panY = pinch.py + ((a.y + b.y) / 2 - pinch.my);
       clampPan();
@@ -360,7 +368,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
   canvas.addEventListener('wheel', (e) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
-    zoom = Math.max(1, Math.min(2.4, zoom * Math.exp(-e.deltaY * 0.01)));
+    zoom = Math.max(1, Math.min(4, zoom * Math.exp(-e.deltaY * 0.01)));
     clampPan();
     dirty = true;
   }, { passive: false });
@@ -368,6 +376,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
   // --- the tray: a seed or decoration waiting to be planted ---
   function paintTray() {
     tray.hidden = !held;
+    today.hidden = !!held;
     if (!held) return;
     const hd = held;
     const art = hd.kind === 'seed'
@@ -505,7 +514,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
         lang() === 'ar' ? '' : h('span', { class: 'learn-row-ar', lang: 'ar' }, m.ar))),
       shelf.length ? h('h3', {}, lt('learn.toPlace')) : '',
       shelf.length ? h('div', { class: 'learn-shelf' }, ...shelf.map((d) => h('button', {
-        class: 'learn-shelf-item', 'aria-label': decoName(d.k), onclick: () => { held = { kind: 'deco', id: d.id, k: d.k }; paintTray(); wrap.scrollIntoView({ behavior: 'smooth', block: 'center' }); },
+        class: 'learn-shelf-item', 'aria-label': decoName(d.k), onclick: () => { held = { kind: 'deco', id: d.id, k: d.k }; paintTray(); void 0; },
       }, vignette(52, (c, x, y, u) => drawDeco(c, d.k, x, y, u, 0, night()), night(), decoHeight(d.k)), h('span', { class: 'small' }, decoName(d.k))))) : '');
   }
 
@@ -530,6 +539,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     d.showModal();
     return d;
   };
+  const openTrees = () => { paintList(); list.hidden = false; sheet('learn-trees', lt('learn.treesHere'), list, how); };
   const openItem = (it: Item) => (it.kind === 'tree' ? openTree(it.t.s) : openDeco(it.d));
 
   async function openTree(s: number) {
@@ -595,7 +605,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       if (tr && tr.x >= 0) { void openTree(s); return; }
       held = { kind: 'seed', s };
       paintTray();
-      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      void 0;
     };
     const seeds = () => {
       const out: Node[] = [];
@@ -646,7 +656,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
                 held = { kind: 'deco', id: got.id, k: got.k };
                 paint();
                 paintTray();
-                wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                void 0;
               },
             }, can ? `✦ ${x.price}` : lt('learn.needN', { n: x.price - wallet() })));
         })),
@@ -668,8 +678,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
   layout();
   paint();
   paintTray();
-  if (grow || held) requestAnimationFrame(() => wrap.scrollIntoView({ block: 'center' }));
-  return () => {
+    return () => {
     cancelAnimationFrame(raf);
     ro.disconnect();
     window.removeEventListener('resize', onResize);
