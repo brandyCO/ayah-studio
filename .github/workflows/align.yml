@@ -190,11 +190,17 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - if: inputs.only != 'compare'
+      - if: inputs.only != 'compare' && inputs.only != 'voice'
         run: python3 scripts/find-surahs.py find.json "Islam Sobhi|Islam Sobhy|Islam Subhi|إسلام صبحي|اسلام صبحي|اسلام صبحى|إسلام صبحى" 37,39,40,45,65
       # only = compare: are the archive.org uploads found the same recording as our checked mp3quran one?
       - if: inputs.only == 'compare'
         run: python3 scripts/compare-ia.py find.json public/data/mp3quran/islam-sobhi.json islamsobhiquran surquran.com/islam islam-sobhi_202405 islam-sobhi_202404 islamicloud-quran-islam-sobhi/islam-sobhi
+      # only = voice: is the archive.org upload his voice? (speaker embeddings against his mp3quran files)
+      - if: inputs.only == 'voice'
+        run: |
+          pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -q speechbrain numpy
+          python3 scripts/voice-check.py find.json
       - name: Save the report
         if: always()
         env:
@@ -205,7 +211,7 @@ jobs:
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
           cd "$RUNNER_TEMP/res"
           git sparse-checkout set sources
-          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ inputs.only == 'compare' && 'compare' || 'find' }}-islam-sobhi.json"
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ (inputs.only == 'compare' || inputs.only == 'voice') && inputs.only || 'find' }}-islam-sobhi.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sources && git commit -qm "Find: Islam Sobhi surahs"
