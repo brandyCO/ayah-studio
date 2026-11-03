@@ -5,6 +5,7 @@
 // one step up (a goal met on ≥ 5 of the last 7 days) or down (met on ≤ 1 while the app was used on
 // ≥ 3); goals never change by themselves. Progress comes from the journey (journey.ts) and the reading log; when every goal that
 // is on has been met, the day is marked (it counts toward goal badges and the weekly summary).
+import { ADHKAR_TOTAL, eveningOpen, finishedCount, type AdhkarPeriod } from './adhkar';
 import { addDays, allDays, markGoalsMet, todayRec } from './journey';
 import { dayKey, readLogAll } from './readLog';
 
@@ -110,6 +111,8 @@ export interface GoalProgress {
   id: string;
   kind: 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'custom';
   dhikr?: DhikrId;
+  /** Adhkar: morning ('s') or evening ('m'). */
+  period?: AdhkarPeriod;
   /** A goal of the user's own: its id and name. */
   custom?: CustomGoal;
   done: number;
@@ -128,7 +131,11 @@ export function todayGoals(now = new Date()): GoalProgress[] {
     const n = g.dhikr[id];
     if (n) out.push({ id: `dhikr:${id}`, kind: 'dhikr', dhikr: id, done: d.dk?.[id] ?? 0, target: n });
   }
-  if (g.adhkar) out.push({ id: 'adhkar', kind: 'adhkar', done: d.ad ? 1 : 0, target: 1 });
+  if (g.adhkar) {
+    // Done = adhkar said in full in the app's session; the evening ones appear from Asr.
+    out.push({ id: 'adhkar', kind: 'adhkar', period: 's', done: d.ad ? ADHKAR_TOTAL.s : Math.min(ADHKAR_TOTAL.s - 1, finishedCount('s')), target: ADHKAR_TOTAL.s });
+    if (d.am || eveningOpen(now)) out.push({ id: 'adhkarM', kind: 'adhkar', period: 'm', done: d.am ? ADHKAR_TOTAL.m : Math.min(ADHKAR_TOTAL.m - 1, finishedCount('m')), target: ADHKAR_TOTAL.m });
+  }
   const wd = now.getDay();
   for (const c of g.custom) if (!c.days.length || c.days.includes(wd)) out.push({ id: `c:${c.id}`, kind: 'custom', custom: c, done: d.cu?.[c.id] ?? 0, target: c.target });
   return out;
@@ -231,7 +238,7 @@ export function lightFor(g: Pick<GoalProgress, 'kind' | 'target'>): number {
     case 'memorise': return 15 * g.target;
     case 'reels': return 10 * g.target;
     case 'dhikr': return DHIKR_LIGHT[g.target] ?? 5;
-    case 'adhkar': return 15;
+    case 'adhkar': return 20;
     default: return 10;
   }
 }

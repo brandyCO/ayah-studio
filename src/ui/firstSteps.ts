@@ -10,7 +10,7 @@ import { goalText } from './goalName';
 const paceLine = (p: Pace) => {
   const v = PACES[p];
   const dk = Object.values(v.dhikr).reduce((a, b) => a + (b ?? 0), 0);
-  return [goalText('pages', v.pages), v.memorise ? goalText('memorise', v.memorise) : '', t('pace.dhikr', { n: dk }), v.adhkar ? t('goal.adhkar') : '']
+  return [goalText('pages', v.pages), v.memorise ? goalText('memorise', v.memorise) : '', t('pace.dhikr', { n: dk }), v.adhkar ? t('goal.eAdhkar') : '']
     .filter(Boolean).join(' · ');
 };
 
