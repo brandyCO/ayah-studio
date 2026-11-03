@@ -1,0 +1,225 @@
+{
+ "others_to_ref_max": 0.6359682083129883,
+ "files": {
+  "018.mp3": {
+   "zailai": 0.8797374963760376,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5655375123023987
+  },
+  "019.mp3": {
+   "zailai": 0.8914189338684082,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5610364675521851
+  },
+  "031.mp3": {
+   "zailai": 0.7297713756561279,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5871126055717468
+  },
+  "035.mp3": {
+   "zailai": 0.7100958228111267,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5406967997550964
+  },
+  "036.mp3": {
+   "zailai": 0.6554898619651794,
+   "closest_other": "bandar-baleela/r1",
+   "other": 0.5914695262908936
+  },
+  "037.mp3": {
+   "zailai": 0.9944969415664673,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6167985200881958
+  },
+  "038.mp3": {
+   "zailai": 0.8918169736862183,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5454817414283752
+  },
+  "042.mp3": {
+   "zailai": 0.8593153953552246,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5394278764724731
+  },
+  "045.mp3": {
+   "zailai": 0.9319366216659546,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6740503311157227
+  },
+  "046.mp3": {
+   "zailai": 0.6647393703460693,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5748270153999329
+  },
+  "049.mp3": {
+   "zailai": 0.8924434185028076,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5984323024749756
+  },
+  "050.mp3": {
+   "zailai": 0.8066523671150208,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6190706491470337
+  },
+  "052.mp3": {
+   "zailai": 0.9168255925178528,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.7148695588111877
+  },
+  "053.mp3": {
+   "zailai": 0.7261734008789062,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5364404916763306
+  },
+  "054.mp3": {
+   "zailai": 0.7551957368850708,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5322869420051575
+  },
+  "055.mp3": {
+   "zailai": 0.8403435945510864,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5724668502807617
+  },
+  "056.mp3": {
+   "zailai": 0.7505381107330322,
+   "closest_other": "bandar-baleela/r1",
+   "other": 0.5502758026123047
+  },
+  "057.mp3": {
+   "zailai": 0.715624213218689,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5689152479171753
+  },
+  "059.mp3": {
+   "zailai": 0.7222781181335449,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5096025466918945
+  },
+  "061.mp3": {
+   "zailai": 0.7236101031303406,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5435435771942139
+  },
+  "062.mp3": {
+   "zailai": 0.8653925657272339,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6276862621307373
+  },
+  "063.mp3": {
+   "zailai": 0.7098115682601929,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5555616617202759
+  },
+  "064.mp3": {
+   "zailai": 0.7847056984901428,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6094875335693359
+  },
+  "066.mp3": {
+   "zailai": 0.7694219350814819,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5705156326293945
+  },
+  "067.mp3": {
+   "zailai": 0.8845442533493042,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6305819749832153
+  },
+  "068.mp3": {
+   "zailai": 0.7610543966293335,
+   "closest_other": "islam-sobhi/r1",
+   "other": 0.5813247561454773
+  },
+  "069.mp3": {
+   "zailai": 0.6848207712173462,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5380524396896362
+  },
+  "070.mp3": {
+   "zailai": 0.6391894817352295,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.49392759799957275
+  },
+  "072.mp3": {
+   "zailai": 0.7421579360961914,
+   "closest_other": "khalid-jalil/r1",
+   "other": 0.5456459522247314
+  },
+  "073.mp3": {
+   "zailai": 0.8610674142837524,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5698276162147522
+  },
+  "074.mp3": {
+   "zailai": 0.7059012651443481,
+   "closest_other": "khalid-jalil/r1",
+   "other": 0.6113266944885254
+  },
+  "075.mp3": {
+   "zailai": 0.6647452116012573,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5112569332122803
+  },
+  "076.mp3": {
+   "zailai": 0.9403378963470459,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.6647500395774841
+  },
+  "077.mp3": {
+   "zailai": 0.6965795755386353,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5236712694168091
+  },
+  "078.mp3": {
+   "zailai": 0.6693466901779175,
+   "closest_other": "khalid-jalil/r1",
+   "other": 0.5294843912124634
+  },
+  "079.mp3": {
+   "zailai": 0.7582114338874817,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.6126742362976074
+  },
+  "081.mp3": {
+   "zailai": 0.7172014713287354,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.512565016746521
+  },
+  "082.mp3": {
+   "zailai": 0.688901424407959,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5305649042129517
+  },
+  "087.mp3": {
+   "zailai": 0.7242125868797302,
+   "closest_other": "raad-kurdi/r1",
+   "other": 0.5417912006378174
+  },
+  "088.mp3": {
+   "zailai": 0.712044358253479,
+   "closest_other": "khalid-jalil/r1",
+   "other": 0.5546966791152954
+  },
+  "091.mp3": {
+   "zailai": 0.6236324310302734,
+   "closest_other": "bandar-baleela/r1",
+   "other": 0.5164605379104614
+  },
+  "092.mp3": {
+   "zailai": 0.6415753364562988,
+   "closest_other": "mansour-salimi/r1",
+   "other": 0.5588633418083191
+  },
+  "097.mp3": {
+   "zailai": 0.7438415288925171,
+   "closest_other": "ahmad-nufais/r1",
+   "other": 0.5857119560241699
+  }
+ },
+ "summary": {
+  "files": 43,
+  "margin_min": 0.06402033567428589,
+  "not_him": []
+ }
+}
