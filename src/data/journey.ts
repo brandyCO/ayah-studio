@@ -79,6 +79,12 @@ interface State {
   settled?: string;
   /** Badges whose reward was claimed (the animation played). */
   claimed: Record<string, 1>;
+  /** Light spent in the shop: item id → price (src/data/shop.ts). */
+  spent?: Record<string, number>;
+  /** Streak freezes kept for later (bought or won): their ids. */
+  bank?: string[];
+  /** The days a kept freeze covered. */
+  bankDays?: string[];
 }
 
 const empty = (): State => ({
@@ -110,6 +116,9 @@ function load(): State {
       if (Number.isFinite(v.best)) s.best = v.best;
       if (typeof v.settled === 'string') s.settled = v.settled;
       if (v.claimed && typeof v.claimed === 'object') s.claimed = v.claimed;
+      if (v.spent && typeof v.spent === 'object') s.spent = v.spent;
+      if (Array.isArray(v.bank)) s.bank = v.bank.filter((x: unknown) => typeof x === 'string');
+      if (Array.isArray(v.bankDays)) s.bankDays = v.bankDays.filter(isDay);
     }
   } catch {
     /* ignore */
@@ -199,21 +208,49 @@ function settle(s: State, k: string) {
       const frozenWeeks = new Set(v.frozen.filter((d) => !extra.includes(d)).map(weekOf));
       let lastExtra = extra.reduce((a, d) => (d > a ? d : a), '');
       const used: string[] = [];
+      const kept: string[] = [];
+      let left = bankLeft(v);
       const ok = gap.every((d) => {
         const w = weekOf(d);
         if (!frozenWeeks.has(w)) { frozenWeeks.add(w); return true; }
-        if (lastExtra && d < addDays(lastExtra, EXTRA_EVERY)) return false;
-        lastExtra = d;
-        used.push(d);
-        return true;
+        if (!lastExtra || d >= addDays(lastExtra, EXTRA_EVERY)) { lastExtra = d; used.push(d); return true; }
+        // A freeze bought in the shop or won in Ranks.
+        if (left > 0) { left--; kept.push(d); return true; }
+        return false;
       });
-      if (ok) { s.frozen.push(...gap); if (used.length) s.extra = [...(s.extra ?? []), ...used]; }
+      if (ok) {
+        s.frozen.push(...gap);
+        if (used.length) s.extra = [...(s.extra ?? []), ...used];
+        if (kept.length) s.bankDays = [...(s.bankDays ?? []), ...kept];
+      }
       else {
         const n = streakOn(last, cov);
         if (n >= 2) s.lost = { n, days: gap, at: k };
       }
     }
   }
+}
+
+// --- the shop (src/data/shop.ts) and kept streak freezes ---
+const bankLeft = (v: State) => Math.max(0, (v.bank ?? []).length - (v.bankDays ?? []).length);
+/** Streak freezes kept for later (all devices). */
+export const bankedFreezes = () => bankLeft(view());
+/** Light spent in the shop (all devices). */
+export const shopSpent = () => Object.values(view().spent ?? {}).reduce((a, b) => a + b, 0);
+export const shopOwned = (id: string) => !!view().spent?.[id];
+/** Records a purchase (the caller checks the Light first). */
+export function shopBuy(id: string, price: number) {
+  const s = load();
+  if (s.spent?.[id]) return;
+  s.spent = { ...s.spent, [id]: Math.round(price) };
+  save();
+}
+/** Keeps a streak freeze for later (`id` once: a purchase or a prize). */
+export function keepFreeze(id: string) {
+  const s = load();
+  if (s.bank?.includes(id)) return;
+  s.bank = [...(s.bank ?? []), id];
+  save();
 }
 
 /** Marks today as opened and settles any missed days before it. */
@@ -551,6 +588,7 @@ function cleanOther(v: unknown): Other | null {
     days, log, totals, badges, claimed,
     frozen: strs(j.frozen).filter(isDay), revived: strs(j.revived).filter(isDay), extra: strs(j.extra).filter(isDay),
     pageLast: nums(j.pageLast), finished: nums(j.finished), juzDone: nums(j.juzDone), best: num(j.best),
+    spent: nums(j.spent), bank: strs(j.bank), bankDays: strs(j.bankDays).filter(isDay),
   };
 }
 function loadOthers(): Record<string, Other> {
@@ -640,6 +678,7 @@ function view(): State {
     ...mine, days: {}, totals: { ...mine.totals }, frozen: [...mine.frozen], revived: [...mine.revived], extra: [...(mine.extra ?? [])],
     pageLast: { ...mine.pageLast }, finished: { ...mine.finished }, juzDone: { ...mine.juzDone },
     badges: { ...mine.badges }, claimed: { ...mine.claimed },
+    spent: { ...mine.spent }, bank: [...(mine.bank ?? [])], bankDays: [...(mine.bankDays ?? [])],
   };
   for (const [k, d] of Object.entries(mine.days)) v.days[k] = { ...d };
   for (const o of devs) {
@@ -665,12 +704,17 @@ function view(): State {
     for (const [id, d] of Object.entries(o.badges)) if (!v.badges[id] || d < v.badges[id]) v.badges[id] = d;
     Object.assign(v.claimed, o.claimed);
     v.best = Math.max(v.best, o.best);
+    // The same purchase on two devices counts once.
+    v.spent = maxNums(v.spent ?? {}, o.spent ?? {});
+    v.bank = union(v.bank, o.bank);
+    v.bankDays = union(v.bankDays, o.bankDays);
   }
   // A day lit on any device needs no freeze; a flame kept alive elsewhere was not lost.
   v.frozen = v.frozen.filter((d) => !v.days[d]?.f);
   v.revived = v.revived.filter((d) => !v.days[d]?.f);
   // An extra freeze is used only where a day still needed one.
   v.extra = (v.extra ?? []).filter((d) => v.frozen.includes(d));
+  v.bankDays = (v.bankDays ?? []).filter((d) => v.frozen.includes(d));
   if (v.lost && v.lost.days.every((d) => v.days[d]?.f || v.frozen.includes(d) || v.revived.includes(d))) delete v.lost;
   viewMemo = { ver, v };
   return v;

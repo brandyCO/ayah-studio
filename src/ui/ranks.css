@@ -157,3 +157,27 @@
 .rkm-week .cel-sub { animation-delay: 1.75s; }
 .rkm-week .rkm-me { animation-delay: 1.95s; }
 .rkm-week .cel-ok { animation-delay: 2.2s; }
+/* Prizes, trophy shelf and the shop */
+.rk-me-acts { gap: 8px; }
+.rk-shop-btn { font-weight: 700; color: var(--accent); }
+.rk-prizes { display: grid; gap: 8px; }
+.rk-prizes:not(:empty) { margin-top: 10px; }
+.rk-prize { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: color-mix(in srgb, #f2c14e 60%, transparent);
+  background: linear-gradient(100deg, color-mix(in srgb, #f2c14e 20%, var(--card)), var(--card)); }
+.rk-prize p { margin: 2px 0 0; }
+.rk-shelf { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer; }
+.rk-shelf-row { display: flex; gap: 2px; flex: 1; overflow: hidden; }
+.rk-trophy-ic { display: inline-grid; line-height: 0; flex: none; }
+.rk-shelf-list { display: grid; gap: 10px; }
+.rk-shelf-txt { flex: 1; display: grid; }
+.rk-shop { display: grid; gap: 8px; }
+.rk-shop-left { margin: 0; }
+.rk-shop-left b { color: var(--accent); }
+.rk-shop-freeze { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rk-shop-freeze p { margin: 2px 0 0; }
+.rk-shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.rk-shop-item { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border-radius: var(--r-m); border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; text-align: center; }
+.rk-shop-item.own { border-color: var(--accent); }
+.rk-shop-item.locked .rk-av { filter: grayscale(.85) brightness(.8); }
+.rk-shop-item.locked span.small { font-size: 11px; line-height: 1.2; color: var(--muted); }
+.rk-av.glow svg { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }

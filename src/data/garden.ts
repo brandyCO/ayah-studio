@@ -11,7 +11,7 @@
 //
 // Kept on this device (localStorage `garden`) and, when signed in, synced as one document merged per
 // tree / decoration / purchase (the newest change wins; purchases are never undone).
-import { stats } from './journey';
+import { shopSpent, stats } from './journey';
 import type { Mushaf } from './mushaf';
 
 export type ChunkSize = 1 | 2 | 3 | 'half' | 'page';
@@ -136,8 +136,8 @@ export const decos = (juz: number): Readonly<Deco>[] => Object.values(load().dec
 export const unplacedDecos = (): Readonly<Deco>[] => Object.values(load().decos).filter((d) => !d.gone && d.x < 0);
 export const ownsVariety = (s: number, v: number) => v === 0 || load().owned[`v:${s}:${v}`] !== undefined;
 export const spent = () => Object.values(load().owned).reduce((a, b) => a + b, 0);
-/** Light to spend: everything earned (all devices) minus what was spent here. */
-export const wallet = () => Math.max(0, stats('all').light - spent());
+/** Light to spend: everything earned (all devices) minus what was spent here and in the Ranks shop. */
+export const wallet = () => Math.max(0, stats('all').light - spent() - shopSpent());
 export const lastJuz = () => load().juz ?? 30;
 export function setLastJuz(j: number) { load().juz = j; save(true); }
 
