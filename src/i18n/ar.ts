@@ -1099,6 +1099,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'cel.big': 'إنجاز',
   'cel.badge': 'وسام جديد',
   'cel.ok': 'الحمد لله',
+  'cel.tapOpen': 'انقر على الصندوق لفتحه',
+  'cel.freeze': 'تجميد للسلسلة',
   'chest.locked': 'صندوق فيه {n} نور، يُفتح عند إتمام هذا الهدف',
   'chest.open': 'افتح صندوقك: {n} نور',
   'chest.opened': 'فُتح الصندوق: {n} نور',
