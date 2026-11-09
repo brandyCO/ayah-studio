@@ -1505,6 +1505,12 @@ duas/reflections section in Me.
       colour (`goal k-{kind}`, `src/ui/me.css`). Create sheet: coral header + colour tiles (`src/ui/create.css`, loaded with
       the sheet). Learn: sunny sky (deep blue at night), chunky white / green buttons. Read's drop-down bar is teal. The
       mushaf page, the Arabic text and reels are untouched; theme colours stay for brand moments
+      Second pass (owner pick 2026-11-09, "all three"): **Noor speaks** (`src/ui/noor.ts` + `noor.css`, lazy): a small light
+      and one line, from what is true now, never guilt — Me under the streak (pages left to light today / lit), the Read bar
+      (page reading time / pages done), the Create sheet (reel goal / share an ayah), Learn above Today (thirsty trees /
+      plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
+      chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
+      with a ring and the streak count (→ Me)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
