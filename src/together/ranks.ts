@@ -5,7 +5,7 @@
 // allows, and works out the score. Signed in with Google only; nothing is sent signed out.
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
-import { addDays, allDays } from '../data/journey';
+import { addDays, allDays, claimGoal } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { shareableLink } from '../native';
 
@@ -150,7 +150,7 @@ export async function claimPrize(p: Prize): Promise<boolean> {
   const r = await rpc<{ light: number; freeze: boolean } | null>('rank_claim_prize', { wk: p.week });
   dropCache();
   if (!r) return false;
-  const { claimGoal, keepFreeze } = await import('../data/journey');
+  const { keepFreeze } = await import('../data/shop');
   claimGoal(`rk:${p.week}`, r.light);
   if (r.freeze) keepFreeze(`prize:${p.week}`);
   return true;

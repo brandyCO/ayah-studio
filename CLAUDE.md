@@ -1465,9 +1465,10 @@ duas/reflections section in Me.
       pgTAP 46 checks): when a player's next week starts, last week's top 3 of a league of 3+ (with points) get a prize row
       (`rank_prizes`): #1 300 Light + a streak freeze, #2 150, #3 100, +50 for moving up; shown as a chest on Ranks, claimed
       once (`rank_claim_prize` → `claimGoal('rk:{week}')`, `keepFreeze()`), then kept on the **trophy shelf**. **Shop**
-      (`src/data/shop.ts`, Ranks → Shop): streak freezes kept for later (250 Light, ≤ 3; `journey` `bank` / `bankDays`, used
-      by `settle()` after the weekly and 30-day freezes), avatars 24–31 (150) and frames 1–3 (200–400) — Light spent is
-      `journey.spent` (synced, a purchase counts once) and the garden's `wallet()` subtracts it too. **Only for winners**
+      (`src/data/shop.ts`, Ranks → Shop): streak freezes kept for later (250 Light, ≤ 3; a flame that went out is relit with
+      one per missed day from Me, `useFreezes()` → `revive()`), avatars 24–31 (150) and frames 1–3 (200–400) — purchases,
+      kept (`fz:`) and used (`fu:`) freezes are `s:…` entries in the garden's `owned` map (synced, merged, a purchase counts
+      once; `wallet()` subtracts them), so first load does not grow. **Only for winners**
       (server-checked in `rank_set_look`): avatars 32–35 + frame 4 (Sun tier reached, `best_tier`), laurel frames 5 / 6 / 7
       (a week at #1 / top 2 / top 3), champion avatars 36–39 (1 / 3 / 5 / 10 weeks won at #1). Art in `src/ui/rankAvatars.ts`
       (`avatar(i, tier, size, frame)`, `trophy(place)`). Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`)

@@ -2,8 +2,8 @@
 // Ranks prizes buys streak freezes kept for later, avatars and frames. Some things can only be won:
 // the Sun tier's avatars and frame, the laurel frames of a week's top 3, and the champion avatars for
 // weeks won at #1 (the server checks those, rank_set_look). Never money, never a measure of reward.
-import { wallet } from './garden';
-import { bankedFreezes, keepFreeze, shopBuy, shopOwned } from './journey';
+import { shopAdd, shopHas, shopIds, wallet } from './garden';
+import { revive } from './journey';
 
 export const FREEZE_PRICE = 250;
 export const FREEZE_MAX = 3;
@@ -36,19 +36,28 @@ export function owns(kind: 'avatar' | 'frame', ref: number, x: Wins): boolean {
   if (kind === 'avatar' ? ref < 24 : ref === 0) return true;
   const it = ITEMS.find((i) => i.kind === kind && i.ref === ref);
   if (!it) return false;
-  return it.win ? won(it.win, x) : shopOwned(it.id);
+  return it.win ? won(it.win, x) : shopHas(it.id);
 }
 /** Light left to spend: all earned (every device) minus the garden's and the shop's purchases. */
 export const lightLeft = wallet;
 export function buy(it: Item): boolean {
-  if (!it.price || it.win || shopOwned(it.id) || lightLeft() < it.price) return false;
-  shopBuy(it.id, it.price);
-  return true;
+  if (!it.price || it.win || shopHas(it.id) || lightLeft() < it.price) return false;
+  return shopAdd(it.id, it.price);
 }
+
+// Streak freezes kept for later: `fz:…` (bought or won), `fu:…` (one used). A kept freeze covers one
+// missed day of a flame that went out (Me → the lost flame), on top of the weekly and 30-day freezes.
+export const bankedFreezes = () => Math.max(0, shopIds('fz:').length - shopIds('fu:').length);
 export function buyFreeze(): boolean {
   if (bankedFreezes() >= FREEZE_MAX || lightLeft() < FREEZE_PRICE) return false;
-  const id = `freeze:${Date.now().toString(36)}`;
-  shopBuy(id, FREEZE_PRICE);
-  keepFreeze(id);
+  return shopAdd(`fz:${Date.now().toString(36)}`, FREEZE_PRICE);
+}
+/** A freeze won in Ranks (once per prize). */
+export const keepFreeze = (id: string) => shopAdd(`fz:${id}`, 0);
+/** Relights a flame that went out with kept freezes, one per missed day. */
+export function useFreezes(days: string[]): boolean {
+  if (!days.length || bankedFreezes() < days.length) return false;
+  for (const d of days) shopAdd(`fu:${d}`, 0);
+  revive(days);
   return true;
 }

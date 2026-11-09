@@ -11,8 +11,7 @@ import {
   rankLeague, rankMoments, myPrizes, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   type Board, type Metric, type Row, type Status,
 } from '../together/ranks';
-import { FREEZE_MAX, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, won, type Item, type Win, type Wins } from '../data/shop';
-import { bankedFreezes } from '../data/journey';
+import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { chest } from './chest';
 import { openAccount } from './account';
