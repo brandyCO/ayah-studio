@@ -57,7 +57,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all'): HTMLElement {
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
 
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
-    items.push(h('li', { class: `rk-row${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
+    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34),
       h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : ''),
