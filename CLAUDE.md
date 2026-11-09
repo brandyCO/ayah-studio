@@ -1484,7 +1484,11 @@ duas/reflections section in Me.
       only after 12 weeks (`rank_prize_item()` / `weekPrize()`): #1 a jewel avatar (40–51), #2 and #3 a rare frame (8–13:
       pearls, crescent crown, mosaic, aurora, lanterns, rosette); `rank_prizes.item`, worn only by their winners
       (`rank_set_look`). Ranks shows "This week's prizes"; Shop → Weekly prizes lists all 18 with when each comes round.
-      Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
+      **Layout** (owner "go" 2026-11-09, Duolingo principles: one job per screen, the list is the hero):
+      top bar = a shaking chest while a prize waits (pop-up once a session, `rkPop:{week}`), ✦ Light → Shop, your avatar →
+      "You" sheet (look, shop, trophies, how points work); League tab = a hero in the tier's colour (the five tier emblems,
+      yours lit, slow light rays) + one strip (quest bar + this week's prizes → sheet) + the list; your row is sticky with
+      "n points to pass {rival}". Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
       **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
       `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
       eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then
