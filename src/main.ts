@@ -108,7 +108,10 @@ async function route() {
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
-    } else c = await showSurahList(screen, view === 'search');
+    } else {
+      await import('./ui/screens.css').catch(() => {});
+      c = await showSurahList(screen, view === 'search');
+    }
     dropSkel();
     if (id === routeId) cleanup = c;
     else c();

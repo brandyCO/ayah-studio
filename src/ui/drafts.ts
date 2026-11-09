@@ -1,4 +1,5 @@
 // Drafts list: reels saved while being edited, newest first. Tap to keep editing; ✕ deletes.
+import './screens.css';
 import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
 import { loadMeta, reference } from '../data/quran';
 import { reciterById } from '../data/reciters';

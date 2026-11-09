@@ -37,3 +37,5 @@
 .goal-day { --gc: #f59f00; border-radius: 18px; background: color-mix(in srgb, var(--gc) 13%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 30%, var(--card)); }
 .goal-day .goal-bar > i { background: var(--gc); }
 .goal-day .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }
+.me-card .menu-item { border-radius: 14px; font-weight: 600; }
+.me-card .menu-item:hover { background: color-mix(in srgb, #f59f00 10%, var(--card)); }
