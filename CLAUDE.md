@@ -1471,7 +1471,12 @@ duas/reflections section in Me.
       once; `wallet()` subtracts them), so first load does not grow. **Only for winners**
       (server-checked in `rank_set_look`): avatars 32–35 + frame 4 (Sun tier reached, `best_tier`), laurel frames 5 / 6 / 7
       (a week at #1 / top 2 / top 3), champion avatars 36–39 (1 / 3 / 5 / 10 weeks won at #1). Art in `src/ui/rankAvatars.ts`
-      (`avatar(i, tier, size, frame)`, `trophy(place)`). Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`)
+      (`avatar(i, tier, size, frame)`, `trophy(place)`). **Weekly prize items** (owner request 2026-11-09, "more prizes … items"; migration
+      `20261110400000_rank_prize_items.sql`, pgTAP 50): each week has its own prizes, the same in every league and back
+      only after 12 weeks (`rank_prize_item()` / `weekPrize()`): #1 a jewel avatar (40–51), #2 and #3 a rare frame (8–13:
+      pearls, crescent crown, mosaic, aurora, lanterns, rosette); `rank_prizes.item`, worn only by their winners
+      (`rank_set_look`). Ranks shows "This week's prizes"; Shop → Weekly prizes lists all 18 with when each comes round.
+      Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
       **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
       `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
       eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then

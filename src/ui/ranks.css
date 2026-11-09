@@ -179,5 +179,17 @@
 .rk-shop-item { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border-radius: var(--r-m); border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; text-align: center; }
 .rk-shop-item.own { border-color: var(--accent); }
 .rk-shop-item.locked .rk-av { filter: grayscale(.85) brightness(.8); }
+/* Weekly prizes keep their colours: they are meant to be wanted. This week's are lit. */
+.rk-shop-item.locked.wk .rk-av { filter: none; opacity: .9; }
+.rk-shop-item.locked.now { border-color: color-mix(in srgb, #f2c14e 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, #f2c14e 30%, transparent); }
 .rk-shop-item.locked span.small { font-size: 11px; line-height: 1.2; color: var(--muted); }
 .rk-av.glow svg { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
+
+/* This week's prizes */
+.rk-weekprize { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer;
+  background: linear-gradient(135deg, color-mix(in srgb, #f2c14e 12%, var(--card, transparent)), var(--card, transparent)); border: 1px solid color-mix(in srgb, #f2c14e 35%, transparent); }
+.rk-wp-txt { flex: 1; min-width: 0; }
+.rk-wp-txt p { margin: 4px 0 0; }
+.rk-wp-items { display: flex; gap: 10px; }
+.rk-wp-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rk-prize-item { display: flex; }

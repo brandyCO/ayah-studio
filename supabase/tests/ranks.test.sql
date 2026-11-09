@@ -1,12 +1,12 @@
 -- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
--- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql): Google accounts only; nobody reads the tables;
+-- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(46);
+select plan(50);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -110,7 +110,8 @@ insert into rank_weeks (user_id, week, score, league) values
   ('eeeeeeee-0000-0000-0000-000000000005', rank_week(current_date) - 7, 900, '11111111-0000-0000-0000-000000000001'),
   ('ffffffff-0000-0000-0000-000000000006', rank_week(current_date) - 7, 500, '11111111-0000-0000-0000-000000000001'),
   ('99999999-0000-0000-0000-000000000007', rank_week(current_date) - 7, 300, '11111111-0000-0000-0000-000000000001');
-insert into ids values ('lastwk', (rank_week(current_date) - 7)::text);
+insert into ids values ('lastwk', (rank_week(current_date) - 7)::text),
+  ('item', rank_prize_item(rank_week(current_date) - 7, 1)), ('other', rank_prize_item(rank_week(current_date), 1));
 select pg_temp.act_as('eeeeeeee-0000-0000-0000-000000000005');
 select is((rank_status(current_date) ->> 'tier')::int, 1, 'the winner moves up a tier');
 select is((rank_my_prizes() -> 0 ->> 'light')::int, 350, '#1: 300 Light, and 50 for moving up');
@@ -120,6 +121,10 @@ select is(rank_claim_prize((select v::date from ids where k = 'lastwk')), null, 
 select lives_ok($$ select rank_set_look(36, false, 5) $$, 'a champion avatar and the gold laurel, won');
 select throws_ok($$ select rank_set_look(37, false, 0) $$, '42501', null, 'the next champion avatar needs 3 wins');
 select throws_ok($$ select rank_set_look(0, false, 4) $$, '42501', null, 'the sun frame needs the Sun tier');
+select is(rank_my_prizes() -> 0 ->> 'item', (select v from ids where k = 'item'), 'the week''s avatar comes with #1');
+select lives_ok($$ select rank_set_look(substr((select v from ids where k = 'item'), 4)::int, false, 0) $$, 'and can be worn');
+select throws_ok($$ select rank_set_look(substr((select v from ids where k = 'other'), 4)::int, false, 0) $$, '42501', null, 'another week''s avatar cannot');
+select throws_ok($$ select rank_set_look(0, false, 8) $$, '42501', null, 'nor a frame won by #2 or #3');
 
 select * from finish();
 rollback;
