@@ -101,6 +101,10 @@ async function route() {
     } else if (view === 'learn') {
       if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
       else c = await (await import('./ui/garden')).showGarden(screen);
+    } else if (view === 'ranks') {
+      c = await (await import('./ui/ranks')).showRanks(screen);
+    } else if (view === 'rb' && a) {
+      c = await (await import('./ui/ranks')).showBoardInvite(screen, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -159,5 +163,7 @@ void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
 void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
+// Ranks: the day's checked totals go to the server when they change (signed in with Google only).
+void import('./together/ranks').then((m) => m.watchRanks());
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

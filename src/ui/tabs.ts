@@ -1,4 +1,5 @@
-// Bottom tab bar: Read · Learn · Create · Me. One tap to the four things people come for.
+// Bottom tab bar: Read · Learn · Create · Ranks · Me (owner request 2026-11-09). Create is the raised
+// round button in the middle: the studio is the heart of the app.
 // On the mushaf the bar stays hidden until the page is tapped (the page stays clean); on the
 // surah list, drafts, Learn and Me it is always shown. Listening lives in Read (owner decision
 // 2026-11-02): ▶ in the mushaf's top bar or on a selected ayah; while listening elsewhere, Read goes
@@ -17,7 +18,7 @@ import { followAlong, playerActive } from './player';
 
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
-export type Tab = 'read' | 'learn' | 'create' | 'me';
+export type Tab = 'read' | 'learn' | 'create' | 'ranks' | 'me';
 export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}`;
 export interface TabHandlers { read?: () => void }
 
@@ -54,7 +55,11 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
     // Listening from another screen: Read goes back to the page being recited.
     btn('read', 'book', t('tab.read'), on.read ?? (() => (playerActive() ? followAlong() : goMushaf()))),
     btn('learn', 'sprout', t('tab.learn'), () => { if (location.hash !== '#/learn') location.hash = '#/learn'; }),
-    btn('create', 'create', t('tab.create'), () => void openCreate()),
+    h('button', {
+      class: `tab-btn create tab-fab${active === 'create' ? ' on' : ''}`, 'aria-current': active === 'create' ? 'page' : false,
+      onclick: () => { haptic(12); void openCreate(); },
+    }, h('span', { class: 'fab-disc' }, icon('plus', 28)), h('span', {}, t('tab.create'))),
+    btn('ranks', 'trophy', t('tab.ranks'), () => { if (location.hash !== '#/ranks') location.hash = '#/ranks'; }),
     btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }
 

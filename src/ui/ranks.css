@@ -1,0 +1,35 @@
+/* Ranks (#/ranks). */
+.screen-ranks, .screen-rb { max-width: 640px; margin: 0 auto; padding-inline: 16px; }
+.rk-me { display: grid; gap: 10px; }
+.rk-me-top { display: flex; align-items: center; gap: 12px; }
+.rk-medal { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; background: var(--sel); flex: none; }
+.rk-me-txt { flex: 1; min-width: 0; display: grid; gap: 2px; justify-items: start; }
+.rk-me-name { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; font-size: var(--fs-xl); color: inherit; cursor: pointer; }
+.rk-me-score { display: grid; justify-items: end; }
+.rk-me-score b { font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.rk-me-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: var(--fs-s); }
+.rk-tier { font-size: var(--fs-xs); font-weight: 600; color: var(--accent); }
+.rk-tabs { margin: 14px 0 10px; }
+.rk-sub { margin-bottom: 8px; align-items: center; }
+.rk-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; }
+.rk-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line); }
+.rk-row.me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.rk-place { width: 26px; text-align: center; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rk-place.p1 { color: #d4a017; } .rk-place.p2 { color: #9aa4ad; } .rk-place.p3 { color: #c07a3a; }
+.rk-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--sel); flex: none; }
+.rk-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.rk-you { margin-inline-start: 6px; padding: 1px 6px; border-radius: 99px; font-size: var(--fs-2xs); background: var(--accent); color: #fff; }
+.rk-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rk-row.up .rk-score { color: var(--accent); }
+.rk-zone { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 4px 10px; color: var(--muted); }
+.rk-zone.up { color: var(--accent); }
+.rk-zone.down { color: #c0563a; }
+.rk-switch { margin-bottom: 10px; }
+.rk-mine { font-weight: 600; text-align: center; }
+.rk-board-acts { margin: 12px 0; }
+.rk-join { display: flex; gap: 8px; align-items: center; }
+.rk-join .search { flex: 1; text-transform: lowercase; }
+.rk-signin, .rk-invite { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 28px 18px; margin-top: 12px; }
+.rk-trophy { font-size: 52px; }
+.rk-how ul { padding-inline-start: 20px; display: grid; gap: 6px; }
+.rk-how-btn { justify-self: start; }

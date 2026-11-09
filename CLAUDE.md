@@ -1438,6 +1438,17 @@ duas/reflections section in Me.
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
       every weekly goal (`WEEK_ALL_LIGHT` 50). Me → Today's goals shows "Resets in 5 h 12 m" (midnight) and a This week
       block "Resets in 6 d 5 h" (Monday 00:00, `resetsAt()`), kept current by the screen's 30 s tick; Edit has the weekly rows
+- [x] M12 Ranks + raised Create (owner request 2026-11-09): tab bar **Read · Learn · Create · Ranks · Me**, Create a raised
+      round button in the middle (`.tab-fab`). `#/ranks` (`src/ui/ranks.ts`, lazy, own CSS `ranks.css` and strings
+      `src/i18n/ranks.ts`): Google accounts only. The app reports each day's totals of what it checks itself (pages
+      counted after their reading time, seconds of recitation played, surahs finished, reels exported; all devices
+      combined) through `rank_report()` (`src/together/ranks.ts`, at most every 90 s, today + yesterday); the server
+      caps them (60 pages, 3 h, 10 surahs, 3 reels a day), never lets them go down or grow faster than time allows,
+      and scores them (page 10, minute 2, surah 30, reel 15, active day 20). Dhikr and Light are never ranked.
+      **League**: 15 a league, tiers Lantern → Star → Moon → Dawn → Sun, top 3 up and bottom 3 down (leagues of 8+),
+      settled lazily when a player's new week starts (Monday). **Global**: this week / all time, top 100 + your place.
+      **My boards**: ≤ 50 people, invite link `#/rb/{code}` or code, ≤ 10 owned / 20 joined. Editable name (≤ 24).
+      Migration `20261110000000_ranks.sql`, pgTAP `ranks.test.sql` (24 checks)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
