@@ -520,12 +520,40 @@ function glowAt(ctx: CanvasRenderingContext2D, x: number, y: number, rad: number
 const WARM = 'rgba(255, 210, 130, A)';
 
 /** Height of a decoration in tile widths (hit tests). */
-export const decoHeight = (k: DecoKind) => ({ lamp: 0.9, flowers: 0.25, stones: 0.1, bench: 0.35, pond: 0.12, fountain: 0.7, arch: 1.25, pavilion: 1.3, moongate: 1.15, starwell: 1.2 })[k];
+export const decoHeight = (k: DecoKind) => ({ lamp: 0.9, flowers: 0.25, stones: 0.1, bench: 0.35, pond: 0.12, fountain: 0.7, arch: 1.25, pavilion: 1.3, moongate: 1.15, starwell: 1.2,
+  goldfountain: 0.95, winnerarch: 1.25, silvergate: 1.15, silverlamps: 0.9, bronzebench: 0.5, bronzelantern: 0.95 })[k];
+/** Ranks prizes: a won decoration in its metal (gold #1, silver #2, bronze #3), light / mid / shade. */
+const METAL = {
+  gold: ['#ffe7a0', '#e0b04a', '#a8771f'], silver: ['#f4f6f8', '#c3c9d0', '#8d949c'], bronze: ['#f0c39a', '#c8834f', '#8d5530'],
+};
+/** An eight-pointed star (two turned squares), centred at (x, y). */
+function star8(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string, turn = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(turn); ctx.fillStyle = fill;
+  for (const rot of [0, Math.PI / 4]) { ctx.save(); ctx.rotate(rot); ctx.fillRect(-r, -r, r * 2, r * 2); ctx.restore(); }
+  ctx.restore();
+}
+/** The shimmer every prize carries: a soft glow and a few slow glints. */
+function prizeShine(ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number, t: number, col: string, h: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  glowAt(ctx, cx, cy - u * h * 0.5, u * 0.55, col, 0.18 + 0.06 * Math.sin(t * 1.1));
+  for (let i = 0; i < 3; i++) {
+    const ph = (t * 0.35 + i / 3) % 1, a = Math.sin(ph * Math.PI);
+    ctx.globalAlpha = a * 0.9;
+    star8(ctx, cx + Math.cos(i * 2.1) * u * 0.32, cy - u * h * (0.3 + 0.5 * ((i * 0.37) % 1)), u * 0.018 * (0.6 + a), '#fffbe6', t);
+  }
+  ctx.restore();
+}
 
-export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number, cy: number, u: number, t: number, night: boolean, lifted = false) {
+export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number, cy: number, u: number, t: number, night: boolean, lifted = false, metal?: string[]) {
   ctx.save();
   if (lifted) ctx.translate(0, -u * 0.25);
-  const stone = night ? ['#b9b4aa', '#8e8a81', '#75716a'] : ['#f1ece2', '#d9d2c4', '#bfb7a8'];
+  const dim = (c: string) => {
+    if (!night) return c;
+    const n = parseInt(c.slice(1), 16), f = 0.72;
+    return `rgb(${Math.round((n >> 16) * f)}, ${Math.round(((n >> 8) & 255) * f)}, ${Math.round((n & 255) * f)})`;
+  };
+  const stone = metal ? metal.map(dim) : night ? ['#b9b4aa', '#8e8a81', '#75716a'] : ['#f1ece2', '#d9d2c4', '#bfb7a8'];
   const shadow = () => { ctx.fillStyle = night ? 'rgba(0,0,0,.28)' : 'rgba(30,50,20,.18)'; ctx.beginPath(); ctx.ellipse(cx + u * 0.04, cy, u * 0.3, u * 0.14, 0, 0, Math.PI * 2); ctx.fill(); };
   const r = rng(k.length * 97 + 5);
   switch (k) {
@@ -552,12 +580,12 @@ export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number,
       break;
     case 'lamp': {
       shadow();
-      ctx.fillStyle = night ? '#3a3a3a' : '#4a4038';
+      ctx.fillStyle = metal ? stone[1] : night ? '#3a3a3a' : '#4a4038';
       ctx.fillRect(cx - u * 0.018, cy - u * 0.7, u * 0.036, u * 0.7);
       box(ctx, cx, cy, u, 0.07, 0.07, u * 0.04, stone[0], stone[1], stone[2]);
       const ly = cy - u * 0.78;
       glowAt(ctx, cx, ly, u * (night ? 0.7 : 0.35), WARM, night ? 0.55 : 0.3);
-      ctx.fillStyle = '#4a4038';
+      ctx.fillStyle = metal ? stone[2] : '#4a4038';
       ctx.beginPath(); ctx.moveTo(cx - u * 0.08, ly - u * 0.08); ctx.lineTo(cx, ly - u * 0.16); ctx.lineTo(cx + u * 0.08, ly - u * 0.08); ctx.fill();
       ctx.fillStyle = `rgba(255, 220, 150, ${0.85 + 0.15 * Math.sin(t * 3)})`;
       ctx.fillRect(cx - u * 0.055, ly - u * 0.08, u * 0.11, u * 0.14);
@@ -567,7 +595,7 @@ export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number,
     }
     case 'bench': {
       shadow();
-      const wood = night ? ['#7a5a40', '#5a4230', '#4a3626'] : ['#c49466', '#a07650', '#87613f'];
+      const wood = metal ? stone : night ? ['#7a5a40', '#5a4230', '#4a3626'] : ['#c49466', '#a07650', '#87613f'];
       box(ctx, cx - u * 0.16, cy - u * 0.04, u, 0.03, 0.1, u * 0.14, stone[1], stone[1], stone[2]);
       box(ctx, cx + u * 0.16, cy + u * 0.04, u, 0.03, 0.1, u * 0.14, stone[1], stone[1], stone[2]);
       box(ctx, cx, cy, u, 0.42, 0.13, u * 0.035, wood[0], wood[1], wood[2], u * 0.14);
@@ -670,6 +698,63 @@ export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number,
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath(); ctx.arc(cx + u * 0.09, my - u * 0.15, u * 0.075, 0, Math.PI * 2); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
+      break;
+    }
+    case 'goldfountain': { // the fountain in gold, a trophy cup on top with water spilling from it
+      const m = METAL.gold, sm = m.map(dim);
+      prizeShine(ctx, cx, cy, u, t, WARM, 0.9);
+      drawDeco(ctx, 'fountain', cx, cy, u, t, night, false, m);
+      const ty = cy - u * 0.5;
+      ctx.fillStyle = sm[1]; ctx.fillRect(cx - u * 0.02, ty - u * 0.1, u * 0.04, u * 0.1);
+      ctx.fillStyle = sm[2]; ctx.beginPath(); ctx.ellipse(cx, ty, u * 0.07, u * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+      const cupY = ty - u * 0.1;
+      const g = ctx.createLinearGradient(cx - u * 0.11, 0, cx + u * 0.11, 0);
+      g.addColorStop(0, sm[2]); g.addColorStop(0.35, sm[0]); g.addColorStop(1, sm[1]);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(cx - u * 0.11, cupY - u * 0.17); ctx.quadraticCurveTo(cx - u * 0.1, cupY, cx, cupY); ctx.quadraticCurveTo(cx + u * 0.1, cupY, cx + u * 0.11, cupY - u * 0.17); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = sm[1]; ctx.lineWidth = Math.max(1, u * 0.018);
+      for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + side * u * 0.12, cupY - u * 0.11, u * 0.04, u * 0.045, 0, side < 0 ? Math.PI * 0.5 : -Math.PI * 0.5, side < 0 ? Math.PI * 1.5 : Math.PI * 0.5); ctx.stroke(); }
+      ctx.fillStyle = night ? '#3d8aa0' : '#8fd3e8'; ctx.beginPath(); ctx.ellipse(cx, cupY - u * 0.17, u * 0.105, u * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+      star8(ctx, cx, cupY - u * 0.085, u * 0.03, '#fff3c4', Math.PI / 8);
+      break;
+    }
+    case 'winnerarch': { // the arch in gold, three small lanterns hanging under it
+      const m = METAL.gold;
+      prizeShine(ctx, cx, cy, u, t, WARM, 1.1);
+      drawDeco(ctx, 'arch', cx, cy, u, t, night, false, m);
+      for (const [dx, dy] of [[-0.12, 0.16], [0, 0.08], [0.12, 0.16]] as const) {
+        const x = cx + dx * u, y = cy - u * 1.05 + dy * u + Math.sin(t * 1.4 + dx * 9) * u * 0.008;
+        ctx.strokeStyle = dim(m[2]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - u * 0.1); ctx.lineTo(x, y - u * 0.04); ctx.stroke();
+        glowAt(ctx, x, y, u * (night ? 0.18 : 0.1), WARM, night ? 0.6 : 0.35);
+        ctx.fillStyle = `rgba(255, 214, 140, ${0.85 + 0.15 * Math.sin(t * 2.6 + dx * 7)})`;
+        ctx.beginPath(); ctx.ellipse(x, y, u * 0.028, u * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = dim(m[1]); ctx.fillRect(x - u * 0.02, y - u * 0.05, u * 0.04, u * 0.012);
+      }
+      break;
+    }
+    case 'silvergate': { // the moon gate in silver
+      prizeShine(ctx, cx, cy, u, t, 'rgba(210, 228, 255, A)', 1);
+      drawDeco(ctx, 'moongate', cx, cy, u, t, night, false, METAL.silver);
+      star8(ctx, cx - u * 0.12, cy - u * 0.68, u * 0.025, '#f4f8ff', t * 0.2);
+      break;
+    }
+    case 'silverlamps': { // two silver lamps side by side
+      prizeShine(ctx, cx, cy, u, t, 'rgba(210, 228, 255, A)', 0.8);
+      drawDeco(ctx, 'lamp', cx - u * 0.13, cy - u * 0.065, u, t, night, false, METAL.silver);
+      drawDeco(ctx, 'lamp', cx + u * 0.13, cy + u * 0.065, u, t + 0.7, night, false, METAL.silver);
+      break;
+    }
+    case 'bronzebench': { // the bench in bronze, a star on its back
+      prizeShine(ctx, cx, cy, u, t, WARM, 0.4);
+      drawDeco(ctx, 'bench', cx, cy, u, t, night, false, METAL.bronze);
+      star8(ctx, cx - u * 0.06, cy - u * 0.36, u * 0.045, dim(METAL.bronze[0]), Math.PI / 8);
+      star8(ctx, cx - u * 0.06, cy - u * 0.36, u * 0.02, '#fff0dc', Math.PI / 8);
+      break;
+    }
+    case 'bronzelantern': { // the garden lamp in bronze, a turning star on top
+      prizeShine(ctx, cx, cy, u, t, WARM, 0.85);
+      drawDeco(ctx, 'lamp', cx, cy, u, t, night, false, METAL.bronze);
+      star8(ctx, cx, cy - u * 0.97, u * 0.035, dim(METAL.bronze[0]), t * 0.4);
       break;
     }
     case 'starwell': {

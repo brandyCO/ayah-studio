@@ -1543,6 +1543,12 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       lifts it out of the store straight onto a square (`dragHeld()`, window listeners; the tray uses the same), the
       seed shown large above the finger. Tapping a small tree or seed on the grid: bigger touch area + the square
       itself, 12 px before a tap becomes a drag
+- [x] Ranks prize decorations (owner request 2026-11-09, "rare things won only by being top one, two or three, cannot
+      be bought"): 6 decorations with `rarity: 'prize'`, `place` 1–3, never in the store (`buyDeco` refuses them):
+      #1 golden trophy fountain / winner's lantern arch, #2 silver crescent gate / silver twin lamps, #3 bronze star
+      bench / bronze star lantern (the garden's own pieces in metal + `prizeShine()`, no figures). `grantPrizeDeco(week,
+      place)` in `src/data/garden.ts` gives one per week (owned `s:prize:{week}`, deco id `prize-{week}-{kind}`, so two
+      devices never double it), the place's piece not owned yet first; it waits unplaced like a bought one
 - [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

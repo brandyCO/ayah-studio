@@ -238,3 +238,4 @@
 .learn-shelf-head { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 0; }
 .learn-shelf { display: block; width: 100%; }
 .learn-store-body { display: block; }
+.learn-rarity.r-prize { color: #c08a12; }

@@ -43,9 +43,10 @@ export interface Tree {
 
 export interface Deco { id: string; k: DecoKind; juz: number; x: number; y: number; at: number; gone?: 1 }
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type DecoKind = 'lamp' | 'flowers' | 'stones' | 'bench' | 'pond' | 'fountain' | 'arch' | 'pavilion' | 'moongate' | 'starwell';
-export const DECOS: { k: DecoKind; rarity: Rarity; price: number }[] = [
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'prize';
+export type DecoKind = 'lamp' | 'flowers' | 'stones' | 'bench' | 'pond' | 'fountain' | 'arch' | 'pavilion' | 'moongate' | 'starwell'
+  | 'goldfountain' | 'winnerarch' | 'silvergate' | 'silverlamps' | 'bronzebench' | 'bronzelantern';
+export const DECOS: { k: DecoKind; rarity: Rarity; price: number; place?: 1 | 2 | 3 }[] = [
   { k: 'flowers', rarity: 'common', price: 30 },
   { k: 'stones', rarity: 'common', price: 30 },
   { k: 'lamp', rarity: 'common', price: 30 },
@@ -56,6 +57,13 @@ export const DECOS: { k: DecoKind; rarity: Rarity; price: number }[] = [
   { k: 'pavilion', rarity: 'epic', price: 300 },
   { k: 'moongate', rarity: 'legendary', price: 800 },
   { k: 'starwell', rarity: 'legendary', price: 800 },
+  // Ranks prizes (owner decision 2026-11-09): won only by finishing a week #1, #2 or #3, never sold.
+  { k: 'goldfountain', rarity: 'prize', price: 0, place: 1 },
+  { k: 'winnerarch', rarity: 'prize', price: 0, place: 1 },
+  { k: 'silvergate', rarity: 'prize', price: 0, place: 2 },
+  { k: 'silverlamps', rarity: 'prize', price: 0, place: 2 },
+  { k: 'bronzebench', rarity: 'prize', price: 0, place: 3 },
+  { k: 'bronzelantern', rarity: 'prize', price: 0, place: 3 },
 ];
 /** Tree varieties: 0 free; the others bought per surah. */
 export const VARIETIES: { v: number; rarity: Rarity; price: number }[] = [
@@ -221,10 +229,27 @@ export function buyVariety(s: number, v: number): boolean {
 /** Buys a decoration; it waits unplaced until dragged into a garden. */
 export function buyDeco(k: DecoKind): Deco | null {
   const def = DECOS.find((d) => d.k === k);
-  if (!def || wallet() < def.price) return null;
+  if (!def || def.place || wallet() < def.price) return null;
   const id = `${k}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const st = load();
   st.owned[`d:${id}`] = def.price;
+  const d: Deco = { id, k, juz: 0, x: -1, y: -1, at: Date.now() };
+  st.decos[id] = d;
+  save();
+  return d;
+}
+/** Gives a Ranks prize decoration for finishing week `week` at `place` (1–3), once per week on every device:
+ *  the place's prize not owned yet (else its first). It waits unplaced, like a bought one. */
+export function grantPrizeDeco(week: string, place: number): Deco | null {
+  const kinds = DECOS.filter((d) => d.place === place).map((d) => d.k);
+  if (!kinds.length || !/^[\w.-]+$/.test(week)) return null;
+  const st = load();
+  const key = `s:prize:${week}`;
+  if (st.owned[key] !== undefined) return null;
+  const have = new Set(Object.values(st.decos).map((d) => d.k));
+  const k = kinds.find((x) => !have.has(x)) ?? kinds[0];
+  const id = `prize-${week}-${k}`;
+  st.owned[key] = 0;
   const d: Deco = { id, k, juz: 0, x: -1, y: -1, at: Date.now() };
   st.decos[id] = d;
   save();
