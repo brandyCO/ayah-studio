@@ -2406,27 +2406,59 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return h('p', { class: 'trust-line' }, icon('check', 16),
       ui(wordTimed() ? 'ed.trust-timed' : 'ed.trust-ayah', { r: reciterCredit(r) }));
   }
-  /** A caption ready to paste: dedication, reference, the whole-ayah translation (only when it fits whole;
-   *  never cut, rule 1), reciter, background credits and a few calm hashtags. Editable before copying. */
-  function captionText(): string {
+  type CaptionLang = 'ar' | 'en' | 'both';
+  /** The caption's languages and whether it carries the ayat: remembered on this device. */
+  const captionLang = (): CaptionLang => {
+    try { const v = localStorage.getItem('captionLang'); if (v === 'ar' || v === 'en' || v === 'both') return v; } catch { /* private window */ }
+    return 'both';
+  };
+  const captionAyat = (): boolean => { try { return localStorage.getItem('captionAyat') !== 'off'; } catch { return true; } };
+  const setPref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+  const CAP_EN = { part: (k: number, of: number) => `Part ${k} of ${of}` };
+  /** A caption ready to paste, in Arabic, English or both (the caption's own language, whatever the app's
+   *  language): dedication, reference, the ayat themselves (the Arabic exactly as in the reel and/or the
+   *  whole-ayah translation; each only when it fits whole: never cut, rule 1), reciter, background
+   *  credits, a few calm hashtags and the link. Editable before copying. */
+  function captionText(lang: CaptionLang = captionLang(), withAyat = captionAyat()): string {
     const r = reciterById(project.reciterId);
-    const ref = reference(s, from, to);
+    const range = `${n}:${from}${to > from ? `–${to}` : ''}`;
+    const ar = lang !== 'en', en = lang !== 'ar';
+    const part = project.series ? { k: project.series.part, n: project.series.of } : null;
     const lines: string[] = [];
     if (project.dedication) lines.push(project.dedication, '');
-    lines.push(project.series ? `${ref} · ${ui('ed.series-part', { k: project.series.part, n: project.series.of })}` : ref);
-    const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
-    const by = translationInfo(project.translation ?? currentTranslation()).translator;
-    if (tr.length <= 1400) lines.push('', tr, `— ${by}`);
-    lines.push('', ui('ed.cap-recited', { r: reciterCredit(r) }));
+    if (ar) lines.push(`${s.ar} · ${range}${part ? ` · الجزء ${part.k} من ${part.n}` : ''}`);
+    if (en) lines.push(`${s.en} · ${range}${part ? ` · ${CAP_EN.part(part.k, part.n)}` : ''}`);
+    if (withAyat) {
+      const arText = arabic.join(' ');
+      if (ar && arText.length <= 1400) lines.push('', arText);
+      const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
+      const by = translationInfo(project.translation ?? currentTranslation()).translator;
+      if (en && tr.length <= 1400) lines.push('', tr, `— ${by}`);
+    }
+    lines.push('');
+    if (ar) lines.push(`بتلاوة ${reciterCredit(r)}`);
+    if (en) lines.push(`Recited by ${reciterCredit(r)}`);
     const credits = new Map<string, Credit>();
     for (const id of project.scenes) {
       const b = backgroundById(id);
       if ((b.kind === 'image' || b.kind === 'video') && b.credit) credits.set(b.credit.url, b.credit);
     }
-    if (credits.size) lines.push(`${ui('ed.cap-background')}: ${[...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ')}`);
+    if (credits.size) {
+      const list = [...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ');
+      lines.push(`${ar && !en ? 'الخلفية' : 'Background'}: ${list}`);
+    }
     const tag = (x: string) => '#' + x.normalize('NFKD').replace(/[^A-Za-z0-9]/g, '');
-    lines.push('', ['#Quran', '#QuranRecitation', tag(s.en), tag(r.short ?? r.name)].filter((x) => x.length > 2).join(' '));
-    lines.push('', ui('ed.cap-make', { link: templateLink() }));
+    // A hashtag of the surah's name (the name only, not Quran text): marks dropped, spaces joined.
+    const arTag = (x: string) => '#' + x.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '').replace(/ٱ/g, 'ا').trim().replace(/\s+/g, '_');
+    const tags = [
+      ...(ar ? ['#القرآن_الكريم', '#تلاوة', arTag(s.ar)] : []),
+      ...(en ? ['#Quran', '#QuranRecitation', tag(s.en)] : []),
+      tag(r.short ?? r.name),
+    ].filter((x) => x.length > 2);
+    lines.push('', tags.join(' '), '');
+    const link = templateLink();
+    if (ar) lines.push(`اصنع هذا المقطع بنفسك في Ayah Studio: ${link}`);
+    else lines.push(`Make this reel yourself in Ayah Studio: ${link}`);
     return lines.join('\n');
   }
   /** A link that opens this reel (ayat, reciter, and the look when it is one of our styles or vibes)
@@ -2443,8 +2475,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const box = h('textarea', { class: 'caption-text', rows: '7', 'aria-label': ui('ed.caption') });
     captionEl = box as HTMLTextAreaElement;
     box.value = captionText();
+    const opts = h('div', { class: 'caption-opts' });
+    const paint = () => opts.replaceChildren(
+      h('div', { class: 'chips' }, ...(['ar', 'en', 'both'] as CaptionLang[]).map((v) =>
+        h('button', { class: `chip${captionLang() === v ? ' on' : ''}`, onclick: () => { setPref('captionLang', v); box.value = captionText(); paint(); } },
+          ui(`ed.cap-lang-${v}`)))),
+      h('div', { class: 'chips' },
+        h('button', { class: `chip${captionAyat() ? ' on' : ''}`, onclick: () => { setPref('captionAyat', captionAyat() ? 'off' : 'on'); box.value = captionText(); paint(); } },
+          ui('ed.cap-ayat'))));
+    paint();
     return h('div', { class: 'caption-box' },
       h('p', { class: 'small muted' }, ui('ed.caption-note')),
+      opts,
       box,
       h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(box.value).then(() => toast(ui('ed.caption-copied')), () => { box.select(); }) }, ui('ed.caption-copy')));
   }
@@ -2584,8 +2626,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
   }
 
-  /** Result page: the reel again as WhatsApp Status pieces — 720P, at most 30 s each (≈ 14 MB), cut in
-   *  the reciter's pauses (between ayat when possible, never mid-word) — then shared together. */
+  /** Result page: the reel again for WhatsApp Status at 720P — whole when it fits a Status (90 s), else
+   *  as few similar pieces as possible, cut in the reciter's pauses (between ayat when possible, never
+   *  mid-word) — then shared together. */
   function statusBlock(name: string): Node | string {
     if (!tl || !audio) return '';
     const parts = statusParts(tl);
@@ -2637,7 +2680,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     };
     return h('div', { class: 'status-box' },
       btn,
-      h('p', { class: 'muted small' }, ui('st.help', { s: STATUS_LIMIT })),
+      h('p', { class: 'muted small' }, ui(parts.length > 1 ? 'st.help' : 'st.helpOne', { s: STATUS_LIMIT })),
       links);
   }
 

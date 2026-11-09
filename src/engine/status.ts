@@ -1,8 +1,9 @@
-// WhatsApp Status parts: a reel cut into pieces of at most `limit` seconds, each cut in a pause —
-// between ayat when one falls in the window, else between two text groups, never mid-word.
+// WhatsApp Status parts: a reel longer than a Status (90 s since 2025) cut into as few pieces as possible,
+// of similar length, each cut in a pause — between ayat when one falls in the window, else between two
+// text groups, never mid-word. A reel that fits is shared whole.
 import type { Timeline } from './timeline';
 
-export const STATUS_LIMIT = 30;
+export const STATUS_LIMIT = 90;
 const MIN_PART = 8;
 
 /** Where each part starts and ends (reel seconds). One part when the reel already fits. */
@@ -23,8 +24,18 @@ export function statusParts(tl: Timeline, limit = STATUS_LIMIT): { from: number;
   const parts: { from: number; to: number }[] = [];
   let at = 0;
   while (end - at > limit + 0.05) {
-    const pick = (list: number[]) => list.filter((x) => x > at + MIN_PART && x <= at + limit).pop();
-    const cut = pick(ayahCuts) ?? pick(groupCuts) ?? at + limit;
+    // Parts still needed, and where an even split would cut; the cut must leave a remainder that the
+    // other parts can still carry.
+    const left = Math.ceil((end - at - 0.05) / limit);
+    const ideal = at + (end - at) / left;
+    const lo = Math.max(at + MIN_PART, end - (left - 1) * limit);
+    const ok = (x: number) => x >= lo && x <= at + limit;
+    const pick = (list: number[]) => {
+      const fit = list.filter(ok);
+      return fit.length ? fit.reduce((a, b) => (Math.abs(b - ideal) < Math.abs(a - ideal) ? b : a)) : undefined;
+    };
+    const loose = (list: number[]) => list.filter((x) => x > at + MIN_PART && x <= at + limit).pop();
+    const cut = pick(ayahCuts) ?? pick(groupCuts) ?? loose(ayahCuts) ?? loose(groupCuts) ?? ideal;
     parts.push({ from: at, to: cut });
     at = cut;
   }
