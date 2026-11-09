@@ -1459,7 +1459,8 @@ duas/reflections section in Me.
       turn, +50 once, checked by the server in `rank_report`); **rival** line ("Maryam is 92 points ahead. About 10 pages
       passes them."); **last week's result** and **players you passed** as cards (`rankMoments()` / `takeRankMoments()`
       in `src/together/ranks.ts`; the full-screen moments belong to the reward-animation thread); **board goal** (pages
-      together this week, set by the owner; `rank_board_goal`); "Points measure effort in the app, not reward with Allah"
+      together this week, set by the owner; `rank_board_goal`); "Points measure effort in the app, not reward with Allah".
+      Rows by place (owner request): #1 gold with a glow, #2 silver, #3 bronze (medal discs), 4–10 a soft tint, the rest plain
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

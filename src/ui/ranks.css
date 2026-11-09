@@ -65,3 +65,22 @@
 .rk-moment p { margin: 2px 0 0; }
 .rk-moment.up { border-color: #1f9d55; }
 .rk-moment.down { border-color: #d1493b; }
+/* Top places (owner request 2026-11-09): #1 gold and glowing, #2 silver, #3 bronze, 4–10 a soft tint, the rest plain */
+.rk-row.r1, .rk-row.r2, .rk-row.r3 { --mc: #d9a520; border-color: color-mix(in srgb, var(--mc) 55%, transparent);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--mc) 24%, var(--card)), color-mix(in srgb, var(--mc) 6%, var(--card)) 70%); }
+.rk-row.r2 { --mc: #9aa6b2; }
+.rk-row.r3 { --mc: #c0763a; }
+.rk-row.r1 { padding-block: 12px; border-width: 1.5px; box-shadow: 0 4px 18px color-mix(in srgb, var(--mc) 35%, transparent); }
+.rk-row.r2 { padding-block: 10px; }
+.rk-row:is(.r1, .r2, .r3) .rk-place { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--mc) 55%, #fff), var(--mc) 60%, color-mix(in srgb, var(--mc) 70%, #000));
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--mc) 60%, transparent); }
+.rk-row.r1 .rk-place { width: 32px; height: 32px; font-size: 1.05em; }
+.rk-row.r1 .rk-name { font-size: 1.06em; }
+.rk-row:is(.r1, .r2, .r3) .rk-score { color: color-mix(in srgb, var(--mc) 70%, var(--text)); }
+.rk-row.r1 .rk-score { font-size: 1.12em; }
+.rk-row.r10 { background: color-mix(in srgb, var(--accent) 6%, var(--card)); border-color: color-mix(in srgb, var(--accent) 22%, var(--line)); }
+.rk-row.r10 .rk-place { color: var(--accent); }
+.rk-row.me:is(.r1, .r2, .r3, .r10) { box-shadow: inset 0 0 0 2px var(--accent); }
+.rk-row.r1.me { box-shadow: inset 0 0 0 2px var(--accent), 0 4px 18px color-mix(in srgb, var(--mc) 35%, transparent); }
+@media (prefers-color-scheme: dark) { .rk-row:is(.r1, .r2, .r3) .rk-score { color: color-mix(in srgb, var(--mc) 75%, #fff); } }
