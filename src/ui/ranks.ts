@@ -5,11 +5,12 @@
 import { account, onAccount } from '../cloud/auth';
 import { t, type Key } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
-import { isNative } from '../native';
+import { isNative, shareableLink } from '../native';
 import {
   LEAGUE, METRICS, POINTS, boardGoal, boardLink, boardPreview, boardRanks, createBoard, joinBoard, leaveBoard, myBoards, rankGlobal,
   rankLeague, rankMoments, myPrizes, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
-  type Board, type Metric, type Row, type Status,
+  myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
+  type Board, type Challenge, type Metric, type Row, type Status,
 } from '../together/ranks';
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
@@ -17,16 +18,30 @@ import { chest, chestArt, chestTier } from './chest';
 import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
 import { h, haptic, toast } from './dom';
-import { tabBar } from './tabs';
+import { goMushaf, tabBar } from './tabs';
 import './ranks.css';
 
 type View = 'league' | 'global' | 'boards';
 const PENDING = 'pendingBoard';
+const PENDING_CH = 'pendingChallenge';
 
 const TIER_ICON: Record<string, string> = { lantern: '🏮', star: '⭐', moon: '🌙', dawn: '🌅', sun: '☀️' };
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
 const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
 const num = (n: number) => n.toLocaleString();
+
+/** The share sheet (app or browser), else the link copied. */
+async function share(title: string, text: string, url: string) {
+  try {
+    if (isNative()) {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({ title, text, url, dialogTitle: title });
+      return;
+    }
+    if (navigator.share) { await navigator.share({ title, text, url }); return; }
+  } catch (e) { if ((e as Error).name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); toast(rt('rk.copied')); } catch { toast(url); }
+}
 
 function sheet(title: string, ...body: (Node | string)[]) {
   const close = () => d.close();
@@ -185,7 +200,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLook(s); } }, `◐  ${rt('rk.look')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, `🏆  ${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `?  ${rt('rk.how')}`))));
+        s.last ? h('button', { class: 'menu-item', onclick: () => { d.close(); void recap(s); } }, `↗  ${rt('rk.recapShare')}`) : '',
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `?  ${rt('rk.how')}`)),
+      isNative() ? h('label', { class: 'rk-note-toggle small' },
+        h('input', { type: 'checkbox', checked: leagueNoteOn(), onchange: (e: Event) => setLeagueNote((e.target as HTMLInputElement).checked) }),
+        ` ${rt('rk.noteToggle')}`) : ''));
   }
   /** "Bilal is 38 points ahead. 4 pages passes him." */
   const rivalLine = (r: Row & { gap: number }) => rt(r.gap > 0 ? 'rk.rival' : 'rk.rivalTie', {
@@ -363,11 +382,48 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       } }, rt('rk.save')))));
   }
 
+  /** Sunday evening: the hours left and the one number that matters now. */
+  function hoursBox(players: Row[]) {
+    const st = standing(players);
+    const line = st.kind === 'up' ? rt('rk.noteUp', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) })
+      : st.kind === 'hold' ? rt('rk.noteHold', { place: st.place, n: num(st.n) })
+        : st.kind === 'safe' ? rt('rk.noteSafe', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) })
+          : st.kind === 'top' ? rt('rk.noteTop') : rt('rk.noteJoin');
+    return h('div', { class: 'rk-hours me-card', role: 'status' },
+      h('b', {}, `⏳ ${rt('rk.hoursTitle', { left: left(weekEnds().getTime() - Date.now()) })}`),
+      h('p', { class: 'small' }, line),
+      h('button', { class: 'chip', onclick: () => goMushaf() }, rt('rk.hoursRead')));
+  }
+  /** Monday and Tuesday: last week's result as a card to share (until closed). */
+  function recapCard() {
+    const s = status;
+    if (!s?.last) return '';
+    const dow = new Date().getDay();
+    let seen = '';
+    try { seen = localStorage.getItem('rankRecapSeen') ?? ''; } catch { /* ignore */ }
+    if ((dow !== 1 && dow !== 2) || seen === s.weekStart) return '';
+    const el: HTMLElement = h('div', { class: `rk-recap me-card t${s.last.tier}` },
+      h('span', { class: 'rk-recap-em' }, tierEmblem(s.last.tier) as unknown as Node),
+      h('div', { class: 'rk-recap-txt' },
+        h('b', {}, rt('rk.recapTitle')),
+        h('span', { class: 'small' }, `#${s.last.place} · ${rt('rk.recapOf', { n: s.last.size, tier: tierName(s.last.tier) })} · ${num(s.last.score)} ${rt('rk.recapPts')}`)),
+      h('button', { class: 'primary brand-btn', onclick: () => void recap(s) }, rt('rk.recapShare')),
+      h('button', { class: 'icon-btn rk-recap-x', 'aria-label': t('common.close'), onclick: () => {
+        try { localStorage.setItem('rankRecapSeen', s.weekStart); } catch { /* ignore */ }
+        el.remove();
+      } }, '✕'));
+    return el;
+  }
+  const recap = async (s: Status) => (await import('./rankRecap')).shareRecap(s, shareableLink('#/ranks'));
+
   async function paintBody(fresh: boolean) {
     if (view === 'league') {
       const lg = await rankLeague(fresh);
       if (!lg) { body.replaceChildren(h('p', { class: 'muted' }, rt('rk.notYet'))); return; }
+      void scheduleLeagueNote(lg.players);
       body.replaceChildren(
+        lastHours() ? hoursBox(lg.players) : '',
+        recapCard(),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
     } else if (view === 'global') {
@@ -399,9 +455,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
             try { await leaveBoard(b.id); openBoard = null; void paint(true); } catch (e) { toast((e as Error).message); }
           } }, b.mine ? rt('rk.delete') : rt('rk.leave'))));
     } else {
-      const boards = await myBoards(fresh);
+      const [boards, chs] = await Promise.all([myBoards(fresh), myChallenges(fresh).catch(() => [] as Challenge[])]);
       const code = h('input', { class: 'search', maxlength: 8, placeholder: rt('rk.codePh'), 'aria-label': rt('rk.join'), autocapitalize: 'off' });
       body.replaceChildren(
+        challengeBox(chs),
+        h('h2', { class: 'me-h' }, rt('rk.boards')),
         boards.length ? h('div', { class: 'menu rk-boards' }, ...boards.map((b) => h('button', { class: 'menu-item', onclick: () => { openBoard = b; metric = 'all'; void paint(); } },
           h('span', {}, `👥  ${b.name}`), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
           : h('p', { class: 'muted' }, rt('rk.noBoards')),
@@ -456,18 +514,60 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       } }, rt('rk.createGo')))));
     setTimeout(() => input.focus(), 50);
   }
-  async function invite(b: Board) {
-    const url = boardLink(b.code);
-    const text = rt('rk.inviteText', { name: b.name, code: b.code });
-    try {
-      if (isNative()) {
-        const { Share } = await import('@capacitor/share');
-        await Share.share({ title: b.name, text, url, dialogTitle: rt('rk.invite') });
-        return;
+  const invite = (b: Board) => share(b.name, rt('rk.inviteText', { name: b.name, code: b.code }), boardLink(b.code));
+
+  /** Friend challenges: one friend, 7 days of pages and listening, side by side. */
+  function challengeBox(list: Challenge[]): HTMLElement {
+    const live = list.filter((c) => !c.expired && !(c.over && c.claimed));
+    const done = list.filter((c) => c.over && c.claimed).slice(0, 3);
+    const card = (c: Challenge) => {
+      if (c.waiting) {
+        return h('div', { class: 'rk-ch me-card wait' },
+          h('div', { class: 'rk-ch-vs' }, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 40, status?.frame ?? 0),
+            h('span', { class: 'rk-ch-x' }, rt('rk.chVs')), h('span', { class: 'rk-ch-q', 'aria-hidden': 'true' }, '?')),
+          h('p', { class: 'small' }, rt('rk.chWaiting')),
+          h('div', { class: 'chips' },
+            h('button', { class: 'primary brand-btn', onclick: () => void sendChallenge(c.code!) }, rt('rk.chSend')),
+            h('button', { class: 'chip', onclick: async () => {
+              try { await cancelChallenge(c.id); void paint(true); } catch (e) { toast((e as Error).message); }
+            } }, rt('rk.chCancel'))));
       }
-      if (navigator.share) { await navigator.share({ title: b.name, text, url }); return; }
-    } catch (e) { if ((e as Error).name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(`${text}\n${url}`); toast(rt('rk.copied')); } catch { toast(url); }
+      const me = c.me ?? 0, them = c.them ?? 0, top = Math.max(1, me, them);
+      const who = c.friend?.name ?? rt('rk.private');
+      const line = c.over ? (me > them ? rt('rk.chWon', { name: who }) : me === them ? rt('rk.chTie') : rt('rk.chLost', { name: who }))
+        : me > them ? rt('rk.chAhead', { n: num(me - them) }) : me === them ? rt('rk.chEven') : rt('rk.chBehind', { name: who, n: num(them - me), pages: Math.ceil((them - me + 1) / POINTS.page) });
+      const bar = (n: number, mine: boolean, face: HTMLElement, label: string) => h('div', { class: `rk-ch-row${mine ? ' me' : ''}` }, face,
+        h('div', { class: 'rk-ch-bar' }, h('span', { style: `width:${Math.max(3, Math.round((n / top) * 100))}%` })),
+        h('b', { 'aria-label': `${label}: ${num(n)}` }, num(n)));
+      const claim = c.over && !c.claimed ? h('button', { class: 'primary brand-btn rk-ch-claim' }, chestArt(chestTier(me > them ? 100 : me === them ? 60 : 30)), ` ${rt('rk.chClaim')}`) : null;
+      claim?.addEventListener('click', () => void openChallenge(c, claim));
+      return h('div', { class: `rk-ch me-card${c.over ? ' over' : ''}` },
+        h('div', { class: 'me-row' }, h('b', {}, rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
+        bar(me, true, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 30, status?.frame ?? 0), rt('rk.you')),
+        bar(them, false, avatar(c.friend?.private ? null : c.friend?.avatar ?? 0, c.friend?.tier ?? 0, 30, c.friend?.frame ?? 0), who),
+        h('p', { class: 'small rk-ch-line' }, line), claim ?? '');
+    };
+    return h('section', { class: 'rk-chs' },
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, rt('rk.chs')),
+        live.filter((c) => c.waiting).length < 3 ? h('button', { class: 'chip', onclick: () => void newChallenge() }, `＋ ${rt('rk.chNew')}`) : ''),
+      live.length ? h('div', { class: 'rk-ch-list' }, ...live.map(card)) : h('p', { class: 'muted small' }, rt('rk.chNone')),
+      done.length ? h('p', { class: 'muted small' }, done.map((c) => `${c.friend?.name ?? rt('rk.private')} ${num(c.me ?? 0)}–${num(c.them ?? 0)}`).join(' · ')) : '');
+  }
+  async function newChallenge() {
+    try { const r = await createChallenge(); await paint(true); void sendChallenge(r.code); } catch (e) { toast((e as Error).message); }
+  }
+  const sendChallenge = (code: string) => share(rt('rk.chs'), rt('rk.chText', { name: status?.name ?? rankName() }), challengeLink(code));
+  async function openChallenge(c: Challenge, el: HTMLElement) {
+    try {
+      const r = await claimChallenge(c);
+      if (!r) { void paint(true); return; }
+      const { celebrate } = await import('./celebrate');
+      const who = c.friend?.name ?? rt('rk.private');
+      await celebrate({ kind: 'chest', kicker: rt('rk.chTitle'),
+        title: r.result === 'won' ? rt('rk.chWon', { name: who }) : r.result === 'tie' ? rt('rk.chTie') : rt('rk.chLost', { name: who }),
+        sub: rt('rk.chSub'), loot: [{ kind: 'light', n: r.light }] }, el, r.light);
+    } catch (e) { toast((e as Error).message); }
+    void paint(true);
   }
 
   let paintId = 0;
@@ -495,6 +595,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
     try { await joinBoard(pending); view = 'boards'; toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
   }
+  const pendingCh = (() => { try { return sessionStorage.getItem(PENDING_CH); } catch { return null; } })();
+  if (pendingCh && account()) {
+    try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
+    try { await acceptChallenge(pendingCh); view = 'boards'; toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
+  }
   void paint(true);
   const off = onAccount(() => void paint(true));
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
@@ -521,3 +626,31 @@ export async function showBoardInvite(root: HTMLElement, code: string): Promise<
         : h('button', { class: 'primary brand-btn', onclick: () => { try { sessionStorage.setItem(PENDING, code); } catch { /* ignore */ } openAccount(); } }, rt('rk.signInJoin')));
   return () => {};
 }
+
+/** #/rc/{code}: a friend challenge. Signed in → accept and open Ranks; else who sent it and a sign-in. */
+export async function showChallengeInvite(root: HTMLElement, code: string): Promise<() => void> {
+  const box = h('div', { class: 'rk-invite me-card' }, h('p', { class: 'muted' }, rt('rk.loading')));
+  root.append(h('header', { class: 'topbar' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title')))), box, tabBar('ranks'));
+  const p = await challengePreview(code).catch(() => null);
+  if (!p) { box.replaceChildren(h('p', {}, rt('rk.chBad'))); return () => {}; }
+  const open = () => { try { sessionStorage.setItem('rankView', 'boards'); } catch { /* ignore */ } location.hash = '#/ranks'; };
+  const go = async () => {
+    try { await acceptChallenge(code); } catch (e) { toast((e as Error).message); return; }
+    open();
+  };
+  const who = p.from.name ?? rt('rk.private');
+  box.replaceChildren(
+    h('div', { class: 'rk-ch-vs big' }, avatar(p.from.private ? null : p.from.avatar ?? 0, p.from.tier ?? 0, 64, p.from.frame ?? 0),
+      h('span', { class: 'rk-ch-x' }, rt('rk.chVs')), h('span', { class: 'rk-ch-q', 'aria-hidden': 'true' }, '?')),
+    h('h2', {}, rt('rk.chInvite', { name: who })),
+    h('p', { class: 'muted' }, p.expired ? rt('rk.chExpired') : p.taken && !p.joined ? rt('rk.chTaken') : rt('rk.chInviteSub')),
+    p.joined || p.mine ? h('button', { class: 'primary brand-btn', onclick: open }, rt('rk.open'))
+      : p.taken || p.expired ? h('a', { class: 'chip', href: '#/ranks' }, rt('rk.open'))
+        : account() ? h('button', { class: 'primary brand-btn', onclick: go }, rt('rk.chAccept'))
+          : h('button', { class: 'primary brand-btn', onclick: () => { try { sessionStorage.setItem(PENDING_CH, code); } catch { /* ignore */ } openAccount(); } }, rt('rk.chSignIn')));
+  return () => {};
+}
+
+/** #/ranks, #/rb/{code} (a board invite) and #/rc/{code} (a friend challenge). */
+export const ranksRoute = (root: HTMLElement, view: string, code?: string) =>
+  view === 'rb' ? showBoardInvite(root, code!) : view === 'rc' ? showChallengeInvite(root, code!) : showRanks(root);

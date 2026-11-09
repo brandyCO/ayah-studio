@@ -1,12 +1,12 @@
 -- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
--- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql): Google accounts only; nobody reads the tables;
+-- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql, 20261110500000_rank_challenges.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(50);
+select plan(64);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -125,6 +125,40 @@ select is(rank_my_prizes() -> 0 ->> 'item', (select v from ids where k = 'item')
 select lives_ok($$ select rank_set_look(substr((select v from ids where k = 'item'), 4)::int, false, 0) $$, 'and can be worn');
 select throws_ok($$ select rank_set_look(substr((select v from ids where k = 'other'), 4)::int, false, 0) $$, '42501', null, 'another week''s avatar cannot');
 select throws_ok($$ select rank_set_look(0, false, 8) $$, '42501', null, 'nor a frame won by #2 or #3');
+
+-- Friend challenge (20261110500000_rank_challenges.sql): a week of pages and listening, one friend.
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+insert into ids select 'ch', rank_challenge_create() ->> 'code';
+select throws_ok($$ select rank_challenge_accept((select v from ids where k = 'ch'), current_date) $$, '22023', null, 'a challenge is sent to someone else');
+select pg_temp.act_as_visitor();
+select is((rank_challenge_preview((select v from ids where k = 'ch')) ->> 'taken')::boolean, false, 'anyone sees the challenge invite');
+select pg_temp.act_as('dddddddd-0000-0000-0000-000000000004', true);
+select throws_ok($$ select rank_challenge_accept((select v from ids where k = 'ch'), current_date) $$, '42501', null, 'an anonymous session cannot accept');
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+insert into ids select 'chid', rank_challenge_accept((select v from ids where k = 'ch'), current_date)::text;
+select is(rank_challenge_accept((select v from ids where k = 'ch'), current_date)::text, (select v from ids where k = 'chid'), 'accepting twice is the same challenge');
+select is((rank_my_challenges(current_date) -> 0 ->> 'waiting')::boolean, false, 'the friend sees it running');
+select is(rank_challenge_claim((select v::uuid from ids where k = 'chid')), null, 'nothing to claim while it runs');
+select throws_ok($$ select * from rank_challenges $$, '42501', null, 'the challenges cannot be read directly');
+select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
+select throws_ok($$ select rank_challenge_accept((select v from ids where k = 'ch'), current_date) $$, '22023', null, 'a third player cannot take it');
+-- The week is over: Aisha read more.
+reset role;
+update rank_challenges set start = current_date - 9 where id = (select v::uuid from ids where k = 'chid');
+insert into rank_days (user_id, day, pages, listen) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', current_date - 5, 5, 600),
+  ('bbbbbbbb-0000-0000-0000-000000000002', current_date - 5, 2, 0)
+  on conflict (user_id, day) do update set pages = excluded.pages, listen = excluded.listen;
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+select is((rank_my_challenges(current_date) -> 0 ->> 'me')::int, 5 * 10 + 10 * 2, 'pages and minutes count');
+select is(rank_challenge_claim((select v::uuid from ids where k = 'chid')) ->> 'light', '100', 'the winner gets 100 Light');
+select is(rank_challenge_claim((select v::uuid from ids where k = 'chid')), null, 'once');
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select is(rank_challenge_claim((select v::uuid from ids where k = 'chid')) ->> 'result', 'lost', 'the friend sees the result');
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+insert into ids select 'ch2', rank_challenge_create() ->> 'id';
+select lives_ok($$ select rank_challenge_cancel((select v::uuid from ids where k = 'ch2')) $$, 'an untaken invite can be taken back');
+select is((select count(*)::int from jsonb_array_elements(rank_my_challenges(current_date))), 1, 'and is gone');
 
 select * from finish();
 rollback;

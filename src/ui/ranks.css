@@ -242,3 +242,38 @@
 .rk-hero.t3 { --tc: #e8607a; }
 .rk-hero.t4 { --tc: #e9a514; }
 .rk-list { grid-template-columns: minmax(0, 1fr); }
+
+/* Friend challenge: you and one friend, two bars */
+.rk-chs { margin: 6px 0 14px; }
+.rk-chs > .me-row { align-items: center; }
+.rk-ch-list { display: grid; gap: 10px; }
+.rk-ch { display: grid; gap: 8px; padding: 14px; border: 2px solid #6c5ce733; }
+.rk-ch.over { border-color: #f59f0066; }
+.rk-ch-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.rk-ch-row b { font: 800 1rem var(--ui-round, inherit); min-width: 3ch; text-align: end; }
+.rk-ch-bar { height: 14px; border-radius: 99px; background: var(--sel); overflow: hidden; }
+.rk-ch-bar span { display: block; height: 100%; border-radius: inherit; background: #b4a9f5; transition: width var(--dur-3, .4s) var(--ease-spring, ease); }
+.rk-ch-row.me .rk-ch-bar span { background: linear-gradient(90deg, #6c5ce7, #8f7ff5); }
+.rk-ch-line { margin: 0; font-weight: 700; }
+.rk-ch-claim { display: inline-flex; align-items: center; gap: 6px; justify-self: start; }
+.rk-ch-claim svg { width: 30px; height: 30px; }
+.rk-ch-vs { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.rk-ch-x { font: 900 1.1rem var(--ui-round, inherit); color: #6c5ce7; text-transform: uppercase; }
+.rk-ch-q { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 2px dashed #6c5ce7; color: #6c5ce7; font: 900 1.2rem var(--ui-round, inherit); }
+.rk-ch-vs.big .rk-ch-q { width: 64px; height: 64px; font-size: 1.8rem; }
+.rk-ch.wait .rk-ch-vs { justify-content: flex-start; }
+/* Sunday evening: the league's last hours */
+.rk-hours { margin: 0 0 10px; padding: 12px 14px; display: grid; gap: 4px; justify-items: start; background: linear-gradient(135deg, #fff4dc, #ffe2b8); color: #4a2f00; border: 2px solid #f59f00; }
+.rk-hours p { margin: 0; }
+:root[data-theme="dark"] .rk-hours { background: linear-gradient(135deg, #3a2a0c, #4a3209); color: #ffe7bd; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rk-hours { background: linear-gradient(135deg, #3a2a0c, #4a3209); color: #ffe7bd; } }
+/* Monday recap */
+.rk-recap { position: relative; margin: 0 0 10px; padding: 12px 40px 12px 12px; display: grid; grid-template-columns: 54px 1fr; gap: 6px 12px; align-items: center;
+  background: linear-gradient(135deg, #2a2170, #6c5ce7); color: #fff; }
+.rk-recap-em { display: block; width: 54px; height: 54px; position: relative; }
+.rk-recap-em svg { position: static; inset: auto; width: 54px !important; height: 54px !important; display: block; transform: none; animation: none; }
+.rk-recap-txt { display: grid; }
+.rk-recap-txt .small { color: #e3defe; }
+.rk-recap .primary { grid-column: 1 / -1; justify-self: start; }
+.rk-recap .rk-recap-x { position: absolute; inset-inline-end: 6px; top: 6px; color: #fff; background: none; border: 0; box-shadow: none; width: 32px; height: 32px; }
+.rk-note-toggle { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
