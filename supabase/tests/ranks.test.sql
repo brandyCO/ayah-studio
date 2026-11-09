@@ -1,11 +1,11 @@
--- Ranks (supabase/migrations/20261110000000_ranks.sql): Google accounts only; nobody reads the tables;
+-- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(24);
+select plan(26);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -56,6 +56,14 @@ select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
 select is(rank_report(current_date, 2, 600, 0, 0, 'Bilal'), 2 * 10 + 10 * 2 + 20, 'Bilal reports');
 select is(jsonb_array_length(rank_league(current_date) -> 'players'), 2, 'both are in the same league');
 select is((rank_league(current_date) -> 'players' -> 0 ->> 'name'), 'Aisha B', 'best first');
+-- Places moved since yesterday: Bilal led before today, Aisha passed him today (nothing moves on a Monday).
+reset role;
+update rank_weeks set score = 1200 where user_id = 'aaaaaaaa-0000-0000-0000-000000000001';
+update rank_weeks set score = 500 where user_id = 'bbbbbbbb-0000-0000-0000-000000000002';
+insert into ids values ('mv', case when current_date = rank_week(current_date) then '0' else '1' end);
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select is((rank_league(current_date) -> 'players' -> 0 ->> 'move')::int, (select v::int from ids where k = 'mv'), 'Aisha moved up a place');
+select is((rank_league(current_date) -> 'players' -> 1 ->> 'move')::int, -(select v::int from ids where k = 'mv'), 'Bilal moved down one');
 select is(jsonb_array_length(rank_global(current_date, false)), 2, 'the weekly global board lists both');
 select is((rank_global(current_date, true) -> 1 ->> 'me')::boolean, true, 'and marks me');
 
