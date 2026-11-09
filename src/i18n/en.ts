@@ -658,6 +658,11 @@ const en = {
   'theme.note': 'Pick the gradient that feels like you. It colours the app’s buttons, highlights and progress bars — never the mushaf page, the Quran text or your reels.',
   'theme.applied': '{name} applied',
   'theme.sample': 'Turn into reel',
+  'theme.iconTitle': 'App icon',
+  'theme.iconNote': 'Match your theme, or use a rare icon you bought with Light or won in Ranks. It changes when you leave the app.',
+  'theme.iconMatch': 'Match theme',
+  'theme.iconSet': 'App icon: {name}',
+  'theme.iconMore': 'More icons in Ranks → Shop',
   'menu.tour': 'Tour',
 
   // tafsir (G4)

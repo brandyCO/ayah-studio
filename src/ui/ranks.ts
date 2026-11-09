@@ -3,7 +3,8 @@
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
 import { account, onAccount } from '../cloud/auth';
-import { t, type Key } from '../i18n';
+import { t, tOr, type Key } from '../i18n';
+import { chooseIcon, chosenIcon, rareIcon, rareIconUrl } from '../data/rareIcons';
 import { rt, type RankKey } from '../i18n/ranks';
 import { isNative } from '../native';
 import {
@@ -11,7 +12,7 @@ import {
   rankLeague, rankMoments, myPrizes, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   type Board, type Metric, type Row, type Status,
 } from '../together/ranks';
-import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
+import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, ownsIcon, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { chest } from './chest';
 import { openAccount } from './account';
@@ -247,16 +248,28 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     shopWeek = s.weekStart;
     const left = h('b', {});
     const freezeRow = h('div', { class: 'rk-shop-freeze me-card' });
+    const iconName = (id: string) => tOr(`icon.${id}`, rareIcon(id)?.name ?? id);
     const grid = (items: Item[]) => h('div', { class: 'rk-shop-grid' }, ...items.map((it) => {
-      const own = owns(it.kind as 'avatar' | 'frame', it.ref as number, x);
-      const art = it.kind === 'avatar' ? avatar(it.ref as number, s.tier, 46) : avatar(s.private ? 0 : s.avatar, s.tier, 46, it.ref as number);
+      const icon = it.kind === 'icon' ? String(it.ref) : '';
+      const own = icon ? ownsIcon(icon, x) : owns(it.kind as 'avatar' | 'frame', it.ref as number, x);
+      const art = icon ? h('img', { class: 'rk-icon-art', src: rareIconUrl(icon), alt: '', width: '46', height: '46', loading: 'lazy' })
+        : it.kind === 'avatar' ? avatar(it.ref as number, s.tier, 46) : avatar(s.private ? 0 : s.avatar, s.tier, 46, it.ref as number);
       const wk = it.win === 'week' ? ` wk${weeksUntil(it.id, shopWeek) === 0 ? ' now' : ''}` : '';
-      return h('button', { class: `rk-shop-item${own ? ' own' : ''}${it.win && !own ? ` locked${wk}` : ''}`, onclick: () => {
+      const using = !!icon && chosenIcon() === icon;
+      return h('button', { class: `rk-shop-item${own ? ' own' : ''}${using ? ' using' : ''}${it.win && !own ? ` locked${wk}` : ''}`, 'aria-label': icon ? iconName(icon) : undefined, onclick: () => {
+        if (own && icon) {
+          haptic();
+          chooseIcon(using ? '' : icon);
+          toast(t('theme.iconSet', { name: using ? t('theme.iconMatch') : iconName(icon) }));
+          repaint();
+          return;
+        }
         if (own) { d.close(); openLook(s); return; }
         if (it.win) { toast(winText(it.win, it)); return; }
         if (!confirm(rt('rk.buyQ', { n: it.price ?? 0 }))) return;
         if (buy(it)) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
-      } }, art, h('span', { class: 'small' }, own ? rt('rk.owned') : it.win ? `🔒 ${winText(it.win, it)}` : `✦ ${it.price}`));
+      } }, art, icon ? h('span', { class: 'rk-icon-name' }, iconName(icon)) : '',
+      h('span', { class: 'small' }, using ? rt('rk.iconInUse') : own ? rt('rk.owned') : it.win ? `🔒 ${winText(it.win, it)}` : `✦ ${it.price}`));
     }));
     const body = h('div', { class: 'sheet-scroll rk-shop' });
     const repaint = () => {
@@ -273,8 +286,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         freezeRow,
         h('h3', { class: 'me-h2' }, rt('rk.shopAvatars')), grid(ITEMS.filter((i) => i.kind === 'avatar' && i.price)),
         h('h3', { class: 'me-h2' }, rt('rk.shopFrames')), grid(ITEMS.filter((i) => i.kind === 'frame' && i.price)),
+        h('h3', { class: 'me-h2' }, rt('rk.shopIcons')), h('p', { class: 'muted small' }, rt('rk.shopIconsSub')),
+        grid(ITEMS.filter((i) => i.kind === 'icon' && i.price)),
         h('h3', { class: 'me-h2' }, rt('rk.shopWin')), h('p', { class: 'muted small' }, rt('rk.shopWinSub')),
-        grid(ITEMS.filter((i) => i.win && i.win !== 'week' && i.kind !== 'icon')),
+        grid(ITEMS.filter((i) => i.win && i.win !== 'week')),
         weekHead,
         h('p', { class: 'muted small' }, rt('rk.weekPrizesSub')),
         // This week's first, then in the order they come round.

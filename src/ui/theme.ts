@@ -5,6 +5,7 @@
 // Picked per device and synced with the account (pref `brandTheme`).
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { touchPref } from './prefs';
+import { chosenIcon, rareIconUrl } from '../data/rareIcons';
 
 export interface BrandTheme {
   id: string;
@@ -173,18 +174,22 @@ export function themeIconUrl(x = themeById(themeId())): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-function setFavicon(x: BrandTheme) {
+function setFavicon(x: BrandTheme, rare: string) {
   const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (link) link.href = themeIconUrl(x);
+  if (link) link.href = rare ? rareIconUrl(rare) : themeIconUrl(x);
 }
 
 let iconFor = '';
+/** The launcher / tab icon: a rare icon the user chose (src/data/rareIcons.ts), else the theme's. */
 function setAppIcon(x: BrandTheme) {
-  if (iconFor === x.id) return;
-  iconFor = x.id;
-  if (Capacitor.isNativePlatform()) void AppIcon.set({ id: x.id }).catch(() => {});
-  else setFavicon(x);
+  const rare = chosenIcon();
+  const id = rare || x.id;
+  if (iconFor === id) return;
+  iconFor = id;
+  if (Capacitor.isNativePlatform()) void AppIcon.set({ id }).catch(() => {});
+  else setFavicon(x, rare);
 }
+window.addEventListener('app-icon-changed', () => setAppIcon(themeById(themeId())));
 
 /** Applies the saved theme (call once at start, before the first screen). */
 export function applyTheme(id = themeId()) {
