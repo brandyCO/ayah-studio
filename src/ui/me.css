@@ -1,0 +1,39 @@
+/* Me, full of life (owner choice 2026-11-09): a dusk sky with stars and a moon behind the streak
+   flame, a big round count, and each goal in its own colour with a chunky button. */
+.me-hero {
+  margin: 4px 0 14px; padding: 18px 16px 16px; border-radius: 26px;
+  background:
+    radial-gradient(1.6px 1.6px at 10% 14%, #fff 99%, transparent), radial-gradient(1.2px 1.2px at 25% 30%, #fffc 99%, transparent),
+    radial-gradient(1.8px 1.8px at 84% 12%, #fff 99%, transparent), radial-gradient(1.1px 1.1px at 74% 34%, #fff9 99%, transparent),
+    radial-gradient(1.3px 1.3px at 46% 8%, #fffb 99%, transparent), radial-gradient(1.2px 1.2px at 92% 46%, #fff9 99%, transparent),
+    radial-gradient(120% 60% at 50% 115%, #f08a3c 0%, transparent 70%),
+    linear-gradient(180deg, #1d1446 0%, #4a2a6b 62%, #8d4a5e 100%);
+  box-shadow: 0 6px 0 #2a1a52;
+}
+.me-hero::before { content: ''; position: absolute; top: 16px; inset-inline-end: 22px; width: 30px; height: 30px; border-radius: 50%;
+  box-shadow: -8px 4px 0 0 #ffe7a8; transform: rotate(-20deg); pointer-events: none; }
+.me-top { flex-direction: column; gap: 2px; text-align: center; margin-bottom: 14px; }
+.me-flame { width: auto; }
+.me-count { justify-content: center; flex-direction: column; align-items: center; gap: 0; }
+.me-count b { font: 900 58px/1 var(--ui-round); letter-spacing: 0; color: #fff; background: none; text-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
+.me-count span { font: 800 var(--fs-l) var(--ui-round); }
+.me-status { color: #f3e6ff; }
+.me-week { background: #fff; border-radius: 20px; padding: 10px 8px 8px; box-shadow: 0 5px 0 rgba(0, 0, 0, .18); justify-content: space-between; }
+.me-pip { color: #8a6a3f; font: 800 var(--fs-xs) var(--ui-round); }
+.me-pip-ic { background: #f3ead9; border-color: transparent; color: #74c0fc; }
+.me-pip.lit .me-pip-d, .me-pip.revived .me-pip-d { color: #2b2116; }
+.me-pip.today .me-pip-ic { border: 3px dashed var(--rw-n2); background: none; }
+.me-pip.frozen .me-pip-ic { background: #74c0fc; color: #fff; }
+.me-h { font-weight: 900; font-size: var(--fs-h2); }
+.me-card { border: 0; border-radius: 22px; box-shadow: 0 4px 0 var(--line); }
+.goal.k-pages, .goal.k-surahs { --gc: #12a594; } .goal.k-listen { --gc: #2f7fd6; } .goal.k-memorise { --gc: #4caf2a; }
+.goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; }
+.goal[class*='k-'] { margin-bottom: 10px; padding: 10px 12px; border-radius: 18px;
+  background: color-mix(in srgb, var(--gc) 11%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 26%, var(--card)); }
+.goal[class*='k-'] .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }
+.goal[class*='k-'] .goal-bar { background: color-mix(in srgb, var(--gc) 20%, var(--card)); }
+.goal[class*='k-'] .goal-bar > i { background: var(--gc); }
+.goal[class*='k-'] .chip { --edge: color-mix(in srgb, var(--gc) 65%, #000); background: var(--gc); border-color: transparent; color: #fff; }
+.goal-day { --gc: #f59f00; border-radius: 18px; background: color-mix(in srgb, var(--gc) 13%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 30%, var(--card)); }
+.goal-day .goal-bar > i { background: var(--gc); }
+.goal-day .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }

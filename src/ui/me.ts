@@ -2,6 +2,7 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import './me.css';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
@@ -132,7 +133,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const catchNow = catchNext && s.litToday && !reduced;
     catchNext = false;
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 76, reduced));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
       h('div', { class: 'me-top' },
         flameBox,
@@ -233,7 +234,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     }
     // Once met, only the adhkar keep their button (to read them again); the chest is the claim.
     if (met && g.kind !== 'adhkar') act = '';
-    return h('div', { class: `goal${met ? ' met' : ''}` },
+    return h('div', { class: `goal k-${g.kind}${met ? ' met' : ''}` },
       h('span', { class: 'goal-txt' },
         h('b', {}, goalLabel(g)),
         bar(g.id, pct),
