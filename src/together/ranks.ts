@@ -153,6 +153,8 @@ export async function claimPrize(p: Prize): Promise<boolean> {
   const { keepFreeze } = await import('../data/shop');
   claimGoal(`rk:${p.week}`, r.light);
   if (r.freeze) keepFreeze(`prize:${p.week}`);
+  // A prize-only garden decoration for the top 3 (waits on the garden's decorations shelf).
+  if (p.place && p.place <= 3) { const { grantPrizeDeco } = await import('../data/garden'); grantPrizeDeco(p.week, p.place); }
   return true;
 }
 
