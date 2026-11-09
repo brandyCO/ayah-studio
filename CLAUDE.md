@@ -427,8 +427,9 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `scripts/merge-openings.py`. **Recordings**: a reciter's other recordings are chips under his name (Listen and
       studio pickers, `groupRecordings()`, `recording`); ids 1038–1049 (migration `20261102000000_more_recordings.sql`).
       `scripts/new-recordings.json`: 187 more mp3quran Hafs recordings, aligned in batches (`only = new:N`; a run
-      restarts itself until every surah has a result, then checks the openings and starts the next batch) for the
-      owner to pick from. Surah-finished card waits until the recitation leaves the surah
+      restarts itself until every surah has a result, then checks the openings and starts the next batch). Owner
+      decision 2026-11-09: add every new one, skip copies (same ayah lengths in Ya-Sin to ~20 ms). Batch 1: 53 added (ids
+      1051–1103, migration `20261109000000_more_recordings_batch1.sql`), 7 copies left out. Surah-finished card waits until the recitation leaves the surah
       **Listen anywhere** (owner request 2026-11-02): one player for the whole app (`sharedPlayer()` in
       `src/ui/player.ts`); the mushaf attaches to it (`attachPlayer()`: page tracking, lit words) and on any other
       screen (Me: claims, tasbih; surah list; drafts) the bar sits above the tab bar (`body.listening-away`) with
