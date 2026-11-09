@@ -1074,7 +1074,11 @@ tafsir only from published, credited editions; UI strings only are translated by
       ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
       each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
       then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
-      caption is copied too
+      caption is copied too. 2026-11-09 (owner): WhatsApp Status now takes 90 s (`STATUS_LIMIT`), so a reel up to 90 s
+      is shared whole; a longer one is cut into the fewest parts, of similar length, each in a pause.
+      **Caption languages** (owner request 2026-11-09): chips over the caption — Arabic / English / Arabic + English
+      (localStorage `captionLang`, default both) and "Include the ayat" (`captionAyat`, on): the Arabic exactly as in
+      the reel and/or the whole-ayah translation with each ayah's reference, each only when it fits whole
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
