@@ -17,7 +17,7 @@ const SYMBOLS = [
   'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z', // drop
 ];
 export const AVATARS = 24;
-const TIER_RING = ['#b07a43', '#c3c9d2', '#9cc2e8', '#eaa07a', '#f2c14e'];
+export const TIER_RING = ['#b07a43', '#c3c9d2', '#9cc2e8', '#eaa07a', '#f2c14e'];
 
 const hue = (i: number) => (i * 47 + (i >= 12 ? 23 : 0)) % 360;
 const NS = 'http://www.w3.org/2000/svg';

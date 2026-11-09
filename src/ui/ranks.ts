@@ -157,24 +157,23 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'rk-goal-bar' }, h('span', { style: `width:${pct}%` })),
       h('p', { class: 'muted small' }, done ? rt('rk.questDone') : rt('rk.questLeft', { n: q.done, of: q.target })));
   }
-  /** Last week's result and the players you passed, as cards until seen. */
+  /** Last week's result and the players you passed: played full screen once (src/ui/rankMoment.ts), then marked seen. */
   const momentBox = h('div', { class: 'rk-moments' });
+  let momentsPlaying = false;
   async function moments(s: Status) {
+    if (momentsPlaying) return;
     const lg = await rankLeague().catch(() => null);
     const m = rankMoments(s, lg);
-    const cards: Node[] = [];
-    if (m.week) {
-      const up = m.week.tierNow > m.week.tier, down = m.week.tierNow < m.week.tier;
-      cards.push(h('div', { class: `rk-moment me-card ${up ? 'up' : down ? 'down' : ''}` },
-        avatar(s.private ? null : s.avatar, s.tier, 44),
-        h('div', {},
-          h('b', {}, up ? rt('rk.wkUp', { tier: tierName(m.week.tierNow) }) : down ? rt('rk.wkDown', { tier: tierName(m.week.tierNow) }) : rt('rk.wkStay', { tier: tierName(m.week.tierNow) })),
-          h('p', { class: 'muted small' }, rt('rk.wkLine', { place: m.week.place, of: m.week.size, n: num(m.week.score) })))));
-    }
-    if (m.passed.length) cards.push(h('div', { class: 'rk-moment me-card up' }, h('span', { class: 'rk-move up' }, '▲'),
-      h('b', {}, rt('rk.passed', { names: m.passed.slice(0, 3).join(', ') }))));
-    if (!cards.length) { momentBox.replaceChildren(); return; }
-    momentBox.replaceChildren(...cards, h('button', { class: 'chip', onclick: () => { takeRankMoments(s, lg); momentBox.replaceChildren(); } }, rt('rk.ok')));
+    if (!m.week && !m.passed.length) return;
+    momentsPlaying = true;
+    try {
+      // Let the screen settle first; skip it if the user has already left Ranks or a sheet is open.
+      await new Promise((r) => setTimeout(r, 600));
+      if (!momentBox.isConnected || document.querySelector('dialog[open], .cel')) return;
+      const { playRankMoments } = await import('./rankMoment');
+      takeRankMoments(s, lg);
+      await playRankMoments(m, { s, players: lg?.players ?? [] });
+    } finally { momentsPlaying = false; }
   }
   function openLook(s: Status) {
     let pick = s.avatar ?? 0;
