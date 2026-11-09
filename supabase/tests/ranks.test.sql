@@ -1,12 +1,12 @@
 -- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
--- 20261110200000_ranks_more.sql): Google accounts only; nobody reads the tables;
+-- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(38);
+select plan(46);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -99,6 +99,27 @@ select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
 select is(rank_league(current_date) -> 'players' -> 0 ->> 'name', null, 'others no longer see the name');
 select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
 select lives_ok($$ select rank_leave_board((select v::uuid from ids where k = 'bid')) $$, 'the owner leaving deletes the board');
+
+-- Prizes: Emre won last week's league of 3, so this week he moves up and wins a trophy, Light and a freeze.
+reset role;
+insert into auth.users (id, email) values ('eeeeeeee-0000-0000-0000-000000000005', 'emre@example.com'),
+  ('ffffffff-0000-0000-0000-000000000006', 'farah@example.com'), ('99999999-0000-0000-0000-000000000007', 'gamal@example.com');
+insert into rank_players (user_id, name) values ('eeeeeeee-0000-0000-0000-000000000005', 'Emre');
+insert into rank_leagues (id, week, tier, size) values ('11111111-0000-0000-0000-000000000001', rank_week(current_date) - 7, 0, 3);
+insert into rank_weeks (user_id, week, score, league) values
+  ('eeeeeeee-0000-0000-0000-000000000005', rank_week(current_date) - 7, 900, '11111111-0000-0000-0000-000000000001'),
+  ('ffffffff-0000-0000-0000-000000000006', rank_week(current_date) - 7, 500, '11111111-0000-0000-0000-000000000001'),
+  ('99999999-0000-0000-0000-000000000007', rank_week(current_date) - 7, 300, '11111111-0000-0000-0000-000000000001');
+insert into ids values ('lastwk', (rank_week(current_date) - 7)::text);
+select pg_temp.act_as('eeeeeeee-0000-0000-0000-000000000005');
+select is((rank_status(current_date) ->> 'tier')::int, 1, 'the winner moves up a tier');
+select is((rank_my_prizes() -> 0 ->> 'light')::int, 350, '#1: 300 Light, and 50 for moving up');
+select is((rank_my_prizes() -> 0 ->> 'freeze')::boolean, true, 'and a streak freeze');
+select is((rank_claim_prize((select v::date from ids where k = 'lastwk')) ->> 'light')::int, 350, 'claimed once');
+select is(rank_claim_prize((select v::date from ids where k = 'lastwk')), null, 'not twice');
+select lives_ok($$ select rank_set_look(36, false, 5) $$, 'a champion avatar and the gold laurel, won');
+select throws_ok($$ select rank_set_look(37, false, 0) $$, '42501', null, 'the next champion avatar needs 3 wins');
+select throws_ok($$ select rank_set_look(0, false, 4) $$, '42501', null, 'the sun frame needs the Sun tier');
 
 select * from finish();
 rollback;

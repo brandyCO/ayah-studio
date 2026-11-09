@@ -144,6 +144,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
         void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
       } }, `🔥  ${t('rl.askFriend')}`) : '',
+      s.lost ? keptFreezeButton(s.lost.days) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
@@ -759,4 +760,16 @@ export function showMeSettings(root: HTMLElement): () => void {
   const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
   window.addEventListener('prayer-changed', onPrayer);
   return () => window.removeEventListener('prayer-changed', onPrayer);
+}
+
+/** A flame that went out can be relit with streak freezes kept from the Ranks shop or prizes. */
+function keptFreezeButton(days: string[]): HTMLElement {
+  const box = h('div', {});
+  void Promise.all([import('../data/shop'), import('../i18n/ranks')]).then(([shop, { rt }]) => {
+    if (shop.bankedFreezes() < days.length) return;
+    box.replaceChildren(h('button', { class: 'me-relight', onclick: () => {
+      if (shop.useFreezes(days)) { toast(rt('rk.freezeUsed')); haptic(); }
+    } }, `❄  ${rt('rk.useFreeze', { n: days.length })}`));
+  }).catch(() => { /* offline chunk: nothing */ });
+  return box;
 }

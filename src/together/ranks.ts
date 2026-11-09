@@ -5,7 +5,7 @@
 // allows, and works out the score. Signed in with Google only; nothing is sent signed out.
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
-import { addDays, allDays } from '../data/journey';
+import { addDays, allDays, claimGoal } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { shareableLink } from '../native';
 
@@ -25,13 +25,13 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; private?: boolean }
+export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
 export interface Quest { kind: 'pages' | 'listen' | 'days' | 'surahs'; target: number; done: number; bonus: number; complete: boolean | null }
 export interface Status {
-  name: string; tier: number; avatar: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
+  name: string; tier: number; avatar: number; frame: number; bestTier: number; bestPlace: number | null; wins: number; prizes: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
   allPlace: number; allPlayers: number; quest: Quest; rival: (Row & { gap: number }) | null;
   /** Last week's league result, if the player played. */
   last: { score: number; tier: number; size: number; place: number } | null; weekStart: string;
@@ -113,8 +113,8 @@ export async function setBoardGoal(id: string, pages: number | null) {
   dropCache();
 }
 /** Avatar (0–23, drawn in the app; no photos) and private mode. */
-export async function setLook(avatar: number, priv: boolean) {
-  await rpc('rank_set_look', { my_avatar: avatar, is_private: priv });
+export async function setLook(avatar: number, priv: boolean, frame = 0) {
+  await rpc('rank_set_look', { my_avatar: avatar, is_private: priv, my_frame: frame });
   dropCache();
 }
 
@@ -141,6 +141,20 @@ export async function leaveBoard(id: string) {
 }
 export const boardPreview = (code: string) => rpc<{ name: string; members: number; joined: boolean } | null>('rank_board_preview', { board_code: code.toLowerCase() });
 export const boardLink = (code: string) => shareableLink(`#/rb/${code}`);
+
+// --- prizes: the top 3 of a league win a trophy and Light (#1 also a streak freeze) ---
+export interface Prize { week: string; place: number | null; tier: number; promoted: boolean; light: number; freeze: boolean; claimed: boolean }
+export const myPrizes = (fresh = false) => cached('prizes', () => rpc<Prize[]>('rank_my_prizes'), fresh);
+/** Claims a prize once: its Light joins the journey and a freeze is kept for later. */
+export async function claimPrize(p: Prize): Promise<boolean> {
+  const r = await rpc<{ light: number; freeze: boolean } | null>('rank_claim_prize', { wk: p.week });
+  dropCache();
+  if (!r) return false;
+  const { keepFreeze } = await import('../data/shop');
+  claimGoal(`rk:${p.week}`, r.light);
+  if (r.freeze) keepFreeze(`prize:${p.week}`);
+  return true;
+}
 
 // --- moments: last week's result (once a week) and the players you passed since you last looked ---
 // The Ranks screen shows them as cards; a full-screen moment can take them with takeRankMoments().

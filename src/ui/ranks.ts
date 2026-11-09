@@ -8,10 +8,12 @@ import { rt, type RankKey } from '../i18n/ranks';
 import { isNative } from '../native';
 import {
   LEAGUE, METRICS, POINTS, boardGoal, boardLink, boardPreview, boardRanks, createBoard, joinBoard, leaveBoard, myBoards, rankGlobal,
-  rankLeague, rankMoments, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
+  rankLeague, rankMoments, myPrizes, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   type Board, type Metric, type Row, type Status,
 } from '../together/ranks';
-import { AVATARS, avatar } from './rankAvatars';
+import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, won, type Item, type Win, type Wins } from '../data/shop';
+import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
+import { chest } from './chest';
 import { openAccount } from './account';
 import { h, haptic, toast } from './dom';
 import { tabBar } from './tabs';
@@ -59,7 +61,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all'): HTMLElement {
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
-      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34),
+      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0),
       h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
@@ -130,7 +132,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     }
     head.replaceChildren(h('div', { class: 'rk-me me-card' },
       h('div', { class: 'rk-me-top' },
-        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => openLook(s) }, avatar(s.private ? null : s.avatar, s.tier, 52)),
+        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => openLook(s) }, avatar(s.private ? null : s.avatar, s.tier, 52, s.frame)),
         h('div', { class: 'rk-me-txt' },
           h('button', { class: 'rk-me-name', onclick: openName, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
           tierBadge(s.tier)),
@@ -140,8 +142,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted' }, rt('rk.allTime', { n: num(s.total), place: num(s.allPlace) }))),
       s.rival ? h('p', { class: 'rk-rival' }, rivalLine(s.rival)) : '',
       s.private ? h('p', { class: 'muted small' }, rt('rk.privateOn')) : '',
-      howBtn()),
-    questCard(s));
+      h('div', { class: 'chips rk-me-acts' }, howBtn(),
+        h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s) }, `✦ ${rt('rk.shop')} · ${num(lightLeft())}`))),
+    prizeBox, questCard(s));
+    void paintPrizes(s, fresh);
     void moments(s);
   }
   /** "Bilal is 38 points ahead. 4 pages passes him." */
@@ -175,21 +179,105 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       await playRankMoments(m, { s, players: lg?.players ?? [] });
     } finally { momentsPlaying = false; }
   }
+  /** Prizes waiting to be claimed (a chest each) and the trophy shelf. */
+  const prizeBox = h('div', { class: 'rk-prizes' });
+  async function paintPrizes(s: Status, fresh: boolean) {
+    const list = await myPrizes(fresh || s.prizes > 0).catch(() => []);
+    const open = list.filter((p) => !p.claimed);
+    const shelf = list.filter((p) => p.place);
+    const nodes: Node[] = open.map((p) => h('div', { class: 'rk-prize me-card' },
+      h('div', {}, h('b', {}, p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp')),
+        h('p', { class: 'muted small' }, [rt('rk.prizeLight', { n: p.light }), p.freeze ? rt('rk.prizeFreeze') : ''].filter(Boolean).join(' · '))),
+      chest(p.light, 'ready', rt('rk.prizeOpen'), (el) => void openPrize(p, el))));
+    if (shelf.length) nodes.push(h('button', { class: 'rk-shelf me-card', onclick: () => openShelf(list) },
+      h('b', { class: 'small' }, rt('rk.trophies')),
+      h('span', { class: 'rk-shelf-row' }, ...shelf.slice(0, 8).map((p) => trophy(p.place, 26))),
+      h('span', { class: 'muted small' }, rt('rk.trophyCount', { n: shelf.length }))));
+    prizeBox.replaceChildren(...nodes);
+  }
+  async function openPrize(p: import('../together/ranks').Prize, el: HTMLElement) {
+    try {
+      if (!(await claimPrize(p))) { void paint(true); return; }
+      const { celebrate } = await import('./celebrate');
+      await celebrate({ kind: 'chest', title: p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp'),
+        sub: p.freeze ? rt('rk.prizeFreezeSub') : rt('rk.prizeSub'), kicker: rt('rk.trophies') }, el, p.light);
+    } catch (e) { toast((e as Error).message); }
+    void paint(true);
+  }
+  function openShelf(list: import('../together/ranks').Prize[]) {
+    sheet(rt('rk.trophies'), h('div', { class: 'sheet-scroll rk-shelf-list' },
+      ...list.map((p) => h('div', { class: 'me-row' },
+        trophy(p.place, 30),
+        h('span', { class: 'rk-shelf-txt' }, h('b', {}, p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp')),
+          h('span', { class: 'muted small' }, rt('rk.weekOf', { d: new Date(`${p.week}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }))),
+        h('span', { class: 'small' }, `+${p.light}`)))));
+  }
+
+  const winsOf = (s: Status): Wins => ({ bestTier: s.bestTier ?? s.tier, bestPlace: s.bestPlace ?? null, wins: s.wins ?? 0 });
+  const winText = (w: Win) => rt(`rk.win.${w}` as RankKey);
+  /** The shop: freezes kept for later, avatars and frames for Light; what can only be won, and how. */
+  function openShop(s: Status) {
+    const x = winsOf(s);
+    const left = h('b', {});
+    const freezeRow = h('div', { class: 'rk-shop-freeze me-card' });
+    const grid = (items: Item[]) => h('div', { class: 'rk-shop-grid' }, ...items.map((it) => {
+      const own = owns(it.kind as 'avatar' | 'frame', it.ref as number, x);
+      const art = it.kind === 'avatar' ? avatar(it.ref as number, s.tier, 46) : avatar(s.private ? 0 : s.avatar, s.tier, 46, it.ref as number);
+      return h('button', { class: `rk-shop-item${own ? ' own' : ''}${it.win && !own ? ' locked' : ''}`, onclick: () => {
+        if (own) { d.close(); openLook(s); return; }
+        if (it.win) { toast(winText(it.win)); return; }
+        if (!confirm(rt('rk.buyQ', { n: it.price ?? 0 }))) return;
+        if (buy(it)) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
+      } }, art, h('span', { class: 'small' }, own ? rt('rk.owned') : it.win ? `🔒 ${winText(it.win)}` : `✦ ${it.price}`));
+    }));
+    const body = h('div', { class: 'sheet-scroll rk-shop' });
+    const repaint = () => {
+      left.textContent = num(lightLeft());
+      const kept = bankedFreezes();
+      freezeRow.replaceChildren(
+        h('div', {}, h('b', {}, rt('rk.freezeTitle')), h('p', { class: 'muted small' }, rt('rk.freezeSub', { n: kept, max: FREEZE_MAX }))),
+        h('button', { class: 'primary brand-btn', disabled: kept >= FREEZE_MAX, onclick: () => {
+          if (!confirm(rt('rk.buyQ', { n: FREEZE_PRICE }))) return;
+          if (buyFreeze()) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
+        } }, `✦ ${FREEZE_PRICE}`));
+      body.replaceChildren(
+        h('p', { class: 'rk-shop-left' }, rt('rk.lightLeft'), ' ', left),
+        freezeRow,
+        h('h3', { class: 'me-h2' }, rt('rk.shopAvatars')), grid(ITEMS.filter((i) => i.kind === 'avatar' && i.price)),
+        h('h3', { class: 'me-h2' }, rt('rk.shopFrames')), grid(ITEMS.filter((i) => i.kind === 'frame' && i.price)),
+        h('h3', { class: 'me-h2' }, rt('rk.shopWin')), h('p', { class: 'muted small' }, rt('rk.shopWinSub')),
+        grid(ITEMS.filter((i) => i.win && i.kind !== 'icon')),
+        h('p', { class: 'muted small' }, rt('rk.shopNote')));
+    };
+    repaint();
+    const d = sheet(rt('rk.shop'), body);
+  }
+
   function openLook(s: Status) {
+    const x = winsOf(s);
     let pick = s.avatar ?? 0;
+    let frame = s.frame ?? 0;
     let priv = s.private;
     const grid = h('div', { class: 'rk-av-grid' });
-    const paintGrid = () => grid.replaceChildren(...Array.from({ length: AVATARS }, (_, i) => h('button', {
-      class: `rk-av-pick${i === pick ? ' on' : ''}`, 'aria-pressed': String(i === pick), 'aria-label': rt('rk.avatarN', { n: i + 1 }),
-      onclick: () => { pick = i; haptic(); paintGrid(); } }, avatar(i, s.tier, 42))));
+    const frames = h('div', { class: 'rk-av-grid' });
+    const paintGrid = () => {
+      grid.replaceChildren(...Array.from({ length: AVATARS }, (_, i) => i).filter((i) => owns('avatar', i, x)).map((i) => h('button', {
+        class: `rk-av-pick${i === pick ? ' on' : ''}`, 'aria-pressed': String(i === pick), 'aria-label': rt('rk.avatarN', { n: i + 1 }),
+        onclick: () => { pick = i; haptic(); paintGrid(); } }, avatar(i, s.tier, 42, frame))));
+      frames.replaceChildren(...Array.from({ length: FRAMES }, (_, i) => i).filter((i) => owns('frame', i, x)).map((i) => h('button', {
+        class: `rk-av-pick${i === frame ? ' on' : ''}`, 'aria-pressed': String(i === frame), 'aria-label': rt('rk.frameN', { n: i + 1 }),
+        onclick: () => { frame = i; haptic(); paintGrid(); } }, avatar(pick, s.tier, 42, i))));
+    };
     paintGrid();
     const sw = h('input', { type: 'checkbox', checked: priv, onchange: (e: Event) => { priv = (e.target as HTMLInputElement).checked; } });
     const d = sheet(rt('rk.look'), h('div', { class: 'sheet-scroll' },
       h('p', { class: 'muted small' }, rt('rk.lookSub')), grid,
+      h('h3', { class: 'me-h2' }, rt('rk.frames')), frames,
+      h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openShop(s); } }, `✦ ${rt('rk.moreInShop')}`),
       h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openName(); } }, `✎ ${rt('rk.name')}`),
       h('label', { class: 'rk-private' }, sw, h('span', {}, h('b', {}, rt('rk.privateTitle')), h('span', { class: 'muted small' }, rt('rk.privateSub')))),
       h('div', { class: 'chips', style: 'margin-top:12px' }, h('button', { class: 'primary brand-btn', onclick: async () => {
-        try { await setLook(pick, priv); d.close(); void paint(true); } catch (e) { toast((e as Error).message); }
+        try { await setLook(pick, priv, frame); d.close(); void paint(true); } catch (e) { toast((e as Error).message); }
       } }, rt('rk.save')))));
   }
 

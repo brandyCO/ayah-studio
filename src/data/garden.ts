@@ -7,7 +7,7 @@
 // A full tree gets thirsty after 1, 3, 7, 14 and 30 days, then every 30 days, and is watered by
 // reciting the surah again. A tree still growing gets thirsty after 3 days without a lesson.
 // Light (src/data/journey.ts) earned here buys rarer varieties of a surah's tree and decorations;
-// the wallet is all the Light earned minus what was spent here, never below 0.
+// the wallet is all the Light earned minus what was spent here and in the Ranks shop, never below 0.
 //
 // Kept on this device (localStorage `garden`) and, when signed in, synced as one document merged per
 // tree / decoration / purchase (the newest change wins; purchases are never undone).
@@ -113,7 +113,7 @@ function clean(raw: unknown): State {
   const o = raw as Record<string, unknown>;
   for (const [k, v] of Object.entries((o.trees as object) ?? {})) { const t = cleanTree(Number(k), v); if (t) s.trees[k] = t; }
   for (const [k, v] of Object.entries((o.decos as object) ?? {})) { const d = cleanDeco(k, v); if (d) s.decos[k] = d; }
-  for (const [k, v] of Object.entries((o.owned as object) ?? {})) if (typeof v === 'number' && v >= 0 && /^(v:\d+:\d|d:[\w-]+)$/.test(k)) s.owned[k] = v;
+  for (const [k, v] of Object.entries((o.owned as object) ?? {})) if (typeof v === 'number' && v >= 0 && /^(v:\d+:\d|d:[\w-]+|s:[\w:.-]+)$/.test(k)) s.owned[k] = v;
   if (typeof o.juz === 'number' && o.juz >= 1 && o.juz <= 30) s.juz = o.juz;
   return s;
 }
@@ -136,8 +136,19 @@ export const decos = (juz: number): Readonly<Deco>[] => Object.values(load().dec
 export const unplacedDecos = (): Readonly<Deco>[] => Object.values(load().decos).filter((d) => !d.gone && d.x < 0);
 export const ownsVariety = (s: number, v: number) => v === 0 || load().owned[`v:${s}:${v}`] !== undefined;
 export const spent = () => Object.values(load().owned).reduce((a, b) => a + b, 0);
-/** Light to spend: everything earned (all devices) minus what was spent here. */
+/** Light to spend: everything earned (all devices) minus what was spent here and in the Ranks shop. */
 export const wallet = () => Math.max(0, stats('all').light - spent());
+// The Ranks shop (src/data/shop.ts) keeps its purchases here too (`s:…` ids), so they sync and merge
+// like the garden's: a purchase counts once, freezes kept and used are ids that only ever get added.
+export const shopHas = (id: string) => load().owned[`s:${id}`] !== undefined;
+export const shopIds = (prefix: string) => Object.keys(load().owned).filter((k) => k.startsWith(`s:${prefix}`)).map((k) => k.slice(2));
+/** Records a purchase or a won thing (price 0); false when already there. */
+export function shopAdd(id: string, price: number): boolean {
+  if (shopHas(id)) return false;
+  load().owned[`s:${id}`] = Math.max(0, Math.round(price));
+  save();
+  return true;
+}
 export const lastJuz = () => load().juz ?? 30;
 export function setLastJuz(j: number) { load().juz = j; save(true); }
 
