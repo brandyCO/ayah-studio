@@ -1461,6 +1461,14 @@ duas/reflections section in Me.
       in `src/together/ranks.ts`; the full-screen moments belong to the reward-animation thread); **board goal** (pages
       together this week, set by the owner; `rank_board_goal`); "Points measure effort in the app, not reward with Allah".
       Rows by place (owner request): #1 gold with a glow, #2 silver, #3 bronze (medal discs), 4–10 a soft tint, the rest plain
+      **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
+      `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
+      eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then
+      moved up: it lifts away, the new one blooms in with turning rays, sparks and a rising ▲; stayed: rings of light
+      pulse out ("You're in the highest league" at Sun); moved down: it sinks softly, the new one settles, no sparks,
+      "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
+      glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
+      No sound, light vibration; reduced motion → the end picture
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
