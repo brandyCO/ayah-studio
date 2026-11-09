@@ -203,19 +203,24 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('p', { class: 'muted small' }, [rt('rk.prizeLight', { n: p.light }), p.freeze ? rt('rk.prizeFreeze') : '',
           p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatar' : 'rk.prizeFrame') : ''].filter(Boolean).join(' · '))),
       p.item ? h('span', { class: 'rk-prize-item' }, itemArt(p.item, s, 40)) : '',
-      chest(p.light, 'ready', rt('rk.prizeOpen'), (el) => void openPrize(p, el))));
+      chest(p.light, 'ready', rt('rk.prizeOpen'), (el) => void openPrize(p, el, s))));
     if (shelf.length) nodes.push(h('button', { class: 'rk-shelf me-card', onclick: () => openShelf(list) },
       h('b', { class: 'small' }, rt('rk.trophies')),
       h('span', { class: 'rk-shelf-row' }, ...shelf.slice(0, 8).map((p) => trophy(p.place, 26))),
       h('span', { class: 'muted small' }, rt('rk.trophyCount', { n: shelf.length }))));
     prizeBox.replaceChildren(...nodes);
   }
-  async function openPrize(p: import('../together/ranks').Prize, el: HTMLElement) {
+  async function openPrize(p: import('../together/ranks').Prize, el: HTMLElement, st: Status) {
     try {
       if (!(await claimPrize(p))) { void paint(true); return; }
       const { celebrate } = await import('./celebrate');
+      // What comes out of the chest, one by one: exactly what this week earned.
+      const loot: import('./celebrate').Loot[] = [{ kind: 'light', n: p.light }];
+      if (p.place) loot.push({ kind: 'item', art: trophy(p.place, 44), label: rt(`rk.loot${p.place}` as 'rk.loot1') });
+      if (p.freeze) loot.push({ kind: 'freeze' });
+      if (p.item) loot.push({ kind: 'item', art: itemArt(p.item, st, 52) as HTMLElement, label: rt(p.item.startsWith('av:') ? 'rk.lootAvatar' : 'rk.lootFrame'), rare: true });
       await celebrate({ kind: 'chest', title: p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp'),
-        sub: p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatarSub' : 'rk.prizeFrameSub') : p.freeze ? rt('rk.prizeFreezeSub') : rt('rk.prizeSub'), kicker: rt('rk.trophies') }, el, p.light);
+        sub: p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatarSub' : 'rk.prizeFrameSub') : p.freeze ? rt('rk.prizeFreezeSub') : rt('rk.prizeSub'), kicker: rt('rk.trophies'), loot }, el, p.light);
     } catch (e) { toast((e as Error).message); }
     void paint(true);
   }

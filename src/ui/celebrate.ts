@@ -11,6 +11,10 @@
 // Polish: the Claim button lifts into a seed of light that flies to the centre, gathers and bursts
 // (flash, light sweep, sparks on a canvas, src/ui/sparks.ts); the moment unfolds from that burst with
 // overshoot, a second beat when it lands, then slow motes rising. A light vibration on each beat, no sound. Tap the button (or anywhere once it has played) to close; Esc too.
+// chest     a goal's (or a Ranks prize's) chest: it drops in and waits; the user taps it open (3–5 taps:
+//           each one jolts it, cracks it and lets more light out of the seam), it bursts open and what
+//           was won comes out one by one (`loot`: Light, a trophy, a freeze, an avatar…). Never random:
+//           the chest holds exactly what was earned, and it says so before it is opened.
 // Reduced motion: the still final picture, faded in.
 import type { BadgeDef } from '../data/badges';
 import { locale, t, type Key } from '../i18n';
@@ -20,15 +24,22 @@ import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
 import { chestArt, chestTier } from './chest';
 import { rewardPalette, rgba } from './theme';
+import './celebrate.css';
 
 /** The theme's reward colours, read when a moment starts (so a theme change shows at once). */
 let P = rewardPalette();
 
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string }
-  | { kind: 'chest'; title: string; sub: string; kicker?: string }
+  | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[] }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
+
+/** What a chest holds, shown one by one as it opens. Without `loot` a chest holds the Light it was given. */
+export type Loot =
+  | { kind: 'light'; n: number }
+  | { kind: 'freeze' }
+  | { kind: 'item'; art: Node; label: string; rare?: boolean };
 
 const NS = 'http://www.w3.org/2000/svg';
 const svg = (box: number, inner: string) => {
@@ -134,6 +145,24 @@ function raysArt() {
     <g fill="${P.n3}">${motes(10, 100, 100, 50)}</g>`);
 }
 
+/** A streak freeze: an ice crystal holding a snowflake. */
+function freezeArt() {
+  return svg(48, `<defs><linearGradient id="cfz" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6f8ff"/><stop offset=".5" stop-color="#8fd8f5"/><stop offset="1" stop-color="#3a8fd0"/></linearGradient></defs>
+    <path d="M24 3L42 13.5V34.5L24 45L6 34.5V13.5Z" fill="url(#cfz)" stroke="#d9f4ff" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M24 3V45M6 13.5L42 34.5M42 13.5L6 34.5" stroke="#fff" stroke-opacity=".22"/>
+    <g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M24 12V36M13.6 18L34.4 30M34.4 18L13.6 30"/>
+    <path d="M20.5 14.5L24 17.5L27.5 14.5M20.5 33.5L24 30.5L27.5 33.5M13.2 23.4L17.5 24.6M30.5 23.4L34.8 24.6" fill="none" stroke-width="1.6"/></g>`);
+}
+
+/** Cracks drawn over the chest (same viewBox as `chestArt`), lit one by one as it is tapped. */
+const CRACKS = ['M27 40l3 5.5-2.2 4.5 3.6 5.5 -1.6 4', 'M53 38.5l-2.4 6.5 3 3.6-2.2 6.4', 'M15 29l5.5 2.6 3.6-2.2', 'M64 45l-4.8 3 2 4.6-3.8 4', 'M41 15.5l-1.4 4.6 2.8 2.8-1.8 3.6', 'M33 60l3.4-3.2 3.6 2.6 3.2-3.4'];
+function crackArt() {
+  const el = svg(80, `<path class="seam" d="M12 37.2H68"/>${CRACKS.map((d) => `<path d="${d}" pathLength="1"/>`).join('')}`);
+  el.setAttribute('viewBox', '0 0 80 76');
+  el.classList.add('cel-crack');
+  return el;
+}
+
 function vibrate(p: number[]) {
   try { if (!matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate?.(p); } catch { /* ignore */ }
 }
@@ -146,11 +175,31 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const stage = h('div', { class: 'cel-stage' });
   let kicker = '', title = '', sub = '';
   let count: HTMLElement | null = null;
-  // A chest: dropped in, shaken (a bigger one more times, harder, slower), then it bursts open.
+  // A chest: dropped in, then tapped open (a bigger one takes more taps), then what it holds comes out.
   const tier = chestTier(light);
-  const chestBox = m.kind === 'chest' ? h('div', { class: 'cel-chest-box', style: `--n:${tier + 2};--w:${6 + tier}deg;--sk:${(0.38 + tier * 0.04).toFixed(2)}s` }, chestArt(tier)) : null;
+  const isChest = m.kind === 'chest';
+  const loot: Loot[] = m.kind === 'chest' ? (m.loot ?? (light > 0 ? [{ kind: 'light', n: light }] : [])) : [];
+  const TAPS = tier >= 4 ? 5 : tier >= 2 ? 4 : 3;
+  const jolt = isChest ? h('div', { class: 'cel-chest-jolt' }, chestArt(tier), crackArt()) : null;
+  const chestBox = isChest ? h('div', { class: 'cel-chest-box' }, jolt!) : null;
+  const hit = isChest ? h('button', { class: 'cel-chest-hit', 'aria-label': t('cel.tapOpen') }) : null;
+  const dots = Array.from({ length: isChest ? TAPS : 0 }, () => h('i', {}));
+  // The Light inside counts up when it lands; the other prizes carry their own picture and name.
+  let lootLight: HTMLElement | null = null;
+  const lootCards = loot.map((l) => {
+    let art: Node, label: Node | string;
+    if (l.kind === 'light') {
+      lootLight = h('b', {}, `+${still ? l.n : 0}`);
+      art = h('span', { class: 'cel-orb' });
+      label = h('span', {}, lootLight, ` ${t('me.light')}`);
+    } else if (l.kind === 'freeze') { art = freezeArt(); label = t('cel.freeze'); } else { art = l.art; label = l.label; }
+    return h('div', { class: `cel-loot-it${l.kind === 'item' && l.rare ? ' rare' : ''}` }, h('span', { class: 'cel-loot-art' }, art), h('span', { class: 'cel-loot-lb' }, label));
+  });
+  const slot = isChest ? h('div', { class: 'cel-slot' },
+    h('p', { class: 'cel-tap', 'aria-hidden': 'true' }, t('cel.tapOpen'), h('span', { class: 'cel-dots' }, ...dots)),
+    h('div', { class: 'cel-loot' }, ...lootCards)) : null;
   if (m.kind === 'chest') {
-    stage.append(h('span', { class: 'cel-chest-rays', 'aria-hidden': 'true' }), h('span', { class: 'cel-chest-beam', 'aria-hidden': 'true' }), chestBox!);
+    stage.append(h('span', { class: 'cel-chest-rays', 'aria-hidden': 'true' }), h('span', { class: 'cel-chest-beam', 'aria-hidden': 'true' }), chestBox!, hit!);
     kicker = m.kicker ?? t('cel.goal');
     title = m.title; sub = m.sub;
   } else if (m.kind === 'lantern' || m.kind === 'star') {
@@ -180,26 +229,28 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   // Sparks in the theme's colours: its neon stops, its brightest stop lifted, a near-white core.
   const sparkColors = [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1), ...(m.kind === 'flame' ? [rgba(P.n2, 1)] : [])];
   // The Light this claim adds: a small pill that counts up once the moment lands.
-  const lightNum = light > 0 ? h('b', {}, String(still ? light : 0)) : null;
+  const lightNum = light > 0 && !isChest ? h('b', {}, String(still ? light : 0)) : null;
   const lightPill = lightNum ? h('p', { class: 'cel-light' }, '✦ ', lightNum, ` ${t('me.light')}`) : null;
-  const countLight = () => {
-    if (!lightNum) return;
+  const countUp = (num: HTMLElement | null, n: number) => {
+    if (!num) return;
     const t0 = performance.now();
     const tick = (now: number) => {
       const p = Math.min(1, (now - t0) / 900);
-      lightNum.textContent = `+${Math.round(light * (1 - (1 - p) ** 3))}`;
+      num.textContent = `+${Math.round(n * (1 - (1 - p) ** 3))}`;
       if (p < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   };
+  const countLight = () => countUp(lightNum, light);
   if (lightNum && still) lightNum.textContent = `+${light}`;
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
-    const el = h('div', { class: `cel cel-${m.kind}${still ? ' still go' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
+    const el = h('div', { class: `cel cel-${m.kind}${still ? ' still go' : ''}${still && isChest ? ' opened revealed' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
       h('span', { class: 'cel-flash', 'aria-hidden': 'true' }),
       h('span', { class: 'cel-sweep', 'aria-hidden': 'true' }),
       stage,
+      slot ?? '',
       canvas,
       h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub)),
       lightPill ?? '',
@@ -217,16 +268,107 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
-      if (light > 0 && !still) flyLight(stage, tier);
+      const lightCard = lootLight ? (lootLight as HTMLElement).closest('.cel-loot-it') : null;
+      if (light > 0 && !still) flyLight(lightCard ?? stage, tier);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+
+    // The chest is opened by hand: each tap jolts it, cracks it and lets more light out of the seam.
+    let taps = 0, ready = false, isOpen = false, revealed = false, revealedAt = 0;
+    const lootTimers: number[] = [];
+    const canvasBox = () => canvas.getBoundingClientRect();
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      revealedAt = performance.now();
+      lootTimers.forEach(clearTimeout);
+      lootCards.forEach((c) => { c.getAnimations().forEach((a) => a.finish()); c.classList.add('in', 'landed'); });
+      if (lootLight) (lootLight as HTMLElement).textContent = `+${(loot.find((l) => l.kind === 'light') as { n: number }).n}`;
+      el.classList.add('revealed');
+      fx?.motes(true);
+      ok.focus({ preventScroll: true });
+    };
+    const land = (i: number) => {
+      const c = lootCards[i];
+      c.classList.add('landed');
+      const r = c.getBoundingClientRect(), k = canvasBox();
+      fx?.burst(r.left + r.width / 2 - k.left, r.top + 32 - k.top, 22 + tier * 4, 0.55);
+      vibrate([14]);
+      const l = loot[i];
+      if (l.kind === 'light') countUp(lootLight, l.n);
+    };
+    const pour = () => {
+      // One prize after another: out of the chest's mouth in an arc, landing on its card.
+      const s = stage.getBoundingClientRect();
+      const mx = s.left + s.width / 2, my = s.top + s.height * 0.42;
+      lootCards.forEach((c, i) => lootTimers.push(window.setTimeout(() => {
+        c.classList.add('in');
+        const r = c.getBoundingClientRect();
+        const dx = mx - (r.left + r.width / 2), dy = my - (r.top + r.height / 2);
+        c.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(.15)`, opacity: 0 },
+          { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 110}px) scale(1.35)`, opacity: 1, offset: 0.55 },
+          { transform: 'scale(.9)', offset: 0.86 },
+          { transform: 'none' },
+        ], { duration: 780, easing: 'cubic-bezier(.3, 0, .3, 1)' });
+        vibrate([8]);
+        lootTimers.push(window.setTimeout(() => land(i), 700));
+      }, i * 650)));
+      lootTimers.push(window.setTimeout(reveal, lootCards.length * 650 + 500));
+    };
+    const openChest = () => {
+      isOpen = true;
+      const b = chestBox!.getBoundingClientRect(), k = canvasBox();
+      chestBox!.classList.add('open');
+      stage.classList.add('opened');
+      el.classList.add('opened');
+      fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24, 0.95 + tier * 0.1);
+      vibrate(tier >= 3 ? [34, 60, 22, 60, 14] : tier >= 1 ? [30, 70, 16] : [26]);
+      later(650, pour);
+    };
+    const paths = jolt ? [...jolt.querySelectorAll<SVGPathElement>('.cel-crack path:not(.seam)')] : [];
+    const tapChest = (x: number | null, y: number | null) => {
+      taps++;
+      el.classList.add('tapped');
+      const b = chestBox!.getBoundingClientRect(), k = canvasBox();
+      const on = x != null && y != null && x > b.left && x < b.right && y > b.top && y < b.bottom;
+      fx?.burst((on ? x! : b.left + b.width / 2) - k.left, (on ? y! : b.top + b.height * 0.45) - k.top, 12 + taps * 7, 0.45 + taps * 0.09);
+      const a = (5 + tier) * (0.6 + (0.5 * taps) / TAPS);
+      jolt!.animate([
+        { transform: 'none' },
+        { transform: 'translateY(5px) scale(1.1, .88)', offset: 0.14 },
+        { transform: `translateY(${-10 - taps * 4}px) rotate(${-a}deg) scale(.95, 1.07)`, offset: 0.4 },
+        { transform: `translateY(-3px) rotate(${a * 0.8}deg)`, offset: 0.62 },
+        { transform: `rotate(${-a * 0.35}deg)`, offset: 0.82 },
+        { transform: 'none' },
+      ], { duration: 440 + tier * 30, easing: 'ease-out' });
+      jolt!.querySelector('.ck-lid')?.animate([{ transform: 'none' }, { transform: `translateY(${-2 - taps * 1.5}px) rotate(${-2 - taps}deg)`, offset: 0.4 }, { transform: 'none' }], { duration: 420 });
+      const lit = Math.ceil((taps / TAPS) * paths.length);
+      paths.forEach((p, i) => p.classList.toggle('on', i < lit));
+      stage.style.setProperty('--crack', String(taps / TAPS));
+      dots[taps - 1]?.classList.add('on');
+      if (taps >= TAPS) { openChest(); return; }
+      vibrate([10 + taps * 6]);
+    };
+    hit?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit.click(); } });
+
     ok.addEventListener('click', close);
-    el.addEventListener('click', (e) => { if (e.target !== ok && performance.now() - opened > 2000) close(); });
+    el.addEventListener('click', (e) => {
+      if (e.target === ok) return;
+      if (isChest && !still) {
+        if (!isOpen) { if (ready) tapChest(e.detail ? e.clientX : null, e.detail ? e.clientY : null); return; }
+        if (!revealed) { reveal(); return; }
+        if (performance.now() - revealedAt > 700) close();
+        return;
+      }
+      if (performance.now() - opened > 2000) close();
+    });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
-    ok.focus({ preventScroll: true });
+    if (still && isChest) lootCards.forEach((c) => c.classList.add('in', 'landed'));
+    (isChest && !still ? hit! : ok).focus({ preventScroll: true });
     if (still) return;
 
     // 1. A seed of light: the Claim button lifts, becomes a glowing orb and flies to the centre,
@@ -261,25 +403,17 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const cr = canvas.getBoundingClientRect();
       fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
       vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' || m.kind === 'khatm' ? [24, 90, 14] : [22]);
+      // A chest now waits for the user's taps (after it has landed).
+      if (isChest) { later(560, () => { ready = true; }); return; }
       // A second beat when the badge lands / the star fills / the lantern opens.
-      const shakes = 600 + (tier + 2) * (380 + tier * 40);
-      const beat = m.kind === 'chest' ? shakes : m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
-      if (m.kind === 'chest') for (let k = 0; k < tier + 2; k++) later(600 + k * (380 + tier * 40) + 90, () => vibrate([6 + tier * 3]));
+      const beat = m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
       later(beat, () => {
         const b2 = stage.getBoundingClientRect();
-        if (m.kind === 'chest') {
-          // The lid bursts open: light pours up out of it, sparks fly from the mouth, a heavier thud.
-          chestBox!.classList.add('open');
-          stage.classList.add('opened');
-          fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height * 0.45 - cr.top, 50 + tier * 22, 0.85 + tier * 0.1);
-          vibrate(tier >= 3 ? [30, 60, 20, 60, 14] : tier >= 1 ? [26, 70, 14] : [22]);
-          return;
-        }
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
         vibrate([14]);
       });
       later(beat + 300, () => fx?.motes(true));
-      later(beat + (m.kind === 'chest' ? 350 : 150), countLight);
+      later(beat + 150, countLight);
       if (count && m.kind === 'flame') {
         const target = m.days;
         const t0 = performance.now() + 350;

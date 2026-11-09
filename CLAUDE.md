@@ -1433,6 +1433,14 @@ duas/reflections section in Me.
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
       their medal moments
+      Tap to open (owner request 2026-11-09, "interactive… the things won inside the chest"): the chest drops in and waits
+      ("Tap the chest to open it", 3 taps, 4 from 25 Light, 5 from 100; a dot per tap); each tap jolts it, sparks fly from
+      the finger, another crack lights up and the seam glows brighter (`--crack`); the last tap bursts it open and the
+      prizes come out of its mouth one by one in an arc, each landing on its own card (`Moment.loot`: `light` counting up,
+      `freeze`, `item` with its own art + label, `rare`), then the title and Alhamdulillah. A tap while they come out shows
+      them all. Goal / adhkar chests hold their Light; a Ranks prize holds its Light, the trophy, the freeze (#1) and the
+      week's jewel avatar or rare frame. Enter / Space taps; reduced motion → the open chest with every prize. Styles in
+      `src/ui/celebrate.css` (lazy)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

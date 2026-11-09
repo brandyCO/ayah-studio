@@ -1039,6 +1039,8 @@ const en = {
   'cel.big': 'Milestone',
   'cel.badge': 'New badge',
   'cel.ok': 'Alhamdulillah',
+  'cel.tapOpen': 'Tap the chest to open it',
+  'cel.freeze': 'Streak freeze',
   'chest.locked': 'A chest with {n} Light, ready when this goal is met',
   'chest.open': 'Open your chest: {n} Light',
   'chest.opened': 'Chest opened: {n} Light',

@@ -1933,35 +1933,6 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .chest.open .ck-lid { transform: translateY(-9px) rotate(-12deg) scaleY(.62); }
 .chest.open .ck-amt { background: none; box-shadow: none; color: var(--muted); }
 
-/* The opening moment (celebrate kind 'chest'): the chest drops in, shakes (more for a bigger one),
-   bursts open with light pouring up, then the Light counts on */
-.cel-stage .cel-chest { position: absolute; inset: 8%; width: 84%; height: 84%; overflow: visible; }
-.cel-chest-rays { position: absolute; inset: -30%; pointer-events: none; opacity: 0; border-radius: 50%;
-  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rw-hi) 55%, transparent) 0 7deg, transparent 7deg 22deg);
-  -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%); mask: radial-gradient(circle, #000 18%, transparent 66%); }
-.cel-chest-beam { position: absolute; left: 50%; bottom: 46%; width: 46%; height: 120%; translate: -50% 0; pointer-events: none; opacity: 0;
-  transform-origin: 50% 100%; background: linear-gradient(to top, color-mix(in srgb, var(--rw-core) 90%, transparent), color-mix(in srgb, var(--rw-hi) 30%, transparent) 55%, transparent);
-  -webkit-mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); filter: blur(2px); }
-.cel-chest-box { position: absolute; inset: 0; }
-.cel.go .cel-chest-box { animation: cel-chest-in .6s cubic-bezier(.2, 1.4, .4, 1) both, cel-chest-shake var(--sk, .42s) .6s ease-in-out var(--n, 2); transform-origin: 50% 88%; }
-.cel-chest-box.open { animation: cel-chest-pop .5s cubic-bezier(.2, 1.6, .4, 1) both !important; }
-.cel-chest-box .ck-mouth { opacity: 0; }
-.cel-chest-box.open .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); transition-duration: .45s; }
-.cel-chest-box.open .ck-mouth { opacity: 1; transform-box: fill-box; transform-origin: center; animation: cel-mouth 1.6s ease-out both; }
-.cel-chest-box.open .ck-aura { opacity: 1; animation: ck-spin 22s linear infinite; }
-.cel-chest-box.open .ck-glints { opacity: 1; }
-.cel-chest-box.open .ck-glints path { transform-box: fill-box; transform-origin: center; animation: ck-glint 1.6s calc(var(--i) * .3s) ease-in-out infinite; }
-.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both, ck-spin 26s linear infinite; }
-.cel-stage.opened .cel-chest-beam { animation: cel-beam 1.8s ease-out both; }
-@keyframes cel-chest-in { from { transform: translateY(-60px) scale(.4); opacity: 0; } 60% { opacity: 1; } to { transform: none; } }
-@keyframes cel-chest-shake { 0%, 100% { transform: none; } 20% { transform: translateY(-4px) rotate(calc(var(--w, 7deg) * -1)); } 45% { transform: translateY(-5px) rotate(var(--w, 7deg)); }
-  70% { transform: translateY(-2px) rotate(calc(var(--w, 7deg) * -.5)); } }
-@keyframes cel-chest-pop { 0% { transform: scale(.92, 1.08); } 40% { transform: scale(1.12, .9); } 100% { transform: none; } }
-@keyframes cel-mouth { 0% { transform: scale(.6); } 30% { transform: scale(1.5, 2.2); } 100% { transform: scale(1.15, 1.4); } }
-@keyframes cel-rays-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
-@keyframes cel-beam { 0% { opacity: 0; transform: scaleY(.1); } 25% { opacity: 1; transform: scaleY(1); } 100% { opacity: .35; transform: scaleY(.85); } }
-.cel.still .cel-chest-box .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); }
-.cel.still .cel-chest-box .ck-mouth, .cel.still .cel-chest-rays { opacity: 1; }
 
 /* Light flying from a reward to the Light counter, which counts up */
 .lt-fly { position: fixed; left: 0; top: 0; z-index: 95; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; pointer-events: none;
@@ -1972,7 +1943,6 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
   .chest .ck-art, .chest .ck-lid, .chest .ck-mouth, .chest .ck-aura, .chest .ck-glints path, .chest::before { animation: none !important; }
   .chest.ready .ck-mouth { opacity: .7; }
 }
-.cel-chest-box > svg { width: 100%; height: 100%; overflow: visible; }
 
 /* Weekly goals + reset countdowns (Me). */
 .me-h2 { margin: 0; font-size: var(--fs-l); }
