@@ -1988,3 +1988,10 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 :where(body:not([data-view="reel"], [data-view="kids"])) .chip:not(.on) { --edge: var(--line); box-shadow: 0 3px 0 var(--edge); }
 :where(body:not([data-view="reel"], [data-view="kids"])) :is(.primary, .chip):active:not(:disabled) { translate: 0 3px; scale: 1; box-shadow: 0 1px 0 var(--edge); }
 :where(body:not([data-view="reel"], [data-view="kids"])) .primary { border-radius: var(--r-l); }
+/* The Read bar in Read's teal (full of life); the page under it stays as it is. */
+.mushaf-bar { --tb: #12a594; background: var(--tb); color: #fff; border: 0; border-radius: 0 0 24px 24px; box-shadow: 0 6px 0 color-mix(in srgb, var(--tb) 60%, #000); backdrop-filter: none; }
+.mushaf-bar :is(.muted, .today-sub) { color: #e2fbf6; }
+.mushaf-bar .brand h1 { font-weight: 900; }
+.mushaf-bar .icon-btn { background: #ffffff2e; border: 0; color: #fff; }
+.mushaf-bar .today-item { background: #ffffff26; color: #fff; }
+@media (prefers-color-scheme: dark) { .mushaf-bar { --tb: #0b6f63; } }
