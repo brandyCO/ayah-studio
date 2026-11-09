@@ -24,7 +24,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 /** Points, as the server counts them (rank_score). */
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, day: 20 };
 
-export interface Row { name: string; score: number; me: boolean; tier?: number }
+export interface Row { name: string; score: number; me: boolean; tier?: number; move?: number }
 export interface Status { name: string; tier: number; total: number; week: number; weekPlace: number | null; weekPlayers: number; allPlace: number; allPlayers: number }
 export interface Board { id: string; name: string; code: string; mine: boolean; members: number }
 

@@ -33,3 +33,9 @@
 .rk-trophy { font-size: 52px; }
 .rk-how ul { padding-inline-start: 20px; display: grid; gap: 6px; }
 .rk-how-btn { justify-self: start; }
+/* Places moved since yesterday, and who moves up / down when the week ends */
+.rk-move { margin-inline-start: 6px; font-size: var(--fs-2xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.rk-move.up, .rk-dir.up { color: #1f9d55; }
+.rk-move.down, .rk-dir.down { color: #d1493b; }
+.rk-dir { font-size: 11px; line-height: 1; }
+@media (prefers-color-scheme: dark) { .rk-move.up, .rk-dir.up { color: #46d483; } .rk-move.down, .rk-dir.down { color: #f07462; } }

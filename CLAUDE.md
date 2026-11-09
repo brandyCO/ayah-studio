@@ -1448,7 +1448,9 @@ duas/reflections section in Me.
       **League**: 15 a league, tiers Lantern → Star → Moon → Dawn → Sun, top 3 up and bottom 3 down (leagues of 8+),
       settled lazily when a player's new week starts (Monday). **Global**: this week / all time, top 100 + your place.
       **My boards**: ≤ 50 people, invite link `#/rb/{code}` or code, ≤ 10 owned / 20 joined. Editable name (≤ 24).
-      Migration `20261110000000_ranks.sql`, pgTAP `ranks.test.sql` (24 checks)
+      Rows show places moved since yesterday (green ▲n / red ▼n beside the name, `move`; none on Mondays) and a ▲ / ▼
+      on the league rows that move up / down. Migrations `20261110000000_ranks.sql`, `20261110100000_rank_moves.sql`,
+      pgTAP `ranks.test.sql` (26 checks)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

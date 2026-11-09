@@ -42,6 +42,10 @@ const left = (ms: number) => {
   return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
 };
 
+/** Places moved since yesterday: a small green ▲2 or red ▼1 beside the name. */
+const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
+  `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
+
 /** One list of players, best first; zones mark who moves up or down in a league. */
 function list(rows: Row[], zones = false): HTMLElement {
   const n = rows.length;
@@ -54,7 +58,8 @@ function list(rows: Row[], zones = false): HTMLElement {
     items.push(h('li', { class: `rk-row${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       h('span', { class: 'rk-avatar', 'aria-hidden': 'true' }, (r.name[0] ?? '?').toUpperCase()),
-      h('span', { class: 'rk-name' }, r.name, r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : ''),
+      h('span', { class: 'rk-name' }, r.name, r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : ''),
+      up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, num(r.score))));
     if (zones && i === LEAGUE.up - 1 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
   });
