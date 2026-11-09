@@ -1,11 +1,11 @@
-// The timeline (recitation spine), CapCut-style: it starts at the left, a white playhead moves along
-// (and stays mid-screen while playing), with a scenes track and the recitation audio track (one block
-// per ayah, with its waveform). Tap a block to select it, then:
+// The timeline (recitation spine), CapCut-style: the white playhead is fixed in the middle and the
+// ruler, scenes track and recitation audio track (one block per ayah, with its waveform) slide under
+// it — swiping the timeline moves the playback position. Tap a block to select it, then:
 //   - scene: drag an edge to trim (neighbours give way, min 1 s, optional snap to the reciter's
 //     pauses), drag the block to reorder
 //   - audio: drag an edge to trim silence from the start or end of the ayah (never a word), drag the
 //     block to add a pause before it
-// Drag the ruler to scrub, anywhere else to scroll; pinch, ctrl+wheel or −/+ to zoom — down to
+// Swipe anywhere (ruler or an unselected block) to scrub; pinch, ctrl+wheel or −/+ to zoom — down to
 // milliseconds (3000 px per second; the waveform has a peak every 2 ms; drag labels show ms).
 import { backgroundById } from '../engine/backgrounds';
 import type { ReelPlan } from '../engine/recitation';
@@ -65,8 +65,7 @@ type Hit =
   | { kind: 'empty' };
 
 type Drag =
-  | { kind: 'scrub' }
-  | { kind: 'pan'; left0: number }
+  | { kind: 'pan'; t0: number }
   | { kind: 'scene-edge'; index: number; bounds: number[] } // index: boundary between scene index and index+1
   | { kind: 'scene-move'; index: number; dt: number }
   | { kind: 'audio-head'; index: number; trim: AudioTrim; head: number }
@@ -111,15 +110,20 @@ export function createSpine(o: SpineOptions) {
   const X = (s: number) => PAD + (s - left) * pps;
   const T = (x: number) => left + (x - PAD) / pps;
   const dur = () => o.timeline()?.duration ?? 0;
-  const clampLeft = () => {
-    const visible = (Wc() - PAD * 2) / pps;
-    left = Math.min(Math.max(0, left), Math.max(0, dur() - visible * 0.5));
+  /** The playhead never moves on screen: it sits in the middle and the view follows the time. */
+  const follow = () => {
+    if (pps) left = o.time() - (Wc() / 2 - PAD) / pps;
   };
-  function zoom(f: number, at = Wc() / 2) {
-    const s = T(at);
-    pps = Math.min(MAX_PPS, Math.max(8, pps * f));
-    left = s - (at - PAD) / pps;
-    clampLeft();
+  const clampT = (t: number) => Math.min(Math.max(0, t), dur());
+  /** Slide the timeline under the playhead: the playback position follows. */
+  function scrubTo(t: number, snap = true) {
+    o.seek(snap ? snapScrub(clampT(t)) : clampT(t));
+    follow();
+    dirty = true;
+  }
+  function zoom(f: number) {
+    pps = Math.min(MAX_PPS, Math.max(8, pps * f)); // around the playhead
+    follow();
     dirty = true;
   }
 
@@ -468,12 +472,13 @@ export function createSpine(o: SpineOptions) {
       ctx.closePath();
       ctx.fill();
     }
-    // Playhead.
-    const px = X(o.time());
-    if (px >= 0 && px <= w) {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px - 1, 2, 2, TRACKS + 6);
-    }
+    // Playhead: fixed in the middle, the tracks slide under it.
+    const px = Math.round(w / 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(px - 1, 2, 2, TRACKS + 6);
+    ctx.beginPath();
+    ctx.arc(px, 4, 4, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function draw() {
@@ -483,7 +488,8 @@ export function createSpine(o: SpineOptions) {
     screen.setTransform(dpr, 0, 0, dpr, 0, 0);
     screen.clearRect(0, 0, w, height);
     if (!tl) return;
-    if (!pps) pps = Math.min(90, Math.max(30, (w - PAD * 2 - 60) / tl.duration)); // fit a short reel
+    if (!pps) pps = Math.min(90, Math.max(30, (w / 2 - PAD) / tl.duration)); // a short reel fits right of the playhead
+    follow();
     // Redraw the cached tracks only when they changed or the view left them.
     const span = w / pps;
     const inside = left >= layerLeft - 1e-9 && (left - layerLeft) * pps + w <= layerW * 3 + 0.5;
@@ -493,7 +499,7 @@ export function createSpine(o: SpineOptions) {
       layerW = w;
       layerDpr = dpr;
       layerH = height;
-      layerLeft = Math.max(0, left - span);
+      layerLeft = left - span;
       const lw = Math.round(w * 3 * dpr), lh = Math.round(height * dpr);
       if (layer.width !== lw || layer.height !== lh) { layer.width = lw; layer.height = lh; }
       lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -539,7 +545,7 @@ export function createSpine(o: SpineOptions) {
   };
   function startDrag(at: Hit): Drag {
     const tl = o.timeline()!;
-    if (at.kind === 'ruler') return { kind: 'scrub' };
+    if (at.kind === 'ruler') return { kind: 'pan', t0: o.time() };
     if (at.kind === 'scene' && at.part === 'end' && at.index === tl.scenes.length - 1) return { kind: 'reel-end', tail0: o.tail(), tail: o.tail() };
     if (at.kind === 'scene' && at.part !== 'body') {
       return { kind: 'scene-edge', index: at.part === 'start' ? at.index - 1 : at.index, bounds: tl.scenes.slice(1).map((s) => s.start) };
@@ -553,7 +559,7 @@ export function createSpine(o: SpineOptions) {
       if (trim && at.part === 'end') return { kind: 'audio-tail', index: at.index, trim, tail: trim.tail };
       if (trim) return { kind: 'audio-move', index: at.index, trim, gap: trim.gap }; // the first: quiet before it
     }
-    return { kind: 'pan', left0: left };
+    return { kind: 'pan', t0: o.time() };
   }
 
   el.addEventListener('pointerdown', (e) => {
@@ -570,28 +576,24 @@ export function createSpine(o: SpineOptions) {
     const p = local(e);
     const d = startDrag(hit(p.x, p.y));
     drag = { ...d, x0: p.x, y0: p.y, moved: false, lastX: p.x, lastT: performance.now(), v: 0 };
-    if (d.kind === 'scrub') {
-      o.onScrubStart();
-      snapped = NaN;
-      o.seek(snapScrub(Math.min(Math.max(0, T(p.x)), dur())));
-    }
   });
 
   el.addEventListener('pointermove', (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, e.clientX);
     if (pinch && pointers.size === 2) {
       const [a, b] = [...pointers.values()];
-      const s = T(pinch.mid);
       pps = Math.min(MAX_PPS, Math.max(8, pinch.pps0 * (Math.abs(a - b) / pinch.d0)));
-      left = s - (pinch.mid - PAD) / pps;
-      clampLeft();
+      follow();
       dirty = true;
       return;
     }
     if (!drag) return;
     const p = local(e);
     if (!drag.moved && Math.abs(p.x - drag.x0) < 6) return;
-    if (!drag.moved && drag.kind !== 'pan' && drag.kind !== 'scrub') o.onScrubStart();
+    if (!drag.moved) {
+      o.onScrubStart();
+      snapped = NaN;
+    }
     drag.moved = true;
     const now = performance.now();
     drag.v = (p.x - drag.lastX) / Math.max(1, now - drag.lastT);
@@ -602,12 +604,9 @@ export function createSpine(o: SpineOptions) {
     const dx = (p.x - drag.x0) / pps;
     const tm = Math.min(Math.max(0, T(p.x)), tl.duration);
     switch (drag.kind) {
-      case 'scrub':
-        o.seek(snapScrub(tm));
-        break;
       case 'pan':
-        left = drag.left0 - (p.x - drag.x0) / pps;
-        clampLeft();
+        // Dragging the timeline left moves forward in time, under the fixed playhead.
+        scrubTo(drag.t0 - (p.x - drag.x0) / pps);
         break;
       case 'scene-edge': {
         const k = drag.index, bs = drag.bounds;
@@ -621,7 +620,6 @@ export function createSpine(o: SpineOptions) {
           buzz(best < 14 / pps ? snapTo : NaN);
         }
         bs[k] = ms(v);
-        o.seek(bs[k]);
         break;
       }
       case 'scene-move':
@@ -642,7 +640,7 @@ export function createSpine(o: SpineOptions) {
         break;
     }
     dirty = true;
-    if (drag.kind !== 'scrub' && drag.kind !== 'pan') tracksDirty = true;
+    if (drag.kind !== 'pan') tracksDirty = true;
   });
 
   const end = (e: PointerEvent) => {
@@ -658,15 +656,14 @@ export function createSpine(o: SpineOptions) {
     const tl = o.timeline();
     if (!tl) return;
     if (!d.moved) {
-      // Tap: the playhead jumps to the tapped moment (snapped to an ayah or word start nearby), so
-      // you can listen from there; a block is selected too (tapping the selected one keeps it), and a
-      // tap on empty space lets go of the selection.
+      // Tap: a block is selected (tapping the selected one keeps it), a tap on empty space lets go
+      // of the selection; a tap on the ruler slides that moment under the playhead.
       const at = hit(d.x0, d.y0);
       if (at.kind === 'add') return o.addScene();
-      if (d.kind !== 'scrub') {
+      if (at.kind === 'ruler') {
         o.onScrubStart();
         snapped = NaN;
-        o.seek(snapScrub(Math.min(Math.max(0, T(d.x0)), dur())));
+        return scrubTo(T(d.x0));
       }
       if (at.kind === 'scene' || at.kind === 'audio') {
         const sel = o.selection();
@@ -700,10 +697,10 @@ export function createSpine(o: SpineOptions) {
           const now = performance.now();
           v *= Math.pow(0.995, now - last);
           if (Math.abs(v) < 0.02) return;
-          left -= (v * (now - last)) / pps;
-          clampLeft();
-          dirty = true;
+          const t = o.time() - (v * (now - last)) / pps;
+          scrubTo(t, false);
           last = now;
+          if (t <= 0 || t >= dur()) return;
           fling = requestAnimationFrame(stepFn);
         };
         fling = requestAnimationFrame(stepFn);
@@ -714,10 +711,9 @@ export function createSpine(o: SpineOptions) {
   el.addEventListener('pointercancel', end);
   el.addEventListener('wheel', (e) => {
     e.preventDefault();
-    if (e.ctrlKey || e.metaKey) return zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.offsetX);
-    left += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / pps;
-    clampLeft();
-    dirty = true;
+    if (e.ctrlKey || e.metaKey) return zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1);
+    o.onScrubStart();
+    scrubTo(o.time() + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / pps, false);
   }, { passive: false });
 
   let lastT = -1;
@@ -733,26 +729,15 @@ export function createSpine(o: SpineOptions) {
       if (t !== lastT) {
         lastT = t;
         dirty = true;
-        if (o.playing() && pps) {
-          // Start from the left; once the playhead passes the middle, keep it there.
-          const w = Wc();
-          if (X(t) > w / 2) left = t - (w / 2 - PAD) / pps;
-          else if (X(t) < PAD) left = t;
-          clampLeft();
-        }
       }
+      follow(); // also after a resize
       if (!dirty) return;
       dirty = false;
       draw();
     },
     /** Bring time t into view (after a seek from elsewhere). */
-    reveal(t: number) {
-      if (!pps) return;
-      if (X(t) < PAD || X(t) > Wc() - PAD) {
-        left = t - Wc() / 3 / pps;
-        clampLeft();
-        dirty = true;
-      }
+    reveal(_t: number) {
+      dirty = true; // the view always follows the playhead
     },
     dispose: () => {
       ro.disconnect();

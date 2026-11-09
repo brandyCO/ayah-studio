@@ -262,9 +262,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [x] Timeline (`src/ui/spine.ts`, CapCut-style): starts at the left, white playhead (kept mid-screen
-      while playing), "00:00 • 00:02" ruler, zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub,
-      drag elsewhere to scroll; room under the tracks. Tracks: scenes (thumbnails, lengths, transition
+- [x] Timeline (`src/ui/spine.ts`, CapCut-style): the white playhead is fixed in the middle (owner
+      request 2026-11-09) and the ruler and tracks slide under it — swiping anywhere (ruler or an
+      unselected block, with a fling) moves the playback position, a tap on the ruler slides that moment
+      under it; "00:00 • 00:02" ruler, zoom around the playhead (pinch, ctrl+wheel, −/+); room under the tracks. Tracks: scenes (thumbnails, lengths, transition
       markers, white + to add) and recitation audio (waveform per ayah). No text track (owner request)
 - [x] Block editing (owner request), within the rules: tap a block to select it →
       **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
@@ -576,7 +577,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
       before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
       reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
-      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      a tap on the timeline selects the block (the playhead stays fixed in the middle since 2026-11-09);
       the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
       divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
       top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
