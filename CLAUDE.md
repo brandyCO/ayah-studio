@@ -448,7 +448,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `qdcSurah()` applies to Quran.com's timings everywhere (`applyFixes()`: heard start/end/words; an unclear ayah between
       two neighbours moved alike moves with them; the ayah before is cut / joined at the new start). Seeking itself was
       checked accurate on all 13 Quran.com recordings (`scripts/seek-check.*`, `align.yml` scan = seek), so a tap that
-      plays from mid-ayah is always a timing error. First: Alafasy 19–38 (37:112–115 were 2.4 s late)
+      plays from mid-ayah is always a timing error. First: Alafasy 19–38 (37:112–115 were 2.4 s late);
+      2026-11-09 all 13 reciters (1 and 9 partly), checked on the audio by `scripts/qdc-fix-check.py` (`align.yml` scan =
+      fixcheck: loudness contrast at both starts): where Quran.com starts late ours was right ~96 %, so those are applied
+      for every reciter; earlier starts only for 1, 7, 9, 161; Shuraim (10) none (`EARLY_OK`, `SKIP`); 13,776 ayat
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when

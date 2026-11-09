@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   plan:
-    if: inputs.scan != 'yes' && inputs.scan != 'seek' && inputs.scan != 'cors' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find' && inputs.scan != 'audit'
+    if: inputs.scan != 'yes' && inputs.scan != 'seek' && inputs.scan != 'cors' && inputs.scan != 'fixcheck' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find' && inputs.scan != 'audit'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -160,7 +160,7 @@ jobs:
 
   # scan = seek: does a seek in Chromium's <audio> land where currentTime says, for each Quran.com recording?
   seek:
-    if: inputs.scan == 'seek' || inputs.scan == 'cors'
+    if: inputs.scan == 'seek' || inputs.scan == 'cors' || inputs.scan == 'fixcheck'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -169,6 +169,8 @@ jobs:
       - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
       - if: inputs.scan == 'seek'
         run: node scripts/seek-check.cjs seek ${{ inputs.surahs || '2' }} && python3 scripts/seek-check.py seek
+      - if: inputs.scan == 'fixcheck'
+        run: mkdir -p seek && python3 scripts/qdc-fix-check.py seek/result.json 40
       - if: inputs.scan == 'cors'
         run: mkdir -p seek && node scripts/cors-check.cjs seek/result.json ${{ inputs.only }}
       - name: Save the report
