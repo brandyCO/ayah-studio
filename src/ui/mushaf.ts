@@ -116,7 +116,10 @@ function knownPage(hash: string): number | null {
   return null;
 }
 
+let mounts = 0; // the newest reading view; an older one's late cleanup must not undo it
+
 export async function showMushaf(root: HTMLElement, n: number, focusAyah?: number): Promise<() => void> {
+  const mount = ++mounts;
   // Reopening where the user left off: start that page's font right away, while the layout loads.
   const known = knownPage(location.hash);
   if (known) void loadPageFont(known).catch(() => {});
@@ -151,6 +154,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   // --- listening: the recited ayah is tinted, the recited word coloured; pages turn with it ---
   let playing: { s: number; a: number; w: number | null } | null = null;
+  // Pages turn with the recitation only while the reader is on the page being recited. A page opened
+  // from elsewhere (recently read, search, a bookmark) or turned by hand stays put until the
+  // recitation reaches it, so it swipes and taps like any page.
+  let following = false;
+  let firstPosition = true;
   let doneLater: (() => void) | null = null; // a "surah finished" card held until the recitation ends it
   // The app's one player: it keeps playing on other screens; here it tracks the page and lights the words.
   const player = sharedPlayer(meta);
@@ -160,8 +168,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       playing = pos;
       if (pos && !panning && !animating) {
         const target = mushaf.wordPage(pos.s, Math.max(1, pos.a), pos.w ?? 1); // a = 0: the Bismillah before ayah 1
-        if (target !== page) go(target);
-      }
+        if (firstPosition) following = target === page; // opened on another page: stay on it
+        else if (target === page) following = true;
+        else if (following) go(target);
+        firstPosition = false;
+      } else if (!pos) following = false;
       paintPlaying();
     },
     onShow: (on) => {
@@ -182,7 +193,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
   }
 
-  listenHere = (s, a) => { noteAyah(s, a); void player.playFrom(s, a); };
+  const playHere = (s: number, a: number) => { following = true; firstPosition = false; void player.playFrom(s, a); };
+  listenHere = (s, a) => { noteAyah(s, a); playHere(s, a); };
   const sel = selectionController({
     meta,
     area,
@@ -195,11 +207,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // While listening, tapping an ayah plays from it.
     onTap: (hit) => {
       if (markTapped) return; // a margin mark opens its own sheet (click handler below)
-      if (player.active() && hit) void player.playFrom(hit.s, hit.a);
+      if (player.active() && hit && following) void player.playFrom(hit.s, hit.a);
       else toggleBar();
     },
     onTranslate: (s) => void showTranslation(s),
-    onListen: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void player.playFrom(s.surah, s.lo); },
+    onListen: (s) => { sel.clear(); noteAyah(s.surah, s.lo); playHere(s.surah, s.lo); },
     onBookmark: (s) => {
       noteAyah(s.surah, s.lo);
       sel.clear();
@@ -212,8 +224,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const listenNow = () => {
     toggleBar(false);
-    if (player.active()) player.toggle();
-    else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
+    if (player.active() && following) player.toggle(); // on another page: ▶ plays from this one
+    else { const f = firstAyahOnPage(); playHere(f.s, f.a); }
   };
   const tabs = tabBar('read', { read: () => toggleBar(false) }, true);
   root.append(bar, area, sel.bar, tabs);
@@ -484,7 +496,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     panRaf = 0;
     panning = false;
     const fling = Math.abs(vx) > 0.35 && Math.sign(vx) === dir;
-    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) slideTo(target, Math.abs(dx), Math.abs(vx));
+    if (phase === 'end' && valid(target) && (Math.abs(dx) > W() * 0.22 || fling)) { following = false; slideTo(target, Math.abs(dx), Math.abs(vx)); }
     else {
       setStrip(0, 220);
       window.setTimeout(() => { if (!panning && !animating) strip.classList.remove('moving'); }, 260);
@@ -586,15 +598,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${reference(meta[s - 1], a, a)}`, () => d.close()),
       b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); void player.playFrom(s, a); } }, `🎧  ${t('bm.listenHere')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, `🎧  ${t('bm.listenHere')}`),
         h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, `🎬  ${t('bm.reel')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast(t('mushaf.bookmarkRemoved')); } }, `✕  ${t('bm.remove')}`)));
   }
 
   const onKey = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || document.querySelector('dialog[open]')) return;
-    if (e.key === 'ArrowLeft') go(page + 1);
-    else if (e.key === 'ArrowRight') go(page - 1);
+    if (e.key === 'ArrowLeft') { following = false; go(page + 1); }
+    else if (e.key === 'ArrowRight') { following = false; go(page - 1); }
     else if (e.key === ' ' && player.active()) { e.preventDefault(); player.toggle(); }
   };
   let resizeTimer = 0;
@@ -662,7 +674,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(resizeTimer);
     sel.destroy();
     detachPlayer(); // the recitation carries on (the bar moves above the tab bar)
-    document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
+    if (mount === mounts) document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };
