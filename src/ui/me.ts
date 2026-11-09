@@ -13,7 +13,7 @@ import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_G
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
 import { badgeMoment } from '../data/claims';
 import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
-import { ALL_LIGHT, BADGE_LIGHT, dayLightMax, lightFor } from '../data/goals';
+import { ALL_LIGHT, BADGE_LIGHT, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -203,8 +203,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     return h('span', { class: 'goal-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct * 100)) }, fill);
   };
   // A goal's chest: resting until the goal is met, then shaking to be opened; open once claimed.
-  const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void) => {
-    const claimed = goalClaimed(id);
+  const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void, week = false) => {
+    const claimed = week ? weekClaimed(id) : goalClaimed(id);
     const state = claimed ? 'open' : met ? 'ready' : 'locked';
     return chest(light, state, t(claimed ? 'chest.opened' : met ? 'chest.open' : 'chest.locked', { n: light }), open);
   };
@@ -220,6 +220,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       met ? t('goal.adhkarAgain') : g.done ? t('goal.adhkarGo') : t('goal.adhkarBegin'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
+    else if (g.kind === 'surahs') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
+    else if (g.kind === 'listen') act = h('button', { class: 'chip', onclick: () => goMushaf('listen') }, t('goal.listen1'));
     else if (g.kind === 'custom') {
       const c = g.custom!;
       act = c.target === 1
@@ -237,7 +239,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarOf', { n: g.done, of: g.target }))
           : g.kind === 'custom' && g.target === 1 ? (met ? t('goal.doneToday') : t('cg.mine')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
       act,
-      goalChest(g.id, lightFor(g), met, (el) => void claimGoalRow(g, el)));
+      goalChest(g.id, lightFor(g), met, (el) => void claimGoalRow(g, el), !!g.week));
   };
   // The day's chest: every goal met today.
   const dayRow = (list: GoalProgress[]) => {
@@ -250,6 +252,39 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted small' }, all && goalClaimed('all') ? t('goal.allMet') : `${n} / ${list.length}`)),
       goalChest('all', ALL_LIGHT, all, (el) => void claimAll(el)));
   };
+  // This week's goals (reset every Monday): their own rows and chest for all of them.
+  const claimWeekAll = (from?: Element) => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
+    () => claimGoal(weekAllId(), WEEK_ALL_LIGHT));
+  const weekBox = () => {
+    const list = weekGoals();
+    if (!list.length) return '';
+    const n = list.filter((g) => g.done >= g.target).length;
+    const all = n === list.length;
+    return h('div', { class: 'week-goals' },
+      h('div', { class: 'me-row' }, h('h3', { class: 'me-h2' }, t('wkg.title')), resetLabel('week')),
+      list.length > 1 ? h('div', { class: `goal-day${all ? ' met' : ''}` },
+        h('span', { class: 'goal-txt' },
+          h('b', {}, t('wkg.chest')),
+          bar(weekAllId(), n / list.length),
+          h('span', { class: 'muted small' }, `${n} / ${list.length}`)),
+        goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
+      h('div', { class: 'goals' }, ...list.map(goalRow)));
+  };
+  // "Resets in 5 h 12 m": kept current by the screen's 30 s tick.
+  const leftText = (ms: number) => {
+    const m = Math.max(1, Math.ceil(ms / 60_000));
+    const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+    return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+  };
+  const resetLabel = (which: 'day' | 'week') => {
+    const el = h('span', { class: 'goal-reset muted small', 'data-reset': which });
+    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[which].getTime() - Date.now()) });
+    return el;
+  };
+  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach((el) => {
+    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
+  });
   // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
   // The lantern fills with this week's Light against what seven days of today's goals could give.
   const lightStrip = () => {
@@ -308,10 +343,12 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     goalsBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
+      list.length ? resetLabel('day') : '',
       tip ? tipCard(tip) : '',
       list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
       list.length ? lightStrip() : '',
+      weekBox(),
       h('div', { class: 'goal-links' },
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
@@ -387,6 +424,11 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         row(t('goal.eReels'), REEL_GOALS, g.reels, (n) => { g.reels = n; }),
         ...DHIKR.map((x) => row(t(x.key as Key), DHIKR_GOALS, g.dhikr[x.id] ?? 0, (n) => { if (n) g.dhikr[x.id] = n; else delete g.dhikr[x.id]; })),
         row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on')),
+        h('h3', { class: 'me-h2' }, t('wkg.title')),
+        row(t('wkg.ePages'), WEEK_PAGES, g.weekly.pages, (n) => { g.weekly.pages = n; }),
+        row(t('wkg.eListen'), WEEK_LISTEN, g.weekly.listen, (n) => { g.weekly.listen = n; }, (n) => t('wkg.min', { n })),
+        row(t('wkg.eSurahs'), WEEK_SURAHS, g.weekly.surahs, (n) => { g.weekly.surahs = n; }),
+        row(t('wkg.eReels'), WEEK_REELS, g.weekly.reels, (n) => { g.weekly.reels = n; }),
         mine));
   }
 
@@ -501,7 +543,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) void paintPrayer(); }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); } }, 30_000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();

@@ -1973,3 +1973,11 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
   .chest.ready .ck-mouth { opacity: .7; }
 }
 .cel-chest-box > svg { width: 100%; height: 100%; overflow: visible; }
+
+/* Weekly goals + reset countdowns (Me). */
+.me-h2 { margin: 0; font-size: var(--fs-l); }
+.goal-reset { display: block; margin: -4px 0 8px; font-variant-numeric: tabular-nums; }
+.me-row .goal-reset { margin: 0; }
+.week-goals { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.week-goals .me-row { margin-bottom: 8px; }
+.goal-editor .me-h2 { margin: 14px 0 4px; }

@@ -1433,6 +1433,11 @@ duas/reflections section in Me.
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
       their medal moments
+- [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
+      reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
+      (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
+      every weekly goal (`WEEK_ALL_LIGHT` 50). Me → Today's goals shows "Resets in 5 h 12 m" (midnight) and a This week
+      block "Resets in 6 d 5 h" (Monday 00:00, `resetsAt()`), kept current by the screen's 30 s tick; Edit has the weekly rows
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
