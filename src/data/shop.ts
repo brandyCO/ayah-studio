@@ -8,10 +8,10 @@ import { revive } from './journey';
 export const FREEZE_PRICE = 250;
 export const FREEZE_MAX = 3;
 /** What can only be won, and how. */
-export type Win = 'sun' | 'p1' | 'p2' | 'p3' | 'w1' | 'w3' | 'w5' | 'w10';
+export type Win = 'sun' | 'p1' | 'p2' | 'p3' | 'w1' | 'w3' | 'w5' | 'w10' | 'week';
 export interface Item { id: string; kind: 'avatar' | 'frame' | 'icon'; ref: number | string; price?: number; win?: Win }
 /** What the player has won so far (from rank_status). */
-export interface Wins { bestTier: number; bestPlace: number | null; wins: number }
+export interface Wins { bestTier: number; bestPlace: number | null; wins: number; items?: string[] }
 
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 export const ITEMS: Item[] = [
@@ -25,10 +25,27 @@ export const ITEMS: Item[] = [
   { id: 'fr:6', kind: 'frame', ref: 6, win: 'p2' },
   { id: 'fr:7', kind: 'frame', ref: 7, win: 'p3' },
   ...(['w1', 'w3', 'w5', 'w10'] as const).map((w, i): Item => ({ id: `av:${36 + i}`, kind: 'avatar', ref: 36 + i, win: w })),
+  // Weekly prizes: each week its own jewel avatar for #1 and frame for #2 and #3 (server: rank_prize_item).
+  ...range(40, 51).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, win: 'week' })),
+  ...range(8, 13).map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, win: 'week' })),
   // App icons join here (bought or won) once their designs are in the app.
 ];
 
-export const won = (w: Win, x: Wins) => w === 'sun' ? x.bestTier >= 4
+/** The week's prize for a place, as the server gives it (rank_prize_item; week 0 = 2026-11-09). */
+export function weekPrize(week: string, place: number): string | null {
+  const k = ((Math.round((Date.parse(`${week}T12:00Z`) - Date.parse('2026-11-09T12:00Z')) / 6048e5) % 12) + 12) % 12;
+  return place === 1 ? `av:${40 + k}` : place === 2 || place === 3 ? `fr:${8 + (k % 6)}` : null;
+}
+/** Weeks until a weekly prize comes round (0 = this week). */
+export function weeksUntil(id: string, week: string): number {
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.parse(`${week}T12:00Z`) + i * 6048e5).toISOString().slice(0, 10);
+    if (weekPrize(d, 1) === id || weekPrize(d, 2) === id) return i;
+  }
+  return -1;
+}
+
+export const won = (w: Win, x: Wins) => w === 'week' ? false : w === 'sun' ? x.bestTier >= 4
   : w[0] === 'p' ? x.bestPlace !== null && x.bestPlace <= Number(w.slice(1))
     : x.wins >= Number(w.slice(1));
 /** Owned: free (the first 24 avatars, the tier ring), bought, or won. */
@@ -36,7 +53,7 @@ export function owns(kind: 'avatar' | 'frame', ref: number, x: Wins): boolean {
   if (kind === 'avatar' ? ref < 24 : ref === 0) return true;
   const it = ITEMS.find((i) => i.kind === kind && i.ref === ref);
   if (!it) return false;
-  return it.win ? won(it.win, x) : shopHas(it.id);
+  return it.win === 'week' ? !!x.items?.includes(it.id) : it.win ? won(it.win, x) : shopHas(it.id);
 }
 /** Light left to spend: all earned (every device) minus the garden's and the shop's purchases. */
 export const lightLeft = wallet;
