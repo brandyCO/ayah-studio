@@ -193,3 +193,7 @@
 .rk-wp-items { display: flex; gap: 10px; }
 .rk-wp-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .rk-prize-item { display: flex; }
+.rk-icon-art { width: 46px; height: 46px; border-radius: 11px; box-shadow: 0 3px 10px -4px rgba(0, 0, 0, .6); }
+.rk-shop-item.locked .rk-icon-art { filter: grayscale(.85) brightness(.8); }
+.rk-shop-item.using { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.rk-icon-name { font-size: 12px; font-weight: 600; line-height: 1.2; }

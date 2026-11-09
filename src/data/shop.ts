@@ -4,6 +4,7 @@
 // weeks won at #1 (the server checks those, rank_set_look). Never money, never a measure of reward.
 import { shopAdd, shopHas, shopIds, wallet } from './garden';
 import { revive } from './journey';
+import { RARE_ICONS } from './rareIcons';
 
 export const FREEZE_PRICE = 250;
 export const FREEZE_MAX = 3;
@@ -28,7 +29,8 @@ export const ITEMS: Item[] = [
   // Weekly prizes: each week its own jewel avatar for #1 and frame for #2 and #3 (server: rank_prize_item).
   ...range(40, 51).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, win: 'week' })),
   ...range(8, 13).map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, win: 'week' })),
-  // App icons join here (bought or won) once their designs are in the app.
+  // Rare app icons (src/data/rareIcons.ts): some sold for Light, some only won (top 3 of a week, the Sun tier).
+  ...RARE_ICONS.map((r): Item => ({ id: `ic:${r.id}`, kind: 'icon', ref: r.id, price: r.price, win: r.win })),
 ];
 
 /** The week's prize for a place, as the server gives it (rank_prize_item; week 0 = 2026-11-09). */
@@ -54,6 +56,12 @@ export function owns(kind: 'avatar' | 'frame', ref: number, x: Wins): boolean {
   const it = ITEMS.find((i) => i.kind === kind && i.ref === ref);
   if (!it) return false;
   return it.win === 'week' ? !!x.items?.includes(it.id) : it.win ? won(it.win, x) : shopHas(it.id);
+}
+/** Owned rare app icon: bought, or won. */
+export function ownsIcon(id: string, x: Wins | null): boolean {
+  const it = ITEMS.find((i) => i.kind === 'icon' && i.ref === id);
+  if (!it) return false;
+  return it.win ? !!x && won(it.win, x) : shopHas(it.id);
 }
 /** Light left to spend: all earned (every device) minus the garden's and the shop's purchases. */
 export const lightLeft = wallet;
