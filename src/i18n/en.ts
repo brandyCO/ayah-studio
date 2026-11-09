@@ -986,6 +986,7 @@ const en = {
   'tab.create': 'Create',
   'tab.me': 'Me',
   'tab.learn': 'Learn',
+  'tab.ranks': "Ranks",
   'mushaf.listen': 'Listen from this page',
   'mushaf.listenMoved': 'Listening is here now: ▶ in the top bar, or long-press an ayah',
   'create.title': 'Make a reel',

@@ -1981,3 +1981,17 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .week-goals { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .week-goals .me-row { margin-bottom: 8px; }
 .goal-editor .me-h2 { margin: 14px 0 4px; }
+
+/* Create: the raised round button in the middle of the tab bar (owner request 2026-11-09). */
+.tab-btn.tab-fab { justify-content: flex-end; padding-bottom: 6px; overflow: visible; }
+.tab-btn.tab-fab:active { background: none; }
+.fab-disc {
+  width: 58px; height: 58px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; background: var(--brand-fill); border: 4px solid var(--bg);
+  box-shadow: 0 6px 18px -4px var(--brand-glow, rgba(10, 110, 85, .55)), var(--brand-shadow, 0 0 0 transparent);
+  transition: transform var(--dur-2, .2s) var(--ease-spring, ease), box-shadow var(--dur-2, .2s) ease;
+}
+.fab-disc svg { stroke-width: 2.4; }
+.tab-btn.tab-fab:active .fab-disc { transform: scale(.92); }
+.tab-btn.tab-fab span:last-child { color: var(--text, inherit); }
+@media (hover: hover) { .tab-btn.tab-fab:hover .fab-disc { transform: translateY(-2px); } }

@@ -1046,6 +1046,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tab.create': 'اصنع',
   'tab.me': 'أنا',
   'tab.learn': 'تعلّم',
+  'tab.ranks': "الترتيب",
   'mushaf.listen': 'استمع من هذه الصفحة',
   'mushaf.listenMoved': 'الاستماع هنا الآن: ▶ في الشريط العلوي، أو اضغط مطولاً على آية',
   'create.title': 'اصنع مقطعًا',
