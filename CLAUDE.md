@@ -1489,6 +1489,16 @@ duas/reflections section in Me.
       "You" sheet (look, shop, trophies, how points work); League tab = a hero in the tier's colour (the five tier emblems,
       yours lit, slow light rays) + one strip (quest bar + this week's prizes → sheet) + the list; your row is sticky with
       "n points to pass {rival}". Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
+      **Friend challenge** (owner pick 2026-11-09; migration `20261110500000_rank_challenges.sql`, pgTAP 64): My boards →
+      Challenge a friend → a link `#/rc/{code}` (≤ 3 a week, ≤ 10 going); the 7 days start the day the friend accepts; points =
+      checked pages × 10 + minutes × 2 from `rank_days` (nothing new reported); two bars on Ranks ("Yusuf leads by 66. About 7
+      pages passes them."); two days after the last day each side opens a chest once: won 100 Light, tie 60, otherwise 30
+      (`claimGoal('ch:{id}')`). **League's last hours**: Sunday from 18:00 a box on the League tab with the time left and
+      `standing()` (points to the top 3, the lead over #4, or out of the bottom 3); Android: one note at Sunday 18:00 (id 3300,
+      rescheduled whenever the league is read; toggle in the You sheet, `rankNote`). **Monday recap**: on Monday and Tuesday a
+      "My week" card (closable, `rankRecapSeen`) → **Share my week**: a 1080×1350 PNG (`src/ui/rankRecap.ts`: last week's tier
+      emblem, place, points, this device's pages and minutes when > 0, "Effort in the app, not reward with Allah"), shared with
+      the app link; also in the You sheet
       **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
       `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
       eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then

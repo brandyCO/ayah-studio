@@ -101,10 +101,8 @@ async function route() {
     } else if (view === 'learn') {
       if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
       else c = await (await import('./ui/garden')).showGarden(screen);
-    } else if (view === 'ranks') {
-      c = await (await import('./ui/ranks')).showRanks(screen);
-    } else if (view === 'rb' && a) {
-      c = await (await import('./ui/ranks')).showBoardInvite(screen, a);
+    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc') && a)) {
+      c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);

@@ -7,7 +7,7 @@ import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import { addDays, allDays, claimGoal } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
-import { shareableLink } from '../native';
+import { isNative, shareableLink } from '../native';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
@@ -85,7 +85,8 @@ export function watchRanks() {
     if (!a) return;
     reportSoon(3000);
     // A board invite opened before signing in: Ranks joins it.
-    try { if (sessionStorage.getItem('pendingBoard') && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
+    try { if ((sessionStorage.getItem('pendingBoard') || sessionStorage.getItem('pendingChallenge')) && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
+    void scheduleLeagueNote();
   });
 }
 
@@ -142,6 +143,39 @@ export async function leaveBoard(id: string) {
 export const boardPreview = (code: string) => rpc<{ name: string; members: number; joined: boolean } | null>('rank_board_preview', { board_code: code.toLowerCase() });
 export const boardLink = (code: string) => shareableLink(`#/rb/${code}`);
 
+// --- friend challenge: one friend, the 7 days from the day they accept, pages + listening ---
+export interface Challenge {
+  id: string; code: string | null; start: string | null; end: string | null; waiting: boolean; expired: boolean;
+  day: number | null; over: boolean; claimed: boolean; me: number | null; them: number | null; friend: Row | null;
+}
+export const myChallenges = (fresh = false) => cached('challenges', () => rpc<Challenge[]>('rank_my_challenges', { d: dayKey() }), fresh);
+export async function createChallenge(): Promise<{ id: string; code: string }> {
+  await report();
+  const r = await rpc<{ id: string; code: string }>('rank_challenge_create');
+  dropCache();
+  return r;
+}
+export async function acceptChallenge(code: string): Promise<string> {
+  await report();
+  const id = await rpc<string>('rank_challenge_accept', { ch_code: code.trim().toLowerCase(), d: dayKey() });
+  dropCache();
+  return id;
+}
+export async function cancelChallenge(id: string) {
+  await rpc('rank_challenge_cancel', { ch: id });
+  dropCache();
+}
+export const challengePreview = (code: string) =>
+  rpc<{ from: Row; taken: boolean; expired: boolean; mine: boolean; joined: boolean } | null>('rank_challenge_preview', { ch_code: code.toLowerCase() });
+export const challengeLink = (code: string) => shareableLink(`#/rc/${code}`);
+/** Claims a finished challenge's Light once (winner 100, tie 60, otherwise 30). */
+export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 'tie' | 'lost'; light: number } | null> {
+  const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });
+  dropCache();
+  if (r) claimGoal(`ch:${c.id}`, r.light);
+  return r;
+}
+
 // --- prizes: the top 3 of a league win a trophy and Light (#1 also a streak freeze) ---
 export interface Prize { week: string; place: number | null; tier: number; promoted: boolean; light: number; freeze: boolean; item?: string | null; claimed: boolean }
 export const myPrizes = (fresh = false) => cached('prizes', () => rpc<Prize[]>('rank_my_prizes'), fresh);
@@ -191,4 +225,62 @@ export function takeRankMoments(s: Status | null, league: { players: Row[] } | n
 export function weekEnds(now = new Date()): Date {
   const toMon = (8 - now.getDay()) % 7 || 7;
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + toMon);
+}
+
+// --- the league's last hours: where you stand, and (Android) a note on Sunday evening ---
+export type Stand = { kind: 'up'; n: number } | { kind: 'hold'; n: number; place: number } | { kind: 'safe'; n: number } | { kind: 'top' } | { kind: 'join' };
+/** What this week's league needs from you: points to the top 3, your lead over #4, or out of the bottom 3. */
+export function standing(players: Row[]): Stand {
+  const i = players.findIndex((r) => r.me);
+  if (i < 0) return { kind: 'join' };
+  const n = players.length, me = players[i].score;
+  if (i < LEAGUE.up) {
+    if (n <= LEAGUE.up || me === 0) return me === 0 ? { kind: 'up', n: 1 } : { kind: 'top' };
+    return { kind: 'hold', n: me - players[LEAGUE.up].score, place: i + 1 };
+  }
+  if (n >= LEAGUE.downFrom && i >= n - LEAGUE.down) return { kind: 'safe', n: players[n - LEAGUE.down - 1].score - me + 1 };
+  return { kind: 'up', n: players[LEAGUE.up - 1].score - me + 1 };
+}
+/** Sunday from 18:00 until midnight: the last hours (local). */
+export const lastHours = (now = new Date()) => now.getDay() === 0 && now.getHours() >= 18;
+const NOTE_ID = 3300;
+export const leagueNoteOn = () => { try { return localStorage.getItem('rankNote') !== '0'; } catch { return true; } };
+export function setLeagueNote(on: boolean) {
+  try { localStorage.setItem('rankNote', on ? '1' : '0'); } catch { /* ignore */ }
+  void scheduleLeagueNote();
+}
+/** Android: one note at 18:00 on Sunday with where you stand (rescheduled whenever the league is read). */
+export async function scheduleLeagueNote(players?: Row[]) {
+  if (!isNative()) return;
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    await LocalNotifications.cancel({ notifications: [{ id: NOTE_ID }] });
+    if (!leagueNoteOn() || !account()) return;
+    if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
+    const end = weekEnds();
+    const at = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1, 18, 0);
+    if (at.getTime() < Date.now() + 60_000) return;
+    const { rt } = await import('../i18n/ranks');
+    const st = players ? standing(players) : { kind: 'join' as const };
+    const body = st.kind === 'up' ? rt('rk.noteUp', { n: st.n, pages: Math.ceil(st.n / POINTS.page) })
+      : st.kind === 'hold' ? rt('rk.noteHold', { place: st.place, n: st.n })
+        : st.kind === 'safe' ? rt('rk.noteSafe', { n: st.n, pages: Math.ceil(st.n / POINTS.page) })
+          : st.kind === 'top' ? rt('rk.noteTop') : rt('rk.noteJoin');
+    await LocalNotifications.schedule({ notifications: [{
+      id: NOTE_ID, smallIcon: 'ic_stat_crescent', title: rt('rk.noteTitle', { h: 6 }), body,
+      schedule: { at, allowWhileIdle: true }, extra: { hash: '#/ranks' },
+    }] });
+  } catch { /* an older build or notifications off */ }
+}
+
+/** Last week from this device's own log: pages read and minutes of recitation (Monday → Sunday). */
+export function lastWeekLocal(weekStart: string) {
+  const days = allDays(), log = readLogAll();
+  let pages = 0, listen = 0, active = 0;
+  for (let i = -7; i < 0; i++) {
+    const k = addDays(weekStart, i);
+    const p = log[k]?.length ?? 0, l = Math.floor((days[k]?.l ?? 0) / 60);
+    pages += p; listen += l; if (p || l) active++;
+  }
+  return { pages, listen, active };
 }
