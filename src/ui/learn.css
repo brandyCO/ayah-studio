@@ -239,3 +239,19 @@
 .learn-shelf { display: block; width: 100%; }
 .learn-store-body { display: block; }
 .learn-rarity.r-prize { color: #c08a12; }
+
+/* Full of life (owner choice 2026-11-09): a sunny sky behind the garden, chunky round buttons. */
+.garden-wrap.garden-full { background: linear-gradient(180deg, #7ad0f5 0%, #bfe9ff 38%, #fff1c9 72%, #ffe0a3 100%); }
+.garden-top { background: #fff; backdrop-filter: none; box-shadow: 0 4px 0 #cfe7c4; }
+.garden-top .learn-nav b, .garden-top h2 { font-family: var(--ui-round); font-weight: 900; color: #1f4a0e; }
+.garden-fab { width: 52px; height: 52px; border-radius: 18px; background: #fff; color: #2f7d14; box-shadow: 0 5px 0 #cfe7c4; backdrop-filter: none; }
+.garden-fab:first-child { background: #4caf2a; box-shadow: 0 5px 0 #2f7d14; }
+.garden-fab:active { transform: translateY(4px); box-shadow: 0 1px 0 #cfe7c4; }
+.garden-full .learn-today { background: #fff; border-radius: 24px; box-shadow: 0 6px 0 #d7ecc9; backdrop-filter: none; }
+.garden-full .learn-today .primary { --edge: #2f7d14; background: #4caf2a; color: #fff; }
+@media (prefers-color-scheme: dark) {
+  .garden-wrap.garden-full { background: linear-gradient(180deg, #0d1b3a 0%, #1d2f5a 45%, #3a2f4a 100%); }
+  .garden-top, .garden-fab:not(:first-child), .garden-full .learn-today { background: #13221d; box-shadow: 0 5px 0 #06100c; }
+  .garden-top .learn-nav b, .garden-top h2 { color: #e8f1ec; }
+  .garden-fab:not(:first-child) { color: #8fe07a; }
+}

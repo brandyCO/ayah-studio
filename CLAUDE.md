@@ -1497,6 +1497,14 @@ duas/reflections section in Me.
       "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
       glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
       No sound, light vibration; reduced motion → the end picture
+- [x] M13 Full of life (owner choice 2026-11-09, design canvas "Ayah Studio, full of life"): each place has its colour —
+      Read teal #12a594, Learn green #4caf2a, Create coral #ff6b4a, Ranks violet #6c5ce7, Me amber #f59f00 — on the tab bar
+      (active icon in a tinted pill, Create a coral raised button with a solid edge), chunky buttons and chips (a darker
+      bottom edge that sinks on press; not in the studio or the Kids space), headings, tabs and buttons in bold Nunito
+      (now the variable font, 200–1000). Me: dusk sky streak card (stars, moon, big count), goal rows in their kind's
+      colour (`goal k-{kind}`, `src/ui/me.css`). Create sheet: coral header + colour tiles (`src/ui/create.css`, loaded with
+      the sheet). Learn: sunny sky (deep blue at night), chunky white / green buttons. Read's drop-down bar is teal. The
+      mushaf page, the Arabic text and reels are untouched; theme colours stay for brand moments
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
