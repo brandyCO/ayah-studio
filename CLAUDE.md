@@ -1450,7 +1450,16 @@ duas/reflections section in Me.
       **My boards**: ≤ 50 people, invite link `#/rb/{code}` or code, ≤ 10 owned / 20 joined. Editable name (≤ 24).
       Rows show places moved since yesterday (green ▲n / red ▼n beside the name, `move`; none on Mondays) and a ▲ / ▼
       on the league rows that move up / down. Migrations `20261110000000_ranks.sql`, `20261110100000_rank_moves.sql`,
-      pgTAP `ranks.test.sql` (26 checks)
+      pgTAP `ranks.test.sql` (38 checks)
+      Second pass (owner "yes", 2026-11-09; migration `20261110200000_ranks_more.sql`): **avatars only, no photos**
+      (24 drawn in `src/ui/rankAvatars.ts`, 12 symbols × 2 colour sets, ring in the tier's colour; `rank_set_look`);
+      **private mode** ("Keep my reading between me and Allah": others see "A reader", off the global board;
+      `rank_face()`); **a board per measure** (chips Overall · Pages · Listening · Surahs · Reels on Global and boards,
+      this week; `rank_measure()`); **weekly quest** (one of pages 50 / listening 60 min / 5 active days / 2 surahs, in
+      turn, +50 once, checked by the server in `rank_report`); **rival** line ("Maryam is 92 points ahead. About 10 pages
+      passes them."); **last week's result** and **players you passed** as cards (`rankMoments()` / `takeRankMoments()`
+      in `src/together/ranks.ts`; the full-screen moments belong to the reward-animation thread); **board goal** (pages
+      together this week, set by the owner; `rank_board_goal`); "Points measure effort in the app, not reward with Allah"
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

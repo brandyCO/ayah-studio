@@ -2,7 +2,6 @@
 .screen-ranks, .screen-rb { max-width: 640px; margin: 0 auto; padding-inline: 16px; }
 .rk-me { display: grid; gap: 10px; }
 .rk-me-top { display: flex; align-items: center; gap: 12px; }
-.rk-medal { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; background: var(--sel); flex: none; }
 .rk-me-txt { flex: 1; min-width: 0; display: grid; gap: 2px; justify-items: start; }
 .rk-me-name { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; font-size: var(--fs-xl); color: inherit; cursor: pointer; }
 .rk-me-score { display: grid; justify-items: end; }
@@ -16,7 +15,6 @@
 .rk-row.me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
 .rk-place { width: 26px; text-align: center; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .rk-place.p1 { color: #d4a017; } .rk-place.p2 { color: #9aa4ad; } .rk-place.p3 { color: #c07a3a; }
-.rk-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--sel); flex: none; }
 .rk-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .rk-you { margin-inline-start: 6px; padding: 1px 6px; border-radius: 99px; font-size: var(--fs-2xs); background: var(--accent); color: #fff; }
 .rk-score { font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -39,3 +37,31 @@
 .rk-move.down, .rk-dir.down { color: #d1493b; }
 .rk-dir { font-size: 11px; line-height: 1; }
 @media (prefers-color-scheme: dark) { .rk-move.up, .rk-dir.up { color: #46d483; } .rk-move.down, .rk-dir.down { color: #f07462; } }
+/* Avatars (drawn, no photos), the look sheet, private mode */
+.rk-av { display: inline-grid; flex: none; line-height: 0; }
+.rk-av.sun svg { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
+.rk-me-av { padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; flex: none; }
+.rk-av-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; margin-top: 8px; }
+.rk-av-pick { padding: 4px; border: 2px solid transparent; border-radius: 50%; background: none; display: grid; place-items: center; }
+.rk-av-pick.on { border-color: var(--accent); }
+.rk-private { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; }
+.rk-private span { display: grid; gap: 2px; }
+.rk-private input { margin-top: 3px; width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.rk-unit { font-weight: 500; }
+.rk-metrics { margin: 4px 0 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.rk-rival { margin: 0; padding: 8px 10px; border-radius: var(--r-m); background: color-mix(in srgb, var(--accent) 9%, transparent); font-size: var(--fs-s); }
+/* Quest, board goal and the week's moments */
+.rk-quest, .rk-goal { display: grid; gap: 6px; margin-top: 10px; }
+.rk-quest p, .rk-goal p { margin: 0; }
+.rk-quest-bonus { font-weight: 700; color: var(--accent); }
+.rk-goal-bar { height: 8px; border-radius: 99px; background: var(--sel); overflow: hidden; }
+.rk-goal-bar span { display: block; height: 100%; border-radius: inherit; background: var(--brand-bar, var(--accent)); transition: width var(--dur-3, .4s) ease; }
+.rk-quest.done .rk-goal-bar span, .rk-goal.done .rk-goal-bar span { background: #1f9d55; }
+.rk-goal-set { margin: 4px 0 8px; }
+.rk-moments { display: grid; gap: 8px; }
+.rk-moments:not(:empty) { margin: 10px 0 4px; }
+.rk-moments > .chip { justify-self: end; }
+.rk-moment { display: flex; align-items: center; gap: 12px; }
+.rk-moment p { margin: 2px 0 0; }
+.rk-moment.up { border-color: #1f9d55; }
+.rk-moment.down { border-color: #d1493b; }

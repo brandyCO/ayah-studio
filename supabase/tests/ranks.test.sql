@@ -1,11 +1,12 @@
--- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql): Google accounts only; nobody reads the tables;
+-- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
+-- 20261110200000_ranks_more.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(26);
+select plan(38);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -79,6 +80,23 @@ insert into ids select 'bid', rank_join_board((select v from ids where k = 'b'))
 select is(jsonb_array_length(rank_board((select v::uuid from ids where k = 'bid'), current_date)), 2, 'a member sees the board');
 select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
 select throws_ok($$ select rank_board((select v::uuid from ids where k = 'bid'), current_date) $$, '42501', null, 'others do not');
+-- Measures, goals, quest, rival, avatars and private mode
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+select is((rank_board((select v::uuid from ids where k = 'bid'), current_date, 'listen') -> 1 ->> 'score')::int, 10, 'a board by minutes listened');
+select throws_ok($$ select rank_global(current_date, false, 'dhikr') $$, '22023', null, 'dhikr is never ranked');
+select throws_ok($$ select rank_set_board_goal((select v::uuid from ids where k = 'bid'), 100) $$, '42501', null, 'only the owner sets the goal');
+select is(rank_status(current_date) -> 'quest' ->> 'bonus', '50', 'the status has this week''s quest');
+select lives_ok($$ select rank_set_look(5, false) $$, 'an avatar can be picked');
+select throws_ok($$ select rank_set_look(99, false) $$, '22023', null, 'only one of ours');
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select lives_ok($$ select rank_set_board_goal((select v::uuid from ids where k = 'bid'), 100) $$, 'the owner sets a goal');
+select is((rank_board_goal((select v::uuid from ids where k = 'bid'), current_date) ->> 'goal')::int, 100, 'members see it');
+select is((rank_status(current_date) -> 'rival' ->> 'gap')::int, 700, 'my rival is 700 points ahead');
+select is((rank_league(current_date) -> 'players' -> 0 ->> 'avatar')::int, 5, 'with their avatar');
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
+select lives_ok($$ select rank_set_look(5, true) $$, 'a player can go private');
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select is(rank_league(current_date) -> 'players' -> 0 ->> 'name', null, 'others no longer see the name');
 select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
 select lives_ok($$ select rank_leave_board((select v::uuid from ids where k = 'bid')) $$, 'the owner leaving deletes the board');
 

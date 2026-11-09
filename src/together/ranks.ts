@@ -24,8 +24,18 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 /** Points, as the server counts them (rank_score). */
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, day: 20 };
 
-export interface Row { name: string; score: number; me: boolean; tier?: number; move?: number }
-export interface Status { name: string; tier: number; total: number; week: number; weekPlace: number | null; weekPlayers: number; allPlace: number; allPlayers: number }
+/** A player on a board. A private player shows no name or avatar (name null). */
+export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; private?: boolean }
+export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
+export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
+/** This week's quest, the same for everyone (server: rank_quest). */
+export interface Quest { kind: 'pages' | 'listen' | 'days' | 'surahs'; target: number; done: number; bonus: number; complete: boolean | null }
+export interface Status {
+  name: string; tier: number; avatar: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
+  allPlace: number; allPlayers: number; quest: Quest; rival: (Row & { gap: number }) | null;
+  /** Last week's league result, if the player played. */
+  last: { score: number; tier: number; size: number; place: number } | null; weekStart: string;
+}
 export interface Board { id: string; name: string; code: string; mine: boolean; members: number }
 
 const firstName = () => (account()?.name ?? '').trim().split(/\s+/)[0]?.slice(0, 24) || 'Reader';
@@ -92,9 +102,21 @@ export const dropCache = () => cache.clear();
 
 export const rankStatus = (fresh = false) => cached('status', () => rpc<Status | null>('rank_status', { d: dayKey() }), fresh);
 export const rankLeague = (fresh = false) => cached('league', () => rpc<{ tier: number; players: Row[] } | null>('rank_league', { d: dayKey() }), fresh);
-export const rankGlobal = (allTime: boolean, fresh = false) => cached(`global:${allTime}`, () => rpc<Row[]>('rank_global', { d: dayKey(), all_time: allTime }), fresh);
+export const rankGlobal = (allTime: boolean, metric: Metric = 'all', fresh = false) =>
+  cached(`global:${allTime}:${metric}`, () => rpc<Row[]>('rank_global', { d: dayKey(), all_time: allTime, metric }), fresh);
 export const myBoards = (fresh = false) => cached('boards', () => rpc<Board[]>('rank_my_boards'), fresh);
-export const boardRanks = (id: string, fresh = false) => cached(`board:${id}`, () => rpc<Row[]>('rank_board', { board: id, d: dayKey() }), fresh);
+export const boardRanks = (id: string, metric: Metric = 'all', fresh = false) =>
+  cached(`board:${id}:${metric}`, () => rpc<Row[]>('rank_board', { board: id, d: dayKey(), metric }), fresh);
+export const boardGoal = (id: string, fresh = false) => cached(`goal:${id}`, () => rpc<{ goal: number | null; pages: number }>('rank_board_goal', { board: id, d: dayKey() }), fresh);
+export async function setBoardGoal(id: string, pages: number | null) {
+  await rpc('rank_set_board_goal', { board: id, pages });
+  dropCache();
+}
+/** Avatar (0–23, drawn in the app; no photos) and private mode. */
+export async function setLook(avatar: number, priv: boolean) {
+  await rpc('rank_set_look', { my_avatar: avatar, is_private: priv });
+  dropCache();
+}
 
 export async function setRankName(name: string) {
   await rpc('rank_set_name', { my_name: name });
@@ -119,6 +141,35 @@ export async function leaveBoard(id: string) {
 }
 export const boardPreview = (code: string) => rpc<{ name: string; members: number; joined: boolean } | null>('rank_board_preview', { board_code: code.toLowerCase() });
 export const boardLink = (code: string) => shareableLink(`#/rb/${code}`);
+
+// --- moments: last week's result (once a week) and the players you passed since you last looked ---
+// The Ranks screen shows them as cards; a full-screen moment can take them with takeRankMoments().
+export interface RankMoments { week: (NonNullable<Status['last']> & { tierNow: number; weekStart: string }) | null; passed: string[] }
+const ls = {
+  get<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : d; } catch { return d; } },
+  set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
+};
+/** What is waiting to be shown (nothing is cleared). */
+export function rankMoments(s: Status | null, league: { players: Row[] } | null): RankMoments {
+  const out: RankMoments = { week: null, passed: [] };
+  if (s?.last && ls.get('rankWeekSeen', '') !== s.weekStart) out.week = { ...s.last, tierNow: s.tier, weekStart: s.weekStart };
+  if (league && s) {
+    const seen = ls.get<{ w: string; above: string[] } | null>('rankAbove', null);
+    const me = league.players.findIndex((r) => r.me);
+    const above = league.players.slice(0, Math.max(0, me)).map((r) => r.name).filter((n): n is string => !!n);
+    if (seen && seen.w === s.weekStart) out.passed = seen.above.filter((n) => !above.includes(n) && league.players.some((r) => r.name === n));
+    else ls.set('rankAbove', { w: s.weekStart, above });
+  }
+  return out;
+}
+/** Marks the moments as seen. */
+export function takeRankMoments(s: Status | null, league: { players: Row[] } | null) {
+  if (s?.last) ls.set('rankWeekSeen', s.weekStart);
+  if (league && s) {
+    const me = league.players.findIndex((r) => r.me);
+    ls.set('rankAbove', { w: s.weekStart, above: league.players.slice(0, Math.max(0, me)).map((r) => r.name).filter(Boolean) });
+  }
+}
 
 /** When the week's league ends (Monday 00:00, local). */
 export function weekEnds(now = new Date()): Date {
