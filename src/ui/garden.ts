@@ -689,7 +689,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       const shelf = unplacedDecos();
       return [
         shelf.length ? h('p', { class: 'small' }, lt('learn.toPlaceN', { n: shelf.length })) : '',
-        h('div', { class: 'learn-decos' }, ...DECOS.map((x) => {
+        h('div', { class: 'learn-decos' }, ...DECOS.filter((x) => !x.place).map((x) => {
           const can = wallet() >= x.price;
           return h('div', { class: `learn-deco-card r-${x.rarity}` },
             vignette(84, (c, cx, cy, u) => drawDeco(c, x.k, cx, cy, u, 0, night()), night(), decoHeight(x.k)),
