@@ -100,7 +100,7 @@ export function createPlayer(o: PlayerHooks) {
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
     label.textContent = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '';
-    who.textContent = `${(using ?? reciter()).short} ▾`;
+    who.textContent = `${(loading ? reciter() : using ?? reciter()).short} ▾`; // the new voice's name while it loads
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
       if (cur) navigator.mediaSession.metadata = new MediaMetadata({ title: label.textContent, artist: (using ?? reciter()).name, album: 'Ayah Studio' });
@@ -162,7 +162,9 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   /** Play from the start of surah:ayah. */
+  let calls = 0;
   async function playFrom(s: number, a: number) {
+    const call = ++calls;
     introDone?.(false); // a Bismillah still playing gives way
     show(true);
     loading = true;
@@ -170,6 +172,8 @@ export function createPlayer(o: PlayerHooks) {
     paint();
     try {
       if (!(await load(s))) return;
+      const mine = req;
+      const stale = () => mine !== req || call !== calls; // another ayah or reciter was chosen meanwhile
       const v = verses.find((x) => x.a === a) ?? verses[0];
       if (!v) throw new Error('No timings for this surah');
       // From the top of a surah: the very start of its recording, so the Bismillah (and an isti'adha) is
@@ -183,19 +187,23 @@ export function createPlayer(o: PlayerHooks) {
       if (perAyah) {
         playing = v.a;
         ahead.pause();
-        audio.src = await playableUrl(everyayahUrl(using!, s, v.a));
+        const src = await playableUrl(everyayahUrl(using!, s, v.a));
+        if (stale()) return;
+        audio.src = src;
         preload(v.a + 1);
       } else await seekTo(at / 1000);
+      if (stale()) return;
       // A recording that starts straight at ayah 1: the reciter's own Bismillah first.
       if (a <= 1) {
-        const mine = req;
         const b = await basmalaBefore(using!, s).catch(() => null);
         if (mine !== req) return;
         if (b && !(await playIntro(b))) return;
       }
+      if (stale()) return;
       await audio.play();
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
+      if (call !== calls) return; // a newer request owns the bar now
       toast(navigator.onLine ? `Could not play the recitation: ${e instanceof Error ? e.message : e}` : 'Listening needs an internet connection');
     }
     loading = false;
@@ -391,9 +399,18 @@ export function createPlayer(o: PlayerHooks) {
     const now = (using ?? reciter()).id;
     const choose = (r: Reciter) => {
       d.close();
-      if (r.id === reciter().id) return;
+      // Compared with the voice actually loaded: picking it again after a failed switch tries again.
+      if (r.id === using?.id && loadedFor) return;
       setReelReciter(r.id); // also the default for the next reel
       const at = cur;
+      // The old voice stops at once and any load still running for it is dropped, so it can never go on
+      // playing (or start again) while the new one loads.
+      req++;
+      introDone?.(false);
+      audio.pause();
+      ahead.pause();
+      aheadFor = 0;
+      aheadWant = '';
       loadedFor = '';
       if (at) void playFrom(at.s, at.a);
       else paint();
