@@ -3,7 +3,6 @@
 // (public/fonts/qcf-v2/p{page}.woff2). The words' text is verified against the bundled Quran text.
 
 import { Capacitor } from '@capacitor/core';
-import { PUBLIC_URL } from '../cloud/config';
 
 /** ["h", surah] header · ["b", surah] basmala · [[surah, ayah, "glyph glyph …"], ...] text line */
 export type MushafLine = ['h', number] | ['b', number] | [number, number, string][];
@@ -81,59 +80,29 @@ export function loadMushaf(): Promise<Mushaf> {
 const fonts = new Map<number, Promise<void>>();
 
 /** Load the QCF V2 font for a page (family "qcf-p{page}"). */
-// Android app: only the first pages' fonts ship in the APK (the 604 fonts are ~95 MB). The others
-// come from the public web app the first time a page is opened and are kept in Cache Storage, so a
-// page read once stays readable offline. The web build fetches its own copies (the service worker
-// keeps them).
-const BUNDLED_PAGES = 3;
-const FONT_CACHE = 'qcf-v2';
-async function pageFontSource(page: number): Promise<string | ArrayBuffer> {
-  const local = `url(${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2)`;
-  if (!Capacitor.isNativePlatform() || page <= BUNDLED_PAGES) return local;
-  const url = `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`;
-  const cache = await caches.open(FONT_CACHE);
-  let res = await cache.match(url);
-  if (!res) {
-    res = await fetch(url);
-    if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
-    await cache.put(url, res.clone());
-  }
-  return res.arrayBuffer();
-}
+// The Android app carries all 604 page fonts (~95 MB) inside the APK (owner decision 2026-11-09), so every
+// page reads offline from install. The web build fetches its own copies, which the service worker keeps
+// (the whole mushaf is downloaded by `mushafDownload.ts`).
+const pageFontUrl = (page: number) => `${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2`;
+const pageFontSource = (page: number) => `url(${pageFontUrl(page)})`;
 
-/** Where a page's font is fetched from and kept: the app's own Cache Storage (Android) or the
- *  service worker's cache (web; `caches.match` searches every cache). */
-const fontUrl = (page: number) => Capacitor.isNativePlatform()
-  ? `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`
-  : new URL(`${import.meta.env.BASE_URL}fonts/qcf-v2/p${page}.woff2`, location.href).href;
-
-/** Whether the page's font is already on this device (bundled in the app or downloaded). */
+/** Whether the page's font is already on this device (always in the app; the service worker's cache on the web). */
 export async function pageFontKept(page: number): Promise<boolean> {
-  if (Capacitor.isNativePlatform() && page <= BUNDLED_PAGES) return true;
-  return !!(await caches.match(fontUrl(page)).catch(() => undefined));
+  if (Capacitor.isNativePlatform()) return true;
+  return !!(await caches.match(new URL(pageFontUrl(page), location.href).href).catch(() => undefined));
 }
 
-/** Download a page's font into the device's cache without loading it (the background download). */
+/** Download a page's font into the service worker's cache without loading it (the whole-mushaf download). */
 export async function keepPageFont(page: number): Promise<void> {
-  const url = fontUrl(page);
-  if (!Capacitor.isNativePlatform()) {
-    // The service worker keeps what passes through it.
-    const res = await fetch(url, { priority: 'low' } as RequestInit);
-    if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
-    await res.arrayBuffer();
-    return;
-  }
-  const cache = await caches.open(FONT_CACHE);
-  if (await cache.match(url)) return;
-  const res = await fetch(url, { priority: 'low' } as RequestInit);
+  if (Capacitor.isNativePlatform()) return;
+  const res = await fetch(pageFontUrl(page), { priority: 'low' } as RequestInit);
   if (!res.ok) throw new Error(`page font ${page}: HTTP ${res.status}`);
-  await cache.put(url, res);
+  await res.arrayBuffer();
 }
 
 export function loadPageFont(page: number): Promise<void> {
   if (!fonts.has(page)) {
-    const p = pageFontSource(page)
-      .then((src) => new FontFace(`qcf-p${page}`, src, { display: 'block' }).load())
+    const p = new FontFace(`qcf-p${page}`, pageFontSource(page), { display: 'block' }).load()
       .then((f) => void document.fonts.add(f));
     p.catch(() => fonts.delete(page));
     fonts.set(page, p);

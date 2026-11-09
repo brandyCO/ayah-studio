@@ -607,6 +607,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   keepWholeMushaf(() => page);
+  if (tourSeen()) void import('./mushafOffline').then((m) => m.offerMushafDownload());
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {

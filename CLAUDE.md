@@ -672,7 +672,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       layout (`lastPage` in localStorage), reflections read after the first page → reopen ~0.5 s at 4× CPU
       throttle (was ~2 s). Offline warm-up once per app version (`warmedUp`); QDC timings reused for 3 days
 - [x] Caches: recitation audio ≤ 300 MB (least recently used first), SW page fonts ≤ 200, timings ≤ 120,
-      Android font cache ≤ 200; thumbnails as WebP (built-in, library, drafts)
+      Android font cache ≤ 200 (now: all pages in the APK); thumbnails as WebP (built-in, library, drafts)
 - [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
       preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
 - [x] Performance timings (`src/perf.ts`, this device only, Device check)
@@ -1092,7 +1092,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       **Whole mushaf on the device** (owner request 2026-10-29, "no loading pages while swiping"):
       `src/data/mushafDownload.ts` downloads all 604 page fonts (~95 MB) in the background after the first page
       shows — two at a time while idle, nearest to the page being read first, Wi‑Fi / wired only (Network
-      Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. No cap on
+      Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. **Every page offline at
+      once** (owner decision 2026-11-09): the Android APK carries all 604 page fonts (the CI build no longer leaves
+      them out; the old Cache Storage `qcf-v2` copy is deleted once); on the web / iPhone a sheet on the mushaf
+      (once, `mushafAsked`) and Me → ⚙ → Reading → **Read without internet** offer "Download the whole mushaf ·
+      95 MB" with a progress bar (`src/ui/mushafOffline.ts`): with that yes (`mushafOk`) it runs on any connection,
+      six pages at a time, and asks for persistent storage; without it, three at a time on Wi‑Fi only. No cap on
       kept page fonts any more (app cache; service worker `MAX_PAGE_FONTS` 700). The reader loads fonts 10 pages
       ahead / 6 back (was 3 / 2) and keeps ±12 in memory
       **Favourite reciters** (owner request 2026-10-31; decision "ask each time"): ☆ beside each reciter in the

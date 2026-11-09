@@ -5,6 +5,7 @@
 import { eveningFrom, refreshAsr } from '../data/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
+import { mushafOfflineRow } from './mushafOffline';
 import { reciterById } from '../data/reciters';
 import { dayKey } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
@@ -549,7 +550,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
 export function showMeSettings(root: HTMLElement): () => void {
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const body = h('div', {});
-  const section = (title: string, ...kids: (Node | string)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
+  const section = (title: string, ...kids: (Node | string | false)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
   const chips = <T,>(list: readonly T[], cur: (x: T) => boolean, label: (x: T) => string, pick: (x: T) => void | Promise<void>) =>
     h('div', { class: 'chips' }, ...list.map((x) => h('button', {
       class: `chip${cur(x) ? ' on' : ''}`, 'aria-pressed': String(cur(x)),
@@ -579,7 +580,8 @@ export function showMeSettings(root: HTMLElement): () => void {
             `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`)),
         h('b', { class: 'set-label' }, t('me.pageTime')),
         h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
-        chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x))),
+        chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x)),
+        mushafOfflineRow()),
       section(t('pr.title'),
         h('p', { class: 'muted small' }, t('pr.locHelp')),
         h('button', { class: 'chip', onclick: async () => {
