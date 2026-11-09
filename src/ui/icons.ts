@@ -63,6 +63,7 @@ const P: Record<string, string> = {
   listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4" height="6" rx="1.5"/><rect x="16.5" y="14" width="4" height="6" rx="1.5"/>',
   create: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor" stroke="none"/>',
   sprout: '<path d="M12 21v-8.5"/><path d="M12 12.5C12 8 15 5.5 20 5.5c0 4.6-3 7-8 7z"/><path d="M12 15c0-3.6-2.6-6-7-6 0 3.7 2.6 6 7 6z"/><path d="M8 21h8"/>',
+  copy: '<rect x="8.5" y="8.5" width="11.5" height="12" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h2.5"/>',
   me: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5"/>',
 };
 

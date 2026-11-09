@@ -246,6 +246,10 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       a result opened or Enter) and **Recently read** (cards: the last 12 mushaf pages stayed on ≥ 3 s, page,
       reference, when), each with Clear; this device only (`src/data/history.ts`, localStorage
       `searchHistory` / `recentPages`). 🔍 opens a fresh search; ‹ back to `#/` keeps the last one
+- [x] Copy ayat as text (owner request 2026-11-09): selection bar → copy icon (mushaf + translation
+      view) → Arabic (with the reference) · Arabic + translation · Translation only; one ayah or the
+      selected range, the bundled text unchanged with its ayah numbers, translator credited; last choice
+      remembered per device (`copyWith`; `src/ui/copyAyat.ts`)
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
