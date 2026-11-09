@@ -1,0 +1,11 @@
+/* Create sheet, full of life (owner choice 2026-11-09): coral header, colour tiles. Loaded with the sheet. */
+.create-sheet .sheet-head { margin: -16px -16px 12px; padding: 22px 16px 26px; border-radius: 18px 18px 0 0; color: #fff; background: linear-gradient(135deg, #ff6b4a, #ffb84d); }
+.create-sheet .sheet-head h2 { font: 900 26px var(--ui-round); }
+.create-sheet .sheet-head .icon-btn { background: #fff3; border: 0; color: #fff; }
+.create-sheet .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.create-sheet .create-item { --c: #6c5ce7; flex-direction: column; align-items: start; gap: 8px; padding: 14px; border-radius: 20px; background: color-mix(in srgb, var(--c) 13%, var(--card)); box-shadow: 0 5px 0 color-mix(in srgb, var(--c) 32%, var(--card)); }
+.create-sheet .create-ic { background: var(--c); color: #fff; }
+.create-sheet .create-txt b { font: 900 var(--fs-l) var(--ui-round); }
+.create-sheet .c-pick { --c: #ff6b4a; grid-column: 1 / -1; flex-direction: row; color: #fff; background: var(--c); box-shadow: 0 6px 0 #c7442a; }
+.create-sheet .c-pick .create-ic { background: #fff3; } .create-sheet .c-pick .muted { color: #fffe; }
+.create-sheet .c-day { --c: #f59f00; } .create-sheet .c-tpl { --c: #12a594; } .create-sheet .c-mine { --c: #e8590c; }
