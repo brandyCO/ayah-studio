@@ -1965,3 +1965,26 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .tab-btn.tab-fab:active .fab-disc { transform: scale(.92); }
 .tab-btn.tab-fab span:last-child { color: var(--text, inherit); }
 @media (hover: hover) { .tab-btn.tab-fab:hover .fab-disc { transform: translateY(-2px); } }
+
+/* Full of life (owner choice 2026-11-09): each place has its colour (Read teal, Learn green, Create
+   coral, Ranks violet, Me amber), buttons are chunky with a solid edge that sinks on press, headings in
+   bold Nunito. Never on the mushaf page, the Arabic text or the reel; the studio and Kids keep theirs. */
+:root { --ui-round: Nunito, system-ui, sans-serif; }
+:where(h1, h2, h3, .brand h1, .tab-btn) { font-family: var(--ui-round); font-weight: 800; }
+.tabbar { background: var(--card); border-top: 2px solid var(--line); backdrop-filter: none; }
+.tab-btn { font-weight: 800; font-size: var(--fs-2xs); }
+.tab-btn > svg { box-sizing: content-box; padding: 3px 8px; border-radius: 12px; transition: background-color var(--dur-2); }
+.tab-btn.read { --pc: #0e8c7d; } .tab-btn.learn { --pc: #3b9a1c; } .tab-btn.ranks { --pc: #6c5ce7; } .tab-btn.me { --pc: #e08600; }
+.tab-btn.on { color: var(--pc); }
+.tab-btn.on > svg { background: color-mix(in srgb, var(--pc) 16%, transparent); stroke-width: 2.4; }
+.tab-btn:active { background: none; }
+.fab-disc { background: #ff6b4a; border: 0; box-shadow: 0 5px 0 #c7442a; }
+.tab-btn.tab-fab:active .fab-disc { transform: translateY(4px); box-shadow: 0 1px 0 #c7442a; }
+:where(body:not([data-view="reel"], [data-view="kids"])) :is(.primary, .chip) {
+  --edge: color-mix(in srgb, var(--accent) 62%, #000);
+  font-family: var(--ui-round); font-weight: 800; box-shadow: 0 4px 0 var(--edge);
+  transition: translate var(--dur-1), box-shadow var(--dur-1), scale var(--dur-2) var(--ease-spring);
+}
+:where(body:not([data-view="reel"], [data-view="kids"])) .chip:not(.on) { --edge: var(--line); box-shadow: 0 3px 0 var(--edge); }
+:where(body:not([data-view="reel"], [data-view="kids"])) :is(.primary, .chip):active:not(:disabled) { translate: 0 3px; scale: 1; box-shadow: 0 1px 0 var(--edge); }
+:where(body:not([data-view="reel"], [data-view="kids"])) .primary { border-radius: var(--r-l); }
