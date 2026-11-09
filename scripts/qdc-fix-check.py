@@ -34,9 +34,9 @@ def main():
     for s in map(int, ss.split(',')):
       d = json.load(open(os.path.join(FIX, rid, '%03d.json' % s)))
       if s >= 30: picks += [(s, int(a), v) for a, v in d.items() if 'f' in v]  # short files
-    rnd.shuffle(picks); picks.sort(key=lambda p: p[0])  # one download per surah: grouped
+    rnd.shuffle(picks); picks = sorted(picks[:per * 3], key=lambda p: p[0])  # grouped: one download per surah
     res, files = [], {}
-    for s, a, v in picks[:per * 3]:
+    for s, a, v in picks:
       if len(res) >= per: break
       try:
         if s not in files:
