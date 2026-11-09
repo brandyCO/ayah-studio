@@ -1372,6 +1372,14 @@ const en = {
   'pm.juzSub': "Every page of it read.",
   'pm.seeMe': "See your progress",
   'pm.continue': "Continue reading",
+  'mo.title': 'Read without internet',
+  'mo.offer': 'Download the whole mushaf once ({size} MB) so every page opens without internet. It carries on while the app is open and picks up where it left off.',
+  'mo.download': 'Download the whole mushaf · {size} MB',
+  'mo.later': 'Not now',
+  'mo.help': 'Pages you have opened already work offline. Download all 604 pages once ({size} MB) to read any page without internet.',
+  'mo.running': 'Downloading the whole mushaf…',
+  'mo.waiting': 'Downloading continues when you are online with the app open.',
+  'mo.done': 'The whole mushaf is on this device: every page opens without internet.',
 };
 
 export type Key = keyof typeof en;
