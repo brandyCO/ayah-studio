@@ -5,6 +5,7 @@ import { h, haptic, toast } from './dom';
 import { t, tOr } from '../i18n';
 import { THEMES, rgba, setTheme, themeIconUrl, themeId } from './theme';
 import { RARE_ICONS, chooseIcon, chosenIcon, rareIconUrl } from '../data/rareIcons';
+import './iconPick.css';
 
 /** The live preview and the grid of themes. */
 export function themeChooser(quiet = false): HTMLElement[] {

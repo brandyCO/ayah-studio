@@ -1,0 +1,11 @@
+/* Theme colours sheet → App icon (src/ui/themePicker.ts; loaded with it). */
+.icon-pick-h { font-size: var(--fs-l, 18px); margin: 18px 0 2px; }
+.icon-pick { display: grid; gap: 12px; }
+.icon-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 12px; }
+.icon-pick-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: var(--fs-s); cursor: pointer; text-align: center; }
+.icon-pick-tile img { width: 56px; height: 56px; border-radius: 14px; outline: 2px solid transparent; outline-offset: 3px; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .6); transition: transform .2s; }
+.icon-pick-tile.on img { outline-color: var(--accent); }
+.icon-pick-tile.on .theme-name { color: var(--accent); font-weight: 650; }
+.icon-pick-tile:focus-visible { outline: none; }
+.icon-pick-tile:focus-visible img { outline-color: var(--accent); }
+.icon-pick-more { justify-self: start; }

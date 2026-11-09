@@ -1484,7 +1484,12 @@ duas/reflections section in Me.
       only after 12 weeks (`rank_prize_item()` / `weekPrize()`): #1 a jewel avatar (40–51), #2 and #3 a rare frame (8–13:
       pearls, crescent crown, mosaic, aurora, lanterns, rosette); `rank_prizes.item`, worn only by their winners
       (`rank_set_look`). Ranks shows "This week's prizes"; Shop → Weekly prizes lists all 18 with when each comes round.
-      Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
+      **Rare app icons** (2026-11-09, `src/data/rareIcons.ts`): the light in the ayah marker on a scene of its own (no figures) —
+      sold for Light: Pearl moon 300, Rose dawn 400, Starlit 500, Borealis 650, Lantern glow 800; only won: Gold / Silver / Bronze
+      laurel (a week at #1 / top 2 / top 3), Sun crown (Sun tier). `ITEMS` `ic:{id}` (kind `icon`, `ownsIcon()`), shop → App icons
+      (tap an owned one to use it), Theme colours sheet → **App icon** (Match theme + owned icons; pref `appIcon`, synced; `setAppIcon()`
+      in theme.ts prefers it over the theme's icon). Art by `scripts/make-icons.py --themes` (`RARE`: Android aliases `.Icon{Id}`,
+      PNG adaptive backgrounds, `public/icons/rare/{id}.svg` for previews and the web tab icon); garden decorations from the garden thread
       **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
       `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
       eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then

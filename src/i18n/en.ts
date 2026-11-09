@@ -663,15 +663,6 @@ const en = {
   'theme.iconMatch': 'Match theme',
   'theme.iconSet': 'App icon: {name}',
   'theme.iconMore': 'More icons in Ranks → Shop',
-  'icon.pearl': 'Pearl moon',
-  'icon.rosedawn': 'Rose dawn',
-  'icon.starlit': 'Starlit',
-  'icon.borealis': 'Borealis',
-  'icon.lantern': 'Lantern glow',
-  'icon.champion': 'Gold laurel',
-  'icon.silver': 'Silver laurel',
-  'icon.bronze': 'Bronze laurel',
-  'icon.sun': 'Sun crown',
   'menu.tour': 'Tour',
 
   // tafsir (G4)
