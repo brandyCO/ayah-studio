@@ -13,7 +13,8 @@ import {
 } from '../together/ranks';
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
-import { chest } from './chest';
+import { chest, chestArt, chestTier } from './chest';
+import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
 import { h, haptic, toast } from './dom';
 import { tabBar } from './tabs';
@@ -51,7 +52,7 @@ const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
 /** One list of players, best first; zones mark who moves up or down in a league. */
-function list(rows: Row[], zones = false, metric: Metric = 'all'): HTMLElement {
+function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): HTMLElement {
   const n = rows.length;
   const items: Node[] = [];
   rows.forEach((r, i) => {
@@ -62,7 +63,8 @@ function list(rows: Row[], zones = false, metric: Metric = 'all'): HTMLElement {
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : ''),
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+        r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
     if (zones && i === LEAGUE.up - 1 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
@@ -123,30 +125,67 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     setTimeout(() => input.focus(), 50);
   }
 
+  // Duolingo-style: the league list is the screen. Above it only the tier ladder and one slim strip
+  // (this week's quest and prizes); you, the shop and the trophies sit behind the top bar's buttons,
+  // and a prize waiting to be opened pops up once instead of living on the page.
+  const topActs = h('div', { class: 'rk-top-acts' });
+  let status: Status | null = null;
   async function paintHead(fresh: boolean) {
     const s = await rankStatus(fresh);
+    status = s;
     if (!s) {
-      head.replaceChildren(h('div', { class: 'rk-me me-card' },
-        h('p', {}, rt('rk.notYet')), howBtn()));
+      topActs.replaceChildren();
+      head.replaceChildren(h('div', { class: 'rk-me me-card' }, h('p', {}, rt('rk.notYet')), howBtn()));
       return;
     }
-    head.replaceChildren(h('div', { class: 'rk-me me-card' },
+    topActs.replaceChildren(
+      h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, `✦ ${num(lightLeft())}`),
+      h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame)));
+    head.replaceChildren(view === 'league' ? h('div', { class: 'rk-headbox' },
+      h('div', { class: `rk-hero t${s.tier}` },
+        ladder(s.tier),
+        h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
+        h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends)),
+      strip(s)) : '');
+    void paintPrizes(s, fresh);
+    void moments(s);
+  }
+  /** The five tiers in a row, yours lit and larger, the ones above still to reach. */
+  const ladder = (tier: number) => h('div', { class: 'rk-ladder', role: 'img', 'aria-label': rt('rk.leagueTitle', { tier: tierName(tier) }) },
+    ...[0, 1, 2, 3, 4].map((n) => h('span', { class: `rk-rung${n === tier ? ' on' : n < tier ? ' past' : ''}` }, tierEmblem(n) as unknown as Node)));
+  /** One line: this week's quest progress, and this week's prizes; tap for both in full. */
+  function strip(s: Status) {
+    const q = s.quest;
+    const done = !!q.complete || q.done >= q.target;
+    const pct = Math.round((Math.min(q.done, q.target) / q.target) * 100);
+    return h('button', { class: 'rk-strip', onclick: () => openWeek(s) },
+      h('span', { class: 'rk-strip-q' },
+        h('span', { class: 'small' }, done ? `✓ ${rt('rk.questTitle')}` : rt(`rk.q.${q.kind}` as RankKey, { n: q.target })),
+        h('span', { class: 'rk-goal-bar' }, h('span', { style: `width:${pct}%` }))),
+      h('span', { class: 'rk-strip-p' }, itemArt(weekPrize(s.weekStart, 1), s, 30), itemArt(weekPrize(s.weekStart, 2), s, 30)),
+      h('span', { class: 'muted', 'aria-hidden': 'true' }, '›'));
+  }
+  function openWeek(s: Status) {
+    sheet(rt('rk.thisWeek'), h('div', { class: 'sheet-scroll rk-week' }, questCard(s), weekPrizeCard(s)));
+  }
+  /** You: name, tier, places, and the way to your look, the shop, your trophies and how points work. */
+  function openYou(s: Status) {
+    const d = sheet(rt('rk.you'), h('div', { class: 'sheet-scroll rk-you-sheet' },
       h('div', { class: 'rk-me-top' },
-        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => openLook(s) }, avatar(s.private ? null : s.avatar, s.tier, 52, s.frame)),
+        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => { d.close(); openLook(s); } }, avatar(s.private ? null : s.avatar, s.tier, 64, s.frame)),
         h('div', { class: 'rk-me-txt' },
-          h('button', { class: 'rk-me-name', onclick: openName, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
+          h('button', { class: 'rk-me-name', onclick: () => { d.close(); openName(); }, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
           tierBadge(s.tier)),
         h('div', { class: 'rk-me-score' }, h('b', {}, num(s.week)), h('span', { class: 'muted small' }, rt('rk.ptsWeek')))),
       h('div', { class: 'rk-me-line' },
         h('span', {}, s.weekPlace ? rt('rk.place', { n: num(s.weekPlace), of: num(s.weekPlayers) }) : rt('rk.noPlace')),
         h('span', { class: 'muted' }, rt('rk.allTime', { n: num(s.total), place: num(s.allPlace) }))),
-      s.rival ? h('p', { class: 'rk-rival' }, rivalLine(s.rival)) : '',
       s.private ? h('p', { class: 'muted small' }, rt('rk.privateOn')) : '',
-      h('div', { class: 'chips rk-me-acts' }, howBtn(),
-        h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s) }, `✦ ${rt('rk.shop')} · ${num(lightLeft())}`))),
-    prizeBox, questCard(s), weekPrizeCard(s));
-    void paintPrizes(s, fresh);
-    void moments(s);
+      h('div', { class: 'menu' },
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openLook(s); } }, `◐  ${rt('rk.look')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, `🏆  ${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `?  ${rt('rk.how')}`))));
   }
   /** "Bilal is 38 points ahead. 4 pages passes him." */
   const rivalLine = (r: Row & { gap: number }) => rt(r.gap > 0 ? 'rk.rival' : 'rk.rivalTie', {
@@ -179,7 +218,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (momentsPlaying) return;
     const lg = await rankLeague().catch(() => null);
     const m = rankMoments(s, lg);
-    if (!m.week && !m.passed.length) return;
+    if (!m.week && !m.passed.length) { setTimeout(() => { if (momentBox.isConnected) offerPrize(s); }, 700); return; }
     momentsPlaying = true;
     try {
       // Let the screen settle first; skip it if the user has already left Ranks or a sheet is open.
@@ -189,26 +228,35 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       takeRankMoments(s, lg);
       await playRankMoments(m, { s, players: lg?.players ?? [] });
     } finally { momentsPlaying = false; }
+    if (momentBox.isConnected) offerPrize(s);
   }
-  /** Prizes waiting to be claimed (a chest each) and the trophy shelf. */
-  const prizeBox = h('div', { class: 'rk-prizes' });
+  /** Prizes waiting to be claimed: a chest in the top bar, and once a session a pop-up to open it. */
   let wonItems: string[] = [];
+  let prizes: import('../together/ranks').Prize[] = [];
   async function paintPrizes(s: Status, fresh: boolean) {
-    const list = await myPrizes(fresh || s.prizes > 0).catch(() => []);
-    wonItems = list.map((p) => p.item).filter((i): i is string => !!i);
-    const open = list.filter((p) => !p.claimed);
-    const shelf = list.filter((p) => p.place);
-    const nodes: Node[] = open.map((p) => h('div', { class: 'rk-prize me-card' },
-      h('div', {}, h('b', {}, p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp')),
-        h('p', { class: 'muted small' }, [rt('rk.prizeLight', { n: p.light }), p.freeze ? rt('rk.prizeFreeze') : '',
-          p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatar' : 'rk.prizeFrame') : ''].filter(Boolean).join(' · '))),
-      p.item ? h('span', { class: 'rk-prize-item' }, itemArt(p.item, s, 40)) : '',
-      chest(p.light, 'ready', rt('rk.prizeOpen'), (el) => void openPrize(p, el, s))));
-    if (shelf.length) nodes.push(h('button', { class: 'rk-shelf me-card', onclick: () => openShelf(list) },
-      h('b', { class: 'small' }, rt('rk.trophies')),
-      h('span', { class: 'rk-shelf-row' }, ...shelf.slice(0, 8).map((p) => trophy(p.place, 26))),
-      h('span', { class: 'muted small' }, rt('rk.trophyCount', { n: shelf.length }))));
-    prizeBox.replaceChildren(...nodes);
+    prizes = await myPrizes(fresh || s.prizes > 0).catch(() => []);
+    wonItems = prizes.map((p) => p.item).filter((i): i is string => !!i);
+    const open = prizes.filter((p) => !p.claimed);
+    topActs.querySelector('.rk-top-chest')?.remove();
+    if (!open.length) return;
+    topActs.prepend(h('button', { class: 'rk-top-chest', 'aria-label': rt('rk.prizeOpen'), onclick: () => prizePop(open[0], s) },
+      chestArt(chestTier(open[0].light)) as unknown as Node, h('span', { class: 'rk-dot' })));
+  }
+  function prizePop(p: import('../together/ranks').Prize, s: Status) {
+    const d = sheet(p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp'),
+      h('div', { class: 'sheet-scroll rk-pop' },
+        p.place ? trophy(p.place, 56) : '',
+        h('p', { class: 'muted' }, [rt('rk.prizeLight', { n: p.light }), p.freeze ? rt('rk.prizeFreeze') : '',
+          p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatar' : 'rk.prizeFrame') : ''].filter(Boolean).join(' · ')),
+        chest(p.light, 'ready', rt('rk.prizeOpen'), (el) => { d.close(); void openPrize(p, el, s); })));
+  }
+  /** After the week's moments: a prize not yet opened pops up once this session. */
+  function offerPrize(s: Status) {
+    const p = prizes.find((x) => !x.claimed);
+    if (!p || document.querySelector('dialog[open], .cel')) return;
+    const k = `rkPop:${p.week}`;
+    try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch { /* ignore */ }
+    prizePop(p, s);
   }
   async function openPrize(p: import('../together/ranks').Prize, el: HTMLElement, st: Status) {
     try {
@@ -320,10 +368,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       const lg = await rankLeague(fresh);
       if (!lg) { body.replaceChildren(h('p', { class: 'muted' }, rt('rk.notYet'))); return; }
       body.replaceChildren(
-        h('div', { class: 'me-row rk-sub' }, h('h2', { class: 'me-h' }, rt('rk.leagueTitle', { tier: tierName(lg.tier) })), ends),
-        list(lg.players, true),
-        h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })),
-        h('p', { class: 'muted small' }, rt('rk.fairNote')));
+        list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
+        h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
     } else if (view === 'global') {
       const rows = await rankGlobal(metric === 'all' && allTime, metric, fresh);
       const sw = (on: boolean, label: string) => h('button', { class: `chip${allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; void paint(); } }, label);
@@ -433,15 +479,16 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
       if (fresh) await report();
-      await Promise.all([paintHead(fresh), paintBody(fresh)]);
+      await paintHead(fresh);
+      await paintBody(fresh);
     } catch (e) {
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));
     }
   }
 
   root.append(
-    h('header', { class: 'topbar' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title')), h('p', { class: 'muted' }, rt('rk.sub')))),
-    head, momentBox, tabs, body, tabBar('ranks'));
+    h('header', { class: 'topbar rk-top' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title'))), topActs),
+    tabs, head, momentBox, body, tabBar('ranks'));
   // A board invite opened before signing in: join it now.
   const pending = (() => { try { return sessionStorage.getItem(PENDING); } catch { return null; } })();
   if (pending && account()) {
