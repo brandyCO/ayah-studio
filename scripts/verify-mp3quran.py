@@ -54,7 +54,8 @@ def get(url, rng=None, tries=4):
       if rng: req.add_header('Range', 'bytes=%d-%d' % rng)
       with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
         # mp3quran redirects a surah it lacks to another reciter's folder: never take someone else's voice.
-        if r.geturl().rsplit('/', 1)[0] != url.rsplit('/', 1)[0]: raise Redirected(r.geturl())
+        # (archive.org always redirects a download to the server holding it: that is the same file.)
+        if 'archive.org/' not in url and r.geturl().rsplit('/', 1)[0] != url.rsplit('/', 1)[0]: raise Redirected(r.geturl())
         return r.read(), r.headers
     except Redirected: raise
     except Exception:

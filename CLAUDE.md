@@ -246,6 +246,10 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       a result opened or Enter) and **Recently read** (cards: the last 12 mushaf pages stayed on ≥ 3 s, page,
       reference, when), each with Clear; this device only (`src/data/history.ts`, localStorage
       `searchHistory` / `recentPages`). 🔍 opens a fresh search; ‹ back to `#/` keeps the last one
+- [x] Copy ayat as text (owner request 2026-11-09): selection bar → copy icon (mushaf + translation
+      view) → Arabic (with the reference) · Arabic + translation · Translation only; one ayah or the
+      selected range, the bundled text unchanged with its ayah numbers, translator credited; last choice
+      remembered per device (`copyWith`; `src/ui/copyAyat.ts`)
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
@@ -258,9 +262,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [x] Timeline (`src/ui/spine.ts`, CapCut-style): starts at the left, white playhead (kept mid-screen
-      while playing), "00:00 • 00:02" ruler, zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub,
-      drag elsewhere to scroll; room under the tracks. Tracks: scenes (thumbnails, lengths, transition
+- [x] Timeline (`src/ui/spine.ts`, CapCut-style): the white playhead is fixed in the middle (owner
+      request 2026-11-09) and the ruler and tracks slide under it — swiping anywhere (ruler or an
+      unselected block, with a fling) moves the playback position, a tap on the ruler slides that moment
+      under it; "00:00 • 00:02" ruler, zoom around the playhead (pinch, ctrl+wheel, −/+); room under the tracks. Tracks: scenes (thumbnails, lengths, transition
       markers, white + to add) and recitation audio (waveform per ayah). No text track (owner request)
 - [x] Block editing (owner request), within the rules: tap a block to select it →
       **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
@@ -339,7 +344,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       no user id, read only through `popular_this_week()`, shown once ≥ 20 reels in 7 days; pgTAP
       `studio_popular.test.sql`); the owner's weekly pick in `public/data/trending.json` (reciter id
       and/or ayah, marked "Trending"); reciter picker "Popular this week" row + Today card line
-      "Popular this week · ref" → Make this reel. Watermark off by default. Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
+      "Popular this week · ref" → Make this reel. Watermark on by default (owner decision 2026-10-31; a look remembered from before turns it on once, `markDefault`). Islam Sobhi (and Raad Al Kurdi until the mp3quran check below):
       no verified source with CORS (not on everyayah or QDC), so not added. 2026-10-13: 20 more everyayah
       reciters (ids 1007–1026: Hudhaify, Ayyoub, Jibreel, Budair, Qahtani, Bukhatir, Basfar, Matroud, Salamah,
       Husary + Minshawi Mujawwad, Tablawi, Ali Jaber, Muhsin Al-Qasim, Neana, Alaqimy, Sowaid, Alili, Sahl
@@ -368,7 +373,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       and applies the verifier's rules (pause ≥ 12 dB under speech or null, ≤ 10 % null, pace) plus a
       confidence check (mean log-probability per ayah ≥ −1.5); `public/data/mp3quran/islam-sobhi.json`
       (`aligned: true`; `vbr: s` for a variable-bitrate file ≤ 4 min, decoded whole: `fileDuration`).
-      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
+      55 surahs so far (45 and 65 removed: mp3quran redirects surahs it lacks — 37, 39, 40, 45, 65 — to Minshawi; `get()` and the app now refuse a redirected file); 2026-11-02: those five aligned from an archive.org upload (`islamsobhiquran`, commit 39742ab3; `url` per surah supported, archive.org's own redirect allowed), not him: the owner heard As-Saffat as Yasser Az-Zailai and `scripts/voice-check.py` (SpeechBrain ECAPA speaker
+      embeddings, `align.yml` scan = find, only = voice) put 37/39/40/45 nearer other voices, so Islam Sobhi stays at 109 surahs
+      (rule: a recording found by name is added only after the voice check and the owner's ear). **Yasser Az-Zailai** (id 1050,
+      owner request 2026-11-03): no complete Quran exists; archive.org `YasserAl-Zailai` (45 files, all one voice by
+      `voice-check.py zailai`) → 42 surahs aligned like Islam Sobhi (`public/data/mp3quran/ia-YasserAl-Zailai.json`, 1839 of 1892
+      ayat with words; 49 has mixed bitrates, 3 is gone, 39 only partial elsewhere); archive.org checked from Chromium
+      (`scripts/cors-check.cjs`, scan = cors: HEAD, Range 206, crossorigin audio plays); migration `20261103000000_zailai.sql`; still to do: surahs > 20 min (align in pieces), longer VBR files (byte offsets per
       ayah), and the 18 that failed (mostly ayat joined without a pause in Juz 'Amma; ayah 1 unclear in
       99–108). Migration `20261018000000_islam_sobhi.sql` (`valid_reciter()`: 1001–1037). **Word times for every reciter** (owner request
       2026-10-13, "all modes for all reciters"): the same aligner gives each word's time. `.github/workflows/align.yml`
@@ -389,7 +400,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       114 surahs; Juhany 1006 left out: 902 ayat passed), mp3quran Nufais, Abkar, Al-Kurdi, Al-Jaleel, Baleela
       (3562–4750 ayat; more surahs verified by the aligned cuts). 2026-10-31: the rest of that run — Al-Dukhain, Al-Yamani, Al-Salimi, Al-Majed,
       Al-Asiri, Islam Sobhi, more of Baleela (3159–5596 ayat each, mostly surahs 1–~80: the 38–114 jobs hit
-      the deadline; rerun for the rest started). Without words: Juhany, Husary + Minshawi Mujawwad. The Android build leaves `data/words` out
+      the deadline). Rerun 2026-10-31: the mp3quran reciters now have words for 100–114 surahs each ; a last rerun of
+      1–37 filled the gaps: each has words for 109–114 surahs, every surah it has a checked recording of). Without words: Juhany. Mujawwad (2026-11-02, owner: "don't tell me there is no way"): Abdul Basit Mujawwad aligned vs Quran.com's times for the same recording: median 0.07 s; Husary Mujawwad 1016 words for 6199 ayat (all 114), Minshawi Mujawwad 1017 6195 ayat (all 114). The Android build leaves `data/words` out
       of the APK; the app fetches a surah's file from the Pages site on first use (Cache Storage `words`)
       **Listen tab plays every reciter** (owner request 2026-10-29): `src/ui/player.ts` — Quran.com reciters as
       before; mp3quran ones stream their checked surah file (cuts as ayah times); everyayah ones play the per-ayah
@@ -400,8 +412,52 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       per-ayah files are joined directly (`GAP` −0.04 s, crossfaded in `mixdown()`; was 0.25 s of silence), and
       where a piece meets added silence its echo fades out over the quiet after the last word (≤ 0.9 s, quadratic)
       and comes in over ≤ 0.12 s (`AudioPiece.fadeIn/fadeOut`); continuous pieces get no fade
+      **One breath** (owner request 2026-11-02, "keep it as it is"): ayat a reciter joins without a pause are never cut
+      apart. `breathJoins()` hears it in the reel's audio (no 0.18 s stretch 18 dB under the speech level before the next
+      ayah; at the reel's end: still sounding where it was cut; word times cannot tell, Quran.com's last word runs on to
+      the next ayah) → `ReelPlan.joins`: no pause or trim inside a breath, and a selection that ends inside one takes in
+      the next ayah with a toast (once per range, `joinKept:` in sessionStorage, so taking it out again is kept).
+      Checked on everyayah Minshawi Mujawwad 37:8–9
       **No added pause by default** (owner decision 2026-10-29): every mood and vibe has `pause: 0`; a look
       remembered from before loses its pause once (`pauseReset`); users add one under Audio → Pauses
+      **Every ayah, every Bismillah** (owner request 2026-11-02, "no ayah skipped, a surah always starts with the
+      Bismillah"): Listen starts a surah at the very start of its file; mp3quran cuts left null get a start from the
+      alignment (`l` in `public/data/mp3quran/*.json`, `scripts/make-listen-starts.py`; reels may use them too); an
+      ayah still without one plays from the previous ayah. `public/data/basmala.json` (`src/data/basmala.ts`): per
+      recording the surahs whose file lacks the Bismillah (`missing`) → the reciter's own Bismillah is played first
+      (everyayah 001001, a span of another surah, or for Quran.com files — which never have it — his Al-Fatiha's ayah
+      1); `spans` light the Bismillah line in the mushaf (`.mp-basmala[data-s]`, position a = 0 to the mushaf only);
+      `skip` passes spoken announcements (Al-Yamani 48–56); `first` = ayah 1's first word after the Bismillah.
+      Made by `scripts/fix-openings.py` / `qdc-openings.py` on GitHub (`align.yml` scan = openings / qdc) and
+      `scripts/merge-openings.py`. **Recordings**: a reciter's other recordings are chips under his name (Listen and
+      studio pickers, `groupRecordings()`, `recording`); ids 1038–1049 (migration `20261102000000_more_recordings.sql`).
+      `scripts/new-recordings.json`: 187 more mp3quran Hafs recordings, aligned in batches (`only = new:N`; a run
+      restarts itself until every surah has a result, then checks the openings and starts the next batch). Owner
+      decision 2026-11-09: add every new one, skip copies (same ayah lengths in Ya-Sin to ~20 ms). Batch 1: 53 added (ids
+      1051–1103, migration `20261109000000_more_recordings_batch1.sql`), 7 copies left out. Surah-finished card waits until the recitation leaves the surah
+      **Listen anywhere** (owner request 2026-11-02): one player for the whole app (`sharedPlayer()` in
+      `src/ui/player.ts`); the mushaf attaches to it (`attachPlayer()`: page tracking, lit words) and on any other
+      screen (Me: claims, tasbih; surah list; drafts) the bar sits above the tab bar (`body.listening-away`) with
+      a book button / the Listen tab back to the page being recited (`followAlong()`); the studio pauses it, the
+      Kids space stops it. Reciter pickers have a search box (`reciterSearchBox()`, letters only) and every
+      reciter a ▶ voice preview (mp3quran ones: the start of their first checked surah, `mp3quranSample()`)
+      **Report a problem** (owner request 2026-11-02, "super easy for users to report every single thing at the time
+      it happens"): player ⋯ → Report a problem (also Me → ⚙ → App), `src/ui/report.ts`: pick what went wrong (ayah
+      doesn't start at its beginning, highlight off, ayah skipped, wrong voice, audio cuts, text, reel, app, other)
+      + optional note; sent with the reciter, surah:ayah, word, ms in the recording, file, screen, build
+      (`__BUILD__`), device type, install id → `send_report()` (migration `20261102100000_problem_reports.sql`,
+      table `problem_reports`, no app read access, 20 a day per install; pgTAP `problem_reports.test.sql`);
+      offline → kept (`reportQueue`) and sent when online. The player's reel / Night listening / Report sit under ⋯.
+      **Timing audit** (owner report 2026-11-02: Alafasy 37:113–114 start at the second word, highlight sometimes
+      off): `scripts/qdc-audit.py` (`align.yml` scan = audit) aligns every ayah of the Quran.com recordings on its
+      own and writes the ones whose start or word times are off (`qdc-audit/{id}/{SSS}.json` on `align-results`); `scripts/make-qdc-fixes.py` turns them into `public/data/qdc-fix/{id}/{SSS}.json` (+ `index.json`), which
+      `qdcSurah()` applies to Quran.com's timings everywhere (`applyFixes()`: heard start/end/words; an unclear ayah between
+      two neighbours moved alike moves with them; the ayah before is cut / joined at the new start). Seeking itself was
+      checked accurate on all 13 Quran.com recordings (`scripts/seek-check.*`, `align.yml` scan = seek), so a tap that
+      plays from mid-ayah is always a timing error. First: Alafasy 19–38 (37:112–115 were 2.4 s late);
+      2026-11-09 all 13 reciters (1 and 9 partly), checked on the audio by `scripts/qdc-fix-check.py` (`align.yml` scan =
+      fixcheck: loudness contrast at both starts): where Quran.com starts late ours was right ~96 %, so those are applied
+      for every reciter; earlier starts only for 1, 7, 9, 161; Shuraim (10) none (`EARLY_OK`, `SKIP`); 13,776 ayat
 - [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
@@ -521,7 +577,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
       before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
       reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
-      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      a tap on the timeline selects the block (the playhead stays fixed in the middle since 2026-11-09);
       the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
       divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
       top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
@@ -665,8 +721,10 @@ save to gallery / share sheet; offline audio cache; settings.
       android` after `npm run build`). `.github/workflows/android.yml` (push to main, PRs, manual) builds
       the debug APK → artifact **ayah-studio-apk** (debug-signed, for sideloading; Play signing later).
       App icon + splash: see "Logo" below
-- [x] Logo (owner-approved 2026-10-08, "sound a"): lowercase "a" + two fading sound bars (the
-      recitation), white on an emerald → teal tile (`#05573d` → `#22b3a0`). The gradient is a brand
+- [x] Logo (owner pick "E", 2026-10-31; was the "sound a" of 2026-10-08): a soft light inside the
+      end-of-ayah rosette (two rounded squares, one turned 45°, thin teal `#3dd1ad` line, fine ring inside,
+      white core) on a deep night-green tile (`#040c09` → `#0b2019`); themed icon = the same in one colour.
+      The emerald → teal gradient (`#05573d` → `#22b3a0`) stays the brand gradient. The gradient is a brand
       moment only (icon, launch screen, the name, later Export / "Turn into reel" / selected chips /
       progress bars) — never on the mushaf page, the Arabic text, the reel or big backgrounds behind
       text. `scripts/make-icons.py` (Pillow + headless Chromium) writes `resources/` (SVG sources, 1024 px
@@ -684,8 +742,22 @@ save to gallery / share sheet; offline audio cache; settings.
       (`src/ui/theme.ts`: Emerald (default), Aurora, Ultraviolet, Synthwave, Neon Sunset, Deep Ocean,
       Royal Gold, Rose Quartz, Cyber Lime, Nebula, Arctic Ice, Ember). Each sets the brand tokens, the
       accent, a `--brand-shadow` glow and a night background tinted to its hue (dark mode + studio);
-      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme`. Same limits as the logo
+      deep `fill` stops keep white text ≥ 4.5:1. Synced pref `brandTheme` (fix 2026-11-02: each synced pref is its own
+      `user_docs` row `setting/pref:{key}`, so another device writing its reading place can no longer put back an old
+      theme; a device holding a newer choice than a pulled row sends it again; the old `prefs` row is still written). Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
+      Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
+      hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
+      gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
+      goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
+      shine plays once; the streak keeps a softer glow
+      **App icon follows the theme** (owner request 2026-11-02): one launcher icon per theme (the same light in the
+      ayah marker: night tile tinted to the theme's hue, marker + glow in its night accent, inner ring its deep colour; `scripts/make-icons.py --themes` reads `theme.ts` and writes the vector
+      backgrounds `drawable/ic_bg_{id}.xml`, adaptive `ic_launcher_{id}` + `_round`, 192 px PNGs for Android 7 and
+      the manifest's activity-aliases). The real activity is `AppActivity`; the launcher entries are aliases
+      (`.MainActivity` = Emerald, so old home-screen icons keep working; `.Icon{Id}`), exactly one enabled.
+      `AppIconPlugin` stores the choice and `AppIcons.apply()` switches when the app leaves the screen (`onStop`).
+      Web: the tab icon is drawn in the theme's colours (`setFavicon()`). Splash and notification icons stay Emerald
 - [x] Export in the app (`src/native.ts`, used when `Capacitor.isNativePlatform()`): Save writes the
       MP4 in 3 MB base64 chunks (`writeFile` + `appendFile`) to `Movies/Ayah Studio` (fallbacks
       `Documents/Ayah Studio`, then the app's own folder; a toast says where), then our native
@@ -1002,7 +1074,11 @@ tafsir only from published, credited editions; UI strings only are translated by
       ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
       each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
       then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
-      caption is copied too
+      caption is copied too. 2026-11-09 (owner): WhatsApp Status now takes 90 s (`STATUS_LIMIT`), so a reel up to 90 s
+      is shared whole; a longer one is cut into the fewest parts, of similar length, each in a pause.
+      **Caption languages** (owner request 2026-11-09): chips over the caption — Arabic / English / Arabic + English
+      (localStorage `captionLang`, default both) and "Include the ayat" (`captionAyat`, on): the Arabic exactly as in
+      the reel and/or the whole-ayah translation with each ayah's reference, each only when it fits whole
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
@@ -1194,7 +1270,8 @@ duas/reflections section in Me.
 - [x] M1 Me screen `#/me` (`src/ui/me.ts`, the Me tab now opens it; ☰ still opens the menu, and
       Me → Settings and more opens it on the mushaf): flame (`src/ui/flame.ts`, SVG + CSS, tiers at 7 / 30
       days, out = ember + smoke, still with reduced motion / old-phone mode), this week's days, weeks in a
-      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; if the
+      row (≥ 3 lit days), freeze (one a calendar week from Monday, used by itself for a missed day; plus
+      one **extra freeze every 30 days** for a second missed day in a week, owner decision 2026-10-31, `State.extra`; if the
       missed days cannot all be covered the flame goes out and `lost` is kept 2 days for a friend's
       relight), best. `src/data/journey.ts` (localStorage `journey`, this device): `recordOpen()` (main.ts,
       on start and when the app comes back; not in the Kids space), `countPage()` (ayat starting on the
@@ -1226,7 +1303,12 @@ duas/reflections section in Me.
       like any goal. **Sync** when signed in (`src/cloud/sync.ts`): each device's journey + reading log as
       its own `user_docs` row (`state` / `journey:{device}`), others kept in localStorage `journeyOthers`
       and read combined (`view()` in journey.ts: counts added, flags and lists joined, a freeze released
-      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins.
+      when another device lit that day; `readLogAll()`); goals as `setting` / `goals`, the newest set wins. Sync fix
+      (owner report 2026-10-31): the missed days are settled again when another device's journey arrives
+      (`resettle()`; the app opens before the pull, so a new or stale device showed the flame out or used a
+      freeze), an extra freeze counts only where a day still needed it, a waiting push is sent when the app
+      is hidden (timers stop there), another account's devices are dropped on an account switch, and the
+      journey plan + page reading time are synced prefs (`journeyPlan`, `pageSeconds`).
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
@@ -1324,7 +1406,90 @@ duas/reflections section in Me.
       today). Journeys (`src/data/journeys.ts`, localStorage `journeyPlan`, one at a time): Khatm in 30 days, Juz
       'Amma in 30 days, Khatm in 6 months; progress = the plan's pages counted since it started
       (`pageReadSince()`), today's portion = pages left over days left (a missed day spreads out)
+- [x] M10 Morning & evening adhkar in the app (owner request 2026-11-03, "loyalty: say them here, not in another app"):
+      no more "Mark done". The goal opens a full-screen session (`src/ui/adhkar.ts`): one dhikr at a time with its
+      meaning, its count and its source, a big counter tapped each time it is said, dots to jump, swipe / ‹ › to move,
+      text size, meaning on/off; a dhikr said in full adds Light (2 / 3 / 5 / 10 by count, `dhikrLight()`, claim id
+      `ak:{s|m}:{id}`) and moves on; all said → `DayRec.ad` (morning) / `am` (evening), then Claim (20 Light) in the
+      session or on Me. Progress is kept for the day (localStorage `adhkarProgress`). **Evening adhkar** appear in the
+      goals from Asr (`eveningFrom()`: today's Asr from the prayer settings, kept in `asrToday`; 15:00 without a
+      location); Me also has Morning / Evening adhkar links even when the goal is off. Data `public/data/adhkar.json`
+      by `scripts/make-adhkar.mjs`: Hisn al-Muslim ch. 27 (Arabic: hisnmuslim.com via YousefAsalya/Islamic-Pro-azkar-API,
+      MIT; English: Darussalam via @kazishariar/morning-evening-adhkar-data, CC BY 4.0); Quran parts (Ayat al-Kursi,
+      Al-Baqarah 285–286 in the evening, Al-Ikhlas / Al-Falaq / An-Nas ×3) from our own KFGQPC text + Saheeh
+      International; the book's own evening wording replaces the words it names; counts checked against the book
+      (25 morning, 23 evening; strings `src/i18n/adhkar.ts`)
+- [x] M11 Reward chests (owner request 2026-11-03, "like Duolingo"): every goal row in Me has a progress bar and a
+      chest holding its Light (`src/ui/chest.ts`, SVG drawn in code): wood ≤ 10, brass 15–20, cedar with a star 25–45,
+      emerald and gold 50–99, pearl and gold with light 100+ (`chestTier()`). Resting (breathing, muted) until the goal is
+      met, then shaking with the lid peeking and light behind it (heavier chests shake harder and slower), open once
+      claimed. The amount inside is always shown, never random (no loot boxes). A day chest row for every goal met
+      (`ALL_LIGHT`) replaces the Claim-all button; the adhkar session's finish shows its chest too. Tap → full-screen
+      moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
+      Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
+      their medal moments
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
+
+### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
+Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the juz gardens").
+- [x] Tab bar **Read · Learn · Create · Me**: Listen left the bar (▶ in the mushaf's top bar `mushaf.listen`, ▶ on a
+      selected ayah; while listening elsewhere Read goes back to the page being recited; a one-time toast
+      `listenMoved` tells returning users). Learn = `#/learn` (garden) and `#/learn/{s}` (lesson), both lazy-loaded
+      with their own strings (`src/i18n/learn.ts`, `lt()`) and CSS (`src/ui/learn.css`) so first load stays small
+- [x] Data `src/data/garden.ts` (localStorage `garden`, synced as `user_docs` state/garden, merged per tree /
+      decoration, newest wins, learned counts never go back, purchases add up; in Export my data): one garden per
+      juz (a surah grows in the juz holding its ayah 1, `surahJuz()`; grid 5–8, `gridSize()`), a tree per surah
+      (`x/y`, variety, chunk size 1/2/3 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
+      ayah 1, `linked`, `full`, review `step`, `water`). Stages seed → sapling → small → medium → full (only after the
+      whole surah from memory). Thirsty: a full tree after 1/3/7/14/30 days then monthly (`WATER_DAYS`; a smooth
+      recitation moves the next one further, slips closer), a growing tree after 3 days without a lesson.
+      Light (journey `claimGoal('gl:…')`): new chunk 5, link 5, full 30, watering 10; wallet = all Light earned −
+      spent here. Store: varieties per surah Autumn 40 / Moonlit 80 / Light 120; decorations common 30 (flowers,
+      stones, lamp, bench), rare 120 (pond, fountain), epic 300 (arch, pavilion), legendary 800 (moon gate, well of light)
+- [x] Garden `src/ui/garden.ts` + art `src/ui/gardenArt.ts` (2D canvas, angled grid island, all drawn in code; no
+      figures): 6 kinds of tree by surah number, and each surah its own shape (`shapeOf()`: lean, height, width,
+      clumps/fronds, second crown, twin stem or forked trunk, fruit/blossom colour); gentle sway, thirsty = paler,
+      drooping, water-drop bubble; growing moment after a lesson (old stage shrinks, new one springs up, sparks);
+      night motes; a juz with every tree full glows (light in the seams, warm sky). Hold/drag trees and decorations
+      anywhere (snap to squares, grab point kept), pinch / ctrl+wheel / double-tap zoom; seed store (30 juz sections,
+      first seed of every surah free) and decorations → a tray: drag onto a square or tap to plant near the middle.
+      Under the garden: Today (thirsty trees first, then the next lesson), the trees of this juz (screen readers),
+      How it works. Tree card: progress, status, next lesson, chunk size, kinds, back to the store
+- [x] Lesson `src/ui/lesson.ts`: New (Listen ×1/3/5 with a turn after each round → Practise with fading hints: all
+      words → first word of each ayah → none → From memory: hidden words keep their place, tap to peek → reveal →
+      Not yet / A few slips / I had it) → Link (1..learned from memory) → Whole surah → full tree; Water for a full
+      thirsty tree; a thirsty growing tree starts with Link then goes on to New. Words lit from QDC word timings
+      only (rule 8); tap a word: Quran.com meaning + its sound where timed. Juz 'Amma recordings kept on the device
+      (`kidsRecitation`), longer surahs streamed. `addMemorised()` feeds the Me tab's memorise goal; rewards play
+      `celebrate()` (lantern / star, own kicker)
+- [x] The 114 magic trees (owner request 2026-11-02, "nothing better than another"): `src/ui/magicTrees.ts` — every
+      surah its own combination of 12 shapes × 14 leaves × 14 fruits × 10 barks × 24 colour sets (no two share three of
+      the five, neighbours never share shape/leaf/fruit) and its own seed (12 bodies × 8 marks); growth is continuous
+      (`STAGE_G`: seed → full, fruit ripening from the growing stage); size follows the surah's pages (`SURAH_PAGES`,
+      `magicSize()`); drawn once per surah + stage as a cached picture (`drawTree()` in `gardenArt.ts`; the six
+      hand-drawn species stay as `drawSimpleTree`). Gallery to review: Artifact "The 114 Trees"
+- [x] Full-screen garden (owner request 2026-11-03): Learn opens on the garden filling the screen above the tab bar
+      (`.garden-full`; the island fits between the top bar and Today's card, zoom 1–4×, drag / pinch); floating top bar
+      (‹ Juz n ›, Light); round icon buttons down the side: seed store (sprout), decorations (sparkle), trees in this
+      garden + how it works (book, a sheet), show the whole garden (fit); Today's next step floats at the bottom (the
+      tray takes its place while planting); tapping a tree or decoration opens the same card as before
+- [x] Lessons on the mushaf page (owner request 2026-11-03, visual memory): the lesson shows the real Madinah page(s)
+      holding the chunk (QCF page font, same fit as the reader); the chunk stays lit, everything else on the page dims
+      (30 %, never black), so half a page dims the other half; listening lights the words, hints / hiding / tap-to-peek
+      work on the page words (`displayIndex()` maps mushaf word positions to display words, word-map aware); the meaning
+      shows under the page. Chip **Page / Ayat** (pref `lessonView`, default page) switches to the ayah + translation view
+- [x] Phone-test fixes (owner, 2026-11-03): the lesson page is the reader's own size (full width, screen height,
+      scrolled in the middle; `.ls-pageview`), with the steps, Listen / hide / reveal buttons and tools always on
+      screen below it and the chunk's translation in a strip (`.ls-trs`). The seed store shows **seeds**, never trees
+      (`seedPic()` / `drawSeedAt()`: each surah's own seed), one juz shelf at a time (juz chips), and a "Press a seed
+      and drag it into your garden" hint with a small animation; press and hold (or pull sideways / drag the seed)
+      lifts it out of the store straight onto a square (`dragHeld()`, window listeners; the tray uses the same), the
+      seed shown large above the finger. Tapping a small tree or seed on the grid: bigger touch area + the square
+      itself, 12 px before a tap becomes a drag
+- [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
+- [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
+      joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
+- [ ] Later: finished juz gardens joined into one world; Kids version
 
 ---
 

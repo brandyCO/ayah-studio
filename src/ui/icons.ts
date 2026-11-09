@@ -58,9 +58,12 @@ const P: Record<string, string> = {
   prev: '<path d="M15 6l-6 6 6 6M6 5v14"/>',
   next: '<path d="M9 6l6 6-6 6M18 5v14"/>',
   save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
+  flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
   book: '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5v13"/>',
   listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4" height="6" rx="1.5"/><rect x="16.5" y="14" width="4" height="6" rx="1.5"/>',
   create: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor" stroke="none"/>',
+  sprout: '<path d="M12 21v-8.5"/><path d="M12 12.5C12 8 15 5.5 20 5.5c0 4.6-3 7-8 7z"/><path d="M12 15c0-3.6-2.6-6-7-6 0 3.7 2.6 6 7 6z"/><path d="M8 21h8"/>',
+  copy: '<rect x="8.5" y="8.5" width="11.5" height="12" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h2.5"/>',
   me: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5"/>',
 };
 

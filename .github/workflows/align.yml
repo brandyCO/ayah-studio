@@ -8,23 +8,32 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: 'Reciter keys, comma-separated (empty = all)'
+        description: 'Reciter keys, comma-separated (empty = all; new:1 … new:4 = a batch of scripts/new-recordings.json)'
         required: false
         default: ''
       surahs:
         description: 'Only these surahs, one job per reciter (e.g. 112-114; empty = all, 4 jobs per reciter)'
         required: false
         default: ''
+      round:
+        description: 'Round of this alignment (set by the workflow when it starts itself again to finish)'
+        required: false
+        default: '1'
+      scan:
+        description: 'yes = instead, scan quranicaudio.com and archive.org for recordings (scripts/scan-sources.py); find = look on archive.org for the surahs Islam Sobhi lacks (scripts/find-surahs.py); audit = check the Quran.com ayah and word times against the audio (scripts/qdc-audit.py; only = reciter ids, surahs = one range); qdc = how the Quran.com recordings open (scripts/qdc-openings.py); openings = the same for the mp3quran reciters (scripts/fix-openings.py)'
+        required: false
+        default: 'no'
 
 permissions:
   contents: write
 
 concurrency:
-  group: align
+  group: align-${{ inputs.scan }}-${{ inputs.only }}
   cancel-in-progress: false
 
 jobs:
   plan:
+    if: inputs.scan != 'yes' && inputs.scan != 'seek' && inputs.scan != 'cors' && inputs.scan != 'fixcheck' && inputs.scan != 'qdc' && inputs.scan != 'openings' && inputs.scan != 'find' && inputs.scan != 'audit'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -43,7 +52,7 @@ jobs:
     timeout-minutes: 355
     strategy:
       fail-fast: false
-      max-parallel: 18
+      max-parallel: 10
       matrix:
         job: ${{ fromJson(needs.plan.outputs.jobs) }}
     env:
@@ -56,6 +65,7 @@ jobs:
       SOURCE: ${{ matrix.job.source }}
       SURAHS: ${{ matrix.job.surahs }}
       GH_TOKEN: ${{ github.token }}
+      RETRY_ERRORS: ${{ inputs.round != '1' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -93,6 +103,358 @@ jobs:
           git add "$RES/$KEY"
           git diff --cached --quiet && exit 0
           git commit -qm "Alignment: $KEY surahs $SURAHS"
+          for i in 1 2 3 4 5 6 7 8; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
+
+  # Finish every job: while any planned surah has no result yet (a job stopped at its deadline or was cancelled),
+  # the workflow starts itself again with the same inputs; surahs already done are skipped (up to 12 rounds).
+  # A batch of new recordings (only = new:N) that is complete starts batch N + 1.
+  next:
+    needs: [plan, align]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      JOBS: ${{ needs.plan.outputs.jobs }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything left?
+        id: left
+        run: |
+          git clone -q --depth 1 --filter=blob:none --no-checkout --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          git -C "$RUNNER_TEMP/res" ls-tree -r --name-only HEAD align2 > "$RUNNER_TEMP/done.txt"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          done = set(open(os.environ['RUNNER_TEMP'] + '/done.txt').read().split())
+          left = 0
+          for j in json.loads(os.environ['JOBS']):
+            for part in j['surahs'].split(','):
+              a, _, b = part.partition('-')
+              for s in range(int(a), int(b or a) + 1):
+                if 'align2/%s/%03d.json' % (j['key'], s) not in done: left += 1
+          print('left=%d' % left)
+          PY
+      - name: Start the next round
+        if: steps.left.outputs.left != '0' && fromJson(inputs.round) < 12
+        run: |
+          echo "${{ steps.left.outputs.left }} surahs left: round $(( ${{ inputs.round }} + 1 ))"
+          gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="${{ inputs.only }}" -f surahs="${{ inputs.surahs }}" \
+            -f round="$(( ${{ inputs.round }} + 1 ))"
+      - name: Done; check its openings and start the next batch
+        if: steps.left.outputs.left == '0' && startsWith(inputs.only, 'new:')
+        run: |
+          n=$(( ${INPUT_ONLY#new:} + 1 ))
+          total=$(( ( $(python3 -c "import json;print(len(json.load(open('scripts/new-recordings.json'))))") + 59 ) / 60 ))
+          gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="${INPUT_ONLY}" -f scan=openings
+          [ "$n" -le "$total" ] || { echo "all batches done"; exit 0; }
+          gh workflow run align.yml --ref "$GITHUB_REF_NAME" -f only="new:$n" -f round=1
+        env:
+          INPUT_ONLY: ${{ inputs.only }}
+
+  # scan = seek: does a seek in Chromium's <audio> land where currentTime says, for each Quran.com recording?
+  seek:
+    if: inputs.scan == 'seek' || inputs.scan == 'cors' || inputs.scan == 'fixcheck'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg && pip install -q numpy
+      - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - if: inputs.scan == 'seek'
+        run: node scripts/seek-check.cjs seek ${{ inputs.surahs || '2' }} && python3 scripts/seek-check.py seek
+      - if: inputs.scan == 'fixcheck'
+        run: mkdir -p seek && python3 scripts/qdc-fix-check.py seek/result.json 40
+      - if: inputs.scan == 'cors'
+        run: mkdir -p seek && node scripts/cors-check.cjs seek/result.json ${{ inputs.only }}
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f seek/result.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/seek/result.json" sources/${{ inputs.scan }}.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Seek check"
+          for i in 1 2 3 4 5 6; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+
+  scan:
+    if: inputs.scan == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg && pip install -q numpy
+      - run: python3 scripts/scan-sources.py scan.json
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f scan.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/scan.json" sources/scan.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Source scan" && git push -q origin HEAD:align-results
+
+  find:
+    if: inputs.scan == 'find'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      # only = zailai: every archive.org upload of Yasser Az-Zailai (owner request 2026-11-03), all surahs
+      - if: inputs.only == 'zailai'
+        run: python3 scripts/find-surahs.py find.json "Zailai|Zailaee|Zailaie|Zaylai|Zaylaee|Zeilai|Zailaey|الزيلعي|الزيلعى" $(seq -s, 1 114)
+      - if: inputs.only != 'compare' && inputs.only != 'voice' && inputs.only != 'zailai' && inputs.only != 'voice-zailai'
+        run: python3 scripts/find-surahs.py find.json "Islam Sobhi|Islam Sobhy|Islam Subhi|إسلام صبحي|اسلام صبحي|اسلام صبحى|إسلام صبحى" 37,39,40,45,65
+      # only = compare: are the archive.org uploads found the same recording as our checked mp3quran one?
+      - if: inputs.only == 'compare'
+        run: python3 scripts/compare-ia.py find.json public/data/mp3quran/islam-sobhi.json islamsobhiquran surquran.com/islam islam-sobhi_202405 islam-sobhi_202404 islamicloud-quran-islam-sobhi/islam-sobhi
+      # only = voice: is the archive.org upload his voice? (speaker embeddings against his mp3quran files)
+      - if: inputs.only == 'voice' || inputs.only == 'voice-zailai'
+        run: |
+          sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg >/dev/null
+          pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -q speechbrain numpy
+          python3 scripts/voice-check.py find.json ${{ inputs.only == 'voice-zailai' && 'zailai' || '' }}
+      - name: Save the report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f find.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set sources
+          mkdir -p sources && cp "$GITHUB_WORKSPACE/find.json" "sources/${{ (inputs.only == 'compare' || inputs.only == 'voice' || inputs.only == 'voice-zailai') && inputs.only || 'find' }}-${{ inputs.only == 'zailai' && 'zailai' || 'islam-sobhi' }}.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources && git commit -qm "Find: Islam Sobhi surahs"
+          for i in 1 2 3 4 5 6; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
+
+  audit-plan:
+    if: inputs.scan == 'audit'
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.p.outputs.jobs }}
+    steps:
+      - id: p
+        env:
+          ONLY: ${{ inputs.only }}
+          SURAHS: ${{ inputs.surahs }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          ids = [int(x) for x in os.environ['ONLY'].split(',') if x.strip()] or [1, 2, 3, 4, 5, 6, 7, 9, 10, 12, 97, 161, 173]
+          rs = [os.environ['SURAHS']] if os.environ['SURAHS'].strip() else ['1-7', '8-18', '19-37', '38-114']
+          print('jobs=' + json.dumps([{'id': i, 'surahs': r} for i in ids for r in rs]))
+          PY
+
+  audit:
+    needs: audit-plan
+    name: QDC audit · ${{ matrix.job.id }} · ${{ matrix.job.surahs }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        job: ${{ fromJson(needs.audit-plan.outputs.jobs) }}
+    env:
+      ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/align.yml
+      - name: Install ffmpeg and the model's libraries
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+          pip install -q transformers==5.19.0 numpy huggingface_hub
+      - uses: actions/cache@v4
+        with:
+          path: .cache/align-model
+          key: align-model-rabah2026-v_final
+      - name: Download the model (Apache-2.0)
+        run: |
+          [ -f "$ALIGN_MODEL/model.safetensors" ] || python3 -c "from huggingface_hub import snapshot_download as d; d('rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final', local_dir='$ALIGN_MODEL')"
+      - name: Surahs already checked (a rerun carries on)
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res" && git sparse-checkout set qdc-audit/${{ matrix.job.id }}
+          mkdir -p "$GITHUB_WORKSPACE/out" && cp -r qdc-audit/. "$GITHUB_WORKSPACE/out/" 2>/dev/null || true
+      - name: Check every ayah start
+        run: timeout 325m python3 scripts/qdc-audit.py ${{ matrix.job.id }} out ${{ matrix.job.surahs }} || true
+      - name: Save results
+        if: always()
+        run: |
+          [ -d out/${{ matrix.job.id }} ] || exit 0
+          cd "$RUNNER_TEMP/res"
+          mkdir -p qdc-audit && cp -r "$GITHUB_WORKSPACE/out/${{ matrix.job.id }}" qdc-audit/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qdc-audit && (git commit -qm "QDC audit: ${{ matrix.job.id }} ${{ matrix.job.surahs }}" || exit 0)
+          for i in 1 2 3 4 5 6 7 8; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
+
+  qdc-openings:
+    if: inputs.scan == 'qdc'
+    name: QDC openings · ${{ matrix.id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        id: [1, 2, 3, 4, 5, 6, 7, 9, 10, 12, 97, 161, 173]
+    env:
+      ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/align.yml
+      - name: Install ffmpeg and the model's libraries
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+          pip install -q transformers==5.19.0 numpy huggingface_hub
+      - uses: actions/cache@v4
+        with:
+          path: .cache/align-model
+          key: align-model-rabah2026-v_final
+      - name: Download the model (Apache-2.0)
+        run: |
+          [ -f "$ALIGN_MODEL/model.safetensors" ] || python3 -c "from huggingface_hub import snapshot_download as d; d('rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final', local_dir='$ALIGN_MODEL')"
+      - run: python3 scripts/qdc-openings.py ${{ matrix.id }} out
+      - name: Save results
+        if: always()
+        run: |
+          [ -f out/qdc${{ matrix.id }}.json ] || exit 0
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          cd "$RUNNER_TEMP/res"
+          git sparse-checkout set qdc-open
+          mkdir -p qdc-open && cp "$GITHUB_WORKSPACE/out/qdc${{ matrix.id }}.json" qdc-open/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qdc-open && git commit -qm "QDC openings: ${{ matrix.id }}"
+          for i in 1 2 3 4 5 6 7 8; do
+            git push -q origin HEAD:align-results && exit 0
+            sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results
+          done
+          exit 1
+
+  # Which recordings: only = keys, new:N = a batch of scripts/new-recordings.json, empty = the mp3quran reciters in the app.
+  openings-plan:
+    if: inputs.scan == 'openings'
+    runs-on: ubuntu-latest
+    outputs:
+      keys: ${{ steps.p.outputs.keys }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re
+          only = os.environ['ONLY'].strip()
+          if only.startswith('new:'):
+            n = int(only[4:]); keys = [r['key'] for r in json.load(open('scripts/new-recordings.json'))[(n - 1) * 60:n * 60]]
+          elif only:
+            keys = only.split(',')
+          else:
+            keys = re.findall(r"mp3quran: \{ read: '?([\w-]+)'?, surahs: '[^']+'", open('src/data/reciters.ts').read())
+          print('keys=' + json.dumps(sorted(set(keys))))
+          PY
+
+  openings:
+    needs: openings-plan
+    name: Openings · ${{ matrix.key }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        key: ${{ fromJson(needs.openings-plan.outputs.keys) }}
+    env:
+      ALIGN_MODEL: ${{ github.workspace }}/.cache/align-model
+      GH_TOKEN: ${{ github.token }}
+      KEY: ${{ matrix.key }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/align.yml
+      - name: Install ffmpeg and the model's libraries
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+          pip install -q transformers==5.19.0 numpy huggingface_hub
+      - uses: actions/cache@v4
+        with:
+          path: .cache/align-model
+          key: align-model-rabah2026-v_final
+      - name: Download the model (Apache-2.0)
+        run: |
+          [ -f "$ALIGN_MODEL/model.safetensors" ] || python3 -c "from huggingface_hub import snapshot_download as d; d('rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final', local_dir='$ALIGN_MODEL')"
+      - name: Results so far
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse --branch align-results \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/res"
+          git -C "$RUNNER_TEMP/res" sparse-checkout set "align2/$KEY" openings
+      - run: rm -f public/data/basmala.json && python3 scripts/fix-openings.py "$RUNNER_TEMP/res" "$KEY"
+      - name: Save results
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/res"
+          mkdir -p "openings/$KEY"
+          cp "$GITHUB_WORKSPACE/public/data/basmala.json" "openings/$KEY/basmala.json" 2>/dev/null || exit 0
+          git -C "$GITHUB_WORKSPACE" diff --name-only -- "public/data/words/$KEY" | while read f; do cp "$GITHUB_WORKSPACE/$f" "openings/$KEY/"; done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add openings && git commit -qm "Openings: $KEY"
           for i in 1 2 3 4 5 6 7 8; do
             git push -q origin HEAD:align-results && exit 0
             sleep $((RANDOM % 20 + 5)); git pull -q --rebase origin align-results

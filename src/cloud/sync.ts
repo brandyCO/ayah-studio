@@ -1,17 +1,18 @@
 // Sync between a signed-in user's devices (docs/together.md T0). Local first: everything lives on the
 // device as before; when signed in, this mirrors it to Supabase `user_docs` and merges what other
-// devices wrote. Synced: the Me tab (each device's journey — streak days, counts, badges, reading
+// devices wrote. Settings: one document per preference (`pref:{key}`, newest change wins) plus the
+// older all-in-one `prefs` document for older app versions. Synced: the Me tab (each device's journey — streak days, counts, badges, reading
 // log — as its own document, read combined; goals: the newest set wins), bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
-// travel as tombstones) and reflections (one document per ayah's note, merged per paragraph: the
+// travel as tombstones), the Learn gardens (one document: trees, decorations, purchases) and reflections (one document per ayah's note, merged per paragraph: the
 // newest edit wins). Thumbnails and own media never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
 import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
-import { journeyRecord, mergeJourney } from '../data/journey';
+import { clearOtherJourneys, journeyRecord, mergeJourney } from '../data/journey';
 import { goalsRecord, mergeGoals } from '../data/goals';
 import type { Project } from '../engine/project';
-import { mergePrefs, prefRecords } from '../ui/prefs';
+import { mergePrefs, prefRecords, prefsBehind } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 import { installId, jitter, remoteConfig } from '../net';
@@ -56,6 +57,8 @@ function loadMeta(user: string): Meta {
   try {
     const m = JSON.parse(localStorage.getItem(META_KEY) ?? 'null') as Meta | null;
     if (m && m.user === user && typeof m.pushed === 'object') return m;
+    // Another account signed in here before: its other devices' streaks are not this account's.
+    if (m && m.user && m.user !== user) clearOtherJourneys();
   } catch {
     /* fresh */
   }
@@ -73,14 +76,25 @@ const deviceId = installId;
 // --- merging what other devices wrote ---
 async function applyRemote(rows: Row[], meta: Meta) {
   await loadReflections();
+  let prefsChanged = false;
   for (const r of rows) {
     const key = `${r.kind}/${r.id}`;
     if (r.kind === 'state' && r.id === 'bookmarks') {
       mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
     } else if (r.kind === 'setting' && r.id === 'prefs') {
-      if (mergePrefs(r.data.prefs)) window.dispatchEvent(new Event('prefs-synced'));
+      // The older all-in-one document (still written, for older app versions).
+      if (mergePrefs(r.data.prefs)) prefsChanged = true;
+      if (prefsBehind(r.data.prefs)) delete meta.pushed[key]; // it lacks a newer choice made here: send it again
+    } else if (r.kind === 'setting' && r.id.startsWith('pref:')) {
+      // One document per preference, so a device writing its reading place cannot put back an old theme.
+      const k = r.id.slice(5);
+      if (mergePrefs({ [k]: r.data })) prefsChanged = true;
+      if (prefsBehind({ [k]: r.data }, [k])) delete meta.pushed[key];
+      else meta.pushed[key] = String(r.data.at); // already on the server: don't send it back
     } else if (r.kind === 'state' && r.id.startsWith('journey:')) {
       mergeJourney(r.data, r.id.slice(8)); // kept per device and read combined
+    } else if (r.kind === 'state' && r.id === 'garden') {
+      (await import('../data/garden')).mergeGarden(r.data); // per tree / decoration, newest wins; purchases add up (pushed back merged)
     } else if (r.kind === 'setting' && r.id === 'goals') {
       mergeGoals(r.data.goals);
     } else if (r.kind === 'reflection') {
@@ -99,9 +113,14 @@ async function applyRemote(rows: Row[], meta: Meta) {
       }
     }
   }
+  if (prefsChanged) {
+    window.dispatchEvent(new Event('prefs-synced')); // the theme, the translation, …
+    window.dispatchEvent(new Event('journey-changed')); // a journey plan or the page reading time
+  }
 }
 
 // --- this device's documents ---
+const hasGarden = () => { try { return !!localStorage.getItem('garden'); } catch { return false; } };
 async function localRows(user: string): Promise<{ key: string; print: string; row: Row }[]> {
   const dev = deviceId();
   const out: { key: string; print: string; row: Row }[] = [];
@@ -112,8 +131,11 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
   add('state', 'bookmarks', { items }, JSON.stringify(items));
   const prefs = prefRecords();
   add('setting', 'prefs', { prefs }, JSON.stringify(prefs));
+  for (const [k, r] of Object.entries(prefs)) if (r.at > 0) add('setting', `pref:${k}`, r, String(r.at));
   const journey = journeyRecord();
   add('state', `journey:${dev}`, journey, JSON.stringify(journey));
+  const garden = hasGarden() ? (await import('../data/garden')).gardenRecord() : null;
+  if (garden) add('state', 'garden', garden as unknown as Record<string, unknown>, JSON.stringify(garden));
   const g = goalsRecord();
   if (g) add('setting', 'goals', { goals: g }, String(g.at));
   await loadReflections();
@@ -196,11 +218,22 @@ async function round() {
 let timer = 0;
 let lastRound = 0;
 let failures = 0;
+let pending = false; // a round is waiting on its timer
 const backoff = () => (failures ? jitter(Math.min(15 * 60e3, 30e3 * 2 ** (failures - 1))) : 0);
 const soon = (ms = 4000) => {
   if (!account()) return;
   clearTimeout(timer);
-  timer = window.setTimeout(() => void syncNow(), Math.max(ms, backoff()));
+  pending = true;
+  timer = window.setTimeout(() => { pending = false; void syncNow(); }, Math.max(ms, backoff()));
+};
+/** Leaving the app: send what is waiting now. A hidden app's timers stop (Android), so a streak lit or
+ *  a reward claimed just before leaving would otherwise reach the other devices only at the next open.
+ *  This is the round that was already due, only sooner (none after a failure: the back-off holds). */
+const onHide = () => {
+  if (!pending || failures) return;
+  clearTimeout(timer);
+  pending = false;
+  void syncNow();
 };
 /** Back in the app or online again: a round, but not more often than the remote setting allows
  *  (a minute by default), a few random seconds later so phones don't arrive together. */
@@ -217,7 +250,7 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'reflections-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'reflections-changed', 'garden-changed']) window.addEventListener(ev, () => soon());
   // The Me tab (streak, goals, counts) changes often while counting dhikr: sync once it rests.
   for (const ev of ['journey-changed', 'readlog-changed']) window.addEventListener(ev, () => soon(20_000));
   // The reel look is remembered at every studio edit, like the draft below.
@@ -228,5 +261,6 @@ export function startSync() {
   window.addEventListener('online', onReturn);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') onReturn();
+    else onHide();
   });
 }

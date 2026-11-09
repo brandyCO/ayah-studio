@@ -8,7 +8,7 @@ import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
 import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
 import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { covers, DEFAULT_RECITER, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { covers, DEFAULT_RECITER, groupRecordings, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary, smallImage } from '../data/library';
@@ -24,7 +24,7 @@ import {
   applyLook, cleanDedication, DEDICATION_MAX, giveEnding, OUTRO, TAIL_MAX, type Look, frameStyle, lookOf, MAX_AYAT, newProject, pacing, PAUSES, restoreProject,
   type GapText, type Grade, type Project, type Scrim, type TextColors, type TextEffect, type TextMode, type TextPos, type TranslationMode,
 } from '../engine/project';
-import { arrangeReel, audioSpans, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
+import { arrangeReel, audioSpans, breathJoins, trimLimits, voiceOnset, voiceStart, type ReelPlan } from '../engine/recitation';
 import { render, type RenderInfo } from '../engine/render';
 import { IDENTITY, keyIndex, addKey, removeKey, type Layer } from '../engine/motion';
 import { loadLogo } from '../data/logos';
@@ -62,6 +62,7 @@ import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
 import { t as ui, tOr } from '../i18n';
 import { translationList } from './translationPicker';
+import { recordingChips, reciterSearchBox } from './recordings';
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: ui('ed.ayah') },
@@ -811,17 +812,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   // --- panels ---
-  const reciterButton = (r: Reciter, tag?: string) =>
+  const pickReciter = (r: Reciter) => {
+    if (exporting || r.id === project.reciterId) return;
+    project.reciterId = r.id;
+    setReelReciter(r.id);
+    changed();
+    void loadAudio();
+  };
+  const reciterButton = (r: Reciter, tag?: string, grouped = false) =>
     h('button', {
       class: `list-item${r.id === project.reciterId ? ' on' : ''}`,
-      onclick: () => {
-        if (exporting || r.id === project.reciterId) return;
-        project.reciterId = r.id;
-        setReelReciter(r.id);
-        changed();
-        void loadAudio();
-      },
-    }, h('span', {}, reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
+      onclick: () => pickReciter(r),
+    }, h('span', {}, grouped ? r.name : reciterPickerLabel(r), tag ? h('span', { class: 'pill' }, tag) : null,
       r.qdc === false && !hasAlignedWords(r, n) ? h('span', { class: 'muted small block' }, ui('ed.reciter-ayah-only')) : null),
     starButton(r, n, () => { if (option?.id === 'reciter') refreshUI(); }), // ★ favourite + download
     sampleButton(r), // hear the voice before choosing
@@ -843,25 +845,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
   let popular: { id: number; trending: boolean }[] = [];
   void popularReciters().then((p) => { popular = p; if (option?.id === 'reciter') refreshUI(); }, () => {});
-  /** Filters the list below it by name (there are ~40 reciters). */
-  const reciterSearch = () => {
-    const input = h('input', { class: 'search', type: 'search', placeholder: ui('ed.reciter-search'), 'aria-label': ui('ed.reciter-search') });
-    input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
-      const list = input.nextElementSibling;
-      list?.querySelectorAll<HTMLElement>('button').forEach((b) => { b.hidden = !!q && !(b.textContent ?? '').toLowerCase().includes(q); });
-    });
-    return input;
-  };
   const reciterPanel = () => {
     checkRanges();
     const top = popular.map((p) => ({ r: RECITERS.find((x) => x.id === p.id && offered(x)), trending: p.trending })).filter((x) => x.r).slice(0, 3);
+    // One row per reciter; several recordings of one reciter are chips under the name.
+    const list = h('div', { class: 'list reciter-list' }, ...groupRecordings(favouritesFirst(RECITERS.filter(offered))).map((g) => {
+      const r = g.find((x) => x.id === project.reciterId) ?? g[0];
+      return h('div', { class: 'rec-group' }, reciterButton(r, undefined, g.length > 1), recordingChips(g, project.reciterId, pickReciter));
+    }));
+    const search = reciterSearchBox(list, ui('ed.reciter-search'));
     return [
       top.length ? h('p', { class: 'muted small' }, ui('ed.popular')) : null,
       top.length ? h('div', { class: 'list' }, ...top.map((x) => reciterButton(x.r!, x.trending ? ui('ed.trending') : undefined))) : null,
       top.length ? h('p', { class: 'muted small' }, ui('ed.all-reciters')) : null,
-      reciterSearch(),
-      h('div', { class: 'list reciter-list' }, ...favouritesFirst(RECITERS.filter(offered)).map((r) => reciterButton(r))),
+      search, list,
     ].filter(Boolean) as Node[];
   };
 
@@ -2170,6 +2167,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   // Recitation per reciter (kept while the editor is open, so switching back is instant).
   const reels = new Map<number, Promise<Reel>>();
+  /** Ayat the reciter joins in one breath are never cut apart (owner request 2026-11-02): a selection that
+   *  ends inside one breath takes in the next ayah, once per range — taking it out again is kept. */
+  function keepBreath(plan: ReelPlan): boolean {
+    const j = plan.joins;
+    if (!j || exporting) return false;
+    const key = `joinKept:${n}:${from}-${to}`;
+    try { if (sessionStorage.getItem(key)) return false; } catch { return false; }
+    if (!j[j.length - 1] || to >= s.ayahs || to - from + 1 >= MAX_AYAT) return false;
+    try { sessionStorage.setItem(key, '1'); } catch { /* private window */ }
+    toast(ui('ed.joined', { ref: `${n}:${to + 1}` }));
+    goRange(from, to + 1);
+    return true;
+  }
+
   let audioReq = 0;
   async function loadAudio() {
     const req = ++audioReq;
@@ -2196,7 +2207,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (req !== audioReq || !alive) return;
       // Where the voice really starts (the start can be trimmed to MIN_LEAD before it).
       if (reel.plan.onset === undefined) reel.plan.onset = voiceOnset(reel.audio.getChannelData(0), reel.audio.sampleRate, reel.plan.ayat[0].start);
+      if (!reel.plan.joins) reel.plan.joins = breathJoins(reel.plan, reel.audio.getChannelData(0), reel.audio.sampleRate, s.ayahs);
       base = reel;
+      if (keepBreath(reel.plan)) return;
       syncText = base.plan.wordTimed
         ? ui('ed.wordSynced')
         : ui(base.plan.source === 'everyayah' ? 'ed.noTimingsEveryayah' : base.plan.source === 'mp3quran' ? 'ed.noTimingsMp3quran' : 'ed.noTimings');
@@ -2393,27 +2406,59 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     return h('p', { class: 'trust-line' }, icon('check', 16),
       ui(wordTimed() ? 'ed.trust-timed' : 'ed.trust-ayah', { r: reciterCredit(r) }));
   }
-  /** A caption ready to paste: dedication, reference, the whole-ayah translation (only when it fits whole;
-   *  never cut, rule 1), reciter, background credits and a few calm hashtags. Editable before copying. */
-  function captionText(): string {
+  type CaptionLang = 'ar' | 'en' | 'both';
+  /** The caption's languages and whether it carries the ayat: remembered on this device. */
+  const captionLang = (): CaptionLang => {
+    try { const v = localStorage.getItem('captionLang'); if (v === 'ar' || v === 'en' || v === 'both') return v; } catch { /* private window */ }
+    return 'both';
+  };
+  const captionAyat = (): boolean => { try { return localStorage.getItem('captionAyat') !== 'off'; } catch { return true; } };
+  const setPref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+  const CAP_EN = { part: (k: number, of: number) => `Part ${k} of ${of}` };
+  /** A caption ready to paste, in Arabic, English or both (the caption's own language, whatever the app's
+   *  language): dedication, reference, the ayat themselves (the Arabic exactly as in the reel and/or the
+   *  whole-ayah translation; each only when it fits whole: never cut, rule 1), reciter, background
+   *  credits, a few calm hashtags and the link. Editable before copying. */
+  function captionText(lang: CaptionLang = captionLang(), withAyat = captionAyat()): string {
     const r = reciterById(project.reciterId);
-    const ref = reference(s, from, to);
+    const range = `${n}:${from}${to > from ? `–${to}` : ''}`;
+    const ar = lang !== 'en', en = lang !== 'ar';
+    const part = project.series ? { k: project.series.part, n: project.series.of } : null;
     const lines: string[] = [];
     if (project.dedication) lines.push(project.dedication, '');
-    lines.push(project.series ? `${ref} · ${ui('ed.series-part', { k: project.series.part, n: project.series.of })}` : ref);
-    const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
-    const by = translationInfo(project.translation ?? currentTranslation()).translator;
-    if (tr.length <= 1400) lines.push('', tr, `— ${by}`);
-    lines.push('', ui('ed.cap-recited', { r: reciterCredit(r) }));
+    if (ar) lines.push(`${s.ar} · ${range}${part ? ` · الجزء ${part.k} من ${part.n}` : ''}`);
+    if (en) lines.push(`${s.en} · ${range}${part ? ` · ${CAP_EN.part(part.k, part.n)}` : ''}`);
+    if (withAyat) {
+      const arText = arabic.join(' ');
+      if (ar && arText.length <= 1400) lines.push('', arText);
+      const tr = english.map((x, i) => `${x} (${n}:${from + i})`).join('\n');
+      const by = translationInfo(project.translation ?? currentTranslation()).translator;
+      if (en && tr.length <= 1400) lines.push('', tr, `— ${by}`);
+    }
+    lines.push('');
+    if (ar) lines.push(`بتلاوة ${reciterCredit(r)}`);
+    if (en) lines.push(`Recited by ${reciterCredit(r)}`);
     const credits = new Map<string, Credit>();
     for (const id of project.scenes) {
       const b = backgroundById(id);
       if ((b.kind === 'image' || b.kind === 'video') && b.credit) credits.set(b.credit.url, b.credit);
     }
-    if (credits.size) lines.push(`${ui('ed.cap-background')}: ${[...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ')}`);
+    if (credits.size) {
+      const list = [...credits.values()].map((c) => `${c.author} (${c.source})`).join(', ');
+      lines.push(`${ar && !en ? 'الخلفية' : 'Background'}: ${list}`);
+    }
     const tag = (x: string) => '#' + x.normalize('NFKD').replace(/[^A-Za-z0-9]/g, '');
-    lines.push('', ['#Quran', '#QuranRecitation', tag(s.en), tag(r.short ?? r.name)].filter((x) => x.length > 2).join(' '));
-    lines.push('', ui('ed.cap-make', { link: templateLink() }));
+    // A hashtag of the surah's name (the name only, not Quran text): marks dropped, spaces joined.
+    const arTag = (x: string) => '#' + x.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '').replace(/ٱ/g, 'ا').trim().replace(/\s+/g, '_');
+    const tags = [
+      ...(ar ? ['#القرآن_الكريم', '#تلاوة', arTag(s.ar)] : []),
+      ...(en ? ['#Quran', '#QuranRecitation', tag(s.en)] : []),
+      tag(r.short ?? r.name),
+    ].filter((x) => x.length > 2);
+    lines.push('', tags.join(' '), '');
+    const link = templateLink();
+    if (ar) lines.push(`اصنع هذا المقطع بنفسك في Ayah Studio: ${link}`);
+    else lines.push(`Make this reel yourself in Ayah Studio: ${link}`);
     return lines.join('\n');
   }
   /** A link that opens this reel (ayat, reciter, and the look when it is one of our styles or vibes)
@@ -2430,8 +2475,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     const box = h('textarea', { class: 'caption-text', rows: '7', 'aria-label': ui('ed.caption') });
     captionEl = box as HTMLTextAreaElement;
     box.value = captionText();
+    const opts = h('div', { class: 'caption-opts' });
+    const paint = () => opts.replaceChildren(
+      h('div', { class: 'chips' }, ...(['ar', 'en', 'both'] as CaptionLang[]).map((v) =>
+        h('button', { class: `chip${captionLang() === v ? ' on' : ''}`, onclick: () => { setPref('captionLang', v); box.value = captionText(); paint(); } },
+          ui(`ed.cap-lang-${v}`)))),
+      h('div', { class: 'chips' },
+        h('button', { class: `chip${captionAyat() ? ' on' : ''}`, onclick: () => { setPref('captionAyat', captionAyat() ? 'off' : 'on'); box.value = captionText(); paint(); } },
+          ui('ed.cap-ayat'))));
+    paint();
     return h('div', { class: 'caption-box' },
       h('p', { class: 'small muted' }, ui('ed.caption-note')),
+      opts,
       box,
       h('button', { class: 'chip', onclick: () => navigator.clipboard?.writeText(box.value).then(() => toast(ui('ed.caption-copied')), () => { box.select(); }) }, ui('ed.caption-copy')));
   }
@@ -2571,8 +2626,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
   }
 
-  /** Result page: the reel again as WhatsApp Status pieces — 720P, at most 30 s each (≈ 14 MB), cut in
-   *  the reciter's pauses (between ayat when possible, never mid-word) — then shared together. */
+  /** Result page: the reel again for WhatsApp Status at 720P — whole when it fits a Status (90 s), else
+   *  as few similar pieces as possible, cut in the reciter's pauses (between ayat when possible, never
+   *  mid-word) — then shared together. */
   function statusBlock(name: string): Node | string {
     if (!tl || !audio) return '';
     const parts = statusParts(tl);
@@ -2624,7 +2680,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     };
     return h('div', { class: 'status-box' },
       btn,
-      h('p', { class: 'muted small' }, ui('st.help', { s: STATUS_LIMIT })),
+      h('p', { class: 'muted small' }, ui(parts.length > 1 ? 'st.help' : 'st.helpOne', { s: STATUS_LIMIT })),
       links);
   }
 

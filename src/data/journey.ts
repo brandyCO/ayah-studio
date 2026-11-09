@@ -1,6 +1,7 @@
 // Your journey (Me tab): the daily streak, the weekly streak, the free weekly streak freeze and the
-// stats (pages, ayat, minutes listened, surahs finished, reels made). This device only
-// (localStorage `journey`); pages per day come from the reading log (readLog.ts).
+// stats (pages, ayat, minutes listened, surahs finished, reels made). Kept on the device (localStorage
+// `journey`) and, when signed in, synced: each device's own record, read combined (see the bottom);
+// pages per day come from the reading log (readLog.ts).
 //
 // Honest counting: a page counts only after it has been open on screen for the reading time the
 // user picked (default 1½ min, timer paused while the app is hidden); swiping past does not count.
@@ -9,15 +10,19 @@
 //
 // Streak: a day is lit when one of the day's goals is met (a counted page always counts; with no
 // goals set, opening the app is enough; see rewards.ts). A missed day is covered by the week's free freeze
-// (one per calendar week, Monday first, used by itself). When the missed days cannot all be
+// (one per calendar week, Monday first, used by itself), and one extra freeze every 30 days covers a
+// second missed day in a week (owner decision 2026-10-31). When the missed days cannot all be
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
 import type { Mushaf } from './mushaf';
+import { touchPref } from '../ui/prefs';
 
 const KEY = 'journey';
 const KEEP_DAYS = 400;
 const DAY = 86_400_000;
 const FINISH_WINDOW = 60 * DAY;
+/** Days between two extra freezes. */
+export const EXTRA_EVERY = 30;
 
 interface DayRec {
   /** Opened the app. */
@@ -38,8 +43,10 @@ interface DayRec {
   dk?: Record<string, number>;
   /** Ayat memorised (marked by the user). */
   m?: number;
-  /** Morning adhkar done (marked by the user). */
+  /** Morning adhkar all said in the app's adhkar session. */
   ad?: 1;
+  /** Evening adhkar all said. */
+  am?: 1;
   /** Every daily goal was met. */
   g?: 1;
   /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
@@ -53,6 +60,8 @@ export interface Totals { pages: number; ayat: number; listen: number; surahs: n
 interface State {
   days: Record<string, DayRec>;
   frozen: string[];
+  /** The frozen days the 30-day extra freeze covered (also in `frozen`). */
+  extra?: string[];
   revived: string[];
   totals: Totals;
   /** Page → when it was last counted (ms). */
@@ -88,6 +97,7 @@ function load(): State {
       if (v.days && typeof v.days === 'object') for (const [k, d] of Object.entries(v.days)) if (isDay(k) && d && typeof d === 'object') s.days[k] = d as DayRec;
       if (Array.isArray(v.frozen)) s.frozen = v.frozen.filter(isDay);
       if (Array.isArray(v.revived)) s.revived = v.revived.filter(isDay);
+      if (Array.isArray(v.extra)) s.extra = v.extra.filter(isDay);
       if (v.totals && typeof v.totals === 'object') for (const k of Object.keys(s.totals) as (keyof Totals)[]) {
         const n = Number(v.totals[k]);
         if (Number.isFinite(n) && n >= 0) s.totals[k] = n;
@@ -176,6 +186,7 @@ function covered(s = view()): Set<string> {
 function settle(s: State, k: string) {
   if (s.settled === k) return;
   s.settled = k;
+  if (s.lost?.at === k) delete s.lost; // worked out again below (another device's days may cover it now)
   const v = view();
   const cov = covered(v);
   let last = '';
@@ -184,14 +195,19 @@ function settle(s: State, k: string) {
     const gap: string[] = [];
     for (let d = addDays(last, 1); d < k && gap.length < 400; d = addDays(d, 1)) gap.push(d);
     if (gap.length) {
-      const frozenWeeks = new Set(v.frozen.map(weekOf));
+      const extra = v.extra ?? [];
+      const frozenWeeks = new Set(v.frozen.filter((d) => !extra.includes(d)).map(weekOf));
+      let lastExtra = extra.reduce((a, d) => (d > a ? d : a), '');
+      const used: string[] = [];
       const ok = gap.every((d) => {
         const w = weekOf(d);
-        if (frozenWeeks.has(w)) return false;
-        frozenWeeks.add(w);
+        if (!frozenWeeks.has(w)) { frozenWeeks.add(w); return true; }
+        if (lastExtra && d < addDays(lastExtra, EXTRA_EVERY)) return false;
+        lastExtra = d;
+        used.push(d);
         return true;
       });
-      if (ok) s.frozen.push(...gap);
+      if (ok) { s.frozen.push(...gap); if (used.length) s.extra = [...(s.extra ?? []), ...used]; }
       else {
         const n = streakOn(last, cov);
         if (n >= 2) s.lost = { n, days: gap, at: k };
@@ -211,6 +227,7 @@ export function recordOpen(now = new Date()) {
   for (const d of Object.keys(s.days)) if (d < cutoff) delete s.days[d];
   s.frozen = s.frozen.filter((d) => d >= cutoff);
   s.revived = s.revived.filter((d) => d >= cutoff);
+  if (s.extra) s.extra = s.extra.filter((d) => d >= cutoff);
   if (s.lost && s.lost.at < addDays(k, -2)) delete s.lost; // a friend can relight it for 2 days
   ver++;
   s.best = Math.max(s.best, streakOn(k, covered()));
@@ -246,6 +263,8 @@ export interface Streak {
   best: number;
   /** This week's freeze: still free, or the day it covered. */
   freeze: { free: boolean; day?: string };
+  /** The extra freeze (one every 30 days): ready, or the day it is ready again. */
+  extra: { free: boolean; next?: string };
   /** Monday → Sunday of this week: lit, frozen, revived, today (not yet), or missed / to come. */
   week: { day: string; state: 'lit' | 'frozen' | 'revived' | 'today' | 'missed' | 'future' }[];
   lost?: { n: number; days: string[] };
@@ -269,7 +288,10 @@ function computeStreak(k: string): Streak {
   const litIn = (w: string) => { let n = 0; for (let i = 0; i < 7; i++) if (cov.has(addDays(w, i))) n++; return n; };
   let weeks = litIn(wk) >= WEEK_DAYS ? 1 : 0;
   for (let w = addDays(wk, -7); litIn(w) >= WEEK_DAYS && weeks < 1000; w = addDays(w, -7)) weeks++;
-  const frozenHere = s.frozen.find((d) => weekOf(d) === wk);
+  const extra = s.extra ?? [];
+  const frozenHere = s.frozen.find((d) => weekOf(d) === wk && !extra.includes(d));
+  const lastExtra = extra.reduce((a, d) => (d > a ? d : a), '');
+  const extraNext = lastExtra ? addDays(lastExtra, EXTRA_EVERY) : '';
   const week = Array.from({ length: 7 }, (_, i) => {
     const day = addDays(wk, i);
     const state = s.frozen.includes(day) ? 'frozen' as const
@@ -281,6 +303,7 @@ function computeStreak(k: string): Streak {
   return {
     days, litToday, weeks, best: Math.max(s.best, days),
     freeze: { free: !frozenHere, day: frozenHere }, week,
+    extra: extraNext > k ? { free: false, next: extraNext } : { free: true },
     lost: s.lost && days < s.lost.n ? { n: s.lost.n, days: s.lost.days } : undefined,
   };
 }
@@ -369,10 +392,11 @@ export function addCustom(id: string, n: number, max: number, now = new Date()) 
   save();
 }
 
-/** The morning adhkar done today (or not). */
-export function setAdhkar(done: boolean, now = new Date()) {
+/** The morning ('s') or evening ('m') adhkar all said today (set by the adhkar session). */
+export function setAdhkar(done: boolean, period: 's' | 'm' = 's', now = new Date()) {
   const d = today(now);
-  if (done) d.ad = 1; else delete d.ad;
+  const f = period === 'm' ? 'am' : 'ad';
+  if (done) d[f] = 1; else delete d[f];
   save();
 }
 
@@ -452,6 +476,7 @@ export function setPageSeconds(sec: number) {
   } catch {
     /* ignore */
   }
+  touchPref('pageSeconds'); // follows the account (cloud/sync.ts)
 }
 
 /** A friend relit the flame: the missed days count as covered again. */
@@ -504,7 +529,7 @@ function cleanOther(v: unknown): Other | null {
     if (!isDay(k) || !d0 || typeof d0 !== 'object') continue;
     const d = d0 as Record<string, unknown>;
     const o: DayRec = {};
-    for (const f of ['o', 'f', 'g', 'ad'] as const) if (d[f]) o[f] = 1;
+    for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (d[f]) o[f] = 1;
     for (const f of ['ay', 'l', 'r', 'm'] as const) if (num(d[f])) o[f] = num(d[f]);
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
@@ -524,7 +549,7 @@ function cleanOther(v: unknown): Other | null {
   if (j.claimed && typeof j.claimed === 'object') for (const id of Object.keys(j.claimed)) claimed[id] = 1;
   return {
     days, log, totals, badges, claimed,
-    frozen: strs(j.frozen).filter(isDay), revived: strs(j.revived).filter(isDay),
+    frozen: strs(j.frozen).filter(isDay), revived: strs(j.revived).filter(isDay), extra: strs(j.extra).filter(isDay),
     pageLast: nums(j.pageLast), finished: nums(j.finished), juzDone: nums(j.juzDone), best: num(j.best),
   };
 }
@@ -558,9 +583,38 @@ export function mergeJourney(remote: unknown, device: string): boolean {
   }
   setOtherLogs(Object.values(all).map((x) => x.log));
   ver++;
+  resettle();
   window.dispatchEvent(new Event('journey-changed'));
   window.dispatchEvent(new Event('readlog-changed'));
   return true;
+}
+
+/** Today's missed days were settled before the other devices' days arrived (the app opens before the
+ *  sync's pull): settle them again with what is known now, so a day lit elsewhere is not frozen and
+ *  missed days the other devices left are covered. */
+function resettle() {
+  const s = load();
+  const k = s.settled; // the day the app was last opened (today, or the next open settles anyway)
+  if (!k) return;
+  delete s.settled;
+  settle(s, k);
+  ver++;
+  s.best = Math.max(s.best, streakOn(k, covered()));
+  save();
+}
+
+/** Signed in with another account: the previous account's devices are not this one's. */
+export function clearOtherJourneys() {
+  others = {};
+  try {
+    localStorage.removeItem(OTHERS);
+  } catch {
+    /* ignore */
+  }
+  setOtherLogs([]);
+  ver++;
+  window.dispatchEvent(new Event('journey-changed'));
+  window.dispatchEvent(new Event('readlog-changed'));
 }
 
 const union = <T,>(a: T[] = [], b: T[] = []) => [...new Set([...a, ...b])];
@@ -583,7 +637,7 @@ function view(): State {
   if (!devs.length) return mine;
   if (viewMemo?.ver === ver) return viewMemo.v;
   const v: State = {
-    ...mine, days: {}, totals: { ...mine.totals }, frozen: [...mine.frozen], revived: [...mine.revived],
+    ...mine, days: {}, totals: { ...mine.totals }, frozen: [...mine.frozen], revived: [...mine.revived], extra: [...(mine.extra ?? [])],
     pageLast: { ...mine.pageLast }, finished: { ...mine.finished }, juzDone: { ...mine.juzDone },
     badges: { ...mine.badges }, claimed: { ...mine.claimed },
   };
@@ -591,7 +645,7 @@ function view(): State {
   for (const o of devs) {
     for (const [k, b] of Object.entries(o.days)) {
       const a = (v.days[k] ??= {});
-      for (const f of ['o', 'f', 'g', 'ad'] as const) if (b[f]) a[f] = 1;
+      for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (b[f]) a[f] = 1;
       for (const f of ['ay', 'l', 'r', 'm'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);
@@ -604,6 +658,7 @@ function view(): State {
     for (const k of Object.keys(v.totals) as (keyof Totals)[]) v.totals[k] += o.totals[k];
     v.frozen = union(v.frozen, o.frozen);
     v.revived = union(v.revived, o.revived);
+    v.extra = union(v.extra ?? [], o.extra ?? []);
     v.pageLast = maxNums(v.pageLast, o.pageLast);
     v.finished = maxNums(v.finished, o.finished);
     v.juzDone = maxNums(v.juzDone, o.juzDone);
@@ -614,6 +669,8 @@ function view(): State {
   // A day lit on any device needs no freeze; a flame kept alive elsewhere was not lost.
   v.frozen = v.frozen.filter((d) => !v.days[d]?.f);
   v.revived = v.revived.filter((d) => !v.days[d]?.f);
+  // An extra freeze is used only where a day still needed one.
+  v.extra = (v.extra ?? []).filter((d) => v.frozen.includes(d));
   if (v.lost && v.lost.days.every((d) => v.days[d]?.f || v.frozen.includes(d) || v.revived.includes(d))) delete v.lost;
   viewMemo = { ver, v };
   return v;

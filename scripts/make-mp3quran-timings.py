@@ -75,7 +75,7 @@ def analyse(name, folder, s, text, max_min=1e9):
   """Align one surah's recording → raw results (ayah and word spans in s, confidence, cut points in ms, file
   size, seek table), or (None, reason). Nothing is judged here (see `judge`), so results can be kept and
   judged again without the audio."""
-  url = '%s%03d.mp3' % (folder, s)
+  url = folder if folder.endswith('.mp3') else '%s%03d.mp3' % (folder, s)  # a whole URL: one file for surah s
   path = os.path.join(CACHE, name, '%03d.mp3' % s)
   hd, why = vf.header(url)
   if not hd:

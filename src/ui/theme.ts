@@ -3,6 +3,7 @@
 // the accent colour. Same rule as the original emerald: never on the mushaf page, the Arabic text,
 // the reel itself or big backgrounds behind text. The Kids space keeps its own sky palette.
 // Picked per device and synced with the account (pref `brandTheme`).
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { touchPref } from './prefs';
 
 export interface BrandTheme {
@@ -75,9 +76,11 @@ const grad = (deg: number, stops: string[]) => `linear-gradient(${deg}deg, ${sto
 export function night(x: BrandTheme) {
   const h = x.hue;
   return {
-    bg: `hsl(${h} 45% 5%)`, card: `hsl(${h} 30% 9%)`, line: `hsl(${h} 22% 15%)`, sel: `hsl(${h} 45% 13%)`,
-    muted: `hsl(${h} 10% 60%)`, studio: `hsl(${h} 30% 4%)`, studioCard: `hsl(${h} 14% 10%)`, studioLine: `hsl(${h} 14% 16%)`,
-    meta: hslHex(h, 45, 5),
+    // Near-neutral greys with only a hint of the hue: a calm place for the eye to rest; cards sit a
+    // clear step above the page so structure comes from the surfaces, not from glow.
+    bg: `hsl(${h} 10% 6%)`, card: `hsl(${h} 9% 10.5%)`, line: `hsl(${h} 8% 17%)`, sel: `hsl(${h} 24% 14%)`,
+    muted: `hsl(${h} 6% 62%)`, studio: `hsl(${h} 8% 4.5%)`, studioCard: `hsl(${h} 7% 10%)`, studioLine: `hsl(${h} 7% 16%)`,
+    meta: hslHex(h, 10, 6),
   };
 }
 
@@ -91,11 +94,15 @@ function hslHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-/** The CSS that overrides the brand tokens for a theme (empty for the default emerald). */
+/** The CSS that overrides the brand tokens for a theme (emerald: only the night surfaces). */
 export function themeCss(x: BrandTheme): string {
-  if (x.id === DEFAULT_THEME) return '';
   const n = night(x);
-  const shadow = (a: number) => `0 0 0 1px ${rgba(x.neon[0], 0.35)}, 0 6px 22px ${rgba(x.neon[x.neon.length - 1], a)}`;
+  // Emerald keeps its built-in colours (styles.css) and only takes the calmer night surfaces.
+  if (x.id === DEFAULT_THEME) return `@media (prefers-color-scheme: dark) {
+  :root { --bg: ${n.bg}; --card: ${n.card}; --line: ${n.line}; --muted: ${n.muted}; }
+}
+body[data-view="reel"] { --bg: ${n.studio}; --card: ${n.studioCard}; --line: ${n.studioLine}; }`;
+  const shadow = (a: number) => `0 8px 22px -10px ${rgba(x.neon[x.neon.length - 1], a)}`; // a soft glow under the main action only
   return `:root {
   --accent: ${x.accentLight}; --sel-line: ${x.accentLight}; --sel: ${rgba(x.accentLight, 0.12)};
   --brand-fill: ${grad(45, x.fill)}; --brand-bar: ${grad(90, x.neon)}; --brand-text: ${grad(90, x.fill)};
@@ -106,13 +113,13 @@ export function themeCss(x: BrandTheme): string {
     --bg: ${n.bg}; --card: ${n.card}; --line: ${n.line}; --muted: ${n.muted}; --sel: ${n.sel};
     --accent: ${x.accentDark}; --accent-ink: ${x.accentInkDark}; --sel-line: ${x.accentDark};
     --brand-bar: ${grad(90, x.neon)}; --brand-text: ${grad(90, x.neon)};
-    --brand-glow: ${rgba(x.neon[0], 0.26)}; --brand-shadow: ${shadow(0.45)};
+    --brand-glow: ${rgba(x.neon[0], 0.2)}; --brand-shadow: ${shadow(0.6)};
   }
 }
 body[data-view="reel"] {
   --bg: ${n.studio}; --card: ${n.studioCard}; --line: ${n.studioLine};
   --accent: ${x.accentDark}; --accent-ink: ${x.accentInkDark};
-  --brand-bar: ${grad(90, x.neon)}; --brand-shadow: ${shadow(0.45)};
+  --brand-bar: ${grad(90, x.neon)}; --brand-shadow: ${shadow(0.6)};
 }`;
 }
 
@@ -140,8 +147,43 @@ function rewardCss(x: BrandTheme): string {
   return `:root {
   --rw-deep: ${p.deep}; --rw-deep2: ${p.deep2}; --rw-n1: ${p.n1}; --rw-n2: ${p.n2}; --rw-n3: ${p.n3};
   --rw-hi: ${p.hi}; --rw-core: ${p.core}; --rw-ink: ${p.ink};
+  --rw-hero: ${grad(100, x.fill)}; --rw-hero-glow: 0 8px 22px -10px ${rgba(p.n3, 0.6)};
   --rw-night: hsl(${p.hue} 55% 13%); --rw-night2: hsl(${p.hue} 40% 7%); --rw-night3: hsl(${p.hue} 35% 4%);
 }`;
+}
+
+// The launcher icon follows the theme (Android: one activity-alias per theme, switched when the app
+// leaves the screen — AppIcons.java; icons by scripts/make-icons.py --themes).
+const AppIcon = registerPlugin<{ set(o: { id: string }): Promise<void> }>('AppIcon');
+
+/** The web tab / bookmark icon in the theme's colours: public/icon.svg (light in the ayah marker) on the
+ *  theme's night tile, with the colours scripts/make-icons.py `theme_colors` uses for the app icons. */
+export function themeIconUrl(x = themeById(themeId())): string {
+  if (x.id === DEFAULT_THEME) return `${import.meta.env.BASE_URL}icon.svg`;
+  const h = x.hue, line = x.accentDark, ring = x.fill[x.fill.length - 1];
+  const glow = (id: string, r: number, stops: string) => `<radialGradient id="${id}" cx="256" cy="256" r="${r}" gradientUnits="userSpaceOnUse">${stops}</radialGradient>`;
+  const sq = `<rect x="138" y="138" width="236" height="236" rx="16.52" fill="none" stroke="${line}" stroke-width="12.98" stroke-linejoin="round"`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="tg" cx="50%" cy="46%" r="75%">`
+    + `<stop offset="0" stop-color="${hslHex(h, 49, 8.4)}"/><stop offset="1" stop-color="${hslHex(h, 50, 3.1)}"/></radialGradient>`
+    + glow('lg', 146.32, `<stop offset="0" stop-color="${line}" stop-opacity=".95"/><stop offset=".22" stop-color="${line}" stop-opacity=".55"/><stop offset=".6" stop-color="${line}" stop-opacity=".12"/><stop offset="1" stop-color="${line}" stop-opacity="0"/>`)
+    + glow('lc', 25.96, '<stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>')
+    + `</defs><rect width="512" height="512" rx="115" fill="url(#tg)"/><circle cx="256" cy="256" r="146.32" fill="url(#lg)"/>`
+    + `${sq}/>${sq} transform="rotate(45 256 256)"/>`
+    + `<circle cx="256" cy="256" r="77.88" fill="none" stroke="${ring}" stroke-width="7.14" opacity=".8"/><circle cx="256" cy="256" r="25.96" fill="url(#lc)"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function setFavicon(x: BrandTheme) {
+  const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (link) link.href = themeIconUrl(x);
+}
+
+let iconFor = '';
+function setAppIcon(x: BrandTheme) {
+  if (iconFor === x.id) return;
+  iconFor = x.id;
+  if (Capacitor.isNativePlatform()) void AppIcon.set({ id: x.id }).catch(() => {});
+  else setFavicon(x);
 }
 
 /** Applies the saved theme (call once at start, before the first screen). */
@@ -156,7 +198,8 @@ export function applyTheme(id = themeId()) {
   style.textContent = `${themeCss(x)}\n${rewardCss(x)}`;
   document.documentElement.dataset.theme = x.id;
   const dark = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="dark"]');
-  if (dark) dark.content = x.id === DEFAULT_THEME ? '#07130f' : night(x).meta;
+  if (dark) dark.content = night(x).meta;
+  setAppIcon(x);
   window.dispatchEvent(new Event('theme-changed')); // the Android widgets follow the colours
 }
 

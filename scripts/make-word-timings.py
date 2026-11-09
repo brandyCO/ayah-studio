@@ -21,6 +21,7 @@ import importlib.util, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MIN_CONF, MIN_LCONF = -1.5, -3.0
+EDGE = 500  # ms a word may run past an ayah's cut (clamped)
 LONG = float(os.environ.get('LONG', 8000))  # ms: no word but the last held longer
 SUB = os.environ.get('ALIGN_SUB', 'align2')
 
@@ -71,7 +72,13 @@ def ayah_words(text, words, conf, lconf, lo=None, hi=None):
   for a, b in zip(words, words[1:]):
     if b[1] < a[2] or not (b[0] == a[0] + 1 or b[0] <= a[0]): return None  # in time; next word or back (repeat)
   if any(w[2] - w[1] > LONG for w in words[:-1]): return None
-  if lo is not None and (words[0][1] < lo or words[-1][2] > hi): return None
+  if lo is not None:
+    # The cut sits at the quietest moment of the pause; an aligned first/last word may reach a little past it
+    # (a held madd fading out): up to EDGE ms is clamped to the cut, more means a misplaced ayah.
+    if words[0][1] < lo - EDGE or words[-1][2] > hi + EDGE: return None
+    words = [list(w) for w in words]
+    for w in words: w[1], w[2] = max(lo, min(hi, w[1])), max(lo, min(hi, w[2]))
+    if any(w[2] <= w[1] for w in words): return None
   td = token_display(text)
   out = []
   for j, s, e, *_ in words:
@@ -93,7 +100,6 @@ def main():
     line = next((l for l in rec.splitlines() if 'qdc: false' in l and re.search(r"(everyayah|mp3quran)", l) and
                  (re.search(r"\{ id: %s," % re.escape(key), l) and 'mp3quran' not in l or re.search(r"read: '?%s'?," % re.escape(key), l))), None)
     if not line or 'qdc: false' not in line: print(key, ': no such reciter'); continue
-    if "style: 'Mujawwad'" in line: print(key, ': mujawwad, word times not reliable yet'); continue
     mp3 = 'mp3quran' in line
     files = sorted(f for f in os.listdir(os.path.join(res_dir, SUB, key)) if f.endswith('.json'))
     doc_path = os.path.join(ROOT, 'public', 'data', 'mp3quran', '%s.json' % key)
@@ -122,8 +128,13 @@ def main():
       if 'error' in raw: continue
       text, got = quran[s - 1], {}
       if mp3:
-        c = doc['surahs'].get(str(s), {}).get('c')
+        sd = doc['surahs'].get(str(s), {})
+        c = sd.get('c')
         if not c: continue
+        # a cut with no pause (two ayat in one breath) is where the next ayah's first word was heard
+        # (`l`, scripts/make-listen-starts.py): the words of both ayat can still be bounded by it
+        ls = ls_mod.listen_starts(sd, raw)
+        c = [x if x is not None else ls.get(str(i + 1)) for i, x in enumerate(c)]
         for k in range(len(text)):
           n_all += 1
           if c[k] is None or c[k + 1] is None: continue
@@ -154,6 +165,7 @@ def main():
 
 
 mk = mod('mk', 'make-mp3quran-timings.py')
+ls_mod = mod('ls_mod', 'make-listen-starts.py')
 al, vf = mk.al, mk.vf
 
 if __name__ == '__main__':

@@ -1,10 +1,11 @@
 // Journeys: a reading plan with a clear end — Khatm in 30 days, Khatm in 6 months, Juz 'Amma in 30 days.
-// One at a time, this device only (localStorage `journeyPlan`). Progress = the plan's pages counted as read
+// One at a time (localStorage `journeyPlan`, a synced preference: it follows the account). Progress = the plan's pages counted as read
 // (the honest page count of the Me tab) since the plan started; today's portion = what is left over the
 // days left, so a missed day simply spreads out. Al-Kahf on Fridays is a separate gentle reminder.
 import { dayKey } from './readLog';
 import { pageReadSince } from './journey';
 import type { Mushaf } from './mushaf';
+import { seedPrefTime, touchPref } from '../ui/prefs';
 
 export type JourneyId = 'khatm30' | 'khatm180' | 'amma30';
 export const JOURNEYS: { id: JourneyId; days: number }[] = [
@@ -26,8 +27,11 @@ export function startJourney(id: JourneyId | null) {
     if (!id) localStorage.removeItem(KEY);
     else localStorage.setItem(KEY, JSON.stringify({ id, start: dayKey(), startMs: Date.now() } satisfies Plan));
   } catch { /* ignore */ }
+  touchPref('journeyPlan');
   window.dispatchEvent(new Event('journey-changed'));
 }
+// A plan started before plans were synced: its start is when it was chosen.
+seedPrefTime('journeyPlan', currentPlan()?.startMs ?? 0);
 
 /** The plan's pages, in reading order. */
 export function planPages(m: Mushaf, id: JourneyId): number[] {

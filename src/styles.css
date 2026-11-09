@@ -402,6 +402,7 @@ body.mushaf-mode { background: var(--paper); padding-bottom: 0; overflow: hidden
 
 /* listening: the ayah being recited is tinted, its word being recited coloured */
 .mp-line .w.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); border-radius: 0; }
+.mp-basmala.play-ayah { background: color-mix(in srgb, var(--accent) 13%, transparent); transition: background 0.3s; }
 .mp-line .w.play-word { color: var(--accent); }
 body.listening .mushaf { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .player {
@@ -718,6 +719,7 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .chip.danger { color: #c62828; }
 @media (prefers-color-scheme: dark) { .chip.danger { color: #ff7b7b; } }
 .reflections-sheet .search { width: 100%; box-sizing: border-box; margin: 10px 0 4px; }
+.reciter-sheet .search { width: 100%; box-sizing: border-box; margin: 6px 0 8px; }
 .rf-list { max-height: 60vh; }
 .rf-group { margin: 14px 0 2px; font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
 .rf-row { flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -1064,20 +1066,24 @@ body[data-view="kids"] {
 .lantern-progress .lp-cap { fill: #c98b3e; }
 .lantern-progress .lp-string { stroke: rgba(255, 241, 214, .5); stroke-width: 1.5; }
 
-/* Opening: a light sweep across the logo (docs/light.md, L5) */
+/* Opening: the mark drawn line by line in the theme's colours (src/ui/opening.ts). The drawing is a
+   worker's canvas; only transform/opacity animate here, so the compositor keeps them smooth. */
 .app-opening {
   position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #07130f;
-  animation: opening-out .3s ease .9s both;
+  animation: op-out .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: opacity;
 }
-@keyframes opening-out { to { opacity: 0; visibility: hidden; } }
-.app-opening-logo { position: relative; width: 112px; height: 112px; }
-.app-opening-logo img { width: 100%; height: 100%; display: block; }
-.app-opening-sweep {
-  position: absolute; inset: 0; -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
-  background: linear-gradient(105deg, transparent 30%, rgba(255, 246, 222, .85) 50%, transparent 70%) no-repeat;
-  background-size: 250% 100%; animation: opening-sweep .85s cubic-bezier(.45, .05, .35, 1) .05s both; mix-blend-mode: screen;
+@keyframes op-out { to { opacity: 0; visibility: hidden; } }
+.op-stage { display: grid; justify-items: center; gap: 0; animation: op-lift .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: transform; }
+@keyframes op-lift { to { transform: scale(1.04); } }
+.op-mark { width: 200px; height: 200px; margin-bottom: -16px; }
+.op-name { display: flex; font: 700 22px/1 "Inter Display", Inter, system-ui, sans-serif; letter-spacing: -.01em; direction: ltr; }
+.op-name span {
+  white-space: pre; background: var(--op-name); background-size: 600% 100%; background-position: calc(var(--i) * 10%) 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0; transform: translateY(8px); will-change: transform, opacity;
+  animation: op-letter .55s cubic-bezier(.2, .7, .3, 1) calc(2.05s + var(--i) * 40ms) forwards;
 }
-@keyframes opening-sweep { from { background-position: 120% 0; } to { background-position: -20% 0; } }
+@keyframes op-letter { to { opacity: 1; transform: none; } }
 
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */
@@ -1220,6 +1226,12 @@ body[data-view="kids"] {
 body.tabs-up .tabbar.auto { transform: none; }
 body.has-selbar .tabbar.auto { transform: translateY(110%); }
 body.tabs-up .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
+/* Listening from another screen (Me, surah list…): the bar sits above the tab bar, with a way back to the page. */
+.pl-follow { display: none !important; }
+body.listening-away .pl-follow { display: inline-flex !important; color: var(--accent); }
+body.listening-away .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
+body.listening-away .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.listening-away:not(:has(.tabbar)) .player.show { bottom: max(10px, env(safe-area-inset-bottom)); }
 body.tabs-up .rf-hint { opacity: 0; }
 
 /* Me sheet: grouped menu */
@@ -1358,7 +1370,7 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-pip-ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); font-size: 15px; color: #9fd8ff; }
 .me-pip.lit .me-pip-ic, .me-pip.revived .me-pip-ic { background: linear-gradient(160deg, var(--rw-n1), var(--rw-n3)); border-color: transparent;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n2) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, .35); }
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rw-n2) 32%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .me-pip-ic svg { width: 70%; height: 70%; overflow: visible; }
 .me-pip.lit .me-pip-d, .me-pip.revived .me-pip-d { color: var(--rw-hi); font-weight: 700; }
 /* A check that stamps in: the circle pops, the tick draws itself. */
@@ -1434,7 +1446,7 @@ button.lt-chip { cursor: pointer; }
 .goal-ring { --ring-p: 0; flex: none; transition: --ring-p var(--dur-3) var(--ease-spring); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
   font-weight: 800; color: var(--accent-ink);
   background: radial-gradient(closest-side, var(--card) 72%, transparent 74%), conic-gradient(var(--accent) calc(var(--ring-p) * 1turn), var(--line) 0); }
-.goal.met .goal-ring { background: linear-gradient(135deg, var(--rw-n1), var(--rw-n3)); color: var(--rw-ink); box-shadow: 0 0 10px color-mix(in srgb, var(--rw-n1) 45%, transparent); }
+.goal.met .goal-ring { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .goal-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .goal-txt .muted { margin: 0; }
 .goal-step { display: flex; gap: 6px; }
@@ -1537,7 +1549,7 @@ button.lt-chip { cursor: pointer; }
 .wg-hint .wg-text b { font-size: var(--fs-m, 15px); }
 .wg-pv > .wg-dots { display: flex; flex-direction: row; gap: 5px; }
 .wg-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / .25); }
-.wg-dots i.on { background: var(--rw-n2, #3dd1ad); box-shadow: 0 0 6px var(--rw-n2, #3dd1ad); }
+.wg-dots i.on { background: var(--rw-n2, #3dd1ad); }
 .wg-daily { align-items: flex-end; background: linear-gradient(160deg, #1b3a30, #0a1813); }
 .wg-steps { margin: 0; padding-inline-start: 20px; line-height: 1.7; }
 .wg-hint { display: flex; align-items: center; gap: 12px; position: relative; padding-inline-end: 40px; }
@@ -1593,7 +1605,7 @@ button.lt-chip { cursor: pointer; }
 .cel-text h2 { margin: 4px 0 2px; font-size: 26px; animation: cel-title .7s .6s cubic-bezier(.2, 1.3, .4, 1) both; }
 .cel-sub { margin: 0; color: color-mix(in srgb, var(--rw-hi) 60%, #bbb); font-size: var(--fs-s); animation: cel-up .6s .8s ease-out both; }
 .cel-ok { margin-top: 14px; min-width: 180px; padding: 12px 22px; border-radius: var(--r-pill); border: 0; font: inherit; font-weight: 700;
-  color: var(--rw-ink); background: linear-gradient(180deg, var(--rw-hi), var(--rw-n2)); box-shadow: 0 6px 24px color-mix(in srgb, var(--rw-n1) 40%, transparent); cursor: pointer;
+  color: #fff; background: var(--rw-hero); box-shadow: var(--rw-hero-glow); cursor: pointer;
   animation: cel-up .6s 1.05s cubic-bezier(.2, 1.4, .4, 1) both; }
 .cel-mote { opacity: 0; transform-box: fill-box; animation: cel-mote 2.2s var(--d) ease-out both; }
 .cel-burst { transform-box: fill-box; transform-origin: center; opacity: .8; animation: cel-burst 1.4s .9s ease-out both; }
@@ -1649,10 +1661,13 @@ button.lt-chip { cursor: pointer; }
 @keyframes cel-turn { to { transform: rotate(360deg); } }
 
 /* Claim buttons (Me): a met goal or a new badge waits here with a soft shimmer. */
-.chip.claim, .claim-all, .claim-badge { position: relative; overflow: hidden; border: 0; font-weight: 700; color: var(--rw-ink);
-  background: linear-gradient(135deg, var(--rw-hi), var(--rw-n2) 60%, var(--rw-n3)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rw-hi) 50%, transparent), 0 4px 16px color-mix(in srgb, var(--rw-n1) 35%, transparent); }
+/* Calm hierarchy: one bright action per screen (the "every goal" banner), the rest tonal — a soft tint
+   of the accent with accent text, no glow — so the eye has somewhere to rest. The shine plays once. */
+.chip.claim, .claim-all, .claim-badge { position: relative; overflow: hidden; font-weight: 700; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.claim-all { border: 0; color: #fff; background: var(--rw-hero); box-shadow: var(--rw-hero-glow); }
 .chip.claim::after, .claim-all::after, .claim-badge::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%);
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .7) 50%, transparent 70%); animation: claim-shine 2.8s ease-in-out infinite; }
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); animation: claim-shine 2.8s .4s ease-in-out 1 both; }
 @keyframes claim-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @media (prefers-reduced-motion: reduce) { .chip.claim::after, .claim-all::after, .claim-badge::after { animation: none; } }
 .claim-all { display: flex; width: 100%; justify-content: center; gap: 8px; margin: 4px 0 10px; padding: 12px; border-radius: var(--r-m); font: inherit; font-weight: 700; cursor: pointer; }
@@ -1663,7 +1678,7 @@ button.lt-chip { cursor: pointer; }
 .claim-badge .cb-go { font-size: var(--fs-s); }
 .tab-btn.me { position: relative; }
 .tab-btn.me.has-dot::after { content: ''; position: absolute; top: 6px; inset-inline-start: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%;
-  background: var(--rw-n2); box-shadow: 0 0 0 2px var(--bg), 0 0 8px color-mix(in srgb, var(--rw-n1) 80%, transparent); }
+  background: var(--rw-n2); box-shadow: 0 0 0 2px var(--bg); }
 
 /* Goals: the first pace, the weekly suggestion, the user's own goals. */
 .pace { display: flex; flex-direction: column; gap: 8px; }
@@ -1674,6 +1689,7 @@ button.lt-chip { cursor: pointer; }
 .goal-tip { margin: 0 0 10px; padding: 10px 12px; border-radius: var(--r-m); background: color-mix(in srgb, var(--accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 .goal-tip p { margin: 0 0 8px; font-size: var(--fs-s); }
+.goal-tip .chip.on { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
 .goal-links { display: flex; flex-wrap: wrap; }
 .goal-links .menu-item { flex: 1 1 auto; }
 .cg-actions { margin-top: 10px; align-items: center; }
@@ -1857,3 +1873,103 @@ html.lite .nudge { backdrop-filter: none; -webkit-backdrop-filter: none; backgro
 .tc-change { display: block; margin: 8px 0 0 auto; background: none; border: 0; padding: 4px; cursor: pointer; text-decoration: underline; }
 .tc-done { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .tc-done .muted { margin: 0 0 6px; }
+/* Several recordings of one reciter: chips under the name in the pickers. */
+.rec-chips { padding: 0 12px 10px; }
+.rec-chips .chip { padding: 4px 10px; font-size: var(--fs-s); }
+/* The studio has its own sound and controls: the paused listening bar waits until the user comes back. */
+body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; }
+/* Report a problem */
+.report-sheet .rp-kinds { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.report-sheet .rp-note { width: 100%; box-sizing: border-box; resize: vertical; min-height: 64px; font: inherit; }
+.report-sheet .rp-sum { margin: 8px 0 12px; }
+.player .pl-more { font-size: 22px; line-height: 1; color: var(--muted); }
+.menu-item .mi-ic { display: inline-flex; margin-inline-end: 10px; vertical-align: middle; color: var(--accent); }
+
+/* ---------- Reward chests (src/ui/chest.ts): goal rows, the opening moment, Light flying to the counter ---------- */
+.goal-bar { position: relative; height: 8px; margin: 5px 0 3px; border-radius: 99px; overflow: hidden;
+  background: color-mix(in srgb, var(--text) 10%, transparent); }
+.goal-bar > i { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: inherit;
+  background: var(--rw-hero, var(--accent)); transition: width var(--dur-3, .5s) var(--ease-spring, ease-out); }
+.goal-bar > i::after { content: ''; position: absolute; inset: 1.5px 4px auto; height: 2px; border-radius: 99px; background: #fff; opacity: .35; }
+.goal.met .goal-bar > i { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); }
+.goal-day { display: flex; align-items: center; gap: 12px; margin: 2px 0 8px; padding: 10px 12px; border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.goal-day .goal-txt b { font-size: var(--fs-m); }
+.chest { position: relative; flex: none; width: 50px; height: 50px; padding: 0; border: 0; background: none; color: inherit; display: grid; place-items: center;
+  -webkit-tap-highlight-color: transparent; }
+.goal-day .chest { width: 62px; height: 62px; }
+.chest .ck-art { width: 100%; height: 100%; overflow: visible; }
+.ck-amt { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; font-weight: 800;
+  padding: 0 5px; border-radius: 99px; background: var(--card); color: var(--accent); box-shadow: 0 0 0 1px var(--line); line-height: 15px; }
+.ck-art .ck-lid, .ck-art .ck-box { transform-box: view-box; }
+.ck-art .ck-lid { transform-origin: 40px 37px; transition: transform .5s cubic-bezier(.2, 1.4, .4, 1); }
+.ck-art .ck-mouth, .ck-art .ck-aura, .ck-art .ck-glints { opacity: 0; }
+.ck-art .ck-aura { transform-box: view-box; transform-origin: 40px 40px; }
+/* locked: resting, a little muted, breathing */
+.chest.locked .ck-art { filter: saturate(.55) brightness(.92); animation: ck-breathe 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes ck-breathe { 50% { transform: translateY(-1px) scale(1.015); } }
+/* ready: now and then it shakes and the lid lifts a crack with light behind it; heavier chests shake harder, slower */
+.chest.ready { cursor: pointer; --w: 7deg; --dur: 2.2s; }
+.chest.t2.ready { --w: 8deg; --dur: 2.4s; } .chest.t3.ready { --w: 9deg; --dur: 2.6s; } .chest.t4.ready { --w: 10deg; --dur: 2.8s; }
+.chest.ready .ck-art { animation: ck-shake var(--dur) ease-in-out infinite; transform-origin: 50% 92%; }
+.chest.ready .ck-lid { animation: ck-peek var(--dur) ease-in-out infinite; }
+.chest.ready .ck-mouth { animation: ck-mouth var(--dur) ease-in-out infinite; }
+.chest.ready .ck-aura { opacity: .9; animation: ck-aura 2.4s ease-in-out infinite; }
+.chest.ready .ck-glints { opacity: 1; }
+.chest.ready .ck-glints path { transform-box: fill-box; transform-origin: center; animation: ck-glint 1.8s calc(var(--i) * .45s) ease-in-out infinite; }
+.chest.t4.ready .ck-aura { animation: ck-aura 2.4s ease-in-out infinite, ck-spin 18s linear infinite; }
+.chest.ready::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; z-index: -1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rw-n3, var(--accent)) 45%, transparent), transparent 68%); animation: ck-aura 2.4s ease-in-out infinite; }
+.chest.ready .ck-amt { color: #fff; background: var(--rw-hero, var(--accent)); box-shadow: none; }
+@keyframes ck-shake { 0%, 52%, 100% { transform: none; } 56% { transform: translateY(-3px) rotate(calc(var(--w) * -1)); } 61% { transform: translateY(-3px) rotate(var(--w)); }
+  66% { transform: translateY(-2px) rotate(calc(var(--w) * -.7)); } 71% { transform: translateY(-1px) rotate(calc(var(--w) * .45)); } 76% { transform: rotate(calc(var(--w) * -.2)); } 80% { transform: none; } }
+@keyframes ck-peek { 0%, 55%, 82%, 100% { transform: none; } 62%, 72% { transform: translateY(-3px) rotate(-4deg); } }
+@keyframes ck-mouth { 0%, 55%, 82%, 100% { opacity: 0; } 62%, 72% { opacity: 1; } }
+@keyframes ck-aura { 50% { opacity: .55; transform: scale(.94); } }
+@keyframes ck-spin { to { transform: rotate(360deg); } }
+@keyframes ck-glint { 0%, 100% { transform: scale(0); opacity: 0; } 40% { transform: scale(1); opacity: 1; } 70% { transform: scale(.4); opacity: .5; } }
+/* open: claimed, lid up and back, quiet */
+.chest.open .ck-art { opacity: .55; filter: saturate(.5); }
+.chest.open .ck-lid { transform: translateY(-9px) rotate(-12deg) scaleY(.62); }
+.chest.open .ck-amt { background: none; box-shadow: none; color: var(--muted); }
+
+/* The opening moment (celebrate kind 'chest'): the chest drops in, shakes (more for a bigger one),
+   bursts open with light pouring up, then the Light counts on */
+.cel-stage .cel-chest { position: absolute; inset: 8%; width: 84%; height: 84%; overflow: visible; }
+.cel-chest-rays { position: absolute; inset: -30%; pointer-events: none; opacity: 0; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rw-hi) 55%, transparent) 0 7deg, transparent 7deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%); mask: radial-gradient(circle, #000 18%, transparent 66%); }
+.cel-chest-beam { position: absolute; left: 50%; bottom: 46%; width: 46%; height: 120%; translate: -50% 0; pointer-events: none; opacity: 0;
+  transform-origin: 50% 100%; background: linear-gradient(to top, color-mix(in srgb, var(--rw-core) 90%, transparent), color-mix(in srgb, var(--rw-hi) 30%, transparent) 55%, transparent);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); filter: blur(2px); }
+.cel-chest-box { position: absolute; inset: 0; }
+.cel.go .cel-chest-box { animation: cel-chest-in .6s cubic-bezier(.2, 1.4, .4, 1) both, cel-chest-shake var(--sk, .42s) .6s ease-in-out var(--n, 2); transform-origin: 50% 88%; }
+.cel-chest-box.open { animation: cel-chest-pop .5s cubic-bezier(.2, 1.6, .4, 1) both !important; }
+.cel-chest-box .ck-mouth { opacity: 0; }
+.cel-chest-box.open .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); transition-duration: .45s; }
+.cel-chest-box.open .ck-mouth { opacity: 1; transform-box: fill-box; transform-origin: center; animation: cel-mouth 1.6s ease-out both; }
+.cel-chest-box.open .ck-aura { opacity: 1; animation: ck-spin 22s linear infinite; }
+.cel-chest-box.open .ck-glints { opacity: 1; }
+.cel-chest-box.open .ck-glints path { transform-box: fill-box; transform-origin: center; animation: ck-glint 1.6s calc(var(--i) * .3s) ease-in-out infinite; }
+.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both, ck-spin 26s linear infinite; }
+.cel-stage.opened .cel-chest-beam { animation: cel-beam 1.8s ease-out both; }
+@keyframes cel-chest-in { from { transform: translateY(-60px) scale(.4); opacity: 0; } 60% { opacity: 1; } to { transform: none; } }
+@keyframes cel-chest-shake { 0%, 100% { transform: none; } 20% { transform: translateY(-4px) rotate(calc(var(--w, 7deg) * -1)); } 45% { transform: translateY(-5px) rotate(var(--w, 7deg)); }
+  70% { transform: translateY(-2px) rotate(calc(var(--w, 7deg) * -.5)); } }
+@keyframes cel-chest-pop { 0% { transform: scale(.92, 1.08); } 40% { transform: scale(1.12, .9); } 100% { transform: none; } }
+@keyframes cel-mouth { 0% { transform: scale(.6); } 30% { transform: scale(1.5, 2.2); } 100% { transform: scale(1.15, 1.4); } }
+@keyframes cel-rays-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+@keyframes cel-beam { 0% { opacity: 0; transform: scaleY(.1); } 25% { opacity: 1; transform: scaleY(1); } 100% { opacity: .35; transform: scaleY(.85); } }
+.cel.still .cel-chest-box .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); }
+.cel.still .cel-chest-box .ck-mouth, .cel.still .cel-chest-rays { opacity: 1; }
+
+/* Light flying from a reward to the Light counter, which counts up */
+.lt-fly { position: fixed; left: 0; top: 0; z-index: 95; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--rw-core, #fff) 0 25%, var(--rw-n3, var(--accent)) 45%, transparent 72%); }
+.lt-chip.bump { animation: lt-bump .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes lt-bump { 40% { transform: scale(1.22); box-shadow: 0 0 22px var(--rw-n3, var(--accent)); } }
+@media (prefers-reduced-motion: reduce) {
+  .chest .ck-art, .chest .ck-lid, .chest .ck-mouth, .chest .ck-aura, .chest .ck-glints path, .chest::before { animation: none !important; }
+  .chest.ready .ck-mouth { opacity: .7; }
+}
+.cel-chest-box > svg { width: 100%; height: 100%; overflow: visible; }

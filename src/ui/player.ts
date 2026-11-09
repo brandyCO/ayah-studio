@@ -10,8 +10,10 @@ import { playableUrl } from '../data/keptAudio';
 import { qdcSurah } from '../data/qdc';
 import { mp3quranSurah } from '../data/mp3quran';
 import { alignedWords } from '../data/alignedWords';
+import { basmalaBefore, openingOf, type Basmala } from '../data/basmala';
 import type { SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, groupRecordings, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { recordingChips, reciterSearchBox } from './recordings';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -83,22 +85,22 @@ export function createPlayer(o: PlayerHooks) {
     playBtn,
     h('button', { class: 'icon-btn', 'aria-label': 'Next ayah', onclick: () => step(1) }, icon('right', 20)),
     h('div', { class: 'pl-info' }, label, who),
-    // Turn what is playing into a reel (this reciter, the ayah being recited).
-    h('button', { class: 'icon-btn', 'aria-label': t('pl.reel'), title: t('pl.reel'), onclick: () => makeReel() }, icon('create', 20)),
-    // Night listening (docs/light.md, L1): loaded only when opened.
-    h('button', { class: 'icon-btn', 'aria-label': t('night.open'), title: t('night.open'), onclick: () => openNightView() }, icon('moon', 20)),
+    // Listening from another screen (Me, tasbih…): back to the page being recited, words lit as it goes.
+    h('button', { class: 'icon-btn pl-follow', 'aria-label': t('pl.follow'), title: t('pl.follow'), onclick: () => followAlong() }, icon('book', 20)),
+    // More: a reel of what is playing, Night listening, and Report a problem (with what is playing right now).
+    h('button', { class: 'icon-btn pl-more', 'aria-label': t('pl.more'), title: t('pl.more'), onclick: () => more() }, '⋯'),
     h('button', { class: 'icon-btn', 'aria-label': 'Stop listening', onclick: () => stop() }, icon('close', 20)));
 
   // Starting or buffering: a spinner on the play button and "Loading…" (the recording streams).
   let loading = false;
   let pending: { s: number; a: number } | null = null;
   function paint() {
-    const playing = !audio.paused;
+    const playing = !audio.paused || (introOn && !intro.paused);
     playBtn.replaceChildren(loading ? h('span', { class: 'spinner' }) : icon(playing ? 'pause' : 'play', 22));
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
     label.textContent = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '';
-    who.textContent = `${(using ?? reciter()).short} ▾`;
+    who.textContent = `${(loading ? reciter() : using ?? reciter()).short} ▾`; // the new voice's name while it loads
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
       if (cur) navigator.mediaSession.metadata = new MediaMetadata({ title: label.textContent, artist: (using ?? reciter()).name, album: 'Ayah Studio' });
@@ -112,6 +114,10 @@ export function createPlayer(o: PlayerHooks) {
     o.onShow(on);
   }
 
+  // Where the loaded recording recites its own Bismillah (lit in the mushaf) and where it starts (past a
+  // spoken announcement in a few uploads), in seconds.
+  let opening: { span: [number, number] | null; start: number; first: number | null } = { span: null, start: 0, first: null };
+
   async function load(s: number): Promise<boolean> {
     const r = reciterIn(s);
     const key = `${r.id}/${s}`;
@@ -119,7 +125,7 @@ export function createPlayer(o: PlayerHooks) {
     const id = ++req;
     let url = '';
     if (r.qdc !== false || r.mp3quran) {
-      const q = r.qdc !== false ? await qdcSurah(r.id, s) : await mp3quranSurah(r, s);
+      const q = r.qdc !== false ? await qdcSurah(r.id, s) : await mp3quranSurah(r, s, true);
       if (id !== req) return false;
       verses = [...q.timings.values()].map((v) => ({
         a: Number(v.verse_key.split(':')[1]),
@@ -128,7 +134,17 @@ export function createPlayer(o: PlayerHooks) {
         words: r.qdc === false && SHIFTED.has(v.verse_key) ? [] : validSegs(v.segments),
       })).sort((x, y) => x.from - y.from);
       url = q.audioUrl;
+      const op = await openingOf(r, s).catch(() => null);
+      if (id !== req) return false;
+      opening = op ?? { span: null, start: 0, first: null };
+      // Ayah 1's first word starts after the Bismillah (Quran.com times it from 0)
+      const v1 = verses.find((v) => v.a === 1);
+      if (opening.first !== null && v1?.words.length) {
+        const f = opening.first;
+        v1.words = v1.words.map((w, i) => (i === 0 && w[1] < f && f < w[2] ? [w[0], f, w[2]] : w));
+      }
     } else {
+      opening = { span: null, start: 0, first: null };
       const words = await alignedWords(r, s);
       if (id !== req) return false;
       verses = Array.from({ length: o.meta[s - 1].ayahs }, (_, i) => ({
@@ -146,28 +162,93 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   /** Play from the start of surah:ayah. */
+  let calls = 0;
   async function playFrom(s: number, a: number) {
+    const call = ++calls;
+    introDone?.(false); // a Bismillah still playing gives way
     show(true);
     loading = true;
     pending = { s, a };
     paint();
     try {
       if (!(await load(s))) return;
+      const mine = req;
+      const stale = () => mine !== req || call !== calls; // another ayah or reciter was chosen meanwhile
       const v = verses.find((x) => x.a === a) ?? verses[0];
       if (!v) throw new Error('No timings for this surah');
+      // From the top of a surah: the very start of its recording, so the Bismillah (and an isti'adha) is
+      // always heard, also where an ayah's start time is unknown (mp3quran cuts that are null). An ayah with
+      // no known start plays from the nearest earlier ayah that has one, never from the surah's first timed ayah.
+      let at = v.from;
+      if (!perAyah && (a <= 1 || v.a !== a)) {
+        const before = a <= 1 ? undefined : verses.filter((x) => x.a < a).pop();
+        at = before ? before.from : opening.start * 1000;
+      }
       if (perAyah) {
         playing = v.a;
         ahead.pause();
-        audio.src = await playableUrl(everyayahUrl(using!, s, v.a));
+        const src = await playableUrl(everyayahUrl(using!, s, v.a));
+        if (stale()) return;
+        audio.src = src;
         preload(v.a + 1);
-      } else await seekTo(v.from / 1000);
+      } else await seekTo(at / 1000);
+      if (stale()) return;
+      // A recording that starts straight at ayah 1: the reciter's own Bismillah first.
+      if (a <= 1) {
+        const b = await basmalaBefore(using!, s).catch(() => null);
+        if (mine !== req) return;
+        if (b && !(await playIntro(b))) return;
+      }
+      if (stale()) return;
       await audio.play();
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
+      if (call !== calls) return; // a newer request owns the bar now
       toast(navigator.onLine ? `Could not play the recitation: ${e instanceof Error ? e.message : e}` : 'Listening needs an internet connection');
     }
     loading = false;
     paint();
+  }
+
+  // The Bismillah played before a surah whose recording has none (data/basmala.ts).
+  const intro = new Audio();
+  intro.preload = 'auto';
+  let introOn = false;
+  let introDone: ((played: boolean) => void) | null = null;
+  /** Plays the Bismillah; true when it finished, false when listening was stopped or moved on meanwhile. */
+  async function playIntro(b: Basmala): Promise<boolean> {
+    const mine = req;
+    intro.src = await playableUrl(b.url);
+    if (mine !== req) return false;
+    await new Promise<void>((resolve, reject) => {
+      if (intro.readyState >= 1) return resolve();
+      intro.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      intro.addEventListener('error', () => reject(new Error('the audio could not be loaded')), { once: true });
+    });
+    intro.currentTime = b.from;
+    const end = b.to;
+    return new Promise<boolean>((resolve) => {
+      const finish = (played: boolean) => {
+        intro.removeEventListener('timeupdate', check);
+        intro.removeEventListener('ended', ended);
+        intro.pause();
+        introOn = false;
+        introDone = null;
+        resolve(played && mine === req);
+      };
+      const check = () => { if (end !== null && intro.currentTime >= end) finish(true); };
+      const ended = () => finish(true);
+      intro.addEventListener('timeupdate', check);
+      intro.addEventListener('ended', ended);
+      introDone = finish;
+      introOn = true;
+      // Al-Fatiha's ayah 1 is the Bismillah; before any other surah it lights the Bismillah line (a = 0).
+      if (surah === 1) { cur = { s: 1, a: 1, w: null }; last = '1:1:null'; tell(cur); }
+      else { last = `${surah}:0`; o.onPosition({ s: surah, a: 0, w: null }); }
+      loading = false;
+      void intro.play().then(() => paint(), () => finish(true));
+      paint();
+    });
   }
 
   /** Load ayah `a` of the playing surah into the spare element. */
@@ -215,6 +296,12 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   function toggle() {
+    if (introOn) {
+      if (intro.paused) void intro.play().catch(() => {});
+      else intro.pause();
+      paint();
+      return;
+    }
     if (!surah) return;
     if (audio.paused) void audio.play().catch(() => toast('Could not play the recitation'));
     else audio.pause();
@@ -230,6 +317,7 @@ export function createPlayer(o: PlayerHooks) {
 
   function stop() {
     req++;
+    introDone?.(false);
     loading = false;
     audio.pause();
     ahead.pause();
@@ -246,6 +334,12 @@ export function createPlayer(o: PlayerHooks) {
     raf = requestAnimationFrame(tick);
     switchOver();
     const t = audio.currentTime * 1000;
+    // The recording's own Bismillah: its line is lit in the mushaf (a = 0; not a position for other listeners).
+    if (!perAyah && opening.span && surah !== 1 && t >= opening.span[0] * 1000 && t < opening.span[1] * 1000) {
+      const k = `${surah}:0`;
+      if (k !== last) { last = k; o.onPosition({ s: surah, a: 0, w: null }); }
+      return;
+    }
     let v: Verse | null = null;
     if (perAyah) v = verses[playing - 1] ?? null;
     else for (const x of verses) {
@@ -302,24 +396,71 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   function pickReciter() {
-    const d = h('dialog', { class: 'sheet bottom' },
+    const now = (using ?? reciter()).id;
+    const choose = (r: Reciter) => {
+      d.close();
+      // Compared with the voice actually loaded: picking it again after a failed switch tries again.
+      if (r.id === using?.id && loadedFor) return;
+      setReelReciter(r.id); // also the default for the next reel
+      const at = cur;
+      // The old voice stops at once and any load still running for it is dropped, so it can never go on
+      // playing (or start again) while the new one loads.
+      req++;
+      introDone?.(false);
+      audio.pause();
+      ahead.pause();
+      aheadFor = 0;
+      aheadWant = '';
+      loadedFor = '';
+      if (at) void playFrom(at.s, at.a);
+      else paint();
+    };
+    // One row per reciter; a reciter with several recordings lists them as chips under the name.
+    const groups = groupRecordings(favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))));
+    const list = h('div', { class: 'menu' }, ...groups.map((g) => {
+      const r = g.find((x) => x.id === now) ?? g[0];
+      return h('div', { class: 'rec-group' },
+        h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
+          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
+        recordingChips(g, now, choose));
+    }));
+    const search = reciterSearchBox(list, t('ed.reciter-search'));
+    const d = h('dialog', { class: 'sheet bottom reciter-sheet' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
-      h('div', { class: 'menu' }, ...favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))).map((r) => h('button', {
-        class: `menu-item${r.id === (using ?? reciter()).id ? ' on' : ''}`,
-        onclick: () => {
-          d.close();
-          if (r.id === reciter().id) return;
-          setReelReciter(r.id); // also the default for the next reel
-          const at = cur;
-          loadedFor = '';
-          if (at) void playFrom(at.s, at.a);
-          else paint();
-        },
-      }, h('span', {}, reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)))));
+      search, list);
     d.addEventListener('close', () => { stopSample(); d.remove(); });
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();
+  }
+
+  /** ⋯: the less frequent actions, so the bar keeps room for the reference on small phones. */
+  function more() {
+    const away = document.body.classList.contains('listening-away');
+    const item = (label: string, ic: string, f: () => void) => h('button', { class: 'menu-item', onclick: () => { d.close(); f(); } },
+      h('span', { class: 'mi-ic' }, icon(ic, 20)), label);
+    const d = h('dialog', { class: 'sheet bottom' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, label.textContent || t('pl.more')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('div', { class: 'menu' },
+        away ? item(t('pl.follow'), 'book', followAlong) : null,
+        item(t('pl.reel'), 'create', makeReel),
+        item(t('night.open'), 'moon', openNightView),
+        item(t('pl.report'), 'flag', report)));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /** The report sheet, with what is playing now. */
+  function report() {
+    const at = cur ?? pending;
+    const r = using ?? reciter();
+    const ms = Math.round((introOn ? intro.currentTime : audio.currentTime) * 1000);
+    void import('./report').then((m) => m.openReport({
+      r: r.id, rn: r.short, s: at?.s, a: at?.a, w: cur?.w ?? null, ms, intro: introOn, playing: !audio.paused,
+      src: r.qdc !== false ? 'qdc' : r.mp3quran ? 'mp3quran' : 'everyayah', url: (introOn ? intro.src : audio.src).slice(0, 160),
+    }, { listening: true, summary: at ? `${o.meta[at.s - 1].en} ${at.s}:${at.a} · ${r.short}` : r.short }));
   }
 
   /** The ayah being recited (or about to be) as a new reel in this reciter's voice. */
@@ -349,11 +490,65 @@ export function createPlayer(o: PlayerHooks) {
     playFrom,
     active: () => shown,
     toggle,
-    position: () => cur,
+    pause: () => { if (introOn) intro.pause(); audio.pause(); },
+    stop,
+    position: () => cur ?? pending,
     destroy() {
       stop();
       for (const el of [audio, ahead]) { el.removeAttribute('src'); el.load(); }
       if ('mediaSession' in navigator) for (const a of ['play', 'pause', 'previoustrack', 'nexttrack'] as const) navigator.mediaSession.setActionHandler(a, null);
     },
   };
+}
+
+// One player for the whole app: the recitation carries on while the user goes to Me (claims, tasbih),
+// the surah list or anywhere else; the mushaf attaches to it while it is open (page tracking and lit
+// words), and elsewhere the bar sits above the tab bar with a button back to the page being recited.
+type Player = ReturnType<typeof createPlayer>;
+type PlayerView = Pick<PlayerHooks, 'onPosition' | 'onShow'>;
+let shared: Player | null = null;
+let view: PlayerView | null = null;
+const markAway = () => document.body.classList.toggle('listening-away', !!shared?.active() && !view);
+
+export function sharedPlayer(meta: SurahMeta[]): Player {
+  if (!shared) {
+    shared = createPlayer({
+      meta,
+      onPosition: (pos) => view?.onPosition(pos),
+      onShow: (on) => { view?.onShow(on); markAway(); },
+    });
+    document.body.append(shared.bar);
+  }
+  return shared;
+}
+
+/** The mushaf follows the recitation while it is open; returns the detach. */
+export function attachPlayer(v: PlayerView): () => void {
+  view = v;
+  markAway();
+  return () => { if (view === v) { view = null; markAway(); } };
+}
+
+/** Once the attached view is built: what is playing now (the bar's room, the page, the lit ayah). */
+export function replayPosition() {
+  if (!view || !shared?.active()) return;
+  view.onShow(true);
+  const pos = shared.position();
+  if (pos) view.onPosition({ s: pos.s, a: pos.a, w: null });
+}
+
+export const playerActive = () => !!shared?.active();
+
+/** Open the page being recited (the mushaf then tracks it). */
+export function followAlong() {
+  const pos = shared?.position();
+  if (!pos) return;
+  try { sessionStorage.removeItem('tabIntent'); } catch { /* ignore */ }
+  location.hash = `#/s/${pos.s}/${Math.max(1, pos.a)}`;
+}
+
+/** Screens with their own sound (the studio) pause it; the Kids space stops it. */
+export function quietPlayer(stop = false) {
+  if (!shared?.active()) return;
+  if (stop) shared.stop(); else shared.pause();
 }

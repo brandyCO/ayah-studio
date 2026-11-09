@@ -232,7 +232,7 @@ export function newProject(surah: number, from: number, to: number, reciterId: n
     intro: false,
     outro: false,
     credit: false,
-    watermark: false,
+    watermark: true, // owner decision 2026-10-31: the small Ayah Studio mark is on by default
     highlight: false,
     grain: false,
     vignette: false,

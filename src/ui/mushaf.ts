@@ -18,7 +18,7 @@ import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
 import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday } from './living';
-import { createPlayer } from './player';
+import { attachPlayer, replayPosition, sharedPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
 import { openReflection, openReflections, wroteHere } from './reflections';
@@ -132,6 +132,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const bar = h('header', { class: 'mushaf-bar' },
     h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
     h('div', { class: 'brand' }, title, sub),
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('mushaf.listen'), title: t('mushaf.listen'), onclick: () => listenNow() }, icon('listen', 20)),
     h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
     today);
   const toggleBar = (show = !bar.classList.contains('show')) => {
@@ -150,12 +151,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   // --- listening: the recited ayah is tinted, the recited word coloured; pages turn with it ---
   let playing: { s: number; a: number; w: number | null } | null = null;
-  const player = createPlayer({
-    meta,
+  let doneLater: (() => void) | null = null; // a "surah finished" card held until the recitation ends it
+  // The app's one player: it keeps playing on other screens; here it tracks the page and lights the words.
+  const player = sharedPlayer(meta);
+  const detachPlayer = attachPlayer({
     onPosition: (pos) => {
+      if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
       playing = pos;
       if (pos && !panning && !animating) {
-        const target = mushaf.wordPage(pos.s, pos.a, pos.w ?? 1);
+        const target = mushaf.wordPage(pos.s, Math.max(1, pos.a), pos.w ?? 1); // a = 0: the Bismillah before ayah 1
         if (target !== page) go(target);
       }
       paintPlaying();
@@ -168,6 +172,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   function paintPlaying() {
     for (const el of strip.querySelectorAll('.play-ayah, .play-word')) el.classList.remove('play-ayah', 'play-word');
     if (!playing) return;
+    if (playing.a === 0) {
+      for (const el of strip.querySelectorAll(`.mp-basmala[data-s="${playing.s}"]`)) el.classList.add('play-ayah');
+      return;
+    }
     for (const el of strip.querySelectorAll<HTMLElement>(`.w[data-s="${playing.s}"][data-a="${playing.a}"]`)) {
       el.classList.add('play-ayah');
       if (playing.w !== null && Number(el.dataset.p) === playing.w) el.classList.add('play-word');
@@ -207,8 +215,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (player.active()) player.toggle();
     else { const f = firstAyahOnPage(); void player.playFrom(f.s, f.a); }
   };
-  const tabs = tabBar('read', { read: () => toggleBar(false), listen: listenNow }, true);
-  root.append(bar, area, sel.bar, player.bar, tabs);
+  const tabs = tabBar('read', { read: () => toggleBar(false) }, true);
+  root.append(bar, area, sel.bar, tabs);
 
   ramadanCtx = { goToPage: (p) => { toggleBar(false); go(p); } };
   let readTimer = 0;
@@ -237,7 +245,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           const juz = (now.j ?? []).slice(j0);
           void import('./pageMoments').then((m) => {
             m.pageCounted(area);
-            m.finished(surahs, juz);
+            // While listening, "surah finished" waits until the recitation has finished it too.
+            const last = surahs[surahs.length - 1];
+            if (last && playing && playing.s <= last.n) doneLater = () => m.finished(surahs, juz);
+            else m.finished(surahs, juz);
           });
         }
       }
@@ -305,13 +316,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   applyTimeTint();
   const tintTimer = window.setInterval(applyTimeTint, 10 * 60_000);
 
+  let lineSurah = 0; // the surah whose header was drawn last: its Bismillah follows
   const line = (l: MushafLine) => {
     if (l[0] === 'h') {
+      lineSurah = Number(l[1]);
       return h('div', { class: 'mp-line mp-surah' },
         h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0'))));
     }
     if (l[0] === 'b') {
-      const el = h('div', { class: 'mp-line mp-basmala' });
+      const el = h('div', { class: 'mp-line mp-basmala', 'data-s': String(lineSurah) });
       el.innerHTML = svg; // bundled file (public/fonts/bismillah.svg)
       return el;
     }
@@ -591,6 +604,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
   layout();
+  replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   keepWholeMushaf(() => page);
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
@@ -603,6 +617,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
+  // Listening moved from the tab bar into the reading view (2026-11-02): say where it is, once.
+  if (!touring && !intent) {
+    try {
+      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (localStorage.getItem('mushafHint')) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
+    } catch { /* ignore */ }
+  }
   if (intent === 'listen') listenNow();
   else if (intent === 'pick') pickHint();
   // From Settings (the old ☰ menu's reading items live there now).
@@ -640,7 +660,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(hintTimer);
     clearTimeout(resizeTimer);
     sel.destroy();
-    player.destroy();
+    detachPlayer(); // the recitation carries on (the bar moves above the tab bar)
     document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);

@@ -1,7 +1,7 @@
 // Per-device UI preferences (best effort: storage can be unavailable). The ones in SYNCED_PREFS
 // follow the user's account across devices (src/cloud/sync.ts): each change records when it was made,
 // and the newest change wins.
-export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation', 'brandTheme'] as const;
+export const SYNCED_PREFS = ['readerMode', 'reelReciter', 'reelLook', 'timeTint', 'lastRead', 'translation', 'brandTheme', 'journeyPlan', 'pageSeconds'] as const;
 type SyncedPref = (typeof SYNCED_PREFS)[number];
 
 function prefTimes(): Record<string, number> {
@@ -23,6 +23,17 @@ export function touchPref(key: SyncedPref) {
   window.dispatchEvent(new CustomEvent('prefs-changed', { detail: key }));
 }
 
+/** Gives a synced preference set before it was synced a change time (only when it has none). */
+export function seedPrefTime(key: SyncedPref, at: number) {
+  const times = prefTimes();
+  if (times[key] || !(at > 0)) return;
+  try {
+    localStorage.setItem('prefsAt', JSON.stringify({ ...times, [key]: at }));
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Synced preferences with their change times (for syncing). */
 export function prefRecords(): Record<string, { v: string | null; at: number }> {
   const at = prefTimes();
@@ -35,6 +46,14 @@ export function prefRecords(): Record<string, { v: string | null; at: number }> 
     }
   }
   return out;
+}
+
+/** True when this device holds a newer choice than `remote` for any of `keys` (default: all synced
+ *  preferences), so the document has to be sent again. */
+export function prefsBehind(remote: unknown, keys: readonly string[] = SYNCED_PREFS): boolean {
+  const times = prefTimes();
+  const r = remote && typeof remote === 'object' ? (remote as Record<string, { at?: unknown }>) : {};
+  return keys.some((k) => (times[k] ?? 0) > (typeof r[k]?.at === 'number' ? (r[k].at as number) : 0));
 }
 
 /** Takes the newer value of each preference from another device. Returns true if any changed. */
@@ -113,6 +132,15 @@ export function reelLook(): unknown {
       localStorage.setItem('pauseReset', '1');
       if ((look as { pause?: number }).pause) {
         (look as { pause?: number }).pause = 0;
+        localStorage.setItem('reelLook', JSON.stringify(look));
+      }
+    }
+    // Owner decision 2026-10-31: the small Ayah Studio mark is on by default. It was off before, so a look
+    // remembered from then turns it on once; turning it off afterwards stays off.
+    if (look && typeof look === 'object' && !localStorage.getItem('markDefault')) {
+      localStorage.setItem('markDefault', '1');
+      if ((look as { watermark?: boolean }).watermark === false) {
+        (look as { watermark?: boolean }).watermark = true;
         localStorage.setItem('reelLook', JSON.stringify(look));
       }
     }

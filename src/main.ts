@@ -4,6 +4,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
+//   #/learn[/N]        Learn: the juz gardens, and a lesson that grows surah N's tree
 //   #/me               Me: streak flame, stats, reading time, settings
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
@@ -29,6 +30,7 @@ import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
 import { watchVitals } from './perf';
+import { quietPlayer } from './ui/player';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -45,6 +47,8 @@ async function route() {
     return void route();
   }
   if (view === 'kids') clearPass();
+  // Listening carries on across screens, but not into the studio (its own sound) or the Kids space.
+  if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
   document.body.dataset.view = view || 'home';
@@ -94,6 +98,9 @@ async function route() {
       const { showMe, showMeSettings } = await import('./ui/me');
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
+    } else if (view === 'learn') {
+      if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
+      else c = await (await import('./ui/garden')).showGarden(screen);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
@@ -140,6 +147,8 @@ watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
 if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
 setupOffline();
+// Problem reports made offline go out now (src/ui/report.ts).
+setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();

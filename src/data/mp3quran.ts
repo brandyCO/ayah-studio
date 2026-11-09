@@ -2,8 +2,9 @@
 // `scripts/verify-mp3quran.py` measured in the audio, for the surahs it verified. No word timings
 // (Ayah mode only, rule 8). The cut points are bundled (public/data/mp3quran/{read}.json), so nothing
 // is guessed at run time; a recording whose size changed since the check is refused. A cut the check
-// could not place (no pause there: ayat joined in one breath, or a wrong time) is null, and a reel may
-// not start, end or change ayah there (`UncheckedRange`).
+// could not place (no pause there: ayat joined in one breath, or a wrong time) is null; where the forced
+// alignment clearly heard the next ayah's first word, that moment stands in for it (`l`, between two words),
+// so every such ayah can be played and used in a reel. Only a cut neither found is refused (`UncheckedRange`).
 import type { VerseTiming } from '../engine/words';
 import type { SeekTable } from './mp3';
 import { alignedWords } from './alignedWords';
@@ -13,8 +14,9 @@ import { keptBlob } from './keptAudio';
 interface Checked {
   folder: string;
   /** `seek`: a variable-bitrate file's seek table (`vbr`: its length in seconds, decoded whole);
-   *  `aligned`: times made by alignment. */
-  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean }>;
+   *  `aligned`: times made by alignment; `url`: a surah mp3quran.net lacks, from another source (archive.org,
+   *  Islam Sobhi 37, 39, 40, 45, 65: scripts/find-surahs.py + align-plan.py "ia:"). */
+  surahs: Record<string, { size: number; c: (number | null)[]; vbr?: number; seek?: SeekTable; aligned?: boolean; l?: Record<string, number>; url?: string }>;
 }
 
 const files = new Map<number | string, Promise<Checked>>();
@@ -37,7 +39,8 @@ const sizes = new Map<string, Promise<number | null>>();
 function sizeOf(url: string): Promise<number | null> {
   if (!sizes.has(url)) {
     sizes.set(url, keptBlob(url).then((k) => k ? k.size : fetch(url, { method: 'HEAD' }).then((r) => {
-      if (r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
+      // (archive.org always sends a download on to the server that holds it: the same file)
+      if (!url.includes('archive.org/') && r.url && r.url.slice(0, r.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) return -1;
       const n = Number(r.headers.get('Content-Length'));
       return r.ok && n > 0 ? n : null;
     }, () => null)));
@@ -51,7 +54,8 @@ export class UncheckedRange extends Error {}
 /** Whether ayat from..to of the surah can be cut from this reciter's verified recording. */
 export async function mp3quranRange(r: Reciter, surah: number, from: number, to: number): Promise<boolean> {
   if (!r.mp3quran || !covers(r, surah)) return false;
-  const c = (await checked(r.mp3quran.read)).surahs[String(surah)]?.c;
+  const s = (await checked(r.mp3quran.read)).surahs[String(surah)];
+  const c = s && cuts(s);
   return !!c && to < c.length && c.slice(from - 1, to + 1).every((x) => x !== null);
 }
 
@@ -65,18 +69,24 @@ export interface Mp3QuranSurah {
   seek?: SeekTable;
 }
 
-export async function mp3quranSurah(r: Reciter, surah: number): Promise<Mp3QuranSurah> {
+/** The cuts, with an unknown one (no pause: two ayat in one breath) taken from where the alignment heard the
+ *  next ayah's first word (`l`, scripts/make-listen-starts.py): a cut between two words, never inside one. */
+const cuts = (s: Checked['surahs'][string]) => s.c.map((x, i) => x ?? s.l?.[String(i + 1)] ?? null);
+
+/** `listen`: an unknown end of the last ayah is the end of the file (Listen plays on to it). */
+export async function mp3quranSurah(r: Reciter, surah: number, listen = false): Promise<Mp3QuranSurah> {
   if (!r.mp3quran || !covers(r, surah)) throw new Error(`No verified recording of surah ${surah} for ${r.name}`);
   const data = await checked(r.mp3quran.read);
   const s = data.surahs[String(surah)];
   if (!s) throw new Error(`No verified recording of surah ${surah} for ${r.name}`);
-  const audioUrl = `${data.folder}${String(surah).padStart(3, '0')}.mp3`;
+  const audioUrl = s.url ?? `${data.folder}${String(surah).padStart(3, '0')}.mp3`;
   const size = await sizeOf(audioUrl);
   if (size !== null && size !== s.size) throw new Error(`The recording of surah ${surah} changed since it was checked`);
   const words = await alignedWords(r, surah);
   const timings = new Map<string, VerseTiming>();
-  for (let k = 1; k < s.c.length; k++) {
-    const a = s.c[k - 1], b = s.c[k];
+  const c = cuts(s).map((x, i) => x ?? (listen && i === s.c.length - 1 ? 1e9 : null));
+  for (let k = 1; k < c.length; k++) {
+    const a = c[k - 1], b = c[k];
     if (a !== null && b !== null) timings.set(`${surah}:${k}`, { verse_key: `${surah}:${k}`, timestamp_from: a, timestamp_to: b, segments: words[k] });
   }
   return { audioUrl, timings, fileDuration: s.vbr ?? null, seek: s.seek };
@@ -88,4 +98,15 @@ export async function mp3quranSizes(r: Reciter): Promise<Record<string, number>>
   const out: Record<string, number> = {};
   for (const [k, s] of Object.entries((await checked(r.mp3quran.read)).surahs)) out[k] = s.size;
   return out;
+}
+
+/** A file to preview the voice from (the reciter picker's ▶): Al-Fatiha when checked, else the first surah
+ *  that is; played from its start (isti'adha / Bismillah / ayah 1). */
+export async function mp3quranSample(r: Reciter): Promise<string | null> {
+  if (!r.mp3quran) return null;
+  const data = await checked(r.mp3quran.read);
+  const keys = Object.keys(data.surahs).map(Number).filter((s) => covers(r, s)).sort((a, b) => a - b);
+  if (!keys.length) return null;
+  const s = keys[0];
+  return data.surahs[String(s)].url ?? `${data.folder}${String(s).padStart(3, '0')}.mp3`;
 }
