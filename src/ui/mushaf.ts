@@ -141,7 +141,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const toggleBar = (show = !bar.classList.contains('show')) => {
     bar.classList.toggle('show', show);
     document.body.classList.toggle('tabs-up', show); // the tab bar comes up with the title bar
-    if (show) void fillToday(today, () => toggleBar(false));
+    if (show) { void fillToday(today, () => toggleBar(false)); void import('./noor').then((m) => m.noorInto(bar, 'read')).catch(() => {}); }
   };
   let markTapped = false; // the current tap started on a margin mark
 

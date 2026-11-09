@@ -16,6 +16,7 @@ import { liteMode } from '../lite';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { tabBar } from './tabs';
+import { noorText, noorLine } from './noor';
 import {
   cellAt, cellCenter, decoHeight, stageHeight, drawCellMark, drawDeco, drawGround, drawThirst, drawTree, drawSeedAt, rng, seedPic, treeHeight, vignette, type Iso,
 } from './gardenArt';
@@ -82,7 +83,8 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
     h('summary', {}, lt('learn.howTitle')),
     h('ol', {}, ...(['learn.how1', 'learn.how2', 'learn.how3', 'learn.how4', 'learn.how5'] as LearnKey[]).map((k) => h('li', {}, lt(k)))));
   root.append(wrap, tabBar('learn'));
-  wrap.querySelector('.garden-bottom')!.prepend(today);
+  const noorEl = noorLine('learn');
+  wrap.querySelector('.garden-bottom')!.prepend(noorEl, today);
 
   // --- the garden's geometry ---
   const ctx = canvas.getContext('2d')!;
@@ -510,6 +512,7 @@ export async function showGarden(root: HTMLElement): Promise<() => void> {
       how.open = true;
     } else if (!body.length) body.push(h('h3', {}, lt('learn.allWatered')), h('p', { class: 'muted small' }, lt('learn.allWateredSub')));
     today.replaceChildren(...body);
+    noorEl.querySelector('.noor-say')!.textContent = noorText('learn');
   }
 
   function paintList() {
