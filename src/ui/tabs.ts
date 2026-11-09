@@ -67,6 +67,7 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
 export async function openCreate() {
   const [meta, drafts, daily, tpl] = await Promise.all([
     loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null), weeklyTemplate(), import('./create.css').catch(() => null)]);
+  const noor = await import('./noor').catch(() => null);
   const close = () => d.close();
   const link = (href: string, title: string, sub: string, ic: string, c: string) =>
     h('a', { class: `menu-item create-item ${c}`, href, onclick: close },
@@ -90,7 +91,8 @@ export async function openCreate() {
         reference(meta[daily.s - 1], daily.from, daily.to), 'sparkle', 'c-day'),
       last && link(draftHash(last.project, last.id),
         t('create.continue'), reference(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip', 'c-cont'),
-      link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes', 'c-mine')));
+      link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes', 'c-mine')),
+    noor ? noor.noorLine('create') : '');
   d.addEventListener('close', () => { d.remove(); window.removeEventListener('hashchange', close); });
   window.addEventListener('hashchange', close); // a link was followed: the sheet goes with the old screen
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });

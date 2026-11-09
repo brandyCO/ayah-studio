@@ -1,0 +1,17 @@
+/* Noor's line: a warm light and a white speech bubble. Loaded with the screens that show it. */
+.noor-line { display: flex; align-items: center; gap: 10px; animation: noor-in var(--dur-3, .7s) var(--ease-spring, ease) both; }
+.noor-dot { flex: none; width: 32px; height: 32px; border-radius: 50%;
+  background: radial-gradient(circle, #fffbe6 0 22%, #ffd36b 40%, rgba(255, 211, 107, 0) 70%);
+  animation: noor-breathe 3.6s ease-in-out infinite; }
+.noor-say { min-width: 0; padding: 8px 12px; border-radius: 16px 16px 16px 4px; background: #fff; color: #3b3324;
+  font: 700 13px/1.35 var(--ui-round, system-ui); box-shadow: 0 3px 0 rgba(0, 0, 0, .1); }
+[dir='rtl'] .noor-say { border-radius: 16px 16px 4px 16px; }
+@media (prefers-color-scheme: dark) { .noor-say { background: #22262b; color: #f1ead8; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); } }
+@keyframes noor-in { from { opacity: 0; translate: 0 6px; } }
+@keyframes noor-breathe { 50% { scale: 1.12; filter: brightness(1.12); } }
+@media (prefers-reduced-motion: reduce) { .noor-line, .noor-dot { animation: none; } }
+.noor-line.at-me { margin: 0 2px 14px; }
+.noor-line.at-create { margin-top: 14px; }
+.noor-line.at-read { flex-basis: 100%; margin-top: 2px; }
+.noor-line.at-read .noor-say { background: #fff; color: #0b4a42; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
+.garden-bottom > .noor-line { pointer-events: none; }

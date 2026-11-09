@@ -3,6 +3,7 @@
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
 import './me.css';
+import { noorLine, noorText } from './noor';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
@@ -88,6 +89,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
   const goalsBox = h('section', { class: 'me-card' });
+  const noorEl = noorLine('me');
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
@@ -335,6 +337,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip on', onclick: () => { acceptTip(tip); haptic(); toast(t('tip.done')); } }, t('tip.yes')),
       h('button', { class: 'chip', onclick: () => dismissTip(tip) }, t('tip.no'))));
   const paintGoals = () => {
+    noorEl.querySelector('.noor-say')!.textContent = noorText('me');
     if (needsPace()) {
       goalsBox.replaceChildren(h('h2', { class: 'me-h' }, t('pace.title')), paceCard());
       return;
@@ -556,7 +559,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
