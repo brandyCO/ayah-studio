@@ -23,7 +23,8 @@ export interface NudgeSettings {
 export const RISK_TIMES = ['18:00', '19:00', '20:00', '21:00', '22:00'] as const;
 const DEFAULTS: NudgeSettings = { goal: true, all: true, risk: true, riskAt: '21:00', freeze: true };
 const CAP = 2;
-const RISK_IDS = Array.from({ length: 7 }, (_, i) => 3100 + i);
+// (3400–3406: 3100–3149 are the prayer reminders, which cancel their own range.)
+const RISK_IDS = Array.from({ length: 7 }, (_, i) => 3400 + i);
 const NOW_ID = 3200;
 
 const read = <T,>(k: string, d: T): T => {

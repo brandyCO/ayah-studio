@@ -363,8 +363,6 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('m') }, `☾  ${t('goal.adhkarM')}`),
-        ...(['wake', 'salah', 'adhan', 'sleep'] as const).map((m) => h('button', { class: 'menu-item', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas(m)); } },
-          `${{ wake: '🌅', salah: '🤲', adhan: '🕌', sleep: '🌙' }[m]}  ${akt(`du.title.${m}`)}`)),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
@@ -722,6 +720,9 @@ export function showMeSettings(root: HTMLElement): () => void {
       chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
       h('b', { class: 'set-label' }, t('pa.sound')),
       chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => { previewSound(x); save((c) => ({ ...c, sound: x })); }),
+      h('b', { class: 'set-label' }, akt('du.notes')),
+      h('p', { class: 'muted small' }, akt('du.notesHelp')),
+      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, a.duas ? akt('du.notesOn') : akt('du.notesOff')),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),

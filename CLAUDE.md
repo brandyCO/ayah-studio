@@ -1556,7 +1556,11 @@ duas/reflections section in Me.
       dawn** (`src/ui/dawn.ts` + `dawn.css`, lazy, checked by `watchRewards()` after start and on return: the morning after, once,
       03:00–12:00, not over the studio / Kids / a dialog — the night sky gives way to rose and gold, the sun rises over the hills, a
       soft shimmer, then the first waking du'a with its source → Say the waking du'a / Later).
-      To come: after-adhan notes, goals / badges / chests, family pact
+      Step 4: **du'a after the adhan** (Android; Me → ⚙ → Prayer reminders, off by default, `prayerAlerts().duas`): a quiet note
+      (channel `prayer_duas`, ids 3150–3199) 4 min after each prayer time → Me, then the adhan session for that prayer, whose end
+      leads on to the adhkar after the salah. (The evening flame reminder moved to ids 3400–3406: it shared 3100–3106 with the
+      prayer reminders, which cancel their whole range.)
+      To come: goals / badges / chests, family pact
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
