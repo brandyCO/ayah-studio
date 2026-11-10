@@ -9,10 +9,13 @@
 // phone's own sound, or silent.
 // Du'a notes (`duas`, off by default): a quiet note a few minutes after each prayer's adhan → the
 // session of the du'a after the adhan and the adhkar after the salah for that prayer (ids 3150–3199).
-// localStorage `prayerAlerts`.
+// Salah notes (`salah`, off by default): a quiet note after each salah (its time + 12–25 min) → the
+// adhkar after that salah (ids 3500–3549). While the app is open, both come as a soft banner instead
+// of waiting in the phone's list (`watchDuaBanners`, web too). localStorage `prayerAlerts`.
 import { PRAYERS, prayerDay, prayerSettings, setPrayerSettings, type PrayerName } from '../data/prayer';
 import { locale, t, type Key } from '../i18n';
 import { isNative } from '../native';
+import { todayRec } from '../data/journey';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
 
 export const ALERT_PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const satisfies readonly PrayerName[];
@@ -20,7 +23,7 @@ export type AlertPrayer = (typeof ALERT_PRAYERS)[number];
 export const BEFORE = [0, 5, 10, 15, 30] as const;
 export const SOUNDS = ['adhan', 'adhanFull', 'chime', 'default', 'quiet'] as const;
 export type AlertSound = (typeof SOUNDS)[number];
-export interface PrayerAlerts { on: Record<AlertPrayer, boolean>; before: number; sound: AlertSound; duas: boolean }
+export interface PrayerAlerts { on: Record<AlertPrayer, boolean>; before: number; sound: AlertSound; duas: boolean; salah: boolean }
 
 const DAYS = 10;
 const BASE = 3100;
@@ -29,10 +32,14 @@ const DUA_BASE = 3150;
 const DUA_IDS = IDS.map((id) => id - BASE + DUA_BASE);
 /** Minutes after the prayer time (the adhan is over by then). */
 const DUA_AFTER = 4;
+const SALAH_BASE = 3500;
+const SALAH_IDS = IDS.map((id) => id - BASE + SALAH_BASE);
+/** Minutes after the prayer time when the salah is usually over (the wait for the iqamah, then the prayer). */
+export const SALAH_AFTER: Record<AlertPrayer, number> = { fajr: 25, dhuhr: 20, asr: 20, maghrib: 12, isha: 20 };
 const OFF: Record<AlertPrayer, boolean> = { fajr: false, dhuhr: false, asr: false, maghrib: false, isha: false };
 
 export function prayerAlerts(): PrayerAlerts {
-  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'adhan', duas: false };
+  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'adhan', duas: false, salah: false };
   try {
     const v = JSON.parse(localStorage.getItem('prayerAlerts') ?? 'null');
     if (!v || typeof v !== 'object') return base;
@@ -43,17 +50,19 @@ export function prayerAlerts(): PrayerAlerts {
       before: (BEFORE as readonly number[]).includes(v.before) ? v.before : 0,
       sound: (SOUNDS as readonly string[]).includes(v.sound) ? v.sound : 'adhan',
       duas: v.duas === true,
+      salah: v.salah === true,
     };
   } catch {
     return base;
   }
 }
-export const anyAlert = (a = prayerAlerts()) => a.duas || ALERT_PRAYERS.some((p) => a.on[p]);
+export const anyAlert = (a = prayerAlerts()) => a.duas || a.salah || ALERT_PRAYERS.some((p) => a.on[p]);
 
 /** Saves the settings and schedules them; false when notifications are not allowed. */
 export async function setPrayerAlerts(a: PrayerAlerts): Promise<boolean> {
   try { localStorage.setItem('prayerAlerts', JSON.stringify(a)); } catch { /* ignore */ }
   window.dispatchEvent(new Event('prayer-alerts-changed'));
+  if (a.duas || a.salah) watchDuaBanners();
   return schedulePrayerAlerts(true);
 }
 
@@ -120,7 +129,7 @@ export function schedulePrayerAlerts(ask = false): Promise<boolean> {
 
 async function scheduleNow(ask: boolean): Promise<boolean> {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
-  await LocalNotifications.cancel({ notifications: [...IDS, ...DUA_IDS].map((id) => ({ id })) });
+  await LocalNotifications.cancel({ notifications: [...IDS, ...DUA_IDS, ...SALAH_IDS].map((id) => ({ id })) });
   const a = prayerAlerts();
   const ps = prayerSettings();
   if (!anyAlert(a) || ps.lat === null) return true;
@@ -149,6 +158,18 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
           channelId: 'prayer_duas',
           schedule: { at: new Date(pTime), allowWhileIdle: true },
           extra: { hash: '#/me', du: name },
+        });
+      }
+      const sTime = times[PRAYERS.indexOf(name)].getTime() + SALAH_AFTER[name] * 60_000;
+      if (a.salah && sTime > now + 5_000) {
+        list.push({
+          id: SALAH_BASE + day * ALERT_PRAYERS.length + k,
+          title: akt('du.salahTitle', { name: akt(`du.p.${name}` as AdhkarKey) }),
+          body: akt('du.salahBody'),
+          smallIcon: 'ic_stat_crescent',
+          channelId: 'prayer_duas',
+          schedule: { at: new Date(sTime), allowWhileIdle: true },
+          extra: { hash: '#/me', dus: name },
         });
       }
       if (!a.on[name]) continue;
@@ -202,10 +223,67 @@ export function initPrayerAlerts() {
   void import('@capacitor/local-notifications').then(({ LocalNotifications }) => LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
     const p = e.notification.extra?.du as AlertPrayer | undefined;
     if (p && (ALERT_PRAYERS as readonly string[]).includes(p)) setTimeout(() => void import('./adhkar').then((m) => m.openDuas('adhan', p)), 1400);
+    const sp = e.notification.extra?.dus as AlertPrayer | undefined;
+    if (sp && (ALERT_PRAYERS as readonly string[]).includes(sp)) setTimeout(() => void import('./adhkar').then((m) => m.openDuas('salah', sp)), 1400);
   }));
   let timer = 0;
   window.addEventListener('prayer-changed', () => {
     clearTimeout(timer);
     timer = window.setTimeout(() => { if (anyAlert()) void schedulePrayerAlerts(); }, 800);
   });
+}
+
+/** In the app (web and Android): when a du'a moment comes while the app is open — a few minutes after
+ *  an adhan, or after the salah — a soft banner at the top opens its session. Once per moment a day,
+ *  never over the studio, the Kids space or a sheet, and not when that session is already said. */
+let watching = false;
+export function watchDuaBanners() {
+  if (watching) return;
+  watching = true;
+  let timer = 0;
+  const plan = async () => {
+    clearTimeout(timer);
+    const a = prayerAlerts();
+    const ps = prayerSettings();
+    if (!(a.duas || a.salah) || ps.lat === null) return;
+    const times = await prayerDay(new Date(), ps);
+    if (!times) return;
+    const now = Date.now();
+    const evs: { at: number; p: AlertPrayer; m: 'adhan' | 'salah' }[] = [];
+    for (const p of ALERT_PRAYERS) {
+      const t0 = times[PRAYERS.indexOf(p)].getTime();
+      if (a.duas) evs.push({ at: t0 + DUA_AFTER * 60_000, p, m: 'adhan' });
+      if (a.salah) evs.push({ at: t0 + SALAH_AFTER[p] * 60_000, p, m: 'salah' });
+    }
+    const due = evs.filter((e) => e.at <= now && now - e.at < 12 * 60_000).sort((x, y) => y.at - x.at)[0];
+    if (due) void show(due.p, due.m);
+    const next = evs.filter((e) => e.at > now).sort((x, y) => x.at - y.at)[0];
+    if (next) timer = window.setTimeout(() => void plan(), Math.min(next.at - now + 800, 6 * 3600_000));
+  };
+  const show = async (p: AlertPrayer, m: 'adhan' | 'salah') => {
+    if (document.hidden || /^#\/(reel|kids)(\/|$)/.test(location.hash) || document.querySelector('dialog[open], .cel')) return;
+    const d = new Date();
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}:${m}:${p}`;
+    let seen: string[] = [];
+    try { seen = JSON.parse(sessionStorage.getItem('duaBanner') ?? '[]'); } catch { /* ignore */ }
+    if (seen.includes(key)) return;
+    const { momentKey } = await import('../data/duas');
+    if (m === 'salah' && (todayRec().dm ?? []).includes(momentKey('salah', p))) return;
+    try { sessionStorage.setItem('duaBanner', JSON.stringify([...seen, key].slice(-12))); } catch { /* ignore */ }
+    const name = akt(`du.p.${p}` as AdhkarKey);
+    const { banner } = await import('./nudges');
+    banner(m === 'adhan' ? akt('du.noteTitle', { name }) : akt('du.salahTitle', { name }), akt(m === 'adhan' ? 'du.noteBody' : 'du.salahBody'),
+      () => void import('./adhkar').then((x) => x.openDuas(m, p)));
+  };
+  void plan();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void plan(); });
+  window.addEventListener('prayer-alerts-changed', () => void plan());
+  window.addEventListener('prayer-changed', () => void plan());
+}
+
+/** Turns on both du'a notes (the "ask once" card on Me); false when the phone said no. */
+export async function turnOnDuaNotes(): Promise<boolean> {
+  const ok = await setPrayerAlerts({ ...prayerAlerts(), duas: true, salah: true });
+  watchDuaBanners();
+  return ok;
 }

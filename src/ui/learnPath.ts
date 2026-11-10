@@ -18,6 +18,7 @@ import { h, haptic, toast } from './dom';
 import { drawDeco, drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
 import { lightChip } from './lightChip';
+import { inboxBell } from './inbox';
 import { noorLine } from './noor';
 import { tabBar } from './tabs';
 
@@ -79,7 +80,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
       h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
       h('span', { class: 'lp-streak', 'aria-label': lt('learn.streakAria', { n: st.days }) }, svg(G.flame, 22), String(st.days)),
-      lightChip());
+      lightChip(),
+      inboxBell());
   }
 
   let pop: HTMLElement | null = null;

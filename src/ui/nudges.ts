@@ -109,9 +109,9 @@ async function notifyNow(title: string, body: string) {
 }
 
 /** The in-app note: slides down from the top, stays ~4 s, tap → Me. Never over a dialog. */
-export function banner(title: string, body: string) {
+export function banner(title: string, body: string, go?: () => void) {
   document.querySelector('.nudge')?.remove();
-  const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
+  const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: (e: Event) => { if (go) { e.preventDefault(); go(); } else focusClaim(); el.remove(); } },
     h('span', { class: 'nudge-spark', 'aria-hidden': 'true' }),
     h('span', { class: 'nudge-txt' }, h('b', {}, title), h('span', {}, body)),
     h('span', { class: 'nudge-go' }, t('nudge.open')));

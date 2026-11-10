@@ -1099,7 +1099,7 @@ const en = {
   'lt.tToday': 'Today',
   'lt.tWeek': 'This week',
   'lt.tMonth': 'This month',
-  'lt.tAll': 'All time',
+  'lt.tAll': 'Earned all time',
   'lt.help': 'Each goal you claim adds Light: more for bigger goals, a bonus when every goal is met, and more for badges. It is only for you, to see your steady effort. It is not a measure of reward, which only Allah knows.',
   'pa.title': 'Prayer reminders',
   'pa.short': 'Reminders',

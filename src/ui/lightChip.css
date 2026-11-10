@@ -1,0 +1,10 @@
+/* The Light star (src/ui/lightChip.ts): the one way Light is drawn (owner decision 2026-11-10). */
+.lt-chip-ic { width: 17px; height: 17px; overflow: visible; filter: drop-shadow(0 0 4px var(--rw-n2)); }
+.lt-star { fill: var(--rw-n2); stroke: var(--rw-hi); stroke-width: 1; stroke-linejoin: round; }
+.lt-star-core { fill: var(--rw-core); }
+/* By day the theme's pale highlight is too faint: the count and the star take the deep accent. */
+@media (prefers-color-scheme: light) {
+  .lt-chip { color: var(--accent); background: color-mix(in srgb, var(--rw-n1) 14%, var(--card)); }
+  .lt-star { fill: #f5b301; stroke: #c98a00; }
+  .lt-chip-ic { filter: drop-shadow(0 0 3px rgba(245, 179, 1, .55)); }
+}

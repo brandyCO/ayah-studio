@@ -1403,8 +1403,6 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
   border: 1px solid color-mix(in srgb, var(--rw-n2) 35%, transparent); font-variant-numeric: tabular-nums; cursor: default; }
 button.lt-chip { cursor: pointer; }
 .lt-chip b { font-weight: 700; }
-.lt-chip-ic { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, var(--rw-core) 0 22%, var(--rw-n2) 40%, transparent 72%);
-  box-shadow: 0 0 10px var(--rw-n2); }
 .topbar .lt-chip { margin-inline-start: auto; }
 .studio-top .lt-chip { height: 28px; font-size: 12px; }
 .set-label { display: block; margin: 10px 0 6px; font-size: var(--fs-s); }
