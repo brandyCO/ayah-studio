@@ -140,7 +140,16 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     onclick: () => { view = v; openBoard = null; metric = 'all'; haptic(); try { sessionStorage.setItem('rankView', v); } catch { /* ignore */ } paint(); },
   }, label);
 
+  // Your avatar stays in the top bar even before the ranks load (signed out, or not counted yet): the character
+  // kept on this device, and a tap opens the builder.
+  const localAv = () => {
+    let fig: string | null = null;
+    try { fig = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
+    return h('button', { class: 'rk-me-av', 'aria-label': rt('fb.open'), onclick: () => openBuilder({ figure: fig, wins: 0 }, () => void paint(true)) },
+      avatar(fig ? 0 : null, 0, 36, 0, fig));
+  };
   const signedOut = () => {
+    topActs.replaceChildren(localAv());
     head.replaceChildren();
     tabs.replaceChildren();
     body.replaceChildren(h('div', { class: 'rk-signin me-card' },
@@ -185,7 +194,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const s = await rankStatus(fresh);
     status = s;
     if (!s) {
-      topActs.replaceChildren();
+      topActs.replaceChildren(localAv());
       head.replaceChildren(h('div', { class: 'rk-me me-card' }, h('p', {}, rt('rk.notYet')), howBtn()));
       return;
     }
