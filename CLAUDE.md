@@ -1583,6 +1583,10 @@ duas/reflections section in Me.
       each member's 7 crescents (`src/ui/pact.ts`, `src/together/pacts.ts`); invite link `#/bp/{code}` (open until the third night);
       the sleep session marks tonight (`pact_mark`, kept in `pactMark` until sent); two days after the last night each member opens a
       chest once: 5 Light a night kept + 50 when everyone kept all seven (`claimGoal('bp:{id}')`). Privacy page updated (ranks too).
+- [x] M15 Learn lessons count (owner request via the Learn thread, 2026-11-10): each Learn lesson or tasmi' passed (journey
+      `ls`, `addLesson()`) is reported to Ranks (`rank_report(…, lessons)`, ≤ 20 a day, 15 points each; migration
+      `20261110800000_rank_lessons.sql`, pgTAP `rank_lessons.test.sql`); a fifth weekly quest "Pass 5 Learn lessons" joins
+      the turn; optional daily goal "Learn lessons" 0/1/2/3 (`Goals.lessons`, off by default, 15 Light each, Begin → `#/learn`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

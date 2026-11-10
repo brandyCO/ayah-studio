@@ -22,14 +22,14 @@ export const tierOf = (n: number): Tier => TIERS[Math.max(0, Math.min(4, n | 0))
 /** League size and how many move up / down at the week's end (server: rank_join_league). */
 export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 /** Points, as the server counts them (rank_score). */
-export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, day: 20 };
+export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
 export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
-export interface Quest { kind: 'pages' | 'listen' | 'days' | 'surahs'; target: number; done: number; bonus: number; complete: boolean | null }
+export interface Quest { kind: 'pages' | 'listen' | 'days' | 'surahs' | 'lessons'; target: number; done: number; bonus: number; complete: boolean | null }
 export interface Status {
   name: string; tier: number; avatar: number; frame: number; figure?: string | null; bestTier: number; bestPlace: number | null; wins: number; prizes: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
   allPlace: number; allPlayers: number; quest: Quest; rival: (Row & { gap: number }) | null;
@@ -45,7 +45,7 @@ export const rankName = () => { try { return localStorage.getItem('rankName') ||
 // --- reporting: today (and yesterday, until it is settled), at most every 90 s, only when changed ---
 function totals(k: string) {
   const d = allDays()[k];
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0 };
+  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0 };
 }
 let timer = 0;
 let busy = false;
@@ -62,9 +62,9 @@ export async function report(): Promise<void> {
     const today = dayKey();
     for (const k of [addDays(today, -1), today]) {
       const v = totals(k);
-      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}`;
-      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels)) continue;
-      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName() });
+      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}`;
+      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons)) continue;
+      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons });
       sent[k] = sig;
     }
     for (const k of Object.keys(sent)) if (k < addDays(today, -3)) delete sent[k];
