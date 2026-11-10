@@ -7,25 +7,32 @@
 // 21 s clip the owner supplied, 2026-10-29) or the whole adhan (prayer_adhan_full.ogg; swiping the
 // notification away stops it), a soft chime (res/raw/prayer_chime.wav, generated), the
 // phone's own sound, or silent.
+// Du'a notes (`duas`, off by default): a quiet note a few minutes after each prayer's adhan → the
+// session of the du'a after the adhan and the adhkar after the salah for that prayer (ids 3150–3199).
 // localStorage `prayerAlerts`.
 import { PRAYERS, prayerDay, prayerSettings, setPrayerSettings, type PrayerName } from '../data/prayer';
 import { locale, t, type Key } from '../i18n';
 import { isNative } from '../native';
+import { akt, type AdhkarKey } from '../i18n/adhkar';
 
 export const ALERT_PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const satisfies readonly PrayerName[];
 export type AlertPrayer = (typeof ALERT_PRAYERS)[number];
 export const BEFORE = [0, 5, 10, 15, 30] as const;
 export const SOUNDS = ['adhan', 'adhanFull', 'chime', 'default', 'quiet'] as const;
 export type AlertSound = (typeof SOUNDS)[number];
-export interface PrayerAlerts { on: Record<AlertPrayer, boolean>; before: number; sound: AlertSound }
+export interface PrayerAlerts { on: Record<AlertPrayer, boolean>; before: number; sound: AlertSound; duas: boolean }
 
 const DAYS = 10;
 const BASE = 3100;
 const IDS = Array.from({ length: DAYS * ALERT_PRAYERS.length }, (_, i) => BASE + i);
+const DUA_BASE = 3150;
+const DUA_IDS = IDS.map((id) => id - BASE + DUA_BASE);
+/** Minutes after the prayer time (the adhan is over by then). */
+const DUA_AFTER = 4;
 const OFF: Record<AlertPrayer, boolean> = { fajr: false, dhuhr: false, asr: false, maghrib: false, isha: false };
 
 export function prayerAlerts(): PrayerAlerts {
-  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'adhan' };
+  const base: PrayerAlerts = { on: { ...OFF }, before: 0, sound: 'adhan', duas: false };
   try {
     const v = JSON.parse(localStorage.getItem('prayerAlerts') ?? 'null');
     if (!v || typeof v !== 'object') return base;
@@ -35,12 +42,13 @@ export function prayerAlerts(): PrayerAlerts {
       on,
       before: (BEFORE as readonly number[]).includes(v.before) ? v.before : 0,
       sound: (SOUNDS as readonly string[]).includes(v.sound) ? v.sound : 'adhan',
+      duas: v.duas === true,
     };
   } catch {
     return base;
   }
 }
-export const anyAlert = (a = prayerAlerts()) => ALERT_PRAYERS.some((p) => a.on[p]);
+export const anyAlert = (a = prayerAlerts()) => a.duas || ALERT_PRAYERS.some((p) => a.on[p]);
 
 /** Saves the settings and schedules them; false when notifications are not allowed. */
 export async function setPrayerAlerts(a: PrayerAlerts): Promise<boolean> {
@@ -57,6 +65,7 @@ const makeChannels = (ln: LN) => (channels ??= (async () => {
   await ln.createChannel({ id: 'prayer_adhanFull', name: `${name} · ${t('pa.s.adhanFull')}`, importance: 4, sound: 'prayer_adhan_full.ogg', vibration: true, visibility: 1 });
   await ln.createChannel({ id: 'prayer_chime', name: `${name} · ${t('pa.s.chime')}`, importance: 4, sound: 'prayer_chime.wav', vibration: true, visibility: 1 });
   await ln.createChannel({ id: 'prayer_default', name: `${name} · ${t('pa.s.default')}`, importance: 4, vibration: true, visibility: 1 });
+  await ln.createChannel({ id: 'prayer_duas', name: akt('du.notes'), importance: 2, vibration: false, visibility: 1 });
   await ln.createChannel({ id: 'prayer_quiet', name: `${name} · ${t('pa.s.quiet')}`, importance: 2, vibration: false, visibility: 1 });
 })().catch(() => { channels = null; }));
 
@@ -111,7 +120,7 @@ export function schedulePrayerAlerts(ask = false): Promise<boolean> {
 
 async function scheduleNow(ask: boolean): Promise<boolean> {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
-  await LocalNotifications.cancel({ notifications: IDS.map((id) => ({ id })) });
+  await LocalNotifications.cancel({ notifications: [...IDS, ...DUA_IDS].map((id) => ({ id })) });
   const a = prayerAlerts();
   const ps = prayerSettings();
   if (!anyAlert(a) || ps.lat === null) return true;
@@ -130,6 +139,18 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
     const times = await prayerDay(new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + day), ps);
     if (!times) break;
     for (const [k, name] of ALERT_PRAYERS.entries()) {
+      const pTime = times[PRAYERS.indexOf(name)].getTime() + DUA_AFTER * 60_000;
+      if (a.duas && pTime > now + 5_000) {
+        list.push({
+          id: DUA_BASE + day * ALERT_PRAYERS.length + k,
+          title: akt('du.noteTitle', { name: akt(`du.p.${name}` as AdhkarKey) }),
+          body: akt('du.noteBody'),
+          smallIcon: 'ic_stat_crescent',
+          channelId: 'prayer_duas',
+          schedule: { at: new Date(pTime), allowWhileIdle: true },
+          extra: { hash: '#/me', du: name },
+        });
+      }
       if (!a.on[name]) continue;
       const time = times[PRAYERS.indexOf(name)];
       const at = time.getTime() - a.before * 60_000;
@@ -177,6 +198,11 @@ export function initPrayerAlerts() {
   };
   refresh();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  // A du'a note tapped: Me opens (the note's address), then the session for that prayer.
+  void import('@capacitor/local-notifications').then(({ LocalNotifications }) => LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
+    const p = e.notification.extra?.du as AlertPrayer | undefined;
+    if (p && (ALERT_PRAYERS as readonly string[]).includes(p)) setTimeout(() => void import('./adhkar').then((m) => m.openDuas('adhan', p)), 1400);
+  }));
   let timer = 0;
   window.addEventListener('prayer-changed', () => {
     clearTimeout(timer);

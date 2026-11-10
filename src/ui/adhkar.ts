@@ -197,6 +197,7 @@ async function runSession(cfg: SessionCfg) {
       h('h3', {}, cfg.doneTitle),
       h('p', { class: 'muted' }, cfg.moment ? akt(`du.doneSub.${cfg.moment}` as AdhkarKey) : akt('ak.doneSub')),
       cfg.moment === 'sleep' ? h('p', { class: 'muted small' }, akt('du.dawnNext')) : '',
+      cfg.moment === 'adhan' ? h('button', { class: 'chip on', onclick: () => { dialog.close(); void openDuas('salah', cfg.prayer); } }, `${akt('du.title.salah')} ›`) : '',
       canClaim ? claim : h('button', { class: 'primary', onclick: () => dialog.close() }, akt('ak.close')),
       h('button', { class: 'chip', onclick: () => { finished = false; i = 0; paint(); } }, akt('ak.again')),
       h('p', { class: 'muted small ak-credit' }, akt('ak.credit'))));

@@ -66,6 +66,12 @@ const en = {
   'dw.morning': 'Good morning',
   'dw.say': "Say the waking du'a",
   'dw.later': 'Later',
+  'du.notes': "Du'a after the adhan",
+  'du.notesHelp': "A quiet note a few minutes after each adhan, opening its du'a and the adhkar after the salah.",
+  'du.notesOn': '🔔 On',
+  'du.notesOff': '🔕 Off',
+  'du.noteTitle': 'The adhan of {name}',
+  'du.noteBody': "Answer it with its du'a. After the salah, the adhkar are waiting.",
   'ak.credit': 'Arabic: hisnmuslim.com · English: Darussalam · Quran: King Fahd Complex, Saheeh International',
 };
 export type AdhkarKey = keyof typeof en;
@@ -134,6 +140,12 @@ const ar: Partial<Record<AdhkarKey, string>> = {
   'dw.morning': 'صباح الخير',
   'dw.say': 'قل أذكار الاستيقاظ',
   'dw.later': 'لاحقًا',
+  'du.notes': 'الدعاء بعد الأذان',
+  'du.notesHelp': 'تنبيه هادئ بعد كل أذان بدقائق، يفتح دعاءه والأذكار بعد الصلاة.',
+  'du.notesOn': '🔔 مفعّل',
+  'du.notesOff': '🔕 متوقف',
+  'du.noteTitle': 'أذان {name}',
+  'du.noteBody': 'أجبه بدعائه. وبعد الصلاة تنتظرك الأذكار.',
   'ak.credit': 'النص: hisnmuslim.com · الترجمة: دار السلام · القرآن: مجمع الملك فهد، صحيح إنترناشونال',
 };
 
