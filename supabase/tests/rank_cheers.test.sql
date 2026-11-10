@@ -23,7 +23,9 @@ grant all on ids to authenticated;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000021');
 select rank_report(current_date, 1, 0, 0, 0, 'Hana');
 insert into ids select 'code', rank_challenge_create() ->> 'code';
+reset role;
 insert into ids select 'id', (select id::text from rank_challenges where code = (select v from ids where k = 'code'));
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000021');
 select throws_ok($$ select rank_challenge_cheer((select v::uuid from ids where k = 'id'), 0) $$, '22023', null, 'not before the friend accepts');
 
 select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000022');
