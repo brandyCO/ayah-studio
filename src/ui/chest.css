@@ -1,0 +1,48 @@
+/* Reward chests (chest.ts), loaded with it: goal rows, Ranks, the wardrobe card, the adhkar finish. */
+.chest { position: relative; flex: none; width: 50px; height: 50px; padding: 0; border: 0; background: none; color: inherit; display: grid; place-items: center;
+  -webkit-tap-highlight-color: transparent; }
+.goal-day .chest { width: 62px; height: 62px; }
+.ck-art { position: relative; display: block; width: 100%; aspect-ratio: 80 / 76; }
+/* The stacked layers (chest.ts): same box, same view-box; the moving ones are HTML spans. */
+.ck-art > svg, .ck-art > span { position: absolute; inset: 0; display: block; }
+.ck-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ck-amt { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; font-weight: 800;
+  padding: 0 5px; border-radius: 99px; background: var(--card); color: var(--accent); box-shadow: 0 0 0 1px var(--line); line-height: 15px; }
+/* Origins in the 80 × 76 view-box: the lid hinges at (40, 37), the aura turns round (40, 40). Moves use the
+   individual translate / rotate / scale properties (in that order, as the transforms they replace). */
+.ck-art .ck-lid { transform-origin: 50% 48.68%; transition: .5s cubic-bezier(.2, 1.4, .4, 1); transition-property: translate, rotate, scale; }
+.ck-art .ck-mouth { transform-origin: 50% 48.68%; }
+.ck-art .ck-mouth, .ck-art .ck-aura, .ck-art .ck-glints { opacity: 0; }
+.ck-art .ck-aura { transform-origin: 50% 52.63%; }
+.ck-art .ck-glints .ck-gl { position: absolute; inset: auto; width: 7.5%; height: 7.89%; display: block; }
+/* locked: resting, a little muted, breathing */
+.chest.locked .ck-art { filter: saturate(.55) brightness(.92); animation: ck-breathe 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes ck-breathe { 50% { translate: 0 -1px; scale: 1.015; } }
+/* ready: now and then it shakes and the lid lifts a crack with light behind it; heavier chests shake harder, slower */
+.chest.ready { cursor: pointer; --w: 7deg; --dur: 2.2s; }
+.chest.t2.ready { --w: 8deg; --dur: 2.4s; } .chest.t3.ready { --w: 9deg; --dur: 2.6s; } .chest.t4.ready { --w: 10deg; --dur: 2.8s; }
+.chest.ready .ck-art { animation: ck-shake var(--dur) ease-in-out infinite; transform-origin: 50% 92%; }
+.chest.ready .ck-lid { animation: ck-peek var(--dur) ease-in-out infinite; }
+.chest.ready .ck-mouth { animation: ck-mouth var(--dur) ease-in-out infinite; }
+.chest.ready .ck-aura { opacity: .9; animation: ck-aura 2.4s ease-in-out infinite; }
+.chest.ready .ck-glints { opacity: 1; }
+.chest.ready .ck-glints .ck-gl { animation: ck-glint 1.8s calc(var(--i) * .45s) ease-in-out infinite; }
+.chest.t4.ready .ck-aura { animation: ck-aura-o 2.4s ease-in-out infinite, spin 18s linear infinite; }
+.chest.ready::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; z-index: -1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rw-n3, var(--accent)) 45%, transparent), transparent 68%); animation: ck-aura 2.4s ease-in-out infinite; }
+.chest.ready .ck-amt { color: #fff; background: var(--rw-hero, var(--accent)); box-shadow: none; }
+@keyframes ck-shake { 0%, 52%, 100% { translate: 0 0; rotate: 0deg; } 56% { translate: 0 -3px; rotate: calc(var(--w) * -1); } 61% { translate: 0 -3px; rotate: var(--w); }
+  66% { translate: 0 -2px; rotate: calc(var(--w) * -.7); } 71% { translate: 0 -1px; rotate: calc(var(--w) * .45); } 76% { translate: 0 0; rotate: calc(var(--w) * -.2); } 80% { translate: 0 0; rotate: 0deg; } }
+@keyframes ck-peek { 0%, 55%, 82%, 100% { translate: 0 0; rotate: 0deg; } 62%, 72% { translate: 0 -3.95%; rotate: -4deg; } }
+@keyframes ck-mouth { 0%, 55%, 82%, 100% { opacity: 0; } 62%, 72% { opacity: 1; } }
+@keyframes ck-aura { 50% { opacity: .55; scale: .94; } }
+@keyframes ck-aura-o { 50% { opacity: .55; } }
+@keyframes ck-glint { 0%, 100% { scale: 0; opacity: 0; } 40% { scale: 1; opacity: 1; } 70% { scale: .4; opacity: .5; } }
+/* open: claimed, lid up and back, quiet */
+.chest.open .ck-art { opacity: .55; filter: saturate(.5); }
+.chest.open .ck-lid { translate: 0 -11.84%; rotate: -12deg; scale: 1 .62; }
+.chest.open .ck-amt { background: none; box-shadow: none; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .chest .ck-art, .chest .ck-lid, .chest .ck-mouth, .chest .ck-aura, .chest .ck-glints .ck-gl, .chest::before { animation: none !important; }
+  .chest.ready .ck-mouth { opacity: .7; }
+}

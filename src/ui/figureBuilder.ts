@@ -12,7 +12,7 @@ import {
 } from './figure';
 import { h, haptic, toast } from './dom';
 import { reduced } from './juice';
-import { glance, hop, nod, sparkle } from './actor';
+import { glance, hop, layer, nod, poseClass, sparkle } from './actor';
 import { sfx } from './sfx';
 import { ownsPiece } from '../data/wardrobe';
 import './figure.css';
@@ -78,6 +78,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     stage.style.setProperty('--fb-a', bg[0]);
     stage.style.setProperty('--fb-b', bg[1]);
     stage.innerHTML = figureSvg(f, { label: rt('fb.title'), actor: true });
+    layer(stage);
     if (hop) {
       react();
       sfx.pop(Math.floor(Math.random() * 3));
@@ -169,7 +170,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     const steps = [0, 70, 150, 245, 360];
     steps.forEach((ms, i) => setTimeout(() => {
       f = random(f.face);
-      if (i < steps.length - 1) { paintStage(false); sfx.tick(); stage.querySelector('.fg-act')?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
+      if (i < steps.length - 1) { paintStage(false); sfx.tick(); stage.querySelector('.fg-mv')?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
       lastSlot = null;
       paintStage(true); paintTabs(); paintPanel();
       rolling = false;
@@ -202,7 +203,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
       if (!reduced()) {
         // A cheer: two happy hops with sparkles, then the builder closes on the new look.
         wear.toggleAttribute('disabled', true);
-        stage.querySelector('svg.fg')?.classList.add('cheer');
+        poseClass(stage, 'cheer', true);
         hop(stage, 34, 600);
         sparkle(stage);
         setTimeout(() => { hop(stage, 18, 480); sparkle(stage, 8); }, 560);

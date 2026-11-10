@@ -1515,6 +1515,17 @@ duas/reflections section in Me.
       surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
       after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
       Me idle at 6× CPU throttle ~880 → ~1 ms/s
+      **60 fps pass** (owner request 2026-11-10, "the characters lag when tapped… make every animation 60fps"): moving parts
+      are HTML layers the compositor moves without repainting, never animations inside an SVG. Characters (`layer()` in
+      `actor.ts`): body, head, raised / waving arms and shadow as stacked SVG copies in `span.fg-lay`; chests (`chestArt()`
+      returns `span.ck-art`: aura, mouth, box, lid, glints), flames (`flame.ts`: glow, body, inner flame, embers as `<i>`),
+      badge shines (a masked HTML band) and the lantern / star / rosette moments (`lift()` in `celebrate.ts`; motes as `<i>`
+      rising in `cqw`) likewise. Keyframes use the individual `translate` / `rotate` / `scale` properties (an animated
+      `rotate()` in `transform` re-layerized the page every frame). Sparks draw in a worker on an OffscreenCanvas
+      (`sparksWorker.ts`, engine `sparksCore.ts`; main-thread fallback). While a moment covers the screen the page behind
+      gets `content-visibility: hidden` (was `visibility`, a 340 ms restyle) and its WAAPI animations pause. Chest styles
+      moved to `src/ui/chest.css` (lazy, with `chest.ts`). 6× CPU throttle, headless: character tap 42 → ~50–57 fps, room
+      38 → 55, chest 38 → 53, lantern 51 → 58, streak 38 → 57, Me scrolling 59; every picture checked identical
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
