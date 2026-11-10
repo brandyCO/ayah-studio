@@ -1,6 +1,7 @@
 // A lesson in the Learn tab (#/learn/{surah}): grows the surah's tree (src/data/garden.ts).
-//   New    the next chunk: Listen (the reciter, words lit, a turn to repeat after each round) →
+//   New    the next chunk: Meaning first (each word's meaning, the translation) → Listen (the reciter, words lit, a turn to repeat after each round) →
 //          Practise (the text, hints fading: all words → first word of each ayah → none) →
+//          Exercises (src/ui/lessonKinds.ts: which word means, next word, fill the word, order) →
 //          From memory (the text hidden; recite, reveal, check yourself)
 //   Link   everything learned so far, from ayah 1, from memory
 //   Whole  the whole surah from memory, once: the tree is full grown
@@ -22,13 +23,14 @@ import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming }
 import { surahName, t, } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
+import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { h, haptic, toast } from './dom';
 import { drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
 import { reelReciter } from './prefs';
 
 type Step = 'new' | 'link' | 'whole' | 'water';
-type Phase = 'listen' | 'practice' | 'memory' | 'check' | 'done';
+type Phase = 'meaning' | 'listen' | 'practice' | 'drill' | 'memory' | 'check' | 'done';
 interface AyahAudio { src: string; from: number; to: number; words: WordTiming | null; heard: boolean[] }
 
 const TURN_EXTRA = 1.5;
@@ -219,7 +221,16 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const first = el.querySelector<HTMLElement>('.lw');
     if (first && el === textEl.querySelector('.ls-page:has(.lw)')) first.scrollIntoView({ block: 'center' });
   }
+  let kindEl: HTMLElement | null = null; // the Meaning or Exercises screen while that phase is on
   function paintText() {
+    textEl.classList.toggle('ls-kind', !!kindEl);
+    if (kindEl) {
+      root.classList.remove('ls-pageview');
+      wordEls.clear(); moreEls.length = 0;
+      trEl.replaceChildren();
+      if (kindEl.parentElement !== textEl) textEl.replaceChildren(kindEl);
+      return;
+    }
     root.classList.toggle('ls-pageview', pageView());
     if (pageView()) { paintPage(); return; }
     trEl.replaceChildren();
@@ -247,14 +258,17 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const b = (label: string, on: () => void, cls = 'chip') => h('button', { class: cls, onclick: on }, label);
     const primary = (label: string, on: () => void) => b(label, on, 'primary brand-btn');
     const n = range[1] - range[0] + 1;
-    const phases: [Phase, LearnKey][] = step === 'new' ? [['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['memory', 'learn.phMemory']] : [];
+    const phases: [Phase, LearnKey][] = step === 'new'
+      ? [['meaning', 'learn.phMeaning'], ['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['drill', 'learn.phDrill'], ['memory', 'learn.phMemory']] : [];
     phaseEl.replaceChildren(
       h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n })),
       phases.length ? h('span', { class: 'ls-phases' }, ...phases.map(([p, k], i) => h('span', { class: p === phase || (p === 'memory' && phase === 'check') ? 'on' : '' }, `${i + 1} ${lt(k)}`))) : '');
-    if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
+    if (phase === 'meaning') actions.replaceChildren(primary(lt('learn.toListen'), () => go('listen')));
+    else if (phase === 'drill') actions.replaceChildren(b(lt('learn.skipDrill'), () => go('memory')));
+    else if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
     else if (phase === 'practice') actions.replaceChildren(
       b(lt(level === 0 ? 'learn.hideSome' : level === 1 ? 'learn.hideAll' : 'learn.showAll'), () => { level = (level + 1) % 3; peeked.clear(); refreshHidden(); paintActions(); }),
-      primary(lt('learn.fromMemory'), () => go('memory')));
+      primary(lt('learn.toDrill'), () => go('drill')));
     else if (phase === 'memory') actions.replaceChildren(
       h('p', { class: 'ls-hint muted small' }, lt('learn.memoryHint')),
       b(lt('learn.practiseFirst'), () => go('practice')), primary(lt('learn.reveal'), () => go('check')));
@@ -276,6 +290,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     phase = p;
     pop.hidden = true;
     peeked.clear();
+    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), () => go('memory')) : null;
+    textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
     paintText();
     paintActions();
@@ -288,7 +304,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
     level = 0;
     paintHead();
-    go(step === 'new' ? 'listen' : 'memory');
+    go(step === 'new' ? 'meaning' : 'memory');
   }
 
   // --- recitation ---
@@ -477,6 +493,23 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     return spans.map(([f, l], p) => (i >= f && i <= l ? list[p] : '')).filter(Boolean).join(' ');
   }
 
+  /** A word's own sound, where the reciter's timings cover it (rule 8). */
+  async function sayWord(a: number, i: number): Promise<void> {
+    if (!(await ensureAudio())) return;
+    const x = audios![a - 1];
+    if (!x.words || !x.heard[i]) return;
+    stopAll();
+    const my = run;
+    lightWord(a)(i);
+    await playSpan(my, x, x.words.start[i], x.words.end[i] + 0.06, () => {}, true);
+    if (my === run) audio.pause();
+    lightWord(a)(null);
+  }
+  const kindCtx = (): KindCtx => ({
+    s, range, words, trans, tr: { lang: tInfo.lang, dir: tInfo.dir, name: tInfo.translator }, meaningOf, sayWord,
+    refOf: (a, b) => reference(m, a, b ?? a),
+  });
+
   let peekTimer = 0;
   async function tapWord(a: number, i: number) {
     const el = wordEls.get(`${a}:${i}`);
@@ -495,15 +528,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     pop.hidden = false;
     pop.replaceChildren(h('span', { class: 'ls-pop-ar', lang: 'ar', dir: 'rtl' }, words[a - 1][i]), h('span', { class: 'ls-pop-en' }, mean || lt('learn.noMeaning')),
       h('span', { class: 'muted small' }, `${s}:${a} · ${lt('learn.wbwCredit')}`));
-    if (!(await ensureAudio())) return;
-    const x = audios![a - 1];
-    if (!x.words || !x.heard[i]) return; // rule 8: no timing of its own → its meaning only
-    stopAll();
-    const my = run;
-    lightWord(a)(i);
-    await playSpan(my, x, x.words.start[i], x.words.end[i] + 0.06, () => {}, true);
-    audio.pause();
-    lightWord(a)(null);
+    await sayWord(a, i); // rule 8: no timing of its own → its meaning only
   }
 
   // --- passing a step ---

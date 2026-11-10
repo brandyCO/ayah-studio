@@ -1661,9 +1661,18 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
       **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
-      lesson kinds (meaning first, next word, order the ayat), tasmi' (page view, prompt, slips, weak words, similar ayat,
+      tasmi' (page view, prompt, slips, weak words, similar ayat,
       playback), page memory (line starts, page start/end, where is the ayah, page strength), the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
+- [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
+      Exercises → From memory. **Meaning first**: every word of the chunk as a tile (Arabic + Quran.com meaning, tap to
+      hear it where timed), then the ayah's translation. **Exercises**: 3–6 cards (by the chunk's words) — which word
+      means "…", what comes next, which word goes here, put the ayat (≤ 4) or a single long ayah's three parts in order;
+      three choices, wrong ones only other words of the same surah (not shown in the line; an ayah-final word only against
+      ayah-final words, as the printed number would give it away; the order cards show the words without the printed
+      number); a missed card comes back once at the end; a bar fills; feedback strip + Continue, sounds via `sfx`. Missed
+      words are kept as weak (`src/data/weakWords.ts`, localStorage `learnWeak`, right twice to leave) and asked first next
+      time; tasmi' will use them. "Skip to reciting" leaves the exercises
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
