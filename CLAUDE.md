@@ -1503,7 +1503,7 @@ duas/reflections section in Me.
       a crescent in the window, Eid pennants and lights, Dhul Hijjah white and green pennants. **Gestures in friend challenges**
       (no chat): Salam, MashaAllah, Keep going, a du'a, Race you — one tap, ≤ 5 a day, your character acts it with a bubble, the
       friend's acts the one they sent once when the card comes into view (`src/ui/cheers.ts`, migration
-      `20261111000000_rank_cheers.sql`: `rank_challenge_cheer`, `rank_challenge_cheers`, table without access; pgTAP
+      `20261111100000_rank_cheers.sql`: `rank_challenge_cheer`, `rank_challenge_cheers`, table without access; pgTAP
       `rank_cheers.test.sql`, 10 checks). **Big milestones**: the character cheers beside the rosette and Khatm moments and on the
       surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
       after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;

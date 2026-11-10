@@ -1,4 +1,4 @@
--- Friend challenge gestures (supabase/migrations/20261111000000_rank_cheers.sql): only the two players, only
+-- Friend challenge gestures (supabase/migrations/20261111100000_rank_cheers.sql): only the two players, only
 -- while it runs, five set gestures, at most 5 a day; the table cannot be read.
 begin;
 create extension if not exists pgtap with schema extensions;
