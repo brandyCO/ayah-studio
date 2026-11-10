@@ -4,7 +4,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
-//   #/learn[/N]        Learn: the juz gardens, and a lesson that grows surah N's tree
+//   #/learn…            Learn: the path, lessons, Your garden, tree close-ups, page memory (src/ui/learnRoutes.ts)
 //   #/me               Me: streak flame, stats, reading time, settings
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
@@ -99,12 +99,16 @@ async function route() {
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
     } else if (view === 'learn') {
-      if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
-      else c = await (await import('./ui/garden')).showGarden(screen);
+      c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
+    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp') && a)) {
+      c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
       c = await showDrafts(screen);
-    } else c = await showSurahList(screen, view === 'search');
+    } else {
+      await import('./ui/screens.css').catch(() => {});
+      c = await showSurahList(screen, view === 'search');
+    }
     dropSkel();
     if (id === routeId) cleanup = c;
     else c();
@@ -159,5 +163,7 @@ void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
 void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
+// Ranks: the day's checked totals go to the server when they change (signed in with Google only).
+void import('./together/ranks').then((m) => m.watchRanks());
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

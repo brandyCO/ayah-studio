@@ -246,6 +246,10 @@ Owner wants it to look and feel like Tarteel: a real full-screen mushaf page.
       a result opened or Enter) and **Recently read** (cards: the last 12 mushaf pages stayed on ≥ 3 s, page,
       reference, when), each with Clear; this device only (`src/data/history.ts`, localStorage
       `searchHistory` / `recentPages`). 🔍 opens a fresh search; ‹ back to `#/` keeps the last one
+- [x] Copy ayat as text (owner request 2026-11-09): selection bar → copy icon (mushaf + translation
+      view) → Arabic (with the reference) · Arabic + translation · Translation only; one ayah or the
+      selected range, the bundled text unchanged with its ayah numbers, translator credited; last choice
+      remembered per device (`copyWith`; `src/ui/copyAyat.ts`)
 - [ ] Tested by the owner on their phone
 Note: the reading view uses QCF glyph fonts; the video renderer still draws the bundled Unicode text
 with the KFGQPC Uthmanic Hafs font (rule 5).
@@ -258,9 +262,10 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
 - [x] Estimated reel length while selecting (selection bar, last-used reciter)
 - [x] Owner feedback: repeats shown again; translation synced to the words on screen; surah name
       position (top / below the ayah / bottom) and size; reciter credit optional (off); watermark optional
-- [x] Timeline (`src/ui/spine.ts`, CapCut-style): starts at the left, white playhead (kept mid-screen
-      while playing), "00:00 • 00:02" ruler, zoom (pinch, ctrl+wheel, −/+), drag the ruler to scrub,
-      drag elsewhere to scroll; room under the tracks. Tracks: scenes (thumbnails, lengths, transition
+- [x] Timeline (`src/ui/spine.ts`, CapCut-style): the white playhead is fixed in the middle (owner
+      request 2026-11-09) and the ruler and tracks slide under it — swiping anywhere (ruler or an
+      unselected block, with a fling) moves the playback position, a tap on the ruler slides that moment
+      under it; "00:00 • 00:02" ruler, zoom around the playhead (pinch, ctrl+wheel, −/+); room under the tracks. Tracks: scenes (thumbnails, lengths, transition
       markers, white + to add) and recitation audio (waveform per ayah). No text track (owner request)
 - [x] Block editing (owner request), within the rules: tap a block to select it →
       **scene**: drag edges to trim (neighbours give way, min 1 s, snap to the reciter's pauses),
@@ -572,7 +577,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       t (60 fps clips skip a copy); Cinematic depth (`soften()`) enlarges its 1/10 copy to 1/4 smoothly
       before stretching it (max 5/255 pixel difference, about half the cost). Headless Chromium, 11.8 s
       reel on Mist: export 21.0 → ~14.5 s, playback ~40 → ~55 fps. Fourth pass (owner request 2026-10-28):
-      a tap anywhere on the timeline moves the playhead there (snapped) as well as selecting the block;
+      a tap on the timeline selects the block (the playhead stays fixed in the middle since 2026-11-09);
       the logo: **Remove black** (`mark.knock`, `knockedLogo()`: alpha = brightest channel, colours
       divided by it, made once per logo), **drag on the preview** (`mark.x`, centre across the safe width;
       top/bottom from `pos`, so it stays in its strip and never covers the text, rule 6), **Show from /
@@ -667,7 +672,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       layout (`lastPage` in localStorage), reflections read after the first page → reopen ~0.5 s at 4× CPU
       throttle (was ~2 s). Offline warm-up once per app version (`warmedUp`); QDC timings reused for 3 days
 - [x] Caches: recitation audio ≤ 300 MB (least recently used first), SW page fonts ≤ 200, timings ≤ 120,
-      Android font cache ≤ 200; thumbnails as WebP (built-in, library, drafts)
+      Android font cache ≤ 200 (now: all pages in the APK); thumbnails as WebP (built-in, library, drafts)
 - [x] Old-phone mode (`src/lite.ts`, `html.lite`: no paper grain / glass blur / launch sweep, studio
       preview starts at 75 %; Auto by memory ≤ 3 GB, ≤ 4 cores or Data Saver; Device check: Auto/On/Off)
 - [x] Performance timings (`src/perf.ts`, this device only, Device check)
@@ -1069,7 +1074,11 @@ tafsir only from published, credited editions; UI strings only are translated by
       ≤ 30 s in a pause (between ayat when one falls 8–30 s in, else between two text groups, never mid-word);
       each is exported at 720P with `exportVideo({ range })` (audio sliced by `sliceAudio()`; ≈ 14 MB a part),
       then shared together (Android: saved + one share sheet; web: Web Share, else a download per part); the
-      caption is copied too
+      caption is copied too. 2026-11-09 (owner): WhatsApp Status now takes 90 s (`STATUS_LIMIT`), so a reel up to 90 s
+      is shared whole; a longer one is cut into the fewest parts, of similar length, each in a pause.
+      **Caption languages** (owner request 2026-11-09): chips over the caption — Arabic / English / Arabic + English
+      (localStorage `captionLang`, default both) and "Include the ayat" (`captionAyat`, on): the Arabic exactly as in
+      the reel and/or the whole-ayah translation with each ayah's reference, each only when it fits whole
 - [x] G7 Friendliness pass (owner request 2026-10-28): bottom tab bar `src/ui/tabs.ts` — **Read · Listen ·
       Create · Me** (always on the surah list and drafts; on the mushaf it comes up with the title bar, so the
       page stays clean; hidden under the selection bar; the player sits above it). Listen = play from this
@@ -1083,7 +1092,12 @@ tafsir only from published, credited editions; UI strings only are translated by
       **Whole mushaf on the device** (owner request 2026-10-29, "no loading pages while swiping"):
       `src/data/mushafDownload.ts` downloads all 604 page fonts (~95 MB) in the background after the first page
       shows — two at a time while idle, nearest to the page being read first, Wi‑Fi / wired only (Network
-      Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. No cap on
+      Information API; phones without it wait), paused while hidden or offline, `mushafKept` when done. **Every page offline at
+      once** (owner decision 2026-11-09): the Android APK carries all 604 page fonts (the CI build no longer leaves
+      them out; the old Cache Storage `qcf-v2` copy is deleted once); on the web / iPhone a sheet on the mushaf
+      (once, `mushafAsked`) and Me → ⚙ → Reading → **Read without internet** offer "Download the whole mushaf ·
+      95 MB" with a progress bar (`src/ui/mushafOffline.ts`): with that yes (`mushafOk`) it runs on any connection,
+      six pages at a time, and asks for persistent storage; without it, three at a time on Wi‑Fi only. No cap on
       kept page fonts any more (app cache; service worker `MAX_PAGE_FONTS` 700). The reader loads fonts 10 pages
       ahead / 6 back (was 3 / 2) and keeps ±12 in memory
       **Favourite reciters** (owner request 2026-10-31; decision "ask each time"): ☆ beside each reciter in the
@@ -1419,6 +1433,217 @@ duas/reflections section in Me.
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
       their medal moments
+      Tap to open (owner request 2026-11-09, "interactive… the things won inside the chest"): the chest drops in and waits
+      ("Tap the chest to open it", 3 taps, 4 from 25 Light, 5 from 100; a dot per tap); each tap jolts it, sparks fly from
+      the finger, another crack lights up and the seam glows brighter (`--crack`); the last tap bursts it open and the
+      prizes come out of its mouth one by one in an arc, each landing on its own card (`Moment.loot`: `light` counting up,
+      `freeze`, `item` with its own art + label, `rare`), then the title and Alhamdulillah. A tap while they come out shows
+      them all. Goal / adhkar chests hold their Light; a Ranks prize holds its Light, the trophy, the freeze (#1) and the
+      week's jewel avatar or rare frame. Enter / Space taps; reduced motion → the open chest with every prize. Styles in
+      `src/ui/celebrate.css` (lazy)
+      **Craft pass + sounds** (owner request 2026-11-10, "inspired by Duolingo… lets try sounds"): `src/ui/juice.ts` — spring
+      physics on WAAPI (`spring`, `squash`, `popIn`, `bump`: overshoot, then settle), `tick()` counters that pop on each step,
+      `combo()` ("2 in a row" pill when rewards are claimed within 2 min of each other, sessionStorage `celCombo`) and **Noor**
+      as a sprite (`noor()`: a floating light that hops on each tap, cheers when the chest bursts, glows) in the chest and streak
+      moments. Chest: JS drop-in with a squash on landing, an anticipation crouch before the last tap, prize cards squash as they
+      land, the Light flies to the chip led by a bigger light, the chip bumps and ticks as the dots arrive. Streak and Ranks
+      moments get the same springs and sounds. **Sounds** (`src/ui/sfx.ts`, Web Audio, no files): shaped noise + a soft low
+      thud only — tap, open, pop, shimmer, whoosh, tick; never music or instruments, never in a reel (rule 3); silent while a
+      recitation plays (Media Session), in the Kids space, when the page is hidden, and when switched off in Me → ⚙ → App →
+      Reward sounds (localStorage `rewardSounds`, on by default). Smoothness: sparks capped at 220 (110 and half bursts in
+      old-phone mode, dpr 1.5), ready chests pause their shaking while off screen (IntersectionObserver, `.chest.off`)
+      Speed pass (owner "do 2 to 4", 2026-11-10): the flying Light is one canvas (`.lt-fly-layer`) instead of a node per dot;
+      the moments' styles moved out of the first load into `src/ui/cel.css` (imported by celebrate / streak / rank moments;
+      first load 138.0 → 136.2 KB); a ready chest on screen preloads `celebrate` and warms the sound engine (`warmSounds()`)
+      while idle; a tap during a non-chest moment plays the rest at once (`skip()`), a second tap closes; sparks watch the
+      frame time and drop to half the sparks at 1× resolution when frames average > 26 ms; moving parts get GPU layers only
+      while they move. Measured at 6× CPU throttle (Chromium): chest ~52 fps, lantern ~57, streak ~56
+      Smoothness pass (owner 2026-11-10, "a bit laggy … without losing any of the quality"): a moment's sky is opaque (no
+      full-screen backdrop blur, which was redone every frame); once it has faded in the screen behind is hidden and its
+      animations are paused (`holdPage()` in `juice.ts`: class `cel-held` on the animating elements, `cel-cover` on html),
+      released as the moment fades out; sparks keep their box size from a ResizeObserver (reading it each frame forced a
+      layout per frame); the chest beam lost a 2 px blur and the streak flame's 28 px drop-shadow became a soft light
+      behind it; the Me flame and badge shines pause off screen (`offscreen.ts`, `.anim-off`). 6× CPU throttle: chest
+      19 → 37 fps, big chest 22 → 40, lantern 28 → 48, streak 26 → 39, Me 37 → 48 (scrolling 44 → 56)
+      **Feel pass** (owner OK 2026-11-10 after recordings): each sound carries its own vibration, sent after the audio output latency
+      so both land together (vibration also with sounds off); pitch varies ±6 % each time, prizes landing in a row climb a
+      pentatonic scale; from the third reward in a row (`combo()` ≥ 3) a chest takes one tap fewer, drops in and pours faster;
+      a rare prize (`rare` item) or a 100+ chest gets a slow gather (`.cel.charging`: the room dims, the seam blazes, `sfx.rare()`
+      swell), a double burst with a gold wash (`.epic`) and the rare card lands with a ring and a "Rare" ribbon. Characters
+      (`figure.ts`): head sway, breathing shadow, and in the builder a hop with crouch / stretch / squash on each change (a nod for
+      head parts), a glance or fidget every 4–7 s, Surprise me shuffles through looks, Wear it cheers with sparkles
+      **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
+      `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
+      hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when
+      moving down) and waves on Me's streak card (tap: waves again). Nothing without a character. **Podium** (`podium()` in
+      `ranks.ts`): the league's / board's top 3 as characters (or their avatar) on gold, silver and bronze steps, risen once a day
+      (`rkPodium`), #1 cheers, a tap makes a player hop (yourself: a wave). **Reward art in the character style**: `src/ui/flat.ts`
+      (`two()`, `edge()`, `shine()`, `mix()`, `freezeArt()`) — chests, badges, trophies, tier emblems, avatar discs, frame rings
+      and laurels redrawn flat two-tone with a chunky edge (class names and chest geometry kept for the cracks); the freeze also
+      shows in the shop. Garden decorations left out (the Learn path replaces the grid). **Frames like jewellery** (owner: "way more premium"):
+      `frameArt()` in `rankAvatars.ts` — metal rims with depth (`rim()`), gems, laurel leaves, pearls, mosaic tiles, lanterns,
+      a rosette; frames 4+ carry a glint that travels round the rim (SMIL, none with reduced motion). **Character by default**
+      (owner decision 2026-11-10): with no character, Me shows a dashed outline "Make your character" (the builder, starting
+      from a ready-made one) and Ranks the builder card above the league; the builder works signed out (`setFigure()` keeps it
+      on the device, `sendLocalFigure()` sends it once signed in, `rankFigureSent`); symbol discs stay as an option
+      **Wardrobe** (owner request 2026-11-10, "pieces by rarity, no limits"): 15 earned pieces (`WARDROBE` in `figure.ts`:
+      Cute / Rare / Epic / Legendary), never sold. The week's top 3 win the week's piece (`rank_prize_piece()`, 6 in turn;
+      `rank_prizes.piece`, checked by `rank_set_figure`; migration `20261110900000_rank_prize_pieces.sql`); streaks of 7 / 30 /
+      100 / 365 days (best streak) and the seasons (Ramadan, Eid al-Fitr 1–3 Shawwal, Dhul Hijjah 1–9, Eid al-Adha 10–13; Umm
+      al-Qura) give the rest (`src/data/wardrobe.ts`), waiting in a chest on Me (`src/ui/wardrobeCard.ts`), then the builder's
+      Wardrobe tab (locked pieces can be tried on, not worn). The character follows the day (`dayLook()` in `actor.ts`): morning
+      stretch, the mushaf when pages were read today, a lantern after 21:00, dozing once the bedtime du'a is said; its bust sits in
+      the page-counted pill; in the overtake moment yours cheers and the passed player's waves back
+      **Round 2** (same request): **Your room** on Me (`src/ui/room.ts` + `room.css`, lazy, only with a character): this
+      hour's sky in the window, Ranks trophies on the top shelf (`prizeWins()` in `garden.ts`, from the prize decorations kept),
+      the best 4 badges below, a framed flame with the best streak, a gold star for a legendary piece; the character sits on a
+      cushion (mushaf by day, lantern at night), hops when tapped; Dress up / Share. **Character card** (`src/ui/charCard.ts`):
+      1080×1350 PNG, the character cheering (`figureSvg(…, { cheer })`) on its background, streak / pieces / trophies, shared like
+      the Monday recap. **Learn path** (`src/ui/pathBuddy.ts`, one call in `learnPath.ts`): stands beside the current step and
+      waves; sits under a tree that just grew and cheers; under the last tree when every step is done. **Friend challenges**:
+      both characters face each other on steps sized by points (`duo()` in `ranks.ts`); the leader cheers, the other waves
+      **Round 3** (owner "all do them", 2026-11-10): **Decorate your room** (`src/data/roomItems.ts`, `src/ui/roomArt.ts`,
+      `src/ui/roomShop.ts`, lazy): 19 pieces in five places (plant, side piece, rug, curtains, hanging lantern), common / rare /
+      epic for Light (60–300, `rm:{id}` in the shop's owned list, synced), and bronze / silver / gold lanterns only for a week in a
+      league's top 3 / 2 / 1 (`prizeWins()`); one piece per place, this device's choice (localStorage `roomLook`); the sheet shows the
+      room live on top with the character sitting in it. **Seasonal room** (`seasonArt()`, `seasonNow()`): Ramadan fanous garland +
+      a crescent in the window, Eid pennants and lights, Dhul Hijjah white and green pennants. **Gestures in friend challenges**
+      (no chat): Salam, MashaAllah, Keep going, a du'a, Race you — one tap, ≤ 5 a day, your character acts it with a bubble, the
+      friend's acts the one they sent once when the card comes into view (`src/ui/cheers.ts`, migration
+      `20261111100000_rank_cheers.sql`: `rank_challenge_cheer`, `rank_challenge_cheers`, table without access; pgTAP
+      `rank_cheers.test.sql`, 10 checks). **Big milestones**: the character cheers beside the rosette and Khatm moments and on the
+      surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
+      after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
+      Me idle at 6× CPU throttle ~880 → ~1 ms/s
+- [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
+      reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
+      (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
+      every weekly goal (`WEEK_ALL_LIGHT` 50). Me → Today's goals shows "Resets in 5 h 12 m" (midnight) and a This week
+      block "Resets in 6 d 5 h" (Monday 00:00, `resetsAt()`), kept current by the screen's 30 s tick; Edit has the weekly rows
+- [x] M12 Ranks + raised Create (owner request 2026-11-09): tab bar **Read · Learn · Create · Ranks · Me**, Create a raised
+      round button in the middle (`.tab-fab`). `#/ranks` (`src/ui/ranks.ts`, lazy, own CSS `ranks.css` and strings
+      `src/i18n/ranks.ts`): Google accounts only. The app reports each day's totals of what it checks itself (pages
+      counted after their reading time, seconds of recitation played, surahs finished, reels exported; all devices
+      combined) through `rank_report()` (`src/together/ranks.ts`, at most every 90 s, today + yesterday); the server
+      caps them (60 pages, 3 h, 10 surahs, 3 reels a day), never lets them go down or grow faster than time allows,
+      and scores them (page 10, minute 2, surah 30, reel 15, active day 20). Dhikr and Light are never ranked.
+      **League**: 15 a league, tiers Lantern → Star → Moon → Dawn → Sun, top 3 up and bottom 3 down (leagues of 8+),
+      settled lazily when a player's new week starts (Monday). **Global**: this week / all time, top 100 + your place.
+      **My boards**: ≤ 50 people, invite link `#/rb/{code}` or code, ≤ 10 owned / 20 joined. Editable name (≤ 24).
+      Rows show places moved since yesterday (green ▲n / red ▼n beside the name, `move`; none on Mondays) and a ▲ / ▼
+      on the league rows that move up / down. Migrations `20261110000000_ranks.sql`, `20261110100000_rank_moves.sql`,
+      pgTAP `ranks.test.sql` (38 checks)
+      Second pass (owner "yes", 2026-11-09; migration `20261110200000_ranks_more.sql`): **avatars only, no photos**
+      (24 drawn in `src/ui/rankAvatars.ts`, 12 symbols × 2 colour sets, ring in the tier's colour; `rank_set_look`);
+      **private mode** ("Keep my reading between me and Allah": others see "A reader", off the global board;
+      `rank_face()`); **a board per measure** (chips Overall · Pages · Listening · Surahs · Reels on Global and boards,
+      this week; `rank_measure()`); **weekly quest** (one of pages 50 / listening 60 min / 5 active days / 2 surahs, in
+      turn, +50 once, checked by the server in `rank_report`); **rival** line ("Maryam is 92 points ahead. About 10 pages
+      passes them."); **last week's result** and **players you passed** as cards (`rankMoments()` / `takeRankMoments()`
+      in `src/together/ranks.ts`; the full-screen moments belong to the reward-animation thread); **board goal** (pages
+      together this week, set by the owner; `rank_board_goal`); "Points measure effort in the app, not reward with Allah".
+      Rows by place (owner request): #1 gold with a glow, #2 silver, #3 bronze (medal discs), 4–10 a soft tint, the rest plain
+      **Prizes + Light shop** (owner decision 2026-11-09, "Light + trophies + shop"; migration `20261110300000_rank_prizes.sql`,
+      pgTAP 46 checks): when a player's next week starts, last week's top 3 of a league of 3+ (with points) get a prize row
+      (`rank_prizes`): #1 300 Light + a streak freeze, #2 150, #3 100, +50 for moving up; shown as a chest on Ranks, claimed
+      once (`rank_claim_prize` → `claimGoal('rk:{week}')`, `keepFreeze()`), then kept on the **trophy shelf**. **Shop**
+      (`src/data/shop.ts`, Ranks → Shop): streak freezes kept for later (250 Light, ≤ 3; a flame that went out is relit with
+      one per missed day from Me, `useFreezes()` → `revive()`), avatars 24–31 (150) and frames 1–3 (200–400) — purchases,
+      kept (`fz:`) and used (`fu:`) freezes are `s:…` entries in the garden's `owned` map (synced, merged, a purchase counts
+      once; `wallet()` subtracts them), so first load does not grow. **Only for winners**
+      (server-checked in `rank_set_look`): avatars 32–35 + frame 4 (Sun tier reached, `best_tier`), laurel frames 5 / 6 / 7
+      (a week at #1 / top 2 / top 3), champion avatars 36–39 (1 / 3 / 5 / 10 weeks won at #1). Art in `src/ui/rankAvatars.ts`
+      (`avatar(i, tier, size, frame)`, `trophy(place)`). **Weekly prize items** (owner request 2026-11-09, "more prizes … items"; migration
+      `20261110400000_rank_prize_items.sql`, pgTAP 50): each week has its own prizes, the same in every league and back
+      only after 12 weeks (`rank_prize_item()` / `weekPrize()`): #1 a jewel avatar (40–51), #2 and #3 a rare frame (8–13:
+      pearls, crescent crown, mosaic, aurora, lanterns, rosette); `rank_prizes.item`, worn only by their winners
+      (`rank_set_look`). Ranks shows "This week's prizes"; Shop → Weekly prizes lists all 18 with when each comes round.
+      **Layout** (owner "go" 2026-11-09, Duolingo principles: one job per screen, the list is the hero):
+      top bar = a shaking chest while a prize waits (pop-up once a session, `rkPop:{week}`), ✦ Light → Shop, your avatar →
+      "You" sheet (look, shop, trophies, how points work); League tab = a hero in the tier's colour (the five tier emblems,
+      yours lit, slow light rays) + one strip (quest bar + this week's prizes → sheet) + the list; your row is sticky with
+      "n points to pass {rival}". Rare app icons: to come from the themes thread (`ITEMS`, kind `icon`); garden decorations from the garden thread
+      **Friend challenge** (owner pick 2026-11-09; migration `20261110500000_rank_challenges.sql`, pgTAP 64): My boards →
+      Challenge a friend → a link `#/rc/{code}` (≤ 3 a week, ≤ 10 going); the 7 days start the day the friend accepts; points =
+      checked pages × 10 + minutes × 2 from `rank_days` (nothing new reported); two bars on Ranks ("Yusuf leads by 66. About 7
+      pages passes them."); two days after the last day each side opens a chest once: won 100 Light, tie 60, otherwise 30
+      (`claimGoal('ch:{id}')`). **League's last hours**: Sunday from 18:00 a box on the League tab with the time left and
+      `standing()` (points to the top 3, the lead over #4, or out of the bottom 3); Android: one note at Sunday 18:00 (id 3300,
+      rescheduled whenever the league is read; toggle in the You sheet, `rankNote`). **Monday recap**: on Monday and Tuesday a
+      "My week" card (closable, `rankRecapSeen`) → **Share my week**: a 1080×1350 PNG (`src/ui/rankRecap.ts`: last week's tier
+      emblem, place, points, this device's pages and minutes when > 0, "Effort in the app, not reward with Allah"), shared with
+      the app link; also in the You sheet
+      **Rank moments** (owner go-ahead 2026-11-09; `src/ui/rankMoment.ts`, lazy, played once when Ranks opens, then
+      `takeRankMoments()`; replaces the cards): **Monday reveal** — last week's tier emblem (drawn per tier: lantern,
+      eight-pointed star, crescent, dawn, sun; `tierEmblem()`) while the place counts down and the points up, then
+      moved up: it lifts away, the new one blooms in with turning rays, sparks and a rising ▲; stayed: rings of light
+      pulse out ("You're in the highest league" at Sun); moved down: it sinks softly, the new one settles, no sparks,
+      "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
+      glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
+      No sound, light vibration; reduced motion → the end picture
+      **Characters** (owner request 2026-11-10, "users build their own character"; faces: the user's choice, off by default):
+      `src/ui/figure.ts` draws a person from parts in the reward art style (two-tone shapes, light from the top left, ground
+      shadow): man / woman / boy / girl, 8 skins, hair (bald, short, curly, swept, long, bun) + 6 colours, beard (short / full /
+      long), headwear (kufi, shemagh, turban, hijab, niqab, knit cap) + 8 colours, outfit (thobe, kurta + vest, hoodie, abaya,
+      embroidered abaya, champion's bisht / gold abaya) + 10 colours, glasses, holding (masbaha, mushaf, book stand, du'a hands,
+      lantern), standing / sitting, 8 disc backgrounds; a hijab or niqab for women, girls may go without. Code = 14 base-36
+      digits (`encode()` / `parse()`). Builder `src/ui/figureBuilder.ts` (+ `figure.css`; Ranks → Your avatar → Make your
+      character): big preview that hops with a pop at each change, part tabs with drawn tiles, swatches, No face / Face, Surprise me,
+      Wear it. Light parts (turban 150, kurta + vest 120, embroidered abaya 120, lantern 100, two backgrounds 80 / 120) are bought on
+      Wear it (`fg:{slot}:{v}` in the shop); the champion outfit needs a week won at #1. On the boards the character's head and
+      shoulders sit in the avatar disc inside the frame (`avatar(…, figure)`). Migration `20261110710000_rank_figures.sql`
+      (`rank_players.figure`, `rank_set_figure` checks the format and the prize outfit, `rank_my_figure`, `rank_face` adds it;
+      pgTAP +7). Kept on the device as `rankFigure`; picking a disc again takes the character off
+- [x] M13 Full of life (owner choice 2026-11-09, design canvas "Ayah Studio, full of life"): each place has its colour —
+      Read teal #12a594, Learn green #4caf2a, Create coral #ff6b4a, Ranks violet #6c5ce7, Me amber #f59f00 — on the tab bar
+      (active icon in a tinted pill, Create a coral raised button with a solid edge), chunky buttons and chips (a darker
+      bottom edge that sinks on press; not in the studio or the Kids space), headings, tabs and buttons in bold Nunito
+      (now the variable font, 200–1000). Me: dusk sky streak card (stars, moon, big count), goal rows in their kind's
+      colour (`goal k-{kind}`, `src/ui/me.css`). Create sheet: coral header + colour tiles (`src/ui/create.css`, loaded with
+      the sheet). Learn: sunny sky (deep blue at night), chunky white / green buttons. Read's drop-down bar is teal. The
+      mushaf page, the Arabic text and reels are untouched; theme colours stay for brand moments
+      Second pass (owner pick 2026-11-09, "all three"): **Noor speaks** (`src/ui/noor.ts` + `noor.css`, lazy): a small light
+      and one line, from what is true now, never guilt — Me under the streak (pages left to light today / lit), the Read bar
+      (page reading time / pages done), the Create sheet (reel goal / share an ayah), Learn above Today (thirsty trees /
+      plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
+      chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
+      with a ring and the streak count (→ Me)
+- [x] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
+      Step 1 done: `public/data/duas.json` by `scripts/make-duas.mjs` — Hisn al-Muslim ch. 1 (waking), 15 (the adhan), 25 (after the
+      salam), 28 (sleeping): Arabic and English (Darussalam) from YousefAsalya/Islamic-Pro-azkar-API (MIT), each English text checked
+      word for word against the source, word notes kept apart (`gloss`), Quran parts from our own text + Saheeh International (checked
+      to be the ayat the book quotes), counts checked by hand; dhikr said a different number of times cut into steps at the book's own
+      commas (33 + 33 + 33 + 1); `prayers` / `countBy` for what differs after Fajr and Maghrib; the book's "what to do" items (`act`,
+      one tap). `src/data/duas.ts` (`loadDuas`, `momentList`, `prayerNow()`: the prayer whose time it is, from the prayer times or the
+      hour); the adhkar session (`src/ui/adhkar.ts`) now runs any list (`openDuas(moment, prayer?)`, prayer chips, a sky per moment);
+      progress per session key in `adhkarProgress` (`salah:fajr`, `adhan:asr`, `wake`, `sleep`). Me → links under the goals.
+      Step 2: the 33s / 34 on a **bead ring** (`beads`: a bead lights and springs in with each tap, a soft tick, a shimmer when the
+      round is full; no sounds before sleeping) and **the day's string of lanterns** on Me (`src/ui/dayLanterns.ts`, lazy: Waking ·
+      Fajr · Dhuhr · Asr · Maghrib · Isha · Sleep, lit when that session is said in full today, the one whose time it is breathes,
+      tap → the session; After the adhan as a chip under it).
+      Step 3: **bedtime mode** (the sleep session in a dim warm night with faint stars, gold instead of the accent, no sounds; a
+      crescent when all are said, `bedtimeSaid()` → localStorage `bedtimeDone` = the night's date, `nightKey()`) and the **waking
+      dawn** (`src/ui/dawn.ts` + `dawn.css`, lazy, checked by `watchRewards()` after start and on return: the morning after, once,
+      03:00–12:00, not over the studio / Kids / a dialog — the night sky gives way to rose and gold, the sun rises over the hills, a
+      soft shimmer, then the first waking du'a with its source → Say the waking du'a / Later).
+      Step 4: **du'a after the adhan** (Android; Me → ⚙ → Prayer reminders, off by default, `prayerAlerts().duas`): a quiet note
+      (channel `prayer_duas`, ids 3150–3199) 4 min after each prayer time → Me, then the adhan session for that prayer, whose end
+      leads on to the adhkar after the salah. (The evening flame reminder moved to ids 3400–3406: it shared 3100–3106 with the
+      prayer reminders, which cancel their whole range.)
+      Step 5: **goals**. Daily "Light n du'a lanterns" (`Goals.duas`, 0/1/3/5/7; paces 1/3/5; goals saved before: 1 on gentle, else
+      3; Begin opens the moment whose time it is, `openNextMoment()`). Weekly "Bedtime du'a on n nights" (`weekly.nights`, 0/3/5/7).
+      Both have their own chests (8 Light a lantern, 15 a night). Each finished moment is kept in the journey (`DayRec.dm`, session
+      keys, merged across devices), so the lanterns and goals follow the account. Badges: Seven / Thirty peaceful nights, A day full of
+      light (all seven), A hundred lanterns.
+      Step 6: **bedtime pact** (migration `20261110600000_bedtime_pacts.sql`, pgTAP `pacts.test.sql` 18): family or friends (2–6,
+      Google accounts in the ranks, ≤ 3 pacts at a time) keep the bedtime du'a 7 nights together — never ranked: Me's du'a card shows
+      each member's 7 crescents (`src/ui/pact.ts`, `src/together/pacts.ts`); invite link `#/bp/{code}` (open until the third night);
+      the sleep session marks tonight (`pact_mark`, kept in `pactMark` until sent); two days after the last night each member opens a
+      chest once: 5 Light a night kept + 50 when everyone kept all seven (`claimGoal('bp:{id}')`). Privacy page updated (ranks too).
+- [x] M15 Learn lessons count (owner request via the Learn thread, 2026-11-10): each Learn lesson or tasmi' passed (journey
+      `ls`, `addLesson()`) is reported to Ranks (`rank_report(…, lessons)`, ≤ 20 a day, 15 points each; migration
+      `20261110800000_rank_lessons.sql`, pgTAP `rank_lessons.test.sql`); a fifth weekly quest "Pass 5 Learn lessons" joins
+      the turn; optional daily goal "Learn lessons" 0/1/2/3 (`Goals.lessons`, off by default, 15 Light each, Begin → `#/learn`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
@@ -1430,7 +1655,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
 - [x] Data `src/data/garden.ts` (localStorage `garden`, synced as `user_docs` state/garden, merged per tree /
       decoration, newest wins, learned counts never go back, purchases add up; in Export my data): one garden per
       juz (a surah grows in the juz holding its ayah 1, `surahJuz()`; grid 5–8, `gridSize()`), a tree per surah
-      (`x/y`, variety, chunk size 1/2/3 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
+      (`x/y`, variety, chunk size 1/2/3/5 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
       ayah 1, `linked`, `full`, review `step`, `water`). Stages seed → sapling → small → medium → full (only after the
       whole surah from memory). Thirsty: a full tree after 1/3/7/14/30 days then monthly (`WATER_DAYS`; a smooth
       recitation moves the next one further, slips closer), a growing tree after 3 days without a lesson.
@@ -1477,7 +1702,98 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       lifts it out of the store straight onto a square (`dragHeld()`, window listeners; the tray uses the same), the
       seed shown large above the finger. Tapping a small tree or seed on the grid: bigger touch area + the square
       itself, 12 px before a tap becomes a drag
-- [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
+- [x] Ranks prize decorations (owner request 2026-11-09, "rare things won only by being top one, two or three, cannot
+      be bought"): 6 decorations with `rarity: 'prize'`, `place` 1–3, never in the store (`buyDeco` refuses them):
+      #1 golden trophy fountain / winner's lantern arch, #2 silver crescent gate / silver twin lamps, #3 bronze star
+      bench / bronze star lantern (the garden's own pieces in metal + `prizeShine()`, no figures). `grantPrizeDeco(week,
+      place)` in `src/data/garden.ts` gives one per week (owned `s:prize:{week}`, deco id `prize-{week}-{kind}`, so two
+      devices never double it), the place's piece not owned yet first; it waits unplaced like a bought one
+- [x] **The path** (owner decision 2026-11-10, "path plus trees as rewards", inspired by Duolingo's quality, not a copy;
+      design canvas https://claude.ai/artifact/8vWN1VWuCCq6rLPz69Rdbg): the grid garden, seed store and dragging are gone
+      (`src/ui/garden.ts` removed). `#/learn` = `src/ui/learnPath.ts` + `learnPath.css` (lazy): one winding path of chunky
+      steps over a drawn dawn landscape (night colours in dark mode); each surah a unit, banner "Surah 67 · Al-Mulk" (long
+      surahs "Part k of N", ≤ 9 steps a part, `PART_STEPS`), steps = its chunks (the lesson as before) then **Tasmi' of the
+      surah** (whole from memory → full tree); done gold, current in the unit's colour with START + ring, locked grey; a tap
+      opens a card (Start lesson / Practise again / finish the steps before); the surah's tree at the end of its last part.
+      Thirsty trees come back as a blue **Review** unit just above where the path stands (≤ 3). Data `src/data/learnPath.ts`
+      (localStorage `learnPath`: start + chunk): **start anywhere** — Juz 'Amma (Al-Fatiha, An-Nas → An-Naba, then on
+      backwards), a surah or a juz (forwards from there, then the surahs before it); **how much at a time** (1/2/3/5 ayat, ½ page,
+      page; per surah in the unit's ⋯ sheet, which also starts the path there); **Already know some?** — picked surahs get a
+      quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
+      the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
+      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
+      the 114 trees redrawn as vectors,
+      lessons in Ranks / quests / goals
+- [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
+      Exercises → From memory. **Meaning first**: every word of the chunk as a tile (Arabic + Quran.com meaning, tap to
+      hear it where timed), then the ayah's translation. **Exercises**: 3–6 cards (by the chunk's words) — which word
+      means "…", what comes next, which word goes here, put the ayat (≤ 4) or a single long ayah's three parts in order;
+      three choices, wrong ones only other words of the same surah (not shown in the line; an ayah-final word only against
+      ayah-final words, as the printed number would give it away; the order cards show the words without the printed
+      number); a missed card comes back once at the end; a bar fills; feedback strip + Continue, sounds via `sfx`. Missed
+      words are kept as weak (`src/data/weakWords.ts`, localStorage `learnWeak`, right twice to leave) and asked first next
+      time; tasmi' will use them. "Skip to reciting" leaves the exercises
+- [x] **Tasmi'** (2026-11-10, `src/ui/tasmi.ts`): every "From memory" step (new chunk, link, whole surah, watering) is a
+      tasmi' on the page (or ayah view) with the words hidden in place; weak words show faintly as a hint; **Stuck? Next
+      word** shows the next hidden word for good and counts as a slip (so does a peek; amber underline); **Record me**
+      (MediaRecorder, the latest per range kept in IndexedDB `recordings`, `tasmi:{s}:{a}-{b}`, never uploaded). Then the
+      text: **tap the words you missed** (red), the slips counted, ▶ Me / ▶ Reciter to compare, **Similar ayat (n)** — a
+      sheet with each ayah beside its similar ones, the differing words marked (`public/data/similar.json` by
+      `scripts/make-similar.mjs`: ayat sharing a run of ≥ 4 words, or 3 making up most of a short ayah, in our own text
+      with harakat and the number left out; phrases in > 60 ayat ignored; top 3 per ayah; 3116 ayat). The result (Not yet /
+      A few slips / I had it) is suggested from the slips (0 · ≤ max(2, 5 %) · more) and sets the review schedule as
+      before; missed and prompted words become weak (`learnWeak`), weak words recited cleanly move towards leaving.
+      **Follow my voice** (owner pick 2026-11-10): in a lesson's tasmi' and page memory's Recite page, the phone's
+      speech recognition listens (`src/ui/follow.ts`: Android app → `SpeechPlugin.java`, the system recogniser,
+      on-device on Android 12+ when available, else "prefer offline"; RECORD_AUDIO + the RecognitionService
+      `<queries>` in the manifest; web → Web Speech API, ar-SA, which Chrome sends to Google; restarted after
+      every pause) and `src/engine/follow.ts` matches what it heard to the next hidden words (bare letters,
+      dagger alif both ways, two heard words = one written word and back, 5 words of lookahead, stricter past
+      the next word): said words appear (`heard`), words passed over show red (`skipped`) and arrive at the
+      check pre-tapped as missed (untap if the phone misheard); at the last word the text shows. No audio or
+      text kept. Exclusive with Record me. Words **said wrong** (heard as another word, or only partly like it,
+      < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
+      (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
+      the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat.
+      **Harakat check on our server** (owner decision 2026-11-10, "only on the server"): `server/harakat` (Python,
+      onnxruntime; Docker image with the 4-bit ONNX of the Quran CTC model `mostafanewir70/quran-recitation-ctc-onnx`,
+      pinned + SHA-256, Apache-2.0). With the repo variable `HARAKAT_URL` set and the learner signed in, Follow my voice
+      records itself (`recordParts()` in `src/ui/follow.ts`: 16 kHz, cut at a 0.6 s pause or at the quietest moment
+      after 12 s) and sends each part with the words from the cursor (`ahead()`); the server (`follow.py`, a port of
+      `src/engine/follow.ts`, kept identical: 200 random cases match) finds the said words, lines the audio up with
+      their exact harakat (CTC Viterbi, free audio before/after) and flags a word when the model is far surer of
+      another haraka (`HARAKAT_FLAG` −6; 97 % caught, ~1 % false). Flagged words show with an amber wavy underline
+      (`harakah`) and count as missed at the check. Supabase token checked, 60 min a day per user, no audio stored.
+      Deploy: `.github/workflows/harakat.yml` (Cloud Run, 4 vCPU, ≤ 3 copies, scale to zero; secret `GCP_SA_KEY`,
+      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Hugging Face option: a Docker Space on its CPU basic hardware, which since 2026 needs a PRO subscription ($9/month; tried 2026-11-10, refused with 402; owner chose to wait, no server yet) (`.github/workflows/harakat-hf.yml`, secret `HF_TOKEN`; 2 vCPU: ~0.21x real time, same results, one copy, sleeps after 48 h). Without it: the phone's recogniser as before.
+      **Help improve the harakat check** (plan steps 2–5): opt-in (`harakatHelp`, off, never in the Kids space; asked
+      once at a check with an orange word, Me → ⚙ → App): `ClipJar` (`src/ui/harakatClips.ts`) keeps ≤ 3 s clips of
+      flagged words (+ one unflagged, 25 %) cut by the server's word times (`at`), shared after the check with the
+      learner's answer (untapped orange word = "I said it right"). Migration `20261111000000_harakat_clips.sql`
+      (`harakat_clips` bytea PCM, 40 a day, no table access; `harakat_clip_add`, `harakat_my_clips`,
+      `harakat_forget_mine`; teachers in `harakat_reviewers`: `harakat_review_queue` (never who), `harakat_label`;
+      pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
+      (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
+      export, held-out report)
+- [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
+      `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
+      Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;
+      every lesson tasmi' records the pages it covered: clean +1 box, slips keep, Not yet → box 1). `#/learn/page/P` — the
+      fixed Madinah page (QCF) three ways: **Line starts** (only each line's first word shows, in violet; recite the line,
+      tap it or "Show the next line" to check), **Quiz** (how does the page start / end, what starts the next page, which
+      words start line n — wrong choices from the 3 pages either side — and where does ayah X start, tapped on the page's
+      outline with its 15 lines, headers and basmala drawn as such), **Recite page** (all hidden, peeks and "Stuck? Next
+      word" are slips, then tap missed words; the result sets the page's strength). ‹ › to the pages either side
+- [x] **Tree close-up** (2026-11-10, `src/ui/treeView.ts`, `#/learn/tree/S`; from a tree's sheet → Look closer and from
+      Your garden's cards): the surah's tree on its starry island, drawn live at the screen's full resolution every frame
+      (`drawTreeFrame()` / `drawIsland()` in `gardenArt.ts`, never a cached picture), so it stays sharp at any zoom (pinch,
+      wheel, double tap, 1–5×, drag); sways (still with reduced motion); **Full grown** previews the finished tree. The
+      Learn addresses now resolve in `src/ui/learnRoutes.ts` (one import in `main.ts`). The palm-tree hadith for Your
+      garden waits until its wording is checked on Sunnah.com (not reachable from the build container)
+- [x] Lessons counted (2026-11-10): every passed lesson / tasmi' (and a page recited with slips or cleanly) adds to
+      `DayRec.ls` (`addLesson()` in `journey.ts`, summed across devices); new ayat keep feeding the memorise goal
+      (`addMemorised`). Ranks, quests and a Learn daily goal reading `ls` belong to the Ranks / goals work
+- [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
 - [ ] Later: finished juz gardens joined into one world; Kids version

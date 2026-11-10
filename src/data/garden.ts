@@ -1,21 +1,21 @@
 // Learn tab: the juz gardens (owner request 2026-11-02). One garden per juz, a grid seen at an angle.
 // Each surah is a tree the learner plants from the seed store (the first seed of every surah is
 // free) and grows by memorising it chunk by chunk:
-//   New   the next chunk (1, 2 or 3 ayat, half a page or a page: the learner's choice)
+//   New   the next chunk (1, 2, 3 or 5 ayat, half a page or a page: the learner's choice)
 //   Link  everything learned so far, from ayah 1, recited from memory
 //   Whole the whole surah from memory in one go: only then is the tree full grown
 // A full tree gets thirsty after 1, 3, 7, 14 and 30 days, then every 30 days, and is watered by
 // reciting the surah again. A tree still growing gets thirsty after 3 days without a lesson.
 // Light (src/data/journey.ts) earned here buys rarer varieties of a surah's tree and decorations;
-// the wallet is all the Light earned minus what was spent here, never below 0.
+// the wallet is all the Light earned minus what was spent here and in the Ranks shop, never below 0.
 //
 // Kept on this device (localStorage `garden`) and, when signed in, synced as one document merged per
 // tree / decoration / purchase (the newest change wins; purchases are never undone).
 import { stats } from './journey';
 import type { Mushaf } from './mushaf';
 
-export type ChunkSize = 1 | 2 | 3 | 'half' | 'page';
-export const CHUNK_SIZES: ChunkSize[] = [1, 2, 3, 'half', 'page'];
+export type ChunkSize = 1 | 2 | 3 | 5 | 'half' | 'page';
+export const CHUNK_SIZES: ChunkSize[] = [1, 2, 3, 5, 'half', 'page'];
 
 export interface Tree {
   /** Surah. */
@@ -43,9 +43,10 @@ export interface Tree {
 
 export interface Deco { id: string; k: DecoKind; juz: number; x: number; y: number; at: number; gone?: 1 }
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type DecoKind = 'lamp' | 'flowers' | 'stones' | 'bench' | 'pond' | 'fountain' | 'arch' | 'pavilion' | 'moongate' | 'starwell';
-export const DECOS: { k: DecoKind; rarity: Rarity; price: number }[] = [
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'prize';
+export type DecoKind = 'lamp' | 'flowers' | 'stones' | 'bench' | 'pond' | 'fountain' | 'arch' | 'pavilion' | 'moongate' | 'starwell'
+  | 'goldfountain' | 'winnerarch' | 'silvergate' | 'silverlamps' | 'bronzebench' | 'bronzelantern';
+export const DECOS: { k: DecoKind; rarity: Rarity; price: number; place?: 1 | 2 | 3 }[] = [
   { k: 'flowers', rarity: 'common', price: 30 },
   { k: 'stones', rarity: 'common', price: 30 },
   { k: 'lamp', rarity: 'common', price: 30 },
@@ -56,6 +57,13 @@ export const DECOS: { k: DecoKind; rarity: Rarity; price: number }[] = [
   { k: 'pavilion', rarity: 'epic', price: 300 },
   { k: 'moongate', rarity: 'legendary', price: 800 },
   { k: 'starwell', rarity: 'legendary', price: 800 },
+  // Ranks prizes (owner decision 2026-11-09): won only by finishing a week #1, #2 or #3, never sold.
+  { k: 'goldfountain', rarity: 'prize', price: 0, place: 1 },
+  { k: 'winnerarch', rarity: 'prize', price: 0, place: 1 },
+  { k: 'silvergate', rarity: 'prize', price: 0, place: 2 },
+  { k: 'silverlamps', rarity: 'prize', price: 0, place: 2 },
+  { k: 'bronzebench', rarity: 'prize', price: 0, place: 3 },
+  { k: 'bronzelantern', rarity: 'prize', price: 0, place: 3 },
 ];
 /** Tree varieties: 0 free; the others bought per surah. */
 export const VARIETIES: { v: number; rarity: Rarity; price: number }[] = [
@@ -113,7 +121,7 @@ function clean(raw: unknown): State {
   const o = raw as Record<string, unknown>;
   for (const [k, v] of Object.entries((o.trees as object) ?? {})) { const t = cleanTree(Number(k), v); if (t) s.trees[k] = t; }
   for (const [k, v] of Object.entries((o.decos as object) ?? {})) { const d = cleanDeco(k, v); if (d) s.decos[k] = d; }
-  for (const [k, v] of Object.entries((o.owned as object) ?? {})) if (typeof v === 'number' && v >= 0 && /^(v:\d+:\d|d:[\w-]+)$/.test(k)) s.owned[k] = v;
+  for (const [k, v] of Object.entries((o.owned as object) ?? {})) if (typeof v === 'number' && v >= 0 && /^(v:\d+:\d|d:[\w-]+|s:[\w:.-]+)$/.test(k)) s.owned[k] = v;
   if (typeof o.juz === 'number' && o.juz >= 1 && o.juz <= 30) s.juz = o.juz;
   return s;
 }
@@ -133,11 +141,27 @@ export const trees = (): Readonly<Tree>[] => Object.values(load().trees);
 export const tree = (s: number): Readonly<Tree> | null => load().trees[s] ?? null;
 export const decos = (juz: number): Readonly<Deco>[] => Object.values(load().decos).filter((d) => d.juz === juz && !d.gone);
 /** Decorations bought and not yet placed in any garden. */
+/** Ranks prize pieces kept (one a week won): the week and the place, newest first. */
+export const prizeWins = (): { week: string; place: 1 | 2 | 3 }[] => Object.values(load().decos)
+  .map((d) => ({ m: /^prize-(.+)-[a-z]+$/.exec(d.id), place: DECOS.find((x) => x.k === d.k)?.place }))
+  .filter((x): x is { m: RegExpExecArray; place: 1 | 2 | 3 } => !!x.m && !!x.place)
+  .map((x) => ({ week: x.m[1], place: x.place })).sort((a, b) => (a.week < b.week ? 1 : -1));
 export const unplacedDecos = (): Readonly<Deco>[] => Object.values(load().decos).filter((d) => !d.gone && d.x < 0);
 export const ownsVariety = (s: number, v: number) => v === 0 || load().owned[`v:${s}:${v}`] !== undefined;
 export const spent = () => Object.values(load().owned).reduce((a, b) => a + b, 0);
-/** Light to spend: everything earned (all devices) minus what was spent here. */
+/** Light to spend: everything earned (all devices) minus what was spent here and in the Ranks shop. */
 export const wallet = () => Math.max(0, stats('all').light - spent());
+// The Ranks shop (src/data/shop.ts) keeps its purchases here too (`s:…` ids), so they sync and merge
+// like the garden's: a purchase counts once, freezes kept and used are ids that only ever get added.
+export const shopHas = (id: string) => load().owned[`s:${id}`] !== undefined;
+export const shopIds = (prefix: string) => Object.keys(load().owned).filter((k) => k.startsWith(`s:${prefix}`)).map((k) => k.slice(2));
+/** Records a purchase or a won thing (price 0); false when already there. */
+export function shopAdd(id: string, price: number): boolean {
+  if (shopHas(id)) return false;
+  load().owned[`s:${id}`] = Math.max(0, Math.round(price));
+  save();
+  return true;
+}
 export const lastJuz = () => load().juz ?? 30;
 export function setLastJuz(j: number) { load().juz = j; save(true); }
 
@@ -158,9 +182,21 @@ export function dueAt(t: Readonly<Tree>): number | null {
 }
 export const thirsty = (t: Readonly<Tree>, now = Date.now()) => { const d = dueAt(t); return d !== null && now >= d; };
 /** Thirsty trees, the longest waiting first. */
-export const thirstyTrees = (now = Date.now()) => trees().filter((t) => t.x >= 0 && thirsty(t, now)).sort((a, b) => dueAt(a)! - dueAt(b)!);
+export const thirstyTrees = (now = Date.now()) => trees().filter((t) => started(t) && thirsty(t, now)).sort((a, b) => dueAt(a)! - dueAt(b)!);
+
+/** A surah whose learning has begun (the path makes its tree at the first lesson). */
+export const started = (t: Readonly<Tree>) => t.learned > 0 || !!t.full;
 
 // --- writing ---
+/** The surah's tree, made (not placed anywhere) when its first lesson opens. */
+export function ensureTree(s: number, chunk: ChunkSize): Readonly<Tree> {
+  const st = load();
+  if (st.trees[s]) return st.trees[s];
+  const now = Date.now();
+  st.trees[s] = { s, x: -1, y: -1, v: 0, chunk, learned: 0, linked: 0, step: 0, water: now, planted: now, at: now };
+  save();
+  return st.trees[s];
+}
 function touch(t: Tree) { t.at = Date.now(); }
 
 /** Plants (or moves) a surah's tree at a free cell of its garden. */
@@ -210,10 +246,27 @@ export function buyVariety(s: number, v: number): boolean {
 /** Buys a decoration; it waits unplaced until dragged into a garden. */
 export function buyDeco(k: DecoKind): Deco | null {
   const def = DECOS.find((d) => d.k === k);
-  if (!def || wallet() < def.price) return null;
+  if (!def || def.place || wallet() < def.price) return null;
   const id = `${k}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const st = load();
   st.owned[`d:${id}`] = def.price;
+  const d: Deco = { id, k, juz: 0, x: -1, y: -1, at: Date.now() };
+  st.decos[id] = d;
+  save();
+  return d;
+}
+/** Gives a Ranks prize decoration for finishing week `week` at `place` (1–3), once per week on every device:
+ *  the place's prize not owned yet (else its first). It waits unplaced, like a bought one. */
+export function grantPrizeDeco(week: string, place: number): Deco | null {
+  const kinds = DECOS.filter((d) => d.place === place).map((d) => d.k);
+  if (!kinds.length || !/^[\w.-]+$/.test(week)) return null;
+  const st = load();
+  const key = `s:prize:${week}`;
+  if (st.owned[key] !== undefined) return null;
+  const have = new Set(Object.values(st.decos).map((d) => d.k));
+  const k = kinds.find((x) => !have.has(x)) ?? kinds[0];
+  const id = `prize-${week}-${k}`;
+  st.owned[key] = 0;
   const d: Deco = { id, k, juz: 0, x: -1, y: -1, at: Date.now() };
   st.decos[id] = d;
   save();

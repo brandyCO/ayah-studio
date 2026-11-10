@@ -59,3 +59,36 @@
 .ak-credit { max-width: 420px; }
 @media (prefers-reduced-motion: reduce) { .ak-count.bump .ak-num, .ak-gain.show { animation: none; } }
 .ak-done .chest { width: 104px; height: 104px; } .ak-done .chest .ck-amt { font-size: var(--fs-m); }
+/* Du'a moments of the day: a sky for each, the prayer chips, the book's word notes. */
+.adhkar.du-wake { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #f4a259 18%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-adhan { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #12a594 16%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-salah { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #4caf2a 14%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-sleep { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #3b3a8f 24%, var(--bg)) 0%, var(--bg) 65%); }
+.ak-prayers { justify-content: center; flex-wrap: wrap; }
+.ak-gloss { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; text-align: center; font-size: var(--fs-s); color: var(--muted); opacity: .85; }
+.ak-read { justify-content: center; }
+.ak-count.act .ak-center::after { content: '✓'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 40px; font-weight: 800; color: var(--accent); opacity: 0; }
+.ak-count.act .ak-num, .ak-count.act .ak-of { visibility: hidden; }
+.ak-count.act .ak-center::after { opacity: .35; }
+.ak-count.act.met .ak-center::after { opacity: 1; }
+.ak-say { color: var(--accent); font-weight: inherit; }
+/* Bead ring (the 33s): the track and the arc give way to beads. */
+.ak-ring.beads .ak-track, .ak-ring.beads .ak-fill { opacity: 0; }
+.ak-beads circle { fill: color-mix(in srgb, var(--text) 16%, transparent); transition: fill .2s ease; }
+.ak-beads circle.on { fill: var(--accent); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.ak-beads circle.next { fill: color-mix(in srgb, var(--accent) 45%, transparent); }
+/* Bedtime mode: the sleep session in a dim, warm night (no sounds; nothing bright). */
+.adhkar.du-sleep { --accent: #c9b98a; color: #d9d3c0; background:
+  radial-gradient(1px 1px at 14% 12%, rgba(255,255,255,.5), transparent), radial-gradient(1px 1px at 38% 6%, rgba(255,255,255,.4), transparent),
+  radial-gradient(1px 1px at 62% 14%, rgba(255,255,255,.45), transparent), radial-gradient(1px 1px at 86% 8%, rgba(255,255,255,.4), transparent),
+  radial-gradient(1.5px 1.5px at 76% 20%, rgba(255,255,255,.35), transparent),
+  radial-gradient(130% 60% at 50% 0%, #16173d 0%, #07081a 70%); }
+.adhkar.du-sleep::backdrop { background: #07081a; }
+.adhkar.du-sleep .ak-en, .adhkar.du-sleep .muted { color: rgba(217, 211, 192, .6); }
+.adhkar.du-sleep .ak-count { background: radial-gradient(circle at 50% 38%, #1d1d40, #0e0f26 70%); color: #d9d3c0;
+  box-shadow: 0 8px 28px rgba(201, 185, 138, .14), inset 0 0 0 1px rgba(201, 185, 138, .25); }
+.adhkar.du-sleep .chip { background: rgba(255,255,255,.06); color: #d9d3c0; box-shadow: none; }
+.adhkar.du-sleep .chip.on { background: rgba(201,185,138,.22); }
+.adhkar.du-sleep .ak-dot.done { background: #c9b98a; border-color: #c9b98a; }
+.adhkar.du-sleep .primary { background: rgba(201,185,138,.2); color: #efe7cc; box-shadow: none; }
+.ak-moon { width: 84px; height: 84px; border-radius: 50%; box-shadow: inset -22px 8px 0 0 #e9dfb8; filter: drop-shadow(0 0 18px rgba(233, 223, 184, .35)); }

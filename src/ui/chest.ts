@@ -9,6 +9,7 @@
 // lifts a crack with light behind it, heavier chests shake harder and more slowly), open (claimed:
 // lid up, quiet). The amount inside is always shown: never a random prize.
 import { h } from './dom';
+import { circlePath, edge, shine, starPath, two } from './flat';
 import { rewardPalette } from './theme';
 
 export type ChestTier = 0 | 1 | 2 | 3 | 4;
@@ -16,27 +17,22 @@ export type ChestState = 'locked' | 'ready' | 'open';
 
 export const chestTier = (light: number): ChestTier => (light >= 100 ? 4 : light >= 50 ? 3 : light >= 25 ? 2 : light >= 15 ? 1 : 0);
 
-interface Mat { body: [string, string]; dark: string; metal: [string, string]; line: string; star?: boolean; gems?: boolean; glow?: boolean; planks?: boolean }
+// Each material: body base / shade, its deep edge, metal base / shade, plank lines.
+interface Mat { body: [string, string]; edge: string; metal: [string, string]; line: string; star?: boolean; gems?: boolean; glow?: boolean; planks?: boolean }
 const MATS: Mat[] = [
-  { body: ['#b77a45', '#8a5530'], dark: '#5e3a20', metal: ['#a7adb4', '#6f757c'], line: '#6b4224', planks: true },
-  { body: ['#a8582f', '#7b3c1d'], dark: '#4e2512', metal: ['#f7d27a', '#b9862c'], line: '#5d2d16', planks: true },
-  { body: ['#6b3a22', '#432214'], dark: '#2a140b', metal: ['#ffe08a', '#c4902c'], line: '#2f170c', star: true },
-  { body: ['#13906a', '#07533d'], dark: '#043427', metal: ['#ffe39a', '#c8952f'], line: '#05402f', star: true, gems: true },
-  { body: ['#fbf4df', '#dccb98'], dark: '#b59f62', metal: ['#fff0b8', '#d9a73c'], line: '#c2ad73', star: true, gems: true, glow: true },
+  { body: ['#c98a52', '#9a6033'], edge: '#5e3a20', metal: ['#c3c9cf', '#868d95'], line: '#7a4a26', planks: true },
+  { body: ['#bd6a3a', '#8a4421'], edge: '#4e2512', metal: ['#ffd877', '#cf9530'], line: '#6a3216', planks: true },
+  { body: ['#7c4428', '#542b17'], edge: '#2a140b', metal: ['#ffe08a', '#d39a2e'], line: '#3a1d0e', star: true },
+  { body: ['#19a67b', '#0b6b4e'], edge: '#043427', metal: ['#ffe39a', '#d6a033'], line: '#075a41', star: true, gems: true },
+  { body: ['#fff8e6', '#e6d3a0'], edge: '#b59f62', metal: ['#fff0b8', '#e2ad3f'], line: '#cdb67a', star: true, gems: true, glow: true },
 ];
 
 let uid = 0;
-function star(cx: number, cy: number, R: number, r: number) {
-  const pts: string[] = [];
-  for (let i = 0; i < 16; i++) {
-    const a = (i * Math.PI) / 8 - Math.PI / 2;
-    const d = i % 2 ? r : R;
-    pts.push(`${(cx + d * Math.cos(a)).toFixed(2)},${(cy + d * Math.sin(a)).toFixed(2)}`);
-  }
-  return pts.join(' ');
-}
+const rr = (x: number, y: number, w: number, h: number, r: number) =>
+  `M${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h - r}Q${x + w} ${y + h} ${x + w - r} ${y + h}H${x + r}Q${x} ${y + h} ${x} ${y + h - r}V${y + r}Q${x} ${y} ${x + r} ${y}Z`;
 
-/** The chest picture (viewBox 80 × 76). The lid is its own group (`.ck-lid`) so it can open. */
+/** The chest picture (viewBox 80 × 76), in the characters' flat two-tone style. The lid is its own group
+ *  (`.ck-lid`) so it can open; the shapes keep their places so the moment's cracks line up. */
 export function chestArt(tier: ChestTier): SVGSVGElement {
   const m = MATS[tier];
   const P = rewardPalette();
@@ -45,41 +41,68 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
   el.setAttribute('viewBox', '0 0 80 76');
   el.setAttribute('aria-hidden', 'true');
   el.classList.add('ck-art');
-  const planks = m.planks ? '<path d="M12 46H68M12 55H68" stroke="' + m.line + '" stroke-opacity=".55" stroke-width="1.2"/>' : '';
-  const lidPlank = m.planks ? '<path d="M14 25H66" stroke="' + m.line + '" stroke-opacity=".5" stroke-width="1.1"/>' : '';
-  const gem = (x: number, y: number, c: string) => `<circle cx="${x}" cy="${y}" r="2.1" fill="${c}" stroke="${m.metal[1]}" stroke-width=".8"/><circle cx="${x - .6}" cy="${y - .7}" r=".6" fill="#fff" fill-opacity=".8"/>`;
+  const [mb, ms] = m.metal;
+  const box = rr(11, 36, 58, 31, 5);
+  const lid = 'M10 37V27Q10 13 40 13Q70 13 70 27V37Z';
+  const lock = 'M33.5 36H46.5V47Q46.5 51.5 40 53.5Q33.5 51.5 33.5 47Z';
+  const planks = m.planks ? `<path d="M12 46.5H68M12 56H68" stroke="${m.line}" stroke-opacity=".5" stroke-width="1.6"/>` +
+    [[14.5, 42], [14.5, 51], [65.5, 42], [65.5, 51]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="${m.edge}" opacity=".5"/>`).join('') : '';
+  const lidPlank = m.planks ? `<path d="M13 25.5H67" stroke="${m.line}" stroke-opacity=".45" stroke-width="1.5"/>` : '';
+  const gem = (x: number, y: number, c: string, d: string) =>
+    `${two(circlePath(x, y, 2.6), c, d, -0.8, -0.8)}<circle cx="${x - .9}" cy="${y - .9}" r=".8" fill="#fff" opacity=".9"/>`;
+  const plate = (x: number, y: number, w: number, h: number) => two(rr(x, y, w, h, 1.4), mb, ms, -1.2, -1.2);
   el.innerHTML = `
     <defs>
-      <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${m.body[0]}"/><stop offset="1" stop-color="${m.body[1]}"/></linearGradient>
-      <linearGradient id="${id}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${m.metal[0]}"/><stop offset="1" stop-color="${m.metal[1]}"/></linearGradient>
       <radialGradient id="${id}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.core}"/><stop offset=".45" stop-color="${P.hi}" stop-opacity=".8"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
     </defs>
     <g class="ck-aura">${m.glow ? Array.from({ length: 12 }, (_, i) => `<path transform="rotate(${i * 30} 40 40)" d="M40 40L37.5 2H42.5Z" fill="${P.hi}" opacity="${i % 2 ? .18 : .32}"/>`).join('') : ''}<circle cx="40" cy="40" r="34" fill="url(#${id}g)" opacity=".5"/></g>
-    <ellipse class="ck-shadow" cx="40" cy="71" rx="27" ry="3.6" fill="#000" fill-opacity=".22"/>
+    <ellipse class="ck-shadow" cx="40" cy="71.5" rx="28" ry="3.8" fill="#000" fill-opacity=".2"/>
     <g class="ck-box">
       <ellipse class="ck-mouth" cx="40" cy="37" rx="27" ry="6" fill="url(#${id}g)"/>
-      <rect x="11" y="36" width="58" height="32" rx="4" fill="url(#${id}b)" stroke="${m.dark}" stroke-width="1.6"/>
+      ${edge(box, m.edge, 3)}
+      ${two(box, m.body[0], m.body[1], -3, -3)}
       ${planks}
-      <rect x="11" y="36" width="58" height="4" fill="${m.dark}" fill-opacity=".35"/>
-      <rect x="18" y="36" width="6" height="32" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/>
-      <rect x="56" y="36" width="6" height="32" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/>
-      ${tier >= 1 ? `<path d="M11 61V68H18M69 61V68H62" fill="none" stroke="url(#${id}m)" stroke-width="3" stroke-linejoin="round"/>` : ''}
-      ${m.gems ? gem(21, 56, '#e0475b') + gem(59, 56, '#3cc7e6') : ''}
-      <path d="M33.5 37H46.5V47Q46.5 51 40 53Q33.5 51 33.5 47Z" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".8"/>
-      <circle cx="40" cy="43" r="2" fill="${m.dark}"/><path d="M39.2 43.8L38.6 48H41.4L40.8 43.8Z" fill="${m.dark}"/>
+      <rect x="11" y="36" width="58" height="4.5" fill="${m.edge}" fill-opacity=".38"/>
+      ${plate(18, 36, 6, 31)}${plate(56, 36, 6, 31)}
+      ${tier >= 1 ? two('M11 58H17.5V67H16Q11 67 11 62Z', mb, ms, -1, -1) + two('M69 58H62.5V67H64Q69 67 69 62Z', mb, ms, -1, -1) : ''}
+      ${m.gems ? gem(21, 56, '#ff6b7d', '#c32a43') + gem(59, 56, '#6fe0f5', '#1f9cc0') : ''}
+      ${edge(lock, m.edge, 1.6)}${two(lock, mb, ms, -1.6, -1.6)}
+      <circle cx="40" cy="43" r="2.2" fill="${m.edge}"/><path d="M39.1 43.8L38.5 48.4H41.5L40.9 43.8Z" fill="${m.edge}"/>
+      ${shine('M14.5 59V46', 2.2, .3)}
     </g>
     <g class="ck-lid">
-      <path d="M10 37V27Q10 13 40 13Q70 13 70 27V37Z" fill="url(#${id}b)" stroke="${m.dark}" stroke-width="1.6" stroke-linejoin="round"/>
+      ${two(lid, m.body[0], m.body[1], -3, -3)}
       ${lidPlank}
-      <path d="M14 22Q22 16.5 40 16Q58 16.5 66 22" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>
-      <path d="M18 37V18.2Q20.5 16.6 24 15.9V37Z" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/>
-      <path d="M62 37V18.2Q59.5 16.6 56 15.9V37Z" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/>
-      <rect x="9" y="33.5" width="62" height="4.5" rx="1.6" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/>
-      ${m.star ? `<polygon class="ck-star" points="${star(40, 24.5, 7.4, 5.4)}" fill="url(#${id}m)" stroke="${m.metal[1]}" stroke-width=".6"/><circle cx="40" cy="24.5" r="2.2" fill="${m.glow ? P.core : m.dark}"/>` : ''}
-      ${m.gems ? gem(21, 26, '#3cc7e6') + gem(59, 26, '#e0475b') : ''}
+      ${shine('M15 21.5Q22 16.8 36 16.2', 2.4, .4)}
+      ${two('M18 37V18.2Q20.5 16.6 24 15.9V37Z', mb, ms, -1.2, -1.2)}
+      ${two('M62 37V18.2Q59.5 16.6 56 15.9V37Z', mb, ms, -1.2, -1.2)}
+      ${edge(rr(9, 33, 62, 5, 2), m.edge, 1.4)}${two(rr(9, 33, 62, 5, 2), mb, ms, -1, -1.2)}
+      ${m.star ? `<g class="ck-star">${edge(starPath(40, 24.5, 7.8, 5.6), m.edge, 1.2)}${two(starPath(40, 24.5, 7.8, 5.6), mb, ms, -1.4, -1.4)}</g><circle cx="40" cy="24.5" r="2.3" fill="${m.glow ? P.core : m.edge}"/>` : ''}
+      ${m.gems ? gem(21, 26, '#6fe0f5', '#1f9cc0') + gem(59, 26, '#ff6b7d', '#c32a43') : ''}
     </g>
     ${m.glow || tier >= 2 ? `<g class="ck-glints" fill="#fff">${[[16, 12], [66, 16], [70, 44], [9, 50]].map(([x, y], i) => `<path style="--i:${i}" d="M${x} ${y - 3}L${x + .8} ${y - .8}L${x + 3} ${y}L${x + .8} ${y + .8}L${x} ${y + 3}L${x - .8} ${y + .8}L${x - 3} ${y}L${x - .8} ${y - .8}Z"/>`).join('')}</g>` : ''}`;
   return el as SVGSVGElement;
+}
+
+// A ready chest shakes for ever: pause it while it is off screen, so a long Me page stays smooth.
+let seen: IntersectionObserver | null = null;
+// A ready chest on screen will likely be tapped: load the opening moment and its sounds while the phone is idle.
+let preloaded = false;
+function preload() {
+  if (preloaded) return;
+  preloaded = true;
+  const go = () => { void import('./celebrate'); void import('./sfx').then((m) => m.warmSounds()); };
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2500 }); else setTimeout(go, 800);
+}
+function watch(el: HTMLElement) {
+  if (typeof IntersectionObserver === 'undefined') return;
+  seen ??= new IntersectionObserver((es) => {
+    for (const e of es) {
+      e.target.classList.toggle('off', !e.isIntersecting);
+      if (e.isIntersecting) preload();
+    }
+  });
+  seen.observe(el);
 }
 
 /** A goal's chest: the picture, its state and the Light it holds. `onOpen` runs when a ready chest is tapped. */
@@ -89,6 +112,7 @@ export function chest(light: number, state: ChestState, label: string, onOpen?: 
   const amount = h('span', { class: 'ck-amt' }, `✦ ${light}`);
   if (state === 'ready' && onOpen) {
     const b: HTMLButtonElement = h('button', { class: `chest t${tier} ready`, type: 'button', 'aria-label': label, onclick: () => onOpen(b) }, art, amount);
+    watch(b);
     return b;
   }
   return h('span', { class: `chest t${tier} ${state}`, role: 'img', 'aria-label': label }, art, amount);

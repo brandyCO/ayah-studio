@@ -1,0 +1,137 @@
+/* Characters (src/ui/figure.ts) and the builder (src/ui/figureBuilder.ts), loaded with the builder. */
+.fg { overflow: visible; display: block; }
+.fg .fg-bob { animation: fg-bob 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.fg .fg-eyes { animation: fg-blink 4.6s infinite; transform-box: fill-box; transform-origin: center; }
+.fg .fg-glow { animation: fg-glow 2.4s ease-in-out infinite; }
+.fg .fg-head { animation: fg-sway 7.4s ease-in-out infinite; transform-box: view-box; transform-origin: 100px 150px; }
+.fg .fg-shadow { animation: fg-shadow 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.fg .fg-act { transform-box: view-box; transform-origin: 100px 250px; }
+.fg.still .fg-bob, .fg.still .fg-twinkle, .fg.still .fg-eyes, .fg.still .fg-glow, .fg.still .fg-head, .fg.still .fg-shadow { animation: none; }
+@keyframes fg-sway { 0%, 100% { transform: none; } 30% { transform: rotate(2.2deg); } 62% { transform: rotate(-1.6deg) translateY(.5px); } }
+@keyframes fg-shadow { 50% { transform: scale(.94, .9); opacity: .24; } }
+@keyframes fg-bob { 50% { transform: translateY(-3px) scale(1.01, .99); } }
+@keyframes fg-blink { 0%, 93%, 100% { transform: none; } 95% { transform: scaleY(.1); } }
+@keyframes fg-glow { 50% { opacity: .55; } }
+/* Actors: raised arms swap in for a cheer or a wave. */
+.fg .fg-up, .fg .fg-wv { display: none; }
+.fg.cheer .fg-up, .fg.waving .fg-wv { display: inline; }
+.fg.cheer .fg-arms, .fg.waving .fg-arms { display: none; }
+.fg .fg-wave-arm { transform-box: view-box; transform-origin: 134px 160px; animation: fg-wave .5s ease-in-out infinite alternate; }
+@keyframes fg-wave { from { transform: rotate(-14deg); } to { transform: rotate(12deg); } }
+@media (prefers-reduced-motion: reduce) { .fg .fg-bob, .fg .fg-eyes, .fg .fg-glow, .fg .fg-head, .fg .fg-shadow { animation: none; } }
+
+dialog.fb {
+  --fb-card: #172033; --fb-card2: #1d2940; --fb-edge: #0a0f19; --fb-fg: #eef2fa; --fb-muted: #9aa6bd;
+  position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; border: 0; padding: 0;
+  padding-top: env(safe-area-inset-top); padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: #0e1420; color: var(--fb-fg); display: flex; flex-direction: column; overflow: hidden;
+}
+dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
+@keyframes fb-in { from { opacity: 0; transform: translateY(24px); } }
+@media (prefers-reduced-motion: reduce) { dialog.fb[open] { animation: none; } }
+.fb-top { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.fb-top h2 { flex: 1; margin: 0; font-weight: 900; font-size: 19px; }
+.fb-top .icon-btn { color: var(--fb-fg); }
+.fb-light { font-weight: 900; color: #ffc533; background: rgba(255, 197, 51, .12); padding: 6px 12px; border-radius: 999px; }
+.fb-stage {
+  --fb-h: min(36vh, 300px);
+  flex: none; height: var(--fb-h); margin: 0 16px; border-radius: 26px; display: flex; justify-content: center; align-items: flex-end; overflow: hidden;
+  background: radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--fb-a) 70%, #fff 0%), var(--fb-b));
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, .18), 0 6px 0 var(--fb-edge);
+}
+.fb-stage svg { height: calc(var(--fb-h) - 10px); width: auto; flex: none; }
+.fb-face { justify-content: center; margin: 12px 16px 0; }
+.fb-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 16px 6px; scrollbar-width: none; flex: none; }
+.fb-tabs::-webkit-scrollbar { display: none; }
+.fb .chip { flex: none; background: var(--fb-card2); color: var(--fb-fg); border-color: transparent; }
+.fb .chip.on { background: #ffc533; color: #2a1c00; box-shadow: 0 3px 0 #b8860b; }
+.fb-panel { flex: 1; overflow-y: auto; padding: 6px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.fb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.fb-tile {
+  position: relative; border: 0; border-radius: 18px; padding: 8px 6px 8px; color: inherit; font: inherit; cursor: pointer;
+  background: linear-gradient(180deg, var(--fb-card2), var(--fb-card)); box-shadow: 0 4px 0 var(--fb-edge);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .12s;
+}
+.fb-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--fb-edge); }
+.fb-tile.on { outline: 3px solid #ffc533; outline-offset: -3px; }
+.fb-tile.locked .fb-art { opacity: .55; }
+.fb-tile.locked[class*=' r-'] .fb-art { opacity: .88; filter: saturate(.8); }
+.fb-art { width: 72px; height: 76px; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+.fb-art svg { height: 74px; width: auto; flex: none; }
+.fb-art svg[viewBox^="2 2"] { height: 68px; margin-bottom: 4px; }
+.fb-name { color: var(--fb-muted); font-weight: 800; text-align: center; line-height: 1.2; }
+.fb-tile.on .fb-name { color: var(--fb-fg); }
+.fb-price { position: absolute; top: 4px; right: 4px; font-size: 11px; font-weight: 900; color: #2a1c00; background: #ffc533; border-radius: 999px; padding: 1px 6px; }
+.fb-price.prize { background: #f2c14e; }
+/* The wardrobe's rarity (earned pieces): cute pink, rare blue, epic violet, legendary gold with a passing shine. */
+.fb-tile[class*=' r-'] { --rc: #ff9ac2; --rc2: #c25a86; overflow: hidden; }
+.fb-tile.r-rare { --rc: #5fb4ff; --rc2: #2a6cc4; }
+.fb-tile.r-epic { --rc: #b98aff; --rc2: #6d3fd0; }
+.fb-tile.r-legendary { --rc: #ffd25e; --rc2: #c4860f; }
+.fb-tile[class*=' r-'] { background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 22%, var(--fb-card2)), var(--fb-card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--rc2) 55%, var(--fb-edge)), inset 0 0 0 2px color-mix(in srgb, var(--rc) 45%, transparent); }
+.fb-tile.r-legendary::after { content: ''; position: absolute; inset: -40% auto -40% -60%; width: 40%; background: linear-gradient(90deg, transparent, rgba(255, 246, 210, .45), transparent);
+  transform: rotate(20deg); animation: fb-legend 3.2s ease-in-out infinite; pointer-events: none; }
+@keyframes fb-legend { 0%, 55% { translate: 0 0; } 100% { translate: 420% 0; } }
+.fb-rar { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 900; letter-spacing: .02em; color: #1d1230; background: var(--rc); border-radius: 999px; padding: 1px 7px; box-shadow: 0 2px 0 var(--rc2); }
+.fb-how { font-size: 10.5px; line-height: 1.2; color: var(--rc); font-weight: 800; text-align: center; }
+.fb-tile.locked .fb-art::after { content: '🔒'; position: absolute; top: 26px; right: 8px; font-size: 13px; }
+.fb-wd-sub { margin: 0; }
+.fg .fg-twinkle { animation: fg-twinkle 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.fg .fg-twinkle:nth-of-type(2n) { animation-delay: -1.3s; }
+@keyframes fg-twinkle { 50% { opacity: .45; transform: scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .fb-tile.r-legendary::after, .fg .fg-twinkle { animation: none; } }
+.fb-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.fb-sw {
+  position: relative; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+  background: linear-gradient(135deg, var(--a) 55%, var(--b) 56%); box-shadow: 0 3px 0 var(--fb-edge), inset 0 0 0 2px rgba(255, 255, 255, .12);
+}
+.fb-sw.on { outline: 3px solid #ffc533; outline-offset: 2px; }
+.fb-sw .fb-price { top: -6px; right: -10px; }
+.fb-foot { display: flex; gap: 10px; padding: 8px 16px 0; align-items: center; }
+.fb-foot .fb-wear { flex: 1; min-height: 48px; font-weight: 900; }
+.fb-wear[disabled] { opacity: .6; }
+.fb-classic { align-self: center; margin-top: 8px; background: none; border: 0; color: var(--fb-muted); text-decoration: underline; font: inherit; }
+.fb-disc { display: inline-grid; border-radius: 50%; }
+.fb-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; border: 0; font: inherit; color: inherit; cursor: pointer; margin-bottom: 12px; }
+.fb-card-txt { flex: 1; display: grid; gap: 2px; }
+.fb-card-new { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #2a1c00; background: linear-gradient(135deg, #ffd56a, #f2a93b); box-shadow: 0 4px 0 #b8760b; }
+
+/* Builder reactions (figureBuilder.ts): sparkles around the stage when the character is worn. */
+.fb-stage { position: relative; }
+.fb-spark { position: absolute; width: 14px; height: 14px; pointer-events: none; color: #fff3c2;
+  background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 6px #ffd76a); animation: fb-spark .9s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes fb-spark { from { transform: translate(0, 0) scale(.2) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); opacity: 0; } }
+
+/* An actor in a moment: sized by its box, standing on its own shadow. */
+.fg-actor { position: absolute; display: block; pointer-events: none; }
+.fg-actor svg { width: 100%; height: auto; display: block; }
+.sm-stage .sm-actor { inset-inline-start: -22%; bottom: -6%; width: 40%; z-index: 2; }
+.cel-streak.go .sm-stage .sm-actor { animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .9s both; }
+@keyframes fg-actor-in { from { transform: translateY(30px) scale(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cel-streak.go .sm-stage .sm-actor { animation: none; } }
+.rkm-stage .rkm-actor { inset-inline-start: -24%; bottom: -8%; width: 40%; z-index: 3; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
+.done-card .done-actor { inset-inline-start: 6px; top: 8px; width: 64px; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .35s both; }
+@media (max-width: 360px) { .done-card .done-actor { width: 52px; } }
+@media (prefers-reduced-motion: reduce) { .rkm-stage .rkm-actor, .done-card .done-actor { animation: none; } }
+.me-hero .me-actor { inset-inline-start: 10px; top: 26px; width: 86px; pointer-events: auto; cursor: pointer; z-index: 1; }
+/* The character's day on Me (src/ui/actor.ts dayLook): dozing after the bedtime du'a, with drifting z's. */
+.fg.sleepy .fg-eyes { animation: none; transform: scaleY(.12); }
+.fg.sleepy .fg-bob { animation-duration: 6s; }
+.fg-actor .fg-z { position: absolute; top: 8%; inset-inline-end: 6%; font: 900 13px/1 var(--ui-round, system-ui); color: #e8e2ff; font-style: normal;
+  opacity: 0; animation: fg-z 3.6s ease-out infinite; animation-delay: calc(var(--i) * 1.2s); }
+@keyframes fg-z { 0% { opacity: 0; translate: 0 0; scale: .7; } 25% { opacity: .9; } 100% { opacity: 0; translate: 16px -26px; scale: 1.2; } }
+@media (prefers-reduced-motion: reduce) { .fg-actor .fg-z { animation: none; opacity: .7; } .fg-actor .fg-z:not(:first-of-type) { display: none; } }
+
+/* The character on the Learn path (src/ui/pathBuddy.ts): beside the step to do now, or under a tree. */
+.fg-actor.lp-buddy { pointer-events: auto; cursor: pointer; z-index: 2; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .2s both; }
+.lp-buddy.step { width: 64px; bottom: -14px; }
+.lp-buddy.step.left { right: calc(100% + 26px); }
+.lp-buddy.step.right { left: calc(100% + 26px); }
+.lp-tree:has(.lp-buddy) { position: relative; }
+.lp-buddy.tree { width: 50px; bottom: 26px; }
+.lp-buddy.tree.left { left: -30px; }
+.lp-buddy.tree.right { right: -30px; }
+@media (prefers-reduced-motion: reduce) { .fg-actor.lp-buddy { animation: none; } }
+/* Off screen, or an old phone: the idle loop rests (src/ui/actor.ts, round 3 speed pass). */
+.fg-actor.fg-off *, html.lite .fg-actor .fg-bob, html.lite .fg-actor .fg-head, html.lite .fg-actor .fg-shadow, html.lite .fg-actor .fg-twinkle { animation-play-state: paused !important; }

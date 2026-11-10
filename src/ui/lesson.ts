@@ -1,18 +1,24 @@
 // A lesson in the Learn tab (#/learn/{surah}): grows the surah's tree (src/data/garden.ts).
-//   New    the next chunk: Listen (the reciter, words lit, a turn to repeat after each round) →
+//   New    the next chunk: Meaning first (each word's meaning, the translation) → Listen (the reciter, words lit, a turn to repeat after each round) →
 //          Practise (the text, hints fading: all words → first word of each ayah → none) →
+//          Exercises (src/ui/lessonKinds.ts: which word means, next word, fill the word, order) →
 //          From memory (the text hidden; recite, reveal, check yourself)
 //   Link   everything learned so far, from ayah 1, from memory
 //   Whole  the whole surah from memory, once: the tree is full grown
 //   Water  a full tree that is thirsty: the whole surah again
+// From memory = tasmi': the words hidden in their place (weak words show faintly), "Stuck? Next word"
+// shows one word and counts as a slip, so does a peek; an optional recording kept on the device. Then the
+// text: tap the words you missed, compare yourself with the reciter (A/B), see similar ayat side by side;
+// the result suggested from the slips (src/ui/tasmi.ts, src/data/weakWords.ts).
 // The text is the bundled Quran text, split only at its spaces and never changed (rule 1); hidden words
 // keep their place. The reference is always on screen (rule 2). Words are lit only from the reciter's
 // word timings (rule 8). Tap a word: its Quran.com meaning and, where timed, its sound.
 import './learn.css';
 import {
-  LIGHT, ayahPlaces, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
+  LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
-import { addMemorised, claimGoal } from '../data/journey';
+import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
+import { addLesson, addMemorised, claimGoal } from '../data/journey';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
@@ -21,14 +27,21 @@ import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming }
 import { surahName, t, } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
+import { drills, meaningCards, type KindCtx } from './lessonKinds';
+import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
+import { ClipJar, helpCard, helpChoice } from './harakatClips';
+import { kidsOn } from '../data/kids';
+import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
+import { markStrong, markWeak, weakWords } from '../data/weakWords';
+import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
 import { drawTree, stageHeight, vignette } from './gardenArt';
-import { holdSeed, noteGrowth } from './garden';
 import { icon } from './icons';
 import { reelReciter } from './prefs';
 
 type Step = 'new' | 'link' | 'whole' | 'water';
-type Phase = 'listen' | 'practice' | 'memory' | 'check' | 'done';
+type Phase = 'meaning' | 'listen' | 'practice' | 'drill' | 'memory' | 'check' | 'done';
 interface AyahAudio { src: string; from: number; to: number; words: WordTiming | null; heard: boolean[] }
 
 const TURN_EXTRA = 1.5;
@@ -43,13 +56,10 @@ const learnReciter = () => {
   return timedReciterById(reelReciter(DEFAULT_RECITER)).id;
 };
 
-export async function showLesson(root: HTMLElement, s: number): Promise<() => void> {
-  if (!tree(s) || tree(s)!.x < 0) {
-    // Not planted yet: the seed waits in the garden's tray.
-    holdSeed(s);
-    location.replace('#/learn');
-    return () => {};
-  }
+/** `mode` 'tasmi': the whole surah from memory straight away ("Already know some?" on the path). */
+export async function showLesson(root: HTMLElement, s: number, mode?: string): Promise<() => void> {
+  ensureTree(s, pathChunk());
+  const quick = mode === 'tasmi';
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
     loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
     surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
@@ -68,6 +78,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   let reviewFirst = false; // a growing tree was thirsty: Link first, then on to New
   async function plan(after?: Step): Promise<void> {
     const tr = tree(s)!;
+    if (quick && !after && !tr.full) { step = 'whole'; range = [1, m.ayahs]; return; }
     if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
     if (tr.full) { step = 'water'; range = [1, m.ayahs]; return; }
     if (!after && thirsty(tr) && tr.learned > 0) { step = 'link'; range = [1, tr.learned]; reviewFirst = true; return; }
@@ -100,7 +111,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const art = h('span', { class: 'ls-tree' });
   root.append(
     h('header', { class: 'ls-head' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToGarden') }, icon('back', 22)),
+      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
       art),
     stepsEl, phaseEl,
@@ -111,6 +122,31 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   let phase: Phase = 'listen';
   let level = 0; // 0 all words · 1 the first word of each ayah · 2 none
   const peeked = new Set<string>();
+  // tasmi'
+  const helped = new Set<string>(); // shown by a prompt or a peek: slips
+  const shown = new Set<string>();  // shown by "Stuck? Next word", stays shown
+  const missed = new Set<string>(); // tapped as missed when the text is shown
+  let weak = new Set<string>();
+  const rec = new Recorder();
+  let recUrl = '';
+  const mine = new Audio();
+  let simCount = 0;
+  // voice follow-along (src/ui/follow.ts): words heard and passed over, fixed at each pause (said, skip)
+  // and as the recogniser has the current utterance so far (sayP, skipP)
+  let follower: Follower | null = null;
+  let canFollow = false;
+  let harakatOn = false;
+  void followChecksHarakat().then((x) => { harakatOn = x; });
+  void followSupported().then((ok) => { canFollow = ok; if (phase === 'memory') paintActions(); });
+  let fw: FollowWord[] = [];
+  let fBase = 0;
+  const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
+  const hkS = new Set<string>(); let hkNext: string[] = []; // said with another haraka (harakat server)
+  const jar = new ClipJar(); // clips for "Help improve the harakat check" (src/ui/harakatClips.ts)
+  let fwText = new Map<string, string>();
+  let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
+  const voiced = (k: string) => said.has(k) || sayP.has(k);
+  const passed = (k: string) => skip.has(k) || skipP.has(k);
   const wordEls = new Map<string, HTMLElement>();
   /** Learn on the real mushaf page (visual memory) or ayah by ayah with the translation. */
   const pageView = () => pref('lessonView', ['page', 'ayat'], 'page') === 'page';
@@ -142,8 +178,16 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const hiddenWord = (a: number, i: number) => {
     if (phase === 'check' || phase === 'done') return false;
     if (peeked.has(`${a}:${i}`)) return false;
+    if (phase === 'memory' && (shown.has(`${a}:${i}`) || voiced(`${a}:${i}`) || passed(`${a}:${i}`))) return false;
     const lv = phase === 'memory' ? 2 : phase === 'listen' ? 0 : level;
     return lv === 2 || (lv === 1 && i > 0);
+  };
+  const wordCls = (a: number, i: number) => {
+    const k = `${a}:${i}`, hid = hiddenWord(a, i);
+    return `${hid ? ' hid' : ''}${hid && phase === 'memory' && weak.has(k) ? ' hint' : ''}`
+      + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`
+      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? (wrongS.has(k) || wrongP.has(k) ? ' wrong' : ' skipped') : ''}`
+      + `${phase === 'memory' && hkS.has(k) ? ' harakah' : ''}`;
   };
   /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
   function displayIndex(a: number, pos: number): number {
@@ -184,7 +228,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
             const a = seg[1], here = inChunk(seg), i = here ? displayIndex(a, pos) : -1;
             const w = h('span', { class: `w${here ? '' : ' dim'}` }, g);
             if (i >= 0) {
-              w.className = `w lw${hiddenWord(a, i) ? ' hid' : ''}`;
+              w.className = `w lw${wordCls(a, i)}`;
               w.setAttribute('role', 'button'); w.tabIndex = 0;
               w.addEventListener('click', () => tapWord(a, i));
               const key = `${a}:${i}`;
@@ -221,7 +265,16 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     const first = el.querySelector<HTMLElement>('.lw');
     if (first && el === textEl.querySelector('.ls-page:has(.lw)')) first.scrollIntoView({ block: 'center' });
   }
+  let kindEl: HTMLElement | null = null; // the Meaning or Exercises screen while that phase is on
   function paintText() {
+    textEl.classList.toggle('ls-kind', !!kindEl);
+    if (kindEl) {
+      root.classList.remove('ls-pageview');
+      wordEls.clear(); moreEls.length = 0;
+      trEl.replaceChildren();
+      if (kindEl.parentElement !== textEl) textEl.replaceChildren(kindEl);
+      return;
+    }
     root.classList.toggle('ls-pageview', pageView());
     if (pageView()) { paintPage(); return; }
     trEl.replaceChildren();
@@ -230,7 +283,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     for (let a = range[0]; a <= range[1]; a++) {
       const p = h('p', { class: 'ls-ayah' });
       words[a - 1].forEach((w, i) => {
-        const el = h('span', { class: `lw${hiddenWord(a, i) ? ' hid' : ''}`, role: 'button', tabindex: '0', onclick: () => tapWord(a, i) }, w);
+        const el = h('span', { class: `lw${wordCls(a, i)}`, role: 'button', tabindex: '0', onclick: () => tapWord(a, i) }, w);
         wordEls.set(`${a}:${i}`, el);
         p.append(i ? ' ' : '', el);
       });
@@ -241,40 +294,226 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     }
     textEl.replaceChildren(...blocks);
   }
+  /** Repaints only these words (voice follow-along updates many times a second). */
+  function refreshKeys(keys: Set<string>) {
+    for (const k of keys) {
+      const [a, i] = k.split(':').map(Number);
+      for (const el of [wordEls.get(k), ...moreEls.filter(([x]) => x === k).map(([, e]) => e)]) {
+        if (!el) continue;
+        const keep = el.classList.contains('on') ? ' on' : '';
+        el.className = `${el.classList.contains('w') ? 'w ' : ''}lw${wordCls(a, i)}${keep}`;
+      }
+    }
+  }
   function refreshHidden() {
-    for (const [k, el] of [...wordEls, ...moreEls]) { const [a, i] = k.split(':').map(Number); el.classList.toggle('hid', hiddenWord(a, i)); }
+    for (const [k, el] of [...wordEls, ...moreEls]) {
+      const [a, i] = k.split(':').map(Number);
+      const keep = el.classList.contains('on') ? ' on' : '';
+      el.className = `${el.classList.contains('w') ? 'w ' : ''}lw${wordCls(a, i)}${keep}`;
+    }
   }
 
   function paintActions() {
     const b = (label: string, on: () => void, cls = 'chip') => h('button', { class: cls, onclick: on }, label);
     const primary = (label: string, on: () => void) => b(label, on, 'primary brand-btn');
     const n = range[1] - range[0] + 1;
-    const phases: [Phase, LearnKey][] = step === 'new' ? [['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['memory', 'learn.phMemory']] : [];
+    const phases: [Phase, LearnKey][] = step === 'new'
+      ? [['meaning', 'learn.phMeaning'], ['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['drill', 'learn.phDrill'], ['memory', 'learn.phMemory']] : [];
     phaseEl.replaceChildren(
       h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n })),
       phases.length ? h('span', { class: 'ls-phases' }, ...phases.map(([p, k], i) => h('span', { class: p === phase || (p === 'memory' && phase === 'check') ? 'on' : '' }, `${i + 1} ${lt(k)}`))) : '');
-    if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
+    if (phase === 'meaning') actions.replaceChildren(primary(lt('learn.toListen'), () => go('listen')));
+    else if (phase === 'drill') actions.replaceChildren(b(lt('learn.skipDrill'), () => go('memory')));
+    else if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
     else if (phase === 'practice') actions.replaceChildren(
       b(lt(level === 0 ? 'learn.hideSome' : level === 1 ? 'learn.hideAll' : 'learn.showAll'), () => { level = (level + 1) % 3; peeked.clear(); refreshHidden(); paintActions(); }),
-      primary(lt('learn.fromMemory'), () => go('memory')));
-    else if (phase === 'memory') actions.replaceChildren(
-      h('p', { class: 'ls-hint muted small' }, lt('learn.memoryHint')),
-      b(lt('learn.practiseFirst'), () => go('practice')), primary(lt('learn.reveal'), () => go('check')));
-    else if (phase === 'check') {
-      const slips: HTMLButtonElement = b(lt('learn.someSlips'), () => void pass(false, slips));
-      const had: HTMLButtonElement = primary(lt('learn.hadIt'), () => void pass(true, had));
+      primary(lt('learn.toDrill'), () => go('drill')));
+    else if (phase === 'memory') {
+      const recBtn = Recorder.supported ? h('button', { class: `chip ts-rec${rec.on ? ' on' : ''}`, 'aria-pressed': String(rec.on), onclick: () => void toggleRec() },
+        h('span', { class: 'ts-dot', 'aria-hidden': 'true' }), lt(rec.on ? 'learn.recording' : 'learn.record')) : '';
+      const slips = new Set([...helped, ...skip, ...skipP]).size;
+      const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
+        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
       actions.replaceChildren(
-        h('p', { class: 'ls-hint' }, lt('learn.howDid')),
-        b(lt('learn.notYet'), () => { level = Math.max(0, level - 1); go('practice'); }),
-        slips, had);
+        h('p', { class: 'ls-hint muted small' }, slips ? lt(skip.size || skipP.size ? 'learn.followSkipped' : 'learn.slipsSoFar', { n: slips }) : lt(follower ? 'learn.followHint' : 'learn.memoryHint')),
+        folBtn, b(lt('learn.stuck'), promptNext, 'chip ts-stuck'), follower ? '' : recBtn,
+        step === 'new' ? b(lt('learn.practiseFirst'), () => go('practice')) : '', primary(lt('learn.reveal'), () => go('check')));
+    } else if (phase === 'check') {
+      const total = new Set([...helped, ...missed]).size;
+      let all = 0;
+      for (let a = range[0]; a <= range[1]; a++) all += words[a - 1].length;
+      const verdict = total === 0 ? 2 : total <= Math.max(2, Math.round(all * 0.05)) ? 1 : 0;
+      const pick = (k: number, label: string, on: (el: HTMLButtonElement) => void) => {
+        const el: HTMLButtonElement = k === verdict ? primary(label, () => on(el)) : b(label, () => on(el));
+        return el;
+      };
+      const ab = h('div', { class: 'ts-ab' },
+        recUrl ? h('button', { class: 'chip', onclick: () => playMine() }, '▶ ', lt('learn.playMine')) : '',
+        h('button', { class: 'chip', onclick: () => { mine.pause(); void listen(); } }, '▶ ', lt('learn.playSheikh')),
+        simCount ? h('button', { class: 'chip ts-simbtn', onclick: () => void similarSheet(s, range[0], range[1]) }, lt('learn.simN', { n: simCount })) : '');
+      actions.replaceChildren(
+        h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
+        h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
+        skip.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.skippedN', { n: skip.size })) : '',
+        hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
+        hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
+        ab,
+        pick(0, lt('learn.notYet'), () => {
+          keepWeak();
+          if (step !== 'new') { const ps: number[] = []; for (let x = range[0]; x <= range[1]; x++) ps.push(mushaf.pageOf(s, x)); recordPages(ps, 0); }
+          if (quick) { toast(lt('learn.quickNotYet')); const n = nextQuick(s); location.replace(n ? `#/learn/${n}/tasmi` : '#/learn'); return; }
+          level = Math.max(0, level - 1); go(step === 'new' ? 'practice' : 'memory');
+        }),
+        pick(1, lt('learn.someSlips'), (el) => { keepWeak(); void pass(false, el); }),
+        pick(2, lt('learn.hadIt'), (el) => { keepWeak(); void pass(true, el); }));
     } else actions.replaceChildren();
+  }
+
+  /** "Stuck? Next word": the first hidden word in reading order, shown for good; a slip. */
+  function promptNext() {
+    for (let a = range[0]; a <= range[1]; a++) for (let i = 0; i < words[a - 1].length; i++) {
+      const k = `${a}:${i}`;
+      if (!hiddenWord(a, i)) continue;
+      shown.add(k); helped.add(k);
+      refreshHidden();
+      const el = wordEls.get(k);
+      el?.classList.add('peek');
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      haptic(10);
+      paintActions();
+      return;
+    }
+  }
+  async function toggleFollow() {
+    if (follower) { stopFollow(); paintActions(); return; }
+    if (rec.on) await stopRec();
+    if (!localStorage.getItem(harakatOn ? 'followNotedS' : 'followNoted')) { toast(lt(harakatOn ? 'learn.followNoteServer' : 'learn.followNote')); try { localStorage.setItem(harakatOn ? 'followNotedS' : 'followNoted', '1'); } catch { /* blocked */ } }
+    stopAll();
+    const list: { key: string; text: string }[] = [];
+    for (let a = range[0]; a <= range[1]; a++) words[a - 1].forEach((text, i) => list.push({ key: `${a}:${i}`, text }));
+    fw = followWords(list);
+    fwText = new Map(list.map((x) => [x.key, x.text]));
+    // carry on from the first word not yet shown, heard or passed
+    fBase = fw.findIndex((w) => { const [a, i] = w.key.split(':').map(Number); return hiddenWord(a, i); });
+    if (fBase < 0) fBase = fw.length;
+    const f = await startFollow({
+      heard: (text, final) => heard(text, final),
+      hints: () => hintsFrom(fw, fBase),
+      ahead: () => fw.slice(fBase).map((w) => fwText.get(w.key) ?? ''),
+      checked: (r, pcm) => {
+        hkNext = r.flags.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k);
+        const base = fBase;
+        jar.take(pcm, r, (i) => { const w = fw[base + i]; if (!w) return null; const a = +w.key.split(':')[0]; return { key: w.key, s, a, text: fwText.get(w.key) ?? '' }; });
+      },
+      ended: (why) => {
+        follower = null;
+        if (why === 'denied') toast(lt('learn.followDenied'));
+        else if (why === 'limit') toast(lt('learn.followLimit'));
+        else if (why === 'failed') toast(lt('learn.followFailed'));
+        else if (why === 'quiet') toast(lt('learn.followQuiet'));
+        if (phase === 'memory') paintActions();
+      },
+    });
+    if (!f) { toast(lt('learn.followFailed')); return; }
+    follower = f;
+    haptic(10);
+    paintActions();
+  }
+  function stopFollow() {
+    const f = follower;
+    follower = null;
+    f?.stop();
+    for (const k of sayP) said.add(k);
+    for (const k of skipP) skip.add(k);
+    for (const k of wrongP) wrongS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set();
+  }
+  let lastSaid = '', lastSig = '';
+  function heard(text: string, final: boolean) {
+    if (!follower || phase !== 'memory') return;
+    const r = follow(fw, fBase, text);
+    const touched = new Set([...sayP, ...skipP]);
+    sayP = new Set(r.said.map((x) => fw[x].key));
+    wrongP = new Set(r.wrong.map((x) => fw[x].key));
+    skipP = new Set([...r.skipped.map((x) => fw[x].key), ...wrongP]);
+    if (final) {
+      for (const k of sayP) said.add(k);
+      for (const k of skipP) skip.add(k);
+      for (const k of wrongP) wrongS.add(k);
+      for (const k of hkNext) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
+      sayP = new Set(); skipP = new Set(); wrongP = new Set();
+      fBase = r.cursor;
+    }
+    for (const k of hkNext) touched.add(k);
+    hkNext = [];
+    for (const k of [...sayP, ...skipP, ...r.said.map((x) => fw[x].key), ...r.skipped.map((x) => fw[x].key), ...r.wrong.map((x) => fw[x].key)]) touched.add(k);
+    refreshKeys(touched);
+    const at = r.said.length ? fw[r.said[r.said.length - 1]].key : '';
+    if (at && at !== lastSaid) {
+      lastSaid = at;
+      const el = wordEls.get(at);
+      if (el) {
+        el.classList.add('pop');
+        const rc = el.getBoundingClientRect(), tc = textEl.getBoundingClientRect();
+        if (rc.bottom > tc.bottom - 40 || rc.top < tc.top) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+    const sig = `${skip.size + skipP.size > 0}|${new Set([...helped, ...skip, ...skipP]).size}`;
+    if (sig !== lastSig) { lastSig = sig; paintActions(); }
+    if (r.cursor >= fw.length) {
+      stopFollow();
+      toast(lt('learn.followEnd'));
+      haptic(20);
+      window.setTimeout(() => { if (phase === 'memory') go('check'); }, 900);
+    }
+  }
+  async function toggleRec() {
+    if (rec.on) { await stopRec(); paintActions(); return; }
+    if (!(await rec.start())) { toast(lt('learn.noMic')); return; }
+    haptic(10);
+    paintActions();
+  }
+  async function stopRec() {
+    if (!rec.on) return;
+    const blob = await rec.stop();
+    if (!blob) return;
+    if (recUrl) URL.revokeObjectURL(recUrl);
+    recUrl = URL.createObjectURL(blob);
+    void keepRecording(recKey(s, range[0], range[1]), blob);
+  }
+  function playMine() {
+    stopAll();
+    if (!recUrl) return;
+    mine.src = recUrl;
+    void mine.play().catch(() => {});
+  }
+  /** Missed and prompted words come back with a hint; weak words recited cleanly move towards leaving. */
+  function keepWeak() {
+    jar.share(missed);
+    const bad = new Set([...helped, ...missed]);
+    for (const k of bad) { const [a, i] = k.split(':').map(Number); markWeak(s, a, i); }
+    for (const k of weak) if (!bad.has(k)) { const [a, i] = k.split(':').map(Number); markStrong(s, a, i); }
   }
 
   function go(p: Phase) {
     stopAll();
+    if (follower) stopFollow();
+    mine.pause();
+    if (p !== 'memory' && rec.on) void stopRec().then(() => { if (phase === 'check') paintActions(); });
+    if (p === 'memory' && phase !== 'check') {
+      helped.clear(); shown.clear(); missed.clear();
+      jar.clear();
+      said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
+      weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
+      if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }
+      void recording(recKey(s, range[0], range[1])).then((b) => { if (b && !recUrl && phase !== 'memory') { recUrl = URL.createObjectURL(b); paintActions(); } });
+    }
+    if (p === 'check') { missed.clear(); for (const k of skip) missed.add(k); } // passed over: marked, untap if the phone misheard
     phase = p;
     pop.hidden = true;
     peeked.clear();
+    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), () => go('memory')) : null;
+    textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
     paintText();
     paintActions();
@@ -286,8 +525,10 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     doneEl.hidden = true;
     for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
     level = 0;
+    simCount = 0;
+    void similarIn(s, range[0], range[1]).then((l) => { simCount = l.length; if (phase === 'check') paintActions(); });
     paintHead();
-    go(step === 'new' ? 'listen' : 'memory');
+    go(step === 'new' ? 'meaning' : 'memory');
   }
 
   // --- recitation ---
@@ -476,13 +717,40 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     return spans.map(([f, l], p) => (i >= f && i <= l ? list[p] : '')).filter(Boolean).join(' ');
   }
 
+  /** A word's own sound, where the reciter's timings cover it (rule 8). */
+  async function sayWord(a: number, i: number): Promise<void> {
+    if (!(await ensureAudio())) return;
+    const x = audios![a - 1];
+    if (!x.words || !x.heard[i]) return;
+    stopAll();
+    const my = run;
+    lightWord(a)(i);
+    await playSpan(my, x, x.words.start[i], x.words.end[i] + 0.06, () => {}, true);
+    if (my === run) audio.pause();
+    lightWord(a)(null);
+  }
+  const kindCtx = (): KindCtx => ({
+    s, range, words, trans, tr: { lang: tInfo.lang, dir: tInfo.dir, name: tInfo.translator }, meaningOf, sayWord,
+    refOf: (a, b) => reference(m, a, b ?? a),
+  });
+
   let peekTimer = 0;
   async function tapWord(a: number, i: number) {
     const el = wordEls.get(`${a}:${i}`);
     if (!el) return;
+    if (phase === 'check') {
+      // Honest tasmi': tap the words that were missed or said wrong.
+      const k = `${a}:${i}`;
+      if (missed.has(k)) missed.delete(k); else missed.add(k);
+      haptic(6);
+      refreshHidden();
+      paintActions();
+      return;
+    }
     if (el.classList.contains('hid')) {
-      // From memory: a peek at one word, for a moment.
+      // From memory: a peek at one word, for a moment (a slip).
       peeked.add(`${a}:${i}`);
+      if (phase === 'memory') { helped.add(`${a}:${i}`); paintActions(); }
       el.classList.remove('hid');
       el.classList.add('peek');
       haptic(6);
@@ -494,15 +762,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
     pop.hidden = false;
     pop.replaceChildren(h('span', { class: 'ls-pop-ar', lang: 'ar', dir: 'rtl' }, words[a - 1][i]), h('span', { class: 'ls-pop-en' }, mean || lt('learn.noMeaning')),
       h('span', { class: 'muted small' }, `${s}:${a} · ${lt('learn.wbwCredit')}`));
-    if (!(await ensureAudio())) return;
-    const x = audios![a - 1];
-    if (!x.words || !x.heard[i]) return; // rule 8: no timing of its own → its meaning only
-    stopAll();
-    const my = run;
-    lightWord(a)(i);
-    await playSpan(my, x, x.words.start[i], x.words.end[i] + 0.06, () => {}, true);
-    audio.pause();
-    lightWord(a)(null);
+    await sayWord(a, i); // rule 8: no timing of its own → its meaning only
   }
 
   // --- passing a step ---
@@ -539,6 +799,11 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
         moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
       }
     }
+    addLesson();
+    // The pages this recitation covered get their strength (page memory).
+    const covered: number[] = [];
+    for (let x = range[0]; x <= range[1]; x++) covered.push(mushaf.pageOf(s, x));
+    recordPages(covered, smooth ? 2 : 1);
     const after = tree(s)!;
     const stage1 = stageOf(after, m.ayahs);
     if (stage1 !== stage0) noteGrowth(s, stage0);
@@ -550,6 +815,12 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       reviewFirst = false;
       await plan('link');
       if (step === 'new') { startStep(); return; }
+    }
+    if (quick && was === 'whole') {
+      const n = nextQuick(s);
+      if (n) { location.replace(`#/learn/${n}/tasmi`); return; }
+      location.hash = '#/learn';
+      return;
     }
     void showDone(after, was);
   }
@@ -566,7 +837,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       h('h2', {}, lt(tr.full ? (was === 'whole' ? 'learn.doneFull' : 'learn.doneWatered') : 'learn.doneToday')),
       h('p', { class: 'muted' }, tr.full ? lt('learn.doneFullSub') : lt('learn.doneSub', { n: tr.learned, of: m.ayahs })),
       h('div', { class: 'ls-done-actions' },
-        h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToGarden')),
+        h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToPath')),
         label ? h('button', { class: 'primary brand-btn', onclick: () => void plan().then(startStep) }, lt('learn.moreToday', { what: label })) : ''));
   }
 
@@ -583,6 +854,10 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   if (tree(s)!.learned === 0 && step === 'new') toast(lt('learn.firstLesson'));
   return () => {
     stopAll();
+    if (follower) stopFollow();
+    void rec.stop();
+    mine.pause();
+    if (recUrl) URL.revokeObjectURL(recUrl);
     audio.removeAttribute('src');
     audio.load();
     if (blobUrl) URL.revokeObjectURL(blobUrl);

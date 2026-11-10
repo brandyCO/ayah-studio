@@ -43,10 +43,14 @@ interface DayRec {
   dk?: Record<string, number>;
   /** Ayat memorised (marked by the user). */
   m?: number;
+  /** Learn: lessons and tasmi' passed (a new chunk, a link, a whole surah, watering, a page). */
+  ls?: number;
   /** Morning adhkar all said in the app's adhkar session. */
   ad?: 1;
   /** Evening adhkar all said. */
   am?: 1;
+  /** Du'a moments said in full (session keys: 'wake', 'salah:fajr', …, 'sleep', 'adhan:asr'). */
+  dm?: string[];
   /** Every daily goal was met. */
   g?: 1;
   /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
@@ -384,6 +388,13 @@ export function addMemorised(n: number, now = new Date()) {
   save();
 }
 
+/** A Learn lesson or tasmi' was passed today (counted for goals, quests and Ranks). */
+export function addLesson(now = new Date()) {
+  const d = today(now);
+  d.ls = (d.ls ?? 0) + 1;
+  save();
+}
+
 /** One of the user's own goals: `n` more (or fewer) times today. */
 export function addCustom(id: string, n: number, max: number, now = new Date()) {
   const d = today(now);
@@ -397,6 +408,14 @@ export function setAdhkar(done: boolean, period: 's' | 'm' = 's', now = new Date
   const d = today(now);
   const f = period === 'm' ? 'am' : 'ad';
   if (done) d[f] = 1; else delete d[f];
+  save();
+}
+
+/** A du'a moment was said in full today (its session key). */
+export function markMoment(key: string, now = new Date()) {
+  const d = today(now);
+  if (d.dm?.includes(key)) return;
+  d.dm = [...(d.dm ?? []), key];
   save();
 }
 
@@ -530,10 +549,11 @@ function cleanOther(v: unknown): Other | null {
     const d = d0 as Record<string, unknown>;
     const o: DayRec = {};
     for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (d[f]) o[f] = 1;
-    for (const f of ['ay', 'l', 'r', 'm'] as const) if (num(d[f])) o[f] = num(d[f]);
+    for (const f of ['ay', 'l', 'r', 'm', 'ls'] as const) if (num(d[f])) o[f] = num(d[f]);
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
     if (Array.isArray(d.cl)) o.cl = strs(d.cl);
+    if (Array.isArray(d.dm)) o.dm = strs(d.dm).slice(0, 20);
     if (d.dk) o.dk = nums(d.dk);
     if (d.cu) o.cu = nums(d.cu);
     if (d.n) o.n = nums(d.n);
@@ -646,10 +666,11 @@ function view(): State {
     for (const [k, b] of Object.entries(o.days)) {
       const a = (v.days[k] ??= {});
       for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (b[f]) a[f] = 1;
-      for (const f of ['ay', 'l', 'r', 'm'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
+      for (const f of ['ay', 'l', 'r', 'm', 'ls'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);
       if (b.cl) a.cl = union(a.cl, b.cl);
+      if (b.dm) a.dm = union(a.dm, b.dm);
       if (b.dk) a.dk = addNums(a.dk, b.dk);
       if (b.cu) a.cu = addNums(a.cu, b.cu);
       // The same reward claimed on two devices counts once.

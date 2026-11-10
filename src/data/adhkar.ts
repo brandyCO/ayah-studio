@@ -40,37 +40,42 @@ export const sessionList = (all: Dhikr[], p: AdhkarPeriod) => all.filter((x) => 
 
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-// --- today's progress: id → times said ---
-interface Progress { day: string; s: Record<string, number>; m: Record<string, number>; at?: Partial<Record<AdhkarPeriod, string>>; f?: Partial<Record<AdhkarPeriod, string[]>> }
+// --- today's progress: session key → id → times said. Keys: 's' / 'm' (morning / evening adhkar),
+// and the du'a moments ('wake', 'sleep', 'salah:fajr', 'adhan:asr', …; src/data/duas.ts). ---
+export type SessionKey = string;
+interface Progress { day: string; c: Record<SessionKey, Record<string, number>>; at: Record<SessionKey, string>; f: Record<SessionKey, string[]> }
 function progress(): Progress {
   try {
-    const v = JSON.parse(localStorage.getItem('adhkarProgress') ?? 'null') as Progress | null;
-    if (v && v.day === dayKey()) return { day: v.day, s: v.s ?? {}, m: v.m ?? {}, at: v.at ?? {}, f: v.f ?? {} };
+    const v = JSON.parse(localStorage.getItem('adhkarProgress') ?? 'null') as (Partial<Progress> & { s?: Record<string, number>; m?: Record<string, number> }) | null;
+    if (v && v.day === dayKey()) return { day: v.day, c: v.c ?? { s: v.s ?? {}, m: v.m ?? {} }, at: v.at ?? {}, f: v.f ?? {} };
   } catch { /* ignore */ }
-  return { day: dayKey(), s: {}, m: {}, at: {}, f: {} };
+  return { day: dayKey(), c: {}, at: {}, f: {} };
 }
 function saveProgress(p: Progress) {
   try { localStorage.setItem('adhkarProgress', JSON.stringify(p)); } catch { /* ignore */ }
 }
-export const saidCount = (p: AdhkarPeriod, id: string) => progress()[p][id] ?? 0;
+export const saidCount = (p: SessionKey, id: string) => progress().c[p]?.[id] ?? 0;
 /** Adhkar said in full today. */
-export const finishedCount = (p: AdhkarPeriod) => progress().f?.[p]?.length ?? 0;
-/** One more (or one fewer) time said; returns the new count. */
-export function say(p: AdhkarPeriod, d: Dhikr, n = 1): number {
+export const finishedCount = (p: SessionKey) => progress().f[p]?.length ?? 0;
+/** Ids said in full today in a session. */
+export const finishedIds = (p: SessionKey) => progress().f[p] ?? [];
+/** One more (or one fewer) time said; returns the new count. `count` overrides the dhikr's own. */
+export function say(p: SessionKey, d: Pick<Dhikr, 'id' | 'count'>, n = 1, count = d.count): number {
   const pr = progress();
-  const v = Math.max(0, Math.min(d.count, (pr[p][d.id] ?? 0) + n));
-  if (v) pr[p][d.id] = v; else delete pr[p][d.id];
-  const f = new Set(pr.f?.[p] ?? []);
-  if (v >= d.count) f.add(d.id); else f.delete(d.id);
-  pr.f = { ...pr.f, [p]: [...f] };
+  const c = (pr.c[p] ??= {});
+  const v = Math.max(0, Math.min(count, (c[d.id] ?? 0) + n));
+  if (v) c[d.id] = v; else delete c[d.id];
+  const f = new Set(pr.f[p] ?? []);
+  if (v >= count) f.add(d.id); else f.delete(d.id);
+  pr.f[p] = [...f];
   saveProgress(pr);
   return v;
 }
 /** Where the user was (to pick up there). */
-export const lastAt = (p: AdhkarPeriod) => progress().at?.[p];
-export function setLastAt(p: AdhkarPeriod, id: string) {
+export const lastAt = (p: SessionKey) => progress().at[p];
+export function setLastAt(p: SessionKey, id: string) {
   const pr = progress();
-  pr.at = { ...pr.at, [p]: id };
+  pr.at[p] = id;
   saveProgress(pr);
 }
 

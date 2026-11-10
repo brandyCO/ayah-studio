@@ -44,4 +44,8 @@ export function watchRewards() {
   window.addEventListener('journey-changed', soon);
   window.addEventListener('readlog-changed', soon);
   check();
+  // The morning after the bedtime du'a: the waking dawn (src/ui/dawn.ts).
+  const dawn = () => void import('../data/duas').then((m) => { if (m.dawnDue()) void import('./dawn').then((d) => d.showDawn()); });
+  setTimeout(dawn, 1800);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(dawn, 900); });
 }

@@ -1,0 +1,54 @@
+/* "Your room" on Me (src/ui/room.ts). The scene keeps the back's 320×200 shape; shelves sit on its planks. */
+.rm-card { display: grid; gap: 10px; }
+.rm-card .me-h { margin: 0; }
+.rm-btns { display: flex; gap: 8px; align-items: center; }
+.rm-btns .primary { flex: 1; }
+.rm-card > p { margin: 0; }
+.rm-scene { position: relative; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 0 rgba(0, 0, 0, .14); }
+.rm-back { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.rm-shelf { position: absolute; left: 59.4%; width: 36.2%; display: flex; justify-content: center; align-items: flex-end; gap: 2px; }
+.rm-shelf.top { bottom: 62%; height: 22%; }
+.rm-shelf.low { bottom: calc(100% - 59%); height: 20%; }
+.rm-shelf svg, .rm-shelf > * { flex: none; }
+.rm-shelf .badge, .rm-shelf > span:not(.rm-cup):not(.rm-empty) { transform-origin: bottom; }
+.rm-cup { display: inline-flex; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .18)); }
+.rm-cup.p1 { position: relative; isolation: isolate; }
+.rm-cup.p1::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 228, 138, .8), transparent); opacity: 0; animation: rm-glint 4s ease-in-out infinite; pointer-events: none; z-index: -1; }
+@keyframes rm-glint { 0%, 80%, 100% { opacity: 0; } 88% { opacity: 1; } }
+.rm-empty { align-self: center; font: 800 10px/1.2 var(--ui-round, system-ui); text-align: center; color: rgba(90, 60, 30, .7); padding: 0 6px; }
+.sky-night .rm-empty { color: rgba(240, 230, 255, .7); }
+.rm-cushion { position: absolute; left: 29.6%; bottom: 13%; width: 22%; height: 9%; border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(circle at 40% 35%, #8fd3c5, #3c9c8a); box-shadow: 0 3px 0 #23685c; }
+.fg-actor.rm-actor { left: 29%; bottom: 15%; width: 23%; pointer-events: auto; cursor: pointer; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .rm-cup.p1::after { animation: none; } }
+/* Decorate your room (src/ui/roomShop.ts) */
+.rs-sheet { max-height: 92vh; }
+.rs-sheet .sheet-head { gap: 8px; }
+.rs-purse { margin-inline-start: auto; font: 900 13px var(--ui-round, system-ui); color: #2a1c00; background: #ffc533; border-radius: 999px; padding: 3px 10px; box-shadow: 0 2px 0 #b8860b; }
+.rs-view { position: relative; flex: none; aspect-ratio: 16 / 10; border-radius: 16px; overflow: hidden; box-shadow: 0 3px 0 rgba(0, 0, 0, .14); margin: 0 0 10px; }
+.rs-view svg { display: block; width: 100%; height: 100%; }
+.rs-season { margin: -2px 0 8px; font-weight: 800; color: var(--accent); }
+.rs-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px; }
+.rs-tabs::-webkit-scrollbar { display: none; }
+.rs-tabs .chip { flex: none; }
+.rs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.rs-tile { position: relative; display: grid; justify-items: center; gap: 3px; padding: 22px 6px 8px; border: 0; border-radius: 16px; cursor: pointer; color: var(--text); font: inherit;
+  background: var(--card); box-shadow: 0 4px 0 color-mix(in srgb, var(--text) 14%, transparent), inset 0 0 0 2px color-mix(in srgb, var(--text) 8%, transparent); transition: transform .12s; }
+.rs-tile:active { transform: translateY(3px); }
+.rs-tile.on { box-shadow: 0 4px 0 #b8860b, inset 0 0 0 3px #ffc533; }
+.rs-tile { --rc: #9aa6b8; --rc2: #5f6b7d; }
+.rs-tile.r-rare { --rc: #5fb4ff; --rc2: #2a6cc4; }
+.rs-tile.r-epic { --rc: #b98aff; --rc2: #6d3fd0; }
+.rs-tile.r-prize { --rc: #ffd25e; --rc2: #c4860f; background: linear-gradient(180deg, color-mix(in srgb, #ffd25e 20%, var(--card)), var(--card)); }
+.rs-rar { position: absolute; top: 5px; inset-inline-start: 5px; font: 900 9.5px/1.4 var(--ui-round, system-ui); color: #1d1230; background: var(--rc); border-radius: 999px; padding: 0 7px; box-shadow: 0 2px 0 var(--rc2); }
+.rs-art { width: 78px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden; }
+.rs-art svg { width: 100%; height: 100%; }
+.rs-art.big { width: 160px; height: 120px; margin: 4px auto 0; }
+.rs-tile.locked .rs-art { opacity: .9; }
+.rs-name { font: 800 12px/1.2 var(--ui-round, system-ui); text-align: center; }
+.rs-price { font: 900 11px var(--ui-round, system-ui); color: #2a1c00; background: #ffc533; border-radius: 999px; padding: 1px 8px; }
+.rs-how { font: 800 10px/1.2 var(--ui-round, system-ui); color: var(--rc2); text-align: center; }
+.rs-sub { margin: 12px 0 0; }
+.rs-ask { text-align: center; max-width: 320px; }
+.rs-ask .chips { justify-content: center; }
+.rm-scene.rest *, .rm-scene.rest .fg-actor * { animation-play-state: paused !important; }

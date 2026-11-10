@@ -38,11 +38,10 @@ jobs:
           # Stock-library proxy (proxy/README.md); empty → the app hides the free library.
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
-      # The mushaf page fonts (~95 MB) are downloaded by the app on first use and kept offline
-      # (src/data/mushaf.ts); only the first pages ship in the APK.
-      - name: Leave most page fonts out of the APK
-        run: find dist/fonts/qcf-v2 -name 'p*.woff2' ! -name 'p1.woff2' ! -name 'p2.woff2' ! -name 'p3.woff2' -delete
+      # All 604 mushaf page fonts (~95 MB) ship in the APK, so every page reads offline from install
+      # (owner decision 2026-11-09).
       # Word times for the aligned reciters (~34 MB) are fetched by the app when a reel needs them
       # (src/data/alignedWords.ts).
       - name: Leave the aligned word times out of the APK

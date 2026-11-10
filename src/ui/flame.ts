@@ -4,6 +4,8 @@
 // drop flickering, a breathing glow, embers rising), in the theme's colours. It grows with the streak:
 // tier 1 (1–6 days), 2 (7–29) brighter with more embers, 3 (30+) a white-hot inner drop.
 // Tier 0 = the flame is out: a dim ember with a thin curl of smoke. Reduced motion → a still flame.
+import { restOffscreen } from './offscreen';
+
 let uid = 0;
 
 export type FlameTier = 0 | 1 | 2 | 3;
@@ -42,5 +44,6 @@ export function flame(tier: FlameTier, size = 140, still = false): HTMLElement {
           <path class="fl-mid" d="${MID}" fill="url(#${id}m)"/>
         </g>
       </svg>`;
+  if (!still && tier > 0) restOffscreen(el);
   return el;
 }

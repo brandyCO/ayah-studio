@@ -1,0 +1,24 @@
+/* Full of life on the list screens (owner choice 2026-11-09): the surah list and search in Read's teal,
+   drafts in Create's coral, chunky cards with a solid edge. Loaded with these screens. */
+.screen .topbar .brand h1 { font-weight: 900; }
+.search { border: 2px solid var(--line); border-radius: 16px; box-shadow: 0 3px 0 var(--line); font-weight: 600; }
+.search:focus { outline: none; border-color: #12a594; }
+.nav-tabs { gap: 8px; }
+.nav-tabs .tab { padding: 8px 14px; font: 800 var(--fs-s) var(--ui-round); background: var(--card); box-shadow: 0 3px 0 var(--line); }
+.nav-tabs .tab.on { background: #12a594; color: #fff; box-shadow: 0 3px 0 #0b6f63; }
+.surah-list { display: grid; gap: 8px; }
+.surah-row { border: 0; border-radius: 18px; padding: 12px; background: var(--card); box-shadow: 0 3px 0 var(--line); }
+.surah-num { border: 0; border-radius: 12px; background: color-mix(in srgb, #12a594 14%, var(--card)); color: #0e8c7d; font: 900 15px var(--ui-round); }
+.surah-names > :first-child { font: 800 var(--fs-l) var(--ui-round); }
+.nav-group-title { font: 900 var(--fs-s) var(--ui-round); color: #0e8c7d; }
+.nav-page { border: 0; border-radius: 18px; box-shadow: 0 3px 0 var(--line); border-top: 4px solid #12a594; }
+.nav-page strong { font: 900 var(--fs-base) var(--ui-round); }
+.hit { margin-bottom: 10px; padding: 14px; border: 0; border-radius: 18px; background: var(--card); box-shadow: 0 3px 0 var(--line); }
+.hit-ref { font: 900 var(--fs-s) var(--ui-round); color: #0e8c7d; }
+.draft-thumb { border: 0; border-radius: 18px; box-shadow: 0 5px 0 color-mix(in srgb, #ff6b4a 35%, var(--card)); }
+.draft-open strong { font: 900 var(--fs-base) var(--ui-round); }
+.empty-glow { background: radial-gradient(closest-side, rgba(255, 107, 74, .16), transparent); font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .surah-num, .nav-group-title, .hit-ref { color: #3dd1ad; }
+  .nav-tabs .tab.on { background: #0e8c7d; }
+}

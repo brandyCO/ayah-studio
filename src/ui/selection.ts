@@ -10,6 +10,8 @@ import { mp3quranSurah } from '../data/mp3quran';
 import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
 import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
+import { openCopy } from './copyAyat';
+import { icon } from './icons';
 import { t } from '../i18n';
 import { reelLook, reelReciter } from './prefs';
 
@@ -57,6 +59,7 @@ export function selectionController(o: SelectionOptions) {
     label,
     o.onListen && h('button', { class: 'icon-btn', 'aria-label': t('sel.listen'), title: t('sel.listenTitle'), onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
     o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': t('sel.bookmark'), title: t('sel.bookmarkTitle'), onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
+    h('button', { class: 'icon-btn', 'aria-label': t('sel.copy'), title: t('sel.copyTitle'), onclick: () => { const sel = current(); if (sel) openCopy(o.meta[sel.surah - 1], sel.lo, sel.hi); } }, icon('copy', 20)),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, t('sel.translation')),
     o.onReflect && h('button', { class: 'chip', title: t('sel.reflectTitle'), onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, t('sel.reflect')),
     h('button', { class: 'primary brand-btn', onclick: () => {

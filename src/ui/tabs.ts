@@ -1,4 +1,5 @@
-// Bottom tab bar: Read · Learn · Create · Me. One tap to the four things people come for.
+// Bottom tab bar: Read · Learn · Create · Ranks · Me (owner request 2026-11-09). Create is the raised
+// round button in the middle: the studio is the heart of the app.
 // On the mushaf the bar stays hidden until the page is tapped (the page stays clean); on the
 // surah list, drafts, Learn and Me it is always shown. Listening lives in Read (owner decision
 // 2026-11-02): ▶ in the mushaf's top bar or on a selected ayah; while listening elsewhere, Read goes
@@ -17,7 +18,7 @@ import { followAlong, playerActive } from './player';
 
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
-export type Tab = 'read' | 'learn' | 'create' | 'me';
+export type Tab = 'read' | 'learn' | 'create' | 'ranks' | 'me';
 export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}`;
 export interface TabHandlers { read?: () => void }
 
@@ -54,38 +55,44 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
     // Listening from another screen: Read goes back to the page being recited.
     btn('read', 'book', t('tab.read'), on.read ?? (() => (playerActive() ? followAlong() : goMushaf()))),
     btn('learn', 'sprout', t('tab.learn'), () => { if (location.hash !== '#/learn') location.hash = '#/learn'; }),
-    btn('create', 'create', t('tab.create'), () => void openCreate()),
+    h('button', {
+      class: `tab-btn create tab-fab${active === 'create' ? ' on' : ''}`, 'aria-current': active === 'create' ? 'page' : false,
+      onclick: () => { haptic(12); void openCreate(); },
+    }, h('span', { class: 'fab-disc' }, icon('plus', 28)), h('span', {}, t('tab.create'))),
+    btn('ranks', 'trophy', t('tab.ranks'), () => { if (location.hash !== '#/ranks') location.hash = '#/ranks'; }),
     btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }
 
 /** The Create sheet: start from today's ayah, continue a draft, or pick ayat in the mushaf. */
 export async function openCreate() {
   const [meta, drafts, daily, tpl] = await Promise.all([
-    loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null), weeklyTemplate()]);
+    loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null), weeklyTemplate(), import('./create.css').catch(() => null)]);
+  const noor = await import('./noor').catch(() => null);
   const close = () => d.close();
-  const link = (href: string, title: string, sub: string, ic: string) =>
-    h('a', { class: 'menu-item create-item', href, onclick: close },
+  const link = (href: string, title: string, sub: string, ic: string, c: string) =>
+    h('a', { class: `menu-item create-item ${c}`, href, onclick: close },
       h('span', { class: 'create-ic' }, icon(ic, 22)),
       h('span', { class: 'create-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)));
   const last = drafts[0];
-  const d = h('dialog', { class: 'sheet bottom' },
+  const d = h('dialog', { class: 'sheet bottom create-sheet' },
     h('div', { class: 'sheet-head' }, h('h2', {}, t('create.title')),
       h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
     h('div', { class: 'menu' },
       h('button', {
-        class: 'menu-item create-item', onclick: () => {
+        class: 'menu-item create-item c-pick', onclick: () => {
           close();
           goMushaf('pick');
         },
       }, h('span', { class: 'create-ic brand' }, icon('plus', 22)),
       h('span', { class: 'create-txt' }, h('b', {}, t('create.pick')), h('span', { class: 'muted small' }, t('create.pickSub')))),
       tpl && link(`#/t/${tpl.surah}/${tpl.from}-${tpl.to}/${tpl.reciter}${tpl.look ? `/${tpl.look}` : ''}`, t('create.template'),
-        reference(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle'),
+        reference(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle', 'c-tpl'),
       daily && link(`#/reel/${daily.s}/${daily.from}-${daily.to}`, t('create.today'),
-        reference(meta[daily.s - 1], daily.from, daily.to), 'sparkle'),
+        reference(meta[daily.s - 1], daily.from, daily.to), 'sparkle', 'c-day'),
       last && link(draftHash(last.project, last.id),
-        t('create.continue'), reference(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip'),
-      link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes')));
+        t('create.continue'), reference(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip', 'c-cont'),
+      link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes', 'c-mine')),
+    noor ? noor.noorLine('create') : '');
   d.addEventListener('close', () => { d.remove(); window.removeEventListener('hashchange', close); });
   window.addEventListener('hashchange', close); // a link was followed: the sheet goes with the old screen
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });

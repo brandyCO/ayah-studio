@@ -2,17 +2,22 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { setSoundsOn, soundsOn } from './sfx';
+import './me.css';
+import { noorLine, noorText } from './noor';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
+import { akt } from '../i18n/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
+import { mushafOfflineRow } from './mushafOffline';
 import { reciterById } from '../data/reciters';
-import { dayKey } from '../data/readLog';
+import { dayKey, readLog } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
 import { badgeMoment } from '../data/claims';
 import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
-import { ALL_LIGHT, BADGE_LIGHT, dayLightMax, lightFor } from '../data/goals';
+import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -85,7 +90,29 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
+  const wardrobeSlot = h('div', { class: 'wd-slot' });
+  // The character's room, decorated with prizes (src/ui/room.ts, lazy; only with a character).
+  const roomSlot = h('div', { class: 'rm-slot' });
+  const paintRoom = () => {
+    let has = false;
+    try { has = !!localStorage.getItem('rankFigure'); } catch { /* ignore */ }
+    if (has) void import('./room').then((m) => { const c = m.roomCard(dressUp); roomSlot.replaceChildren(c ?? ''); });
+  };
+  const dressUp = (tab?: 'wardrobe') => void import('./figureBuilder').then((b) => {
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
+    b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); paintRoom(); }, tab);
+  });
+  void import('./wardrobeCard').then((m) => {
+    const c = m.wardrobeCard(() => dressUp('wardrobe'));
+    if (c) wardrobeSlot.replaceChildren(c);
+  });
   const goalsBox = h('section', { class: 'me-card' });
+  // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
+  const duaBox = h('section', { class: 'me-card dl-card' });
+  const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
+  const noorEl = noorLine('me');
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
@@ -117,6 +144,66 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       paintHero();
     });
   };
+  // The user's character (when they made one) stands on the streak card: it waves when Me opens and when
+  // tapped, and cheers when the flame catches. Loaded only for people with a character.
+  // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
+  // owner decision 2026-11-10).
+  const showGhost = () => {
+    void import('../i18n/ranks').then(({ rt }) => {
+      if (!hero.isConnected) return;
+      const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
+        haptic(8);
+        void import('./figureBuilder').then((m) => m.openBuilder({ figure: null, wins: 0 }, () => {
+          ghost.remove(); actorTried = false; placeActor(true); paintRoom();
+        }));
+      } }, h('span', { class: 'me-ghost-fig', 'aria-hidden': 'true' }), h('span', { class: 'me-ghost-txt' }, rt('fb.open')));
+      hero.append(ghost);
+    });
+  };
+  let meActor: import('./actor').Actor | null = null;
+  let actorTried = false;
+  const placeActor = (cheer: boolean) => {
+    if (meActor) { hero.append(meActor.el); if (cheer) setTimeout(() => meActor?.cheer(), 700); return; }
+    if (actorTried) return;
+    actorTried = true;
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure'); } catch { /* ignore */ }
+    if (!code && account()) {
+      // Made on another device: the account keeps it, so this device (the web too) fetches it once.
+      // (`myFigure()` keeps '' when the account has none, so this is asked once.)
+      let never = false;
+      try { never = localStorage.getItem('rankFigure') === null; } catch { /* ignore */ }
+      if (never) {
+        void import('../together/ranks').then((m) => m.myFigure()).catch(() => null).then((c) => {
+          if (!hero.isConnected) return;
+          if (!c) { showGhost(); return; }
+          actorTried = false;
+          paintRoom();
+          placeActor(false);
+        });
+        return;
+      }
+    }
+    if (!code) { showGhost(); return; }
+    void import('./actor').then((m) => {
+      // The character follows the day: reading, sitting by its lantern at night, dozing after the bedtime du'a.
+      let bedtime = false;
+      try { bedtime = localStorage.getItem('bedtimeDone') === dayKey(new Date(Date.now() - 12 * 3600e3)); } catch { /* ignore */ }
+      const look = m.dayLook(code, { read: (readLog()[dayKey()]?.length ?? 0) > 0, bedtime });
+      meActor = m.actor(`me-actor day-${look.mode}`, look.code);
+      if (!meActor || !hero.isConnected) return;
+      const a = meActor;
+      a.el.setAttribute('role', 'button');
+      a.el.setAttribute('aria-hidden', 'true');
+      if (look.mode === 'asleep') {
+        a.el.querySelector('svg')?.classList.add('sleepy');
+        a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
+      }
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); });
+      hero.append(a.el);
+      setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
+    });
+  };
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
@@ -131,7 +218,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const catchNow = catchNext && s.litToday && !reduced;
     catchNext = false;
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 76, reduced));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
       h('div', { class: 'me-top' },
         flameBox,
@@ -143,12 +230,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
         void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
       } }, `🔥  ${t('rl.askFriend')}`) : '',
+      s.lost ? keptFreezeButton(s.lost.days) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
+    placeActor(catchNow);
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
       hero.append(canvas);
@@ -202,8 +291,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     return h('span', { class: 'goal-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct * 100)) }, fill);
   };
   // A goal's chest: resting until the goal is met, then shaking to be opened; open once claimed.
-  const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void) => {
-    const claimed = goalClaimed(id);
+  const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void, week = false) => {
+    const claimed = week ? weekClaimed(id) : goalClaimed(id);
     const state = claimed ? 'open' : met ? 'ready' : 'locked';
     return chest(light, state, t(claimed ? 'chest.opened' : met ? 'chest.open' : 'chest.locked', { n: light }), open);
   };
@@ -217,8 +306,13 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip', 'aria-label': t('goal.more'), onclick: () => { addMemorised(1); haptic(); } }, '+'));
     else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, onclick: () => openAdhkarSession(g.period ?? 's') },
       met ? t('goal.adhkarAgain') : g.done ? t('goal.adhkarGo') : t('goal.adhkarBegin'));
+    else if (g.kind === 'duas') act = h('button', { class: 'chip', onclick: () => { haptic(); void import('./dayLanterns').then((m) => m.openNextMoment()); } }, t('goal.adhkarBegin'));
+    else if (g.kind === 'lessons') act = h('a', { class: 'chip', href: '#/learn' }, t('goal.adhkarBegin'));
+    else if (g.kind === 'nights') act = h('button', { class: 'chip', onclick: () => { haptic(); void import('./adhkar').then((m) => m.openDuas('sleep')); } }, t('goal.adhkarBegin'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
+    else if (g.kind === 'surahs') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
+    else if (g.kind === 'listen') act = h('button', { class: 'chip', onclick: () => goMushaf('listen') }, t('goal.listen1'));
     else if (g.kind === 'custom') {
       const c = g.custom!;
       act = c.target === 1
@@ -229,14 +323,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     }
     // Once met, only the adhkar keep their button (to read them again); the chest is the claim.
     if (met && g.kind !== 'adhkar') act = '';
-    return h('div', { class: `goal${met ? ' met' : ''}` },
+    return h('div', { class: `goal k-${g.kind}${met ? ' met' : ''}` },
       h('span', { class: 'goal-txt' },
         h('b', {}, goalLabel(g)),
         bar(g.id, pct),
         h('span', { class: 'muted small' }, g.kind === 'adhkar' ? (met ? t('goal.adhkarDone') : t('goal.adhkarOf', { n: g.done, of: g.target }))
           : g.kind === 'custom' && g.target === 1 ? (met ? t('goal.doneToday') : t('cg.mine')) : `${Math.min(g.done, g.target)} / ${g.target}`)),
       act,
-      goalChest(g.id, lightFor(g), met, (el) => void claimGoalRow(g, el)));
+      goalChest(g.id, lightFor(g), met, (el) => void claimGoalRow(g, el), !!g.week));
   };
   // The day's chest: every goal met today.
   const dayRow = (list: GoalProgress[]) => {
@@ -249,6 +343,39 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted small' }, all && goalClaimed('all') ? t('goal.allMet') : `${n} / ${list.length}`)),
       goalChest('all', ALL_LIGHT, all, (el) => void claimAll(el)));
   };
+  // This week's goals (reset every Monday): their own rows and chest for all of them.
+  const claimWeekAll = (from?: Element) => play(
+    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
+    () => claimGoal(weekAllId(), WEEK_ALL_LIGHT));
+  const weekBox = () => {
+    const list = weekGoals();
+    if (!list.length) return '';
+    const n = list.filter((g) => g.done >= g.target).length;
+    const all = n === list.length;
+    return h('div', { class: 'week-goals' },
+      h('div', { class: 'me-row' }, h('h3', { class: 'me-h2' }, t('wkg.title')), resetLabel('week')),
+      list.length > 1 ? h('div', { class: `goal-day${all ? ' met' : ''}` },
+        h('span', { class: 'goal-txt' },
+          h('b', {}, t('wkg.chest')),
+          bar(weekAllId(), n / list.length),
+          h('span', { class: 'muted small' }, `${n} / ${list.length}`)),
+        goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
+      h('div', { class: 'goals' }, ...list.map(goalRow)));
+  };
+  // "Resets in 5 h 12 m": kept current by the screen's 30 s tick.
+  const leftText = (ms: number) => {
+    const m = Math.max(1, Math.ceil(ms / 60_000));
+    const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+    return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+  };
+  const resetLabel = (which: 'day' | 'week') => {
+    const el = h('span', { class: 'goal-reset muted small', 'data-reset': which });
+    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[which].getTime() - Date.now()) });
+    return el;
+  };
+  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach((el) => {
+    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
+  });
   // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
   // The lantern fills with this week's Light against what seven days of today's goals could give.
   const lightStrip = () => {
@@ -297,6 +424,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip on', onclick: () => { acceptTip(tip); haptic(); toast(t('tip.done')); } }, t('tip.yes')),
       h('button', { class: 'chip', onclick: () => dismissTip(tip) }, t('tip.no'))));
   const paintGoals = () => {
+    noorEl.querySelector('.noor-say')!.textContent = noorText('me');
     if (needsPace()) {
       goalsBox.replaceChildren(h('h2', { class: 'me-h' }, t('pace.title')), paceCard());
       return;
@@ -307,10 +435,12 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     goalsBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
         h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
+      list.length ? resetLabel('day') : '',
       tip ? tipCard(tip) : '',
       list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
       list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
       list.length ? lightStrip() : '',
+      weekBox(),
       h('div', { class: 'goal-links' },
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
@@ -386,6 +516,14 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         row(t('goal.eReels'), REEL_GOALS, g.reels, (n) => { g.reels = n; }),
         ...DHIKR.map((x) => row(t(x.key as Key), DHIKR_GOALS, g.dhikr[x.id] ?? 0, (n) => { if (n) g.dhikr[x.id] = n; else delete g.dhikr[x.id]; })),
         row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on')),
+        row(t('goal.eDuas'), DUA_GOALS, g.duas, (n) => { g.duas = n; }),
+        row(t('goal.eLessons'), LESSON_GOALS, g.lessons, (n) => { g.lessons = n; }),
+        h('h3', { class: 'me-h2' }, t('wkg.title')),
+        row(t('wkg.ePages'), WEEK_PAGES, g.weekly.pages, (n) => { g.weekly.pages = n; }),
+        row(t('wkg.eListen'), WEEK_LISTEN, g.weekly.listen, (n) => { g.weekly.listen = n; }, (n) => t('wkg.min', { n })),
+        row(t('wkg.eSurahs'), WEEK_SURAHS, g.weekly.surahs, (n) => { g.weekly.surahs = n; }),
+        row(t('wkg.eReels'), WEEK_REELS, g.weekly.reels, (n) => { g.weekly.reels = n; }),
+        row(t('wkg.eNights'), WEEK_NIGHTS, g.weekly.nights, (n) => { g.weekly.nights = n; }),
         mine));
   }
 
@@ -495,12 +633,12 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   void import('../together/relight').then((m) => m.takeRelights());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); maybeStreak(); };
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) void paintPrayer(); }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); } }, 30_000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();
@@ -511,8 +649,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', wardrobeSlot, todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, roomSlot, libBox,
     tabBar('me'));
+  paintRoom();
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
   // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
@@ -549,7 +688,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
 export function showMeSettings(root: HTMLElement): () => void {
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const body = h('div', {});
-  const section = (title: string, ...kids: (Node | string)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
+  const section = (title: string, ...kids: (Node | string | false)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
   const chips = <T,>(list: readonly T[], cur: (x: T) => boolean, label: (x: T) => string, pick: (x: T) => void | Promise<void>) =>
     h('div', { class: 'chips' }, ...list.map((x) => h('button', {
       class: `chip${cur(x) ? ' on' : ''}`, 'aria-pressed': String(cur(x)),
@@ -579,7 +718,8 @@ export function showMeSettings(root: HTMLElement): () => void {
             `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`)),
         h('b', { class: 'set-label' }, t('me.pageTime')),
         h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
-        chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x))),
+        chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x)),
+        mushafOfflineRow()),
       section(t('pr.title'),
         h('p', { class: 'muted small' }, t('pr.locHelp')),
         h('button', { class: 'chip', onclick: async () => {
@@ -626,6 +766,8 @@ export function showMeSettings(root: HTMLElement): () => void {
           h('button', { class: 'menu-item', onclick: () => openAccount() }, accountLabel()),
           h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
           h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
+          h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, `${soundsOn() ? '🔔' : '🔕'}  ${t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')}`),
+          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, `🎙  ${t('set.harakatHelp')}`),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, `⚑  ${t('set.report')}`))));
   };
@@ -665,6 +807,9 @@ export function showMeSettings(root: HTMLElement): () => void {
       chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
       h('b', { class: 'set-label' }, t('pa.sound')),
       chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => { previewSound(x); save((c) => ({ ...c, sound: x })); }),
+      h('b', { class: 'set-label' }, akt('du.notes')),
+      h('p', { class: 'muted small' }, akt('du.notesHelp')),
+      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, a.duas ? akt('du.notesOn') : akt('du.notesOff')),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),
@@ -715,4 +860,16 @@ export function showMeSettings(root: HTMLElement): () => void {
   const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
   window.addEventListener('prayer-changed', onPrayer);
   return () => window.removeEventListener('prayer-changed', onPrayer);
+}
+
+/** A flame that went out can be relit with streak freezes kept from the Ranks shop or prizes. */
+function keptFreezeButton(days: string[]): HTMLElement {
+  const box = h('div', {});
+  void Promise.all([import('../data/shop'), import('../i18n/ranks')]).then(([shop, { rt }]) => {
+    if (shop.bankedFreezes() < days.length) return;
+    box.replaceChildren(h('button', { class: 'me-relight', onclick: () => {
+      if (shop.useFreezes(days)) { toast(rt('rk.freezeUsed')); haptic(); }
+    } }, `❄  ${rt('rk.useFreeze', { n: days.length })}`));
+  }).catch(() => { /* offline chunk: nothing */ });
+  return box;
 }
