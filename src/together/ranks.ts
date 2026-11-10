@@ -108,7 +108,7 @@ export const rankStatus = (fresh = false) => cached('status', async () => {
 }, fresh);
 // The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
 const FIG = 'rankFigure';
-async function myFigure(): Promise<string | null> {
+export async function myFigure(): Promise<string | null> {
   try { const v = localStorage.getItem(FIG); if (v !== null) return v || null; } catch { /* ignore */ }
   const v = await rpc<string | null>('rank_my_figure').catch(() => null);
   try { localStorage.setItem(FIG, v ?? ''); } catch { /* ignore */ }

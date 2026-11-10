@@ -146,6 +146,20 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   };
   // The user's character (when they made one) stands on the streak card: it waves when Me opens and when
   // tapped, and cheers when the flame catches. Loaded only for people with a character.
+  // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
+  // owner decision 2026-11-10).
+  const showGhost = () => {
+    void import('../i18n/ranks').then(({ rt }) => {
+      if (!hero.isConnected) return;
+      const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
+        haptic(8);
+        void import('./figureBuilder').then((m) => m.openBuilder({ figure: null, wins: 0 }, () => {
+          ghost.remove(); actorTried = false; placeActor(true); paintRoom();
+        }));
+      } }, h('span', { class: 'me-ghost-fig', 'aria-hidden': 'true' }), h('span', { class: 'me-ghost-txt' }, rt('fb.open')));
+      hero.append(ghost);
+    });
+  };
   let meActor: import('./actor').Actor | null = null;
   let actorTried = false;
   const placeActor = (cheer: boolean) => {
@@ -154,21 +168,23 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     actorTried = true;
     let code: string | null = null;
     try { code = localStorage.getItem('rankFigure'); } catch { /* ignore */ }
-    if (!code) {
-      // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
-      // owner decision 2026-11-10).
-      void import('../i18n/ranks').then(({ rt }) => {
-        if (!hero.isConnected) return;
-        const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
-          haptic(8);
-          void import('./figureBuilder').then((m) => m.openBuilder({ figure: null, wins: 0 }, () => {
-            ghost.remove(); actorTried = false; placeActor(true); paintRoom();
-          }));
-        } }, h('span', { class: 'me-ghost-fig', 'aria-hidden': 'true' }), h('span', { class: 'me-ghost-txt' }, rt('fb.open')));
-        hero.append(ghost);
-      });
-      return;
+    if (!code && account()) {
+      // Made on another device: the account keeps it, so this device (the web too) fetches it once.
+      // (`myFigure()` keeps '' when the account has none, so this is asked once.)
+      let never = false;
+      try { never = localStorage.getItem('rankFigure') === null; } catch { /* ignore */ }
+      if (never) {
+        void import('../together/ranks').then((m) => m.myFigure()).catch(() => null).then((c) => {
+          if (!hero.isConnected) return;
+          if (!c) { showGhost(); return; }
+          actorTried = false;
+          paintRoom();
+          placeActor(false);
+        });
+        return;
+      }
     }
+    if (!code) { showGhost(); return; }
     void import('./actor').then((m) => {
       // The character follows the day: reading, sitting by its lantern at night, dozing after the bedtime du'a.
       let bedtime = false;
