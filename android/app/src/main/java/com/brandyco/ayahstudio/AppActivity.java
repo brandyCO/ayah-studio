@@ -27,6 +27,7 @@ public class AppActivity extends BridgeActivity {
         registerPlugin(ExportServicePlugin.class);
         registerPlugin(WidgetsPlugin.class);
         registerPlugin(AppIconPlugin.class);
+        registerPlugin(SpeechPlugin.class);
         keepHash(getIntent());
         super.onCreate(savedInstanceState);
     }

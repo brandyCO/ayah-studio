@@ -1693,7 +1693,18 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       with harakat and the number left out; phrases in > 60 ayat ignored; top 3 per ayah; 3116 ayat). The result (Not yet /
       A few slips / I had it) is suggested from the slips (0 · ≤ max(2, 5 %) · more) and sets the review schedule as
       before; missed and prompted words become weak (`learnWeak`), weak words recited cleanly move towards leaving.
-      Still to come: automatic voice follow-along
+      **Follow my voice** (owner pick 2026-11-10): in a lesson's tasmi' and page memory's Recite page, the phone's
+      speech recognition listens (`src/ui/follow.ts`: Android app → `SpeechPlugin.java`, the system recogniser,
+      on-device on Android 12+ when available, else "prefer offline"; RECORD_AUDIO + the RecognitionService
+      `<queries>` in the manifest; web → Web Speech API, ar-SA, which Chrome sends to Google; restarted after
+      every pause) and `src/engine/follow.ts` matches what it heard to the next hidden words (bare letters,
+      dagger alif both ways, two heard words = one written word and back, 5 words of lookahead, stricter past
+      the next word): said words appear (`heard`), words passed over show red (`skipped`) and arrive at the
+      check pre-tapped as missed (untap if the phone misheard); at the last word the text shows. No audio or
+      text kept. Exclusive with Record me. Words **said wrong** (heard as another word, or only partly like it,
+      < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
+      (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
+      the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;

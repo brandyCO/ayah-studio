@@ -254,6 +254,16 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Light haptic taps (navigator.vibrate in the WebView); a normal permission, never asked. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Tasmi': "Record me" and "Follow my voice" (asked the first time either is used). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Android 11+: lets the app see the phone's speech recogniser (SpeechPlugin.java). -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
     <!-- Export in the background: foreground service + keep the CPU awake with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

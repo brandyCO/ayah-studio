@@ -420,3 +420,17 @@
 .learn-tree-acts { display: flex; gap: 8px; align-items: center; }
 .learn-tree-acts .learn-go { flex: 1; }
 .learn-tree-acts a { text-decoration: none; }
+
+/* voice follow-along: words appear as they are said; words passed over in red */
+.lw.heard { animation: ts-heard .5s cubic-bezier(.2, .9, .3, 1.3); }
+.lw.heard.pop { color: var(--accent); }
+.ls-page .lw.heard.pop { color: var(--accent); }
+.lw.skipped, .ls-page .lw.skipped { color: #d4383d; box-shadow: inset 0 -3px 0 #d4383d; }
+@keyframes ts-heard { from { opacity: 0; transform: translateY(4px) scale(.9); } to { opacity: 1; transform: none; } }
+.ts-follow { display: inline-flex; align-items: center; gap: 6px; }
+.ts-mic { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: .6; }
+.ts-follow.live { color: var(--accent); border-color: var(--accent); }
+.ts-follow.live .ts-mic { opacity: 1; animation: ts-listen 1.4s ease-in-out infinite; }
+@keyframes ts-listen { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (prefers-reduced-motion: reduce) { .lw.heard, .ts-follow.live .ts-mic { animation: none; } }
+.lw.wrong, .ls-page .lw.wrong { color: #d4383d; text-decoration: underline wavy #d4383d; text-underline-offset: 6px; text-decoration-thickness: 1.5px; }
