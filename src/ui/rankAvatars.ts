@@ -53,7 +53,7 @@ function look(n: number): { a: string; b: string; sym: number; ink: string; rays
 
 /** An avatar disc with its frame. `i` null = a private player. */
 export function avatar(i: number | null | undefined, tier = 0, size = 36, frame = 0, figure?: string | null): HTMLElement {
-  const svg = el('svg', { viewBox: '-4 -4 48 48', width: String(size), height: String(size), 'aria-hidden': 'true' });
+  const svg = el('svg', { viewBox: '-4 -4 48 48', width: String(size), height: String(size), 'aria-hidden': 'true', overflow: 'visible' });
   const priv = i === null || i === undefined;
   const fig = priv ? null : parse(figure);
   if (fig) {
@@ -99,89 +99,124 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
   return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 || n >= 40 ? ' glow' : ''}` }, svg as unknown as Node);
 }
 
-function drawFrame(svg: Element, f: number, tier: number) {
-  // A solid ring gets the characters' two tones: its deep colour just under it, a shine on the top left.
-  const ring = (r: number, stroke: string, w: number, extra: Record<string, string> = {}) => {
-    const solid = /^#[0-9a-f]{6}$/i.test(stroke) && w >= 1.5 && !extra['stroke-dasharray'];
-    if (solid) svg.append(el('circle', { cx: '20.3', cy: '20.8', r: String(r), fill: 'none', stroke: mix(stroke, .38), 'stroke-width': String(w) }));
-    svg.append(el('circle', { cx: '20', cy: '20', r: String(r), fill: 'none', stroke, 'stroke-width': String(w), ...extra }));
-    if (solid) {
-      const a1 = Math.PI * 1.08, a2 = Math.PI * 1.42;
-      svg.append(el('path', { d: `M${20 + r * Math.cos(a1)} ${20 + r * Math.sin(a1)}A${r} ${r} 0 0 1 ${20 + r * Math.cos(a2)} ${20 + r * Math.sin(a2)}`, fill: 'none', stroke: '#fff', 'stroke-opacity': '.55', 'stroke-width': String(w * .38), 'stroke-linecap': 'round' }));
-    }
-  };
+// Frames, drawn like jewellery in the characters' flat two-tone style: a metal rim with its deep edge under
+// it, a light bevel on the top left and shade on the bottom right; the rare ones (4+) carry a slow moving
+// glint (`.rk-glint`, still with reduced motion).
+const METAL: Record<string, [string, string, string, string]> = {
+  // base, shade, edge, light
+  gold: ['#ffcf55', '#d39a26', '#7d5710', '#fff3c2'],
+  silver: ['#dfe6ee', '#9eabb8', '#4f5a66', '#ffffff'],
+  bronze: ['#eb9a5c', '#b4642f', '#6a3517', '#ffd6b0'],
+  emerald: ['#1fbf8f', '#0b7a5c', '#033a29', '#9ff5da'],
+  night: ['#3b4a8a', '#24306a', '#0e1433', '#8fa3ff'],
+  pearl: ['#fbf6ee', '#d8ccb8', '#8b7d66', '#ffffff'],
+};
+const P2 = (r: number, a: number) => `${(20 + r * Math.cos(a)).toFixed(2)} ${(20 + r * Math.sin(a)).toFixed(2)}`;
+const arc = (r: number, a1: number, a2: number) => `M${P2(r, a1)}A${r} ${r} 0 ${a2 - a1 > Math.PI ? 1 : 0} 1 ${P2(r, a2)}`;
+const ringD = (r: number, w: number) => `${circlePath(20, 20, r + w / 2)}${circlePath(20, 20, r - w / 2)}`;
+/** A metal band of radius r and width w. */
+function rim(r: number, w: number, [base, shade, ed, light]: [string, string, string, string]): string {
+  return `<path d="${ringD(r, w)}" fill="${ed}" fill-rule="evenodd" transform="translate(.25 1)"/>
+    <circle cx="20" cy="20" r="${r}" fill="none" stroke="${base}" stroke-width="${w}"/>
+    <path d="${arc(r + w * .1, -0.15, Math.PI * 0.95)}" fill="none" stroke="${shade}" stroke-width="${w * .55}" stroke-linecap="round"/>
+    <path d="${arc(r - w * .05, Math.PI * 1.08, Math.PI * 1.55)}" fill="none" stroke="${light}" stroke-width="${w * .32}" stroke-linecap="round" opacity=".9"/>
+    <circle cx="20" cy="20" r="${r - w / 2 + .2}" fill="none" stroke="${ed}" stroke-width=".55" opacity=".55"/>`;
+}
+const still = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return true; } };
+const glint = (r: number, w: number) => still() ? '' :
+  `<g class="rk-glint"><path d="${arc(r, -Math.PI * .62, -Math.PI * .4)}" fill="none" stroke="#fff" stroke-width="${w * .5}" stroke-linecap="round" opacity=".85"/><animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="7s" repeatCount="indefinite"/></g>`;
+const gemAt = (x: number, y: number, r: number, c: string, d: string, ed = '#7d5710') =>
+  `<circle cx="${(x + .2).toFixed(2)}" cy="${(y + .5).toFixed(2)}" r="${r + .5}" fill="${ed}"/><circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r + .5}" fill="#ffcf55"/>${two(circlePath(x, y, r), c, d, -r * .35, -r * .35)}<circle cx="${(x - r * .35).toFixed(2)}" cy="${(y - r * .4).toFixed(2)}" r="${(r * .32).toFixed(2)}" fill="#fff" opacity=".9"/>`;
+const starD = (x: number, y: number, R: number, k = 4) => {
+  const pts: string[] = [];
+  for (let i = 0; i < k * 2; i++) { const a = (i * Math.PI) / k - Math.PI / 2, d = i % 2 ? R * .42 : R; pts.push(`${(x + d * Math.cos(a)).toFixed(2)} ${(y + d * Math.sin(a)).toFixed(2)}`); }
+  return `M${pts.join('L')}Z`;
+};
+const metalStar = (x: number, y: number, R: number, m = METAL.gold, k = 4) => `${edge(starD(x, y, R, k), m[2], .7)}${two(starD(x, y, R, k), m[3], m[0], -R * .2, -R * .2)}`;
+
+function frameArt(f: number, tier: number): string {
   const tc = TIER_RING[Math.max(0, Math.min(4, tier))];
-  if (f === 0) ring(18.5, tc, 2.4);
-  else if (f === 1) { ring(18.5, GOLD, 2.6); ring(20.6, 'rgba(242,193,78,.35)', 1.2); }
-  else if (f === 2) { ring(18.2, '#3dd1ad', 1.6); ring(20.4, '#0a6e55', 1.6); }
-  else if (f === 3) {
-    ring(18.5, tc, 1.6, { 'stroke-dasharray': '2 2' });
-    for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
-      star(svg, 20 + Math.cos(a) * 19.5, 20 + Math.sin(a) * 19.5, 1.9, GOLD);
+  const tierM: [string, string, string, string] = [tc, mix(tc, .28), mix(tc, .58), mix(tc, -.6)];
+  const G = METAL.gold;
+  switch (f) {
+    case 0: return rim(18.6, 2.8, tierM);
+    case 1: // glow: a gold band with eight studs, a soft halo outside
+      return `<circle cx="20" cy="20" r="21.6" fill="none" stroke="#fff0b0" stroke-width="2.4" opacity=".3"/>${rim(18.6, 3, G)}
+        ${Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2 + Math.PI / 8; return `<circle cx="${(20 + Math.cos(a) * 18.6 + .15).toFixed(2)}" cy="${(20 + Math.sin(a) * 18.6 + .4).toFixed(2)}" r="1.05" fill="${G[2]}"/><circle cx="${(20 + Math.cos(a) * 18.6).toFixed(2)}" cy="${(20 + Math.sin(a) * 18.6).toFixed(2)}" r=".95" fill="${G[3]}"/>`; }).join('')}`;
+    case 2: // emerald: a deep green band with a gold inner line and four gems
+      return `${rim(18.8, 3.4, METAL.emerald)}<circle cx="20" cy="20" r="16.9" fill="none" stroke="#ffcf55" stroke-width=".7"/>
+        ${[0, 1, 2, 3].map((k) => { const a = (k / 4) * Math.PI * 2 - Math.PI / 2; return gemAt(20 + Math.cos(a) * 18.8, 20 + Math.sin(a) * 18.8, 1.5, k % 2 ? '#6fe0f5' : '#ff6b7d', k % 2 ? '#1f9cc0' : '#c32a43'); }).join('')}`;
+    case 3: // stars: a night band strewn with gold stars
+      return `${rim(18.6, 3.2, METAL.night)}${Array.from({ length: 8 }, (_, k) => { const a = (k / 8) * Math.PI * 2 - Math.PI / 2; return metalStar(20 + Math.cos(a) * 18.6, 20 + Math.sin(a) * 18.6, k % 2 ? 1.6 : 2.4); }).join('')}`;
+    case 4: // sun crown: rays behind a gold band
+      return `${Array.from({ length: 16 }, (_, k) => { const a = (k / 16) * Math.PI * 2 - Math.PI / 2, L = k % 2 ? 22.6 : 24.4, w = .13;
+          const d = `M${P2(19.5, a - w)}L${P2(L, a)}L${P2(19.5, a + w)}Z`; return `${edge(d, G[2], .7)}${two(d, k % 2 ? G[0] : G[3], G[1], -.5, -.5)}`; }).join('')}
+        ${rim(18.6, 3, G)}${glint(18.6, 3)}${gemAt(20, 1.4, 1.6, '#ff8a3d', '#c4541a')}`;
+    case 5: case 6: case 7: { // laurel: gold / silver / bronze branches meeting under the disc, a gem at the knot
+      const m = [G, METAL.silver, METAL.bronze][f - 5];
+      let leaves = '';
+      for (const side of [-1, 1]) for (let k = 0; k < 7; k++) {
+        const deg = 90 + side * (24 + k * 18.5), a = (deg * Math.PI) / 180;
+        const x = 20 + Math.cos(a) * 21, y = 20 + Math.sin(a) * 21;
+        const rot = `rotate(${(deg - side * 38).toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})`;
+        leaves += `<g transform="${rot}"><ellipse cx="${(x + .3).toFixed(2)}" cy="${(y + .7).toFixed(2)}" rx="1.75" ry="3.3" fill="${m[2]}"/><ellipse cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" rx="1.7" ry="3.2" fill="${m[1]}"/><ellipse cx="${(x - .35).toFixed(2)}" cy="${(y - .35).toFixed(2)}" rx="1.25" ry="2.7" fill="${m[0]}"/><path d="M${x.toFixed(2)} ${(y - 2.4).toFixed(2)}V${(y + 2.4).toFixed(2)}" stroke="${m[3]}" stroke-width=".4" opacity=".8"/></g>`;
+      }
+      return `${leaves}${rim(18.4, 2.6, m)}${glint(18.4, 2.6)}${gemAt(20, 40.4, 1.9, f === 5 ? '#ff6b7d' : f === 6 ? '#6fe0f5' : '#7be38f', f === 5 ? '#c32a43' : f === 6 ? '#1f9cc0' : '#2e9a4a', m[2])}
+        ${metalStar(20, -1.2, 2.4, m)}`;
     }
-  } else if (f === 4) {
-    ring(18.5, GOLD, 2.4);
-    for (let k = 0; k < 16; k++) {
-      const a = (k / 16) * Math.PI * 2;
-      const r1 = 20, r2 = k % 2 ? 22 : 23.5;
-      svg.append(el('line', { x1: String(20 + Math.cos(a) * r1), y1: String(20 + Math.sin(a) * r1), x2: String(20 + Math.cos(a) * r2), y2: String(20 + Math.sin(a) * r2), stroke: GOLD, 'stroke-width': '1.4', 'stroke-linecap': 'round' }));
+    case 8: // pearls on a fine gold band
+      return `${rim(18.6, 1.4, G)}${Array.from({ length: 20 }, (_, k) => { const a = (k / 20) * Math.PI * 2, x = 20 + Math.cos(a) * 19.4, y = 20 + Math.sin(a) * 19.4;
+          return `<circle cx="${(x + .2).toFixed(2)}" cy="${(y + .55).toFixed(2)}" r="1.6" fill="${METAL.pearl[2]}" opacity=".7"/>${two(circlePath(x, y, 1.55), METAL.pearl[0], METAL.pearl[1], -.5, -.5)}<circle cx="${(x - .5).toFixed(2)}" cy="${(y - .55).toFixed(2)}" r=".45" fill="#fff"/>`; }).join('')}${glint(19.4, 2.4)}`;
+    case 9: { // crescent crown: a gold band, a crescent and star rising over it, two side gems
+      const moon = 'M22.4 -4.4a5.4 5.4 0 1 0 0 9.8a4.2 4.2 0 1 1 0 -9.8z';
+      return `<circle cx="20" cy="0.6" r="6.4" fill="#fff6da" opacity=".35"/>${rim(18.6, 3, G)}${glint(18.6, 3)}
+        ${edge(moon, G[2], .9)}${two(moon, G[3], G[0], -.9, -.9)}${metalStar(23.4, .6, 2, G)}
+        ${gemAt(20 + Math.cos(Math.PI * .82) * 18.6, 20 + Math.sin(Math.PI * .82) * 18.6, 1.3, '#a78bfa', '#6d4fd6')}${gemAt(20 + Math.cos(Math.PI * .18) * 18.6, 20 + Math.sin(Math.PI * .18) * 18.6, 1.3, '#a78bfa', '#6d4fd6')}`;
     }
-  } else if (f === 8) {
-    ring(18.4, '#e9e2d4', 1);
-    for (let k = 0; k < 18; k++) {
-      const a = (k / 18) * Math.PI * 2;
-      svg.append(el('circle', { cx: String(20 + Math.cos(a) * 19.6), cy: String(20 + Math.sin(a) * 19.6), r: '1.55', fill: '#fbf6ee', stroke: '#c9bfae', 'stroke-width': '0.4' }));
+    case 10: { // mosaic: tiles in turquoise, gold and red set in a gold band
+      const C = ['#2fc9b0', '#ffcf55', '#ef5a6f'], D = ['#11806f', '#d39a26', '#a92a3e'];
+      let t = '';
+      for (let k = 0; k < 15; k++) {
+        const a1 = (k / 15) * Math.PI * 2 + .05, a2 = ((k + 1) / 15) * Math.PI * 2 - .05, r1 = 17.2, r2 = 21;
+        const d = `M${P2(r1, a1)}L${P2(r2, a1)}A${r2} ${r2} 0 0 1 ${P2(r2, a2)}L${P2(r1, a2)}A${r1} ${r1} 0 0 0 ${P2(r1, a1)}Z`;
+        t += two(d, C[k % 3], D[k % 3], -.5, -.6);
+      }
+      return `<path d="${ringD(19.1, 4.6)}" fill="${G[2]}" fill-rule="evenodd" transform="translate(.25 1)"/><path d="${ringD(19.1, 4.6)}" fill="${G[1]}" fill-rule="evenodd"/>${t}
+        <circle cx="20" cy="20" r="16.8" fill="none" stroke="${G[0]}" stroke-width=".8"/><circle cx="20" cy="20" r="21.4" fill="none" stroke="${G[0]}" stroke-width=".8"/>${glint(19.1, 3)}`;
     }
-  } else if (f === 9) {
-    ring(18.5, GOLD, 2.2);
-    // A crescent and a star crowning the disc.
-    svg.append(el('circle', { cx: '20', cy: '0.6', r: '5.2', fill: '#fff6da', opacity: '.55' }));
-    svg.append(el('path', { d: 'M21.5 -3.6a4.6 4.6 0 1 0 0 8.4a3.6 3.6 0 1 1 0 -8.4z', fill: GOLD, stroke: '#b5821e', 'stroke-width': '0.4' }));
-    star(svg, 22.6, 0.6, 1.5, GOLD);
-  } else if (f === 10) {
-    const C = 2 * Math.PI * 18.8, seg = C / 12;
-    ['#3dd1ad', GOLD, '#e0475b'].forEach((c, i) => ring(18.8, c, 3, { 'stroke-dasharray': `${seg - 0.6} ${seg * 2 + 0.6}`, 'stroke-dashoffset': String(-seg * i) }));
-    ring(21, 'rgba(242,193,78,.5)', 0.6);
-  } else if (f === 11) {
-    const gid = `rkf${++uid}`;
-    const g = el('linearGradient', { id: gid, x1: '0', y1: '0', x2: '1', y2: '1' });
-    g.append(el('stop', { offset: '0', 'stop-color': '#3dd1ad' }), el('stop', { offset: '.5', 'stop-color': '#8f6ae0' }), el('stop', { offset: '1', 'stop-color': '#f58da0' }));
-    const defs = el('defs', {});
-    defs.append(g);
-    svg.prepend(defs);
-    ring(18.6, `url(#${gid})`, 2.8);
-    ring(21.2, `url(#${gid})`, 0.9, { opacity: '.6' });
-  } else if (f === 12) {
-    ring(18.5, GOLD, 1.6);
-    for (let k = 0; k < 4; k++) {
-      const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
-      const x = 20 + Math.cos(a) * 19.5, y = 20 + Math.sin(a) * 19.5;
-      svg.append(el('path', { d: `M${x - 1.6} ${y - 1.4}h3.2l.8 1.4v1.6l-.8 1.4h-3.2l-.8-1.4v-1.6zM${x} ${y - 2.8}v1.4`, fill: '#ffd98a', stroke: '#b5821e', 'stroke-width': '0.5' }));
+    case 11: { // aurora: a band of shifting light
+      const gid = `rkf${++uid}`;
+      return `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3dd1ad"/><stop offset=".5" stop-color="#8f6ae0"/><stop offset="1" stop-color="#f58da0"/></linearGradient></defs>
+        <circle cx="20" cy="20" r="22" fill="none" stroke="url(#${gid})" stroke-width="2" opacity=".3"/>
+        <path d="${ringD(18.8, 3.4)}" fill="#1a1440" fill-rule="evenodd" transform="translate(.25 1)"/><circle cx="20" cy="20" r="18.8" fill="none" stroke="url(#${gid})" stroke-width="3.4"/>
+        <path d="${arc(18.9, Math.PI * 1.08, Math.PI * 1.55)}" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round" opacity=".7"/>${glint(18.8, 3.4)}
+        ${[[3, 6], [37, 9], [38, 30], [2, 33]].map(([x, y], i) => `<path d="${starD(x, y, i % 2 ? 1.4 : 2)}" fill="#fff" opacity=".9"/>`).join('')}`;
     }
-  } else if (f === 13) {
-    for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2 - Math.PI / 2, w = Math.PI / 14;
-      const p = (r: number, t: number) => `${(20 + Math.cos(t) * r).toFixed(2)},${(20 + Math.sin(t) * r).toFixed(2)}`;
-      svg.append(el('polygon', { points: `${p(19, a - w)} ${p(24.6, a)} ${p(19, a + w)}`, fill: GOLD }));
-      const b = a + Math.PI / 8;
-      svg.append(el('polygon', { points: `${p(19, b - w * 0.7)} ${p(22, b)} ${p(19, b + w * 0.7)}`, fill: '#3dd1ad' }));
+    case 12: { // lanterns: four small glowing lanterns hung on a gold band
+      const lantern = (x: number, y: number) => {
+        const body = `M${x - 1.9} ${y - 1.6}H${x + 1.9}Q${x + 2.8} ${y + .4} ${x + 1.9} ${y + 2.4}H${x - 1.9}Q${x - 2.8} ${y + .4} ${x - 1.9} ${y - 1.6}Z`;
+        return `<circle cx="${x}" cy="${y + .4}" r="4.2" fill="#ffcf55" opacity=".25"/>${edge(`M${x - 1.3} ${y - 3}H${x + 1.3}L${x + 1.9} ${y - 1.6}H${x - 1.9}Z`, G[2], .5)}${two(`M${x - 1.3} ${y - 3}H${x + 1.3}L${x + 1.9} ${y - 1.6}H${x - 1.9}Z`, G[0], G[1], -.3, -.3)}
+          ${edge(body, G[2], .6)}${two(body, '#fff2c4', '#f3c873', -.5, -.4)}<path d="M${x} ${y - .6}c.9 1 1 1.7 1 2.2a1 1 0 0 1-2 0c0-.5.1-1.2 1-2.2z" fill="#ff9a2e"/>`;
+      };
+      return `${rim(18.4, 2.4, G)}${glint(18.4, 2.4)}${[0, 1, 2, 3].map((k) => { const a = (k / 4) * Math.PI * 2 + Math.PI / 4; return lantern(20 + Math.cos(a) * 19.6, 20 + Math.sin(a) * 19.6); }).join('')}`;
     }
-    ring(18.5, '#0f6b52', 2.2);
-  } else {
-    const c = LAUREL[f - 5];
-    ring(18.5, c, 2);
-    // Two branches of leaves round the lower part, meeting under the disc.
-    for (const side of [-1, 1]) for (let k = 0; k < 7; k++) {
-      const deg = 90 + side * (22 + k * 19);
-      const a = (deg * Math.PI) / 180;
-      const x = 20 + Math.cos(a) * 20.4, y = 20 + Math.sin(a) * 20.4;
-      const rot = `rotate(${(deg + 90 + side * 28).toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})`;
-      svg.append(el('ellipse', { cx: (x + .35).toFixed(2), cy: (y + .6).toFixed(2), rx: '1.45', ry: '2.9', fill: mix(c, .38), transform: rot }));
-      svg.append(el('ellipse', { cx: x.toFixed(2), cy: y.toFixed(2), rx: '1.35', ry: '2.8', fill: c, transform: rot }));
-      svg.append(el('ellipse', { cx: (x - .35).toFixed(2), cy: (y - .5).toFixed(2), rx: '.45', ry: '1.5', fill: '#fff', opacity: '.45', transform: rot }));
+    case 13: { // rosette: gold petals and turquoise points round an emerald band
+      let p = '';
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2, w = Math.PI / 12, b = a + Math.PI / 8;
+        const d1 = `M${P2(19, a - w)}Q${P2(23.2, a - w * .6)} ${P2(25, a)}Q${P2(23.2, a + w * .6)} ${P2(19, a + w)}Z`;
+        const d2 = `M${P2(19, b - w * .6)}L${P2(22.6, b)}L${P2(19, b + w * .6)}Z`;
+        p += `${edge(d1, G[2], .7)}${two(d1, G[0], G[1], -.5, -.5)}${edge(d2, '#03463a', .6)}${two(d2, '#3ee0c0', '#11806f', -.4, -.4)}`;
+      }
+      return `${p}${rim(18.6, 2.8, METAL.emerald)}${glint(18.6, 2.8)}`;
     }
+    default: return rim(18.6, 2.8, tierM);
   }
+}
+function drawFrame(svg: Element, f: number, tier: number) {
+  const g = el('g', { class: `rk-frame${f >= 4 ? ' rare' : ''}` });
+  g.innerHTML = frameArt(f, tier);
+  svg.append(g);
 }
 function star(svg: Element, x: number, y: number, r: number, fill: string) {
   const pts: string[] = [];
