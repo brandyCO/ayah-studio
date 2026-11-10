@@ -1458,6 +1458,13 @@ duas/reflections section in Me.
       while idle; a tap during a non-chest moment plays the rest at once (`skip()`), a second tap closes; sparks watch the
       frame time and drop to half the sparks at 1× resolution when frames average > 26 ms; moving parts get GPU layers only
       while they move. Measured at 6× CPU throttle (Chromium): chest ~52 fps, lantern ~57, streak ~56
+      **Feel pass** (owner OK 2026-11-10 after recordings): each sound carries its own vibration, sent after the audio output latency
+      so both land together (vibration also with sounds off); pitch varies ±6 % each time, prizes landing in a row climb a
+      pentatonic scale; from the third reward in a row (`combo()` ≥ 3) a chest takes one tap fewer, drops in and pours faster;
+      a rare prize (`rare` item) or a 100+ chest gets a slow gather (`.cel.charging`: the room dims, the seam blazes, `sfx.rare()`
+      swell), a double burst with a gold wash (`.epic`) and the rare card lands with a ring and a "Rare" ribbon. Characters
+      (`figure.ts`): head sway, breathing shadow, and in the builder a hop with crouch / stretch / squash on each change (a nod for
+      head parts), a glance or fidget every 4–7 s, Surprise me shuffles through looks, Wear it cheers with sparkles
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
