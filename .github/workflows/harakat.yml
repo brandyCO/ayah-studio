@@ -2,7 +2,7 @@ name: Deploy harakat server
 
 # Deploys server/harakat (the harakat check for "Follow my voice") to Google Cloud Run when it changes on
 # main. Needs the repo secret GCP_SA_KEY (a service account key, JSON, with the roles Cloud Run Admin,
-# Cloud Build Editor, Artifact Registry Admin, Service Account User and Storage Admin) and the repo variable
+# Cloud Build Editor, Artifact Registry Admin, Service Account User, Storage Admin, Service Usage Admin) and the repo variable
 # GCP_PROJECT (the project id); GCP_REGION is optional (default europe-west1). Without them the job is
 # skipped. Steps for the owner: server/harakat/README.md. The model is baked into the image.
 
