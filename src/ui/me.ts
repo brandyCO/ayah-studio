@@ -92,6 +92,21 @@ export function openBadge(b: BadgeState, fresh = false) {
 
 // What the goal rings and the Light lantern showed last (this session), so they fill on from there.
 const ringWas = new Map<string, number>();
+
+/** ‹ on Me's own screens: step back in history when Me opened it, so the phone's back button does not loop. */
+const backToMe = (e: Event) => {
+  let fromMe = false;
+  try { fromMe = sessionStorage.getItem('meScroll') !== null; } catch { /* ignore */ }
+  if (fromMe && history.length > 1) { e.preventDefault(); history.back(); }
+};
+const svgIcon = (cls: string, body: string) => {
+  const el = h('span', { class: cls, 'aria-hidden': 'true' });
+  el.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  return el;
+};
+const roomIcon = () => svgIcon('me-room-ic', '<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>');
+const editIcon = () => svgIcon('goal-edit-ic', '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>');
+const clockIcon = () => svgIcon('goal-reset-ic', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>');
 let lanternWas: number | undefined;
 
 export async function showMe(root: HTMLElement, at?: string): Promise<() => void> {
@@ -107,7 +122,15 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     let has = false;
     try { has = !!localStorage.getItem('rankFigure'); } catch { /* ignore */ }
     if (page !== 'room') { paintDoors(); return; }
-    if (has) void import('./room').then((m) => { const c = m.roomCard(dressUp); roomSlot.replaceChildren(c ?? ''); });
+    // The room is the whole screen: its own floating top bar, no tab bar.
+    if (has) void import('./room').then((m) => {
+      const bar = h('div', { class: 'rm-full-bar' },
+        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('h1', {}, mpt('mp.room')),
+        lightChip(() => openLight()));
+      const c = m.roomScreen(dressUp, bar);
+      roomSlot.replaceChildren(c ?? '');
+    });
     else roomSlot.replaceChildren(h('button', { class: 'primary me-make-fig', onclick: () => dressUp() }, mpt('mp.roomMake')));
   };
   const dressUp = (tab?: 'wardrobe') => void import('./figureBuilder').then((b) => {
@@ -156,6 +179,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // Badges waiting for their Claim stay on Me itself; the rest of the badges live behind a door.
   const claimSlot = h('div', { class: 'me-claims' });
   const doors = h('nav', { class: 'me-doors', 'aria-label': t('me.title') });
+  const prayerStrip = h('a', { class: 'me-pr-strip', href: '#/me/prayer' });
   let prayerLine = '';
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
@@ -239,15 +263,17 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         m.poseClass(a.el, 'sleepy', true);
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
-      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); });
+      // A tap greets you, then goes into the room.
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
     });
   };
+  const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost]);
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig()]);
     if (sig === heroSig) return;
     heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
@@ -260,6 +286,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
     const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
+      hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
         flameBox,
         h('div', { class: 'me-top-txt' },
@@ -407,14 +434,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
     return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
   };
+  // The time left sits as a small clock pill at the top right of the goals card (owner request 2026-11-10).
+  const resetText = (el: HTMLElement) => {
+    const full = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
+    el.title = full;
+    el.setAttribute('aria-label', full);
+    el.lastChild!.textContent = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+  };
   const resetLabel = (which: 'day' | 'week') => {
-    const el = h('span', { class: 'goal-reset muted small', 'data-reset': which });
-    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[which].getTime() - Date.now()) });
+    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
+    resetText(el);
     return el;
   };
-  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach((el) => {
-    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
-  });
+  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach(resetText);
   // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
   // The lantern fills with this week's Light against what seven days of today's goals could give.
   const lightStrip = () => {
@@ -499,8 +531,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         wk.length
           ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady), seg('week', mpt('mp.week'), weekReady))
           : h('h2', { class: 'me-h' }, t('goal.title')),
-        h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
-      tab === 'week' || list.length ? resetLabel(tab) : '',
+        tab === 'week' || list.length ? resetLabel(tab) : '',
+        h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
       ...body,
       h('div', { class: 'goal-links chips' },
         h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
@@ -660,9 +692,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon),
         h('span', { class: 'me-door-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
         dot ? h('i', { class: 'me-door-dot', 'aria-hidden': 'true' }) : '');
+    void hasFigure;
+    // The room is on the streak card and prayer times on the line at the top; these two are used less often.
+    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, '🕌'),
+      h('span', { class: 'me-pr-txt' }, prayerLine || mpt('mp.prayerSet')), h('span', { class: 'me-pr-go', 'aria-hidden': 'true' }, '›'));
     doors.replaceChildren(
-      door('room', '🏠', mpt('mp.room'), hasFigure ? mpt('mp.roomSub') : mpt('mp.roomMake'), false, hasFigure ? undefined : () => dressUp()),
-      door('prayer', '🕌', mpt('mp.prayer'), prayerLine || mpt('mp.prayerSet')),
       door('stats', '🏅', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
       door('library', '📚', mpt('mp.lib'), mpt('mp.libSub')));
   };
@@ -728,13 +762,16 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const toAsr = eveningFrom().getTime() - Date.now();
   const asrTimer = toAsr > 0 && toAsr < 86_400_000 ? window.setTimeout(refresh, toAsr + 1000) : 0;
   const onPrayer = () => void paintPrayer();
-  if (page) {
+  if (page === 'room') {
+    root.classList.add('me-room-screen');
+    root.append(roomSlot);
+  } else if (page) {
     // A door's full screen: the same live sections, on their own.
     const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib') }[page];
-    const content = { room: [roomSlot, wardrobeSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
+    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
-        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back') }, '‹'),
+        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
         h('div', { class: 'brand' }, h('h1', {}, title)),
         lightChip(() => openLight())),
       h('div', { class: `me-page me-page-${page}` }, ...content),
@@ -747,7 +784,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(() => openLight()),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(),
+      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(),
       tabBar('me'));
     void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
@@ -782,7 +819,22 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // A sheet or the tasbih counter closed: the streak moment may play now.
   const onClose = () => setTimeout(maybeStreak, 350);
   document.addEventListener('close', onClose, true);
+  // Back from one of Me's own screens (a door, settings): Me opens where it was left, not at the top.
+  if (!page) {
+    let y = 0;
+    try { y = Number(sessionStorage.getItem('meScroll')) || 0; sessionStorage.removeItem('meScroll'); } catch { /* ignore */ }
+    if (y > 0) {
+      const go = () => window.scrollTo(0, Math.min(y, document.documentElement.scrollHeight - innerHeight));
+      requestAnimationFrame(go);
+      // Some cards (lanterns, today, the character) arrive a moment later and may lengthen the page.
+      setTimeout(() => { if (Math.abs(scrollY - y) > 4 && scrollY < y) go(); }, 250);
+    }
+  }
+  const leaveY = () => scrollY;
   return () => {
+    if (!page && location.hash.startsWith('#/me/')) {
+      try { sessionStorage.setItem('meScroll', String(Math.round(leaveY()))); } catch { /* ignore */ }
+    }
     document.removeEventListener('close', onClose, true);
     clearInterval(tick);
     clearTimeout(asrTimer);

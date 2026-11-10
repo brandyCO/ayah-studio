@@ -1673,6 +1673,14 @@ duas/reflections section in Me.
       the device (`rankCache`, per account) so Ranks paints at once (`staleFirst`), then fresh; while open it asks again
       every 12 s and repaints only on a change (`refreshCached`), so others' points, names and characters show within
       seconds; progress is reported 8 s after a change (was 90 s)
+      Second pass (owner feedback 2026-11-10): prayer times are one slim line at the top of Me (→ `#/me/prayer`); the
+      streak card has a **Room** button (and a tap on the character greets, then opens the room); only Stats and
+      Library stay as doors; the reset time is a clock pill at the goals card's top right (Edit is a pencil);
+      Me keeps its scroll place when you come back from its screens (sessionStorage `meScroll`; ‹ steps back in
+      history). **The room is the whole screen** (`roomScreen()` in `src/ui/room.ts`): wall above, the room 1.28× the
+      phone's width (opens at the window, glides to the character and shelves; swipe sideways), the floor runs on into
+      a dock — a button per place showing what stands there (Plant, Corner, Rug, Curtains, Lantern), Shop, Dress up,
+      Share; decorating opens as a low panel and the room rises above it (`openRoomShop(…, { slot, inRoom })`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -52,3 +52,50 @@
 .rs-ask { text-align: center; max-width: 320px; }
 .rs-ask .chips { justify-content: center; }
 .rm-scene.rest *, .rm-scene.rest .fg-actor * { animation-play-state: paused !important; }
+
+/* The full-screen room (#/me/room, owner request 2026-11-10): wall above, the room wider than the phone (swipe
+   sideways), the floor running on into a dock with a button per place, Shop, Dress up and Share. */
+body[data-view="me"]:has(.me-room-screen) .tabbar { display: none; }
+.screen-me.me-room-screen { max-width: none; padding: 0; }
+.rm-full { --wall: #f3e2c7; --wall2: #e6cfac; --floor: #c99a6a; --floor2: #b5875a; position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+  background: var(--wall); color: #3b2a16; }
+.rm-full.night { --wall: #3b3466; --wall2: #2e2852; --floor: #5b4a7a; --floor2: #463a62; color: #f3eeff; }
+.rm-full-bar { position: absolute; top: 0; inset-inline: 0; z-index: 3; display: flex; align-items: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0; pointer-events: none; }
+.rm-full-bar > * { pointer-events: auto; }
+.rm-full-bar .icon-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .85); color: #3b2a16; font-size: 26px;
+  display: grid; place-items: center; text-decoration: none; box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
+.rm-full-bar h1 { margin: 0; font: 900 var(--fs-l) var(--ui-round); text-shadow: 0 1px 0 rgba(255, 255, 255, .4); }
+.rm-full.night .rm-full-bar h1 { text-shadow: none; }
+.rm-full-bar .lt-chip { margin-inline-start: auto; }
+.rm-stage { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; container-type: size; scrollbar-width: none; overscroll-behavior-x: contain;
+  background: var(--wall); }
+.rm-stage::-webkit-scrollbar { display: none; }
+.rm-room { --sh: min(100cqh, 80cqw); position: relative; width: max(100cqw, calc(var(--sh) * 1.6)); height: 100cqh; display: flex; align-items: flex-end; justify-content: center;
+  background: repeating-linear-gradient(90deg, transparent 0 10.94%, color-mix(in srgb, var(--wall2) 45%, transparent) 10.94% 14.06%, transparent 14.06% 25%) center / calc(var(--sh) * 1.6) 100% no-repeat,
+    linear-gradient(var(--floor), var(--floor)) bottom / 100% calc(var(--sh) * .27) no-repeat,
+    linear-gradient(var(--wall2), var(--wall2)) top / 100% 10px no-repeat, var(--wall); transition: padding .35s var(--ease-spring, ease); }
+.rm-full .rm-scene { flex: none; height: var(--sh); width: calc(var(--sh) * 1.6); aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+.rm-dock { flex: none; display: grid; gap: 10px; padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); background: var(--floor);
+  box-shadow: inset 0 3px 0 var(--floor2); }
+.rm-full-sub { margin: 2px 4px 0; text-align: center; font-weight: 800; color: color-mix(in srgb, currentColor 85%, transparent); }
+.rm-full:not(.night) .rm-full-sub { color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
+.rm-slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.rm-slot-b { display: grid; justify-items: center; gap: 2px; padding: 6px 2px 5px; border: 0; border-radius: 16px; cursor: pointer; color: #3b2a16;
+  background: #fff8ec; box-shadow: 0 4px 0 rgba(0, 0, 0, .22); font: inherit; transition: transform .12s, box-shadow .12s; }
+.rm-slot-b:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .22); }
+.rm-slot-art { position: relative; width: 100%; max-width: 58px; aspect-ratio: 1.2; border-radius: 10px; overflow: hidden; display: flex; }
+.rm-slot-art svg { width: 100%; height: 100%; }
+.rm-slot-n { font: 900 11px/1.2 var(--ui-round, system-ui); }
+.rm-slot-b:not(.set) .rm-slot-art svg { opacity: .5; }
+.rm-slot-b:not(.set) .rm-slot-art::after { content: '+'; position: absolute; inset: 0; display: grid; place-items: center; font: 900 24px/1 var(--ui-round, system-ui); color: #b5875a; }
+.rm-dock > * { width: 100%; max-width: 640px; margin-inline: auto; }
+.rm-dock-main { display: flex; gap: 8px; align-items: center; }
+.rm-dock-main .rm-shop-b { flex: 1; }
+.rm-dock-main .chip { background: #fff8ec; color: #3b2a16; }
+/* Decorating from the full-screen room: a low panel, the room stays visible above it. */
+.rs-sheet.in-room { max-height: 46vh; }
+/* While decorating, the room rises to the top so the panel never hides it. */
+.rm-full.decorating .rm-room { align-items: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 58px); }
+.rm-full.decorating .rm-dock { visibility: hidden; }
+.rs-sheet.in-room::backdrop { background: transparent; }
