@@ -82,6 +82,14 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
   return el as SVGSVGElement;
 }
 
+// A ready chest shakes for ever: pause it while it is off screen, so a long Me page stays smooth.
+let seen: IntersectionObserver | null = null;
+function watch(el: HTMLElement) {
+  if (typeof IntersectionObserver === 'undefined') return;
+  seen ??= new IntersectionObserver((es) => { for (const e of es) e.target.classList.toggle('off', !e.isIntersecting); });
+  seen.observe(el);
+}
+
 /** A goal's chest: the picture, its state and the Light it holds. `onOpen` runs when a ready chest is tapped. */
 export function chest(light: number, state: ChestState, label: string, onOpen?: (el: HTMLElement) => void): HTMLElement {
   const tier = chestTier(light);
@@ -89,6 +97,7 @@ export function chest(light: number, state: ChestState, label: string, onOpen?: 
   const amount = h('span', { class: 'ck-amt' }, `✦ ${light}`);
   if (state === 'ready' && onOpen) {
     const b: HTMLButtonElement = h('button', { class: `chest t${tier} ready`, type: 'button', 'aria-label': label, onclick: () => onOpen(b) }, art, amount);
+    watch(b);
     return b;
   }
   return h('span', { class: `chest t${tier} ${state}`, role: 'img', 'aria-label': label }, art, amount);
