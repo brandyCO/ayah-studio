@@ -400,3 +400,23 @@
 :root[data-theme="dark"] .pm { --pm-none: #3a4741; }
 .pm-oline.head { cursor: default; background: transparent; border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 99px; }
 .pm-oline.basm { cursor: default; width: 55%; justify-self: center; background: color-mix(in srgb, var(--ink, #333) 8%, transparent); }
+
+/* Tree close-up (src/ui/treeView.ts) */
+.screen.tv { position: fixed; inset: 0; padding: 0; background: #05080a; color: #eef4f0; overflow: hidden; }
+.tv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.tv-top { position: absolute; inset: 0 0 auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 14px 24px; background: linear-gradient(#05080acc, #05080a00); pointer-events: none; }
+.tv-top > * { pointer-events: auto; }
+.tv-top .icon-btn { color: #eef4f0; background: rgba(255,255,255,.1); }
+.tv-title { text-align: center; display: grid; }
+.tv-title h1 { margin: 0; font-size: 20px; font-family: var(--ui-round, inherit); font-weight: 900; }
+.tv-title span { font-family: 'SuraNames', 'AmiriQuran', serif; opacity: .8; }
+.tv-card { position: absolute; inset: auto 12px calc(12px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; display: grid; gap: 8px; padding: 14px; border-radius: 20px; background: rgba(12,20,17,.72); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
+.tv-note { margin: 0; font-weight: 700; text-align: center; }
+.tv-row { display: flex; gap: 8px; }
+.tv-row .primary { flex: 1; text-align: center; text-decoration: none; }
+.tv-preview { color: #eef4f0; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
+.tv-preview.on { background: #ffc83d; color: #2a1d00; border-color: #d99a12; }
+.tv-hint { margin: 0; font-size: var(--fs-xs); opacity: .65; text-align: center; }
+.learn-tree-acts { display: flex; gap: 8px; align-items: center; }
+.learn-tree-acts .learn-go { flex: 1; }
+.learn-tree-acts a { text-decoration: none; }

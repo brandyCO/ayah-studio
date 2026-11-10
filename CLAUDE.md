@@ -1692,6 +1692,12 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       words start line n — wrong choices from the 3 pages either side — and where does ayah X start, tapped on the page's
       outline with its 15 lines, headers and basmala drawn as such), **Recite page** (all hidden, peeks and "Stuck? Next
       word" are slips, then tap missed words; the result sets the page's strength). ‹ › to the pages either side
+- [x] **Tree close-up** (2026-11-10, `src/ui/treeView.ts`, `#/learn/tree/S`; from a tree's sheet → Look closer and from
+      Your garden's cards): the surah's tree on its starry island, drawn live at the screen's full resolution every frame
+      (`drawTreeFrame()` / `drawIsland()` in `gardenArt.ts`, never a cached picture), so it stays sharp at any zoom (pinch,
+      wheel, double tap, 1–5×, drag); sways (still with reduced motion); **Full grown** previews the finished tree. The
+      Learn addresses now resolve in `src/ui/learnRoutes.ts` (one import in `main.ts`). The palm-tree hadith for Your
+      garden waits until its wording is checked on Sunnah.com (not reachable from the build container)
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

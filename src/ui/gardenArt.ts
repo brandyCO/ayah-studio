@@ -283,6 +283,19 @@ export function drawTree(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   ctx.restore();
 }
 
+/** A surah's tree drawn straight onto ctx in its own 500 × 625 frame (ground at y 520), never from a cached
+ *  picture: sharp at any size or zoom. `night` adds the starry island behind it. */
+export function drawTreeFrame(ctx: CanvasRenderingContext2D, s: number, stage: Stage, thirsty: boolean, t: number, island = false) {
+  const T = magic(s) as { fit: number; name: string; line: string };
+  if (island) drawIsland(ctx, s, t);
+  ctx.save(); MagicTrees.fitTo(ctx, T); MagicTrees.drawTree(ctx, T, STAGE_G[stage], { t, thirst: thirsty ? 1 : 0 }); ctx.restore();
+}
+/** The surah's starry island alone, in the same frame; `islandSky` = the colour at the frame's top. */
+export function drawIsland(ctx: CanvasRenderingContext2D, s: number, t: number) { MagicTrees.island(ctx, magic(s), t); }
+export const islandSky = (s: number) => `hsl(${(magic(s) as { pal: { ah: number } }).pal.ah}, 30%, 9%)`;
+/** What makes this surah's tree its own (shape, leaves, fruit, bark, colours), in English. */
+export const treeLine = (s: number) => (magic(s) as { line: string }).line;
+
 /** The earlier hand-drawn trees (six species), kept for reference. */
 export function drawSimpleTree(ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number, k: TreeLook) {
   const sp = speciesOf(k.s);

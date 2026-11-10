@@ -301,6 +301,10 @@ const en = {
   'learn.pmQuizDone': '{n} of {of} right',
   'learn.pmAgain': 'Another quiz',
   'learn.pmOpen': 'Page memory',
+  'learn.tvFull': 'Full grown',
+  'learn.tvPreviewNote': 'This is what it becomes when you hold the whole surah.',
+  'learn.tvHint': 'Pinch or double-tap to look closer.',
+  'learn.tvLook': 'Look closer',
 };
 export type LearnKey = keyof typeof en;
 const ar: Partial<Record<LearnKey, string>> = {
@@ -602,6 +606,10 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.pmQuizDone': '{n} من {of} صحيحة',
   'learn.pmAgain': 'اختبار آخر',
   'learn.pmOpen': 'حفظ الصفحات',
+  'learn.tvFull': 'مكتملة',
+  'learn.tvPreviewNote': 'هكذا تصير حين تحفظ السورة كلها.',
+  'learn.tvHint': 'قرّب بإصبعين أو بنقرتين لترى عن قرب.',
+  'learn.tvLook': 'انظر عن قرب',
 };
 
 /** A Learn string, with {name} placeholders filled from `vars` (numbers as written). */

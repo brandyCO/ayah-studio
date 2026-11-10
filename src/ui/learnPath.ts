@@ -232,7 +232,9 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
           h('div', { class: 'learn-tree-ar', lang: 'ar', dir: 'rtl' }, m.ar),
           h('p', {}, tr?.full ? lt('learn.treeGrown') : lt('learn.doneSub2', { n: learned, of: m.ayahs })),
           h('div', { class: 'learn-bar' }, h('i', { style: `width:${Math.round((tr?.full ? 1 : learned / m.ayahs) * 100)}%` })))),
-      h('a', { class: 'primary brand-btn learn-go', href: `#/learn/${m.n}` }, lt(tr?.full ? (thirsty(tr) ? 'learn.goWater' : 'learn.goRecite') : 'learn.continue')));
+      h('div', { class: 'learn-tree-acts' },
+        h('a', { class: 'chip', href: `#/learn/tree/${m.n}` }, lt('learn.tvLook')),
+        h('a', { class: 'primary brand-btn learn-go', href: `#/learn/${m.n}` }, lt(tr?.full ? (thirsty(tr) ? 'learn.goWater' : 'learn.goRecite') : 'learn.continue'))));
   }
 
   async function openStart(first = false) {
@@ -326,7 +328,7 @@ export async function showYourGarden(root: HTMLElement): Promise<() => void> {
     const tr = tree(s)!;
     const stage = stageOf(tr, m.ayahs);
     const dry = thirsty(tr);
-    return h('a', { class: `lp-gcard${dry ? ' dry' : ''}`, href: `#/learn/${s}` },
+    return h('a', { class: `lp-gcard${dry ? ' dry' : ''}`, href: `#/learn/tree/${s}` },
       dry ? h('span', { class: 'lp-gdrop', 'aria-hidden': 'true' }, svg(G.drop, 14)) : '',
       vignette(84, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage, thirsty: dry, t: 0, night: night() }), night(), stageHeight(s, stage)),
       h('b', {}, surahName(m)),
