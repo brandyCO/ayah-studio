@@ -262,6 +262,19 @@ const en = {
   'learn.qFill': 'Which word goes here?',
   'learn.qOrder': 'Put the ayat in order',
   'learn.qOrderParts': 'Put the parts of the ayah in order',
+  'learn.record': 'Record me',
+  'learn.recording': 'Recording…',
+  'learn.slipsSoFar': 'Slips so far: {n}. Keep going.',
+  'learn.stuck': 'Stuck? Next word',
+  'learn.playMine': 'Me',
+  'learn.playSheikh': 'Reciter',
+  'learn.simN': 'Similar ayat ({n})',
+  'learn.simTitle': 'Similar ayat',
+  'learn.simLead': 'Ayat that are easy to mix up. The words that differ are marked.',
+  'learn.tapMissed': 'Tap any word you missed or said wrong.',
+  'learn.slipsN': '{n} slips (prompts, peeks and missed words)',
+  'learn.noSlips': 'No slips. Be honest with yourself: tap any word you missed.',
+  'learn.noMic': 'The microphone could not be used. You can still recite without recording.',
 };
 export type LearnKey = keyof typeof en;
 const ar: Partial<Record<LearnKey, string>> = {
@@ -524,6 +537,19 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.qFill': 'أيّ كلمة مكانها هنا؟',
   'learn.qOrder': 'رتّب الآيات',
   'learn.qOrderParts': 'رتّب أجزاء الآية',
+  'learn.record': 'سجّلني',
+  'learn.recording': 'جارٍ التسجيل…',
+  'learn.slipsSoFar': 'الأخطاء حتى الآن: {n}. تابع.',
+  'learn.stuck': 'توقّفت؟ الكلمة التالية',
+  'learn.playMine': 'أنا',
+  'learn.playSheikh': 'القارئ',
+  'learn.simN': 'آيات متشابهة ({n})',
+  'learn.simTitle': 'آيات متشابهة',
+  'learn.simLead': 'آيات يسهل الخلط بينها. الكلمات المختلفة معلَّمة.',
+  'learn.tapMissed': 'اضغط على كل كلمة نسيتها أو أخطأت فيها.',
+  'learn.slipsN': '{n} أخطاء (تذكير ولمح وكلمات منسية)',
+  'learn.noSlips': 'لا أخطاء. كن صادقًا مع نفسك: اضغط على أي كلمة نسيتها.',
+  'learn.noMic': 'تعذّر استخدام الميكروفون. يمكنك التسميع دون تسجيل.',
 };
 
 /** A Learn string, with {name} placeholders filled from `vars` (numbers as written). */

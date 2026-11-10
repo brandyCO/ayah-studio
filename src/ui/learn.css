@@ -321,3 +321,27 @@
 .lk-foot.good .lk-continue { background: var(--good); }
 .lk-foot.bad .lk-continue { background: var(--bad); }
 @media (prefers-reduced-motion: reduce) { .lk-tile, .lk-opt.wrong { animation: none; } .lk-bar span { transition: none; } }
+
+/* Tasmi' (src/ui/tasmi.ts): weak words faint, prompted words amber, missed words red */
+.lw.hid.hint, .ls-page .lw.hid.hint { color: color-mix(in srgb, var(--text) 22%, transparent); }
+.ls-page .lw.hid.hint { color: color-mix(in srgb, var(--ink, #222) 22%, transparent); }
+.lw.helped { box-shadow: inset 0 -3px 0 #f59f00; }
+.lw.missed, .ls-page .lw.missed { color: #d4383d; background: color-mix(in srgb, #d4383d 14%, transparent); box-shadow: inset 0 -3px 0 #d4383d; }
+.ts-stuck { font-weight: 700; }
+.ts-rec { display: inline-flex; align-items: center; gap: 6px; }
+.ts-dot { width: 10px; height: 10px; border-radius: 50%; background: #d4383d; opacity: .7; }
+.ts-rec.on { color: #d4383d; border-color: #d4383d; }
+.ts-rec.on .ts-dot { opacity: 1; animation: ts-blink 1.2s ease-in-out infinite; }
+@keyframes ts-blink { 50% { opacity: .25; } }
+.ts-sum { font-weight: 700; margin-top: -2px; }
+.ts-ab { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.ts-sim { display: grid; gap: 14px; padding-bottom: 12px; }
+.ts-group { display: grid; gap: 10px; }
+.ts-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ts-side { padding: 8px 10px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); }
+.ts-side.here { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.ts-ref { display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
+.ts-ayah { margin: 2px 0 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(18px, 4.8vw, 24px); line-height: 1.9; }
+.ts-diff { background: color-mix(in srgb, #f59f00 30%, transparent); color: inherit; border-radius: 4px; padding: 0 2px; }
+@media (max-width: 520px) { .ts-pair { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .ts-rec.on .ts-dot { animation: none; } }

@@ -1673,6 +1673,17 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       number); a missed card comes back once at the end; a bar fills; feedback strip + Continue, sounds via `sfx`. Missed
       words are kept as weak (`src/data/weakWords.ts`, localStorage `learnWeak`, right twice to leave) and asked first next
       time; tasmi' will use them. "Skip to reciting" leaves the exercises
+- [x] **Tasmi'** (2026-11-10, `src/ui/tasmi.ts`): every "From memory" step (new chunk, link, whole surah, watering) is a
+      tasmi' on the page (or ayah view) with the words hidden in place; weak words show faintly as a hint; **Stuck? Next
+      word** shows the next hidden word for good and counts as a slip (so does a peek; amber underline); **Record me**
+      (MediaRecorder, the latest per range kept in IndexedDB `recordings`, `tasmi:{s}:{a}-{b}`, never uploaded). Then the
+      text: **tap the words you missed** (red), the slips counted, ▶ Me / ▶ Reciter to compare, **Similar ayat (n)** — a
+      sheet with each ayah beside its similar ones, the differing words marked (`public/data/similar.json` by
+      `scripts/make-similar.mjs`: ayat sharing a run of ≥ 4 words, or 3 making up most of a short ayah, in our own text
+      with harakat and the number left out; phrases in > 60 ayat ignored; top 3 per ayah; 3116 ayat). The result (Not yet /
+      A few slips / I had it) is suggested from the slips (0 · ≤ max(2, 5 %) · more) and sets the review schedule as
+      before; missed and prompted words become weak (`learnWeak`), weak words recited cleanly move towards leaving.
+      Still to come: automatic voice follow-along
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
