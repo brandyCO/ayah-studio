@@ -91,6 +91,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
   const goalsBox = h('section', { class: 'me-card' });
+  // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
+  const duaBox = h('section', { class: 'me-card dl-card' });
+  const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
   const noorEl = noorLine('me');
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
@@ -547,7 +550,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   void import('../together/relight').then((m) => m.takeRelights());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); maybeStreak(); };
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
@@ -563,7 +566,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 

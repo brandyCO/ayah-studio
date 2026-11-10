@@ -39,3 +39,29 @@
 .goal-day .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }
 .me-card .menu-item { border-radius: 14px; font-weight: 600; }
 .me-card .menu-item:hover { background: color-mix(in srgb, #f59f00 10%, var(--card)); }
+/* The day's string of du'a lanterns (src/ui/dayLanterns.ts) */
+.dl-string { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 14px 0 4px; }
+.dl-string::before { content: ''; position: absolute; inset-inline: 6%; top: 8px; height: 14px; border-top: 1.5px solid color-mix(in srgb, var(--text) 22%, transparent);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0; transform: scaleY(-1); pointer-events: none; }
+.dl-stop { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; padding: 0; cursor: pointer; color: var(--muted);
+  -webkit-tap-highlight-color: transparent; font: inherit; }
+.dl-stop svg { width: 30px; height: 45px; overflow: visible; transition: transform .15s; }
+.dl-stop:active svg { transform: scale(.92); }
+.dl-hook { stroke: color-mix(in srgb, var(--text) 30%, transparent); stroke-width: 1.5; fill: none; }
+.dl-cap { fill: color-mix(in srgb, var(--text) 30%, transparent); }
+.dl-body { fill: color-mix(in srgb, var(--text) 6%, transparent); stroke: color-mix(in srgb, var(--text) 28%, transparent); stroke-width: 1.4; }
+.dl-ribs { fill: none; stroke: color-mix(in srgb, var(--text) 14%, transparent); stroke-width: 1; }
+.dl-flame { fill: transparent; }
+.dl-name { font-size: 11px; font-weight: 700; line-height: 1.1; text-align: center; }
+.dl-stop.on { color: var(--text); }
+.dl-stop.on .dl-body { fill: #ffc46b; stroke: #e89b2c; }
+.dl-stop.on .dl-ribs { stroke: rgba(176, 98, 10, .35); }
+.dl-stop.on .dl-cap { fill: #c9852a; }
+.dl-stop.on .dl-flame { fill: #fff6d8; }
+.dl-stop.on svg { filter: drop-shadow(0 0 7px rgba(255, 186, 80, .75)); }
+.dl-stop.now .dl-body { stroke: var(--accent); stroke-width: 2; }
+.dl-stop.now .dl-name { color: var(--accent); }
+.dl-stop.now svg { animation: dl-breathe 2.4s ease-in-out infinite; }
+@keyframes dl-breathe { 50% { transform: translateY(-2px); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); } }
+.dl-adhan { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .dl-stop.now svg { animation: none; } }

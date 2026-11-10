@@ -1547,7 +1547,11 @@ duas/reflections section in Me.
       one tap). `src/data/duas.ts` (`loadDuas`, `momentList`, `prayerNow()`: the prayer whose time it is, from the prayer times or the
       hour); the adhkar session (`src/ui/adhkar.ts`) now runs any list (`openDuas(moment, prayer?)`, prayer chips, a sky per moment);
       progress per session key in `adhkarProgress` (`salah:fajr`, `adhan:asr`, `wake`, `sleep`). Me → links under the goals.
-      To come: bead ring + the day's lanterns on Me, bedtime mode + waking dawn, after-adhan notes, goals / badges / chests, family pact
+      Step 2: the 33s / 34 on a **bead ring** (`beads`: a bead lights and springs in with each tap, a soft tick, a shimmer when the
+      round is full; no sounds before sleeping) and **the day's string of lanterns** on Me (`src/ui/dayLanterns.ts`, lazy: Waking ·
+      Fajr · Dhuhr · Asr · Maghrib · Isha · Sleep, lit when that session is said in full today, the one whose time it is breathes,
+      tap → the session; After the adhan as a chip under it).
+      To come: bedtime mode + waking dawn, after-adhan notes, goals / badges / chests, family pact
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
