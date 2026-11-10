@@ -4,7 +4,7 @@ import { DHIKR, type GoalProgress } from '../data/goals';
 import { t, type Key } from '../i18n';
 
 export const goalText = (kind: string, n: number) =>
-  t((n === 1 && ['pages', 'memorise', 'reels', 'surahs'].includes(kind) ? `goal.${kind}1` : `goal.${kind}`) as Key, { n });
+  t((n === 1 && ['pages', 'memorise', 'reels', 'surahs', 'duas', 'nights'].includes(kind) ? `goal.${kind}1` : `goal.${kind}`) as Key, { n });
 
 export const goalLabel = (g: GoalProgress) => g.kind === 'dhikr'
   ? t(DHIKR.find((x) => x.id === g.dhikr)!.key as Key)

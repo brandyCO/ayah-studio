@@ -9,7 +9,7 @@
 import './adhkar.css';
 import { dhikrLight, lastAt, loadAdhkar, say, saidCount, sessionList, setLastAt, type AdhkarPeriod, type SessionKey } from '../data/adhkar';
 import { bedtimeSaid, loadDuas, momentKey, momentList, prayerNow, PRAYER_LIST, type Dua, type Moment, type Prayer } from '../data/duas';
-import { claimGoal, goalClaimed, setAdhkar } from '../data/journey';
+import { claimGoal, goalClaimed, markMoment, setAdhkar } from '../data/journey';
 import { goals, lightFor } from '../data/goals';
 import { surahMeta } from '../data/quran';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
@@ -219,6 +219,7 @@ async function runSession(cfg: SessionCfg) {
     const all = list.every(isDone);
     if (all && (p === 's' || p === 'm')) setAdhkar(true, p);
     if (all && cfg.moment === 'sleep') bedtimeSaid();
+    if (all && cfg.moment) markMoment(p);
     clearTimeout(advancing);
     advancing = window.setTimeout(() => {
       advancing = 0;

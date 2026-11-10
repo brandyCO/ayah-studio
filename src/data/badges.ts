@@ -1,6 +1,7 @@
 // Milestone badges (Me tab): each one has a goal and shows its progress until it is earned. Earned
 // badges keep the day they were earned (journey.ts `badges`). Computed from this device's journey.
-import { earnBadges, earnedBadges, pagesEver, stats, streak, totals } from './journey';
+import { allDays, earnBadges, earnedBadges, pagesEver, stats, streak, totals } from './journey';
+import { litCount } from './goals';
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'emerald';
 export type BadgeIcon = 'flame' | 'page' | 'book' | 'mushaf' | 'juz' | 'beads' | 'reel' | 'target' | 'listen' | 'heart';
@@ -19,6 +20,10 @@ export interface BadgeDef {
 
 const best = () => streak().best;
 const goalDays = () => stats('all').goalDays;
+const days = () => Object.values(allDays());
+const nights = () => days().filter((d) => d.dm?.includes('sleep')).length;
+const lanterns = () => days().reduce((a, d) => a + litCount(d), 0);
+const fullDay = () => (days().some((d) => litCount(d) >= 7) ? 1 : 0);
 
 export const BADGES: BadgeDef[] = [
   { id: 'streak7', tier: 'bronze', icon: 'flame', name: 'bd.streak7', goal: 'bd.gStreak', need: 7, have: best },
@@ -41,6 +46,10 @@ export const BADGES: BadgeDef[] = [
   { id: 'reels10', tier: 'silver', icon: 'reel', name: 'bd.reels10', goal: 'bd.gReels', need: 10, have: () => totals().reels },
   { id: 'goals7', tier: 'silver', icon: 'target', name: 'bd.goals7', goal: 'bd.gGoals', need: 7, have: goalDays },
   { id: 'goals30', tier: 'gold', icon: 'target', name: 'bd.goals30', goal: 'bd.gGoals', need: 30, have: goalDays },
+  { id: 'nights7', tier: 'bronze', icon: 'heart', name: 'bd.nights7', goal: 'bd.gNights', need: 7, have: nights },
+  { id: 'nights30', tier: 'gold', icon: 'heart', name: 'bd.nights30', goal: 'bd.gNights', need: 30, have: nights },
+  { id: 'lanterns7', tier: 'silver', icon: 'beads', name: 'bd.lanterns7', goal: 'bd.gLanternDay', need: 1, have: fullDay },
+  { id: 'lanterns100', tier: 'gold', icon: 'beads', name: 'bd.lanterns100', goal: 'bd.gLanterns', need: 100, have: lanterns },
 ];
 
 export interface BadgeState { def: BadgeDef; have: number; earned?: string }

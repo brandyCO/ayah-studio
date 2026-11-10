@@ -1560,7 +1560,12 @@ duas/reflections section in Me.
       (channel `prayer_duas`, ids 3150–3199) 4 min after each prayer time → Me, then the adhan session for that prayer, whose end
       leads on to the adhkar after the salah. (The evening flame reminder moved to ids 3400–3406: it shared 3100–3106 with the
       prayer reminders, which cancel their whole range.)
-      To come: goals / badges / chests, family pact
+      Step 5: **goals**. Daily "Light n du'a lanterns" (`Goals.duas`, 0/1/3/5/7; paces 1/3/5; goals saved before: 1 on gentle, else
+      3; Begin opens the moment whose time it is, `openNextMoment()`). Weekly "Bedtime du'a on n nights" (`weekly.nights`, 0/3/5/7).
+      Both have their own chests (8 Light a lantern, 15 a night). Each finished moment is kept in the journey (`DayRec.dm`, session
+      keys, merged across devices), so the lanterns and goals follow the account. Badges: Seven / Thirty peaceful nights, A day full of
+      light (all seven), A hundred lanterns.
+      To come: family pact
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

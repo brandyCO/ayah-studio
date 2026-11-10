@@ -47,6 +47,8 @@ interface DayRec {
   ad?: 1;
   /** Evening adhkar all said. */
   am?: 1;
+  /** Du'a moments said in full (session keys: 'wake', 'salah:fajr', …, 'sleep', 'adhan:asr'). */
+  dm?: string[];
   /** Every daily goal was met. */
   g?: 1;
   /** Rewards claimed that day: goal ids, and 'all' for every goal met. */
@@ -400,6 +402,14 @@ export function setAdhkar(done: boolean, period: 's' | 'm' = 's', now = new Date
   save();
 }
 
+/** A du'a moment was said in full today (its session key). */
+export function markMoment(key: string, now = new Date()) {
+  const d = today(now);
+  if (d.dm?.includes(key)) return;
+  d.dm = [...(d.dm ?? []), key];
+  save();
+}
+
 /** Marks today as a day every goal was met (set once, never taken back). */
 export function markGoalsMet(now = new Date()) {
   const d = today(now);
@@ -534,6 +544,7 @@ function cleanOther(v: unknown): Other | null {
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
     if (Array.isArray(d.cl)) o.cl = strs(d.cl);
+    if (Array.isArray(d.dm)) o.dm = strs(d.dm).slice(0, 20);
     if (d.dk) o.dk = nums(d.dk);
     if (d.cu) o.cu = nums(d.cu);
     if (d.n) o.n = nums(d.n);
@@ -650,6 +661,7 @@ function view(): State {
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);
       if (b.cl) a.cl = union(a.cl, b.cl);
+      if (b.dm) a.dm = union(a.dm, b.dm);
       if (b.dk) a.dk = addNums(a.dk, b.dk);
       if (b.cu) a.cu = addNums(a.cu, b.cu);
       // The same reward claimed on two devices counts once.

@@ -17,7 +17,7 @@ import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_G
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
 import { badgeMoment } from '../data/claims';
 import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
-import { ALL_LIGHT, BADGE_LIGHT, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
+import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
@@ -227,6 +227,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip', 'aria-label': t('goal.more'), onclick: () => { addMemorised(1); haptic(); } }, '+'));
     else if (g.kind === 'adhkar') act = h('button', { class: `chip${met ? ' on' : ''}`, onclick: () => openAdhkarSession(g.period ?? 's') },
       met ? t('goal.adhkarAgain') : g.done ? t('goal.adhkarGo') : t('goal.adhkarBegin'));
+    else if (g.kind === 'duas') act = h('button', { class: 'chip', onclick: () => { haptic(); void import('./dayLanterns').then((m) => m.openNextMoment()); } }, t('goal.adhkarBegin'));
+    else if (g.kind === 'nights') act = h('button', { class: 'chip', onclick: () => { haptic(); void import('./adhkar').then((m) => m.openDuas('sleep')); } }, t('goal.adhkarBegin'));
     else if (g.kind === 'pages') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
     else if (g.kind === 'reels') act = h('a', { class: 'chip', href: '#/drafts' }, t('goal.make'));
     else if (g.kind === 'surahs') act = h('a', { class: 'chip', href: '#/' }, t('goal.read'));
@@ -434,11 +436,13 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         row(t('goal.eReels'), REEL_GOALS, g.reels, (n) => { g.reels = n; }),
         ...DHIKR.map((x) => row(t(x.key as Key), DHIKR_GOALS, g.dhikr[x.id] ?? 0, (n) => { if (n) g.dhikr[x.id] = n; else delete g.dhikr[x.id]; })),
         row(t('goal.eAdhkar'), [0, 1], g.adhkar ? 1 : 0, (n) => { g.adhkar = !!n; }, () => t('goal.on')),
+        row(t('goal.eDuas'), DUA_GOALS, g.duas, (n) => { g.duas = n; }),
         h('h3', { class: 'me-h2' }, t('wkg.title')),
         row(t('wkg.ePages'), WEEK_PAGES, g.weekly.pages, (n) => { g.weekly.pages = n; }),
         row(t('wkg.eListen'), WEEK_LISTEN, g.weekly.listen, (n) => { g.weekly.listen = n; }, (n) => t('wkg.min', { n })),
         row(t('wkg.eSurahs'), WEEK_SURAHS, g.weekly.surahs, (n) => { g.weekly.surahs = n; }),
         row(t('wkg.eReels'), WEEK_REELS, g.weekly.reels, (n) => { g.weekly.reels = n; }),
+        row(t('wkg.eNights'), WEEK_NIGHTS, g.weekly.nights, (n) => { g.weekly.nights = n; }),
         mine));
   }
 
