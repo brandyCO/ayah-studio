@@ -1634,7 +1634,24 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       bench / bronze star lantern (the garden's own pieces in metal + `prizeShine()`, no figures). `grantPrizeDeco(week,
       place)` in `src/data/garden.ts` gives one per week (owned `s:prize:{week}`, deco id `prize-{week}-{kind}`, so two
       devices never double it), the place's piece not owned yet first; it waits unplaced like a bought one
-- [ ] Tested by the owner on the phone (planting, dragging, a lesson with audio, watering)
+- [x] **The path** (owner decision 2026-11-10, "path plus trees as rewards", inspired by Duolingo's quality, not a copy;
+      design canvas https://claude.ai/artifact/8vWN1VWuCCq6rLPz69Rdbg): the grid garden, seed store and dragging are gone
+      (`src/ui/garden.ts` removed). `#/learn` = `src/ui/learnPath.ts` + `learnPath.css` (lazy): one winding path of chunky
+      steps over a drawn dawn landscape (night colours in dark mode); each surah a unit, banner "Surah 67 · Al-Mulk" (long
+      surahs "Part k of N", ≤ 9 steps a part, `PART_STEPS`), steps = its chunks (the lesson as before) then **Tasmi' of the
+      surah** (whole from memory → full tree); done gold, current in the unit's colour with START + ring, locked grey; a tap
+      opens a card (Start lesson / Practise again / finish the steps before); the surah's tree at the end of its last part.
+      Thirsty trees come back as a blue **Review** unit just above where the path stands (≤ 3). Data `src/data/learnPath.ts`
+      (localStorage `learnPath`: start + chunk): **start anywhere** — Juz 'Amma (Al-Fatiha, An-Nas → An-Naba, then on
+      backwards), a surah or a juz (forwards from there, then the surahs before it); **how much at a time** (1/2/3 ayat, ½ page,
+      page; per surah in the unit's ⋯ sheet, which also starts the path there); **Already know some?** — picked surahs get a
+      quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
+      the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
+      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
+      lesson kinds (meaning first, next word, order the ayat), tasmi' (page view, prompt, slips, weak words, similar ayat,
+      playback), page memory (line starts, page start/end, where is the ayah, page strength), the 114 trees redrawn as vectors,
+      lessons in Ranks / quests / goals
+- [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
 - [ ] Later: finished juz gardens joined into one world; Kids version

@@ -5,7 +5,7 @@ import './noor.css';
 import { lang } from '../i18n';
 import { todayGoals } from '../data/goals';
 import { pageSeconds, streak } from '../data/journey';
-import { thirstyTrees, trees } from '../data/garden';
+import { started, thirstyTrees, trees } from '../data/garden';
 import { dayKey, readLogAll } from '../data/readLog';
 import { h } from './dom';
 
@@ -79,7 +79,7 @@ export function noorText(where: Where): string {
   }
   const dry = thirstyTrees().length;
   if (dry) return say(dry === 1 ? 'dry1' : 'dryN', { n: dry });
-  return say(trees().some((x) => x.x >= 0) ? 'grow' : 'plant');
+  return say(trees().some(started) ? 'grow' : 'plant');
 }
 
 /** Noor (a small light, no face) beside a speech bubble. */

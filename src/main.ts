@@ -4,7 +4,7 @@
 //   #/s/2[/255]        reading view — mushaf page or translation cards (optionally at an ayah)
 //   #/reel/2/255-257[/draft]   editor for a selection (optionally a saved draft)
 //   #/drafts           saved reel drafts
-//   #/learn[/N]        Learn: the juz gardens, and a lesson that grows surah N's tree
+//   #/learn[/N[/tasmi]] Learn: the path, and a lesson that grows surah N's tree (#/learn/garden: the trees)
 //   #/me               Me: streak flame, stats, reading time, settings
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
@@ -99,8 +99,9 @@ async function route() {
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
     } else if (view === 'learn') {
-      if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a));
-      else c = await (await import('./ui/garden')).showGarden(screen);
+      if (Number(a)) c = await (await import('./ui/lesson')).showLesson(screen, Number(a), b);
+      else if (a === 'garden') c = await (await import('./ui/learnPath')).showYourGarden(screen);
+      else c = await (await import('./ui/learnPath')).showPath(screen);
     } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp') && a)) {
       c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
     } else if (view === 'drafts') {
