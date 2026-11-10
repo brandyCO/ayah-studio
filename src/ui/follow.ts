@@ -7,7 +7,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor
 
 interface SpeechNative {
   available(): Promise<{ available: boolean; onDevice: boolean }>;
-  start(o: { lang: string }): Promise<{ onDevice: boolean }>;
+  start(o: { lang: string; hints?: string[] }): Promise<{ onDevice: boolean }>;
   stop(): Promise<void>;
   addListener(e: 'partial' | 'result', f: (d: { text: string }) => void): Promise<PluginListenerHandle>;
   addListener(e: 'end', f: () => void): Promise<PluginListenerHandle>;
@@ -38,33 +38,42 @@ export function followSupported(): Promise<boolean> {
 export interface FollowHandlers {
   /** The current utterance as heard so far (`final`: the recogniser is done with it). */
   heard(text: string, final: boolean): void;
-  /** Listening stopped for good: 'denied' (no microphone), 'failed' (no recogniser) or 'stopped'. */
-  ended(why: 'denied' | 'failed' | 'stopped'): void;
+  /** Listening stopped for good: 'denied' (no microphone), 'failed' (no recogniser), 'quiet' (nothing heard
+   * for a while, to spare the battery) or 'stopped'. */
+  ended(why: Why): void;
+  /** Phrases to expect next (the coming words of the text), given to the recogniser when it can use them. */
+  hints?(): string[];
 }
+type Why = 'denied' | 'failed' | 'quiet' | 'stopped';
 export interface Follower { stop(): void }
+/** Nothing heard for this long: the microphone stops by itself. */
+const QUIET_MS = 20_000;
 
 /** Starts listening in Arabic; keeps listening across pauses until stop(). */
 export async function startFollow(on: FollowHandlers): Promise<Follower | null> {
-  let alive = true, fails = 0;
-  const finish = (why: 'denied' | 'failed' | 'stopped') => { if (!alive) return; alive = false; on.ended(why); };
+  let alive = true, fails = 0, lastHeard = Date.now();
+  let stopNow = () => {};
+  const finish = (why: Why) => { if (!alive) return; stopNow(); alive = false; clearInterval(quiet); on.ended(why); };
+  const quiet = window.setInterval(() => { if (Date.now() - lastHeard > QUIET_MS) finish('quiet'); }, 2000);
+  const got = (text: string, final: boolean) => { if (text.trim()) lastHeard = Date.now(); on.heard(text, final); };
   if (native()) {
     const subs: PluginListenerHandle[] = [];
     const again = async () => {
       if (!alive) return;
-      try { await Speech.start({ lang: 'ar-SA' }); }
+      try { await Speech.start({ lang: 'ar-SA', hints: on.hints?.() ?? [] }); }
       catch (e) { finish(String((e as { code?: string })?.code ?? e).includes('denied') ? 'denied' : 'failed'); }
     };
-    subs.push(await Speech.addListener('partial', (d) => { if (alive && d.text) { fails = 0; on.heard(d.text, false); } }));
-    subs.push(await Speech.addListener('result', (d) => { if (alive) { if (d.text) fails = 0; on.heard(d.text ?? '', true); } }));
+    subs.push(await Speech.addListener('partial', (d) => { if (alive && d.text) { fails = 0; got(d.text, false); } }));
+    subs.push(await Speech.addListener('result', (d) => { if (alive) { if (d.text) fails = 0; got(d.text ?? '', true); } }));
     // 7 no match, 6 silence: just listen again; 9 no permission; others a few times, then give up
     subs.push(await Speech.addListener('error', (d) => { if (d.code === 9) finish('denied'); else if (d.code !== 6 && d.code !== 7 && ++fails > 4) finish('failed'); }));
     subs.push(await Speech.addListener('end', () => { if (alive) window.setTimeout(() => void again(), 60); }));
+    stopNow = () => { void Speech.stop(); subs.forEach((x) => void x.remove()); };
     await again();
-    const stop = () => { if (!alive) return; alive = false; void Speech.stop(); subs.forEach((x) => void x.remove()); };
-    return { stop: () => { stop(); on.ended('stopped'); } };
+    return { stop: () => finish('stopped') };
   }
   const Ctor = WebCtor();
-  if (!Ctor) return null;
+  if (!Ctor) { alive = false; clearInterval(quiet); return null; }
   let r: WebRec;
   const open = () => {
     r = new Ctor();
@@ -74,7 +83,7 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
     r.maxAlternatives = 1;
     // a continuous session gives one result per pause; each is followed on its own from where the last ended
     r.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) on.heard(e.results[i][0].transcript, e.results[i].isFinal);
+      for (let i = e.resultIndex; i < e.results.length; i++) got(e.results[i][0].transcript, e.results[i].isFinal);
       fails = 0;
     };
     r.onerror = (e) => {
@@ -84,6 +93,7 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
     r.onend = () => { if (alive) window.setTimeout(() => { if (alive) try { open(); } catch { finish('failed'); } }, 60); };
     r.start();
   };
-  try { open(); } catch { return null; }
-  return { stop: () => { if (!alive) return; alive = false; try { r.abort(); } catch { /* already stopped */ } on.ended('stopped'); } };
+  stopNow = () => { try { r.abort(); } catch { /* already stopped */ } };
+  try { open(); } catch { alive = false; clearInterval(quiet); return null; }
+  return { stop: () => finish('stopped') };
 }

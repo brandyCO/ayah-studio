@@ -30,7 +30,7 @@ import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
 import { followSupported, startFollow, type Follower } from './follow';
-import { follow, followWords, type FollowWord } from '../engine/follow';
+import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
@@ -136,8 +136,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   void followSupported().then((ok) => { canFollow = ok; if (phase === 'memory') paintActions(); });
   let fw: FollowWord[] = [];
   let fBase = 0;
-  const said = new Set<string>(), skip = new Set<string>();
-  let sayP = new Set<string>(), skipP = new Set<string>();
+  const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
+  let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const voiced = (k: string) => said.has(k) || sayP.has(k);
   const passed = (k: string) => skip.has(k) || skipP.has(k);
   const wordEls = new Map<string, HTMLElement>();
@@ -179,7 +179,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const k = `${a}:${i}`, hid = hiddenWord(a, i);
     return `${hid ? ' hid' : ''}${hid && phase === 'memory' && weak.has(k) ? ' hint' : ''}`
       + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`
-      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? ' skipped' : ''}`;
+      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? (wrongS.has(k) || wrongP.has(k) ? ' wrong' : ' skipped') : ''}`;
   };
   /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
   function displayIndex(a: number, pos: number): number {
@@ -286,6 +286,17 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     }
     textEl.replaceChildren(...blocks);
   }
+  /** Repaints only these words (voice follow-along updates many times a second). */
+  function refreshKeys(keys: Set<string>) {
+    for (const k of keys) {
+      const [a, i] = k.split(':').map(Number);
+      for (const el of [wordEls.get(k), ...moreEls.filter(([x]) => x === k).map(([, e]) => e)]) {
+        if (!el) continue;
+        const keep = el.classList.contains('on') ? ' on' : '';
+        el.className = `${el.classList.contains('w') ? 'w ' : ''}lw${wordCls(a, i)}${keep}`;
+      }
+    }
+  }
   function refreshHidden() {
     for (const [k, el] of [...wordEls, ...moreEls]) {
       const [a, i] = k.split(':').map(Number);
@@ -376,10 +387,12 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (fBase < 0) fBase = fw.length;
     const f = await startFollow({
       heard: (text, final) => heard(text, final),
+      hints: () => hintsFrom(fw, fBase),
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
         else if (why === 'failed') toast(lt('learn.followFailed'));
+        else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (phase === 'memory') paintActions();
       },
     });
@@ -394,21 +407,26 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     f?.stop();
     for (const k of sayP) said.add(k);
     for (const k of skipP) skip.add(k);
-    sayP = new Set(); skipP = new Set();
+    for (const k of wrongP) wrongS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set();
   }
-  let lastSaid = '';
+  let lastSaid = '', lastSig = '';
   function heard(text: string, final: boolean) {
     if (!follower || phase !== 'memory') return;
     const r = follow(fw, fBase, text);
+    const touched = new Set([...sayP, ...skipP]);
     sayP = new Set(r.said.map((x) => fw[x].key));
-    skipP = new Set(r.skipped.map((x) => fw[x].key));
+    wrongP = new Set(r.wrong.map((x) => fw[x].key));
+    skipP = new Set([...r.skipped.map((x) => fw[x].key), ...wrongP]);
     if (final) {
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
-      sayP = new Set(); skipP = new Set();
+      for (const k of wrongP) wrongS.add(k);
+      sayP = new Set(); skipP = new Set(); wrongP = new Set();
       fBase = r.cursor;
     }
-    refreshHidden();
+    for (const k of [...sayP, ...skipP, ...r.said.map((x) => fw[x].key), ...r.skipped.map((x) => fw[x].key), ...r.wrong.map((x) => fw[x].key)]) touched.add(k);
+    refreshKeys(touched);
     const at = r.said.length ? fw[r.said[r.said.length - 1]].key : '';
     if (at && at !== lastSaid) {
       lastSaid = at;
@@ -419,7 +437,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         if (rc.bottom > tc.bottom - 40 || rc.top < tc.top) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
     }
-    paintActions();
+    const sig = `${skip.size + skipP.size > 0}|${new Set([...helped, ...skip, ...skipP]).size}`;
+    if (sig !== lastSig) { lastSig = sig; paintActions(); }
     if (r.cursor >= fw.length) {
       stopFollow();
       toast(lt('learn.followEnd'));
@@ -461,7 +480,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (p !== 'memory' && rec.on) void stopRec().then(() => { if (phase === 'check') paintActions(); });
     if (p === 'memory' && phase !== 'check') {
       helped.clear(); shown.clear(); missed.clear();
-      said.clear(); skip.clear(); sayP = new Set(); skipP = new Set(); lastSaid = '';
+      said.clear(); skip.clear(); wrongS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
       weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
       if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }
       void recording(recKey(s, range[0], range[1])).then((b) => { if (b && !recUrl && phase !== 'memory') { recUrl = URL.createObjectURL(b); paintActions(); } });

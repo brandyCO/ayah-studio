@@ -1694,7 +1694,10 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       dagger alif both ways, two heard words = one written word and back, 5 words of lookahead, stricter past
       the next word): said words appear (`heard`), words passed over show red (`skipped`) and arrive at the
       check pre-tapped as missed (untap if the phone misheard); at the last word the text shows. No audio or
-      text kept. Exclusive with Record me
+      text kept. Exclusive with Record me. Words **said wrong** (heard as another word, or only partly like it,
+      < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
+      (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
+      the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;

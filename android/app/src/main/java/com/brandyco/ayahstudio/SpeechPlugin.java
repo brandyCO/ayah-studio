@@ -59,6 +59,11 @@ public class SpeechPlugin extends Plugin {
 
     private void begin(PluginCall call) {
         final String lang = call.getString("lang", "ar-SA");
+        final ArrayList<String> hints = new ArrayList<>();
+        try {
+            com.getcapacitor.JSArray arr = call.getArray("hints");
+            if (arr != null) for (int i = 0; i < arr.length() && i < 50; i++) hints.add(arr.getString(i));
+        } catch (Exception ignored) { }
         main.post(() -> {
             try {
                 release();
@@ -73,6 +78,8 @@ public class SpeechPlugin extends Plugin {
                 it.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
                 it.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L);
                 it.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L);
+                // Android 13+: lean towards the words that come next in the text
+                if (Build.VERSION.SDK_INT >= 33 && !hints.isEmpty()) it.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, hints);
                 sr.startListening(it);
                 JSObject r = new JSObject();
                 r.put("onDevice", onDevice);

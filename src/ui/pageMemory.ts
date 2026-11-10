@@ -19,7 +19,7 @@ import { surahName } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
 import { followSupported, startFollow, type Follower } from './follow';
-import { follow, followWords, type FollowWord } from '../engine/follow';
+import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
 import { popIn, reduced } from './juice';
 import { lightChip } from './lightChip';
@@ -189,8 +189,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   const els = new Map<string, HTMLElement>();
   // voice follow-along (as in a lesson's tasmi'): words heard / passed over, fixed at each pause and pending
   let follower: Follower | null = null, canFollow = false, fw: FollowWord[] = [], fBase = 0;
-  const said = new Set<string>(), skip = new Set<string>();
-  let sayP = new Set<string>(), skipP = new Set<string>();
+  const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
+  let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const twins = new Map<string, string[]>(); // glyphs that show the same display word go together
   void followSupported().then((ok) => { canFollow = ok; if (mode === 'recite' && !checking) paintActions(); });
 
@@ -200,15 +200,18 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     if (mode === 'recite') return !checking && !shown.has(k) && !said.has(k) && !sayP.has(k) && !skip.has(k) && !skipP.has(k);
     return false;
   };
-  function refresh() {
-    for (const [k, el] of els) {
+  function refresh(only?: Set<string>) {
+    for (const [k, el] of only ? [...only].map((k) => [k, els.get(k)] as const) : els) {
+      if (!el) continue;
       const [li, wi] = k.split(':').map(Number);
       el.classList.toggle('hid', hidden(li, wi));
       el.classList.toggle('helped', mode === 'recite' && helped.has(k));
       el.classList.toggle('missed', mode === 'recite' && checking && missed.has(k));
       el.classList.toggle('start', mode === 'starts' && wi === firstOf(li) && !revealed.has(li));
       el.classList.toggle('heard', mode === 'recite' && !checking && (said.has(k) || sayP.has(k)));
-      el.classList.toggle('skipped', mode === 'recite' && !checking && (skip.has(k) || skipP.has(k)));
+      const bad = mode === 'recite' && !checking && (skip.has(k) || skipP.has(k)), wr = wrongS.has(k) || wrongP.has(k);
+      el.classList.toggle('skipped', bad && !wr);
+      el.classList.toggle('wrong', bad && wr);
     }
   }
 
@@ -291,10 +294,12 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     if (fBase < 0) fBase = fw.length;
     const f = await startFollow({
       heard: (text, final) => heard(text, final),
+      hints: () => hintsFrom(fw, fBase),
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
         else if (why === 'failed') toast(lt('learn.followFailed'));
+        else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (mode === 'recite' && !checking) paintActions();
       },
     });
@@ -310,22 +315,30 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     f?.stop();
     for (const k of sayP) said.add(k);
     for (const k of skipP) skip.add(k);
-    sayP = new Set(); skipP = new Set();
+    for (const k of wrongP) wrongS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set();
   }
+  let lastSig = '';
   const withTwins = (keys: string[]) => new Set(keys.flatMap((k) => [k, ...(twins.get(k) ?? [])]));
   function heard(text: string, final: boolean) {
     if (!follower || mode !== 'recite' || checking) return;
     const r = follow(fw, fBase, text);
+    const touched = new Set([...sayP, ...skipP]);
     sayP = withTwins(r.said.map((x) => fw[x].key));
-    skipP = withTwins(r.skipped.map((x) => fw[x].key));
+    wrongP = withTwins(r.wrong.map((x) => fw[x].key));
+    skipP = new Set([...withTwins(r.skipped.map((x) => fw[x].key)), ...wrongP]);
     if (final) {
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
-      sayP = new Set(); skipP = new Set();
+      for (const k of wrongP) wrongS.add(k);
+      sayP = new Set(); skipP = new Set(); wrongP = new Set();
       fBase = r.cursor;
     }
-    refresh();
-    paintActions();
+    for (const k of [...sayP, ...skipP]) touched.add(k);
+    if (final) for (const k of [...said, ...skip]) touched.add(k);
+    refresh(touched);
+    const sig = `${skip.size + skipP.size > 0}|${new Set([...helped, ...skip, ...skipP]).size}`;
+    if (sig !== lastSig) { lastSig = sig; paintActions(); }
     if (r.cursor >= fw.length) {
       stopFollow();
       toast(lt('learn.followEnd'));
@@ -342,7 +355,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
 
   function setMode(m: Mode) {
     if (follower) stopFollow();
-    said.clear(); skip.clear(); sayP = new Set(); skipP = new Set();
+    said.clear(); skip.clear(); wrongS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
     revealed.clear(); helped.clear(); shown.clear(); missed.clear(); checking = false;

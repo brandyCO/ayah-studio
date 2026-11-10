@@ -433,3 +433,4 @@
 .ts-follow.live .ts-mic { opacity: 1; animation: ts-listen 1.4s ease-in-out infinite; }
 @keyframes ts-listen { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
 @media (prefers-reduced-motion: reduce) { .lw.heard, .ts-follow.live .ts-mic { animation: none; } }
+.lw.wrong, .ls-page .lw.wrong { color: #d4383d; text-decoration: underline wavy #d4383d; text-underline-offset: 6px; text-decoration-thickness: 1.5px; }
