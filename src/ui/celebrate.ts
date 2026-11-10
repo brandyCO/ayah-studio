@@ -28,7 +28,7 @@ import './cel.css';
 import './celebrate.css';
 import { actor as makeActor } from './actor';
 import { freezeArt } from './flat';
-import { bump, combo, noor as makeNoor, popIn, squash, tick as tickNum } from './juice';
+import { bump, combo, holdPage, noor as makeNoor, popIn, squash, tick as tickNum } from './juice';
 import { sfx } from './sfx';
 
 /** The theme's reward colours, read when a moment starts (so a theme change shows at once). */
@@ -286,6 +286,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
+      holdPage(false);
       const lightCard = lootLight ? (lootLight as HTMLElement).closest('.cel-loot-it') : null;
       if (light > 0 && !still) { flyLight(lightCard ?? stage, tier); sfx.whoosh(); }
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
@@ -431,6 +432,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
+    holdPage(true);
     if (still && isChest) lootCards.forEach((c) => c.classList.add('in', 'landed'));
     (isChest && !still ? hit! : ok).focus({ preventScroll: true });
     if (still) return;

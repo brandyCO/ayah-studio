@@ -45,11 +45,21 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
   // Watchdog: if frames come slowly on this phone, carry on with half the sparks at a lower resolution.
   let slow = lite, slowSum = 0, slowN = 0;
   const ctx = canvas.getContext('2d')!;
+  // The box size is read once and then kept by a ResizeObserver: reading clientWidth in every frame forced a
+  // style and layout pass per frame while the rest of the moment was animating.
+  let cw = canvas.clientWidth, ch = canvas.clientHeight;
   const fit = () => {
-    canvas.width = Math.round(canvas.clientWidth * dpr);
-    canvas.height = Math.round(canvas.clientHeight * dpr);
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
   };
   fit();
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => {
+    const r = es[es.length - 1].contentRect;
+    cw = r.width; ch = r.height;
+    fit();
+  }) : null;
+  ro?.observe(canvas);
+  let drawn = false;
   const sprites = colors.flatMap((c) => [sprite(c, 64, false), sprite(c, 64, true)]);
   const ps: P[] = [];
   let mote = false;
@@ -70,13 +80,12 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
         slowSum = 0; slowN = 0;
       }
     }
-    if (canvas.width !== Math.round(canvas.clientWidth * dpr)) fit();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (drawn) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawn = ps.length > 0;
     ctx.globalCompositeOperation = 'lighter';
     if (mote && now - lastMote > 140) {
       lastMote = now;
-      const w = canvas.clientWidth;
-      ps.push({ x: rand(w * 0.2, w * 0.8), y: canvas.clientHeight * rand(0.45, 0.62), vx: rand(-6, 6), vy: rand(-26, -14), life: 0, max: rand(2.6, 4), size: rand(5, 10), spr: Math.floor(rand(0, colors.length)) * 2, star: false, tw: rand(0, 6), g: -2 });
+      ps.push({ x: rand(cw * 0.2, cw * 0.8), y: ch * rand(0.45, 0.62), vx: rand(-6, 6), vy: rand(-26, -14), life: 0, max: rand(2.6, 4), size: rand(5, 10), spr: Math.floor(rand(0, colors.length)) * 2, star: false, tw: rand(0, 6), g: -2 });
     }
     for (let i = ps.length - 1; i >= 0; i--) {
       const p = ps[i];
@@ -114,6 +123,6 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
       kick();
     },
     motes(on) { mote = on; if (on) kick(); },
-    stop() { stopped = true; cancelAnimationFrame(raf); },
+    stop() { stopped = true; cancelAnimationFrame(raf); ro?.disconnect(); },
   };
 }

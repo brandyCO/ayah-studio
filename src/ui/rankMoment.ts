@@ -12,7 +12,7 @@ import { rt, type RankKey } from '../i18n/ranks';
 import { tierOf, type RankMoments, type Row, type Status } from '../together/ranks';
 import { h } from './dom';
 import { TIER_RING, avatar } from './rankAvatars';
-import { bump } from './juice';
+import { bump, holdPage } from './juice';
 import { sfx } from './sfx';
 import { sparks, type Sparks } from './sparks';
 import './cel.css';
@@ -99,6 +99,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
+      holdPage(false);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -108,6 +109,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
+    holdPage(true);
     ok.focus({ preventScroll: true });
     if (still) return;
     fx = sparks(canvas, colors);
