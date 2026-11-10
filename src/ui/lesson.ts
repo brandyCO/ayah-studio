@@ -10,8 +10,9 @@
 // word timings (rule 8). Tap a word: its Quran.com meaning and, where timed, its sound.
 import './learn.css';
 import {
-  LIGHT, ayahPlaces, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
+  LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
+import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
 import { addMemorised, claimGoal } from '../data/journey';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
@@ -23,7 +24,6 @@ import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
 import { h, haptic, toast } from './dom';
 import { drawTree, stageHeight, vignette } from './gardenArt';
-import { holdSeed, noteGrowth } from './garden';
 import { icon } from './icons';
 import { reelReciter } from './prefs';
 
@@ -43,13 +43,10 @@ const learnReciter = () => {
   return timedReciterById(reelReciter(DEFAULT_RECITER)).id;
 };
 
-export async function showLesson(root: HTMLElement, s: number): Promise<() => void> {
-  if (!tree(s) || tree(s)!.x < 0) {
-    // Not planted yet: the seed waits in the garden's tray.
-    holdSeed(s);
-    location.replace('#/learn');
-    return () => {};
-  }
+/** `mode` 'tasmi': the whole surah from memory straight away ("Already know some?" on the path). */
+export async function showLesson(root: HTMLElement, s: number, mode?: string): Promise<() => void> {
+  ensureTree(s, pathChunk());
+  const quick = mode === 'tasmi';
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
     loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
     surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
@@ -68,6 +65,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   let reviewFirst = false; // a growing tree was thirsty: Link first, then on to New
   async function plan(after?: Step): Promise<void> {
     const tr = tree(s)!;
+    if (quick && !after && !tr.full) { step = 'whole'; range = [1, m.ayahs]; return; }
     if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
     if (tr.full) { step = 'water'; range = [1, m.ayahs]; return; }
     if (!after && thirsty(tr) && tr.learned > 0) { step = 'link'; range = [1, tr.learned]; reviewFirst = true; return; }
@@ -100,7 +98,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
   const art = h('span', { class: 'ls-tree' });
   root.append(
     h('header', { class: 'ls-head' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToGarden') }, icon('back', 22)),
+      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
       art),
     stepsEl, phaseEl,
@@ -265,7 +263,10 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       const had: HTMLButtonElement = primary(lt('learn.hadIt'), () => void pass(true, had));
       actions.replaceChildren(
         h('p', { class: 'ls-hint' }, lt('learn.howDid')),
-        b(lt('learn.notYet'), () => { level = Math.max(0, level - 1); go('practice'); }),
+        b(lt('learn.notYet'), () => {
+          if (quick) { toast(lt('learn.quickNotYet')); const n = nextQuick(s); location.replace(n ? `#/learn/${n}/tasmi` : '#/learn'); return; }
+          level = Math.max(0, level - 1); go('practice');
+        }),
         slips, had);
     } else actions.replaceChildren();
   }
@@ -551,6 +552,12 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       await plan('link');
       if (step === 'new') { startStep(); return; }
     }
+    if (quick && was === 'whole') {
+      const n = nextQuick(s);
+      if (n) { location.replace(`#/learn/${n}/tasmi`); return; }
+      location.hash = '#/learn';
+      return;
+    }
     void showDone(after, was);
   }
 
@@ -566,7 +573,7 @@ export async function showLesson(root: HTMLElement, s: number): Promise<() => vo
       h('h2', {}, lt(tr.full ? (was === 'whole' ? 'learn.doneFull' : 'learn.doneWatered') : 'learn.doneToday')),
       h('p', { class: 'muted' }, tr.full ? lt('learn.doneFullSub') : lt('learn.doneSub', { n: tr.learned, of: m.ayahs })),
       h('div', { class: 'ls-done-actions' },
-        h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToGarden')),
+        h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToPath')),
         label ? h('button', { class: 'primary brand-btn', onclick: () => void plan().then(startStep) }, lt('learn.moreToday', { what: label })) : ''));
   }
 

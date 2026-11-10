@@ -177,9 +177,21 @@ export function dueAt(t: Readonly<Tree>): number | null {
 }
 export const thirsty = (t: Readonly<Tree>, now = Date.now()) => { const d = dueAt(t); return d !== null && now >= d; };
 /** Thirsty trees, the longest waiting first. */
-export const thirstyTrees = (now = Date.now()) => trees().filter((t) => t.x >= 0 && thirsty(t, now)).sort((a, b) => dueAt(a)! - dueAt(b)!);
+export const thirstyTrees = (now = Date.now()) => trees().filter((t) => started(t) && thirsty(t, now)).sort((a, b) => dueAt(a)! - dueAt(b)!);
+
+/** A surah whose learning has begun (the path makes its tree at the first lesson). */
+export const started = (t: Readonly<Tree>) => t.learned > 0 || !!t.full;
 
 // --- writing ---
+/** The surah's tree, made (not placed anywhere) when its first lesson opens. */
+export function ensureTree(s: number, chunk: ChunkSize): Readonly<Tree> {
+  const st = load();
+  if (st.trees[s]) return st.trees[s];
+  const now = Date.now();
+  st.trees[s] = { s, x: -1, y: -1, v: 0, chunk, learned: 0, linked: 0, step: 0, water: now, planted: now, at: now };
+  save();
+  return st.trees[s];
+}
 function touch(t: Tree) { t.at = Date.now(); }
 
 /** Plants (or moves) a surah's tree at a free cell of its garden. */
