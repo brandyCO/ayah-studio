@@ -36,7 +36,7 @@ On Google Cloud Run (the GitHub workflow `Deploy harakat server` does this on ev
 1. Google Cloud: create a project and turn on billing (the free tier still asks for a card). Free each
    month: 180,000 vCPU-seconds, which is about 5,800 minutes of recitation checked.
 2. IAM → Service accounts → create one with the roles Cloud Run Admin, Cloud Build Editor, Artifact
-   Registry Admin, Service Account User and Storage Admin → Keys → Add key → JSON.
+   Registry Admin, Service Account User, Storage Admin and Service Usage Admin → Keys → Add key → JSON.
 3. GitHub repo → Settings → Secrets and variables → Actions: secret `GCP_SA_KEY` = the JSON file's
    contents; variable `GCP_PROJECT` = the project id (optional `GCP_REGION`, default `europe-west1`).
 4. Actions → Deploy harakat server → Run workflow. The last line of its log is the server's address: put
