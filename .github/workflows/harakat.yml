@@ -1,0 +1,50 @@
+name: Deploy harakat server
+
+# Deploys server/harakat (the harakat check for "Follow my voice") to Google Cloud Run when it changes on
+# main. Needs the repo secret GCP_SA_KEY (a service account key, JSON, with the roles Cloud Run Admin,
+# Cloud Build Editor, Artifact Registry Admin, Service Account User and Storage Admin) and the repo variable
+# GCP_PROJECT (the project id); GCP_REGION is optional (default europe-west1). Without them the job is
+# skipped. Steps for the owner: server/harakat/README.md. The model is baked into the image.
+
+on:
+  push:
+    branches: [main]
+    paths: ['server/harakat/**', '.github/workflows/harakat.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harakat
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.GCP_SA_KEY }}
+      PROJECT: ${{ vars.GCP_PROJECT }}
+      REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.KEY != '' && env.PROJECT != ''
+      - uses: google-github-actions/auth@v2
+        if: env.KEY != '' && env.PROJECT != ''
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+        if: env.KEY != '' && env.PROJECT != ''
+      - name: Turn on the services (once)
+        if: env.KEY != '' && env.PROJECT != ''
+        run: gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "$PROJECT"
+      # 4 vCPU: a recited part is checked in ~0.13x its length. At most 3 copies at once (cost ceiling),
+      # none while unused (free tier). One check at a time per copy.
+      - name: Deploy
+        if: env.KEY != '' && env.PROJECT != ''
+        run: |
+          gcloud run deploy harakat --source server/harakat --project "$PROJECT" --region "$REGION" \
+            --allow-unauthenticated --cpu 4 --memory 2Gi --concurrency 1 \
+            --min-instances 0 --max-instances 3 --timeout 60 --cpu-boost \
+            --set-env-vars THREADS=4,MAX_SECONDS_DAY=3600 --quiet
+          gcloud run services describe harakat --project "$PROJECT" --region "$REGION" --format 'value(status.url)'

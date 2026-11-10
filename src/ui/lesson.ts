@@ -29,7 +29,7 @@ import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
-import { followSupported, startFollow, type Follower } from './follow';
+import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
@@ -133,10 +133,14 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   // and as the recogniser has the current utterance so far (sayP, skipP)
   let follower: Follower | null = null;
   let canFollow = false;
+  let harakatOn = false;
+  void followChecksHarakat().then((x) => { harakatOn = x; });
   void followSupported().then((ok) => { canFollow = ok; if (phase === 'memory') paintActions(); });
   let fw: FollowWord[] = [];
   let fBase = 0;
   const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
+  const hkS = new Set<string>(); let hkNext: string[] = []; // said with another haraka (harakat server)
+  let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const voiced = (k: string) => said.has(k) || sayP.has(k);
   const passed = (k: string) => skip.has(k) || skipP.has(k);
@@ -179,7 +183,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const k = `${a}:${i}`, hid = hiddenWord(a, i);
     return `${hid ? ' hid' : ''}${hid && phase === 'memory' && weak.has(k) ? ' hint' : ''}`
       + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`
-      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? (wrongS.has(k) || wrongP.has(k) ? ' wrong' : ' skipped') : ''}`;
+      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? (wrongS.has(k) || wrongP.has(k) ? ' wrong' : ' skipped') : ''}`
+      + `${phase === 'memory' && hkS.has(k) ? ' harakah' : ''}`;
   };
   /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
   function displayIndex(a: number, pos: number): number {
@@ -377,20 +382,24 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   async function toggleFollow() {
     if (follower) { stopFollow(); paintActions(); return; }
     if (rec.on) await stopRec();
-    if (!localStorage.getItem('followNoted')) { toast(lt('learn.followNote')); try { localStorage.setItem('followNoted', '1'); } catch { /* blocked */ } }
+    if (!localStorage.getItem(harakatOn ? 'followNotedS' : 'followNoted')) { toast(lt(harakatOn ? 'learn.followNoteServer' : 'learn.followNote')); try { localStorage.setItem(harakatOn ? 'followNotedS' : 'followNoted', '1'); } catch { /* blocked */ } }
     stopAll();
     const list: { key: string; text: string }[] = [];
     for (let a = range[0]; a <= range[1]; a++) words[a - 1].forEach((text, i) => list.push({ key: `${a}:${i}`, text }));
     fw = followWords(list);
+    fwText = new Map(list.map((x) => [x.key, x.text]));
     // carry on from the first word not yet shown, heard or passed
     fBase = fw.findIndex((w) => { const [a, i] = w.key.split(':').map(Number); return hiddenWord(a, i); });
     if (fBase < 0) fBase = fw.length;
     const f = await startFollow({
       heard: (text, final) => heard(text, final),
       hints: () => hintsFrom(fw, fBase),
+      ahead: () => fw.slice(fBase).map((w) => fwText.get(w.key) ?? ''),
+      flagged: (at) => { hkNext = at.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k); },
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
+        else if (why === 'limit') toast(lt('learn.followLimit'));
         else if (why === 'failed') toast(lt('learn.followFailed'));
         else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (phase === 'memory') paintActions();
@@ -422,9 +431,12 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
       for (const k of wrongP) wrongS.add(k);
+      for (const k of hkNext) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
       sayP = new Set(); skipP = new Set(); wrongP = new Set();
       fBase = r.cursor;
     }
+    for (const k of hkNext) touched.add(k);
+    hkNext = [];
     for (const k of [...sayP, ...skipP, ...r.said.map((x) => fw[x].key), ...r.skipped.map((x) => fw[x].key), ...r.wrong.map((x) => fw[x].key)]) touched.add(k);
     refreshKeys(touched);
     const at = r.said.length ? fw[r.said[r.said.length - 1]].key : '';
@@ -480,7 +492,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (p !== 'memory' && rec.on) void stopRec().then(() => { if (phase === 'check') paintActions(); });
     if (p === 'memory' && phase !== 'check') {
       helped.clear(); shown.clear(); missed.clear();
-      said.clear(); skip.clear(); wrongS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
+      said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
       weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
       if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }
       void recording(recKey(s, range[0], range[1])).then((b) => { if (b && !recUrl && phase !== 'memory') { recUrl = URL.createObjectURL(b); paintActions(); } });

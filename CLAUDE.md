@@ -1734,7 +1734,18 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       text kept. Exclusive with Record me. Words **said wrong** (heard as another word, or only partly like it,
       < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
       (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
-      the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat
+      the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat.
+      **Harakat check on our server** (owner decision 2026-11-10, "only on the server"): `server/harakat` (Python,
+      onnxruntime; Docker image with the 4-bit ONNX of the Quran CTC model `mostafanewir70/quran-recitation-ctc-onnx`,
+      pinned + SHA-256, Apache-2.0). With the repo variable `HARAKAT_URL` set and the learner signed in, Follow my voice
+      records itself (`recordParts()` in `src/ui/follow.ts`: 16 kHz, cut at a 0.6 s pause or at the quietest moment
+      after 12 s) and sends each part with the words from the cursor (`ahead()`); the server (`follow.py`, a port of
+      `src/engine/follow.ts`, kept identical: 200 random cases match) finds the said words, lines the audio up with
+      their exact harakat (CTC Viterbi, free audio before/after) and flags a word when the model is far surer of
+      another haraka (`HARAKAT_FLAG` −6; 97 % caught, ~1 % false). Flagged words show with an amber wavy underline
+      (`harakah`) and count as missed at the check. Supabase token checked, 60 min a day per user, no audio stored.
+      Deploy: `.github/workflows/harakat.yml` (Cloud Run, 4 vCPU, ≤ 3 copies, scale to zero; secret `GCP_SA_KEY`,
+      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Without it: the phone's recogniser as before
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;
