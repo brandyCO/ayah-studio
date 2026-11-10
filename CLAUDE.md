@@ -1627,7 +1627,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
 - [x] Data `src/data/garden.ts` (localStorage `garden`, synced as `user_docs` state/garden, merged per tree /
       decoration, newest wins, learned counts never go back, purchases add up; in Export my data): one garden per
       juz (a surah grows in the juz holding its ayah 1, `surahJuz()`; grid 5–8, `gridSize()`), a tree per surah
-      (`x/y`, variety, chunk size 1/2/3 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
+      (`x/y`, variety, chunk size 1/2/3/5 ayat · ½ page · page from the mushaf lines `ayahPlaces()`, `learned` from
       ayah 1, `linked`, `full`, review `step`, `water`). Stages seed → sapling → small → medium → full (only after the
       whole surah from memory). Thirsty: a full tree after 1/3/7/14/30 days then monthly (`WATER_DAYS`; a smooth
       recitation moves the next one further, slips closer), a growing tree after 3 days without a lesson.
@@ -1689,7 +1689,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       opens a card (Start lesson / Practise again / finish the steps before); the surah's tree at the end of its last part.
       Thirsty trees come back as a blue **Review** unit just above where the path stands (≤ 3). Data `src/data/learnPath.ts`
       (localStorage `learnPath`: start + chunk): **start anywhere** — Juz 'Amma (Al-Fatiha, An-Nas → An-Naba, then on
-      backwards), a surah or a juz (forwards from there, then the surahs before it); **how much at a time** (1/2/3 ayat, ½ page,
+      backwards), a surah or a juz (forwards from there, then the surahs before it); **how much at a time** (1/2/3/5 ayat, ½ page,
       page; per surah in the unit's ⋯ sheet, which also starts the path there); **Already know some?** — picked surahs get a
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
