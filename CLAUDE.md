@@ -1479,6 +1479,14 @@ duas/reflections section in Me.
       (owner decision 2026-11-10): with no character, Me shows a dashed outline "Make your character" (the builder, starting
       from a ready-made one) and Ranks the builder card above the league; the builder works signed out (`setFigure()` keeps it
       on the device, `sendLocalFigure()` sends it once signed in, `rankFigureSent`); symbol discs stay as an option
+      **Wardrobe** (owner request 2026-11-10, "pieces by rarity, no limits"): 15 earned pieces (`WARDROBE` in `figure.ts`:
+      Cute / Rare / Epic / Legendary), never sold. The week's top 3 win the week's piece (`rank_prize_piece()`, 6 in turn;
+      `rank_prizes.piece`, checked by `rank_set_figure`; migration `20261110900000_rank_prize_pieces.sql`); streaks of 7 / 30 /
+      100 / 365 days (best streak) and the seasons (Ramadan, Eid al-Fitr 1–3 Shawwal, Dhul Hijjah 1–9, Eid al-Adha 10–13; Umm
+      al-Qura) give the rest (`src/data/wardrobe.ts`), waiting in a chest on Me (`src/ui/wardrobeCard.ts`), then the builder's
+      Wardrobe tab (locked pieces can be tried on, not worn). The character follows the day (`dayLook()` in `actor.ts`): morning
+      stretch, the mushaf when pages were read today, a lantern after 21:00, dozing once the bedtime du'a is said; its bust sits in
+      the page-counted pill; in the overtake moment yours cheers and the passed player's waves back
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

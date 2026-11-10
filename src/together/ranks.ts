@@ -210,7 +210,7 @@ export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 't
 }
 
 // --- prizes: the top 3 of a league win a trophy and Light (#1 also a streak freeze) ---
-export interface Prize { week: string; place: number | null; tier: number; promoted: boolean; light: number; freeze: boolean; item?: string | null; claimed: boolean }
+export interface Prize { week: string; place: number | null; tier: number; promoted: boolean; light: number; freeze: boolean; item?: string | null; piece?: string | null; claimed: boolean }
 export const myPrizes = (fresh = false) => cached('prizes', () => rpc<Prize[]>('rank_my_prizes'), fresh);
 /** Claims a prize once: its Light joins the journey and a freeze is kept for later. */
 export async function claimPrize(p: Prize): Promise<boolean> {

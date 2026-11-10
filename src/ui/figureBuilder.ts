@@ -7,25 +7,29 @@ import { t } from '../i18n';
 import { shopAdd, shopHas, wallet } from '../data/garden';
 import { setFigure, type Status } from '../together/ranks';
 import {
-  DEFAULT, PRICE, PRIZE, SWATCH, bustMarkup, encode, figureSvg, hairHidden, normalize, options, parse, random,
-  type Fig, type Slot,
+  DEFAULT, PRICE, PRIZE, SWATCH, WARDROBE, bustMarkup, encode, figureSvg, hairHidden, normalize, options, parse, random,
+  type Fig, type Rarity, type Slot,
 } from './figure';
 import { h, haptic, toast } from './dom';
 import { reduced } from './juice';
 import { glance, hop, nod, sparkle } from './actor';
 import { sfx } from './sfx';
+import { ownsPiece } from '../data/wardrobe';
 import './figure.css';
 
-type Tab = 'body' | 'skin' | 'hair' | 'beard' | 'head' | 'outfit' | 'glasses' | 'hold' | 'pose' | 'bg';
-const TABS: Tab[] = ['body', 'skin', 'hair', 'beard', 'head', 'outfit', 'glasses', 'hold', 'pose', 'bg'];
+type Tab = 'body' | 'wardrobe' | 'skin' | 'hair' | 'beard' | 'head' | 'outfit' | 'glasses' | 'hold' | 'pose' | 'bg';
+const TABS: Tab[] = ['body', 'wardrobe', 'skin', 'hair', 'beard', 'head', 'outfit', 'glasses', 'hold', 'pose', 'bg'];
+const RARITY: Rarity[] = ['legendary', 'epic', 'rare', 'cute'];
+/** A wardrobe piece (earned, never sold) other than the champion's outfit, which has its own rule. */
+const piece = (slot: Slot, v: number) => key(slot, v) !== PRIZE ? WARDROBE[key(slot, v)] : undefined;
 /** The colour each tab can also change. */
 const COLOUR: Partial<Record<Tab, 'hairC' | 'headC' | 'outC'>> = { hair: 'hairC', beard: 'hairC', head: 'headC', outfit: 'outC' };
 /** Tiles that show the whole character (the rest show head and shoulders). */
-const WHOLE = new Set<Tab>(['body', 'outfit', 'hold', 'pose']);
+const WHOLE = new Set<Tab>(['body', 'outfit', 'hold', 'pose', 'wardrobe']);
 
 const key = (slot: Slot, v: number) => `${slot}:${v}`;
 const shopId = (slot: Slot, v: number) => `fg:${slot}:${v}`;
-const owned = (slot: Slot, v: number) => !PRICE[key(slot, v)] || shopHas(shopId(slot, v));
+const owned = (slot: Slot, v: number) => piece(slot, v) ? ownsPiece(key(slot, v)) : !PRICE[key(slot, v)] || shopHas(shopId(slot, v));
 const label = (slot: Slot, v: number) => rt(`fb.${slot}.${v}` as RankKey);
 
 function disc(f: Fig, size: number) {
@@ -35,9 +39,9 @@ function disc(f: Fig, size: number) {
 }
 
 /** Opens the builder; `done` runs after the character was saved (or taken off). */
-export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void) {
+export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void, first: Tab = 'body') {
   let f: Fig = parse(s.figure) ?? { ...DEFAULT };
-  let tab: Tab = 'body';
+  let tab: Tab = first;
   const champion = (s.wins ?? 0) > 0;
 
   const stage = h('div', { class: 'fb-stage' });
@@ -52,6 +56,8 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     return f[slot as Slot] === Number(v) && !owned(slot as Slot, Number(v));
   }).reduce((a, [, p]) => a + p, 0);
   const prizeOn = () => key('outfit', f.outfit) === PRIZE;
+  /** A worn wardrobe piece not earned yet: it can be tried on, not worn. */
+  const unearned = () => (['outfit', 'hold', 'glasses', 'bg'] as Slot[]).find((sl) => piece(sl, f[sl]) && !owned(sl, f[sl]));
 
   // Each change gets a reaction that fits it: a nod for the head and face, a hop for the rest.
   let lastSlot: Slot | 'face' | null = null;
@@ -77,8 +83,9 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
       sfx.pop(Math.floor(Math.random() * 3));
     }
     const c = cost();
-    wear.textContent = prizeOn() && !champion ? rt('fb.prize') : c ? rt('fb.buy', { n: c }) : rt('fb.wear');
-    wear.toggleAttribute('disabled', prizeOn() && !champion);
+    const un = unearned();
+    wear.textContent = prizeOn() && !champion ? rt('fb.prize') : un ? rt('fb.earn') : c ? rt('fb.buy', { n: c }) : rt('fb.wear');
+    wear.toggleAttribute('disabled', (prizeOn() && !champion) || !!un);
     light.textContent = `✦ ${wallet().toLocaleString()}`;
     faceChips.replaceChildren(...[0, 1].map((v) => h('button', {
       class: `chip${f.face === v ? ' on' : ''}`, 'aria-pressed': String(f.face === v),
@@ -94,7 +101,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     paintPanel();
   };
 
-  const visible = (x: Tab) => (x === 'hair' ? options('hair', f).length > 0 && !hairHidden(f) : options(x, f).length > 1);
+  const visible = (x: Tab) => x === 'wardrobe' || (x === 'hair' ? options('hair', f).length > 0 && !hairHidden(f) : options(x, f).length > 1);
   const paintTabs = () => {
     if (!visible(tab)) tab = 'body';
     tabs.replaceChildren(...TABS.filter(visible).map((x) => h('button', {
@@ -107,20 +114,25 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     const g = normalize({ ...f, [slot]: v });
     const on = f[slot] === v;
     const price = PRICE[key(slot, v)];
-    const locked = key(slot, v) === PRIZE && !champion;
+    const pc = WARDROBE[key(slot, v)];
+    const locked = (key(slot, v) === PRIZE && !champion) || (!!piece(slot, v) && !owned(slot, v));
     const art = h('span', { class: 'fb-art', 'aria-hidden': 'true' });
     art.innerHTML = WHOLE.has(slot as Tab) ? figureSvg(g, { still: true }) : `<svg viewBox="2 2 36 36">${bustMarkup(g, 18)}</svg>`;
+    const how = pc ? rt(`fb.how.${key(slot, v) === PRIZE ? 'week' : pc.how}` as RankKey) : '';
+    const name = slot === 'bg' ? (v >= 8 ? label(slot, v) : rt('fb.tab.bg')) : label(slot, v);
     return h('button', {
-      class: `fb-tile${on ? ' on' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(on),
-      'aria-label': label(slot, v) + (price && !owned(slot, v) ? ` · ✦ ${price}` : locked ? ` · ${rt('fb.prize')}` : ''),
-      onclick: () => set(slot, v),
+      class: `fb-tile${on ? ' on' : ''}${locked ? ' locked' : ''}${pc ? ` r-${pc.r}` : ''}`, 'aria-pressed': String(on),
+      'aria-label': name + (pc ? ` · ${rt(`fb.r.${pc.r}` as RankKey)}` : '') + (price && !owned(slot, v) ? ` · ✦ ${price}` : locked ? ` · ${key(slot, v) === PRIZE ? rt('fb.prize') : how}` : ''),
+      onclick: () => { set(slot, v); if (locked && piece(slot, v)) toast(rt('fb.tryOn', { how })); },
     }, art,
-    h('span', { class: 'fb-name small' }, label(slot, v)),
+    pc ? h('span', { class: 'fb-rar' }, rt(`fb.r.${pc.r}` as RankKey)) : '',
+    h('span', { class: 'fb-name small' }, name),
+    locked && piece(slot, v) ? h('span', { class: 'fb-how' }, how) : '',
     price && !owned(slot, v) ? h('span', { class: 'fb-price' }, `✦ ${price}`) : '',
     key(slot, v) === PRIZE ? h('span', { class: 'fb-price prize' }, '🏆 #1') : '');
   };
   const swatches = (slot: 'skin' | 'hairC' | 'headC' | 'outC' | 'bg') => h('div', { class: 'fb-swatches', role: 'group', 'aria-label': rt('fb.colour') },
-    ...options(slot, f).map((v) => {
+    ...options(slot, f).filter((v) => !piece(slot, v) || owned(slot, v)).map((v) => {
       const [a, b] = SWATCH[slot][v];
       const price = PRICE[key(slot, v)];
       return h('button', {
@@ -132,11 +144,17 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
 
   const paintPanel = () => {
     const kids: (Node | string)[] = [];
-    if (tab === 'skin' || tab === 'bg') kids.push(swatches(tab));
+    if (tab === 'wardrobe') {
+      // Every piece this body can wear, rarest first; earned ones can be worn, the rest tried on.
+      const all = Object.entries(WARDROBE).map(([k, p]) => { const [sl, v] = k.split(':'); return { slot: sl as Slot, v: Number(v), p }; })
+        .filter((x) => options(x.slot, f).includes(x.v))
+        .sort((a, b) => RARITY.indexOf(a.p.r) - RARITY.indexOf(b.p.r) || Number(owned(b.slot, b.v)) - Number(owned(a.slot, a.v)));
+      kids.push(h('p', { class: 'muted small fb-wd-sub' }, rt('fb.wardrobeSub')), h('div', { class: 'fb-grid' }, ...all.map((x) => tile(x.slot, x.v))));
+    } else if (tab === 'skin' || tab === 'bg') kids.push(swatches(tab));
     else {
       const c = COLOUR[tab];
       if (c && (tab !== 'head' || f.head !== 0) && (tab !== 'beard' || f.beard !== 0)) kids.push(swatches(c));
-      kids.push(h('div', { class: 'fb-grid' }, ...options(tab, f).map((v) => tile(tab, v))));
+      kids.push(h('div', { class: 'fb-grid' }, ...options(tab, f).filter((v) => !piece(tab as Slot, v) || owned(tab as Slot, v)).map((v) => tile(tab as Slot, v))));
       if (tab === 'hold' && f.hold === 3) kids.push(h('p', { class: 'muted small' }, rt('fb.standNote')));
     }
     panel.replaceChildren(...kids);

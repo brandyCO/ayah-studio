@@ -133,6 +133,9 @@
 .rkm-stage.go .rkm-row:not(.me) { transition: transform .6s .35s cubic-bezier(.3, 0, .2, 1); transform: translateY(var(--row)); }
 .rkm-stage.go .rkm-row.me { transition: transform .9s cubic-bezier(.5, -0.2, .2, 1.15); transform: translateY(calc(var(--row) * var(--k) * -1)) scale(1.04); }
 .rkm-stage.go .rkm-up, .rkm-stage.go .rkm-down { opacity: 1; transition: opacity .3s .9s; }
+.rkm-duo { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin-top: 14px; }
+.rkm-duo .fg-actor { position: relative; width: 92px; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
+.rkm-duo .fg-actor:first-child svg { transform: scaleX(-1); }
 .rkm.still .rkm-row:not(.me) { transform: translateY(var(--row)); }
 .rkm.still .rkm-row.me { transform: translateY(calc(var(--row) * var(--k) * -1)); }
 .rkm.still .rkm-up, .rkm.still .rkm-down { opacity: 1; }

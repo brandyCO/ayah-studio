@@ -3,7 +3,7 @@
 // and waves from the streak card on Me. Only when the user has made a character (Ranks → Make your
 // character); otherwise the moments stay as they were. All WAAPI on the SVG groups, over the CSS idle loop
 // (breathing, head sway, blink) from figure.css. Reduced motion: the character stands still.
-import { figureSvg, parse } from './figure';
+import { encode, figureSvg, normalize, parse } from './figure';
 import { h } from './dom';
 import { reduced } from './juice';
 import { sfx } from './sfx';
@@ -77,6 +77,25 @@ export interface Actor {
   sink(): void;
   nod(): void;
   glance(dir?: number): void;
+  /** A long slow stretch, arms up (mornings). */
+  stretch(): void;
+}
+
+/** How the character looks on Me at this moment of the day (owner idea 2026-11-10, "reacts to your day"):
+ *  after a page counted today it holds the mushaf; at night it sits by its lantern, and once the bedtime du'a
+ *  is said it dozes; in the morning it stretches when it first appears. */
+export type DayMode = 'morning' | 'reading' | 'night' | 'asleep' | 'day';
+export function dayLook(code: string | null, o: { read: boolean; bedtime: boolean; now?: Date }): { code: string | null; mode: DayMode } {
+  const f = parse(code);
+  if (!f) return { code, mode: 'day' };
+  const hr = (o.now ?? new Date()).getHours();
+  const night = hr >= 21 || hr < 4;
+  if (night) {
+    const g = normalize({ ...f, pose: 1, hold: o.bedtime ? f.hold === 3 ? 0 : f.hold : 5 });
+    return { code: encode(g), mode: o.bedtime ? 'asleep' : 'night' };
+  }
+  if (o.read && f.hold !== 2 && f.hold !== 3) return { code: encode(normalize({ ...f, hold: 2 })), mode: 'reading' };
+  return { code, mode: hr >= 4 && hr < 10 ? 'morning' : 'day' };
 }
 
 /** The character as an actor, or null when the user has not made one. `cls` places it. */
@@ -121,5 +140,11 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
     },
     nod: () => nod(el),
     glance: (dir) => glance(el, dir),
+    stretch() {
+      const { act } = parts(el);
+      if (!act || reduced()) return;
+      pose('cheer', 1700);
+      act.animate([{ transform: 'none' }, { transform: 'translateY(-6px) scale(.97, 1.06)', offset: 0.45 }, { transform: 'translateY(-6px) scale(.97, 1.06)', offset: 0.7 }, { transform: 'translateY(1px) scale(1.03, .97)', offset: 0.88 }, { transform: 'none' }], { duration: 1700, easing: 'ease-in-out' });
+    },
   };
 }
