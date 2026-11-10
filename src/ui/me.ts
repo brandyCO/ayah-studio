@@ -442,7 +442,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('div', { class: 'me-tiles' },
           h('div', { class: 'me-tile lt-left' }, h('span', { class: 'me-tile-n' }, star(), h('b', {}, String(wallet()))), h('span', {}, mpt('mp.toSpend'))),
           ...([['lt.tToday', lightOn(dayKey())], ['lt.tWeek', stats('week').light], ['lt.tMonth', stats('month').light], ['lt.tAll', all]] as [Key, number][])
-            .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, t(k))))),
+            .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, k === 'lt.tAll' ? mpt('mp.earnedAll') : t(k))))),
         h('p', { class: 'muted small' }, t('lt.help'))));
   };
   // A first pace (once), then the goals; at most one gentle suggestion a week.

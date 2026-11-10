@@ -154,3 +154,8 @@
 .me-ask-ic { font-size: 26px; line-height: 1; }
 .me-ask-txt b { font: 800 var(--fs-m) var(--ui-round); }
 .me-ask-txt p { margin: 4px 0 8px; }
+/* The du'a lanterns widget's preview (src/ui/widgetsPage.ts). */
+.wg-duas { flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
+.wg-pv > .wg-lanterns { display: flex; flex-direction: row; gap: 4px; }
+.wg-lanterns i { width: 9px; height: 13px; border-radius: 4px; background: rgb(255 255 255 / .16); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+.wg-lanterns i.on { background: linear-gradient(#ffd68c, #f2a03c); box-shadow: 0 0 6px rgb(255 186 80 / .8); }

@@ -272,8 +272,15 @@ export function watchDuaBanners() {
     try { sessionStorage.setItem('duaBanner', JSON.stringify([...seen, key].slice(-12))); } catch { /* ignore */ }
     const name = akt(`du.p.${p}` as AdhkarKey);
     const { banner } = await import('./nudges');
-    banner(m === 'adhan' ? akt('du.noteTitle', { name }) : akt('du.salahTitle', { name }), akt(m === 'adhan' ? 'du.noteBody' : 'du.salahBody'),
-      () => void import('./adhkar').then((x) => x.openDuas(m, p)));
+    banner(m === 'adhan' ? akt('du.noteTitle', { name }) : akt('du.salahTitle', { name }), akt(m === 'adhan' ? 'du.noteBody' : 'du.salahBody'));
+    // This banner opens the session itself instead of going to Me.
+    const el = document.querySelector<HTMLElement>('.nudge');
+    el?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      el.remove();
+      void import('./adhkar').then((x) => x.openDuas(m, p));
+    }, { capture: true });
   };
   void plan();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void plan(); });

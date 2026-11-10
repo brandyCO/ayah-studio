@@ -4,7 +4,7 @@
 // row goes straight to where it is opened (Me scrolls to the chest; Ranks pops its prize up).
 // Counting is local only: rewards from the journey, and prizes / challenges from the answers Ranks
 // kept on this device (src/together/ranks.ts, `rankCache`); pacts are asked when the list opens.
-import './inbox.css';
+import './lightChip.css';
 import { pendingRewards, type Pending } from '../data/claims';
 import { earnedPieces } from '../data/wardrobe';
 import { account } from '../cloud/auth';

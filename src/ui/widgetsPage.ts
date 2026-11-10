@@ -3,7 +3,6 @@
 // (Android 8+: the launcher places it after its own confirmation) or the steps by hand where a
 // launcher cannot. Also the one-time hint on Me (`widgetHintOff`), shown on the Android app until a
 // widget is on the home screen or the hint is closed.
-import './widgetsPage.css';
 import { streak, todayRec } from '../data/journey';
 import { DHIKR, goals } from '../data/goals';
 import { PRAYERS, nextPrayer } from '../data/prayer';
