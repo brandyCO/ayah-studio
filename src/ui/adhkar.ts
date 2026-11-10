@@ -4,12 +4,15 @@
 // met (journey DayRec.ad / am) and can be claimed here. Progress is kept for the day, so leaving and
 // coming back picks up where the user stopped. Quran parts are drawn from our own text in the
 // KFGQPC font; the rest is Hisn al-Muslim as bundled (rule: nothing written by us).
+// The same session says the du'a moments of the day (`openDuas`: waking, the adhan, after the salah
+// per prayer, before sleep; src/data/duas.ts).
 import './adhkar.css';
-import { dhikrLight, lastAt, loadAdhkar, say, saidCount, sessionList, setLastAt, type AdhkarPeriod, type Dhikr } from '../data/adhkar';
+import { dhikrLight, lastAt, loadAdhkar, say, saidCount, sessionList, setLastAt, type AdhkarPeriod, type SessionKey } from '../data/adhkar';
+import { loadDuas, momentKey, momentList, prayerNow, PRAYER_LIST, type Dua, type Moment, type Prayer } from '../data/duas';
 import { claimGoal, goalClaimed, setAdhkar } from '../data/journey';
 import { goals, lightFor } from '../data/goals';
 import { surahMeta } from '../data/quran';
-import { akt } from '../i18n/adhkar';
+import { akt, type AdhkarKey } from '../i18n/adhkar';
 import { lang, t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { chest } from './chest';
@@ -21,15 +24,41 @@ const pref = (k: string, d: number) => { try { const v = Number(localStorage.get
 const setPref = (k: string, v: number) => { try { localStorage.setItem(k, String(v)); } catch { /* ignore */ } };
 
 export async function openAdhkar(p: AdhkarPeriod) {
-  let all: Dhikr[];
+  let all: Dua[];
   try { all = await loadAdhkar(); } catch { toast(akt('ak.failed')); return; }
-  const list = sessionList(all, p);
+  await runSession({ key: p, list: sessionList(all, p), title: akt(p === 'm' ? 'ak.titleM' : 'ak.titleS'), goalId: p === 'm' ? 'adhkarM' : 'adhkar',
+    doneTitle: akt(p === 'm' ? 'ak.doneTitleM' : 'ak.doneTitleS'), variant: `ak-${p}` });
+}
+
+/** A du'a moment of the day; the adhan and the salah open on the prayer whose time it is (chips change it). */
+export async function openDuas(m: Moment, prayer?: Prayer) {
+  let all: Record<Moment, Dua[]>;
+  try { all = await loadDuas(); } catch { toast(akt('ak.failed')); return; }
+  const p = m === 'salah' || m === 'adhan' ? (prayer ?? await prayerNow()) : undefined;
+  await runSession({ key: momentKey(m, p), list: momentList(all, m, p), title: akt(`du.title.${m}` as AdhkarKey), moment: m, prayer: p,
+    doneTitle: akt(`du.done.${m}` as AdhkarKey), variant: `du-${m}` });
+}
+
+interface SessionCfg {
+  key: SessionKey;
+  list: Dua[];
+  title: string;
+  doneTitle: string;
+  variant: string;
+  /** The daily goal this session meets (the morning / evening adhkar). */
+  goalId?: string;
+  moment?: Moment;
+  prayer?: Prayer;
+}
+
+async function runSession(cfg: SessionCfg) {
+  const { key: p, list, title, goalId } = cfg;
+  if (!list.length) return;
   const names = new Map<number, string>();
-  await Promise.all([...new Set(list.filter((x) => x.quran).map((x) => x.quran!.s))].map(async (s) => {
+  await Promise.all([...new Set(list.flatMap((x) => [...(x.quran ? [x.quran.s] : []), ...(x.read ?? [])]))].map(async (s) => {
     try { const m = await surahMeta(s); names.set(s, lang() === 'ar' ? m.ar : m.en); } catch { /* reference only */ }
   }));
-  const goalId = p === 'm' ? 'adhkarM' : 'adhkar';
-  const isDone = (d: Dhikr) => saidCount(p, d.id) >= d.count;
+  const isDone = (d: Dua) => saidCount(p, d.id) >= d.count;
   const firstOpen = () => list.findIndex((d) => !isDone(d));
   let i = Math.max(0, list.findIndex((d) => d.id === lastAt(p)));
   if (isDone(list[i]) && firstOpen() >= 0) i = firstOpen();
@@ -38,7 +67,6 @@ export async function openAdhkar(p: AdhkarPeriod) {
   let meaning = pref('adhkarMeaning', lang() === 'ar' ? 0 : 1) === 1;
   let advancing = 0;
 
-  const title = akt(p === 'm' ? 'ak.titleM' : 'ak.titleS');
   const step = h('span', { class: 'ak-step' }, '');
   const dots = h('div', { class: 'ak-dots', role: 'tablist', 'aria-label': akt('ak.list') });
   const body = h('div', { class: 'ak-body' });
@@ -53,13 +81,27 @@ export async function openAdhkar(p: AdhkarPeriod) {
   const counter = h('button', { class: 'ak-count', onclick: () => tap() }, ring, h('span', { class: 'ak-center' }, num, of), gain);
   const prev = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.prev'), onclick: () => go(i - 1) }, lang() === 'ar' ? '›' : '‹');
   const next = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.next'), onclick: () => go(i + 1) }, lang() === 'ar' ? '‹' : '›');
-  const undo = h('button', { class: 'chip ak-undo', onclick: () => { if (saidCount(p, list[i].id) > 0) { say(p, list[i], -1); paint(); } } }, akt('ak.undo'));
-  const foot = h('div', { class: 'ak-foot' }, prev, h('div', { class: 'ak-mid' }, counter, h('p', { class: 'muted small ak-hint' }, akt('ak.tap'))), next);
+  const undo = h('button', { class: 'chip ak-undo', onclick: () => { if (saidCount(p, list[i].id) > 0) { say(p, list[i], -1, list[i].count); paint(); } } }, akt('ak.undo'));
+  const hint = h('p', { class: 'muted small ak-hint' }, akt('ak.tap'));
+  const foot = h('div', { class: 'ak-foot' }, prev, h('div', { class: 'ak-mid' }, counter, hint), next);
 
-  const textOf = (d: Dhikr) => (p === 'm' && d.arM ? d.arM : d.ar);
-  const enOf = (d: Dhikr) => (p === 'm' && d.enM ? d.enM : d.en);
+  const textOf = (d: Dua) => (p === 'm' && d.arM ? d.arM : d.ar);
+  const enOf = (d: Dua) => (p === 'm' && d.enM ? d.enM : d.en);
   const timesLine = (n: number) => (n === 1 ? akt('ak.once') : akt(n > 10 ? 'ak.timesMany' : 'ak.times', { n }));
-  const noteOf = (d: Dhikr) => (d.note === 'night' ? akt('ak.noteNight') : d.note === 'lazy' ? akt('ak.noteLazy') : d.note === 'day' ? akt('ak.noteDay') : '');
+  const noteOf = (d: Dua) => {
+    if (d.note === 'night') return akt('ak.noteNight');
+    if (d.note === 'lazy') return akt('ak.noteLazy');
+    if (d.note === 'day') return akt('ak.noteDay');
+    // The book's own words where it has them in the reader's language, else a short line of ours.
+    const book = lang() === 'ar' ? d.arNote : d.enNote;
+    return book ?? (d.note ? akt(`du.note.${d.note}` as AdhkarKey) : '');
+  };
+  const prayerName = (x: Prayer) => akt(`du.p.${x}` as AdhkarKey);
+  const kickerOf = (d: Dua, q: Dua['quran'], ref: string) => {
+    if (d.act) return akt('du.sunnah');
+    const base = q ? akt('ak.quran', { name: names.get(q.s) ?? '', ref }) : timesLine(d.count);
+    return d.prayers && d.prayers.length < PRAYER_LIST.length ? `${base} · ${akt('du.only', { list: d.prayers.map(prayerName).join(lang() === 'ar' ? ' و' : ' & ') })}` : base;
+  };
 
   const paintDots = () => dots.replaceChildren(...list.map((d, k) => h('button', {
     class: `ak-dot${isDone(d) ? ' done' : ''}${k === i && !finished ? ' cur' : ''}`, role: 'tab', 'aria-selected': String(k === i && !finished),
@@ -73,7 +115,9 @@ export async function openAdhkar(p: AdhkarPeriod) {
     of.textContent = `/ ${d.count}`;
     fill.style.strokeDashoffset = String(C * (1 - n / d.count));
     counter.classList.toggle('met', n >= d.count);
-    counter.setAttribute('aria-label', akt('ak.tapAria', { n, of: d.count }));
+    counter.setAttribute('aria-label', d.act ? akt('du.didIt') : akt('ak.tapAria', { n, of: d.count }));
+    counter.classList.toggle('act', !!d.act);
+    hint.textContent = d.act ? akt('du.tapDone') : akt('ak.tap');
     undo.hidden = n === 0;
   };
 
@@ -88,13 +132,18 @@ export async function openAdhkar(p: AdhkarPeriod) {
     const ref = q ? `${q.s}:${q.a}${q.b > q.a ? `–${q.b}` : ''}` : '';
     const note = noteOf(d);
     body.replaceChildren(
-      h('p', { class: 'ak-kicker' }, q ? akt('ak.quran', { name: names.get(q.s) ?? '', ref }) : timesLine(d.count)),
-      q ? h('p', { class: 'ak-times muted small' }, timesLine(d.count)) : '',
+      h('p', { class: 'ak-kicker' }, kickerOf(d, q, ref)),
+      q && !d.act ? h('p', { class: 'ak-times muted small' }, timesLine(d.count)) : '',
       d.opening ? h('p', { class: 'ak-open', lang: 'ar', dir: 'rtl' }, d.opening) : '',
-      h('p', { class: `ak-ar${q ? ' quran' : ''}`, lang: 'ar', dir: 'rtl', style: `--ak-scale:${SIZES[size]}` }, textOf(d)),
+      h('p', { class: `ak-ar${q ? ' quran' : ''}`, lang: 'ar', dir: 'rtl', style: `--ak-scale:${SIZES[size]}` },
+        // In "what to do", the words to say (the book's (( ))) stand out; the text itself is unchanged.
+        ...(d.act ? textOf(d).split(/(\(\(.+?\)\))/s).map((x, k) => (k % 2 ? h('b', { class: 'ak-say' }, x) : x)) : [textOf(d)])),
       meaning ? h('p', { class: 'ak-en', lang: 'en', dir: 'ltr' }, enOf(d)) : '',
+      meaning && d.gloss?.length ? h('ul', { class: 'ak-gloss', lang: 'en', dir: 'ltr' }, ...d.gloss.map((g) => h('li', {}, g))) : '',
+      d.read?.length ? h('div', { class: 'chips ak-read' }, ...d.read.map((s) => h('button', { class: 'chip', onclick: () => { dialog.close(); location.hash = `#/s/${s}`; } },
+        akt('du.open', { name: names.get(s) ?? String(s) })))) : '',
       note ? h('p', { class: 'ak-note' }, note,
-        d.note === 'lazy' && !isDone(d) ? h('button', { class: 'chip', onclick: () => { say(p, d, d.count); completed(d); } }, akt('ak.lazyBtn')) : '') : '',
+        d.note === 'lazy' && !isDone(d) ? h('button', { class: 'chip', onclick: () => { say(p, d, d.count, d.count); completed(d); } }, akt('ak.lazyBtn')) : '') : '',
       h('p', { class: 'ak-ref muted small' }, akt('ak.source', { ref: lang() === 'ar' ? d.refAr : d.ref })),
       undo);
     body.scrollTop = 0;
@@ -104,29 +153,29 @@ export async function openAdhkar(p: AdhkarPeriod) {
   };
 
   const paintDone = () => {
-    const goalOn = goals().adhkar;
-    const canClaim = goalOn && !goalClaimed(goalId);
+    const goalOn = goalId ? goals().adhkar : false;
+    const canClaim = !!goalId && goalOn && !goalClaimed(goalId);
     const light = lightFor({ kind: 'adhkar', target: list.length });
     const open = async () => {
         // The session is a modal dialog: close it first so the moment plays above the Me screen.
         const m = await import('./celebrate');
         dialog.close();
         await m.celebrate({ kind: 'chest', title, sub: akt('ak.doneSub') }, null, light);
-        claimGoal(goalId, light);
+        claimGoal(goalId!, light);
     };
     const claim = h('button', { class: 'primary brand-btn ak-claim', onclick: open }, akt('ak.claim'));
     body.replaceChildren(h('div', { class: 'ak-done' },
       canClaim ? chest(light, 'ready', t('chest.open', { n: light }), () => void open())
         : h('div', { class: 'ak-done-mark', 'aria-hidden': 'true' }, '✓'),
-      h('h3', {}, akt(p === 'm' ? 'ak.doneTitleM' : 'ak.doneTitleS')),
-      h('p', { class: 'muted' }, akt('ak.doneSub')),
+      h('h3', {}, cfg.doneTitle),
+      h('p', { class: 'muted' }, cfg.moment ? akt(`du.doneSub.${cfg.moment}` as AdhkarKey) : akt('ak.doneSub')),
       canClaim ? claim : h('button', { class: 'primary', onclick: () => dialog.close() }, akt('ak.close')),
       h('button', { class: 'chip', onclick: () => { finished = false; i = 0; paint(); } }, akt('ak.again')),
       h('p', { class: 'muted small ak-credit' }, akt('ak.credit'))));
   };
 
   /** A dhikr was just said in full: Light, then on to the next one still to say. */
-  const completed = (d: Dhikr) => {
+  const completed = (d: Dua) => {
     const light = dhikrLight(d.count);
     const id = `ak:${p}:${d.id}`;
     const fresh = !goalClaimed(id);
@@ -139,7 +188,7 @@ export async function openAdhkar(p: AdhkarPeriod) {
     paintCounter();
     paintDots();
     const all = list.every(isDone);
-    if (all) setAdhkar(true, p);
+    if (all && (p === 's' || p === 'm')) setAdhkar(true, p);
     clearTimeout(advancing);
     advancing = window.setTimeout(() => {
       advancing = 0;
@@ -153,7 +202,7 @@ export async function openAdhkar(p: AdhkarPeriod) {
     if (finished || advancing) return;
     const d = list[i];
     if (isDone(d)) { go(i + 1); return; }
-    const n = say(p, d, 1);
+    const n = say(p, d, 1, d.count);
     counter.classList.remove('bump'); void counter.offsetWidth; counter.classList.add('bump');
     if (n >= d.count) completed(d);
     else { haptic(12); paintCounter(); }
@@ -188,12 +237,16 @@ export async function openAdhkar(p: AdhkarPeriod) {
     else if (e.key === 'ArrowRight') go(lang() === 'ar' ? i - 1 : i + 1);
     else if (e.key === 'ArrowLeft') go(lang() === 'ar' ? i + 1 : i - 1);
   };
-  const dialog = h('dialog', { class: `adhkar ak-${p}`, 'aria-label': title },
+  // After the adhan / the salah: which prayer (what is said after Fajr and Maghrib differs).
+  const prayers = cfg.prayer ? h('div', { class: 'chips ak-prayers', role: 'group', 'aria-label': akt('du.which') },
+    ...PRAYER_LIST.map((x) => h('button', { class: `chip${x === cfg.prayer ? ' on' : ''}`, 'aria-pressed': String(x === cfg.prayer),
+      onclick: () => { if (x === cfg.prayer) return; dialog.close(); void openDuas(cfg.moment!, x); } }, prayerName(x)))) : '';
+  const dialog = h('dialog', { class: `adhkar ${cfg.variant}`, 'aria-label': title },
     h('div', { class: 'ak-top' },
       h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'),
       h('div', { class: 'ak-title' }, h('h2', {}, title), step),
       h('div', { class: 'ak-tools' }, meaningBtn, sizeBtn)),
-    dots, body, foot);
+    prayers, dots, body, foot);
   dialog.addEventListener('keydown', onKey);
   dialog.addEventListener('close', () => { clearTimeout(advancing); dialog.remove(); });
   window.addEventListener('hashchange', close, { once: true });

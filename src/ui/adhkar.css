@@ -59,3 +59,16 @@
 .ak-credit { max-width: 420px; }
 @media (prefers-reduced-motion: reduce) { .ak-count.bump .ak-num, .ak-gain.show { animation: none; } }
 .ak-done .chest { width: 104px; height: 104px; } .ak-done .chest .ck-amt { font-size: var(--fs-m); }
+/* Du'a moments of the day: a sky for each, the prayer chips, the book's word notes. */
+.adhkar.du-wake { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #f4a259 18%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-adhan { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #12a594 16%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-salah { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #4caf2a 14%, var(--bg)) 0%, var(--bg) 65%); }
+.adhkar.du-sleep { background: radial-gradient(130% 60% at 50% 0%, color-mix(in srgb, #3b3a8f 24%, var(--bg)) 0%, var(--bg) 65%); }
+.ak-prayers { justify-content: center; flex-wrap: wrap; }
+.ak-gloss { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; text-align: center; font-size: var(--fs-s); color: var(--muted); opacity: .85; }
+.ak-read { justify-content: center; }
+.ak-count.act .ak-center::after { content: '✓'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 40px; font-weight: 800; color: var(--accent); opacity: 0; }
+.ak-count.act .ak-num, .ak-count.act .ak-of { visibility: hidden; }
+.ak-count.act .ak-center::after { opacity: .35; }
+.ak-count.act.met .ak-center::after { opacity: 1; }
+.ak-say { color: var(--accent); font-weight: inherit; }
