@@ -3,11 +3,16 @@
 .fg .fg-bob { animation: fg-bob 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 .fg .fg-eyes { animation: fg-blink 4.6s infinite; transform-box: fill-box; transform-origin: center; }
 .fg .fg-glow { animation: fg-glow 2.4s ease-in-out infinite; }
-.fg.still .fg-bob, .fg.still .fg-eyes, .fg.still .fg-glow { animation: none; }
+.fg .fg-head { animation: fg-sway 7.4s ease-in-out infinite; transform-box: view-box; transform-origin: 100px 150px; }
+.fg .fg-shadow { animation: fg-shadow 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.fg .fg-act { transform-box: view-box; transform-origin: 100px 250px; }
+.fg.still .fg-bob, .fg.still .fg-eyes, .fg.still .fg-glow, .fg.still .fg-head, .fg.still .fg-shadow { animation: none; }
+@keyframes fg-sway { 0%, 100% { transform: none; } 30% { transform: rotate(2.2deg); } 62% { transform: rotate(-1.6deg) translateY(.5px); } }
+@keyframes fg-shadow { 50% { transform: scale(.94, .9); opacity: .24; } }
 @keyframes fg-bob { 50% { transform: translateY(-3px) scale(1.01, .99); } }
 @keyframes fg-blink { 0%, 93%, 100% { transform: none; } 95% { transform: scaleY(.1); } }
 @keyframes fg-glow { 50% { opacity: .55; } }
-@media (prefers-reduced-motion: reduce) { .fg .fg-bob, .fg .fg-eyes, .fg .fg-glow { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fg .fg-bob, .fg .fg-eyes, .fg .fg-glow, .fg .fg-head, .fg .fg-shadow { animation: none; } }
 
 dialog.fb {
   --fb-card: #172033; --fb-card2: #1d2940; --fb-edge: #0a0f19; --fb-fg: #eef2fa; --fb-muted: #9aa6bd;
@@ -66,3 +71,10 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 .fb-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; border: 0; font: inherit; color: inherit; cursor: pointer; margin-bottom: 12px; }
 .fb-card-txt { flex: 1; display: grid; gap: 2px; }
 .fb-card-new { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #2a1c00; background: linear-gradient(135deg, #ffd56a, #f2a93b); box-shadow: 0 4px 0 #b8760b; }
+
+/* Builder reactions (figureBuilder.ts): sparkles around the stage when the character is worn. */
+.fb-stage { position: relative; }
+.fb-spark { position: absolute; width: 14px; height: 14px; pointer-events: none; color: #fff3c2;
+  background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 6px #ffd76a); animation: fb-spark .9s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes fb-spark { from { transform: translate(0, 0) scale(.2) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); opacity: 0; } }

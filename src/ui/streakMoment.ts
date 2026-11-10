@@ -4,7 +4,7 @@
 // today's circle with a check that stamps in. Theme colours (rewardPalette), vibration, no sound.
 // Reduced motion → the end picture, still.
 import { t, type Key } from '../i18n';
-import { h, haptic } from './dom';
+import { h } from './dom';
 import { flame, flameTier } from './flame';
 import { bump, noor as makeNoor, popIn, squash } from './juice';
 import { sfx } from './sfx';
@@ -25,7 +25,6 @@ export function dayMark(state: WeekState, animate = false): HTMLElement {
   return el;
 }
 
-const vibrate = (p: number[]) => { try { navigator.vibrate?.(p); } catch { /* ignore */ } };
 
 /** Plays the moment; resolves when it is closed. */
 export function streakMoment(days: number, week: WeekDay[], today: string): Promise<void> {
@@ -102,14 +101,12 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       fx = sparks(canvas, [rgba(P.n1, 1), rgba(P.n2, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1)]);
       const [x, y] = centre(fl);
       fx.burst(x, y + 20, 80, 1.1);
-      vibrate([22]);
     });
     // 2. The count rolls over: yesterday's number lifts away, today's drops in with a bounce.
     later(1250, () => {
       roll.classList.add('go');
       const [x, y] = centre(roll);
       fx?.burst(x, y, 36, 0.6);
-      vibrate([12, 60, 18]);
       sfx.pop(1);
       later(260, () => bump(countEl, 0.3));
       nr.hop(0.7);
@@ -122,7 +119,6 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       slot.replaceWith(mark);
       const [x, y] = centre(mark);
       fx?.burst(x, y, 28, 0.45);
-      haptic(16);
       sfx.pop(3);
       nr.hop(1);
     });

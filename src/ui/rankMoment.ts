@@ -162,8 +162,8 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
     vibrate([8]);
     later(1300, () => {
       stage.classList.add('go');
-      if (dir === 'up') { burst(70, 1.05); vibrate([22, 80, 14]); sfx.open(); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
-      else if (dir === 'stay') { burst(28, 0.6); vibrate([14]); sfx.pop(2); }
+      if (dir === 'up') { burst(70, 1.05); sfx.open(); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
+      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); }
       else vibrate([10]);
     });
   });
@@ -194,8 +194,8 @@ function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
     later(700, () => {
       stage.classList.add('go');
       sfx.whoosh();
-      passed.forEach((_, k) => later(260 + k * 140, () => { vibrate([8]); sfx.tick(); }));
+      passed.forEach((_, k) => later(260 + k * 140, () => sfx.tick()));
     });
-    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); vibrate([18]); sfx.shimmer(); bump(mine, 0.12); });
+    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); sfx.shimmer(); bump(mine, 0.12); });
   });
 }
