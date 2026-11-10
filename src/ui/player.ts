@@ -395,6 +395,8 @@ export function createPlayer(o: PlayerHooks) {
     navigator.mediaSession.setActionHandler('nexttrack', () => step(1));
   }
 
+  const countCovered = (r: Reciter) => Array.from({ length: 114 }, (_, i) => i + 1).filter((x) => covers(r, x)).length;
+
   function pickReciter() {
     const now = (using ?? reciter()).id;
     const choose = (r: Reciter) => {
@@ -417,13 +419,30 @@ export function createPlayer(o: PlayerHooks) {
     };
     // One row per reciter; a reciter with several recordings lists them as chips under the name.
     const groups = groupRecordings(favouritesFirst(RECITERS.filter((r) => !surah || covers(r, surah))));
-    const list = h('div', { class: 'menu' }, ...groups.map((g) => {
+    const row = (g: Reciter[]) => {
       const r = g.find((x) => x.id === now) ?? g[0];
       return h('div', { class: 'rec-group' },
         h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
           h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
         recordingChips(g, now, choose));
-    }));
+    };
+    // Reciters with no recording of this surah are still listed (below), so nobody seems missing:
+    // a tap plays the next surah they have.
+    const others = surah ? RECITERS.filter((r) => !covers(r, surah) && !groups.some((g) => g[0].name === r.name)) : [];
+    const goTo = (r: Reciter) => {
+      const n = Array.from({ length: 114 }, (_, i) => ((surah + i) % 114) + 1).find((x) => covers(r, x));
+      if (!n) return;
+      d.close();
+      setReelReciter(r.id);
+      req++; introDone?.(false); audio.pause(); ahead.pause(); aheadFor = 0; aheadWant = ''; loadedFor = '';
+      toast(t('pl.other-surah', { r: r.short, s: o.meta[n - 1].en }));
+      void playFrom(n, 1);
+    };
+    const list = h('div', { class: 'menu' }, ...groups.map(row),
+      others.length ? h('p', { class: 'rec-others' }, t('pl.others')) : null,
+      ...others.map((r) => h('div', { class: 'rec-group' },
+        h('button', { class: 'menu-item off', onclick: () => goTo(r) },
+          h('span', {}, reciterPickerLabel(r)), h('small', { class: 'rec-has' }, t('pl.has', { n: countCovered(r) }))), sampleButton(r))));
     const search = reciterSearchBox(list, t('ed.reciter-search'));
     const d = h('dialog', { class: 'sheet bottom reciter-sheet' },
       h('div', { class: 'sheet-head' }, h('h2', {}, 'Reciter'), h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => d.close() }, '✕')),
