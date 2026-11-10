@@ -62,6 +62,10 @@ const en = {
   'du.short.wake': 'Waking',
   'du.short.sleep': 'Sleep',
   'du.lit': '{n} of {of} lit',
+  'du.dawnNext': "In the morning, the waking du'a will be waiting with the dawn.",
+  'dw.morning': 'Good morning',
+  'dw.say': "Say the waking du'a",
+  'dw.later': 'Later',
   'ak.credit': 'Arabic: hisnmuslim.com · English: Darussalam · Quran: King Fahd Complex, Saheeh International',
 };
 export type AdhkarKey = keyof typeof en;
@@ -126,6 +130,10 @@ const ar: Partial<Record<AdhkarKey, string>> = {
   'du.short.wake': 'الاستيقاظ',
   'du.short.sleep': 'النوم',
   'du.lit': '{n} من {of}',
+  'du.dawnNext': 'في الصباح تنتظرك أذكار الاستيقاظ مع الفجر.',
+  'dw.morning': 'صباح الخير',
+  'dw.say': 'قل أذكار الاستيقاظ',
+  'dw.later': 'لاحقًا',
   'ak.credit': 'النص: hisnmuslim.com · الترجمة: دار السلام · القرآن: مجمع الملك فهد، صحيح إنترناشونال',
 };
 

@@ -65,3 +65,16 @@ export async function prayerNow(now = new Date()): Promise<Prayer> {
   const h = now.getHours();
   return h < 4 ? 'isha' : h < 12 ? 'fajr' : h < 15 ? 'dhuhr' : h < 18 ? 'asr' : h < 20 ? 'maghrib' : 'isha';
 }
+
+// --- bedtime → dawn ---
+const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+/** The night a moment belongs to: the evening's date (01:00 is still last night). */
+export const nightKey = (d = new Date()) => dayKey(new Date(d.getTime() - 12 * 3600e3));
+/** The bedtime du'a were said in full tonight. */
+export function bedtimeSaid(now = new Date()) { try { localStorage.setItem('bedtimeDone', nightKey(now)); } catch { /* ignore */ } }
+/** The dawn rises the morning after (03:00–12:00, once a day). */
+export function dawnDue(now = new Date()): boolean {
+  const hr = now.getHours();
+  if (hr < 3 || hr >= 12) return false;
+  try { return localStorage.getItem('dawnSeen') !== dayKey(now) && localStorage.getItem('bedtimeDone') === nightKey(now); } catch { return false; }
+}

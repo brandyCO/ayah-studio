@@ -1551,7 +1551,12 @@ duas/reflections section in Me.
       round is full; no sounds before sleeping) and **the day's string of lanterns** on Me (`src/ui/dayLanterns.ts`, lazy: Waking ·
       Fajr · Dhuhr · Asr · Maghrib · Isha · Sleep, lit when that session is said in full today, the one whose time it is breathes,
       tap → the session; After the adhan as a chip under it).
-      To come: bedtime mode + waking dawn, after-adhan notes, goals / badges / chests, family pact
+      Step 3: **bedtime mode** (the sleep session in a dim warm night with faint stars, gold instead of the accent, no sounds; a
+      crescent when all are said, `bedtimeSaid()` → localStorage `bedtimeDone` = the night's date, `nightKey()`) and the **waking
+      dawn** (`src/ui/dawn.ts` + `dawn.css`, lazy, checked by `watchRewards()` after start and on return: the morning after, once,
+      03:00–12:00, not over the studio / Kids / a dialog — the night sky gives way to rose and gold, the sun rises over the hills, a
+      soft shimmer, then the first waking du'a with its source → Say the waking du'a / Later).
+      To come: after-adhan notes, goals / badges / chests, family pact
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
