@@ -124,6 +124,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('li', {}, rt('rk.ptMinute', { n: POINTS.minute })),
         h('li', {}, rt('rk.ptSurah', { n: POINTS.surah })),
         h('li', {}, rt('rk.ptReel', { n: POINTS.reel })),
+        h('li', {}, rt('rk.ptLesson', { n: POINTS.lesson })),
         h('li', {}, rt('rk.ptDay', { n: POINTS.day }))),
       h('p', { class: 'muted small' }, rt('rk.fair')),
       h('p', { class: 'muted small' }, rt('rk.fairNote')),

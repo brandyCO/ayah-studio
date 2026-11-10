@@ -26,7 +26,7 @@
 .me-pip.frozen .me-pip-ic { background: #74c0fc; color: #fff; }
 .me-h { font-weight: 900; font-size: var(--fs-h2); }
 .me-card { border: 0; border-radius: 22px; box-shadow: 0 4px 0 var(--line); }
-.goal.k-pages, .goal.k-surahs { --gc: #12a594; } .goal.k-listen { --gc: #2f7fd6; } .goal.k-memorise { --gc: #4caf2a; }
+.goal.k-pages, .goal.k-surahs { --gc: #12a594; } .goal.k-listen { --gc: #2f7fd6; } .goal.k-memorise, .goal.k-lessons { --gc: #4caf2a; }
 .goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; }
 .goal[class*='k-'] { margin-bottom: 10px; padding: 10px 12px; border-radius: 18px;
   background: color-mix(in srgb, var(--gc) 11%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 26%, var(--card)); }
