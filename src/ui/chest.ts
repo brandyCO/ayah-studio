@@ -84,9 +84,22 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
 
 // A ready chest shakes for ever: pause it while it is off screen, so a long Me page stays smooth.
 let seen: IntersectionObserver | null = null;
+// A ready chest on screen will likely be tapped: load the opening moment and its sounds while the phone is idle.
+let preloaded = false;
+function preload() {
+  if (preloaded) return;
+  preloaded = true;
+  const go = () => { void import('./celebrate'); void import('./sfx').then((m) => m.warmSounds()); };
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2500 }); else setTimeout(go, 800);
+}
 function watch(el: HTMLElement) {
   if (typeof IntersectionObserver === 'undefined') return;
-  seen ??= new IntersectionObserver((es) => { for (const e of es) e.target.classList.toggle('off', !e.isIntersecting); });
+  seen ??= new IntersectionObserver((es) => {
+    for (const e of es) {
+      e.target.classList.toggle('off', !e.isIntersecting);
+      if (e.isIntersecting) preload();
+    }
+  });
   seen.observe(el);
 }
 

@@ -74,6 +74,7 @@
 
 /* Duolingo-style craft pass: Noor beside the chest, the leading light, chunkier prize cards. */
 .cel-stage .cel-noor { left: -6%; top: 2%; z-index: 4; }
-.lt-fly.lead { width: 18px; height: 18px; margin: -9px 0 0 -9px; box-shadow: 0 0 16px 6px color-mix(in srgb, var(--rw-n3, #ffd36b) 70%, transparent); }
 .cel-loot-art { box-shadow: 0 4px 0 color-mix(in srgb, var(--rw-n1, #b86e00) 70%, #000), 0 0 16px color-mix(in srgb, var(--rw-n3, #ffd36b) 30%, transparent); }
 .cel-loot-it.rare .cel-loot-art { box-shadow: 0 4px 0 #b8892a, 0 0 22px rgba(255, 224, 138, .6); }
+/* Moving parts get their own layer only while they move: the chest and its prizes are drawn once and slid around by the GPU. */
+.cel:not(.revealed) .cel-chest-jolt, .cel:not(.revealed) .cel-chest-box, .cel-loot-it.in:not(.landed), .cel-seed { will-change: transform; }
