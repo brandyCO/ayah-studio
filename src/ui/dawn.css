@@ -1,0 +1,33 @@
+/* ---------- Waking dawn (src/ui/dawn.ts) ---------- */
+.dawn { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border: 0; padding: 0; overflow: hidden;
+  background: #0b0d2a; color: #fff; display: none; }
+.dawn[open] { display: block; }
+.dawn::backdrop { background: #0b0d2a; }
+.dw-sky { position: absolute; inset: 0; transition: opacity 3.2s ease; }
+.dw-night { background: linear-gradient(#070820, #1c1d55 60%, #3b2e6e); }
+.dw-day { opacity: 0; background: linear-gradient(#5b6fd1 0%, #c58bb8 45%, #ffb37a 72%, #ffe2a6 100%); }
+.dawn.up .dw-day { opacity: 1; }
+.dw-stars { position: absolute; inset: 0 0 40% 0; transition: opacity 2.6s ease;
+  background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 48% 26%, #fff, transparent), radial-gradient(1px 1px at 66% 12%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 84% 22%, #fff, transparent), radial-gradient(1px 1px at 92% 6%, #fff, transparent),
+    radial-gradient(1px 1px at 22% 36%, #fff, transparent), radial-gradient(1px 1px at 74% 38%, #fff, transparent); }
+.dawn.up .dw-stars { opacity: 0; }
+.dw-sun { position: absolute; left: 50%; bottom: 50%; width: 46vmin; height: 46vmin; margin-left: -23vmin; border-radius: 50%;
+  background: radial-gradient(circle, #fff7da 0 28%, #ffd27a 42%, rgba(255, 190, 110, .35) 60%, transparent 71%);
+  transform: translateY(60vmin); transition: transform 3.4s cubic-bezier(.2, .7, .2, 1); }
+.dawn.up .dw-sun { transform: translateY(0); }
+.dw-hills { position: absolute; inset: auto 0 0 0; height: 54%;
+  background: radial-gradient(120% 90% at 20% 100%, #2c2346 0 60%, transparent 61%), radial-gradient(120% 100% at 85% 100%, #3a2b52 0 58%, transparent 59%), #241c3a;
+  border-radius: 50% 50% 0 0 / 22% 22% 0 0; }
+.dw-text { position: absolute; inset: auto 16px max(24px, env(safe-area-inset-bottom)) 16px; max-width: 560px; margin: 0 auto;
+  padding: 18px 16px; border-radius: 22px; background: rgba(20, 14, 40, .46); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  text-align: center; opacity: 0; display: flex; flex-direction: column; gap: 8px; }
+.dw-text.in { opacity: 1; }
+.dw-kicker { margin: 0; font-weight: 800; letter-spacing: .04em; color: #ffe2a6; }
+.dw-ar { margin: 0; font-family: 'AmiriQuran', serif; font-size: clamp(22px, 6.4vw, 30px); line-height: 2; }
+.dw-en { margin: 0; color: rgba(255, 255, 255, .82); line-height: 1.5; }
+.dw-ref { margin: 0; font-size: var(--fs-s); color: rgba(255, 255, 255, .6); }
+.dw-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
+.dw-actions .chip { background: rgba(255, 255, 255, .12); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .dw-sky, .dw-stars, .dw-sun { transition: none; } .dw-text { opacity: 1; } }

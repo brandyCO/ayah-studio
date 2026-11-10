@@ -8,7 +8,7 @@
 // per prayer, before sleep; src/data/duas.ts).
 import './adhkar.css';
 import { dhikrLight, lastAt, loadAdhkar, say, saidCount, sessionList, setLastAt, type AdhkarPeriod, type SessionKey } from '../data/adhkar';
-import { loadDuas, momentKey, momentList, prayerNow, PRAYER_LIST, type Dua, type Moment, type Prayer } from '../data/duas';
+import { bedtimeSaid, loadDuas, momentKey, momentList, prayerNow, PRAYER_LIST, type Dua, type Moment, type Prayer } from '../data/duas';
 import { claimGoal, goalClaimed, setAdhkar } from '../data/journey';
 import { goals, lightFor } from '../data/goals';
 import { surahMeta } from '../data/quran';
@@ -193,9 +193,10 @@ async function runSession(cfg: SessionCfg) {
     const claim = h('button', { class: 'primary brand-btn ak-claim', onclick: open }, akt('ak.claim'));
     body.replaceChildren(h('div', { class: 'ak-done' },
       canClaim ? chest(light, 'ready', t('chest.open', { n: light }), () => void open())
-        : h('div', { class: 'ak-done-mark', 'aria-hidden': 'true' }, '✓'),
+        : cfg.moment === 'sleep' ? h('div', { class: 'ak-moon', 'aria-hidden': 'true' }) : h('div', { class: 'ak-done-mark', 'aria-hidden': 'true' }, '✓'),
       h('h3', {}, cfg.doneTitle),
       h('p', { class: 'muted' }, cfg.moment ? akt(`du.doneSub.${cfg.moment}` as AdhkarKey) : akt('ak.doneSub')),
+      cfg.moment === 'sleep' ? h('p', { class: 'muted small' }, akt('du.dawnNext')) : '',
       canClaim ? claim : h('button', { class: 'primary', onclick: () => dialog.close() }, akt('ak.close')),
       h('button', { class: 'chip', onclick: () => { finished = false; i = 0; paint(); } }, akt('ak.again')),
       h('p', { class: 'muted small ak-credit' }, akt('ak.credit'))));
@@ -216,6 +217,7 @@ async function runSession(cfg: SessionCfg) {
     paintDots();
     const all = list.every(isDone);
     if (all && (p === 's' || p === 'm')) setAdhkar(true, p);
+    if (all && cfg.moment === 'sleep') bedtimeSaid();
     clearTimeout(advancing);
     advancing = window.setTimeout(() => {
       advancing = 0;
