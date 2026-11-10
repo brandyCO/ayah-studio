@@ -1357,7 +1357,7 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-flame { flex: none; display: flex; justify-content: center; width: 64px; }
 /* The flame on the card is alive: it breathes a little bigger now and then, as well as swaying. */
 .me-flame:not(.catch) .flame:not(.still) { animation: me-breathe 3.2s ease-in-out infinite; transform-origin: 50% 92%; }
-@keyframes me-breathe { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.06, 1.09); filter: brightness(1.12); } }
+@keyframes me-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06, 1.09); } }
 .me-top-txt { min-width: 0; }
 .me-count { display: flex; align-items: baseline; gap: 8px; }
 .me-count b { font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -1px;

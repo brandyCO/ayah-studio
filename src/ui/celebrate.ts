@@ -244,7 +244,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const nr = isChest && !still ? makeNoor('cel-noor') : null;
   if (nr) stage.append(nr.el);
   // The user's own character (when they made one) stands beside the chest, watches and cheers.
-  const me = isChest && !still ? makeActor('cel-actor') : null;
+  // The character also cheers the big milestones: a first surah, a juz, ten surahs, the Khatm (round 3).
+  const me = (isChest || m.kind === 'rosette' || m.kind === 'khatm') && !still ? makeActor(`cel-actor${isChest ? '' : ' big'}`) : null;
   if (me) stage.append(me.el);
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
@@ -481,6 +482,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         later(roll ? 420 : 620, () => { ready = true; });
         return;
       }
+      if (me) later(260, () => me.cheer(m.kind === 'khatm' ? 3400 : 2400));
       // A second beat when the badge lands / the star fills / the lantern opens.
       const beat = (m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900) * (roll ? 0.6 : 1);
       later(beat, () => {
@@ -488,6 +490,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
         sfx.shimmer();
         showCombo();
+        if (m.kind === 'khatm') me?.cheer(2600);
       });
       later(beat + 300, () => fx?.motes(true));
       later(beat + 150, countLight);

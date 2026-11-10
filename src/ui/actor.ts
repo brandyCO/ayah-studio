@@ -63,6 +63,17 @@ export function sparkle(box: HTMLElement, n = 14, at = 0.45) {
   }
 }
 
+// Speed (old-phone pass, round 3): a character's idle loop (breathing, blinking, head sway) only runs while it is on
+// screen; off screen its animations pause (`.fg-off`), so a page with several characters costs nothing for the
+// ones scrolled away. One shared observer for all of them.
+let watch: IntersectionObserver | null = null;
+function rest(el: HTMLElement) {
+  if (typeof IntersectionObserver === 'undefined') return;
+  watch ??= new IntersectionObserver((es) => { for (const e of es) { e.target.classList.toggle('fg-off', !e.isIntersecting); if (!e.target.isConnected) watch!.unobserve(e.target); } });
+  el.classList.add('fg-off');
+  watch.observe(el);
+}
+
 export interface Actor {
   el: HTMLElement;
   /** A small hop (`k` 0–1 how big). */
@@ -104,6 +115,7 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
   if (!f) return null;
   const el = h('span', { class: `fg-actor ${cls}`, 'aria-hidden': 'true' });
   el.innerHTML = figureSvg(f, { actor: true });
+  rest(el);
   const svg = el.querySelector('svg')!;
   let armsT = 0;
   const pose = (c: 'cheer' | 'waving', ms: number) => {

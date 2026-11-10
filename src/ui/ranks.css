@@ -332,3 +332,22 @@
 .rk-duo-step { width: 74px; height: var(--h); border-radius: 10px 10px 4px 4px; background: color-mix(in srgb, var(--rw-n2, #6c5ce7) 30%, var(--card));
   box-shadow: 0 3px 0 color-mix(in srgb, var(--rw-n3, #4a3cb8) 40%, var(--card)); transition: height .6s cubic-bezier(.3, 1.4, .5, 1); }
 .rk-duo-vs { align-self: center; font: 900 14px var(--ui-round, system-ui); color: var(--muted); }
+/* Friendly gestures in a friend challenge (src/ui/cheers.ts) */
+.rk-duo-side { position: relative; }
+.rk-gbox { display: grid; gap: 6px; margin-top: 4px; }
+.rk-g { display: flex; justify-content: space-between; gap: 4px; }
+.rk-g-btn { flex: 1; display: grid; justify-items: center; gap: 2px; padding: 6px 2px 5px; border: 0; border-radius: 14px; cursor: pointer;
+  background: color-mix(in srgb, var(--rw-n2, #6c5ce7) 12%, var(--card)); box-shadow: 0 3px 0 color-mix(in srgb, var(--rw-n3, #4a3cb8) 26%, var(--card));
+  font: 800 10.5px/1.1 var(--ui-round, system-ui); color: var(--fg); transition: transform .12s, box-shadow .12s; }
+.rk-g-btn:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+.rk-g-ic { display: inline-flex; }
+.rk-g-last { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); }
+.rk-g-last .rk-g-ic svg { width: 18px; height: 18px; }
+.rk-bub { position: absolute; bottom: calc(100% - 4px); left: 50%; translate: -50% 0; z-index: 2; display: inline-flex; align-items: center; gap: 4px;
+  white-space: nowrap; padding: 5px 9px 5px 6px; border-radius: 14px; background: #fff; color: #2b2340; box-shadow: 0 3px 0 rgba(0, 0, 0, .14);
+  font: 900 12px/1 var(--ui-round, system-ui); animation: rk-bub-in .45s cubic-bezier(.3, 1.6, .5, 1) both; transition: opacity .4s, translate .4s; }
+.rk-bub::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: #fff; }
+.rk-bub .rk-g-ic svg { width: 18px; height: 18px; }
+.rk-bub.out { opacity: 0; translate: -50% -8px; }
+@keyframes rk-bub-in { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .rk-bub { animation: none; } }

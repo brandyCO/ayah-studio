@@ -111,7 +111,9 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 @keyframes fg-actor-in { from { transform: translateY(30px) scale(.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cel-streak.go .sm-stage .sm-actor { animation: none; } }
 .rkm-stage .rkm-actor { inset-inline-start: -24%; bottom: -8%; width: 40%; z-index: 3; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
-@media (prefers-reduced-motion: reduce) { .rkm-stage .rkm-actor { animation: none; } }
+.done-card .done-actor { inset-inline-start: 6px; top: 8px; width: 64px; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .35s both; }
+@media (max-width: 360px) { .done-card .done-actor { width: 52px; } }
+@media (prefers-reduced-motion: reduce) { .rkm-stage .rkm-actor, .done-card .done-actor { animation: none; } }
 .me-hero .me-actor { inset-inline-start: 10px; top: 26px; width: 86px; pointer-events: auto; cursor: pointer; z-index: 1; }
 /* The character's day on Me (src/ui/actor.ts dayLook): dozing after the bedtime du'a, with drifting z's. */
 .fg.sleepy .fg-eyes { animation: none; transform: scaleY(.12); }
@@ -131,3 +133,5 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 .lp-buddy.tree.left { left: -30px; }
 .lp-buddy.tree.right { right: -30px; }
 @media (prefers-reduced-motion: reduce) { .fg-actor.lp-buddy { animation: none; } }
+/* Off screen, or an old phone: the idle loop rests (src/ui/actor.ts, round 3 speed pass). */
+.fg-actor.fg-off *, html.lite .fg-actor .fg-bob, html.lite .fg-actor .fg-head, html.lite .fg-actor .fg-shadow, html.lite .fg-actor .fg-twinkle { animation-play-state: paused !important; }

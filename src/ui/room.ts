@@ -13,6 +13,10 @@ import { ownsPiece } from '../data/wardrobe';
 import { rt } from '../i18n/ranks';
 import { badgeArt } from './badge';
 import { trophy } from './rankAvatars';
+import { roomLook, type Slot } from '../data/roomItems';
+import { seasonNow } from '../data/wardrobe';
+import { itemArt, rugArt, seasonArt } from './roomArt';
+import { lite, reduced } from './juice';
 import { h, haptic } from './dom';
 import { sfx } from './sfx';
 import './room.css';
@@ -22,8 +26,9 @@ const skyOf = (hr: number): Sky => (hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr <
 const SKY: Record<Sky, [string, string]> = { dawn: ['#ffc7a8', '#f08aa0'], day: ['#9fd8ff', '#5aa9ec'], dusk: ['#ffb86b', '#d9607a'], night: ['#2b2f7a', '#141640'] };
 
 /** The room's back: wall, window with this hour's sky, shelves, the flame frame, floor and rug (viewBox 320×200). */
-function backSvg(sky: Sky, best: number, star: boolean): string {
+export function backSvg(sky: Sky, best: number, star: boolean, look: Partial<Record<Slot, string>> = {}, season: string | null = null, still = false): string {
   const night = sky === 'night';
+  const sea = seasonArt(season, night, still);
   const wall = night ? '#3b3466' : '#f3e2c7', wallSh = night ? '#2e2852' : '#e6cfac';
   const [s1, s2] = SKY[sky];
   const win = 'M26 104V52Q26 26 64 26Q102 26 102 52V104Z';
@@ -43,19 +48,18 @@ function backSvg(sky: Sky, best: number, star: boolean): string {
     <rect width="320" height="146" fill="${wall}"/><rect y="132" width="320" height="14" fill="${wallSh}"/>
     ${[40, 120, 200, 280].map((x) => `<path d="M${x} 0V132" stroke="${wallSh}" stroke-width="10" opacity=".45"/>`).join('')}
     ${edge(win, night ? '#1c1838' : '#a8784a', 3)}${two(win, night ? '#8a6bb0' : '#e0b07a', night ? '#634a8a' : '#c08a52')}
-    <path d="${glass}" fill="url(#rmsky)"/>${sun}
+    <path d="${glass}" fill="url(#rmsky)"/>${sun}${sea.window}
     <path d="M64 33V98M33 66H95" stroke="${night ? '#634a8a' : '#c08a52'}" stroke-width="3"/>
-    ${shine('M38 92V58Q38 42 52 38', 2, .4)}
+    ${shine('M38 92V58Q38 42 52 38', 2, .4)}${look.curtain ? itemArt(look.curtain, 'curtain', night, still) : ''}
     ${edge(frame, night ? '#1c1838' : '#8f6236', 3)}${two(frame, '#e8b85e', '#c38f35', -1.5, -1.5)}<rect x="125" y="27" width="34" height="28" fill="#2a2150"/>
     ${two(flame, '#ffb03a', '#ff6a3d', -1, -1)}<text x="155" y="53" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="Nunito, system-ui, sans-serif">${best}</text>
     ${star ? `${edge(starPath(178, 30, 8, 3.6, 8), '#a8650e', 2)}${two(starPath(178, 30, 8, 3.6, 8), '#ffd25e', '#e09a1f', -1.5, -1.5)}` : ''}
     ${plank(70)}${plank(118)}
     ${two('M0 146H320V200H0Z', night ? '#5b4a7a' : '#c99a6a', night ? '#463a62' : '#b5875a', 0, -3)}
     ${[160, 176, 190].map((y) => `<path d="M0 ${y}H320" stroke="${mix(night ? '#463a62' : '#b5875a', 0.12)}" stroke-width="1.2" opacity=".6"/>`).join('')}
-    ${edge('M40 168Q130 150 220 168Q130 192 40 168Z', '#7a2f3f', 3)}${two('M40 168Q130 150 220 168Q130 192 40 168Z', '#d9566a', '#b23d55')}
-    <path d="M66 168Q130 156 194 168Q130 184 66 168Z" fill="none" stroke="#ffd27a" stroke-width="2" stroke-dasharray="5 4" opacity=".9"/>
-    <path d="${starPath(130, 168, 8, 3.6, 8)}" fill="#ffd27a" opacity=".9"/>
-    ${night ? '<ellipse cx="128" cy="166" rx="80" ry="34" fill="url(#rmglow)"/>' : ''}
+    ${rugArt(look.rug, night)}
+    ${look.plant ? itemArt(look.plant, 'plant', night, still) : ''}${look.side ? itemArt(look.side, 'side', night, still) : ''}
+    ${look.hang ? itemArt(look.hang, 'hang', night, still) : ''}${sea.top}
   </svg>`;
 }
 
@@ -69,7 +73,12 @@ export function roomCard(edit: () => void): HTMLElement | null {
   const best = Math.max(streak().best, streak().days);
   const legendary = Object.entries(WARDROBE).some(([id, p]) => p.r === 'legendary' && ownsPiece(id));
   const scene = h('div', { class: `rm-scene sky-${sky}` });
-  scene.innerHTML = backSvg(sky, best, legendary);
+  const draw = () => {
+    const html = backSvg(sky, best, legendary, roomLook(), seasonNow(), reduced() || lite());
+    const old = scene.querySelector('.rm-back');
+    if (old) old.outerHTML = html; else scene.insertAdjacentHTML('afterbegin', html);
+  };
+  draw();
   // Top shelf: trophies (newest first, up to 5). Lower shelf: the best badges earned (up to 4).
   const wins = prizeWins().slice(0, 5);
   const top = h('div', { class: 'rm-shelf top' }, ...wins.map((w) => h('span', { class: `rm-cup p${w.place}`, title: `#${w.place} · ${w.week}` }, trophy(w.place, 30))));
@@ -92,10 +101,26 @@ export function roomCard(edit: () => void): HTMLElement | null {
     void m.shareCharCard(code!);
   } }, rt('room.share'));
   const card = h('section', { class: 'me-card rm-card' },
-    h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, rt('room.title')),
-      h('div', { class: 'chips' }, h('button', { class: 'chip', type: 'button', onclick: () => edit() }, rt('room.edit')), share)),
+    h('h2', { class: 'me-h' }, rt('room.title')),
     scene,
+    h('div', { class: 'rm-btns' }, h('button', { class: 'primary brand-btn', type: 'button', onclick: async () => {
+      haptic(6);
+      (await import('./roomShop')).openRoomShop(draw, sit);
+    } }, rt('room.decorate')), h('button', { class: 'chip', type: 'button', onclick: () => edit() }, rt('room.edit')), share),
     h('p', { class: 'muted small' }, wins.length ? rt('room.sub', { n: wins.length }) : rt('room.subEmpty')));
+  // Speed (round 3): the room's small animations (lantern glow, smoke, swaying plant, twinkling lights, the
+  // character's idle loop) play for a while when it comes into view or is tapped, then rest, so a phone sitting
+  // on Me does not keep repainting it.
+  let restT = 0;
+  const wake = () => {
+    scene.classList.remove('rest');
+    scene.querySelector<SVGSVGElement>('.rm-back')?.unpauseAnimations?.();
+    clearTimeout(restT);
+    restT = window.setTimeout(sleep, 14000);
+  };
+  const sleep = () => { scene.classList.add('rest'); scene.querySelector<SVGSVGElement>('.rm-back')?.pauseAnimations?.(); };
+  new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) wake(); else { clearTimeout(restT); sleep(); } }).observe(scene);
+  scene.addEventListener('pointerdown', wake);
   // Greet once when the room scrolls into view.
   if (a) {
     const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); setTimeout(() => (night ? a.nod() : a.wave()), 300); } }, { threshold: 0.6 });
