@@ -1698,6 +1698,9 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       wheel, double tap, 1–5×, drag); sways (still with reduced motion); **Full grown** previews the finished tree. The
       Learn addresses now resolve in `src/ui/learnRoutes.ts` (one import in `main.ts`). The palm-tree hadith for Your
       garden waits until its wording is checked on Sunnah.com (not reachable from the build container)
+- [x] Lessons counted (2026-11-10): every passed lesson / tasmi' (and a page recited with slips or cleanly) adds to
+      `DayRec.ls` (`addLesson()` in `journey.ts`, summed across devices); new ayat keep feeding the memorise goal
+      (`addMemorised`). Ranks, quests and a Learn daily goal reading `ls` belong to the Ranks / goals work
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
