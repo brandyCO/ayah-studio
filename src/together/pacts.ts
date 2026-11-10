@@ -15,7 +15,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
   return data as T;
 }
 
-export interface Face { name: string | null; private?: boolean; avatar: number | null; tier: number; me: boolean; frame?: number }
+export interface Face { name: string | null; private?: boolean; avatar: number | null; tier: number; me: boolean; frame?: number; figure?: string | null }
 export interface Pact {
   id: string; start: string; end: string; code: string | null; night: number; over: boolean; claimed: boolean;
   members: { face: Face; nights: number[] }[];

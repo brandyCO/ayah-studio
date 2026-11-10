@@ -25,13 +25,13 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean }
+export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
 export interface Quest { kind: 'pages' | 'listen' | 'days' | 'surahs'; target: number; done: number; bonus: number; complete: boolean | null }
 export interface Status {
-  name: string; tier: number; avatar: number; frame: number; bestTier: number; bestPlace: number | null; wins: number; prizes: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
+  name: string; tier: number; avatar: number; frame: number; figure?: string | null; bestTier: number; bestPlace: number | null; wins: number; prizes: number; private: boolean; total: number; week: number; weekPlace: number | null; weekPlayers: number;
   allPlace: number; allPlayers: number; quest: Quest; rival: (Row & { gap: number }) | null;
   /** Last week's league result, if the player played. */
   last: { score: number; tier: number; size: number; place: number } | null; weekStart: string;
@@ -101,7 +101,25 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
 }
 export const dropCache = () => cache.clear();
 
-export const rankStatus = (fresh = false) => cached('status', () => rpc<Status | null>('rank_status', { d: dayKey() }), fresh);
+export const rankStatus = (fresh = false) => cached('status', async () => {
+  const s = await rpc<Status | null>('rank_status', { d: dayKey() });
+  if (s) s.figure = await myFigure();
+  return s;
+}, fresh);
+// The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
+const FIG = 'rankFigure';
+async function myFigure(): Promise<string | null> {
+  try { const v = localStorage.getItem(FIG); if (v !== null) return v || null; } catch { /* ignore */ }
+  const v = await rpc<string | null>('rank_my_figure').catch(() => null);
+  try { localStorage.setItem(FIG, v ?? ''); } catch { /* ignore */ }
+  return v;
+}
+/** Wears a character on the boards (null = back to the avatar disc). The prize outfit is checked by the server. */
+export async function setFigure(code: string | null) {
+  await rpc('rank_set_figure', { code });
+  try { localStorage.setItem(FIG, code ?? ''); } catch { /* ignore */ }
+  dropCache();
+}
 export const rankLeague = (fresh = false) => cached('league', () => rpc<{ tier: number; players: Row[] } | null>('rank_league', { d: dayKey() }), fresh);
 export const rankGlobal = (allTime: boolean, metric: Metric = 'all', fresh = false) =>
   cached(`global:${allTime}:${metric}`, () => rpc<Row[]>('rank_global', { d: dayKey(), all_time: allTime, metric }), fresh);

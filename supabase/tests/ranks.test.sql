@@ -1,12 +1,12 @@
 -- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
--- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql, 20261110500000_rank_challenges.sql): Google accounts only; nobody reads the tables;
+-- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql, 20261110500000_rank_challenges.sql, 20261110710000_rank_figures.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(64);
+select plan(71);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -125,6 +125,15 @@ select is(rank_my_prizes() -> 0 ->> 'item', (select v from ids where k = 'item')
 select lives_ok($$ select rank_set_look(substr((select v from ids where k = 'item'), 4)::int, false, 0) $$, 'and can be worn');
 select throws_ok($$ select rank_set_look(substr((select v from ids where k = 'other'), 4)::int, false, 0) $$, '42501', null, 'another week''s avatar cannot');
 select throws_ok($$ select rank_set_look(0, false, 8) $$, '42501', null, 'nor a frame won by #2 or #3');
+-- Characters (20261110710000_rank_figures.sql): any well-formed one, the champion's outfit only for a #1.
+select lives_ok($$ select rank_set_figure('0201011006000a') $$, 'Emre (a #1) can wear the champion''s outfit');
+select is(rank_my_figure(), '0201011006000a', 'and it is kept');
+select throws_ok($$ select rank_set_figure('nope') $$, '22023', null, 'only a well-formed character');
+select is((select f ->> 'figure' from jsonb_array_elements(rank_league(current_date) -> 'players') f where (f ->> 'me')::boolean), '0201011006000a', 'the boards show it');
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select throws_ok($$ select rank_set_figure('0201011006000a') $$, '42501', null, 'not without a week won at #1');
+select lives_ok($$ select rank_set_figure('0201011000000a') $$, 'any other character');
+select lives_ok($$ select rank_set_figure(null) $$, 'and back to the avatar disc');
 
 -- Friend challenge (20261110500000_rank_challenges.sql): a week of pages and listening, one friend.
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');

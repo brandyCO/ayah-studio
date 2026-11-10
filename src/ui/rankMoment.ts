@@ -145,7 +145,7 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
       h('span', { class: 'rkm-stat' }, pts, h('span', {}, rt('rk.wkPts')))),
     h('h2', {}, title),
     h('p', { class: 'cel-sub' }, sub),
-    h('div', { class: 'rkm-me' }, avatar(s.private ? null : s.avatar, w.tierNow, 30), h('span', {}, s.name)));
+    h('div', { class: 'rkm-me' }, avatar(s.private ? null : s.avatar, w.tierNow, 30, 0, s.figure), h('span', {}, s.name)));
   const c = TIER_RING[w.tierNow];
   return frame('week', title, stage, text, [rgbaOf(c), rgbaOf('#fff7e0'), rgbaOf(TIER_RING[w.tier])], ({ later, burst, fx }) => {
     // Count the place down to the real one and the points up while the old emblem waits.
@@ -173,7 +173,7 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
 function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
   const passed = names.slice(0, 3);
   const row = (r: Row | undefined, name: string, me: boolean) => h('div', { class: `rkm-row${me ? ' me' : ''}` },
-    avatar(me ? (s.private ? null : s.avatar) : r?.private ? null : r?.avatar ?? 0, me ? s.tier : r?.tier ?? s.tier, 34),
+    avatar(me ? (s.private ? null : s.avatar) : r?.private ? null : r?.avatar ?? 0, me ? s.tier : r?.tier ?? s.tier, 34, 0, me ? s.figure : r?.figure),
     h('span', { class: 'rkm-name' }, name, me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
     me ? h('span', { class: 'rkm-up', 'aria-hidden': 'true' }, '▲') : h('span', { class: 'rkm-down', 'aria-hidden': 'true' }, '▼'));
   const rows = passed.map((n) => row(players.find((p) => p.name === n), n, false));

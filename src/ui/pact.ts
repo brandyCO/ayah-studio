@@ -43,7 +43,7 @@ function pactCard(p: Pact, repaint: () => void) {
     h('div', { class: 'me-row' }, h('b', {}, `🌙 ${akt('bp.title')}`),
       h('span', { class: 'muted small' }, p.over ? akt('bp.over') : akt('bp.night', { n: Math.min(7, p.night) }))),
     h('div', { class: 'bp-members' }, ...p.members.map((m) => h('div', { class: 'bp-row' },
-      avatar(m.face.private ? null : m.face.avatar ?? 0, m.face.tier ?? 0, 28, m.face.frame ?? 0),
+      avatar(m.face.private ? null : m.face.avatar ?? 0, m.face.tier ?? 0, 28, m.face.frame ?? 0, m.face.figure),
       h('span', { class: 'bp-name' }, m.face.me ? akt('bp.you') : m.face.name ?? rt('rk.private')),
       moons(m.nights, p.night, p.over)))),
     p.code ? h('button', { class: 'chip', onclick: () => { haptic(); void share(p.code!); } }, `＋ ${akt('bp.invite')}`) : '',
