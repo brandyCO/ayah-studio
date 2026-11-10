@@ -38,6 +38,7 @@ jobs:
           # Stock-library proxy (proxy/README.md); empty → the app hides the free library.
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
       # All 604 mushaf page fonts (~95 MB) ship in the APK, so every page reads offline from install
       # (owner decision 2026-11-09).

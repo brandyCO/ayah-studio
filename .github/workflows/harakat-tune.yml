@@ -1,0 +1,55 @@
+name: Tune harakat check
+
+# Manual: downloads the harakat clips learners shared and teachers labelled (supabase/migrations/
+# 20261111000000_harakat_clips.sql), scores them with the server's model and sets a threshold per haraka
+# (scripts/harakat-tune.py). The result, thresholds.json, is the run's artifact; copy it into
+# server/harakat/ to use it. The clips themselves stay in this run only (the repository is public, so they
+# are never uploaded as an artifact). Needs the secrets SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PASSWORD.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: jposubjybzstfmnngews
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets
+        if: env.SUPABASE_ACCESS_TOKEN == '' || env.SUPABASE_DB_PASSWORD == ''
+        run: echo "::error::Add the repo secrets SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PASSWORD." && exit 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tools and model
+        run: |
+          sudo apt-get install -y -q postgresql-client
+          pip install -q onnxruntime==1.29.0 numpy==2.5.3
+          curl -sfL -o server/harakat/model.onnx https://huggingface.co/mostafanewir70/quran-recitation-ctc-onnx/resolve/f90650aac5d9dcff15230a19998c0027f45b33f1/onnx/model_q4.onnx
+          echo "9b17e04fdc2aef54720e62216a7c7ae7f55d27911ee7cd55253baa231845a587  server/harakat/model.onnx" | sha256sum -c
+      - name: Download the clips
+        run: |
+          set -uo pipefail
+          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/config/database/pooler" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['SUPABASE_DB_PASSWORD'].strip(), safe=''))")
+          echo "::add-mask::$PW"
+          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
+            if DB_URL="postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres" python3 scripts/harakat-clips.py "$RUNNER_TEMP/clips"; then exit 0; fi
+          done
+          exit 1
+      - name: Tune
+        run: python3 scripts/harakat-tune.py "$RUNNER_TEMP/clips" --out "$RUNNER_TEMP/thresholds.json" | tee "$RUNNER_TEMP/report.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harakat-thresholds
+          path: |
+            ${{ runner.temp }}/thresholds.json
+            ${{ runner.temp }}/report.txt

@@ -18,7 +18,9 @@ import { displayWords, parseSpans } from '../engine/words';
 import { surahName } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
-import { followSupported, startFollow, type Follower } from './follow';
+import { ClipJar, helpCard, helpChoice } from './harakatClips';
+import { kidsOn } from '../data/kids';
+import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
 import { popIn, reduced } from './juice';
@@ -190,8 +192,14 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   // voice follow-along (as in a lesson's tasmi'): words heard / passed over, fixed at each pause and pending
   let follower: Follower | null = null, canFollow = false, fw: FollowWord[] = [], fBase = 0;
   const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
+  const hkS = new Set<string>(); let hkNext: string[] = []; // said with another haraka (harakat server)
+  const jar = new ClipJar(); // clips for "Help improve the harakat check" (src/ui/harakatClips.ts)
+  const where = new Map<string, [number, number]>(); // word key -> surah, ayah
+  let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const twins = new Map<string, string[]>(); // glyphs that show the same display word go together
+  let harakatOn = false;
+  void followChecksHarakat().then((x) => { harakatOn = x; });
   void followSupported().then((ok) => { canFollow = ok; if (mode === 'recite' && !checking) paintActions(); });
 
   const hidden = (li: number, wi: number): boolean => {
@@ -212,6 +220,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       const bad = mode === 'recite' && !checking && (skip.has(k) || skipP.has(k)), wr = wrongS.has(k) || wrongP.has(k);
       el.classList.toggle('skipped', bad && !wr);
       el.classList.toggle('wrong', bad && wr);
+      el.classList.toggle('harakah', mode === 'recite' && !checking && hkS.has(k));
     }
   }
 
@@ -288,23 +297,32 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       prev = id;
       twins.set(k, []);
       list.push({ key: k, text: texts.get(g.s)?.[g.a - 1]?.[g.i] ?? '' });
+      where.set(k, [g.s, g.a]);
     });
     fw = followWords(list);
+    fwText = new Map(list.map((x) => [x.key, x.text]));
     fBase = fw.findIndex((w) => { const [li, wi] = w.key.split(':').map(Number); return hidden(li, wi); });
     if (fBase < 0) fBase = fw.length;
     const f = await startFollow({
       heard: (text, final) => heard(text, final),
       hints: () => hintsFrom(fw, fBase),
+      ahead: () => fw.slice(fBase).map((w) => fwText.get(w.key) ?? ''),
+      checked: (r, pcm) => {
+        hkNext = r.flags.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k);
+        const base = fBase;
+        jar.take(pcm, r, (i) => { const w = fw[base + i]; const at = w && where.get(w.key); return w && at ? { key: w.key, s: at[0], a: at[1], text: fwText.get(w.key) ?? '' } : null; });
+      },
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
+        else if (why === 'limit') toast(lt('learn.followLimit'));
         else if (why === 'failed') toast(lt('learn.followFailed'));
         else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (mode === 'recite' && !checking) paintActions();
       },
     });
     if (!f) { toast(lt('learn.followFailed')); return; }
-    if (!localStorage.getItem('followNoted')) { toast(lt('learn.followNote')); try { localStorage.setItem('followNoted', '1'); } catch { /* blocked */ } }
+    if (!localStorage.getItem(harakatOn ? 'followNotedS' : 'followNoted')) { toast(lt(harakatOn ? 'learn.followNoteServer' : 'learn.followNote')); try { localStorage.setItem(harakatOn ? 'followNotedS' : 'followNoted', '1'); } catch { /* blocked */ } }
     follower = f;
     haptic(10);
     paintActions();
@@ -331,9 +349,11 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
       for (const k of wrongP) wrongS.add(k);
+      for (const k of withTwins(hkNext)) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
       sayP = new Set(); skipP = new Set(); wrongP = new Set();
       fBase = r.cursor;
     }
+    hkNext = [];
     for (const k of [...sayP, ...skipP]) touched.add(k);
     if (final) for (const k of [...said, ...skip]) touched.add(k);
     refresh(touched);
@@ -355,7 +375,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
 
   function setMode(m: Mode) {
     if (follower) stopFollow();
-    said.clear(); skip.clear(); wrongS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    jar.clear();
+    said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
     revealed.clear(); helped.clear(); shown.clear(); missed.clear(); checking = false;
@@ -397,10 +418,13 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       actions.replaceChildren(
         h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
+        hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
+        hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
         res(0, lt('learn.notYet')), res(1, lt('learn.someSlips')), res(2, lt('learn.hadIt')));
     }
   }
   function done(k: 0 | 1 | 2) {
+    jar.share(missed);
     recordPage(p, k);
     if (k > 0) addLesson();
     if (k === 2) sfx.shimmer();
