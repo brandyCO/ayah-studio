@@ -82,3 +82,16 @@
 .bp-invite { text-align: center; }
 .bp-invite-art { display: flex; justify-content: center; gap: 8px; padding: 18px 0 6px; }
 .bp-invite-art .bp-moon { width: 26px; height: 26px; box-shadow: inset -8px 3px 0 0 #e7cf72; }
+/* No character yet: a soft dashed outline where it will stand, with a "+", and its label (src/ui/me.ts) */
+.me-hero .me-ghost { position: absolute; inset-inline-start: 10px; top: 22px; width: 78px; display: grid; justify-items: center; gap: 4px;
+  border: 0; background: none; padding: 0; color: #f3e6ff; font: 800 11px/1.15 var(--ui-round); cursor: pointer; z-index: 1;
+  -webkit-tap-highlight-color: transparent; }
+.me-ghost-fig { position: relative; width: 58px; height: 74px; opacity: .75;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 58 74'%3E%3Cg fill='%23ffffff' fill-opacity='.12' stroke='%23ffffff' stroke-opacity='.7' stroke-width='2' stroke-dasharray='4 4' stroke-linecap='round'%3E%3Ccircle cx='29' cy='20' r='14'/%3E%3Cpath d='M6 72V58Q6 40 29 40Q52 40 52 58V72Z'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+  animation: me-ghost 2.8s ease-in-out infinite; }
+.me-ghost-fig::after { content: '+'; position: absolute; inset-inline-end: -2px; bottom: 4px; width: 22px; height: 22px; border-radius: 50%;
+  background: #ffd36b; color: #4a2a6b; font: 900 18px/22px var(--ui-round); text-align: center; box-shadow: 0 2px 0 #c98a1e; }
+.me-ghost:active .me-ghost-fig { transform: scale(.94); }
+.me-ghost-txt { text-wrap: balance; text-align: center; }
+@keyframes me-ghost { 50% { translate: 0 -3px; opacity: .95; } }
+@media (prefers-reduced-motion: reduce) { .me-ghost-fig { animation: none; } }

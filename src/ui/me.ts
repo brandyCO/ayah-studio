@@ -136,7 +136,21 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     actorTried = true;
     let code: string | null = null;
     try { code = localStorage.getItem('rankFigure'); } catch { /* ignore */ }
-    if (!code) return;
+    if (!code) {
+      // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
+      // owner decision 2026-11-10).
+      void import('../i18n/ranks').then(({ rt }) => {
+        if (!hero.isConnected) return;
+        const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
+          haptic(8);
+          void import('./figureBuilder').then((m) => m.openBuilder({ figure: null, wins: 0 }, () => {
+            ghost.remove(); actorTried = false; placeActor(true);
+          }));
+        } }, h('span', { class: 'me-ghost-fig', 'aria-hidden': 'true' }), h('span', { class: 'me-ghost-txt' }, rt('fb.open')));
+        hero.append(ghost);
+      });
+      return;
+    }
     void import('./actor').then((m) => {
       meActor = m.actor('me-actor');
       if (!meActor || !hero.isConnected) return;

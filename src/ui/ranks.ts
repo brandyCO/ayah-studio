@@ -464,6 +464,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       body.replaceChildren(
         lastHours() ? hoursBox(lg.players) : '',
         recapCard(),
+        // The character is everyone's avatar by default (owner decision 2026-11-10): until one is made, ask here.
+        status && !status.figure && !status.private ? builderCard(status, () => openBuilder(status!, () => void paint(true))) : '',
         podium(lg.players),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));

@@ -35,7 +35,7 @@ function disc(f: Fig, size: number) {
 }
 
 /** Opens the builder; `done` runs after the character was saved (or taken off). */
-export function openBuilder(s: Status, done: () => void) {
+export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void) {
   let f: Fig = parse(s.figure) ?? { ...DEFAULT };
   let tab: Tab = 'body';
   const champion = (s.wins ?? 0) > 0;

@@ -1473,7 +1473,12 @@ duas/reflections section in Me.
       (`rkPodium`), #1 cheers, a tap makes a player hop (yourself: a wave). **Reward art in the character style**: `src/ui/flat.ts`
       (`two()`, `edge()`, `shine()`, `mix()`, `freezeArt()`) — chests, badges, trophies, tier emblems, avatar discs, frame rings
       and laurels redrawn flat two-tone with a chunky edge (class names and chest geometry kept for the cracks); the freeze also
-      shows in the shop. Garden decorations left out (the Learn path replaces the grid)
+      shows in the shop. Garden decorations left out (the Learn path replaces the grid). **Frames like jewellery** (owner: "way more premium"):
+      `frameArt()` in `rankAvatars.ts` — metal rims with depth (`rim()`), gems, laurel leaves, pearls, mosaic tiles, lanterns,
+      a rosette; frames 4+ carry a glint that travels round the rim (SMIL, none with reduced motion). **Character by default**
+      (owner decision 2026-11-10): with no character, Me shows a dashed outline "Make your character" (the builder, starting
+      from a ready-made one) and Ranks the builder card above the league; the builder works signed out (`setFigure()` keeps it
+      on the device, `sendLocalFigure()` sends it once signed in, `rankFigureSent`); symbol discs stay as an option
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
