@@ -10,10 +10,10 @@ import { badgeStates } from '../data/badges';
 import { prizeWins } from '../data/garden';
 import { streak } from '../data/journey';
 import { ownsPiece } from '../data/wardrobe';
-import { rt } from '../i18n/ranks';
+import { rt, type RankKey } from '../i18n/ranks';
 import { badgeArt } from './badge';
 import { trophy } from './rankAvatars';
-import { roomLook, type Slot } from '../data/roomItems';
+import { SLOTS, roomLook, type Slot } from '../data/roomItems';
 import { seasonNow } from '../data/wardrobe';
 import { itemArt, rugArt, seasonArt } from './roomArt';
 import { lite, reduced } from './juice';
@@ -63,8 +63,10 @@ export function backSvg(sky: Sky, best: number, star: boolean, look: Partial<Rec
   </svg>`;
 }
 
-/** The room card, or null without a character. `edit` opens the builder. */
-export function roomCard(edit: () => void): HTMLElement | null {
+type Built = { scene: HTMLElement; draw: () => void; sit: string; code: string; night: boolean; cups: number };
+
+/** The room itself (back, shelves, the character on its cushion), or null without a character. */
+function buildScene(): Built | null {
   const code = myFigureCode();
   const f = parse(code);
   if (!f) return null;
@@ -95,19 +97,6 @@ export function roomCard(edit: () => void): HTMLElement | null {
     scene.append(cushion, a.el);
   }
   scene.append(top, low);
-  const share = h('button', { class: 'chip', type: 'button', onclick: async () => {
-    haptic(6);
-    const m = await import('./charCard');
-    void m.shareCharCard(code!);
-  } }, rt('room.share'));
-  const card = h('section', { class: 'me-card rm-card' },
-    h('h2', { class: 'me-h' }, rt('room.title')),
-    scene,
-    h('div', { class: 'rm-btns' }, h('button', { class: 'primary brand-btn', type: 'button', onclick: async () => {
-      haptic(6);
-      (await import('./roomShop')).openRoomShop(draw, sit);
-    } }, rt('room.decorate')), h('button', { class: 'chip', type: 'button', onclick: () => edit() }, rt('room.edit')), share),
-    h('p', { class: 'muted small' }, wins.length ? rt('room.sub', { n: wins.length }) : rt('room.subEmpty')));
   // Speed (round 3): the room's small animations (lantern glow, smoke, swaying plant, twinkling lights, the
   // character's idle loop) play for a while when it comes into view or is tapped, then rest, so a phone sitting
   // on Me does not keep repainting it.
@@ -121,10 +110,76 @@ export function roomCard(edit: () => void): HTMLElement | null {
   const sleep = () => { scene.classList.add('rest'); scene.querySelector<SVGSVGElement>('.rm-back')?.pauseAnimations?.(); };
   new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) wake(); else { clearTimeout(restT); sleep(); } }).observe(scene);
   scene.addEventListener('pointerdown', wake);
-  // Greet once when the room scrolls into view.
+  // Greet once when the room comes into view.
   if (a) {
     const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); setTimeout(() => (night ? a.nod() : a.wave()), 300); } }, { threshold: 0.6 });
     io.observe(scene);
   }
-  return card;
+  return { scene, draw, sit, code: code!, night, cups: wins.length };
+}
+
+const shareChar = async (code: string) => {
+  haptic(6);
+  const m = await import('./charCard');
+  void m.shareCharCard(code);
+};
+
+/** The room card, or null without a character. `edit` opens the builder. */
+export function roomCard(edit: () => void): HTMLElement | null {
+  const b = buildScene();
+  if (!b) return null;
+  return h('section', { class: 'me-card rm-card' },
+    h('h2', { class: 'me-h' }, rt('room.title')),
+    b.scene,
+    h('div', { class: 'rm-btns' }, h('button', { class: 'primary brand-btn', type: 'button', onclick: async () => {
+      haptic(6);
+      (await import('./roomShop')).openRoomShop(b.draw, b.sit);
+    } }, rt('room.decorate')), h('button', { class: 'chip', type: 'button', onclick: () => edit() }, rt('room.edit')),
+    h('button', { class: 'chip', type: 'button', onclick: () => void shareChar(b.code) }, rt('room.share'))),
+    h('p', { class: 'muted small' }, b.cups ? rt('room.sub', { n: b.cups }) : rt('room.subEmpty')));
+}
+
+/** #/me/room (owner request 2026-11-10): the whole screen is the room. A small back and the Light star float
+ *  at the top; the room is wider than a phone, so it can be swiped sideways; the floor runs on into a dock with
+ *  a button per place (showing what stands there now), Shop, Dress up and Share. Decorating opens as a low
+ *  panel over the room, which changes behind it at once. */
+export function roomScreen(edit: () => void, top: HTMLElement): HTMLElement | null {
+  const b = buildScene();
+  if (!b) return null;
+  const room = h('div', { class: 'rm-room' }, b.scene);
+  const stage = h('div', { class: 'rm-stage' }, room);
+  const slots = h('div', { class: 'rm-slots' });
+  const shop = (slot?: Slot) => void import('./roomShop').then((m) => {
+    haptic(6);
+    m.openRoomShop(() => { b.draw(); paintSlots(); }, b.sit, { slot, inRoom: true });
+  });
+  const paintSlots = () => void import('./roomShop').then((m) => {
+    const look = roomLook();
+    slots.replaceChildren(...SLOTS.map((s) => {
+      const btn = h('button', { class: `rm-slot-b${look[s] ? ' set' : ''}`, type: 'button', onclick: () => shop(s) },
+        h('span', { class: 'rm-slot-art', 'aria-hidden': 'true' }), h('span', { class: 'rm-slot-n' }, rt(`rs.${s}` as RankKey)));
+      btn.querySelector('.rm-slot-art')!.innerHTML = m.tileArt(s, look[s] ?? null);
+      return btn;
+    }));
+  });
+  paintSlots();
+  const el = h('div', { class: `rm-full${b.night ? ' night' : ''}` },
+    top,
+    stage,
+    h('div', { class: 'rm-dock' },
+      h('p', { class: 'rm-full-sub small' }, b.cups ? rt('room.sub', { n: b.cups }) : rt('room.subEmpty')),
+      slots,
+      h('div', { class: 'rm-dock-main' },
+        h('button', { class: 'primary brand-btn rm-shop-b', type: 'button', onclick: () => shop() }, `✦ ${rt('rs.shop')}`),
+        h('button', { class: 'chip', type: 'button', onclick: () => edit() }, rt('room.edit')),
+        h('button', { class: 'chip', type: 'button', onclick: () => void shareChar(b.code) }, rt('room.share')))));
+  // The room is wider than a phone: it opens at the window, then glides over to the character and the
+  // shelves, which shows it can be swiped sideways.
+  requestAnimationFrame(() => {
+    const to = (stage.scrollWidth - stage.clientWidth) * 0.8;
+    if (to <= 0) return;
+    if (reduced()) { stage.scrollLeft = to; return; }
+    setTimeout(() => stage.scrollTo({ left: to, behavior: 'smooth' }), 500);
+  });
+  return el;
 }
