@@ -65,3 +65,20 @@
 @keyframes dl-breathe { 50% { transform: translateY(-2px); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); } }
 .dl-adhan { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) { .dl-stop.now svg { animation: none; } }
+/* Bedtime pact (src/ui/pact.ts) */
+.bp { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.bp:empty { display: none; }
+.bp-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: linear-gradient(160deg, #16173d, #0d0e26); color: #e9e3cc; }
+.bp-card .muted { color: rgba(233, 227, 204, .65); }
+.bp-members { display: flex; flex-direction: column; gap: 6px; }
+.bp-row { display: flex; align-items: center; gap: 8px; }
+.bp-name { flex: 1; min-width: 0; font-weight: 700; font-size: var(--fs-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-moons { display: flex; gap: 4px; }
+.bp-moon { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset -5px 2px 0 0 rgba(233, 223, 184, .22); display: inline-block; }
+.bp-moon.on { box-shadow: inset -5px 2px 0 0 #f1e3a8; filter: drop-shadow(0 0 4px rgba(241, 227, 168, .6)); }
+.bp-moon.now { outline: 1.5px dashed rgba(241, 227, 168, .55); outline-offset: 1px; }
+.bp-card .chip { align-self: flex-start; background: rgba(255,255,255,.08); color: #e9e3cc; }
+.bp-start { align-self: flex-start; }
+.bp-invite { text-align: center; }
+.bp-invite-art { display: flex; justify-content: center; gap: 8px; padding: 18px 0 6px; }
+.bp-invite-art .bp-moon { width: 26px; height: 26px; box-shadow: inset -8px 3px 0 0 #e7cf72; }

@@ -1538,7 +1538,7 @@ duas/reflections section in Me.
       plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
       chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
       with a ring and the streak count (→ Me)
-- [ ] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
+- [x] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
       Step 1 done: `public/data/duas.json` by `scripts/make-duas.mjs` — Hisn al-Muslim ch. 1 (waking), 15 (the adhan), 25 (after the
       salam), 28 (sleeping): Arabic and English (Darussalam) from YousefAsalya/Islamic-Pro-azkar-API (MIT), each English text checked
       word for word against the source, word notes kept apart (`gloss`), Quran parts from our own text + Saheeh International (checked
@@ -1565,7 +1565,11 @@ duas/reflections section in Me.
       Both have their own chests (8 Light a lantern, 15 a night). Each finished moment is kept in the journey (`DayRec.dm`, session
       keys, merged across devices), so the lanterns and goals follow the account. Badges: Seven / Thirty peaceful nights, A day full of
       light (all seven), A hundred lanterns.
-      To come: family pact
+      Step 6: **bedtime pact** (migration `20261110600000_bedtime_pacts.sql`, pgTAP `pacts.test.sql` 18): family or friends (2–6,
+      Google accounts in the ranks, ≤ 3 pacts at a time) keep the bedtime du'a 7 nights together — never ranked: Me's du'a card shows
+      each member's 7 crescents (`src/ui/pact.ts`, `src/together/pacts.ts`); invite link `#/bp/{code}` (open until the third night);
+      the sleep session marks tonight (`pact_mark`, kept in `pactMark` until sent); two days after the last night each member opens a
+      chest once: 5 Light a night kept + 50 when everyone kept all seven (`claimGoal('bp:{id}')`). Privacy page updated (ranks too).
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -17,6 +17,9 @@ const STOPS: Stop[] = [
 const SHORT: Partial<Record<Moment, AdhkarKey>> = { wake: 'du.short.wake', sleep: 'du.short.sleep' };
 
 let all: Record<Moment, Dua[]> | null = null;
+// The bedtime pact under the string (src/ui/pact.ts): asked for at most once a minute.
+const pactBox = h('div', { class: 'bp' });
+let pactAt = 0;
 const seen = new Set<string>();
 
 const lanternSvg = () => {
@@ -62,8 +65,10 @@ export async function paintDayLanterns(slot: HTMLElement) {
         if (on && !seen.has(key)) { seen.add(key); if (slot.isConnected && slot.dataset.ready) requestAnimationFrame(() => popIn(b.firstElementChild!, { stiffness: 380, damping: 11 })); }
         return b;
       })),
-    h('button', { class: 'chip dl-adhan', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas('adhan')); } }, `🕌  ${akt('du.title.adhan')}`));
+    h('button', { class: 'chip dl-adhan', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas('adhan')); } }, `🕌  ${akt('du.title.adhan')}`),
+    pactBox);
   slot.dataset.ready = '1';
+  if (Date.now() - pactAt > 60_000) { pactAt = Date.now(); void import('./pact').then((m) => m.paintPacts(pactBox)); }
 }
 
 /** The goal's button: the moment whose time it is, if it is still unlit, else the first unlit one. */
