@@ -751,6 +751,7 @@ export function showMeSettings(root: HTMLElement): () => void {
           h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
           h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
           h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, `${soundsOn() ? '🔔' : '🔕'}  ${t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')}`),
+          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, `🎙  ${t('set.harakatHelp')}`),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, `⚑  ${t('set.report')}`))));
   };

@@ -108,9 +108,20 @@ def align(lp: np.ndarray, toks: list[int]):
     return ext, path
 
 
-def harakat_scores(lp: np.ndarray, words: list[str]) -> list[float | None]:
-    """Per word: the weakest of its harakat (expected haraka minus the strongest other haraka, at its best
-    moment). Below FLAG = said with another haraka. None: nothing to check (no harakat, or no audio)."""
+# Per haraka thresholds (thresholds.json, written by scripts/harakat-tune.py from the teachers' labels);
+# FLAG for any haraka it does not name.
+NAMES = {V['َ']: 'fatha', V['ُ']: 'damma', V['ِ']: 'kasra', V['ْ']: 'sukun', V['ً']: 'fathatan', V['ٌ']: 'dammatan', V['ٍ']: 'kasratan'}
+try:
+    _thr = json.load(open(os.path.join(HERE, 'thresholds.json'), encoding='utf-8'))
+except OSError:
+    _thr = {}
+THR = {tk: float(_thr.get(name, FLAG)) for tk, name in NAMES.items()}
+
+
+def harakat_scores(lp: np.ndarray, words: list[str]) -> list[dict]:
+    """Per word: `score`, the weakest of its harakat (expected haraka minus the strongest other haraka, at
+    its best moment; None when there is nothing to check), `flag` (a haraka below its threshold = said with
+    another haraka) and `at` (start, end in seconds, from the alignment; None when not found)."""
     forms = [model_form(w) for w in words]
     toks, owner = [], []
     for wi, f in enumerate(forms):
@@ -118,31 +129,41 @@ def harakat_scores(lp: np.ndarray, words: list[str]) -> list[float | None]:
             toks.append(V[c]); owner.append(wi)
         if wi < len(forms) - 1:
             toks.append(SEP); owner.append(-1)
+    out = [{'score': None, 'flag': False, 'at': None} for _ in words]
     if not toks or not len(lp):
-        return [None] * len(words)
+        return out
     ext, path = align(lp, toks)
     if path is None:
-        return [None] * len(words)
+        return out
     best = np.full(len(toks), -99.0)
+    first, last = {}, {}
     for t, st in enumerate(path):
         if st >= 0 and st % 2 == 1:
             j = (st - 1) // 2
+            wi = owner[j]
+            if wi >= 0:
+                first.setdefault(wi, t); last[wi] = t
             tk = int(ext[st])
             if tk not in HK:
                 continue
             other = max(lp[t, o] for o in HK if o != tk)
             best[j] = max(best[j], lp[t, tk] - other)
-    out: list[float | None] = [None] * len(words)
     for j, wi in enumerate(owner):
         if wi >= 0 and toks[j] in HK and best[j] > -99:
-            out[wi] = float(best[j]) if out[wi] is None else min(out[wi], float(best[j]))
+            o = out[wi]
+            o['score'] = float(best[j]) if o['score'] is None else min(o['score'], float(best[j]))
+            if best[j] < THR.get(toks[j], FLAG):
+                o['flag'] = True
+    for wi in first:
+        out[wi]['at'] = [round(first[wi] * 0.02, 2), round((last[wi] + 1) * 0.02, 2)]
     return out
 
 
 def check(model: Model, pcm16: bytes, words: list[str]) -> dict:
     """One recited part, `words` = the text from where the reciter is (as the app has it). Returns the heard
-    text, the words said / skipped / said differently (as the app's own matching finds them) and, of the
-    words said, those said with another haraka (`flags`). Indices are into `words`."""
+    text, the words said / skipped / said differently (as the app's own matching finds them), of the words
+    said those said with another haraka (`flags`), and where each recited word is in the part (`at`, s).
+    Indices are into `words`."""
     a = np.frombuffer(pcm16, dtype='<i2').astype(np.float32) / 32768.0
     lp = model.logp(a)
     heard = greedy(lp)
@@ -151,12 +172,12 @@ def check(model: Model, pcm16: bytes, words: list[str]) -> dict:
     said = [keep[i] for i in r['said']]
     # the audio is lined up with the words actually recited (said, or said differently), in order
     run = sorted(said + [keep[i] for i in r['wrong']])
-    scores = dict(zip(run, harakat_scores(lp, [words[i] for i in run]))) if run else {}
-    flags = [i for i in said if scores.get(i) is not None and scores[i] < FLAG]
+    res = dict(zip(run, harakat_scores(lp, [words[i] for i in run]))) if run else {}
     return {
         'heard': heard,
         'said': said, 'skipped': [keep[i] for i in r['skipped']], 'wrong': [keep[i] for i in r['wrong']],
-        'flags': flags,
-        'scores': {str(i): round(scores[i], 2) for i in said if scores.get(i) is not None},
+        'flags': [i for i in said if res[i]['flag']],
+        'scores': {str(i): round(res[i]['score'], 2) for i in said if res[i]['score'] is not None},
+        'at': {str(i): res[i]['at'] for i in run if res[i]['at']},
         'seconds': round(len(a) / 16000, 2),
     }
