@@ -8,6 +8,7 @@ import { h, haptic } from './dom';
 import { flame, flameTier } from './flame';
 import { bump, noor as makeNoor, popIn, squash } from './juice';
 import { sfx } from './sfx';
+import './cel.css';
 import { sparks, type Sparks } from './sparks';
 import { rewardPalette, rgba } from './theme';
 

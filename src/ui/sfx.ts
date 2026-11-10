@@ -28,6 +28,9 @@ function ready(): AudioContext | null {
   } catch { return null; }
 }
 
+/** Builds the sound engine ahead of time (when a chest comes on screen), so the first tap is heard at once. */
+export function warmSounds() { ready(); }
+
 const MASTER = 0.32;
 
 /** Shaped noise through a band-pass whose centre moves from f0 to f1. */

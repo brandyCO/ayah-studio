@@ -13,6 +13,7 @@ import { TIER_RING, avatar } from './rankAvatars';
 import { bump } from './juice';
 import { sfx } from './sfx';
 import { sparks, type Sparks } from './sparks';
+import './cel.css';
 import './ranks.css';
 
 const NS = 'http://www.w3.org/2000/svg';

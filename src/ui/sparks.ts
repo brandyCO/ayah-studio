@@ -40,8 +40,10 @@ export interface Sparks { burst(x: number, y: number, n: number, power?: number)
 /** Starts the particle layer on `canvas` (sized to its box) with these colours (rgba(…, 1) strings). */
 export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
   const lite = document.documentElement.classList.contains('lite');
-  const dpr = Math.min(lite ? 1.5 : 2, window.devicePixelRatio || 1);
-  const cap = lite ? 110 : 220;
+  let dpr = Math.min(lite ? 1.5 : 2, window.devicePixelRatio || 1);
+  let cap = lite ? 110 : 220;
+  // Watchdog: if frames come slowly on this phone, carry on with half the sparks at a lower resolution.
+  let slow = lite, slowSum = 0, slowN = 0;
   const ctx = canvas.getContext('2d')!;
   const fit = () => {
     canvas.width = Math.round(canvas.clientWidth * dpr);
@@ -58,8 +60,16 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
   const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
   const frame = (now: number) => {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const gap = now - last;
+    const dt = Math.min(0.05, gap / 1000);
     last = now;
+    if (!slow && ps.length > 20) {
+      slowSum += gap; slowN++;
+      if (slowN >= 20) {
+        if (slowSum / slowN > 26) { slow = true; cap = Math.round(cap / 2); dpr = Math.min(dpr, 1); fit(); ps.splice(0, Math.max(0, ps.length - cap)); }
+        slowSum = 0; slowN = 0;
+      }
+    }
     if (canvas.width !== Math.round(canvas.clientWidth * dpr)) fit();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = 'lighter';
@@ -93,7 +103,7 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
   return {
     burst(x, y, n, power = 1) {
       // Old phones get half the sparks; never more than `cap` on screen, so frames stay smooth.
-      n = Math.min(lite ? Math.ceil(n / 2) : n, Math.max(0, cap - ps.length));
+      n = Math.min(slow ? Math.ceil(n / 2) : n, Math.max(0, cap - ps.length));
       for (let i = 0; i < n; i++) {
         const a = rand(0, Math.PI * 2);
         const star = i % 4 === 0;

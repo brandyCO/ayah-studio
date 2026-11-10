@@ -1452,6 +1452,12 @@ duas/reflections section in Me.
       recitation plays (Media Session), in the Kids space, when the page is hidden, and when switched off in Me → ⚙ → App →
       Reward sounds (localStorage `rewardSounds`, on by default). Smoothness: sparks capped at 220 (110 and half bursts in
       old-phone mode, dpr 1.5), ready chests pause their shaking while off screen (IntersectionObserver, `.chest.off`)
+      Speed pass (owner "do 2 to 4", 2026-11-10): the flying Light is one canvas (`.lt-fly-layer`) instead of a node per dot;
+      the moments' styles moved out of the first load into `src/ui/cel.css` (imported by celebrate / streak / rank moments;
+      first load 138.0 → 136.2 KB); a ready chest on screen preloads `celebrate` and warms the sound engine (`warmSounds()`)
+      while idle; a tap during a non-chest moment plays the rest at once (`skip()`), a second tap closes; sparks watch the
+      frame time and drop to half the sparks at 1× resolution when frames average > 26 ms; moving parts get GPU layers only
+      while they move. Measured at 6× CPU throttle (Chromium): chest ~52 fps, lantern ~57, streak ~56
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

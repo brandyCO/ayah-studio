@@ -24,6 +24,7 @@ import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
 import { chestArt, chestTier } from './chest';
 import { rewardPalette, rgba } from './theme';
+import './cel.css';
 import './celebrate.css';
 import { bump, combo, noor as makeNoor, popIn, squash, tick as tickNum } from './juice';
 import { sfx } from './sfx';
@@ -257,14 +258,27 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       lightPill ?? '',
       ok);
     const opened = performance.now();
-    const timers: number[] = [];
-    const later = (ms: number, f: () => void) => timers.push(window.setTimeout(f, ms));
+    const timers = new Map<number, () => void>();
+    const later = (ms: number, f: () => void) => { const id = window.setTimeout(() => { timers.delete(id); f(); }, ms); timers.set(id, f); };
+    // A tap during the opening plays the rest of it at once: the pending beats run now, the animations jump to their end.
+    let skipped = false;
+    const skip = () => {
+      skipped = true;
+      for (let n = 0; n < 8 && timers.size; n++) {
+        const due = [...timers]; timers.clear();
+        for (const [id, f] of due) { clearTimeout(id); f(); }
+      }
+      for (const a of el.getAnimations({ subtree: true })) {
+        if (a.effect?.getComputedTiming().iterations !== Infinity) try { a.finish(); } catch { /* still pending */ }
+      }
+    };
     let fx: Sparks | null = null;
     let done = false;
     const close = () => {
       if (done) return;
       done = true;
-      timers.forEach(clearTimeout);
+      timers.forEach((_, id) => clearTimeout(id));
+      timers.clear();
       fx?.stop();
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
@@ -394,7 +408,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         if (performance.now() - revealedAt > 700) close();
         return;
       }
-      if (performance.now() - opened > 2000) close();
+      if (performance.now() - opened > 2000 || skipped) close();
+      else skip();
     });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
@@ -483,23 +498,49 @@ function flyLight(from: Element, tier: number) {
   const b = chip.getBoundingClientRect();
   const x0 = a.left + a.width / 2, y0 = a.top + a.height * 0.45;
   const x1 = b.left + 14, y1 = b.top + b.height / 2;
-  const n = 6 + tier * 3;
-  for (let i = 0; i < n; i++) {
-    const dot = h('span', { class: i === 0 ? 'lt-fly lead' : 'lt-fly', 'aria-hidden': 'true' });
-    document.body.append(dot);
-    const sx = x0 + Math.cos(i * 2.4) * (18 + (i % 4) * 10);
-    const sy = y0 + Math.sin(i * 2.4) * (18 + (i % 4) * 10);
-    const mx = (sx + x1) / 2 + (i % 2 ? 60 : -60), my = Math.min(sy, y1) - 40;
-    const anim = dot.animate([
-      { transform: `translate(${x0}px, ${y0}px) scale(.3)`, opacity: 0 },
-      { transform: `translate(${sx}px, ${sy}px) scale(1.2)`, opacity: 1, offset: .25 },
-      { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: .6 },
-      { transform: `translate(${x1}px, ${y1}px) scale(.5)`, opacity: .9 },
-    ], { duration: 820 + i * 45, easing: 'cubic-bezier(.5, 0, .3, 1)', fill: 'forwards' });
-    anim.onfinish = () => {
-      dot.remove();
-      if (i % 2 === 0 || i === n - 1) { bump(chip, i === n - 1 ? 0.3 : 0.14); sfx.tick(); }
-      if (i === n - 1) { chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); }
-    };
-  }
+  const lite = document.documentElement.classList.contains('lite');
+  const n = lite ? 4 + tier * 2 : 6 + tier * 3;
+  // All the lights fly on one canvas over the page (one draw call each a frame, no DOM nodes to lay out).
+  const dpr = Math.min(lite ? 1.5 : 2, window.devicePixelRatio || 1);
+  const cv = h('canvas', { class: 'lt-fly-layer', 'aria-hidden': 'true' }) as HTMLCanvasElement;
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+  document.body.append(cv);
+  const g = cv.getContext('2d')!;
+  const spr = document.createElement('canvas');
+  spr.width = spr.height = 48;
+  const sg = spr.getContext('2d')!;
+  const grad = sg.createRadialGradient(24, 24, 0, 24, 24, 24);
+  grad.addColorStop(0, P.core); grad.addColorStop(0.3, rgba(P.n3, 0.95)); grad.addColorStop(0.65, rgba(P.n2, 0.35)); grad.addColorStop(1, rgba(P.n2, 0));
+  sg.fillStyle = grad; sg.fillRect(0, 0, 48, 48);
+  const dots = Array.from({ length: n }, (_, i) => {
+    const sx = x0 + Math.cos(i * 2.4) * (18 + (i % 4) * 10), sy = y0 + Math.sin(i * 2.4) * (18 + (i % 4) * 10);
+    return { i, sx, sy, mx: (sx + x1) / 2 + (i % 2 ? 60 : -60), my: Math.min(sy, y1) - 40, dur: 820 + i * 45, size: i === 0 ? 34 : 20, done: false };
+  });
+  const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  const t0 = performance.now();
+  const frame = (now: number) => {
+    g.clearRect(0, 0, cv.width, cv.height);
+    let left = 0;
+    for (const d of dots) {
+      if (d.done) continue;
+      const p = Math.min(1, (now - t0) / d.dur);
+      let x: number, y: number, s: number, o: number;
+      if (p < 0.25) { const k = ease(p / 0.25); x = x0 + (d.sx - x0) * k; y = y0 + (d.sy - y0) * k; s = 0.3 + 0.9 * k; o = k; }
+      else {
+        const k = ease((p - 0.25) / 0.75), u = 1 - k;
+        x = u * u * d.sx + 2 * u * k * d.mx + k * k * x1; y = u * u * d.sy + 2 * u * k * d.my + k * k * y1;
+        s = 1.2 - 0.7 * k; o = 1 - 0.1 * k;
+      }
+      const w = d.size * s * dpr;
+      g.globalAlpha = o;
+      g.drawImage(spr, x * dpr - w / 2, y * dpr - w / 2, w, w);
+      if (p >= 1) {
+        d.done = true;
+        if (d.i % 2 === 0 || d.i === n - 1) { bump(chip, d.i === n - 1 ? 0.3 : 0.14); sfx.tick(); }
+        if (d.i === n - 1) { chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); }
+      } else left++;
+    }
+    if (left) requestAnimationFrame(frame); else cv.remove();
+  };
+  requestAnimationFrame(frame);
 }
