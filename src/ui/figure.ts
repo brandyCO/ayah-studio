@@ -417,10 +417,11 @@ function raised(f: Fig, which: 'up' | 'wave'): string {
 
 const kid = (f: Fig) => f.body === BOY || f.body === GIRL;
 /** The whole character, standing on the ground. `cls` adds classes to the moving group. */
-export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean; actor?: boolean } = {}): string {
+export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean; actor?: boolean; cheer?: boolean } = {}): string {
   const k = kid(f);
   // An actor (a character in a moment) also carries raised arms for a cheer and a wave, shown by class.
-  const arms = o.actor ? `<g class="fg-arms">${holds(f)}</g>` : holds(f);
+  // `cheer` draws the arms raised for good (a picture, e.g. the character card).
+  const arms = o.actor ? `<g class="fg-arms">${holds(f)}</g>` : o.cheer ? raised(f, 'up') : holds(f);
   const up = o.actor ? `<g class="fg-up">${raised(f, 'up')}</g><g class="fg-wv">${raised(f, 'wave')}</g>` : '';
   const kidT = 'transform="translate(100 248) scale(.86 .8) translate(-100 -248)"';
   const inner = k

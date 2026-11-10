@@ -92,12 +92,20 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const hero = h('section', { class: 'me-hero' });
   // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
   const wardrobeSlot = h('div', { class: 'wd-slot' });
+  // The character's room, decorated with prizes (src/ui/room.ts, lazy; only with a character).
+  const roomSlot = h('div', { class: 'rm-slot' });
+  const paintRoom = () => {
+    let has = false;
+    try { has = !!localStorage.getItem('rankFigure'); } catch { /* ignore */ }
+    if (has) void import('./room').then((m) => { const c = m.roomCard(dressUp); roomSlot.replaceChildren(c ?? ''); });
+  };
+  const dressUp = (tab?: 'wardrobe') => void import('./figureBuilder').then((b) => {
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
+    b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); paintRoom(); }, tab);
+  });
   void import('./wardrobeCard').then((m) => {
-    const c = m.wardrobeCard(() => void import('./figureBuilder').then((b) => {
-      let code: string | null = null;
-      try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
-      b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); }, 'wardrobe');
-    }));
+    const c = m.wardrobeCard(() => dressUp('wardrobe'));
     if (c) wardrobeSlot.replaceChildren(c);
   });
   const goalsBox = h('section', { class: 'me-card' });
@@ -154,7 +162,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
           haptic(8);
           void import('./figureBuilder').then((m) => m.openBuilder({ figure: null, wins: 0 }, () => {
-            ghost.remove(); actorTried = false; placeActor(true);
+            ghost.remove(); actorTried = false; placeActor(true); paintRoom();
           }));
         } }, h('span', { class: 'me-ghost-fig', 'aria-hidden': 'true' }), h('span', { class: 'me-ghost-txt' }, rt('fb.open')));
         hero.append(ghost);
@@ -625,8 +633,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, noorEl, dayCard() ?? '', wardrobeSlot, todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', wardrobeSlot, todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, roomSlot, libBox,
     tabBar('me'));
+  paintRoom();
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
   // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
