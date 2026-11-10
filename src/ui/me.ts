@@ -6,7 +6,6 @@ import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
-import { akt } from '../i18n/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
 import { mushafOfflineRow } from './mushafOffline';
@@ -91,6 +90,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
   const goalsBox = h('section', { class: 'me-card' });
+  // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
+  const duaBox = h('section', { class: 'me-card dl-card' });
+  const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
   const noorEl = noorLine('me');
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
@@ -360,8 +362,6 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('m') }, `☾  ${t('goal.adhkarM')}`),
-        ...(['wake', 'salah', 'adhan', 'sleep'] as const).map((m) => h('button', { class: 'menu-item', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas(m)); } },
-          `${{ wake: '🌅', salah: '🤲', adhan: '🕌', sleep: '🌙' }[m]}  ${akt(`du.title.${m}`)}`)),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
@@ -547,7 +547,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   void import('../together/relight').then((m) => m.takeRelights());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintStats(); paintBadges(); maybeStreak(); };
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
@@ -563,7 +563,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 

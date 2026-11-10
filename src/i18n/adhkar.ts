@@ -59,6 +59,9 @@ const en = {
   'du.tapDone': 'Tap when you have done it',
   'du.didIt': 'Done',
   'du.open': 'Open {name}',
+  'du.short.wake': 'Waking',
+  'du.short.sleep': 'Sleep',
+  'du.lit': '{n} of {of} lit',
   'ak.credit': 'Arabic: hisnmuslim.com · English: Darussalam · Quran: King Fahd Complex, Saheeh International',
 };
 export type AdhkarKey = keyof typeof en;
@@ -120,6 +123,9 @@ const ar: Partial<Record<AdhkarKey, string>> = {
   'du.tapDone': 'اضغط بعد أن تفعله',
   'du.didIt': 'تم',
   'du.open': 'افتح {name}',
+  'du.short.wake': 'الاستيقاظ',
+  'du.short.sleep': 'النوم',
+  'du.lit': '{n} من {of}',
   'ak.credit': 'النص: hisnmuslim.com · الترجمة: دار السلام · القرآن: مجمع الملك فهد، صحيح إنترناشونال',
 };
 

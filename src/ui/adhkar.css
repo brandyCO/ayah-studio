@@ -72,3 +72,8 @@
 .ak-count.act .ak-center::after { opacity: .35; }
 .ak-count.act.met .ak-center::after { opacity: 1; }
 .ak-say { color: var(--accent); font-weight: inherit; }
+/* Bead ring (the 33s): the track and the arc give way to beads. */
+.ak-ring.beads .ak-track, .ak-ring.beads .ak-fill { opacity: 0; }
+.ak-beads circle { fill: color-mix(in srgb, var(--text) 16%, transparent); transition: fill .2s ease; }
+.ak-beads circle.on { fill: var(--accent); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.ak-beads circle.next { fill: color-mix(in srgb, var(--accent) 45%, transparent); }

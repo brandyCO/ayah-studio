@@ -16,6 +16,8 @@ import { akt, type AdhkarKey } from '../i18n/adhkar';
 import { lang, t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { chest } from './chest';
+import { popIn, squash } from './juice';
+import { sfx } from './sfx';
 
 const R = 54;
 const C = 2 * Math.PI * R;
@@ -75,6 +77,30 @@ async function runSession(cfg: SessionCfg) {
   ring.classList.add('ak-ring');
   ring.innerHTML = `<circle cx="60" cy="60" r="${R}" class="ak-track"/><circle cx="60" cy="60" r="${R}" class="ak-fill" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 60 60)"/>`;
   const fill = ring.lastElementChild as SVGCircleElement;
+  // The 33s (and the 34) are counted on a ring of beads, one lighting with each tap.
+  const beadsG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  beadsG.classList.add('ak-beads');
+  ring.append(beadsG);
+  let beadsFor = '';
+  const paintBeads = (d: Dua, n: number) => {
+    ring.classList.toggle('beads', !!d.beads);
+    if (!d.beads) { beadsG.replaceChildren(); beadsFor = ''; return; }
+    if (beadsFor !== d.id) {
+      beadsFor = d.id;
+      beadsG.replaceChildren(...Array.from({ length: d.count }, (_, k) => {
+        const a = -Math.PI / 2 + (k * 2 * Math.PI) / d.count;
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', (60 + R * Math.cos(a)).toFixed(2));
+        c.setAttribute('cy', (60 + R * Math.sin(a)).toFixed(2));
+        c.setAttribute('r', d.count > 40 ? '2.2' : '3.1');
+        c.style.transformOrigin = `${c.getAttribute('cx')}px ${c.getAttribute('cy')}px`;
+        return c;
+      }));
+    }
+    [...beadsG.children].forEach((c, k) => { c.classList.toggle('on', k < n); c.classList.toggle('next', k === n); });
+  };
+  // No sounds before sleeping (and none unless the user keeps reward sounds on: sfx checks).
+  const quiet = cfg.moment === 'sleep';
   const num = h('b', { class: 'ak-num' }, '0');
   const of = h('span', { class: 'ak-of' }, '');
   const gain = h('span', { class: 'ak-gain', 'aria-live': 'polite' }, '');
@@ -114,6 +140,7 @@ async function runSession(cfg: SessionCfg) {
     num.textContent = String(n);
     of.textContent = `/ ${d.count}`;
     fill.style.strokeDashoffset = String(C * (1 - n / d.count));
+    paintBeads(d, n);
     counter.classList.toggle('met', n >= d.count);
     counter.setAttribute('aria-label', d.act ? akt('du.didIt') : akt('ak.tapAria', { n, of: d.count }));
     counter.classList.toggle('act', !!d.act);
@@ -204,6 +231,12 @@ async function runSession(cfg: SessionCfg) {
     if (isDone(d)) { go(i + 1); return; }
     const n = say(p, d, 1, d.count);
     counter.classList.remove('bump'); void counter.offsetWidth; counter.classList.add('bump');
+    if (d.beads) {
+      const b = beadsG.children[n - 1];
+      if (b) popIn(b, { stiffness: 520, damping: 12 });
+      if (!quiet) sfx.tick();
+    }
+    if (n >= d.count) { squash(counter, 0.12); if (!quiet) sfx.shimmer(); }
     if (n >= d.count) completed(d);
     else { haptic(12); paintCounter(); }
   };
@@ -248,7 +281,7 @@ async function runSession(cfg: SessionCfg) {
       h('div', { class: 'ak-tools' }, meaningBtn, sizeBtn)),
     prayers, dots, body, foot);
   dialog.addEventListener('keydown', onKey);
-  dialog.addEventListener('close', () => { clearTimeout(advancing); dialog.remove(); });
+  dialog.addEventListener('close', () => { clearTimeout(advancing); dialog.remove(); window.dispatchEvent(new Event('journey-changed')); });
   window.addEventListener('hashchange', close, { once: true });
   document.body.append(dialog);
   dialog.showModal();
