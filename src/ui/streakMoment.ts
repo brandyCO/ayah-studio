@@ -7,7 +7,7 @@ import { t, type Key } from '../i18n';
 import { h } from './dom';
 import { flame, flameTier } from './flame';
 import { actor as makeActor } from './actor';
-import { bump, noor as makeNoor, popIn, squash } from './juice';
+import { bump, holdPage, noor as makeNoor, popIn, squash } from './juice';
 import { sfx } from './sfx';
 import './cel.css';
 import { sparks, type Sparks } from './sparks';
@@ -71,6 +71,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
       el.classList.add('out');
+      holdPage(false);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') close(); };
@@ -79,6 +80,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
+    holdPage(true);
     ok.focus({ preventScroll: true });
     if (still) {
       row.querySelector('.sm-slot')?.replaceWith(dayMark('lit'));

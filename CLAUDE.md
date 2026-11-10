@@ -1458,6 +1458,13 @@ duas/reflections section in Me.
       while idle; a tap during a non-chest moment plays the rest at once (`skip()`), a second tap closes; sparks watch the
       frame time and drop to half the sparks at 1× resolution when frames average > 26 ms; moving parts get GPU layers only
       while they move. Measured at 6× CPU throttle (Chromium): chest ~52 fps, lantern ~57, streak ~56
+      Smoothness pass (owner 2026-11-10, "a bit laggy … without losing any of the quality"): a moment's sky is opaque (no
+      full-screen backdrop blur, which was redone every frame); once it has faded in the screen behind is hidden and its
+      animations are paused (`holdPage()` in `juice.ts`: class `cel-held` on the animating elements, `cel-cover` on html),
+      released as the moment fades out; sparks keep their box size from a ResizeObserver (reading it each frame forced a
+      layout per frame); the chest beam lost a 2 px blur and the streak flame's 28 px drop-shadow became a soft light
+      behind it; the Me flame and badge shines pause off screen (`offscreen.ts`, `.anim-off`). 6× CPU throttle: chest
+      19 → 37 fps, big chest 22 → 40, lantern 28 → 48, streak 26 → 39, Me 37 → 48 (scrolling 44 → 56)
       **Feel pass** (owner OK 2026-11-10 after recordings): each sound carries its own vibration, sent after the audio output latency
       so both land together (vibration also with sounds off); pitch varies ±6 % each time, prizes landing in a row climb a
       pentatonic scale; from the third reward in a row (`combo()` ≥ 3) a chest takes one tap fewer, drops in and pours faster;

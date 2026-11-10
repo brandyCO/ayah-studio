@@ -1800,7 +1800,7 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .chest.t4.ready .ck-aura { animation: ck-aura 2.4s ease-in-out infinite, ck-spin 18s linear infinite; }
 .chest.ready::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; z-index: -1;
   background: radial-gradient(circle, color-mix(in srgb, var(--rw-n3, var(--accent)) 45%, transparent), transparent 68%); animation: ck-aura 2.4s ease-in-out infinite; }
-.chest.off, .chest.off * { animation-play-state: paused !important; }
+.chest.off, .chest.off *, .anim-off, .anim-off * { animation-play-state: paused !important; }
 .chest.ready .ck-amt { color: #fff; background: var(--rw-hero, var(--accent)); box-shadow: none; }
 @keyframes ck-shake { 0%, 52%, 100% { transform: none; } 56% { transform: translateY(-3px) rotate(calc(var(--w) * -1)); } 61% { transform: translateY(-3px) rotate(var(--w)); }
   66% { transform: translateY(-2px) rotate(calc(var(--w) * -.7)); } 71% { transform: translateY(-1px) rotate(calc(var(--w) * .45)); } 76% { transform: rotate(calc(var(--w) * -.2)); } 80% { transform: none; } }

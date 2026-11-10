@@ -3,6 +3,7 @@
 // are drawn in grey. SVG + CSS only.
 import type { BadgeIcon, BadgeTier } from '../data/badges';
 import { circlePath, edge, shine, starPath, two } from './flat';
+import { restOffscreen } from './offscreen';
 
 let uid = 0;
 
@@ -57,5 +58,6 @@ export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size =
     ${icon(icn, '34 34')}
     ${earned ? `<g clip-path="url(#${id}c)"><rect class="bd-shine" x="-60" y="-10" width="40" height="120" fill="url(#${id}s)" transform="rotate(20 50 50)"/></g>` : ''}
   </svg>`;
+  if (earned) restOffscreen(el);
   return el;
 }

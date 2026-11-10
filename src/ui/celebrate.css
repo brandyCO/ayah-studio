@@ -7,7 +7,7 @@
   -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%); mask: radial-gradient(circle, #000 18%, transparent 66%); }
 .cel-chest-beam { position: absolute; left: 50%; bottom: 46%; width: 46%; height: 120%; translate: -50% 0; pointer-events: none; opacity: 0;
   transform-origin: 50% 100%; background: linear-gradient(to top, color-mix(in srgb, var(--rw-core) 90%, transparent), color-mix(in srgb, var(--rw-hi) 30%, transparent) 55%, transparent);
-  -webkit-mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); filter: blur(2px); }
+  -webkit-mask: linear-gradient(90deg, transparent, #000 34%, #000 66%, transparent); mask: linear-gradient(90deg, transparent, #000 34%, #000 66%, transparent); }
 .cel-chest-box { position: absolute; inset: 0; }
 .cel.go:not(.cel-chest) .cel-chest-box { animation: cel-chest-in .6s cubic-bezier(.2, 1.4, .4, 1) both; transform-origin: 50% 88%; }
 /* Tapped open by hand: the chest nudges now and then until the first tap; each tap jolts it (WAAPI on

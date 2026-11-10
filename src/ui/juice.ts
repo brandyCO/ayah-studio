@@ -107,3 +107,37 @@ export function noor(cls = ''): Noor {
     glow(l) { level = Math.max(0, Math.min(1, l)); el.style.setProperty('--nr', String(level)); },
   };
 }
+
+/** While a full-screen moment plays, the screen behind it holds still (its animations pause) and, once the
+ *  moment's opaque sky has faded in, is not drawn at all, so a phone only draws the moment. Released as the moment
+ *  starts to fade out. Counted, so two moments in a row hand over cleanly. */
+let held = 0, coverT = 0;
+let paused: Animation[] = [];
+let heldEls: Element[] = [];
+export function holdPage(on: boolean) {
+  held = Math.max(0, held + (on ? 1 : -1));
+  const root = document.documentElement;
+  clearTimeout(coverT);
+  // Once the sky covers the screen (not in the moment's first frames, which are busy enough). Only the elements that
+  // are animating get a class (a rule pausing every element would restyle the whole page at once); CSS animations are
+  // paused by that class, not by pause(), which would stop CSS from pausing them off screen later.
+  if (held > 0) coverT = window.setTimeout(() => {
+    if (held <= 0 || root.classList.contains('cel-cover')) return;
+    const els = new Set<Element>();
+    for (const a of document.getAnimations()) {
+      const el = (a.effect as KeyframeEffect | null)?.target;
+      if (a.playState !== 'running' || !el || el.closest('.cel, .lt-fly-layer')) continue;
+      if (a instanceof CSSAnimation) els.add(el);
+      else { a.pause(); paused.push(a); }
+    }
+    heldEls = [...els];
+    for (const el of heldEls) el.classList.add('cel-held');
+    root.classList.add('cel-cover');
+  }, 340);
+  else {
+    root.classList.remove('cel-cover');
+    for (const el of heldEls) el.classList.remove('cel-held');
+    for (const a of paused) try { a.play(); } catch { /* removed meanwhile */ }
+    paused = []; heldEls = [];
+  }
+}
