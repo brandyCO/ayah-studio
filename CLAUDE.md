@@ -1524,6 +1524,19 @@ duas/reflections section in Me.
       "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
       glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
       No sound, light vibration; reduced motion → the end picture
+      **Characters** (owner request 2026-11-10, "users build their own character"; faces: the user's choice, off by default):
+      `src/ui/figure.ts` draws a person from parts in the reward art style (two-tone shapes, light from the top left, ground
+      shadow): man / woman / boy / girl, 8 skins, hair (bald, short, curly, swept, long, bun) + 6 colours, beard (short / full /
+      long), headwear (kufi, shemagh, turban, hijab, niqab, knit cap) + 8 colours, outfit (thobe, kurta + vest, hoodie, abaya,
+      embroidered abaya, champion's bisht / gold abaya) + 10 colours, glasses, holding (masbaha, mushaf, book stand, du'a hands,
+      lantern), standing / sitting, 8 disc backgrounds; a hijab or niqab for women, girls may go without. Code = 14 base-36
+      digits (`encode()` / `parse()`). Builder `src/ui/figureBuilder.ts` (+ `figure.css`; Ranks → Your avatar → Make your
+      character): big preview that hops with a pop at each change, part tabs with drawn tiles, swatches, No face / Face, Surprise me,
+      Wear it. Light parts (turban 150, kurta + vest 120, embroidered abaya 120, lantern 100, two backgrounds 80 / 120) are bought on
+      Wear it (`fg:{slot}:{v}` in the shop); the champion outfit needs a week won at #1. On the boards the character's head and
+      shoulders sit in the avatar disc inside the frame (`avatar(…, figure)`). Migration `20261110710000_rank_figures.sql`
+      (`rank_players.figure`, `rank_set_figure` checks the format and the prize outfit, `rank_my_figure`, `rank_face` adds it;
+      pgTAP +7). Kept on the device as `rankFigure`; picking a disc again takes the character off
 - [x] M13 Full of life (owner choice 2026-11-09, design canvas "Ayah Studio, full of life"): each place has its colour —
       Read teal #12a594, Learn green #4caf2a, Create coral #ff6b4a, Ranks violet #6c5ce7, Me amber #f59f00 — on the tab bar
       (active icon in a tinted pill, Create a coral raised button with a solid edge), chunky buttons and chips (a darker
