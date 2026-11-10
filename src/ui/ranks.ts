@@ -653,4 +653,5 @@ export async function showChallengeInvite(root: HTMLElement, code: string): Prom
 
 /** #/ranks, #/rb/{code} (a board invite) and #/rc/{code} (a friend challenge). */
 export const ranksRoute = (root: HTMLElement, view: string, code?: string) =>
-  view === 'rb' ? showBoardInvite(root, code!) : view === 'rc' ? showChallengeInvite(root, code!) : showRanks(root);
+  view === 'rb' ? showBoardInvite(root, code!) : view === 'rc' ? showChallengeInvite(root, code!)
+    : view === 'bp' ? import('./pact').then((m) => m.showPactInvite(root, code!)) : showRanks(root);

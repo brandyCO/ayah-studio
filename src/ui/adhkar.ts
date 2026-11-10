@@ -218,7 +218,7 @@ async function runSession(cfg: SessionCfg) {
     paintDots();
     const all = list.every(isDone);
     if (all && (p === 's' || p === 'm')) setAdhkar(true, p);
-    if (all && cfg.moment === 'sleep') bedtimeSaid();
+    if (all && cfg.moment === 'sleep') { bedtimeSaid(); void import('../together/pacts').then((m) => m.markTonight()); }
     if (all && cfg.moment) markMoment(p);
     clearTimeout(advancing);
     advancing = window.setTimeout(() => {
