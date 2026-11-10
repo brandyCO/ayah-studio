@@ -54,6 +54,45 @@ const svg = (box: number, inner: string) => {
   el.innerHTML = inner;
   return el;
 };
+// Speed (owner 2026-11-10, "60fps, every animation"): the parts that keep moving for the whole moment — the
+// lantern's sway, the rosette's turning ring, the Khatm halo, the medal's rays — are lifted out of the drawing
+// into HTML layers (each an SVG copy with the same view-box, stacked in order), which the compositor moves
+// without repainting the picture.
+const LIFT = ['cel-lantern', 'cel-ring', 'cel-halo', 'cel-rays'];
+const isMotes = (k: Element) => k.tagName === 'g' && k.children.length > 0 && [...k.children].every((c) => c.classList.contains('cel-mote'));
+function lift(el: SVGSVGElement): Element {
+  const kids = [...el.children];
+  if (!kids.some((k) => isMotes(k) || LIFT.some((c) => k.classList.contains(c)))) return el;
+  const vb = el.viewBox.baseVal.width || 200;
+  const box = h('span', { class: 'cel-svgs', 'aria-hidden': 'true' });
+  let run: Element[] = [];
+  const copy = (nodes: Element[]) => {
+    const c = el.cloneNode(false) as SVGSVGElement;
+    c.append(...nodes);
+    return c;
+  };
+  const flush = () => { if (run.length) box.append(copy(run)); run = []; };
+  for (const k of kids) {
+    // Rising motes become small HTML lights (same place, size and colour), each moved by the compositor.
+    if (isMotes(k)) {
+      flush();
+      const fill = k.getAttribute('fill') ?? '#fff';
+      box.append(h('span', { class: 'cel-motes', style: `--vb:${vb}` }, ...[...k.children].map((m) => {
+        const cx = +m.getAttribute('cx')!, cy = +m.getAttribute('cy')!, r = +m.getAttribute('r')!;
+        const st = (m as SVGElement).style;
+        return h('i', { class: 'cel-mote', style: `left:${((cx - r) / vb) * 100}%;top:${((cy - r) / vb) * 100}%;width:${(2 * r / vb) * 100}%;height:${(2 * r / vb) * 100}%;background:${fill};--d:${st.getPropertyValue('--d')};--yu:${parseFloat(st.getPropertyValue('--y'))}` });
+      })));
+      continue;
+    }
+    const c = LIFT.find((x) => k.classList.contains(x));
+    if (!c) { run.push(k); continue; }
+    flush();
+    k.classList.remove(c);
+    box.append(h('span', { class: `cel-ly ${c}` }, copy([k])));
+  }
+  flush();
+  return box;
+}
 const motes = (n: number, cx: number, cy: number, spread: number) => Array.from({ length: n }, (_, i) =>
   `<circle class="cel-mote" cx="${cx + (((i * 37) % (spread * 2)) - spread)}" cy="${cy}" r="${1.6 + (i % 3) * 0.8}" style="--d:${(0.9 + ((i * 0.13) % 0.9)).toFixed(2)}s;--y:${-70 - ((i * 23) % 60)}px"/>`).join('');
 
@@ -72,7 +111,7 @@ const square = (cx: number, cy: number, r: number, rot: number) => Array.from({ 
 }).join(' ');
 
 function lanternArt() {
-  return svg(200, `
+  return lift(svg(200, `
     <defs>
       <radialGradient id="celG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.core}" stop-opacity=".95"/><stop offset=".4" stop-color="${P.n3}" stop-opacity=".45"/><stop offset="1" stop-color="${P.n1}" stop-opacity="0"/></radialGradient>
       <linearGradient id="celL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${P.n1}"/><stop offset=".5" stop-color="${P.hi}"/><stop offset="1" stop-color="${P.n1}"/></linearGradient>
@@ -87,7 +126,7 @@ function lanternArt() {
       <path d="M90 154H110L106 162H94Z" fill="${P.deep2}"/>
       <path d="M100 162V178" stroke="${P.n3}" stroke-width="2" stroke-linecap="round"/>
     </g>
-    <g fill="${P.n3}">${motes(14, 100, 104, 46)}</g>`);
+    <g fill="${P.n3}">${motes(14, 100, 104, 46)}</g>`));
 }
 
 function starArt() {
@@ -97,7 +136,7 @@ function starArt() {
     const a = (i * Math.PI) / 4 - Math.PI / 2;
     return `<line class="cel-draw" pathLength="1" style="--d:${(0.9 + i * 0.05).toFixed(2)}s" x1="${(100 + 26 * Math.cos(a)).toFixed(1)}" y1="${(100 + 26 * Math.sin(a)).toFixed(1)}" x2="${(100 + 52 * Math.cos(a)).toFixed(1)}" y2="${(100 + 52 * Math.sin(a)).toFixed(1)}"/>`;
   }).join('');
-  return svg(200, `
+  return lift(svg(200, `
     <defs>
       <radialGradient id="celS" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="${P.core}"/><stop offset=".55" stop-color="${P.n3}"/><stop offset="1" stop-color="${P.n1}"/></radialGradient>
       <radialGradient id="celSg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.n3}" stop-opacity=".55"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
@@ -111,7 +150,7 @@ function starArt() {
     </g>
     <polygon class="cel-fill" points="${starPoints(100, 100, 50, 38)}" fill="url(#celS)" stroke="${P.hi}" stroke-width="1.5"/>
     <circle class="cel-fill" cx="100" cy="100" r="16" fill="${P.core}"/>
-    <g fill="${P.n3}">${motes(12, 100, 100, 60)}</g>`);
+    <g fill="${P.n3}">${motes(12, 100, 100, 60)}</g>`));
 }
 
 function rosetteArt(khatm = false) {
@@ -123,7 +162,7 @@ function rosetteArt(khatm = false) {
     const a = (i * Math.PI) / 12;
     return `<circle cx="${(120 + 108 * Math.cos(a)).toFixed(1)}" cy="${(120 + 108 * Math.sin(a)).toFixed(1)}" r="2"/>`;
   }).join('');
-  return svg(240, `
+  return lift(svg(240, `
     <defs>
       <linearGradient id="celP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.hi}" stop-opacity=".95"/><stop offset="1" stop-color="${P.n1}" stop-opacity=".55"/></linearGradient>
       <radialGradient id="celPg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.hi}" stop-opacity=".55"/><stop offset=".6" stop-color="${P.n3}" stop-opacity=".18"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
@@ -138,16 +177,16 @@ function rosetteArt(khatm = false) {
       <polygon class="cel-draw" pathLength="1" style="--d:.85s" points="${square(120, 120, 98, 0)}"/>
       <circle class="cel-draw" pathLength="1" style="--d:1s" cx="120" cy="120" r="62"/>
     </g>
-    <g fill="${P.n3}">${motes(16, 120, 120, 80)}</g>`);
+    <g fill="${P.n3}">${motes(16, 120, 120, 80)}</g>`));
 }
 
 function raysArt() {
   const rays = Array.from({ length: 16 }, (_, i) =>
     `<path transform="rotate(${i * 22.5} 100 100)" d="M100 100L95 6H105Z" opacity="${i % 2 ? 0.35 : 0.6}"/>`).join('');
-  return svg(200, `
+  return lift(svg(200, `
     <defs><radialGradient id="celR" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.n3}" stop-opacity=".9"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient></defs>
     <g class="cel-rays" fill="url(#celR)">${rays}</g>
-    <g fill="${P.n3}">${motes(10, 100, 100, 50)}</g>`);
+    <g fill="${P.n3}">${motes(10, 100, 100, 50)}</g>`));
 }
 
 /** Cracks drawn over the chest (same viewBox as `chestArt`), lit one by one as it is tapped. */
@@ -395,7 +434,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         { transform: `rotate(${-a * 0.35}deg)`, offset: 0.82 },
         { transform: 'none' },
       ], { duration: 440 + tier * 30, easing: 'ease-out' });
-      jolt!.querySelector('.ck-lid')?.animate([{ transform: 'none' }, { transform: `translateY(${-2 - taps * 1.5}px) rotate(${-2 - taps}deg)`, offset: 0.4 }, { transform: 'none' }], { duration: 420 });
+      jolt!.querySelector('.ck-lid')?.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `0 ${((-2 - taps * 1.5) / 0.76).toFixed(2)}%`, rotate: `${-2 - taps}deg`, offset: 0.4 }, { translate: '0 0', rotate: '0deg' }], { duration: 420 });
       const lit = Math.ceil((taps / TAPS) * paths.length);
       paths.forEach((p, i) => p.classList.toggle('on', i < lit));
       stage.style.setProperty('--crack', String(taps / TAPS));

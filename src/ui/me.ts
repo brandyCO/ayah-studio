@@ -196,7 +196,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       a.el.setAttribute('role', 'button');
       a.el.setAttribute('aria-hidden', 'true');
       if (look.mode === 'asleep') {
-        a.el.querySelector('svg')?.classList.add('sleepy');
+        m.poseClass(a.el, 'sleepy', true);
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
       a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); });

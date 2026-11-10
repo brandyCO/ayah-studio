@@ -5,7 +5,6 @@ import type { BadgeIcon, BadgeTier } from '../data/badges';
 import { circlePath, edge, shine, starPath, two } from './flat';
 import { restOffscreen } from './offscreen';
 
-let uid = 0;
 
 // edge, shade, base, light, the inner disc (base, shade), icon
 const METALS: Record<BadgeTier, [string, string, string, string, string, string, string]> = {
@@ -35,8 +34,14 @@ const ICONS: Record<BadgeIcon, string> = {
 const OUTER = starPath(50, 50, 46, 35.4);
 const INNER = starPath(50, 50, 39, 30);
 
+// Speed (owner 2026-11-10, "60fps, every animation"): the passing shine is an HTML layer over the drawing,
+// cut to the medallion's outline by a mask, so the compositor slides it across without repainting the badge.
+const SHINE_MASK = (() => {
+  const m = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='${OUTER}'/></svg>`)}")`;
+  return `-webkit-mask:${m} center/100% 100% no-repeat;mask:${m} center/100% 100% no-repeat`;
+})();
+
 export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size = 72): HTMLElement {
-  const id = `bd${++uid}`;
   const [edgeC, shade, base, light, dBase, dShade, icn] = METALS[tier];
   const el = document.createElement('span');
   el.className = `badge-art${earned ? ' earned' : ' locked'}`;
@@ -45,8 +50,6 @@ export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size =
   const icon = (stroke: string, move: string) => `<g transform="translate(${move}) scale(1.333)" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="--bd-ic:${stroke}">${ICONS[ic]}</g>`;
   el.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">
     <defs>
-      <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-      <clipPath id="${id}c"><path d="${OUTER}"/></clipPath>
     </defs>
     ${edge(OUTER, edgeC, 4)}
     ${two(OUTER, base, shade, -4, -4)}
@@ -56,8 +59,7 @@ export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size =
     ${shine('M30 38A22 22 0 0 1 44 27', 3, .5)}
     <g class="bd-ic-shade" opacity=".45">${icon('#000', '34.6 35.2')}</g>
     ${icon(icn, '34 34')}
-    ${earned ? `<g clip-path="url(#${id}c)"><rect class="bd-shine" x="-60" y="-10" width="40" height="120" fill="url(#${id}s)" transform="rotate(20 50 50)"/></g>` : ''}
-  </svg>`;
-  if (earned) restOffscreen(el);
+  </svg>${earned ? '<span class="bd-shine-l"><i class="bd-shine"></i></span>' : ''}`;
+  if (earned) { (el.querySelector('.bd-shine-l') as HTMLElement).style.cssText = SHINE_MASK; restOffscreen(el); }
   return el;
 }

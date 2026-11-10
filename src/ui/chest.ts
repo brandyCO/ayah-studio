@@ -11,6 +11,7 @@
 import { h } from './dom';
 import { circlePath, edge, shine, starPath, two } from './flat';
 import { rewardPalette } from './theme';
+import './chest.css';
 
 export type ChestTier = 0 | 1 | 2 | 3 | 4;
 export type ChestState = 'locked' | 'ready' | 'open';
@@ -32,15 +33,14 @@ const rr = (x: number, y: number, w: number, h: number, r: number) =>
   `M${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h - r}Q${x + w} ${y + h} ${x + w - r} ${y + h}H${x + r}Q${x} ${y + h} ${x} ${y + h - r}V${y + r}Q${x} ${y} ${x + r} ${y}Z`;
 
 /** The chest picture (viewBox 80 × 76), in the characters' flat two-tone style. The lid is its own group
- *  (`.ck-lid`) so it can open; the shapes keep their places so the moment's cracks line up. */
-export function chestArt(tier: ChestTier): SVGSVGElement {
+ *  (`.ck-lid`) so it can open; the shapes keep their places so the moment's cracks line up.
+ *  Speed (owner 2026-11-10, "60fps, every animation"): the picture is a stack of SVGs with the same view-box —
+ *  aura, shadow, the light in the seam, box, lid, four glints — and every moving part is an HTML layer
+ *  (`span.ck-aura`, `.ck-mouth`, `.ck-lid`, `.ck-gl`) the compositor moves without repainting anything. */
+export function chestArt(tier: ChestTier): HTMLElement {
   const m = MATS[tier];
   const P = rewardPalette();
   const id = `ck${++uid}`;
-  const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  el.setAttribute('viewBox', '0 0 80 76');
-  el.setAttribute('aria-hidden', 'true');
-  el.classList.add('ck-art');
   const [mb, ms] = m.metal;
   const box = rr(11, 36, 58, 31, 5);
   const lid = 'M10 37V27Q10 13 40 13Q70 13 70 27V37Z';
@@ -51,14 +51,14 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
   const gem = (x: number, y: number, c: string, d: string) =>
     `${two(circlePath(x, y, 2.6), c, d, -0.8, -0.8)}<circle cx="${x - .9}" cy="${y - .9}" r=".8" fill="#fff" opacity=".9"/>`;
   const plate = (x: number, y: number, w: number, h: number) => two(rr(x, y, w, h, 1.4), mb, ms, -1.2, -1.2);
+  const grad = `<radialGradient id="${id}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.core}"/><stop offset=".45" stop-color="${P.hi}" stop-opacity=".8"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>`;
+  const sv = (inner: string, vb = '0 0 80 76') => `<svg viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
+  const el = h('span', { class: 'ck-art', 'aria-hidden': 'true' });
   el.innerHTML = `
-    <defs>
-      <radialGradient id="${id}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${P.core}"/><stop offset=".45" stop-color="${P.hi}" stop-opacity=".8"/><stop offset="1" stop-color="${P.n3}" stop-opacity="0"/></radialGradient>
-    </defs>
-    <g class="ck-aura">${m.glow ? Array.from({ length: 12 }, (_, i) => `<path transform="rotate(${i * 30} 40 40)" d="M40 40L37.5 2H42.5Z" fill="${P.hi}" opacity="${i % 2 ? .18 : .32}"/>`).join('') : ''}<circle cx="40" cy="40" r="34" fill="url(#${id}g)" opacity=".5"/></g>
-    <ellipse class="ck-shadow" cx="40" cy="71.5" rx="28" ry="3.8" fill="#000" fill-opacity=".2"/>
-    <g class="ck-box">
-      <ellipse class="ck-mouth" cx="40" cy="37" rx="27" ry="6" fill="url(#${id}g)"/>
+    <span class="ck-aura">${sv(`<defs>${grad}</defs>${m.glow ? Array.from({ length: 12 }, (_, i) => `<path transform="rotate(${i * 30} 40 40)" d="M40 40L37.5 2H42.5Z" fill="${P.hi}" opacity="${i % 2 ? .18 : .32}"/>`).join('') : ''}<circle cx="40" cy="40" r="34" fill="url(#${id}g)" opacity=".5"/>`)}</span>
+    ${sv(`<ellipse class="ck-shadow" cx="40" cy="71.5" rx="28" ry="3.8" fill="#000" fill-opacity=".2"/>`)}
+    <span class="ck-mouth">${sv(`<ellipse cx="40" cy="37" rx="27" ry="6" fill="url(#${id}g)"/>`)}</span>
+    ${sv(`<g class="ck-box">
       ${edge(box, m.edge, 3)}
       ${two(box, m.body[0], m.body[1], -3, -3)}
       ${planks}
@@ -69,8 +69,8 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
       ${edge(lock, m.edge, 1.6)}${two(lock, mb, ms, -1.6, -1.6)}
       <circle cx="40" cy="43" r="2.2" fill="${m.edge}"/><path d="M39.1 43.8L38.5 48.4H41.5L40.9 43.8Z" fill="${m.edge}"/>
       ${shine('M14.5 59V46', 2.2, .3)}
-    </g>
-    <g class="ck-lid">
+    </g>`)}
+    <span class="ck-lid">${sv(`
       ${two(lid, m.body[0], m.body[1], -3, -3)}
       ${lidPlank}
       ${shine('M15 21.5Q22 16.8 36 16.2', 2.4, .4)}
@@ -78,10 +78,10 @@ export function chestArt(tier: ChestTier): SVGSVGElement {
       ${two('M62 37V18.2Q59.5 16.6 56 15.9V37Z', mb, ms, -1.2, -1.2)}
       ${edge(rr(9, 33, 62, 5, 2), m.edge, 1.4)}${two(rr(9, 33, 62, 5, 2), mb, ms, -1, -1.2)}
       ${m.star ? `<g class="ck-star">${edge(starPath(40, 24.5, 7.8, 5.6), m.edge, 1.2)}${two(starPath(40, 24.5, 7.8, 5.6), mb, ms, -1.4, -1.4)}</g><circle cx="40" cy="24.5" r="2.3" fill="${m.glow ? P.core : m.edge}"/>` : ''}
-      ${m.gems ? gem(21, 26, '#6fe0f5', '#1f9cc0') + gem(59, 26, '#ff6b7d', '#c32a43') : ''}
-    </g>
-    ${m.glow || tier >= 2 ? `<g class="ck-glints" fill="#fff">${[[16, 12], [66, 16], [70, 44], [9, 50]].map(([x, y], i) => `<path style="--i:${i}" d="M${x} ${y - 3}L${x + .8} ${y - .8}L${x + 3} ${y}L${x + .8} ${y + .8}L${x} ${y + 3}L${x - .8} ${y + .8}L${x - 3} ${y}L${x - .8} ${y - .8}Z"/>`).join('')}</g>` : ''}`;
-  return el as SVGSVGElement;
+      ${m.gems ? gem(21, 26, '#6fe0f5', '#1f9cc0') + gem(59, 26, '#ff6b7d', '#c32a43') : ''}`)}</span>
+    ${m.glow || tier >= 2 ? `<span class="ck-glints">${[[16, 12], [66, 16], [70, 44], [9, 50]].map(([x, y], i) =>
+      `<span class="ck-gl" style="--i:${i};left:${((x - 3) / 0.8).toFixed(2)}%;top:${((y - 3) / 0.76).toFixed(2)}%">${sv('<path fill="#fff" d="M0 -3L.8 -.8L3 0L.8 .8L0 3L-.8 .8L-3 0L-.8 -.8Z"/>', '-3 -3 6 6')}</span>`).join('')}</span>` : ''}`;
+  return el;
 }
 
 // A ready chest shakes for ever: pause it while it is off screen, so a long Me page stays smooth.
