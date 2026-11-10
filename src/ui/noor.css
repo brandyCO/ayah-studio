@@ -8,7 +8,7 @@
 [dir='rtl'] .noor-say { border-radius: 16px 16px 4px 16px; }
 @media (prefers-color-scheme: dark) { .noor-say { background: #22262b; color: #f1ead8; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); } }
 @keyframes noor-in { from { opacity: 0; translate: 0 6px; } }
-@keyframes noor-breathe { 50% { scale: 1.12; filter: brightness(1.12); } }
+@keyframes noor-breathe { 50% { scale: 1.12; opacity: .88; } }
 @media (prefers-reduced-motion: reduce) { .noor-line, .noor-dot { animation: none; } }
 .noor-line.at-me { margin: 0 2px 14px; }
 .noor-line.at-create { margin-top: 14px; }

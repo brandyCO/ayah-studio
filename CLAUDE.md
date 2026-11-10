@@ -1495,6 +1495,19 @@ duas/reflections section in Me.
       the Monday recap. **Learn path** (`src/ui/pathBuddy.ts`, one call in `learnPath.ts`): stands beside the current step and
       waves; sits under a tree that just grew and cheers; under the last tree when every step is done. **Friend challenges**:
       both characters face each other on steps sized by points (`duo()` in `ranks.ts`); the leader cheers, the other waves
+      **Round 3** (owner "all do them", 2026-11-10): **Decorate your room** (`src/data/roomItems.ts`, `src/ui/roomArt.ts`,
+      `src/ui/roomShop.ts`, lazy): 19 pieces in five places (plant, side piece, rug, curtains, hanging lantern), common / rare /
+      epic for Light (60–300, `rm:{id}` in the shop's owned list, synced), and bronze / silver / gold lanterns only for a week in a
+      league's top 3 / 2 / 1 (`prizeWins()`); one piece per place, this device's choice (localStorage `roomLook`); the sheet shows the
+      room live on top with the character sitting in it. **Seasonal room** (`seasonArt()`, `seasonNow()`): Ramadan fanous garland +
+      a crescent in the window, Eid pennants and lights, Dhul Hijjah white and green pennants. **Gestures in friend challenges**
+      (no chat): Salam, MashaAllah, Keep going, a du'a, Race you — one tap, ≤ 5 a day, your character acts it with a bubble, the
+      friend's acts the one they sent once when the card comes into view (`src/ui/cheers.ts`, migration
+      `20261111100000_rank_cheers.sql`: `rank_challenge_cheer`, `rank_challenge_cheers`, table without access; pgTAP
+      `rank_cheers.test.sql`, 10 checks). **Big milestones**: the character cheers beside the rosette and Khatm moments and on the
+      surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
+      after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
+      Me idle at 6× CPU throttle ~880 → ~1 ms/s
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

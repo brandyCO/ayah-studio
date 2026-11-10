@@ -62,7 +62,9 @@
 .dl-stop.now .dl-body { stroke: var(--accent); stroke-width: 2; }
 .dl-stop.now .dl-name { color: var(--accent); }
 .dl-stop.now svg { animation: dl-breathe 2.4s ease-in-out infinite; }
-@keyframes dl-breathe { 50% { transform: translateY(-2px); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); } }
+@keyframes dl-breathe { 50% { transform: translateY(-2px); } }
+/* Speed (round 3): only transform moves, so the breathing lantern is moved by the compositor, not repainted. */
+.dl-stop.now svg { will-change: transform; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 45%, transparent)); }
 .dl-adhan { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) { .dl-stop.now svg { animation: none; } }
 /* Bedtime pact (src/ui/pact.ts) */

@@ -7,7 +7,7 @@ import { todayGoals } from '../data/goals';
 import { surahName, t } from '../i18n';
 import { h, haptic } from './dom';
 import { bustMarkup, parse } from './figure';
-import { myFigureCode } from './actor';
+import { actor, myFigureCode } from './actor';
 
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -50,6 +50,9 @@ export function finished(surahs: SurahMeta[], juz: number[]) {
     h('div', { class: 'done-row' },
       h('a', { class: 'chip', href: '#/me', onclick: close }, t('pm.seeMe')),
       h('button', { class: 'primary brand-btn', onclick: close }, t('pm.continue'))));
+  // The character joins in: it pops up in the card's corner and cheers (round 3, big milestones).
+  const me = actor('done-actor');
+  if (me) { card.prepend(me.el); setTimeout(() => me.cheer(juz.length ? 2600 : 2000), 520); }
   document.body.append(card);
   haptic(14);
   requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('show')));

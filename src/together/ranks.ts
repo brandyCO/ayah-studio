@@ -201,6 +201,15 @@ export async function cancelChallenge(id: string) {
 export const challengePreview = (code: string) =>
   rpc<{ from: Row; taken: boolean; expired: boolean; mine: boolean; joined: boolean } | null>('rank_challenge_preview', { ch_code: code.toLowerCase() });
 export const challengeLink = (code: string) => shareableLink(`#/rc/${code}`);
+/** A gesture between the two players of a running challenge (0 wave, 1 MashaAllah, 2 keep going, 3 du'a, 4 race). */
+export interface Cheer { ch: string; kind: number; at: string; mine: boolean }
+export const myCheers = (fresh = false) => cached('cheers', () => rpc<Cheer[]>('rank_challenge_cheers'), fresh);
+/** Sends a gesture; returns how many are left today (5 a day). */
+export async function sendCheer(ch: string, kind: number): Promise<number> {
+  const n = await rpc<number>('rank_challenge_cheer', { ch, kind });
+  cache.delete('cheers');
+  return n;
+}
 /** Claims a finished challenge's Light once (winner 100, tie 60, otherwise 30). */
 export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 'tie' | 'lost'; light: number } | null> {
   const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });

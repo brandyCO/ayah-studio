@@ -15,7 +15,8 @@ import {
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
-import { actor, hop as hopFig } from './actor';
+import { actor, hop as hopFig, type Actor } from './actor';
+import { gestureRow } from './cheers';
 import { freezeArt } from './flat';
 import { pieceArt } from './wardrobeCard';
 import { grantPiece } from '../data/wardrobe';
@@ -578,10 +579,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // step; when the card comes into view the leader cheers and the other waves (a tie: both wave), and once it is
   // over the winner cheers and the other claps them on. Only when both have a character and the friend's is not
   // private.
-  function duo(me: number, them: number, friend: Row | null): HTMLElement | '' {
-    if (status?.private || !friend || friend.private) return '';
+  function duo(me: number, them: number, friend: Row | null): { el: HTMLElement; a: Actor; b: Actor } | null {
+    if (status?.private || !friend || friend.private) return null;
     const a = actor('rk-duo-a mine', status?.figure ?? null), b = a ? actor('rk-duo-a theirs', friend.figure ?? null) : null;
-    if (!a || !b) return '';
+    if (!a || !b) return null;
     const top = Math.max(1, me, them);
     const step = (n: number) => h('span', { class: 'rk-duo-step', style: `--h:${6 + Math.round((n / top) * 30)}px` });
     const el = h('div', { class: 'rk-duo', 'aria-hidden': 'true' },
@@ -594,7 +595,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       setTimeout(() => { lead.cheer(); setTimeout(() => other.wave(), 450); }, 300);
     }, { threshold: 0.6 });
     io.observe(el);
-    return el;
+    return { el, a, b };
   }
   function challengeBox(list: Challenge[]): HTMLElement {
     const live = list.filter((c) => !c.expired && !(c.over && c.claimed));
@@ -620,12 +621,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('b', { 'aria-label': `${label}: ${num(n)}` }, num(n)));
       const claim = c.over && !c.claimed ? h('button', { class: 'primary brand-btn rk-ch-claim' }, chestArt(chestTier(me > them ? 100 : me === them ? 60 : 30)), ` ${rt('rk.chClaim')}`) : null;
       claim?.addEventListener('click', () => void openChallenge(c, claim));
+      const cast = duo(me, them, c.friend);
       return h('div', { class: `rk-ch me-card${c.over ? ' over' : ''}` },
         h('div', { class: 'me-row' }, h('b', {}, rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
-        duo(me, them, c.friend),
+        cast?.el ?? '',
         bar(me, true, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 30, status?.frame ?? 0, status?.figure), rt('rk.you')),
         bar(them, false, avatar(c.friend?.private ? null : c.friend?.avatar ?? 0, c.friend?.tier ?? 0, 30, c.friend?.frame ?? 0, c.friend?.figure), who),
-        h('p', { class: 'small rk-ch-line' }, line), claim ?? '');
+        h('p', { class: 'small rk-ch-line' }, line), claim ?? '',
+        c.over ? '' : gestureRow(c, cast, who));
     };
     return h('section', { class: 'rk-chs' },
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, rt('rk.chs')),
