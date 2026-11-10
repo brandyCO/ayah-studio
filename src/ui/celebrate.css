@@ -101,3 +101,8 @@
 @keyframes cel-rare-tag { from { transform: scale(0); } }
 @keyframes cel-rare-shine { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .cel::after { display: none; } }
+/* The user's character beside the chest (actor.ts). */
+.cel-stage .cel-actor { inset-inline-start: -36%; bottom: -4%; width: 46%; z-index: 3; }
+.cel.go .cel-stage .cel-actor { animation: cel-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .45s both; }
+@keyframes cel-actor-in { from { transform: translateY(30px) scale(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cel.go .cel-stage .cel-actor { animation: none; } }

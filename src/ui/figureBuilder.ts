@@ -12,6 +12,7 @@ import {
 } from './figure';
 import { h, haptic, toast } from './dom';
 import { reduced } from './juice';
+import { glance, hop, nod, sparkle } from './actor';
 import { sfx } from './sfx';
 import './figure.css';
 
@@ -31,53 +32,6 @@ function disc(f: Fig, size: number) {
   const s = h('span', { class: 'fb-disc', 'aria-hidden': 'true' });
   s.innerHTML = `<svg viewBox="2 2 36 36" width="${size}" height="${size}">${bustMarkup(f, 18)}</svg>`;
   return s;
-}
-
-// The character's reactions (feel pass, owner request 2026-11-10). All WAAPI on the SVG groups, so they ride on
-// top of the CSS idle loop (bob, breath shadow, head sway, blink): a hop with crouch, stretch and a squash on
-// landing; a little nod; a glance; a cheer with sparkles; and an idle fidget every few seconds.
-const acts = (stage: HTMLElement) => ({
-  act: stage.querySelector<SVGGElement>('.fg-act'),
-  head: stage.querySelector<SVGGElement>('.fg-head'),
-  eyes: stage.querySelector<SVGGElement>('.fg-eyes'),
-  shadow: stage.querySelector<SVGEllipseElement>('.fg-shadow'),
-});
-function hop(stage: HTMLElement, height = 26, ms = 620) {
-  const { act, shadow } = acts(stage);
-  if (!act || reduced()) return;
-  act.animate([
-    { transform: 'none' },
-    { transform: 'translateY(4px) scale(1.08, .9)', offset: 0.16 },
-    { transform: `translateY(${-height}px) scale(.94, 1.08)`, offset: 0.42, easing: 'cubic-bezier(.3, 0, .6, 1)' },
-    { transform: 'translateY(2px) scale(1.12, .86)', offset: 0.72 },
-    { transform: 'translateY(-3px) scale(.98, 1.03)', offset: 0.86 },
-    { transform: 'none' },
-  ], { duration: ms, easing: 'cubic-bezier(.3, .7, .4, 1)' });
-  shadow?.animate([{ transform: 'none' }, { transform: 'scale(1.06)', offset: 0.16 }, { transform: 'scale(.6)', opacity: 0.14, offset: 0.42 }, { transform: 'scale(1.1)', offset: 0.72 }, { transform: 'none' }], { duration: ms });
-  setTimeout(() => sfx.land(), ms * 0.7);
-}
-function nod(stage: HTMLElement, deg = 6) {
-  const { head } = acts(stage);
-  if (!head || reduced()) return;
-  head.animate([{ transform: 'none' }, { transform: `rotate(${-deg}deg) translateY(2px)`, offset: 0.35 }, { transform: `rotate(${deg * 0.5}deg)`, offset: 0.7 }, { transform: 'none' }], { duration: 560, easing: 'ease-in-out', composite: 'add' });
-}
-function glance(stage: HTMLElement) {
-  const { eyes, head } = acts(stage);
-  if (reduced()) return;
-  const dir = Math.random() < 0.5 ? -1 : 1;
-  eyes?.animate([{ transform: 'none' }, { transform: `translateX(${dir * 4}px)`, offset: 0.2 }, { transform: `translateX(${dir * 4}px)`, offset: 0.7 }, { transform: 'none' }], { duration: 1300, easing: 'ease-in-out', composite: 'add' });
-  head?.animate([{ transform: 'none' }, { transform: `rotate(${dir * 4}deg)`, offset: 0.25 }, { transform: `rotate(${dir * 4}deg)`, offset: 0.7 }, { transform: 'none' }], { duration: 1300, easing: 'ease-in-out', composite: 'add' });
-}
-function sparkle(stage: HTMLElement, n = 14) {
-  if (reduced()) return;
-  const w = stage.clientWidth, hgt = stage.clientHeight;
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4, r = 70 + Math.random() * 70;
-    const sp = h('span', { class: 'fb-spark', 'aria-hidden': 'true' });
-    sp.style.cssText = `left:${w / 2 - 7}px;top:${hgt * 0.45}px;--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8}px;animation-delay:${Math.random() * 120}ms;scale:${0.6 + Math.random() * 0.8}`;
-    stage.append(sp);
-    setTimeout(() => sp.remove(), 1200);
-  }
 }
 
 /** Opens the builder; `done` runs after the character was saved (or taken off). */
@@ -117,7 +71,7 @@ export function openBuilder(s: Status, done: () => void) {
     const bg = SWATCH.bg[f.bg];
     stage.style.setProperty('--fb-a', bg[0]);
     stage.style.setProperty('--fb-b', bg[1]);
-    stage.innerHTML = figureSvg(f, { label: rt('fb.title') });
+    stage.innerHTML = figureSvg(f, { label: rt('fb.title'), actor: true });
     if (hop) {
       react();
       sfx.pop(Math.floor(Math.random() * 3));
@@ -197,7 +151,7 @@ export function openBuilder(s: Status, done: () => void) {
     const steps = [0, 70, 150, 245, 360];
     steps.forEach((ms, i) => setTimeout(() => {
       f = random(f.face);
-      if (i < steps.length - 1) { paintStage(false); sfx.tick(); acts(stage).act?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
+      if (i < steps.length - 1) { paintStage(false); sfx.tick(); stage.querySelector('.fg-act')?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
       lastSlot = null;
       paintStage(true); paintTabs(); paintPanel();
       rolling = false;
@@ -230,6 +184,7 @@ export function openBuilder(s: Status, done: () => void) {
       if (!reduced()) {
         // A cheer: two happy hops with sparkles, then the builder closes on the new look.
         wear.toggleAttribute('disabled', true);
+        stage.querySelector('svg.fg')?.classList.add('cheer');
         hop(stage, 34, 600);
         sparkle(stage);
         setTimeout(() => { hop(stage, 18, 480); sparkle(stage, 8); }, 560);

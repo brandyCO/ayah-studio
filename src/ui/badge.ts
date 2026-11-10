@@ -1,16 +1,17 @@
-// A milestone badge: an eight-pointed star medallion (two squares, the khatam) in its tier's metal,
-// a dark inner disc with a line icon, a soft light passing over it once it is earned. Locked badges
+// A milestone badge: an eight-pointed star medallion (two squares, the khatam) in its tier's metal, flat
+// two-tone like the characters with a chunky edge, a deep inner disc with a raised line icon, a soft light passing over it once it is earned. Locked badges
 // are drawn in grey. SVG + CSS only.
 import type { BadgeIcon, BadgeTier } from '../data/badges';
+import { circlePath, edge, shine, starPath, two } from './flat';
 
 let uid = 0;
 
-const METALS: Record<BadgeTier, [string, string, string, string]> = {
-  // dark edge, body, highlight, icon
-  bronze: ['#6e3f1c', '#c9844a', '#f6d2a6', '#ffd9b0'],
-  silver: ['#5d6873', '#bcc6cf', '#f7fafc', '#eef3f7'],
-  gold: ['#7d5710', '#dcaa3c', '#fff1b8', '#ffe39a'],
-  emerald: ['#033a29', '#0f8273', '#7ff0d2', '#a8f5e2'],
+// edge, shade, base, light, the inner disc (base, shade), icon
+const METALS: Record<BadgeTier, [string, string, string, string, string, string, string]> = {
+  bronze: ['#6e3f1c', '#b06c36', '#e09a5c', '#f6c696', '#7a4420', '#5a2f14', '#ffe2c2'],
+  silver: ['#55606b', '#9eabb8', '#d3dce5', '#f2f6fa', '#45525f', '#2f3a45', '#f4f8fb'],
+  gold: ['#7d5710', '#d39a26', '#ffcf55', '#fff0b0', '#8a5a0c', '#5e3c06', '#fff1c4'],
+  emerald: ['#033a29', '#0b7a5c', '#19b98a', '#8ff2d2', '#0b5a48', '#063a2f', '#c8fbea'],
 };
 
 const ICONS: Record<BadgeIcon, string> = {
@@ -30,38 +31,30 @@ const ICONS: Record<BadgeIcon, string> = {
   heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.2C19.5 15.4 12 20 12 20z"/>',
 };
 
-function starPoints(R: number, r: number) {
-  const pts: string[] = [];
-  for (let i = 0; i < 16; i++) {
-    const a = (i * Math.PI) / 8 - Math.PI / 2;
-    const rad = i % 2 ? r : R;
-    pts.push(`${(50 + rad * Math.cos(a)).toFixed(2)},${(50 + rad * Math.sin(a)).toFixed(2)}`);
-  }
-  return pts.join(' ');
-}
-const OUTER = starPoints(47, 36.2);
-const INNER = starPoints(41, 31.6);
+const OUTER = starPath(50, 50, 46, 35.4);
+const INNER = starPath(50, 50, 39, 30);
 
 export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size = 72): HTMLElement {
   const id = `bd${++uid}`;
-  const [edge, body, hi, icn] = METALS[tier];
+  const [edgeC, shade, base, light, dBase, dShade, icn] = METALS[tier];
   const el = document.createElement('span');
   el.className = `badge-art${earned ? ' earned' : ' locked'}`;
   el.style.width = el.style.height = `${size}px`;
   el.setAttribute('aria-hidden', 'true');
+  const icon = (stroke: string, move: string) => `<g transform="translate(${move}) scale(1.333)" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="--bd-ic:${stroke}">${ICONS[ic]}</g>`;
   el.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">
     <defs>
-      <linearGradient id="${id}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".45" stop-color="${body}"/><stop offset="1" stop-color="${edge}"/></linearGradient>
-      <linearGradient id="${id}r" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${hi}"/><stop offset=".5" stop-color="${body}"/><stop offset="1" stop-color="${edge}"/></linearGradient>
-      <radialGradient id="${id}d" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="${tier === 'emerald' ? '#0c3b30' : '#2a221c'}"/><stop offset="1" stop-color="${tier === 'emerald' ? '#04140f' : '#0e0b09'}"/></radialGradient>
       <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-      <clipPath id="${id}c"><polygon points="${OUTER}"/></clipPath>
+      <clipPath id="${id}c"><path d="${OUTER}"/></clipPath>
     </defs>
-    <polygon points="${OUTER}" fill="url(#${id}m)"/>
-    <polygon points="${INNER}" fill="url(#${id}r)" opacity=".9"/>
-    <circle cx="50" cy="50" r="27" fill="url(#${id}d)" stroke="${hi}" stroke-opacity=".7" stroke-width="1.4"/>
-    <circle cx="50" cy="50" r="23.5" fill="none" stroke="${body}" stroke-opacity=".45" stroke-width=".8" stroke-dasharray="1.6 2.2"/>
-    <g transform="translate(34 34) scale(1.333)" fill="none" stroke="${icn}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="--bd-ic:${icn}">${ICONS[ic]}</g>
+    ${edge(OUTER, edgeC, 4)}
+    ${two(OUTER, base, shade, -4, -4)}
+    ${two(INNER, light, base, -3, -3)}
+    ${two(circlePath(50, 50, 26), dBase, dShade, -3, -3)}
+    <circle cx="50" cy="50" r="26" fill="none" stroke="${shade}" stroke-width="2.4"/>
+    ${shine('M30 38A22 22 0 0 1 44 27', 3, .5)}
+    <g class="bd-ic-shade" opacity=".45">${icon('#000', '34.6 35.2')}</g>
+    ${icon(icn, '34 34')}
     ${earned ? `<g clip-path="url(#${id}c)"><rect class="bd-shine" x="-60" y="-10" width="40" height="120" fill="url(#${id}s)" transform="rotate(20 50 50)"/></g>` : ''}
   </svg>`;
   return el;

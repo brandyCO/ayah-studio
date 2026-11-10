@@ -126,6 +126,28 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       paintHero();
     });
   };
+  // The user's character (when they made one) stands on the streak card: it waves when Me opens and when
+  // tapped, and cheers when the flame catches. Loaded only for people with a character.
+  let meActor: import('./actor').Actor | null = null;
+  let actorTried = false;
+  const placeActor = (cheer: boolean) => {
+    if (meActor) { hero.append(meActor.el); if (cheer) setTimeout(() => meActor?.cheer(), 700); return; }
+    if (actorTried) return;
+    actorTried = true;
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure'); } catch { /* ignore */ }
+    if (!code) return;
+    void import('./actor').then((m) => {
+      meActor = m.actor('me-actor');
+      if (!meActor || !hero.isConnected) return;
+      const a = meActor;
+      a.el.setAttribute('role', 'button');
+      a.el.setAttribute('aria-hidden', 'true');
+      a.el.addEventListener('click', () => { a.wave(); haptic(8); });
+      hero.append(a.el);
+      setTimeout(() => (cheer ? a.cheer() : a.wave()), 600);
+    });
+  };
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
@@ -159,6 +181,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
+    placeActor(catchNow);
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
       hero.append(canvas);

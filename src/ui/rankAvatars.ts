@@ -7,6 +7,7 @@
 // 10 mosaic, 11 aurora, 12 lanterns, 13 rosette for its #2 and #3.
 import { h } from './dom';
 import { bustMarkup, parse } from './figure';
+import { circlePath, edge, mix, shine, two } from './flat';
 
 const SYMBOLS = [
   'M12 3v2M9 5h6l1.5 3v8L15 19H9l-1.5-3V8zM7.5 8h9M7.5 16h9', // lantern
@@ -67,12 +68,10 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
   const n = priv ? 0 : Math.max(0, Math.min(AVATARS - 1, i | 0));
   const f = priv ? 0 : Math.max(0, Math.min(FRAMES - 1, frame | 0));
   const L = look(n);
-  const id = `rka${++uid}`;
-  const g = el('linearGradient', { id, x1: '0', y1: '0', x2: '1', y2: '1' });
-  g.append(el('stop', { offset: '0', 'stop-color': priv ? '#8a8f94' : L.a }), el('stop', { offset: '1', 'stop-color': priv ? '#5d6166' : L.b }));
-  const defs = el('defs', {});
-  defs.append(g);
-  svg.append(defs, el('circle', { cx: '20', cy: '20', r: '17', fill: `url(#${id})` }));
+  // The disc in two tones like the characters, the light from the top left.
+  const disc = el('g', {});
+  disc.innerHTML = two(circlePath(20, 20, 17), priv ? '#8a8f94' : L.a, priv ? '#5d6166' : L.b, -3, -3) + shine('M8.6 15.5A12.5 12.5 0 0 1 15.5 8.6', 1.6, .3);
+  svg.append(disc);
   if (!priv && L.rays) for (let k = 0; k < 12; k++) {
     const a = (k / 12) * Math.PI * 2;
     svg.append(el('line', { x1: String(20 + Math.cos(a) * 9), y1: String(20 + Math.sin(a) * 9), x2: String(20 + Math.cos(a) * 16), y2: String(20 + Math.sin(a) * 16), stroke: 'rgba(255,255,255,.35)', 'stroke-width': '1' }));
@@ -91,14 +90,26 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
     star(svg, 29, 10, 2.4, 'rgba(255,255,255,.9)');
   }
   if (priv) svg.append(el('circle', { cx: '20', cy: '20', r: '3', fill: 'rgba(255,255,255,.7)' }));
-  else svg.append(el('path', { d: SYMBOLS[L.sym], fill: 'none', stroke: L.ink, 'stroke-width': '1.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', transform: 'translate(8 8)' }));
+  else {
+    // The symbol raised off the disc: a soft shade under it, then the ink.
+    svg.append(el('path', { d: SYMBOLS[L.sym], fill: 'none', stroke: 'rgba(0,0,0,.3)', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', transform: 'translate(8.4 8.8)' }));
+    svg.append(el('path', { d: SYMBOLS[L.sym], fill: 'none', stroke: L.ink, 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', transform: 'translate(8 8)' }));
+  }
   drawFrame(svg, f, tier);
   return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 || n >= 40 ? ' glow' : ''}` }, svg as unknown as Node);
 }
 
 function drawFrame(svg: Element, f: number, tier: number) {
-  const ring = (r: number, stroke: string, w: number, extra: Record<string, string> = {}) =>
+  // A solid ring gets the characters' two tones: its deep colour just under it, a shine on the top left.
+  const ring = (r: number, stroke: string, w: number, extra: Record<string, string> = {}) => {
+    const solid = /^#[0-9a-f]{6}$/i.test(stroke) && w >= 1.5 && !extra['stroke-dasharray'];
+    if (solid) svg.append(el('circle', { cx: '20.3', cy: '20.8', r: String(r), fill: 'none', stroke: mix(stroke, .38), 'stroke-width': String(w) }));
     svg.append(el('circle', { cx: '20', cy: '20', r: String(r), fill: 'none', stroke, 'stroke-width': String(w), ...extra }));
+    if (solid) {
+      const a1 = Math.PI * 1.08, a2 = Math.PI * 1.42;
+      svg.append(el('path', { d: `M${20 + r * Math.cos(a1)} ${20 + r * Math.sin(a1)}A${r} ${r} 0 0 1 ${20 + r * Math.cos(a2)} ${20 + r * Math.sin(a2)}`, fill: 'none', stroke: '#fff', 'stroke-opacity': '.55', 'stroke-width': String(w * .38), 'stroke-linecap': 'round' }));
+    }
+  };
   const tc = TIER_RING[Math.max(0, Math.min(4, tier))];
   if (f === 0) ring(18.5, tc, 2.4);
   else if (f === 1) { ring(18.5, GOLD, 2.6); ring(20.6, 'rgba(242,193,78,.35)', 1.2); }
@@ -136,7 +147,9 @@ function drawFrame(svg: Element, f: number, tier: number) {
     const gid = `rkf${++uid}`;
     const g = el('linearGradient', { id: gid, x1: '0', y1: '0', x2: '1', y2: '1' });
     g.append(el('stop', { offset: '0', 'stop-color': '#3dd1ad' }), el('stop', { offset: '.5', 'stop-color': '#8f6ae0' }), el('stop', { offset: '1', 'stop-color': '#f58da0' }));
-    svg.querySelector('defs')?.append(g);
+    const defs = el('defs', {});
+    defs.append(g);
+    svg.prepend(defs);
     ring(18.6, `url(#${gid})`, 2.8);
     ring(21.2, `url(#${gid})`, 0.9, { opacity: '.6' });
   } else if (f === 12) {
@@ -163,8 +176,10 @@ function drawFrame(svg: Element, f: number, tier: number) {
       const deg = 90 + side * (22 + k * 19);
       const a = (deg * Math.PI) / 180;
       const x = 20 + Math.cos(a) * 20.4, y = 20 + Math.sin(a) * 20.4;
-      svg.append(el('ellipse', { cx: x.toFixed(2), cy: y.toFixed(2), rx: '1.3', ry: '2.8', fill: c,
-        transform: `rotate(${(deg + 90 + side * 28).toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})` }));
+      const rot = `rotate(${(deg + 90 + side * 28).toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})`;
+      svg.append(el('ellipse', { cx: (x + .35).toFixed(2), cy: (y + .6).toFixed(2), rx: '1.45', ry: '2.9', fill: mix(c, .38), transform: rot }));
+      svg.append(el('ellipse', { cx: x.toFixed(2), cy: y.toFixed(2), rx: '1.35', ry: '2.8', fill: c, transform: rot }));
+      svg.append(el('ellipse', { cx: (x - .35).toFixed(2), cy: (y - .5).toFixed(2), rx: '.45', ry: '1.5', fill: '#fff', opacity: '.45', transform: rot }));
     }
   }
 }
@@ -178,17 +193,35 @@ function star(svg: Element, x: number, y: number, r: number, fill: string) {
   svg.append(el('polygon', { points: pts.join(' '), fill }));
 }
 
-/** A trophy cup in gold, silver or bronze (place 1–3), or a rising arrow for a week that only moved up. */
+/** A trophy cup in gold, silver or bronze (place 1–3), or a rising arrow for a week that only moved up.
+ *  Flat two-tone like the characters: a chunky cup with handles, a star, and the place on the plinth. */
+const CUPS: [string, string, string, string][] = [
+  // base, shade, edge, light
+  ['#ffd25e', '#e09a1f', '#a8650e', '#fff3c2'],
+  ['#eef2f6', '#aab5c3', '#6f7b8a', '#ffffff'],
+  ['#f2a76a', '#c26d36', '#7f4220', '#ffd9b8'],
+];
 export function trophy(place: number | null, size = 28): HTMLElement {
-  const c = place ? ['#f2c14e', '#c9d1da', '#cd8549'][place - 1] : '#3dd1ad';
-  const svg = el('svg', { viewBox: '0 0 24 24', width: String(size), height: String(size), 'aria-hidden': 'true' });
+  const svg = el('svg', { viewBox: '0 0 48 48', width: String(size), height: String(size), 'aria-hidden': 'true' });
   if (place) {
-    svg.append(
-      el('path', { d: 'M7 3h10v4a5 5 0 0 1-10 0z', fill: c }),
-      el('path', { d: 'M7 5H4v1a3 3 0 0 0 3 3M17 5h3v1a3 3 0 0 1-3 3', fill: 'none', stroke: c, 'stroke-width': '1.6' }),
-      el('path', { d: 'M10.5 12h3v4h-3zM8 17h8v3H8z', fill: c }),
-      el('text', { x: '12', y: '8.6', 'text-anchor': 'middle', 'font-size': '5.5', 'font-weight': '800', fill: 'rgba(0,0,0,.45)' }));
-    (svg.lastChild as Element).textContent = String(place);
-  } else svg.append(el('path', { d: 'M12 4l6 7h-4v8h-4v-8H6z', fill: c }));
+    const [b, sh, ed, li] = CUPS[Math.max(0, Math.min(2, place - 1))];
+    const cup = 'M12 6H36V16Q36 29 24 30.5Q12 29 12 16Z';
+    const plinth = 'M12 37.5Q12 36 13.5 36H34.5Q36 36 36 37.5V43Q36 44.5 34.5 44.5H13.5Q12 44.5 12 43Z';
+    svg.innerHTML = `
+      <path d="M13 10H7.5Q6 10 6 12V13.5Q6 21 14 22.5M35 10H40.5Q42 10 42 12V13.5Q42 21 34 22.5" fill="none" stroke="${ed}" stroke-width="4.4" stroke-linecap="round" transform="translate(0 1.5)"/>
+      <path d="M13 10H7.5Q6 10 6 12V13.5Q6 21 14 22.5M35 10H40.5Q42 10 42 12V13.5Q42 21 34 22.5" fill="none" stroke="${sh}" stroke-width="4.4" stroke-linecap="round"/>
+      <path d="M13 10H8.5Q7 10 7 12V13Q7 19.5 13.5 21" fill="none" stroke="${b}" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+      ${two('M20.5 29H27.5L28.5 36H19.5Z', b, sh, -1.5, 0)}
+      ${edge(cup, ed, 2)}${two(cup, b, sh, -3, -2.5)}
+      <rect x="10.5" y="6.2" width="27" height="3.6" rx="1.8" fill="${sh}"/><rect x="10.5" y="4.8" width="27" height="3.6" rx="1.8" fill="${li}"/>
+      ${shine('M15.5 12.5V17.5Q16 22 19 25', 2.2, .55)}
+      <path d="M24 10.6L26.1 14.9L30.8 15.5L27.4 18.8L28.2 23.4L24 21.2L19.8 23.4L20.6 18.8L17.2 15.5L21.9 14.9Z" fill="${li}"/>
+      ${edge(plinth, ed, 2.4)}${two(plinth, b, sh, -2, -2)}
+      <rect x="16.5" y="36.6" width="15" height="6.8" rx="2" fill="${ed}"/>
+      <text x="24" y="42.3" text-anchor="middle" font-size="7.6" font-weight="900" font-family="Nunito, system-ui, sans-serif" fill="${li}">${place}</text>`;
+  } else {
+    const arrow = 'M24 6L39 22H30.5V40Q30.5 42 28.5 42H19.5Q17.5 42 17.5 40V22H9Z';
+    svg.innerHTML = `${edge(arrow, '#0a5a46', 2)}${two(arrow, '#5fe0bf', '#1fa486', -3, -3)}${shine('M21 37V24', 2.4, .45)}`;
+  }
   return h('span', { class: 'rk-trophy-ic' }, svg as unknown as Node);
 }
