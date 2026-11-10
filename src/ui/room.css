@@ -1,0 +1,19 @@
+/* "Your room" on Me (src/ui/room.ts). The scene keeps the back's 320×200 shape; shelves sit on its planks. */
+.rm-card { display: grid; gap: 10px; }
+.rm-card .me-row { align-items: center; }
+.rm-scene { position: relative; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 0 rgba(0, 0, 0, .14); }
+.rm-back { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.rm-shelf { position: absolute; left: 59.4%; width: 36.2%; display: flex; justify-content: center; align-items: flex-end; gap: 2px; }
+.rm-shelf.top { bottom: 62%; height: 22%; }
+.rm-shelf.low { bottom: calc(100% - 59%); height: 20%; }
+.rm-shelf svg, .rm-shelf > * { flex: none; }
+.rm-shelf .badge, .rm-shelf > span:not(.rm-cup):not(.rm-empty) { transform-origin: bottom; }
+.rm-cup { display: inline-flex; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .18)); }
+.rm-cup.p1 { animation: rm-glint 4s ease-in-out infinite; }
+@keyframes rm-glint { 0%, 80%, 100% { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .18)); } 88% { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .18)) drop-shadow(0 0 6px #ffe48a); } }
+.rm-empty { align-self: center; font: 800 10px/1.2 var(--ui-round, system-ui); text-align: center; color: rgba(90, 60, 30, .7); padding: 0 6px; }
+.sky-night .rm-empty { color: rgba(240, 230, 255, .7); }
+.rm-cushion { position: absolute; left: 29.6%; bottom: 13%; width: 22%; height: 9%; border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(circle at 40% 35%, #8fd3c5, #3c9c8a); box-shadow: 0 3px 0 #23685c; }
+.fg-actor.rm-actor { left: 29%; bottom: 15%; width: 23%; pointer-events: auto; cursor: pointer; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .rm-cup.p1 { animation: none; } }

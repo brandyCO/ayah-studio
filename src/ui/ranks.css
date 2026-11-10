@@ -323,3 +323,12 @@
 .rk-podium.intro .p1 .rk-pod-who, .rk-podium.intro .p1 .rk-pod-name { animation-delay: .85s; }
 @keyframes rk-drop { from { transform: translateY(-160px); opacity: 0; } 60% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rk-podium.intro *, .rk-pod-disc, .rk-pod-beam { animation: none !important; } }
+
+/* A friend challenge's two characters (ranks.ts duo()): yours left, theirs right facing you, on steps. */
+.rk-duo { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 2px 0 4px; }
+.rk-duo-side { display: grid; justify-items: center; }
+.rk-duo .fg-actor { position: relative; width: 70px; margin-bottom: -6px; }
+.rk-duo .fg-actor.theirs svg { transform: scaleX(-1); }
+.rk-duo-step { width: 74px; height: var(--h); border-radius: 10px 10px 4px 4px; background: color-mix(in srgb, var(--rw-n2, #6c5ce7) 30%, var(--card));
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--rw-n3, #4a3cb8) 40%, var(--card)); transition: height .6s cubic-bezier(.3, 1.4, .5, 1); }
+.rk-duo-vs { align-self: center; font: 900 14px var(--ui-round, system-ui); color: var(--muted); }
