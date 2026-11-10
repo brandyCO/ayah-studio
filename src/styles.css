@@ -719,6 +719,9 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .chip.danger { color: #c62828; }
 @media (prefers-color-scheme: dark) { .chip.danger { color: #ff7b7b; } }
 .reflections-sheet .search { width: 100%; box-sizing: border-box; margin: 10px 0 4px; }
+.reciter-sheet .rec-others { margin: 14px 4px 4px; font-size: .85em; opacity: .7; }
+.reciter-sheet .menu-item.off { opacity: .75; }
+.reciter-sheet .rec-has { margin-inline-start: auto; opacity: .7; font-size: .8em; }
 .reciter-sheet .search { width: 100%; box-sizing: border-box; margin: 6px 0 8px; }
 .rf-list { max-height: 60vh; }
 .rf-group { margin: 14px 0 2px; font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
