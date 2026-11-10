@@ -1661,7 +1661,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
       **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
-      page memory (line starts, page start/end, where is the ayah, page strength), the 114 trees redrawn as vectors,
+      the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
 - [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
       Exercises → From memory. **Meaning first**: every word of the chunk as a tile (Arabic + Quran.com meaning, tap to
@@ -1683,6 +1683,15 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       A few slips / I had it) is suggested from the slips (0 · ≤ max(2, 5 %) · more) and sets the review schedule as
       before; missed and prompted words become weak (`learnWeak`), weak words recited cleanly move towards leaving.
       Still to come: automatic voice follow-along
+- [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
+      `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
+      Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;
+      every lesson tasmi' records the pages it covered: clean +1 box, slips keep, Not yet → box 1). `#/learn/page/P` — the
+      fixed Madinah page (QCF) three ways: **Line starts** (only each line's first word shows, in violet; recite the line,
+      tap it or "Show the next line" to check), **Quiz** (how does the page start / end, what starts the next page, which
+      words start line n — wrong choices from the 3 pages either side — and where does ayah X start, tapped on the page's
+      outline with its 15 lines, headers and basmala drawn as such), **Recite page** (all hidden, peeks and "Stuck? Next
+      word" are slips, then tap missed words; the result sets the page's strength). ‹ › to the pages either side
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

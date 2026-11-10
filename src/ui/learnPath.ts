@@ -40,6 +40,7 @@ const G = {
   star: '<path d="M12 2.5l2.1 4.6 5-.6-1.6 4.8 3.9 3.1-4.8 1.6.6 5-4.6-2.1-3.3 3.9-1.2-4.9-4.9-1.2 3.9-3.3L5 8.8l5 .6z" fill="currentColor"/>',
   drop: '<path d="M12 3c3 4 6 7.2 6 10.5a6 6 0 0 1-12 0C6 10.2 9 7 12 3z" fill="currentColor"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  page: '<rect x="5" y="3" width="14" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   book: '<path d="M4 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z M20 5h-4a2 2 0 0 0-2 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   dots: '<circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/>',
   tree: '<path d="M12 3c4 0 7 3 7 6.5 0 3-2.4 5.5-6 6V21h-2v-5.5c-3.6-.5-6-3-6-6C5 6 8 3 12 3z" fill="currentColor"/>',
@@ -75,6 +76,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     top.replaceChildren(
       h('button', { class: 'lp-pill', type: 'button', onclick: () => void openStart(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), lt('learn.choose')),
       h('span', { class: 'lp-gap' }),
+      h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
       h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
       h('span', { class: 'lp-streak', 'aria-label': lt('learn.streakAria', { n: st.days }) }, svg(G.flame, 22), String(st.days)),
       lightChip());
