@@ -1378,6 +1378,8 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .me-pip-ic.stamp path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pip-tick .35s .2s ease-out forwards; }
 @keyframes pip-stamp { 0% { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: none; } }
 @keyframes pip-tick { to { stroke-dashoffset: 0; } }
+/* `.today` is also the mushaf's Today list (flex-basis 100%): keep the pip its own size. */
+.me-pip.today { flex-basis: auto; margin-top: 0; }
 .me-pip.today .me-pip-ic { border: 1.5px dashed color-mix(in srgb, var(--rw-hi) 70%, transparent); }
 .me-pip.missed .me-pip-ic { opacity: .45; }
 .me-pip.frozen .me-pip-ic { background: rgba(120, 200, 255, .14); border-color: rgba(140, 210, 255, .45); }
@@ -1697,6 +1699,8 @@ button.lt-chip { cursor: pointer; }
 .page-light-pill { position: relative; margin-bottom: 10px; padding: 3px 10px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600;
   background: color-mix(in srgb, var(--card) 88%, transparent); color: var(--muted); box-shadow: var(--shadow);
   animation: pl-pill 2.9s var(--ease-spring) both; }
+.page-light-pill { display: inline-flex; align-items: center; gap: 6px; }
+.page-light-me { display: inline-flex; margin-inline-start: -6px; border-radius: 50%; overflow: hidden; }
 .page-light-pill.met { color: var(--rw-ink, #fff); background: linear-gradient(135deg, var(--rw-n1, var(--accent)), var(--rw-n3, var(--accent))); }
 @keyframes pl-pill { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 15%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .done-card { position: fixed; z-index: 25; inset-inline: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); margin: 0 auto; max-width: 440px;

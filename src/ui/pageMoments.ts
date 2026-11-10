@@ -6,6 +6,8 @@ import type { SurahMeta } from '../data/quran';
 import { todayGoals } from '../data/goals';
 import { surahName, t } from '../i18n';
 import { h, haptic } from './dom';
+import { bustMarkup, parse } from './figure';
+import { myFigureCode } from './actor';
 
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -13,7 +15,12 @@ const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 export function pageCounted(area: HTMLElement) {
   area.querySelector('.page-light')?.remove();
   const g = todayGoals().find((x) => x.kind === 'pages');
-  const pill = g ? h('span', { class: `page-light-pill${g.done >= g.target ? ' met' : ''}` },
+  // The user's character reads along: a small bust holding the mushaf at the start of the pill.
+  const code = myFigureCode();
+  const f = parse(code);
+  const bust = f ? h('span', { class: 'page-light-me' }) : '';
+  if (bust && f) { f.hold = 2; bust.innerHTML = `<svg viewBox="1 1 38 38" width="22" height="22">${bustMarkup(f, 18)}</svg>`; }
+  const pill = g ? h('span', { class: `page-light-pill${g.done >= g.target ? ' met' : ''}` }, bust,
     g.done >= g.target ? `✓ ${t('pm.pagesMet', { n: g.target })}` : t('pm.pages', { done: g.done, n: g.target })) : '';
   const el = h('div', { class: 'page-light', 'aria-hidden': 'true' }, h('span', { class: 'page-light-line' }), pill);
   area.append(el);

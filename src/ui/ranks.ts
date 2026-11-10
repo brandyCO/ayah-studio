@@ -17,6 +17,9 @@ import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
 import { actor, hop as hopFig } from './actor';
 import { freezeArt } from './flat';
+import { pieceArt } from './wardrobeCard';
+import { grantPiece } from '../data/wardrobe';
+import { WARDROBE, weekPiece } from './figure';
 import { chest, chestArt, chestTier } from './chest';
 import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
@@ -260,7 +263,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'rk-wp-txt' }, h('b', {}, rt('rk.weekPrizes')), h('p', { class: 'muted small' }, rt('rk.weekPrizesSub'))),
       h('div', { class: 'rk-wp-items' },
         h('span', { class: 'rk-wp-item' }, itemArt(a, s, 48), h('span', { class: 'small' }, '#1')),
-        h('span', { class: 'rk-wp-item' }, itemArt(f, s, 48), h('span', { class: 'small' }, '#2 · #3'))));
+        h('span', { class: 'rk-wp-item' }, itemArt(f, s, 48), h('span', { class: 'small' }, '#2 · #3')),
+        // The week's character piece goes to all three (wardrobe, never sold).
+        h('span', { class: 'rk-wp-item' }, pieceArt(weekPiece(s.weekStart), 48), h('span', { class: 'small' }, '#1–3'))));
   }
   /** Last week's result and the players you passed: played full screen once (src/ui/rankMoment.ts), then marked seen. */
   const momentBox = h('div', { class: 'rk-moments' });
@@ -287,6 +292,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   async function paintPrizes(s: Status, fresh: boolean) {
     prizes = await myPrizes(fresh || s.prizes > 0).catch(() => []);
     wonItems = prizes.map((p) => p.item).filter((i): i is string => !!i);
+    // A piece claimed on another device (or before pieces came) is in the wardrobe here too.
+    for (const p of prizes) if (p.claimed && p.piece) grantPiece(p.piece);
     const open = prizes.filter((p) => !p.claimed);
     topActs.querySelector('.rk-top-chest')?.remove();
     if (!open.length) return;
@@ -318,6 +325,12 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       if (p.place) loot.push({ kind: 'item', art: trophy(p.place, 44), label: rt(`rk.loot${p.place}` as 'rk.loot1') });
       if (p.freeze) loot.push({ kind: 'freeze' });
       if (p.item) loot.push({ kind: 'item', art: itemArt(p.item, st, 52) as HTMLElement, label: rt(p.item.startsWith('av:') ? 'rk.lootAvatar' : 'rk.lootFrame'), rare: true });
+      if (p.piece) {
+        grantPiece(p.piece);
+        const [slot, v] = p.piece.split(':');
+        const r = WARDROBE[p.piece]?.r ?? 'rare';
+        loot.push({ kind: 'item', art: pieceArt(p.piece, 56), label: `${rt(`fb.${slot}.${v}` as RankKey)} · ${rt(`fb.r.${r}` as RankKey)}`, rare: r === 'epic' || r === 'legendary' });
+      }
       await celebrate({ kind: 'chest', title: p.place ? rt('rk.prizeWon', { place: p.place, tier: tierName(p.tier) }) : rt('rk.prizeUp'),
         sub: p.item ? rt(p.item.startsWith('av:') ? 'rk.prizeAvatarSub' : 'rk.prizeFrameSub') : p.freeze ? rt('rk.prizeFreezeSub') : rt('rk.prizeSub'), kicker: rt('rk.trophies'), loot }, el, p.light);
     } catch (e) { toast((e as Error).message); }

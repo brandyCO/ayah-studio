@@ -1,12 +1,12 @@
 -- Ranks (supabase/migrations/20261110000000_ranks.sql, 20261110100000_rank_moves.sql,
--- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql, 20261110500000_rank_challenges.sql, 20261110710000_rank_figures.sql): Google accounts only; nobody reads the tables;
+-- 20261110200000_ranks_more.sql, 20261110300000_rank_prizes.sql, 20261110400000_rank_prize_items.sql, 20261110500000_rank_challenges.sql, 20261110710000_rank_figures.sql, 20261110900000_rank_prize_pieces.sql): Google accounts only; nobody reads the tables;
 -- reported totals are capped, never go down and grow only as fast as time allows; leagues of ≤ 15;
 -- the global board and own boards (invite code, members only).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(71);
+select plan(75);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -130,7 +130,13 @@ select lives_ok($$ select rank_set_figure('02010110600000') $$, 'Emre (a #1) can
 select is(rank_my_figure(), '02010110600000', 'and it is kept');
 select throws_ok($$ select rank_set_figure('nope') $$, '22023', null, 'only a well-formed character');
 select is((select f ->> 'figure' from jsonb_array_elements(rank_league(current_date) -> 'players') f where (f ->> 'me')::boolean), '02010110600000', 'the boards show it');
+-- Prize pieces (20261110900000_rank_prize_pieces.sql): the week's piece comes with a top-3 place and only its winners wear it.
+select is(rank_my_prizes() -> 0 ->> 'piece', rank_prize_piece((select v::date from ids where k = 'lastwk')), 'the week''s character piece comes with the place');
+select lives_ok(format($$ select rank_set_figure(%L) $$, (select case split_part(p, ':', 1) when 'outfit' then '02010110700000' when 'glasses' then '02010110003000' when 'hold' then '02010110000' || split_part(p, ':', 2) || '00' else '0201011000000' || split_part(p, ':', 2) end
+  from (select rank_prize_piece((select v::date from ids where k = 'lastwk')) p) x)), 'and can be worn');
 select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select throws_ok($$ select rank_set_figure('02010110700000') $$, '42501', null, 'a prize robe not won cannot');
+select throws_ok($$ select rank_set_figure('02010110000009') $$, '42501', null, 'nor a prize background');
 select throws_ok($$ select rank_set_figure('02010110600000') $$, '42501', null, 'not without a week won at #1');
 select lives_ok($$ select rank_set_figure('02010110000000') $$, 'any other character');
 select lives_ok($$ select rank_set_figure(null) $$, 'and back to the avatar disc');

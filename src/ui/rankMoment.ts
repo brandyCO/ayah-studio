@@ -188,7 +188,13 @@ function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
   const rows = passed.map((n) => row(players.find((p) => p.name === n), n, false));
   const mine = row(undefined, s.name, true);
   const ladder = h('div', { class: 'rkm-ladder', style: `--k:${passed.length}` }, ...rows, mine);
-  const stage = h('div', { class: 'rkm-stage passed' }, ladder);
+  // Both characters (yours and the first one you passed) stand under the ladder: yours cheers, theirs waves
+  // back, a good race and no more. Only when both of you have made a character and theirs is not private.
+  const rival = players.find((p) => p.name === passed[0]);
+  const meA = s.private ? null : actor('rkm-duo-a', s.figure ?? null);
+  const themA = meA && rival && !rival.private ? actor('rkm-duo-a', rival.figure ?? null) : null;
+  const duo = meA && themA ? h('div', { class: 'rkm-duo' }, themA.el, meA.el) : '';
+  const stage = h('div', { class: 'rkm-stage passed' }, ladder, duo);
   // Who is next to catch, and by how much.
   const i = players.findIndex((p) => p.me);
   const next = i > 0 ? players[i - 1] : null;
@@ -205,6 +211,6 @@ function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
       sfx.whoosh();
       passed.forEach((_, k) => later(260 + k * 140, () => sfx.tick()));
     });
-    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); sfx.shimmer(); bump(mine, 0.12); });
+    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); sfx.shimmer(); bump(mine, 0.12); if (duo) { meA!.cheer(); later(350, () => themA!.wave()); } });
   });
 }

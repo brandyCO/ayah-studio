@@ -95,3 +95,13 @@
 .me-ghost-txt { text-wrap: balance; text-align: center; }
 @keyframes me-ghost { 50% { translate: 0 -3px; opacity: .95; } }
 @media (prefers-reduced-motion: reduce) { .me-ghost-fig { animation: none; } }
+/* New wardrobe pieces waiting (src/ui/wardrobeCard.ts) */
+.wd-slot:empty { display: none; }
+.wd-card { display: flex; align-items: center; gap: 12px; background: linear-gradient(160deg, #2a1d5c, #4a2a6b); color: #f3e6ff; box-shadow: 0 4px 0 #1d1446; }
+.wd-card .muted { color: rgba(243, 230, 255, .75); }
+.wd-card .chest { flex: none; width: 70px; }
+.wd-txt { flex: 1; min-width: 0; }
+.wd-txt p { margin: 2px 0 0; }
+.wd-peek { display: flex; }
+.wd-peek .wd-piece + .wd-piece { margin-inline-start: -14px; }
+.wd-piece { display: inline-grid; border-radius: 50%; box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }

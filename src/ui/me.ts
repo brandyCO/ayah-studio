@@ -11,7 +11,7 @@ import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
 import { mushafOfflineRow } from './mushafOffline';
 import { reciterById } from '../data/reciters';
-import { dayKey } from '../data/readLog';
+import { dayKey, readLog } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
 import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
@@ -90,6 +90,16 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
+  const wardrobeSlot = h('div', { class: 'wd-slot' });
+  void import('./wardrobeCard').then((m) => {
+    const c = m.wardrobeCard(() => void import('./figureBuilder').then((b) => {
+      let code: string | null = null;
+      try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
+      b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); }, 'wardrobe');
+    }));
+    if (c) wardrobeSlot.replaceChildren(c);
+  });
   const goalsBox = h('section', { class: 'me-card' });
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
   const duaBox = h('section', { class: 'me-card dl-card' });
@@ -152,14 +162,22 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       return;
     }
     void import('./actor').then((m) => {
-      meActor = m.actor('me-actor');
+      // The character follows the day: reading, sitting by its lantern at night, dozing after the bedtime du'a.
+      let bedtime = false;
+      try { bedtime = localStorage.getItem('bedtimeDone') === dayKey(new Date(Date.now() - 12 * 3600e3)); } catch { /* ignore */ }
+      const look = m.dayLook(code, { read: (readLog()[dayKey()]?.length ?? 0) > 0, bedtime });
+      meActor = m.actor(`me-actor day-${look.mode}`, look.code);
       if (!meActor || !hero.isConnected) return;
       const a = meActor;
       a.el.setAttribute('role', 'button');
       a.el.setAttribute('aria-hidden', 'true');
-      a.el.addEventListener('click', () => { a.wave(); haptic(8); });
+      if (look.mode === 'asleep') {
+        a.el.querySelector('svg')?.classList.add('sleepy');
+        a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
+      }
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); });
       hero.append(a.el);
-      setTimeout(() => (cheer ? a.cheer() : a.wave()), 600);
+      setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
     });
   };
   const paintHero = () => {
@@ -607,7 +625,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
       lightChip(() => openLight()),
       h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, noorEl, dayCard() ?? '', todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, libBox,
+    hero, noorEl, dayCard() ?? '', wardrobeSlot, todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, libBox,
     tabBar('me'));
   void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
