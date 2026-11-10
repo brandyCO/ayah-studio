@@ -1,16 +1,13 @@
 name: Deploy harakat server (Hugging Face)
 
-# Free host for server/harakat (no card): a Docker Space on Hugging Face's free CPU (2 vCPU, 16 GB). Needs the
+# Host for server/harakat: a Docker Space on Hugging Face's CPU basic (2 vCPU, 16 GB; needs a PRO subscription). Needs the
 # repo secret HF_TOKEN (a Hugging Face access token with write access); without it the job is skipped. Creates
 # the Space {user}/ayah-harakat on the first run, uploads the server, waits until it runs and checks /health.
 # The last line of the log is the server's address: put it in the repo variable HARAKAT_URL.
 # One copy only (checks queue when several learners recite at once); the Space sleeps after 48 h unused.
 
 on:
-  push:
-    branches: [main]
-    paths: ['server/harakat/**', '.github/workflows/harakat-hf.yml']
-  workflow_dispatch:
+  workflow_dispatch:  # manual only until the account has PRO
 
 permissions:
   contents: read
