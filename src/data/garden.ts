@@ -1,7 +1,7 @@
 // Learn tab: the juz gardens (owner request 2026-11-02). One garden per juz, a grid seen at an angle.
 // Each surah is a tree the learner plants from the seed store (the first seed of every surah is
 // free) and grows by memorising it chunk by chunk:
-//   New   the next chunk (1, 2 or 3 ayat, half a page or a page: the learner's choice)
+//   New   the next chunk (1, 2, 3 or 5 ayat, half a page or a page: the learner's choice)
 //   Link  everything learned so far, from ayah 1, recited from memory
 //   Whole the whole surah from memory in one go: only then is the tree full grown
 // A full tree gets thirsty after 1, 3, 7, 14 and 30 days, then every 30 days, and is watered by
@@ -14,8 +14,8 @@
 import { stats } from './journey';
 import type { Mushaf } from './mushaf';
 
-export type ChunkSize = 1 | 2 | 3 | 'half' | 'page';
-export const CHUNK_SIZES: ChunkSize[] = [1, 2, 3, 'half', 'page'];
+export type ChunkSize = 1 | 2 | 3 | 5 | 'half' | 'page';
+export const CHUNK_SIZES: ChunkSize[] = [1, 2, 3, 5, 'half', 'page'];
 
 export interface Tree {
   /** Surah. */
