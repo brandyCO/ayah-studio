@@ -44,6 +44,17 @@ On Google Cloud Run (the GitHub workflow `Deploy harakat server` does this on ev
 5. Billing → Budgets & alerts: a budget (for example $10 a month) so any cost past the free tier is
    noticed. The server never runs more than 3 copies at once.
 
+## Free option: Hugging Face (no card)
+
+A Docker Space on Hugging Face's free CPU (2 vCPU, 16 GB): no card, no monthly limit, but one copy only (checks
+queue when several learners recite at once, about 0.2x real time each, so ~4 learners at once) and it sleeps after 48 h unused (the first
+check after that waits ~1 min while it wakes; meanwhile the app uses the phone's recogniser).
+
+1. huggingface.co → Sign up (free). Settings → Access Tokens → Create new token → type **Write** → copy it.
+2. GitHub repo → Settings → Secrets and variables → Actions → secret `HF_TOKEN` = the token.
+3. Actions → Deploy harakat server (Hugging Face) → Run workflow. It creates the Space `{user}/ayah-harakat`, waits
+   until it answers `/health` and prints its address on the last line: put that in the repo variable `HARAKAT_URL`.
+
 ## Making it better (teachers' labels)
 
 Learners who turn on **Help improve the harakat check** share short clips of flagged words (and a few

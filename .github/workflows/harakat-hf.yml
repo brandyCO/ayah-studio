@@ -1,0 +1,73 @@
+name: Deploy harakat server (Hugging Face)
+
+# Free host for server/harakat (no card): a Docker Space on Hugging Face's free CPU (2 vCPU, 16 GB). Needs the
+# repo secret HF_TOKEN (a Hugging Face access token with write access); without it the job is skipped. Creates
+# the Space {user}/ayah-harakat on the first run, uploads the server, waits until it runs and checks /health.
+# The last line of the log is the server's address: put it in the repo variable HARAKAT_URL.
+# One copy only (checks queue when several learners recite at once); the Space sleeps after 48 h unused.
+
+on:
+  push:
+    branches: [main]
+    paths: ['server/harakat/**', '.github/workflows/harakat-hf.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harakat-hf
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      SPACE_NAME: ${{ vars.HF_SPACE_NAME || 'ayah-harakat' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HF_TOKEN != ''
+      - uses: actions/setup-python@v5
+        if: env.HF_TOKEN != ''
+        with:
+          python-version: '3.12'
+      - name: Upload to the Space
+        if: env.HF_TOKEN != ''
+        run: |
+          pip install -q huggingface_hub==1.1.2
+          python3 - <<'EOF'
+          import os, re, shutil, tempfile, time, urllib.request
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          user = api.whoami()['name']
+          repo = f"{user}/{os.environ['SPACE_NAME']}"
+          api.create_repo(repo, repo_type='space', space_sdk='docker', exist_ok=True)
+          for k, v in {'THREADS': '2', 'MAX_SECONDS_DAY': '3600'}.items():
+              api.add_space_variable(repo, k, v)
+          d = tempfile.mkdtemp()
+          for f in ['Dockerfile', 'vocab.json', 'thresholds.json', 'harakat.py', 'follow.py', 'server.py']:
+              shutil.copy(os.path.join('server/harakat', f), d)
+          with open(os.path.join(d, 'README.md'), 'w') as f:
+              f.write('---\ntitle: Ayah Studio harakat check\nsdk: docker\napp_port: 8080\npinned: false\n---\n\n'
+                      'The harakat check for Ayah Studio (source: github.com/brandyCO/ayah-studio, server/harakat). '
+                      'Signed-in app users only; audio is checked in memory and never stored.\n')
+          api.upload_folder(folder_path=d, repo_id=repo, repo_type='space', commit_message='Deploy from GitHub')
+          host = 'https://' + re.sub(r'[^a-z0-9]+', '-', repo.lower().replace('/', '-')) + '.hf.space'
+          for _ in range(90):  # the image builds on Hugging Face (~3-6 min)
+              time.sleep(10)
+              stage = api.get_space_runtime(repo).stage
+              if stage in ('BUILD_ERROR', 'RUNTIME_ERROR', 'CONFIG_ERROR'):
+                  raise SystemExit(f'Space failed: {stage}')
+              if stage == 'RUNNING':
+                  try:
+                      body = urllib.request.urlopen(host + '/health', timeout=20).read().decode()
+                      if '"ok"' in body:
+                          print('health:', body)
+                          print(host)
+                          break
+                  except Exception as e:
+                      print('waiting for health:', e)
+          else:
+              raise SystemExit('Space did not become healthy in 15 min')
+          EOF
