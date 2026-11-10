@@ -1538,6 +1538,16 @@ duas/reflections section in Me.
       plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
       chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
       with a ring and the streak count (→ Me)
+- [ ] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
+      Step 1 done: `public/data/duas.json` by `scripts/make-duas.mjs` — Hisn al-Muslim ch. 1 (waking), 15 (the adhan), 25 (after the
+      salam), 28 (sleeping): Arabic and English (Darussalam) from YousefAsalya/Islamic-Pro-azkar-API (MIT), each English text checked
+      word for word against the source, word notes kept apart (`gloss`), Quran parts from our own text + Saheeh International (checked
+      to be the ayat the book quotes), counts checked by hand; dhikr said a different number of times cut into steps at the book's own
+      commas (33 + 33 + 33 + 1); `prayers` / `countBy` for what differs after Fajr and Maghrib; the book's "what to do" items (`act`,
+      one tap). `src/data/duas.ts` (`loadDuas`, `momentList`, `prayerNow()`: the prayer whose time it is, from the prayer times or the
+      hour); the adhkar session (`src/ui/adhkar.ts`) now runs any list (`openDuas(moment, prayer?)`, prayer chips, a sky per moment);
+      progress per session key in `adhkarProgress` (`salah:fajr`, `adhan:asr`, `wake`, `sleep`). Me → links under the goals.
+      To come: bead ring + the day's lanterns on Me, bedtime mode + waking dawn, after-adhan notes, goals / badges / chests, family pact
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

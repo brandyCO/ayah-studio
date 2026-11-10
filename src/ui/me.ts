@@ -6,6 +6,7 @@ import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
+import { akt } from '../i18n/adhkar';
 import { favouritesSection } from './favourite';
 import { favouriteIds } from '../data/reciterDownload';
 import { mushafOfflineRow } from './mushafOffline';
@@ -359,6 +360,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
         h('button', { class: 'menu-item', onclick: () => openAdhkarSession('m') }, `☾  ${t('goal.adhkarM')}`),
+        ...(['wake', 'salah', 'adhan', 'sleep'] as const).map((m) => h('button', { class: 'menu-item', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas(m)); } },
+          `${{ wake: '🌅', salah: '🤲', adhan: '🕌', sleep: '🌙' }[m]}  ${akt(`du.title.${m}`)}`)),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
