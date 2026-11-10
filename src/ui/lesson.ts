@@ -18,7 +18,7 @@ import {
   LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
-import { addMemorised, claimGoal } from '../data/journey';
+import { addLesson, addMemorised, claimGoal } from '../data/journey';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
@@ -673,6 +673,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
       }
     }
+    addLesson();
     // The pages this recitation covered get their strength (page memory).
     const covered: number[] = [];
     for (let x = range[0]; x <= range[1]; x++) covered.push(mushaf.pageOf(s, x));

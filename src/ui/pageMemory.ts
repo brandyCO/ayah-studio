@@ -12,6 +12,7 @@
 import './learn.css';
 import './learnPath.css';
 import { due, level, recordPage, strength } from '../data/pageMemory';
+import { addLesson } from '../data/journey';
 import { loadMeta, loadWordMap, reference, surahText, type SurahMeta } from '../data/quran';
 import { displayWords, parseSpans } from '../engine/words';
 import { surahName } from '../i18n';
@@ -306,6 +307,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   }
   function done(k: 0 | 1 | 2) {
     recordPage(p, k);
+    if (k > 0) addLesson();
     if (k === 2) sfx.shimmer();
     toast(lt('learn.pmSaved', { level: lt(LEVEL_KEY[level(p)]) }));
     paintBadge();
