@@ -29,6 +29,8 @@ import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
+import { followSupported, startFollow, type Follower } from './follow';
+import { follow, followWords, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
@@ -127,6 +129,17 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   let recUrl = '';
   const mine = new Audio();
   let simCount = 0;
+  // voice follow-along (src/ui/follow.ts): words heard and passed over, fixed at each pause (said, skip)
+  // and as the recogniser has the current utterance so far (sayP, skipP)
+  let follower: Follower | null = null;
+  let canFollow = false;
+  void followSupported().then((ok) => { canFollow = ok; if (phase === 'memory') paintActions(); });
+  let fw: FollowWord[] = [];
+  let fBase = 0;
+  const said = new Set<string>(), skip = new Set<string>();
+  let sayP = new Set<string>(), skipP = new Set<string>();
+  const voiced = (k: string) => said.has(k) || sayP.has(k);
+  const passed = (k: string) => skip.has(k) || skipP.has(k);
   const wordEls = new Map<string, HTMLElement>();
   /** Learn on the real mushaf page (visual memory) or ayah by ayah with the translation. */
   const pageView = () => pref('lessonView', ['page', 'ayat'], 'page') === 'page';
@@ -158,14 +171,15 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const hiddenWord = (a: number, i: number) => {
     if (phase === 'check' || phase === 'done') return false;
     if (peeked.has(`${a}:${i}`)) return false;
-    if (phase === 'memory' && shown.has(`${a}:${i}`)) return false;
+    if (phase === 'memory' && (shown.has(`${a}:${i}`) || voiced(`${a}:${i}`) || passed(`${a}:${i}`))) return false;
     const lv = phase === 'memory' ? 2 : phase === 'listen' ? 0 : level;
     return lv === 2 || (lv === 1 && i > 0);
   };
   const wordCls = (a: number, i: number) => {
     const k = `${a}:${i}`, hid = hiddenWord(a, i);
     return `${hid ? ' hid' : ''}${hid && phase === 'memory' && weak.has(k) ? ' hint' : ''}`
-      + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`;
+      + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`
+      + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? ' skipped' : ''}`;
   };
   /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
   function displayIndex(a: number, pos: number): number {
@@ -298,9 +312,12 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     else if (phase === 'memory') {
       const recBtn = Recorder.supported ? h('button', { class: `chip ts-rec${rec.on ? ' on' : ''}`, 'aria-pressed': String(rec.on), onclick: () => void toggleRec() },
         h('span', { class: 'ts-dot', 'aria-hidden': 'true' }), lt(rec.on ? 'learn.recording' : 'learn.record')) : '';
+      const slips = new Set([...helped, ...skip, ...skipP]).size;
+      const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
+        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
       actions.replaceChildren(
-        h('p', { class: 'ls-hint muted small' }, lt(helped.size ? 'learn.slipsSoFar' : 'learn.memoryHint', { n: helped.size })),
-        b(lt('learn.stuck'), promptNext, 'chip ts-stuck'), recBtn,
+        h('p', { class: 'ls-hint muted small' }, slips ? lt(skip.size || skipP.size ? 'learn.followSkipped' : 'learn.slipsSoFar', { n: slips }) : lt(follower ? 'learn.followHint' : 'learn.memoryHint')),
+        folBtn, b(lt('learn.stuck'), promptNext, 'chip ts-stuck'), follower ? '' : recBtn,
         step === 'new' ? b(lt('learn.practiseFirst'), () => go('practice')) : '', primary(lt('learn.reveal'), () => go('check')));
     } else if (phase === 'check') {
       const total = new Set([...helped, ...missed]).size;
@@ -318,6 +335,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       actions.replaceChildren(
         h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
+        skip.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.skippedN', { n: skip.size })) : '',
         ab,
         pick(0, lt('learn.notYet'), () => {
           keepWeak();
@@ -343,6 +361,70 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       haptic(10);
       paintActions();
       return;
+    }
+  }
+  async function toggleFollow() {
+    if (follower) { stopFollow(); paintActions(); return; }
+    if (rec.on) await stopRec();
+    if (!localStorage.getItem('followNoted')) { toast(lt('learn.followNote')); try { localStorage.setItem('followNoted', '1'); } catch { /* blocked */ } }
+    stopAll();
+    const list: { key: string; text: string }[] = [];
+    for (let a = range[0]; a <= range[1]; a++) words[a - 1].forEach((text, i) => list.push({ key: `${a}:${i}`, text }));
+    fw = followWords(list);
+    // carry on from the first word not yet shown, heard or passed
+    fBase = fw.findIndex((w) => { const [a, i] = w.key.split(':').map(Number); return hiddenWord(a, i); });
+    if (fBase < 0) fBase = fw.length;
+    const f = await startFollow({
+      heard: (text, final) => heard(text, final),
+      ended: (why) => {
+        follower = null;
+        if (why === 'denied') toast(lt('learn.followDenied'));
+        else if (why === 'failed') toast(lt('learn.followFailed'));
+        if (phase === 'memory') paintActions();
+      },
+    });
+    if (!f) { toast(lt('learn.followFailed')); return; }
+    follower = f;
+    haptic(10);
+    paintActions();
+  }
+  function stopFollow() {
+    const f = follower;
+    follower = null;
+    f?.stop();
+    for (const k of sayP) said.add(k);
+    for (const k of skipP) skip.add(k);
+    sayP = new Set(); skipP = new Set();
+  }
+  let lastSaid = '';
+  function heard(text: string, final: boolean) {
+    if (!follower || phase !== 'memory') return;
+    const r = follow(fw, fBase, text);
+    sayP = new Set(r.said.map((x) => fw[x].key));
+    skipP = new Set(r.skipped.map((x) => fw[x].key));
+    if (final) {
+      for (const k of sayP) said.add(k);
+      for (const k of skipP) skip.add(k);
+      sayP = new Set(); skipP = new Set();
+      fBase = r.cursor;
+    }
+    refreshHidden();
+    const at = r.said.length ? fw[r.said[r.said.length - 1]].key : '';
+    if (at && at !== lastSaid) {
+      lastSaid = at;
+      const el = wordEls.get(at);
+      if (el) {
+        el.classList.add('pop');
+        const rc = el.getBoundingClientRect(), tc = textEl.getBoundingClientRect();
+        if (rc.bottom > tc.bottom - 40 || rc.top < tc.top) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+    paintActions();
+    if (r.cursor >= fw.length) {
+      stopFollow();
+      toast(lt('learn.followEnd'));
+      haptic(20);
+      window.setTimeout(() => { if (phase === 'memory') go('check'); }, 900);
     }
   }
   async function toggleRec() {
@@ -374,15 +456,17 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
 
   function go(p: Phase) {
     stopAll();
+    if (follower) stopFollow();
     mine.pause();
     if (p !== 'memory' && rec.on) void stopRec().then(() => { if (phase === 'check') paintActions(); });
     if (p === 'memory' && phase !== 'check') {
       helped.clear(); shown.clear(); missed.clear();
+      said.clear(); skip.clear(); sayP = new Set(); skipP = new Set(); lastSaid = '';
       weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
       if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }
       void recording(recKey(s, range[0], range[1])).then((b) => { if (b && !recUrl && phase !== 'memory') { recUrl = URL.createObjectURL(b); paintActions(); } });
     }
-    if (p === 'check') missed.clear();
+    if (p === 'check') { missed.clear(); for (const k of skip) missed.add(k); } // passed over: marked, untap if the phone misheard
     phase = p;
     pop.hidden = true;
     peeked.clear();
@@ -728,6 +812,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   if (tree(s)!.learned === 0 && step === 'new') toast(lt('learn.firstLesson'));
   return () => {
     stopAll();
+    if (follower) stopFollow();
     void rec.stop();
     mine.pause();
     if (recUrl) URL.revokeObjectURL(recUrl);
