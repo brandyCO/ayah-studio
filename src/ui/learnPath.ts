@@ -296,6 +296,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   }
 
   paint();
+  void import('./pathBuddy').then((b) => b.pathBuddy(list));
   // Scroll the step to do now into view; a tree that just grew plays its moment.
   requestAnimationFrame(() => {
     const cur = list.querySelector('.lp-step.is-current') ?? list.querySelector('.lp-tree.grew');

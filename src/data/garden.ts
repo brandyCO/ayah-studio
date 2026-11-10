@@ -141,6 +141,11 @@ export const trees = (): Readonly<Tree>[] => Object.values(load().trees);
 export const tree = (s: number): Readonly<Tree> | null => load().trees[s] ?? null;
 export const decos = (juz: number): Readonly<Deco>[] => Object.values(load().decos).filter((d) => d.juz === juz && !d.gone);
 /** Decorations bought and not yet placed in any garden. */
+/** Ranks prize pieces kept (one a week won): the week and the place, newest first. */
+export const prizeWins = (): { week: string; place: 1 | 2 | 3 }[] => Object.values(load().decos)
+  .map((d) => ({ m: /^prize-(.+)-[a-z]+$/.exec(d.id), place: DECOS.find((x) => x.k === d.k)?.place }))
+  .filter((x): x is { m: RegExpExecArray; place: 1 | 2 | 3 } => !!x.m && !!x.place)
+  .map((x) => ({ week: x.m[1], place: x.place })).sort((a, b) => (a.week < b.week ? 1 : -1));
 export const unplacedDecos = (): Readonly<Deco>[] => Object.values(load().decos).filter((d) => !d.gone && d.x < 0);
 export const ownsVariety = (s: number, v: number) => v === 0 || load().owned[`v:${s}:${v}`] !== undefined;
 export const spent = () => Object.values(load().owned).reduce((a, b) => a + b, 0);

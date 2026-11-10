@@ -1487,6 +1487,14 @@ duas/reflections section in Me.
       Wardrobe tab (locked pieces can be tried on, not worn). The character follows the day (`dayLook()` in `actor.ts`): morning
       stretch, the mushaf when pages were read today, a lantern after 21:00, dozing once the bedtime du'a is said; its bust sits in
       the page-counted pill; in the overtake moment yours cheers and the passed player's waves back
+      **Round 2** (same request): **Your room** on Me (`src/ui/room.ts` + `room.css`, lazy, only with a character): this
+      hour's sky in the window, Ranks trophies on the top shelf (`prizeWins()` in `garden.ts`, from the prize decorations kept),
+      the best 4 badges below, a framed flame with the best streak, a gold star for a legendary piece; the character sits on a
+      cushion (mushaf by day, lantern at night), hops when tapped; Dress up / Share. **Character card** (`src/ui/charCard.ts`):
+      1080×1350 PNG, the character cheering (`figureSvg(…, { cheer })`) on its background, streak / pieces / trophies, shared like
+      the Monday recap. **Learn path** (`src/ui/pathBuddy.ts`, one call in `learnPath.ts`): stands beside the current step and
+      waves; sits under a tree that just grew and cheers; under the last tree when every step is done. **Friend challenges**:
+      both characters face each other on steps sized by points (`duo()` in `ranks.ts`); the leader cheers, the other waves
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
