@@ -2,6 +2,7 @@
 // prayers, before sleeping. A lantern lights when that session is said in full today (progress from
 // src/data/adhkar.ts); the one whose time it is now breathes. A tap opens the session. Loaded with Me.
 import { finishedIds } from '../data/adhkar';
+import { todayRec } from '../data/journey';
 import { loadDuas, momentKey, momentList, prayerNow, type Dua, type Moment, type Prayer } from '../data/duas';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
 import { h, haptic } from './dom';
@@ -36,7 +37,9 @@ export async function paintDayLanterns(slot: HTMLElement) {
   const hour = new Date().getHours();
   // "Now": waking in the early morning before Dhuhr's list is due, sleep late at night.
   const nowStop = hour >= 21 || hour < 3 ? 'sleep' : `salah:${now}`;
+  const said = todayRec().dm ?? [];
   const done = (st: Stop) => {
+    if (said.includes(momentKey(st.m, st.p))) return true;
     const list = momentList(data, st.m, st.p);
     const f = new Set(finishedIds(momentKey(st.m, st.p)));
     return list.every((d) => f.has(d.id));
@@ -61,4 +64,16 @@ export async function paintDayLanterns(slot: HTMLElement) {
       })),
     h('button', { class: 'chip dl-adhan', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas('adhan')); } }, `🕌  ${akt('du.title.adhan')}`));
   slot.dataset.ready = '1';
+}
+
+/** The goal's button: the moment whose time it is, if it is still unlit, else the first unlit one. */
+export async function openNextMoment() {
+  const now = await prayerNow();
+  const hour = new Date().getHours();
+  const said = todayRec().dm ?? [];
+  const lit = (st: Stop) => said.includes(momentKey(st.m, st.p));
+  const cur = STOPS.find((st) => (hour >= 21 || hour < 3 ? st.m === 'sleep' : st.p === now));
+  const st = cur && !lit(cur) ? cur : STOPS.find((x) => !lit(x)) ?? cur ?? STOPS[0];
+  const { openDuas } = await import('./adhkar');
+  await openDuas(st.m, st.p);
 }

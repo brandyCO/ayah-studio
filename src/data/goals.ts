@@ -31,7 +31,13 @@ export const WEEK_PAGES = [0, 7, 14, 25, 50, 100] as const;
 export const WEEK_LISTEN = [0, 30, 60, 120, 300] as const;
 export const WEEK_SURAHS = [0, 1, 2, 3, 5] as const;
 export const WEEK_REELS = [0, 1, 3, 5, 7] as const;
-export interface WeekGoals { pages: number; listen: number; surahs: number; reels: number }
+export const WEEK_NIGHTS = [0, 3, 5, 7] as const;
+/** Du'a lanterns a day (of 7: waking, after the five prayers, sleep). */
+export const DUA_GOALS = [0, 1, 3, 5, 7] as const;
+export const LANTERNS = ['wake', 'salah:fajr', 'salah:dhuhr', 'salah:asr', 'salah:maghrib', 'salah:isha', 'sleep'];
+/** Lanterns lit on a day. */
+export const litCount = (d?: { dm?: string[] }) => (d?.dm ?? []).filter((k) => LANTERNS.includes(k)).length;
+export interface WeekGoals { pages: number; listen: number; surahs: number; reels: number; nights: number }
 
 export const CUSTOM_MAX = 5;
 export const CUSTOM_TIMES = [1, 2, 3, 5, 7, 10, 20] as const;
@@ -50,6 +56,8 @@ export interface Goals {
   reels: number;
   dhikr: Partial<Record<DhikrId, number>>;
   adhkar: boolean;
+  /** Du'a lanterns to light a day (0 = off). */
+  duas: number;
   custom: CustomGoal[];
   weekly: WeekGoals;
   /** The pace picked at the start (null = not picked yet). */
@@ -60,12 +68,12 @@ export interface Goals {
   at: number;
 }
 export type Pace = 'gentle' | 'steady' | 'devoted';
-const WEEK_DEFAULT: WeekGoals = { pages: 14, listen: 60, surahs: 1, reels: 0 };
-const DEFAULT: Goals = { pages: 2, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: true, custom: [], weekly: WEEK_DEFAULT, pace: null, since: '', at: 0 };
-export const PACES: Record<Pace, Pick<Goals, 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'weekly'>> = {
-  gentle: { pages: 1, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: false, weekly: { pages: 7, listen: 30, surahs: 0, reels: 0 } },
-  steady: { pages: 2, memorise: 1, reels: 0, dhikr: { subhan: 100 }, adhkar: true, weekly: WEEK_DEFAULT },
-  devoted: { pages: 5, memorise: 3, reels: 0, dhikr: { subhan: 100, istighfar: 100, tahleel: 100 }, adhkar: true, weekly: { pages: 50, listen: 120, surahs: 2, reels: 1 } },
+const WEEK_DEFAULT: WeekGoals = { pages: 14, listen: 60, surahs: 1, reels: 0, nights: 3 };
+const DEFAULT: Goals = { pages: 2, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: true, duas: 3, custom: [], weekly: WEEK_DEFAULT, pace: null, since: '', at: 0 };
+export const PACES: Record<Pace, Pick<Goals, 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'duas' | 'weekly'>> = {
+  gentle: { pages: 1, memorise: 0, reels: 0, dhikr: { subhan: 33 }, adhkar: false, duas: 1, weekly: { pages: 7, listen: 30, surahs: 0, reels: 0, nights: 0 } },
+  steady: { pages: 2, memorise: 1, reels: 0, dhikr: { subhan: 100 }, adhkar: true, duas: 3, weekly: WEEK_DEFAULT },
+  devoted: { pages: 5, memorise: 3, reels: 0, dhikr: { subhan: 100, istighfar: 100, tahleel: 100 }, adhkar: true, duas: 5, weekly: { pages: 50, listen: 120, surahs: 2, reels: 1, nights: 7 } },
 };
 
 let memo: { raw: string | null; g: Goals } | null = null;
@@ -92,6 +100,8 @@ function parseGoals(raw: string | null): Goals {
       reels: pick(v.reels, REEL_GOALS, 0),
       dhikr,
       adhkar: v.adhkar !== false,
+      // Goals saved before the du'a moments: a gentle start (one lantern on a gentle pace, else three).
+      duas: pick(v.duas, DUA_GOALS, v.pace === 'gentle' ? 1 : 3),
       custom: Array.isArray(v.custom) ? v.custom.filter((c: CustomGoal) => c && typeof c.id === 'string' && typeof c.name === 'string' && c.name.trim())
         .slice(0, CUSTOM_MAX).map((c: CustomGoal) => ({
           id: c.id, name: c.name.trim().slice(0, 40), target: pick(c.target, CUSTOM_TIMES, 1),
@@ -102,6 +112,7 @@ function parseGoals(raw: string | null): Goals {
         listen: pick(v.weekly?.listen, WEEK_LISTEN, WEEK_DEFAULT.listen),
         surahs: pick(v.weekly?.surahs, WEEK_SURAHS, WEEK_DEFAULT.surahs),
         reels: pick(v.weekly?.reels, WEEK_REELS, WEEK_DEFAULT.reels),
+        nights: pick(v.weekly?.nights, WEEK_NIGHTS, 0),
       },
       pace: v.pace === 'gentle' || v.pace === 'steady' || v.pace === 'devoted' ? v.pace : 'steady',
       since: typeof v.since === 'string' ? v.since : '',
@@ -125,7 +136,7 @@ export function setGoals(g: Goals) {
 
 export interface GoalProgress {
   id: string;
-  kind: 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'custom' | 'listen' | 'surahs';
+  kind: 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'custom' | 'listen' | 'surahs' | 'duas' | 'nights';
   /** A weekly goal: the Monday its week starts. */
   week?: string;
   dhikr?: DhikrId;
@@ -154,6 +165,7 @@ export function todayGoals(now = new Date()): GoalProgress[] {
     out.push({ id: 'adhkar', kind: 'adhkar', period: 's', done: d.ad ? ADHKAR_TOTAL.s : Math.min(ADHKAR_TOTAL.s - 1, finishedCount('s')), target: ADHKAR_TOTAL.s });
     if (d.am || eveningOpen(now)) out.push({ id: 'adhkarM', kind: 'adhkar', period: 'm', done: d.am ? ADHKAR_TOTAL.m : Math.min(ADHKAR_TOTAL.m - 1, finishedCount('m')), target: ADHKAR_TOTAL.m });
   }
+  if (g.duas) out.push({ id: 'duas', kind: 'duas', done: litCount(d), target: g.duas });
   const wd = now.getDay();
   for (const c of g.custom) if (!c.days.length || c.days.includes(wd)) out.push({ id: `c:${c.id}`, kind: 'custom', custom: c, done: d.cu?.[c.id] ?? 0, target: c.target });
   return out;
@@ -165,7 +177,7 @@ export function weekGoals(now = new Date()): GoalProgress[] {
   const wk = weekOf(dayKey(now));
   const days = allDays();
   const log = readLogAll();
-  let pages = 0, listen = 0, surahs = 0, reels = 0;
+  let pages = 0, listen = 0, surahs = 0, reels = 0, nights = 0;
   for (let i = 0; i < 7; i++) {
     const k = addDays(wk, i);
     pages += log[k]?.length ?? 0;
@@ -173,6 +185,7 @@ export function weekGoals(now = new Date()): GoalProgress[] {
     listen += d?.l ?? 0;
     surahs += d?.s?.length ?? 0;
     reels += d?.r ?? 0;
+    if (d?.dm?.includes('sleep')) nights++;
   }
   const out: GoalProgress[] = [];
   const add = (kind: GoalProgress['kind'], done: number, target: number) => {
@@ -182,6 +195,7 @@ export function weekGoals(now = new Date()): GoalProgress[] {
   add('listen', Math.floor(listen / 60), w.listen);
   add('surahs', surahs, w.surahs);
   add('reels', reels, w.reels);
+  add('nights', nights, w.nights);
   return out;
 }
 /** Id of the reward for every weekly goal met. */
@@ -297,6 +311,7 @@ export function lightFor(g: Pick<GoalProgress, 'kind' | 'target' | 'week'>): num
       case 'pages': return 3 * g.target;
       case 'listen': return Math.round(g.target / 2);
       case 'surahs': return 40 * g.target;
+      case 'nights': return 15 * g.target;
       default: return 10 * g.target;
     }
   }
@@ -306,6 +321,7 @@ export function lightFor(g: Pick<GoalProgress, 'kind' | 'target' | 'week'>): num
     case 'reels': return 10 * g.target;
     case 'dhikr': return DHIKR_LIGHT[g.target] ?? 5;
     case 'adhkar': return 20;
+    case 'duas': return 8 * g.target;
     default: return 10;
   }
 }
