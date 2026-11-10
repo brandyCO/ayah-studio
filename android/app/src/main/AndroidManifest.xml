@@ -219,6 +219,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
         </receiver>
+        <receiver android:name=".DuaWidget" android:label="@string/dua_widget_label" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/dua_widget_info" />
+        </receiver>
         <receiver android:name=".PrayerAlarm" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

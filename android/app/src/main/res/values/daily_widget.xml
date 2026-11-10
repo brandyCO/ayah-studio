@@ -12,6 +12,8 @@
     <string name="tasbih_widget_label">Tasbih</string>
     <string name="tasbih_widget_description">Count dhikr from the home screen</string>
     <string name="prayer_widget_label">Prayer times</string>
+    <string name="dua_widget_label">Du\'a lanterns</string>
+    <string name="dua_widget_description">Today\'s du\'a moments as a string of lanterns, lit as you say them</string>
     <string name="prayer_widget_description">The next prayer and today’s times, worked out on your phone</string>
     <string name="tasbih_next">Next dhikr</string>
     <string name="tasbih_count">Count one</string>

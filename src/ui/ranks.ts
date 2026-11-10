@@ -11,7 +11,10 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Board, type Challenge, type Metric, type Row, type Status,
+  StaleMiss, staleFirst, refreshCached,
 } from '../together/ranks';
+import { inboxBell } from './inbox';
+import { star } from './lightChip';
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
@@ -169,6 +172,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('li', {}, rt('rk.ptReel', { n: POINTS.reel })),
         h('li', {}, rt('rk.ptLesson', { n: POINTS.lesson })),
         h('li', {}, rt('rk.ptDay', { n: POINTS.day }))),
+      h('p', { class: 'rk-not-light' }, rt('rk.notLight')),
       h('p', { class: 'muted small' }, rt('rk.fair')),
       h('p', { class: 'muted small' }, rt('rk.fairNote')),
       h('p', { class: 'muted small' }, rt('rk.league', { size: LEAGUE.size, up: LEAGUE.up, down: LEAGUE.down }))));
@@ -189,6 +193,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // (this week's quest and prizes); you, the shop and the trophies sit behind the top bar's buttons,
   // and a prize waiting to be opened pops up once instead of living on the page.
   const topActs = h('div', { class: 'rk-top-acts' });
+  const bell = inboxBell();
   let status: Status | null = null;
   async function paintHead(fresh: boolean) {
     const s = await rankStatus(fresh);
@@ -199,7 +204,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       return;
     }
     topActs.replaceChildren(
-      h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, `✦ ${num(lightLeft())}`),
+      bell,
+      h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, star(), num(lightLeft())),
       h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame, s.figure)));
     head.replaceChildren(view === 'league' ? h('div', { class: 'rk-headbox' },
       h('div', { class: `rk-hero t${s.tier}` },
@@ -207,6 +213,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends)),
       strip(s)) : '');
+    if (fromKept) return;
     void paintPrizes(s, fresh);
     void moments(s);
   }
@@ -237,6 +244,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
           h('button', { class: 'rk-me-name', onclick: () => { d.close(); openName(); }, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
           tierBadge(s.tier)),
         h('div', { class: 'rk-me-score' }, h('b', {}, num(s.week)), h('span', { class: 'muted small' }, rt('rk.ptsWeek')))),
+        h('p', { class: 'muted small' }, rt('rk.notLight')),
       h('div', { class: 'rk-me-line' },
         h('span', {}, s.weekPlace ? rt('rk.place', { n: num(s.weekPlace), of: num(s.weekPlayers) }) : rt('rk.noPlace')),
         h('span', { class: 'muted' }, rt('rk.allTime', { n: num(s.total), place: num(s.allPlace) }))),
@@ -663,6 +671,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   }
 
   let paintId = 0;
+  // Painting from the answers kept on this device (Ranks opens at once, then the fresh paint follows).
+  let fromKept = false;
   async function paint(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
@@ -674,8 +684,16 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       await paintHead(fresh);
       await paintBody(fresh);
     } catch (e) {
+      if (e instanceof StaleMiss) return;
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));
     }
+  }
+  /** Ranks at once from last time, then the fresh answers (only repainted when something changed). */
+  async function open() {
+    if (!account()) { signedOut(); return; }
+    fromKept = true;
+    try { await staleFirst(() => paint(false)); } finally { fromKept = false; }
+    await paint(true);
   }
 
   root.append(
@@ -692,10 +710,17 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
     try { await acceptChallenge(pendingCh); view = 'boards'; toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
   }
-  void paint(true);
+  void open();
   const off = onAccount(() => void paint(true));
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
-  return () => { off(); clearInterval(tick); };
+  // Live while open: others' points, names and characters show within seconds, not after a minute.
+  let polling = false;
+  const live = window.setInterval(async () => {
+    if (document.hidden || polling || !account() || document.querySelector('dialog[open], .cel')) return;
+    polling = true;
+    try { await report(); if (await refreshCached()) await paint(false); } finally { polling = false; }
+  }, 12_000);
+  return () => { off(); clearInterval(tick); clearInterval(live); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */

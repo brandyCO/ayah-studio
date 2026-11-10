@@ -11,6 +11,8 @@ import { PRAYERS, prayerDay, prayerSettings } from '../data/prayer';
 import { locale, t, type Key } from '../i18n';
 import { rewardPalette } from './theme';
 import { isNative } from '../native';
+import { akt, type AdhkarKey } from '../i18n/adhkar';
+import { mpt } from '../i18n/mePages';
 
 interface WidgetData {
   streak: { days: number; lit: boolean; today: string; weeks: number; freeze: boolean; week: string[]; hist: Record<string, string>; best: number };
@@ -21,6 +23,8 @@ interface WidgetData {
   dhikrDay: string;
   dhikrToday: Record<string, number>;
   strings: Record<string, string>;
+  /** The du'a lanterns widget: today's finished moments (journey `dm`) and the names under them. */
+  duas: { day: string; lit: string[]; names: string[]; title: string; of: string };
 }
 const Widgets = registerPlugin<{
   update(d: WidgetData): Promise<void>;
@@ -29,10 +33,10 @@ const Widgets = registerPlugin<{
   pin(o: { kind: WidgetKind }): Promise<{ ok: boolean }>;
 }>('Widgets');
 
-export const WIDGETS = ['streak', 'tasbih', 'prayer', 'daily'] as const;
+export const WIDGETS = ['streak', 'tasbih', 'prayer', 'duas', 'daily'] as const;
 export type WidgetKind = (typeof WIDGETS)[number];
 export interface WidgetStatus { canPin: boolean; on: Record<WidgetKind, number> }
-const NONE: WidgetStatus = { canPin: false, on: { streak: 0, tasbih: 0, prayer: 0, daily: 0 } };
+const NONE: WidgetStatus = { canPin: false, on: { streak: 0, tasbih: 0, prayer: 0, duas: 0, daily: 0 } };
 /** Which widgets are on the home screen (Android); web: none, and none can be added. */
 export async function widgetStatus(): Promise<WidgetStatus> {
   if (!isNative()) return NONE;
@@ -87,7 +91,14 @@ async function data(): Promise<WidgetData> {
       dayStreak: str('w.dayStreak'), litToday: str('w.litToday'), openToday: str('w.openToday'), start: str('w.start'),
       weeks: str('w.weeks'), next: str('w.next'), noLocation: str('w.noLocation'), tapToCount: str('w.tapToCount'),
       prayerChannel: str('w.prayerChannel'), letters: letters.join('|'), best: str('w.best'), streakHead: str('w.streakHead'),
-      todayAyah: str('wg.dailyHead'),
+      todayAyah: str('wg.dailyHead'), inLeft: mpt('mp.inLeft'),
+    },
+    duas: {
+      day: dayKey(),
+      lit: [...(todayRec().dm ?? [])],
+      names: ['du.short.wake', 'du.p.fajr', 'du.p.dhuhr', 'du.p.asr', 'du.p.maghrib', 'du.p.isha', 'du.short.sleep'].map((k) => akt(k as AdhkarKey)),
+      title: akt('du.moments'),
+      of: akt('du.lit'),
     },
   };
 }

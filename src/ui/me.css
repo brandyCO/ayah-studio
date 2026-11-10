@@ -107,3 +107,55 @@
 .wd-peek { display: flex; }
 .wd-peek .wd-piece + .wd-piece { margin-inline-start: -14px; }
 .wd-piece { display: inline-grid; border-radius: 50%; box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+
+/* One goals card: Today / This week switch in the same place (owner request 2026-11-10). */
+.goal-head { align-items: center; gap: 10px; }
+.goal-seg { display: inline-flex; flex: 1; max-width: 300px; padding: 4px; border-radius: 16px; background: color-mix(in srgb, #f59f00 12%, var(--card));
+  box-shadow: inset 0 2px 0 color-mix(in srgb, #000 6%, transparent); }
+.goal-seg-b { position: relative; flex: 1; border: 0; border-radius: 12px; padding: 8px 10px; background: none; color: var(--muted);
+  font: 900 var(--fs-m) var(--ui-round); cursor: pointer; transition: background var(--dur-2, .2s), color var(--dur-2, .2s), transform .12s; }
+.goal-seg-b:active { transform: scale(.96); }
+.goal-seg-b.on { background: #f59f00; color: #fff; box-shadow: 0 3px 0 #b87400; }
+.goal-seg-dot { position: absolute; top: 5px; inset-inline-end: 8px; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f;
+  box-shadow: 0 0 0 2px var(--card); animation: seg-dot 1.6s ease-in-out infinite; }
+@keyframes seg-dot { 50% { transform: scale(1.35); } }
+.goal-head + .goal-reset { margin-top: 6px; }
+.me-card .week-goals { margin-top: 0; padding-top: 0; border-top: 0; }
+.me-card .goal-links { gap: 6px; margin-top: 12px; }
+.me-card .goal-links .chip { font-weight: 700; }
+
+/* The du'a lanterns sit right under the goals, as one compact strip. */
+.me-card.dl-card { padding-top: 10px; padding-bottom: 10px; }
+.dl-card .me-h { font-size: var(--fs-l); }
+
+/* Doors: each opens its own full screen, so Me stays short. */
+.me-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.me-door { --dc: #f59f00; position: relative; display: flex; align-items: center; gap: 10px; min-height: 72px; padding: 12px; border-radius: 20px;
+  background: color-mix(in srgb, var(--dc) 12%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--dc) 30%, var(--card));
+  color: var(--text); text-decoration: none; transition: transform .12s, box-shadow .12s; }
+.me-door:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--dc) 30%, var(--card)); }
+.me-door.d-room { --dc: #6c5ce7; } .me-door.d-prayer { --dc: #12a594; } .me-door.d-stats { --dc: #f59f00; } .me-door.d-library { --dc: #ff6b4a; }
+.me-door-ic { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 14px; font-size: 22px;
+  background: var(--dc); box-shadow: 0 3px 0 color-mix(in srgb, var(--dc) 65%, #000); }
+.me-door-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.me-door-txt b { font: 900 var(--fs-m) var(--ui-round); }
+.me-door-txt .small { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.me-door-dot { position: absolute; top: 8px; inset-inline-end: 10px; width: 9px; height: 9px; border-radius: 50%; background: #ff4d4f; }
+.me-page { padding-bottom: 8px; }
+.me-make-fig { width: 100%; margin: 12px 0; }
+@media (max-width: 340px) { .me-doors { grid-template-columns: 1fr; } }
+.dl-acts { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 10px; }
+.dl-acts .dl-adhan { margin-top: 0; }
+.dl-acts .bp:has(> :not(.bp-start)) { flex-basis: 100%; }
+.lt-sheet .me-tile.lt-left { grid-column: 1 / -1; }
+.lt-left .me-tile-n { align-items: center; gap: 8px; }
+.lt-left .lt-chip-ic { width: 24px; height: 24px; }
+.me-ask { display: flex; gap: 12px; align-items: flex-start; background: color-mix(in srgb, #12a594 10%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, #12a594 26%, var(--card)); }
+.me-ask-ic { font-size: 26px; line-height: 1; }
+.me-ask-txt b { font: 800 var(--fs-m) var(--ui-round); }
+.me-ask-txt p { margin: 4px 0 8px; }
+/* The du'a lanterns widget's preview (src/ui/widgetsPage.ts). */
+.wg-duas { flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
+.wg-pv > .wg-lanterns { display: flex; flex-direction: row; gap: 4px; }
+.wg-lanterns i { width: 9px; height: 13px; border-radius: 4px; background: rgb(255 255 255 / .16); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+.wg-lanterns i.on { background: linear-gradient(#ffd68c, #f2a03c); box-shadow: 0 0 6px rgb(255 186 80 / .8); }

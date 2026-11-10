@@ -49,7 +49,7 @@ function totals(k: string) {
 }
 let timer = 0;
 let busy = false;
-export function reportSoon(delay = 90_000) {
+export function reportSoon(delay = 8_000) {
   if (!account() || timer) return;
   timer = window.setTimeout(() => { timer = 0; void report(); }, delay);
 }
@@ -82,6 +82,8 @@ export function watchRanks() {
   window.addEventListener('readlog-changed', soon);
   document.addEventListener('visibilitychange', () => { if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); } });
   onAccount((a) => {
+    kept = null;
+    cache.clear();
     if (!a) return;
     reportSoon(3000);
     // A board invite opened before signing in: Ranks joins it.
@@ -91,15 +93,67 @@ export function watchRanks() {
 }
 
 // --- reading the boards (kept a minute, so switching tabs is instant) ---
-const cache = new Map<string, { at: number; v: unknown }>();
+// Answers are kept a minute in memory, and the last of each on this device too, so Ranks can open
+// at once with what it showed last time (`staleFirst`) while the fresh answers load. While Ranks is
+// open, `refreshCached()` asks again for what it shows and tells whether anything changed.
+const cache = new Map<string, { at: number; v: unknown; json: string; load: () => Promise<unknown> }>();
+const STORE = 'rankCache';
+let kept: Record<string, unknown> | null = null;
+const keptAll = () => {
+  if (kept) return kept;
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE) ?? 'null');
+    kept = v && v.who === account()?.id && typeof v.v === 'object' ? v.v : {};
+  } catch { kept = {}; }
+  return kept!;
+};
+let keepTimer = 0;
+const keep = (key: string, v: unknown) => {
+  keptAll()[key] = v;
+  clearTimeout(keepTimer);
+  keepTimer = window.setTimeout(() => {
+    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept })); } catch { /* full */ }
+    // The inbox bell counts prizes and challenge chests from these (src/ui/inbox.ts).
+    window.dispatchEvent(new Event('rank-cache'));
+  }, 400);
+};
+/** Thrown while painting from the kept answers when one is missing: the fresh paint follows. */
+export class StaleMiss extends Error {}
+let stale = false;
+/** Runs `paint` with the answers kept on this device (no network); a missing one throws StaleMiss. */
+export async function staleFirst<T>(paint: () => Promise<T>): Promise<T> {
+  stale = true;
+  try { return await paint(); } finally { stale = false; }
+}
 async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Promise<T> {
   const c = cache.get(key);
   if (!fresh && c && Date.now() - c.at < 60_000) return c.v as T;
+  if (stale && !fresh) {
+    if (c) return c.v as T;
+    const k = keptAll();
+    if (key in k) return k[key] as T;
+    throw new StaleMiss();
+  }
   const v = await load();
-  cache.set(key, { at: Date.now(), v });
+  cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
+  keep(key, v);
   return v;
 }
-export const dropCache = () => cache.clear();
+export const dropCache = () => { for (const c of cache.values()) c.at = 0; };
+/** Asks again for every answer used in the last 2 minutes; true when any of them changed. */
+export async function refreshCached(): Promise<boolean> {
+  let changed = false;
+  await Promise.all([...cache.entries()].filter(([, c]) => Date.now() - c.at < 120_000 || c.at === 0).map(async ([key, c]) => {
+    try {
+      const v = await c.load();
+      const json = JSON.stringify(v) ?? '';
+      if (json !== c.json) changed = true;
+      cache.set(key, { at: Date.now(), v, json, load: c.load });
+      keep(key, v);
+    } catch { /* offline: keep what there is */ }
+  }));
+  return changed;
+}
 
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: dayKey() });

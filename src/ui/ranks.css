@@ -351,3 +351,5 @@
 .rk-bub.out { opacity: 0; translate: -50% -8px; }
 @keyframes rk-bub-in { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) { .rk-bub { animation: none; } }
+.rk-not-light { padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, #6c5ce7 12%, var(--card)); font-weight: 600; font-size: var(--fs-s); }
+.rk-shop-btn { display: inline-flex; align-items: center; gap: 5px; } .rk-shop-btn .lt-chip-ic { width: 16px; height: 16px; }
