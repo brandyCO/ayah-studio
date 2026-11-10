@@ -1745,7 +1745,16 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       another haraka (`HARAKAT_FLAG` −6; 97 % caught, ~1 % false). Flagged words show with an amber wavy underline
       (`harakah`) and count as missed at the check. Supabase token checked, 60 min a day per user, no audio stored.
       Deploy: `.github/workflows/harakat.yml` (Cloud Run, 4 vCPU, ≤ 3 copies, scale to zero; secret `GCP_SA_KEY`,
-      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Without it: the phone's recogniser as before
+      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Without it: the phone's recogniser as before.
+      **Help improve the harakat check** (plan steps 2–5): opt-in (`harakatHelp`, off, never in the Kids space; asked
+      once at a check with an orange word, Me → ⚙ → App): `ClipJar` (`src/ui/harakatClips.ts`) keeps ≤ 3 s clips of
+      flagged words (+ one unflagged, 25 %) cut by the server's word times (`at`), shared after the check with the
+      learner's answer (untapped orange word = "I said it right"). Migration `20261111000000_harakat_clips.sql`
+      (`harakat_clips` bytea PCM, 40 a day, no table access; `harakat_clip_add`, `harakat_my_clips`,
+      `harakat_forget_mine`; teachers in `harakat_reviewers`: `harakat_review_queue` (never who), `harakat_label`;
+      pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
+      (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
+      export, held-out report)
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;

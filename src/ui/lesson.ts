@@ -29,6 +29,8 @@ import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
+import { ClipJar, helpCard, helpChoice } from './harakatClips';
+import { kidsOn } from '../data/kids';
 import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
@@ -140,6 +142,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   let fBase = 0;
   const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
   const hkS = new Set<string>(); let hkNext: string[] = []; // said with another haraka (harakat server)
+  const jar = new ClipJar(); // clips for "Help improve the harakat check" (src/ui/harakatClips.ts)
   let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const voiced = (k: string) => said.has(k) || sayP.has(k);
@@ -352,6 +355,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
         skip.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.skippedN', { n: skip.size })) : '',
+        hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
+        hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
         ab,
         pick(0, lt('learn.notYet'), () => {
           keepWeak();
@@ -395,7 +400,11 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       heard: (text, final) => heard(text, final),
       hints: () => hintsFrom(fw, fBase),
       ahead: () => fw.slice(fBase).map((w) => fwText.get(w.key) ?? ''),
-      flagged: (at) => { hkNext = at.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k); },
+      checked: (r, pcm) => {
+        hkNext = r.flags.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k);
+        const base = fBase;
+        jar.take(pcm, r, (i) => { const w = fw[base + i]; if (!w) return null; const a = +w.key.split(':')[0]; return { key: w.key, s, a, text: fwText.get(w.key) ?? '' }; });
+      },
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
@@ -480,6 +489,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
   /** Missed and prompted words come back with a hint; weak words recited cleanly move towards leaving. */
   function keepWeak() {
+    jar.share(missed);
     const bad = new Set([...helped, ...missed]);
     for (const k of bad) { const [a, i] = k.split(':').map(Number); markWeak(s, a, i); }
     for (const k of weak) if (!bad.has(k)) { const [a, i] = k.split(':').map(Number); markStrong(s, a, i); }
@@ -492,6 +502,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (p !== 'memory' && rec.on) void stopRec().then(() => { if (phase === 'check') paintActions(); });
     if (p === 'memory' && phase !== 'check') {
       helped.clear(); shown.clear(); missed.clear();
+      jar.clear();
       said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
       weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
       if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }

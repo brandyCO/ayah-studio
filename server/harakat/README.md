@@ -43,3 +43,18 @@ On Google Cloud Run (the GitHub workflow `Deploy harakat server` does this on ev
    it in the repo variable `HARAKAT_URL`, and the next app build turns the check on.
 5. Billing → Budgets & alerts: a budget (for example $10 a month) so any cost past the free tier is
    noticed. The server never runs more than 3 copies at once.
+
+## Making it better (teachers' labels)
+
+Learners who turn on **Help improve the harakat check** share short clips of flagged words (and a few
+unflagged ones) with their own answer at the check. Teachers label them:
+
+1. Add a teacher (Supabase SQL editor): `insert into harakat_reviewers (user_id) select id from auth.users
+   where email = 'teacher@example.com';` They sign in to the app with Google and open `#/learn/review`.
+2. **Tune** (any time, a few minutes): Actions → Tune harakat check → Run workflow. The artifact
+   `thresholds.json` sets a threshold per haraka from the labels (only for harakat with ≥ 40 right and ≥ 10
+   wrong clips, keeping false alarms ≤ 1.5 %). Put it in `server/harakat/` and merge: the deploy picks it up.
+3. **Train** (when there are a few thousand labelled clips): on a free Kaggle or Colab GPU,
+   `DB_URL=… python3 scripts/harakat-clips.py clips` then `python3 scripts/harakat-finetune.py clips --out ft`.
+   It prints the current and the new model's results on held-out clips; replace the image's model only when
+   the new one catches more at no more false alarms. Clips are learners' voices: keep them off public places.

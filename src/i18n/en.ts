@@ -1041,6 +1041,7 @@ const en = {
   'cel.ok': 'Alhamdulillah',
   'cel.combo': '{n} in a row',
   'set.soundsOn': 'Reward sounds: on',
+  'set.harakatHelp': 'Help improve the harakat check',
   'set.soundsOff': 'Reward sounds: off',
   'cel.tapOpen': 'Tap the chest to open it',
   'cel.freeze': 'Streak freeze',

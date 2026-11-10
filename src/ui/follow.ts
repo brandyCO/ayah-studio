@@ -10,6 +10,7 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { account } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
+import type { PartResult } from './harakatClips';
 
 interface SpeechNative {
   available(): Promise<{ available: boolean; onDevice: boolean }>;
@@ -65,8 +66,9 @@ export interface FollowHandlers {
   hints?(): string[];
   /** The text from where the reciter is now (words as written): the harakat server matches parts to it. */
   ahead?(): string[];
-  /** Server only, just before heard(…, true) for the same part: words of ahead() said with another haraka. */
-  flagged?(at: number[]): void;
+  /** Server only, just before heard(…, true) for the same part: what the server found (indices into the
+   * ahead() sent with it; `flags` = said with another haraka) and the part's audio. */
+  checked?(r: PartResult, pcm: Int16Array): void;
 }
 type Why = 'denied' | 'failed' | 'quiet' | 'stopped' | 'limit';
 export interface Follower { stop(): void }
@@ -169,9 +171,9 @@ async function recordParts(token: string, on: FollowHandlers, got: (t: string, f
       });
       if (res.status === 429) { finish('limit'); return; }
       if (!res.ok) throw new Error(String(res.status));
-      const r = await res.json() as { heard: string; flags: number[] };
+      const r = await res.json() as PartResult & { heard: string };
       fails = 0;
-      if (alive()) { on.flagged?.(r.flags ?? []); got(r.heard ?? '', true); }
+      if (alive()) { on.checked?.({ said: r.said ?? [], flags: r.flags ?? [], scores: r.scores, at: r.at }, pcm); got(r.heard ?? '', true); }
     } catch {
       if (++fails > 2) { finish('failed'); return; }
       queue.unshift(pcm);

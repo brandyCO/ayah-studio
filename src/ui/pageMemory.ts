@@ -18,6 +18,8 @@ import { displayWords, parseSpans } from '../engine/words';
 import { surahName } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
+import { ClipJar, helpCard, helpChoice } from './harakatClips';
+import { kidsOn } from '../data/kids';
 import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
@@ -191,6 +193,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   let follower: Follower | null = null, canFollow = false, fw: FollowWord[] = [], fBase = 0;
   const said = new Set<string>(), skip = new Set<string>(), wrongS = new Set<string>(); // skip holds the wrong ones too
   const hkS = new Set<string>(); let hkNext: string[] = []; // said with another haraka (harakat server)
+  const jar = new ClipJar(); // clips for "Help improve the harakat check" (src/ui/harakatClips.ts)
+  const where = new Map<string, [number, number]>(); // word key -> surah, ayah
   let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
   const twins = new Map<string, string[]>(); // glyphs that show the same display word go together
@@ -293,6 +297,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       prev = id;
       twins.set(k, []);
       list.push({ key: k, text: texts.get(g.s)?.[g.a - 1]?.[g.i] ?? '' });
+      where.set(k, [g.s, g.a]);
     });
     fw = followWords(list);
     fwText = new Map(list.map((x) => [x.key, x.text]));
@@ -302,7 +307,11 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       heard: (text, final) => heard(text, final),
       hints: () => hintsFrom(fw, fBase),
       ahead: () => fw.slice(fBase).map((w) => fwText.get(w.key) ?? ''),
-      flagged: (at) => { hkNext = at.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k); },
+      checked: (r, pcm) => {
+        hkNext = r.flags.map((i) => fw[fBase + i]?.key).filter((k): k is string => !!k);
+        const base = fBase;
+        jar.take(pcm, r, (i) => { const w = fw[base + i]; const at = w && where.get(w.key); return w && at ? { key: w.key, s: at[0], a: at[1], text: fwText.get(w.key) ?? '' } : null; });
+      },
       ended: (why) => {
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
@@ -366,6 +375,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
 
   function setMode(m: Mode) {
     if (follower) stopFollow();
+    jar.clear();
     said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
@@ -408,10 +418,13 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       actions.replaceChildren(
         h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
+        hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
+        hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
         res(0, lt('learn.notYet')), res(1, lt('learn.someSlips')), res(2, lt('learn.hadIt')));
     }
   }
   function done(k: 0 | 1 | 2) {
+    jar.share(missed);
     recordPage(p, k);
     if (k > 0) addLesson();
     if (k === 2) sfx.shimmer();
