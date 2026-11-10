@@ -8,7 +8,8 @@
 // to the server, which hears it, finds the words said (the same matching) and checks their harakat. The
 // audio is checked in memory there and never kept.
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
-import { hasStoredSession, supabase } from '../cloud/supabase';
+import { account } from '../cloud/auth';
+import { supabase } from '../cloud/supabase';
 
 interface SpeechNative {
   available(): Promise<{ available: boolean; onDevice: boolean }>;
@@ -39,7 +40,7 @@ const canRecord = () => !!navigator.mediaDevices?.getUserMedia && typeof AudioCo
 async function serverToken(): Promise<string | null> {
   if (!HARAKAT || !canRecord()) return null;
   try {
-    if (!hasStoredSession()) return null;
+    if (!account()) return null;
     const { data } = await (await supabase()).auth.getSession();
     return data.session?.access_token ?? null;
   } catch { return null; }
