@@ -1758,7 +1758,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       another haraka (`HARAKAT_FLAG` −6; 97 % caught, ~1 % false). Flagged words show with an amber wavy underline
       (`harakah`) and count as missed at the check. Supabase token checked, 60 min a day per user, no audio stored.
       Deploy: `.github/workflows/harakat.yml` (Cloud Run, 4 vCPU, ≤ 3 copies, scale to zero; secret `GCP_SA_KEY`,
-      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Free host (owner pick 2026-11-10, no card): a Docker Space on Hugging Face's free CPU (`.github/workflows/harakat-hf.yml`, secret `HF_TOKEN`; 2 vCPU: ~0.21x real time, same results, one copy, sleeps after 48 h). Without it: the phone's recogniser as before.
+      variable `GCP_PROJECT`), owner steps in `server/harakat/README.md`. Hugging Face option: a Docker Space on its CPU basic hardware, which since 2026 needs a PRO subscription ($9/month; tried 2026-11-10, refused with 402; owner chose to wait, no server yet) (`.github/workflows/harakat-hf.yml`, secret `HF_TOKEN`; 2 vCPU: ~0.21x real time, same results, one copy, sleeps after 48 h). Without it: the phone's recogniser as before.
       **Help improve the harakat check** (plan steps 2–5): opt-in (`harakatHelp`, off, never in the Kids space; asked
       once at a check with an orange word, Me → ⚙ → App): `ClipJar` (`src/ui/harakatClips.ts`) keeps ≤ 3 s clips of
       flagged words (+ one unflagged, 25 %) cut by the server's word times (`at`), shared after the check with the
