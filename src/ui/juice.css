@@ -1,0 +1,26 @@
+/* Noor in the reward moments (src/ui/juice.ts): a small light — core, soft halo, a short trail. No face, no
+   body; feeling shown only by light. It breathes and bobs while it waits; hops and flares are WAAPI. */
+.noor-sprite { position: absolute; z-index: 3; width: 44px; height: 44px; pointer-events: none; --nr: 0; }
+.noor-sprite .nr-body { position: absolute; inset: 0; display: block; animation: nr-bob 2.6s ease-in-out infinite; }
+.noor-sprite .nr-halo { position: absolute; inset: -60%; border-radius: 50%; opacity: calc(.75 + var(--nr) * .25);
+  background: radial-gradient(circle, color-mix(in srgb, var(--rw-hi, #ffe8a8) 70%, transparent) 0, color-mix(in srgb, var(--rw-n3, #3dd1ad) 30%, transparent) 38%, transparent 68%);
+  animation: nr-breathe 2.6s ease-in-out infinite; }
+.noor-sprite .nr-core { position: absolute; inset: 22%; border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, #fff 0 30%, var(--rw-core, #fffbe8) 52%, color-mix(in srgb, var(--rw-hi, #ffe8a8) 80%, transparent) 72%, transparent 76%);
+  box-shadow: 0 0 calc(14px + var(--nr) * 14px) calc(3px + var(--nr) * 5px) color-mix(in srgb, var(--rw-hi, #ffe8a8) 70%, transparent); }
+.noor-sprite .nr-trail { position: absolute; inset: 0; }
+.noor-sprite .nr-trail i { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; opacity: .5;
+  background: var(--rw-core, #fff); animation: nr-trail 2.6s ease-in-out infinite; }
+.noor-sprite .nr-trail i:nth-child(2) { width: 6px; height: 6px; margin: -3px; animation-delay: .15s; opacity: .35; }
+.noor-sprite .nr-trail i:nth-child(3) { width: 4px; height: 4px; margin: -2px; animation-delay: .3s; opacity: .2; }
+@keyframes nr-bob { 50% { transform: translateY(-7px); } }
+@keyframes nr-breathe { 50% { transform: scale(1.12); } }
+@keyframes nr-trail { 0%, 100% { transform: translate(-10px, 10px); } 50% { transform: translate(-14px, 4px); } }
+.noor-sprite.off, .noor-sprite.off * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .noor-sprite *, .noor-sprite { animation: none !important; } }
+/* The combo pill ("3 in a row") */
+.cel-combo { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; padding: 5px 14px;
+  border-radius: 999px; font-weight: 900; font-size: 15px; color: #3b2600; background: linear-gradient(180deg, #ffd666, #f59f00);
+  box-shadow: 0 3px 0 #b86e00, 0 0 18px rgba(255, 196, 0, .45); }
+.cel-combo:empty { display: none; }
+.sm-stage .sm-noor { right: 0; top: 6%; left: auto; }

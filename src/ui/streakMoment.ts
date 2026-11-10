@@ -6,6 +6,8 @@
 import { t, type Key } from '../i18n';
 import { h, haptic } from './dom';
 import { flame, flameTier } from './flame';
+import { bump, noor as makeNoor, popIn, squash } from './juice';
+import { sfx } from './sfx';
 import { sparks, type Sparks } from './sparks';
 import { rewardPalette, rgba } from './theme';
 
@@ -40,15 +42,16 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       h('span', { class: 'me-pip-d' }, w.label));
   }));
   const ok = h('button', { class: 'cel-ok' }, t('sm.continue'));
+  let stageEl!: HTMLElement, countEl!: HTMLElement;
   const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
   const title = t((days === 1 ? 'sm.title1' : 'sm.title') as Key, { n: days });
   const el = h('div', { class: `cel cel-streak${still ? ' still go done' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('span', { class: 'cel-flash', 'aria-hidden': 'true' }),
-    h('div', { class: 'sm-stage' },
+    stageEl = h('div', { class: 'sm-stage' },
       h('span', { class: 'cel-rings' }, h('i', {}), h('i', {}), h('i', {})),
       fl),
     canvas,
-    h('div', { class: 'sm-count' }, roll, h('span', { class: 'sm-label' }, t(days === 1 ? 'me.day' : 'me.days'))),
+    countEl = h('div', { class: 'sm-count' }, roll, h('span', { class: 'sm-label' }, t(days === 1 ? 'me.day' : 'me.days'))),
     h('p', { class: 'sm-sub' }, t(days === 1 ? 'sm.sub1' : 'sm.sub')),
     row,
     ok);
@@ -85,8 +88,15 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       const c = canvas.getBoundingClientRect();
       return [a.left + a.width / 2 - c.left, a.top + a.height / 2 - c.top] as const;
     };
+    // Noor waits beside the flame and hops on every beat.
+    const nr = makeNoor('cel-noor sm-noor');
+    nr.el.style.opacity = '0';
+    stageEl.append(nr.el);
     // 1. Light gathers, then the flame springs up out of a burst.
     later(380, () => {
+      sfx.open();
+      squash(stageEl, 0.22, { delay: 220 });
+      later(500, () => { nr.el.style.opacity = ''; popIn(nr.el); nr.glow(0.6); });
       el.classList.add('go');
       fx = sparks(canvas, [rgba(P.n1, 1), rgba(P.n2, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1)]);
       const [x, y] = centre(fl);
@@ -99,6 +109,9 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       const [x, y] = centre(roll);
       fx?.burst(x, y, 36, 0.6);
       vibrate([12, 60, 18]);
+      sfx.pop(1);
+      later(260, () => bump(countEl, 0.3));
+      nr.hop(0.7);
     });
     // 3. Today's circle fills and the check stamps in.
     later(2000, () => {
@@ -109,7 +122,9 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       const [x, y] = centre(mark);
       fx?.burst(x, y, 28, 0.45);
       haptic(16);
+      sfx.pop(3);
+      nr.hop(1);
     });
-    later(2500, () => { el.classList.add('done'); fx?.motes(true); });
+    later(2500, () => { el.classList.add('done'); fx?.motes(true); sfx.shimmer(); nr.cheer(); nr.glow(1); });
   });
 }

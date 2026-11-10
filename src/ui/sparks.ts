@@ -39,7 +39,9 @@ export interface Sparks { burst(x: number, y: number, n: number, power?: number)
 
 /** Starts the particle layer on `canvas` (sized to its box) with these colours (rgba(…, 1) strings). */
 export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const lite = document.documentElement.classList.contains('lite');
+  const dpr = Math.min(lite ? 1.5 : 2, window.devicePixelRatio || 1);
+  const cap = lite ? 110 : 220;
   const ctx = canvas.getContext('2d')!;
   const fit = () => {
     canvas.width = Math.round(canvas.clientWidth * dpr);
@@ -90,6 +92,8 @@ export function sparks(canvas: HTMLCanvasElement, colors: string[]): Sparks {
 
   return {
     burst(x, y, n, power = 1) {
+      // Old phones get half the sparks; never more than `cap` on screen, so frames stay smooth.
+      n = Math.min(lite ? Math.ceil(n / 2) : n, Math.max(0, cap - ps.length));
       for (let i = 0; i < n; i++) {
         const a = rand(0, Math.PI * 2);
         const star = i % 4 === 0;

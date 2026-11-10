@@ -1441,6 +1441,17 @@ duas/reflections section in Me.
       them all. Goal / adhkar chests hold their Light; a Ranks prize holds its Light, the trophy, the freeze (#1) and the
       week's jewel avatar or rare frame. Enter / Space taps; reduced motion → the open chest with every prize. Styles in
       `src/ui/celebrate.css` (lazy)
+      **Craft pass + sounds** (owner request 2026-11-10, "inspired by Duolingo… lets try sounds"): `src/ui/juice.ts` — spring
+      physics on WAAPI (`spring`, `squash`, `popIn`, `bump`: overshoot, then settle), `tick()` counters that pop on each step,
+      `combo()` ("2 in a row" pill when rewards are claimed within 2 min of each other, sessionStorage `celCombo`) and **Noor**
+      as a sprite (`noor()`: a floating light that hops on each tap, cheers when the chest bursts, glows) in the chest and streak
+      moments. Chest: JS drop-in with a squash on landing, an anticipation crouch before the last tap, prize cards squash as they
+      land, the Light flies to the chip led by a bigger light, the chip bumps and ticks as the dots arrive. Streak and Ranks
+      moments get the same springs and sounds. **Sounds** (`src/ui/sfx.ts`, Web Audio, no files): shaped noise + a soft low
+      thud only — tap, open, pop, shimmer, whoosh, tick; never music or instruments, never in a reel (rule 3); silent while a
+      recitation plays (Media Session), in the Kids space, when the page is hidden, and when switched off in Me → ⚙ → App →
+      Reward sounds (localStorage `rewardSounds`, on by default). Smoothness: sparks capped at 220 (110 and half bursts in
+      old-phone mode, dpr 1.5), ready chests pause their shaking while off screen (IntersectionObserver, `.chest.off`)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

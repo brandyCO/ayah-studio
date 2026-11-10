@@ -10,6 +10,8 @@ import { rt, type RankKey } from '../i18n/ranks';
 import { tierOf, type RankMoments, type Row, type Status } from '../together/ranks';
 import { h } from './dom';
 import { TIER_RING, avatar } from './rankAvatars';
+import { bump } from './juice';
+import { sfx } from './sfx';
 import { sparks, type Sparks } from './sparks';
 import './ranks.css';
 
@@ -153,13 +155,14 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
       pts.textContent = num(Math.round(w.score * e));
       place.textContent = `#${Math.max(w.place, Math.round(w.size - (w.size - w.place) * e))}`;
       if (p < 1 && document.body.contains(pts)) requestAnimationFrame(tick);
+      else if (p >= 1) { bump(pts, 0.3); bump(place, 0.3); sfx.tick(); }
     };
     requestAnimationFrame(tick);
     vibrate([8]);
     later(1300, () => {
       stage.classList.add('go');
-      if (dir === 'up') { burst(70, 1.05); vibrate([22, 80, 14]); later(350, () => fx()?.motes(true)); }
-      else if (dir === 'stay') { burst(28, 0.6); vibrate([14]); }
+      if (dir === 'up') { burst(70, 1.05); vibrate([22, 80, 14]); sfx.open(); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
+      else if (dir === 'stay') { burst(28, 0.6); vibrate([14]); sfx.pop(2); }
       else vibrate([10]);
     });
   });
@@ -189,8 +192,9 @@ function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
   return frame('passed', title, stage, text, [rgbaOf(c), rgbaOf('#fff7e0')], ({ later, burst }) => {
     later(700, () => {
       stage.classList.add('go');
-      passed.forEach((_, k) => later(260 + k * 140, () => vibrate([8])));
+      sfx.whoosh();
+      passed.forEach((_, k) => later(260 + k * 140, () => { vibrate([8]); sfx.tick(); }));
     });
-    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); vibrate([18]); });
+    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); vibrate([18]); sfx.shimmer(); bump(mine, 0.12); });
   });
 }
