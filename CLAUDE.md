@@ -1661,8 +1661,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
       **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
-      tasmi' (page view, prompt, slips, weak words, similar ayat,
-      playback), page memory (line starts, page start/end, where is the ayah, page strength), the 114 trees redrawn as vectors,
+      page memory (line starts, page start/end, where is the ayah, page strength), the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
 - [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
       Exercises → From memory. **Meaning first**: every word of the chunk as a tile (Arabic + Quran.com meaning, tap to
