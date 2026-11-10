@@ -30,6 +30,7 @@ import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
+import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
 import { drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
@@ -320,6 +321,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         ab,
         pick(0, lt('learn.notYet'), () => {
           keepWeak();
+          if (step !== 'new') { const ps: number[] = []; for (let x = range[0]; x <= range[1]; x++) ps.push(mushaf.pageOf(s, x)); recordPages(ps, 0); }
           if (quick) { toast(lt('learn.quickNotYet')); const n = nextQuick(s); location.replace(n ? `#/learn/${n}/tasmi` : '#/learn'); return; }
           level = Math.max(0, level - 1); go(step === 'new' ? 'practice' : 'memory');
         }),
@@ -671,6 +673,10 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
       }
     }
+    // The pages this recitation covered get their strength (page memory).
+    const covered: number[] = [];
+    for (let x = range[0]; x <= range[1]; x++) covered.push(mushaf.pageOf(s, x));
+    recordPages(covered, smooth ? 2 : 1);
     const after = tree(s)!;
     const stage1 = stageOf(after, m.ayahs);
     if (stage1 !== stage0) noteGrowth(s, stage0);
