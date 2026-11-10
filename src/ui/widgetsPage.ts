@@ -14,6 +14,7 @@ import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
 import { dailyWidgetLang, setDailyWidgetLang } from './morning';
 import { tabBar } from './tabs';
+import { mpt } from '../i18n/mePages';
 import { WIDGETS, pinWidget, widgetStatus, type WidgetKind, type WidgetStatus } from './widgets';
 
 const timeFmt = () => new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
@@ -42,6 +43,12 @@ async function preview(kind: WidgetKind): Promise<HTMLElement> {
         ? h('div', {}, h('span', { class: 'wg-small' }, t('w.next')), h('b', { class: 'wg-big' }, t(`pr.${nx.name}` as Key)), h('span', { class: 'wg-small' }, timeFmt().format(nx.at)))
         : h('div', {}, h('b', {}, t('pr.title')), h('span', { class: 'wg-small' }, t('w.noLocation'))),
       h('div', { class: 'wg-dots' }, ...PRAYERS.filter((p) => p !== 'sunrise').map((p) => h('i', { class: nx?.name === p ? 'on' : '' }))));
+  }
+  if (kind === 'duas') {
+    const lit = todayRec().dm?.length ?? 0;
+    return h('div', { class: 'wg-pv wg-duas' },
+      h('div', {}, h('span', { class: 'wg-small' }, mpt('mp.wgDuas')), h('b', { class: 'wg-big' }, `${lit}/7`)),
+      h('div', { class: 'wg-lanterns' }, ...Array.from({ length: 7 }, (_, i) => h('i', { class: i < lit ? 'on' : '' }))));
   }
   const item = await todaysAyah().catch(() => null);
   let ref = '';
@@ -80,8 +87,8 @@ export async function showMeWidgets(root: HTMLElement): Promise<() => void> {
         return h('section', { class: 'me-card wg-card' },
           pv,
           h('div', { class: 'wg-text' },
-            h('h3', {}, t(`wg.${kind}` as Key)),
-            h('p', { class: 'muted small' }, t(`wg.${kind}Desc` as Key)),
+            h('h3', {}, kind === 'duas' ? mpt('mp.wgDuas') : t(`wg.${kind}` as Key)),
+            h('p', { class: 'muted small' }, kind === 'duas' ? mpt('mp.wgDuasDesc') : t(`wg.${kind}Desc` as Key)),
             kind === 'daily' ? langChips() : '',
             h('div', { class: 'wg-actions' },
               count ? h('span', { class: 'wg-on' }, `✓ ${t('wg.onHome')}`) : '',

@@ -60,14 +60,15 @@ export async function paintPacts(slot: HTMLElement) {
     try { const r = await createPact(); await share(r.code); } catch (e) { toast((e as Error).message); }
     repaint();
   } }, `🌙 ${akt('bp.start')}`);
-  if (!account()) { slot.replaceChildren(h('p', { class: 'muted small' }, akt('bp.help')), start); return; }
+  start.title = akt('bp.help');
+  if (!account()) { slot.replaceChildren(start); return; }
   void flushPactMark();
   void resumePendingPact();
   let list: Pact[] = [];
   try { list = await myPacts(); } catch { slot.replaceChildren(); return; }
   const running = list.filter((p) => !p.over || !p.claimed);
   slot.replaceChildren(...running.map((p) => pactCard(p, repaint)),
-    running.some((p) => !p.over) ? '' : h('p', { class: 'muted small' }, akt('bp.help')), running.some((p) => !p.over) ? '' : start);
+    running.some((p) => !p.over) ? '' : start);
 }
 
 /** #/bp/{code}: the invite. */

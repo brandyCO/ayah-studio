@@ -48,4 +48,6 @@ export function watchRewards() {
   const dawn = () => void import('../data/duas').then((m) => { if (m.dawnDue()) void import('./dawn').then((d) => d.showDawn()); });
   setTimeout(dawn, 1800);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(dawn, 900); });
+  // Du'a notes on: a soft banner after each adhan / salah while the app is open (src/ui/prayerAlerts.ts).
+  try { if (/"(duas|salah)":true/.test(localStorage.getItem('prayerAlerts') ?? '')) void import('./prayerAlerts').then((m) => m.watchDuaBanners()); } catch { /* ignore */ }
 }

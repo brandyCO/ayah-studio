@@ -719,6 +719,9 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .chip.danger { color: #c62828; }
 @media (prefers-color-scheme: dark) { .chip.danger { color: #ff7b7b; } }
 .reflections-sheet .search { width: 100%; box-sizing: border-box; margin: 10px 0 4px; }
+.reciter-sheet .rec-others { margin: 14px 4px 4px; font-size: .85em; opacity: .7; }
+.reciter-sheet .menu-item.off { opacity: .75; }
+.reciter-sheet .rec-has { margin-inline-start: auto; opacity: .7; font-size: .8em; }
 .reciter-sheet .search { width: 100%; box-sizing: border-box; margin: 6px 0 8px; }
 .rf-list { max-height: 60vh; }
 .rf-group { margin: 14px 0 2px; font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
@@ -1403,8 +1406,6 @@ html.lite .tour { background: color-mix(in srgb, var(--bg) 90%, transparent); }
   border: 1px solid color-mix(in srgb, var(--rw-n2) 35%, transparent); font-variant-numeric: tabular-nums; cursor: default; }
 button.lt-chip { cursor: pointer; }
 .lt-chip b { font-weight: 700; }
-.lt-chip-ic { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, var(--rw-core) 0 22%, var(--rw-n2) 40%, transparent 72%);
-  box-shadow: 0 0 10px var(--rw-n2); }
 .topbar .lt-chip { margin-inline-start: auto; }
 .studio-top .lt-chip { height: 28px; font-size: 12px; }
 .set-label { display: block; margin: 10px 0 6px; font-size: var(--fs-s); }

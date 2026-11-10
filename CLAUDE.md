@@ -1655,6 +1655,24 @@ duas/reflections section in Me.
       `ls`, `addLesson()`) is reported to Ranks (`rank_report(…, lessons)`, ≤ 20 a day, 15 points each; migration
       `20261110800000_rank_lessons.sql`, pgTAP `rank_lessons.test.sql`); a fifth weekly quest "Pass 5 Learn lessons" joins
       the turn; optional daily goal "Learn lessons" 0/1/2/3 (`Goals.lessons`, off by default, 15 Light each, Begin → `#/learn`)
+- [x] M16 Shorter Me + reminders + widgets + Ranks fixes (owner request 2026-11-10): **Me** = streak, waiting badge claims,
+      one goals card with a **Today | This week** switch (`meGoalTab`; a red dot on the other side when its chest is ready;
+      adhkar chips only when they are not goal rows), the du'a lanterns right under it (pact as a chip), then four **doors**
+      to full screens `#/me/room`, `#/me/prayer`, `#/me/stats` (stats + all badges), `#/me/library` (`showMe(root, page)`;
+      Room without a character opens the builder); strings `src/i18n/mePages.ts` (`mpt`). **Inbox bell** (`src/ui/inbox.ts`,
+      Me / Learn / Ranks top bars): count of everything waiting — goal and week chests, badges, new pieces, Ranks prizes and
+      challenge chests (from the kept Ranks answers, `rankCache`), pact chests (asked when opened) — each row goes straight
+      to it. **Reminders**: `prayerAlerts().salah` → a note after each salah (time + 25/20/20/12/20 min, ids 3500–3549) →
+      the adhkar after that salah; with the app open both notes come as a banner (`watchDuaBanners()`, web too); asked once on
+      Me under the lanterns (`duaNotesAsked`). **Widgets**: `DuaWidget` (seven lanterns from `duas.lit` = journey `dm`, the
+      one whose time it is glows, worked out natively; tap a lantern → `#/me/du:{key}` opens its session); `PrayerWidget`
+      redrawn (next prayer + live countdown, sunrise small, the five prayers with short times so nothing is cut, passed ones
+      dim, tomorrow after Isha, small sizes keep only the top; tap → `#/me/prayer`). **Light** is one currency drawn one way:
+      a star with the Light to spend (`wallet()`) in every top bar and the shop; the sheet shows "Earned all time"; Ranks says
+      points are a weekly score, never spent, and Light never counts there (owner decision). **Ranks speed**: answers kept on
+      the device (`rankCache`, per account) so Ranks paints at once (`staleFirst`), then fresh; while open it asks again
+      every 12 s and repaints only on a change (`refreshCached`), so others' points, names and characters show within
+      seconds; progress is reported 8 s after a change (was 90 s)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
