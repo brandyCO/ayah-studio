@@ -15,6 +15,8 @@ import {
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
+import { actor, hop as hopFig } from './actor';
+import { freezeArt } from './flat';
 import { chest, chestArt, chestTier } from './chest';
 import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
@@ -66,6 +68,34 @@ const left = (ms: number) => {
 /** Places moved since yesterday: a small green ▲2 or red ▼1 beside the name. */
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
+
+/** The top 3 on a podium (owner pick 2026-11-10): gold in the middle, silver left, bronze right, each player
+ *  standing as their own character (or their avatar disc on a stand). The steps rise and the players drop
+ *  onto them the first time a day; #1 cheers, the rest bob; a tap makes a player hop (yours waves). */
+export function podium(rows: Row[]): HTMLElement | '' {
+  const top = rows.slice(0, 3);
+  if (top.length < 3 || top[0].score <= 0) return '';
+  let today = '';
+  try { today = new Date().toDateString(); } catch { /* ignore */ }
+  let first = true;
+  try { first = localStorage.getItem('rkPodium') !== today; localStorage.setItem('rkPodium', today); } catch { /* ignore */ }
+  const spot = (r: Row, place: number) => {
+    const code = r.private ? null : r.figure ?? null;
+    const a = code ? actor('rk-pod-fig', code) : null;
+    const who = a ? a.el : h('span', { class: 'rk-pod-disc' }, avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, place === 1 ? 64 : 54, r.frame ?? 0));
+    const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.name ?? rt('rk.private')} · ${num(r.score)}`,
+      onclick: () => { if (a) (r.me ? a.wave() : a.hop(0.6)); else hopFig(el, 12, 480, false); haptic(8); } },
+      h('span', { class: 'rk-pod-who' }, place === 1 ? h('span', { class: 'rk-pod-beam', 'aria-hidden': 'true' }) : '', who),
+      h('span', { class: 'rk-pod-name' }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
+      h('span', { class: 'rk-pod-step' }, h('b', {}, String(place)), h('span', {}, num(r.score))));
+    return { el, a };
+  };
+  const [g, sv, br] = [spot(top[0], 1), spot(top[1], 2), spot(top[2], 3)];
+  const box = h('div', { class: `rk-podium${first ? ' intro' : ''}` }, sv.el, g.el, br.el);
+  if (first) setTimeout(() => { g.a?.cheer(2400); setTimeout(() => { sv.a?.hop(0.4); br.a?.hop(0.4); }, 300); }, 1500);
+  else setTimeout(() => g.a?.hop(0.3), 600);
+  return box;
+}
 
 /** One list of players, best first; zones mark who moves up or down in a league. */
 function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): HTMLElement {
@@ -332,6 +362,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       left.textContent = num(lightLeft());
       const kept = bankedFreezes();
       freezeRow.replaceChildren(
+        h('span', { class: 'rk-shop-fz' }, freezeArt(44) as unknown as Node),
         h('div', {}, h('b', {}, rt('rk.freezeTitle')), h('p', { class: 'muted small' }, rt('rk.freezeSub', { n: kept, max: FREEZE_MAX }))),
         h('button', { class: 'primary brand-btn', disabled: kept >= FREEZE_MAX, onclick: () => {
           if (!confirm(rt('rk.buyQ', { n: FREEZE_PRICE }))) return;
@@ -433,6 +464,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       body.replaceChildren(
         lastHours() ? hoursBox(lg.players) : '',
         recapCard(),
+        // The character is everyone's avatar by default (owner decision 2026-11-10): until one is made, ask here.
+        status && !status.figure && !status.private ? builderCard(status, () => openBuilder(status!, () => void paint(true))) : '',
+        podium(lg.players),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
     } else if (view === 'global') {
@@ -456,6 +490,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('h2', { class: 'me-h' }, b.name),
         goalBox(b, goal),
         metricChips(),
+        podium(rows),
         list(rows, false, metric),
         h('div', { class: 'chips rk-board-acts' },
           h('button', { class: 'primary brand-btn', onclick: () => void invite(b) }, rt('rk.invite')),

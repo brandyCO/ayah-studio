@@ -175,6 +175,9 @@
 .rk-shop-left b { color: var(--accent); }
 .rk-shop-freeze { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .rk-shop-freeze p { margin: 2px 0 0; }
+.rk-shop-freeze > div { flex: 1; min-width: 0; }
+.rk-shop-fz { flex: none; display: grid; }
+.rk-shop-fz svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .18)); }
 .rk-shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
 .rk-shop-item { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border-radius: var(--r-m); border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; text-align: center; }
 .rk-shop-item.own { border-color: var(--accent); }
@@ -277,3 +280,43 @@
 .rk-recap .primary { grid-column: 1 / -1; justify-self: start; }
 .rk-recap .rk-recap-x { position: absolute; inset-inline-end: 6px; top: 6px; color: #fff; background: none; border: 0; box-shadow: none; width: 32px; height: 32px; }
 .rk-note-toggle { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+
+/* The podium (owner pick 2026-11-10): the top 3 stand on gold, silver and bronze steps as their characters. */
+.rk-podium { position: relative; display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 6px; margin: 4px 0 14px; padding: 18px 10px 0;
+  border-radius: 24px; overflow: hidden; background: radial-gradient(90% 70% at 50% 100%, #3b2f7a 0%, #1c1946 60%, #131233 100%); box-shadow: 0 5px 0 #0c0b24; }
+.rk-podium::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .8;
+  background: radial-gradient(1.4px 1.4px at 12% 18%, #fff 99%, transparent), radial-gradient(1.1px 1.1px at 30% 8%, #fffc 99%, transparent),
+    radial-gradient(1.6px 1.6px at 82% 14%, #fff 99%, transparent), radial-gradient(1.2px 1.2px at 64% 26%, #fffa 99%, transparent),
+    radial-gradient(1.2px 1.2px at 92% 40%, #fff9 99%, transparent), radial-gradient(1.1px 1.1px at 6% 46%, #fff9 99%, transparent); }
+.rk-pod { position: relative; display: grid; justify-items: center; align-content: end; gap: 4px; border: 0; padding: 0; background: none; color: #fff; font: inherit; cursor: pointer; min-width: 0; }
+.rk-pod-who { position: relative; width: 100%; display: grid; justify-items: center; align-items: end; height: 118px; }
+.rk-pod.p1 .rk-pod-who { height: 136px; }
+.rk-pod .rk-pod-fig { position: relative; width: 84%; max-width: 104px; }
+.rk-pod.p1 .rk-pod-fig { width: 94%; max-width: 116px; }
+.rk-pod-disc { display: grid; place-items: center; padding-bottom: 8px; animation: rk-pod-float 3.4s ease-in-out infinite; }
+@keyframes rk-pod-float { 50% { transform: translateY(-4px); } }
+.rk-pod-beam { position: absolute; bottom: 0; left: 50%; width: 120%; height: 150%; translate: -50% 0; pointer-events: none;
+  background: conic-gradient(from 180deg at 50% 100%, transparent 155deg, rgba(255, 224, 138, .28) 172deg, rgba(255, 244, 196, .45) 180deg, rgba(255, 224, 138, .28) 188deg, transparent 205deg);
+  animation: rk-pod-beam 4s ease-in-out infinite; }
+@keyframes rk-pod-beam { 50% { opacity: .6; transform: scaleX(1.12); } }
+.rk-pod-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 13px/1.2 var(--ui-round, inherit); }
+.rk-pod-name .rk-you { margin-inline-start: 4px; }
+.rk-pod-step { width: 100%; display: grid; justify-items: center; align-content: start; gap: 0; padding-top: 8px; border-radius: 14px 14px 0 0; color: #2a1c00;
+  background: linear-gradient(180deg, var(--st) 0%, var(--st2) 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .45), inset 0 -6px 0 rgba(0, 0, 0, .12); }
+.rk-pod-step b { font: 900 30px/1 var(--ui-round, inherit); text-shadow: 0 2px 0 rgba(255, 255, 255, .45); }
+.rk-pod-step span { font: 800 12px/1.4 var(--ui-round, inherit); opacity: .8; }
+.rk-pod.p1 .rk-pod-step { --st: #ffe08a; --st2: #e0a526; height: 92px; }
+.rk-pod.p2 .rk-pod-step { --st: #eef2f7; --st2: #a9b6c6; height: 68px; }
+.rk-pod.p3 .rk-pod-step { --st: #f3c39a; --st2: #c07a45; height: 52px; }
+.rk-pod.me .rk-pod-step { outline: 3px solid #fff; outline-offset: -3px; }
+.rk-pod:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; border-radius: 14px; }
+/* First look of the day: the steps rise in turn, then the players drop onto them. */
+.rk-podium.intro .rk-pod-step { animation: rk-step-up .55s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: 50% 100%; }
+.rk-podium.intro .p2 .rk-pod-step { animation-delay: .1s; } .rk-podium.intro .p1 .rk-pod-step { animation-delay: .25s; } .rk-podium.intro .p3 .rk-pod-step { animation-delay: .4s; }
+@keyframes rk-step-up { from { transform: scaleY(0); } }
+.rk-podium.intro .rk-pod-who, .rk-podium.intro .rk-pod-name { animation: rk-drop .6s cubic-bezier(.5, 0, .6, 1.4) both; }
+.rk-podium.intro .p2 .rk-pod-who, .rk-podium.intro .p2 .rk-pod-name { animation-delay: .55s; }
+.rk-podium.intro .p3 .rk-pod-who, .rk-podium.intro .p3 .rk-pod-name { animation-delay: .7s; }
+.rk-podium.intro .p1 .rk-pod-who, .rk-podium.intro .p1 .rk-pod-name { animation-delay: .85s; }
+@keyframes rk-drop { from { transform: translateY(-160px); opacity: 0; } 60% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rk-podium.intro *, .rk-pod-disc, .rk-pod-beam { animation: none !important; } }

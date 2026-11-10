@@ -242,13 +242,27 @@ function head(f: Fig): string {
   return s;
 }
 
+/** Arms raised for a cheer (both up) or a wave (one up, swinging at the shoulder); drawn only for actors. */
+function raised(f: Fig, which: 'up' | 'wave'): string {
+  const k = f.outfit === 6 && !female(f.body) ? CLOTH[0] : f.outfit === 6 ? (['#2a2d38', '#15171e'] as Pair) : CLOTH[f.outC];
+  const sk = SKIN[f.skin];
+  const hand = (x: number, y: number) => S(circ(x, y, 10), sk[0], sk[1], -3, -3);
+  if (which === 'up') return arm(66, 160, 46, 112, k) + arm(134, 160, 154, 112, k) + hand(44, 106) + hand(156, 106);
+  const down = f.pose === 1 ? arm(68, 160, 64, 204, k) + hand(62, 208) : arm(66, 160, 58, 210, k) + hand(57, 214);
+  return down + `<g class="fg-wave-arm">${arm(134, 160, 160, 116, k)}${hand(162, 110)}</g>`;
+}
+
 const kid = (f: Fig) => f.body === BOY || f.body === GIRL;
 /** The whole character, standing on the ground. `cls` adds classes to the moving group. */
-export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean } = {}): string {
+export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean; actor?: boolean } = {}): string {
   const k = kid(f);
+  // An actor (a character in a moment) also carries raised arms for a cheer and a wave, shown by class.
+  const arms = o.actor ? `<g class="fg-arms">${holds(f)}</g>` : holds(f);
+  const up = o.actor ? `<g class="fg-up">${raised(f, 'up')}</g><g class="fg-wv">${raised(f, 'wave')}</g>` : '';
+  const kidT = 'transform="translate(100 248) scale(.86 .8) translate(-100 -248)"';
   const inner = k
-    ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)"><g class="fg-head">${head(f)}</g></g>`
-    : `${body(f)}${holds(f)}<g class="fg-head">${head(f)}</g>`;
+    ? `<g ${kidT}>${body(f)}${arms}</g><g transform="translate(0 20)"><g class="fg-head">${head(f)}</g></g>${up ? `<g ${kidT}>${up}</g>` : ''}`
+    : `${body(f)}${arms}<g class="fg-head">${head(f)}</g>${up}`;
   const size = o.size ? ` width="${o.size}" height="${Math.round(o.size * 1.31)}"` : '';
   return `<svg viewBox="0 0 200 262"${size} class="fg${o.still ? ' still' : ''}" ${o.label ? `role="img" aria-label="${o.label}"` : 'aria-hidden="true"'}><ellipse class="fg-shadow" cx="100" cy="250" rx="62" ry="9" fill="#000" opacity=".3"/><g class="fg-act"><g class="fg-bob">${inner}</g></g></svg>`;
 }

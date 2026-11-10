@@ -6,6 +6,7 @@
 import { t, type Key } from '../i18n';
 import { h } from './dom';
 import { flame, flameTier } from './flame';
+import { actor as makeActor } from './actor';
 import { bump, noor as makeNoor, popIn, squash } from './juice';
 import { sfx } from './sfx';
 import './cel.css';
@@ -92,6 +93,9 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     const nr = makeNoor('cel-noor sm-noor');
     nr.el.style.opacity = '0';
     stageEl.append(nr.el);
+    // The user's character (when they made one) stands beside the flame and celebrates with it.
+    const me = makeActor('sm-actor');
+    if (me) stageEl.append(me.el);
     // 1. Light gathers, then the flame springs up out of a burst.
     later(380, () => {
       sfx.open();
@@ -110,6 +114,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       sfx.pop(1);
       later(260, () => bump(countEl, 0.3));
       nr.hop(0.7);
+      me?.hop(0.6);
     });
     // 3. Today's circle fills and the check stamps in.
     later(2000, () => {
@@ -121,7 +126,8 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       fx?.burst(x, y, 28, 0.45);
       sfx.pop(3);
       nr.hop(1);
+      me?.glance(1);
     });
-    later(2500, () => { el.classList.add('done'); fx?.motes(true); sfx.shimmer(); nr.cheer(); nr.glow(1); });
+    later(2500, () => { el.classList.add('done'); fx?.motes(true); sfx.shimmer(); nr.cheer(); nr.glow(1); me?.cheer(2400); });
   });
 }

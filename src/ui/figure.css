@@ -12,6 +12,12 @@
 @keyframes fg-bob { 50% { transform: translateY(-3px) scale(1.01, .99); } }
 @keyframes fg-blink { 0%, 93%, 100% { transform: none; } 95% { transform: scaleY(.1); } }
 @keyframes fg-glow { 50% { opacity: .55; } }
+/* Actors: raised arms swap in for a cheer or a wave. */
+.fg .fg-up, .fg .fg-wv { display: none; }
+.fg.cheer .fg-up, .fg.waving .fg-wv { display: inline; }
+.fg.cheer .fg-arms, .fg.waving .fg-arms { display: none; }
+.fg .fg-wave-arm { transform-box: view-box; transform-origin: 134px 160px; animation: fg-wave .5s ease-in-out infinite alternate; }
+@keyframes fg-wave { from { transform: rotate(-14deg); } to { transform: rotate(12deg); } }
 @media (prefers-reduced-motion: reduce) { .fg .fg-bob, .fg .fg-eyes, .fg .fg-glow, .fg .fg-head, .fg .fg-shadow { animation: none; } }
 
 dialog.fb {
@@ -78,3 +84,14 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
   background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
   filter: drop-shadow(0 0 6px #ffd76a); animation: fb-spark .9s cubic-bezier(.2, .8, .3, 1) both; }
 @keyframes fb-spark { from { transform: translate(0, 0) scale(.2) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); opacity: 0; } }
+
+/* An actor in a moment: sized by its box, standing on its own shadow. */
+.fg-actor { position: absolute; display: block; pointer-events: none; }
+.fg-actor svg { width: 100%; height: auto; display: block; }
+.sm-stage .sm-actor { inset-inline-start: -22%; bottom: -6%; width: 40%; z-index: 2; }
+.cel-streak.go .sm-stage .sm-actor { animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .9s both; }
+@keyframes fg-actor-in { from { transform: translateY(30px) scale(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cel-streak.go .sm-stage .sm-actor { animation: none; } }
+.rkm-stage .rkm-actor { inset-inline-start: -24%; bottom: -8%; width: 40%; z-index: 3; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
+@media (prefers-reduced-motion: reduce) { .rkm-stage .rkm-actor { animation: none; } }
+.me-hero .me-actor { inset-inline-start: 10px; top: 26px; width: 86px; pointer-events: auto; cursor: pointer; z-index: 1; }

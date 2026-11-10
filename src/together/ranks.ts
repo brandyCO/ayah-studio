@@ -103,7 +103,7 @@ export const dropCache = () => cache.clear();
 
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: dayKey() });
-  if (s) s.figure = await myFigure();
+  if (s) { s.figure = await myFigure(); await sendLocalFigure(); }
   return s;
 }, fresh);
 // The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
@@ -115,10 +115,25 @@ async function myFigure(): Promise<string | null> {
   return v;
 }
 /** Wears a character on the boards (null = back to the avatar disc). The prize outfit is checked by the server. */
+// The character is the default avatar (owner decision 2026-11-10), so it can be made signed out too: kept on this
+// device and sent to the boards once signed in (`rankFigureSent` = the code the server has).
+const SENT = 'rankFigureSent';
 export async function setFigure(code: string | null) {
-  await rpc('rank_set_figure', { code });
+  if (account()) {
+    await rpc('rank_set_figure', { code });
+    try { localStorage.setItem(SENT, code ?? ''); } catch { /* ignore */ }
+  }
   try { localStorage.setItem(FIG, code ?? ''); } catch { /* ignore */ }
   dropCache();
+}
+/** A character made before signing in goes up the first time the boards are read. */
+async function sendLocalFigure() {
+  try {
+    const v = localStorage.getItem(FIG);
+    if (!v || localStorage.getItem(SENT) === v) return;
+    await rpc('rank_set_figure', { code: v });
+    localStorage.setItem(SENT, v);
+  } catch { /* try again next time */ }
 }
 export const rankLeague = (fresh = false) => cached('league', () => rpc<{ tier: number; players: Row[] } | null>('rank_league', { d: dayKey() }), fresh);
 export const rankGlobal = (allTime: boolean, metric: Metric = 'all', fresh = false) =>

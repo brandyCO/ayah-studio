@@ -6,6 +6,8 @@
 //   passed   "You passed Bilal ▲": a little ladder of the players you passed with you under them; your row
 //            glides up past theirs, which step down, and the next one to catch is named.
 // Calm: no sound, a light vibration on the beats. Reduced motion: the still end picture.
+import { actor } from './actor';
+import { circlePath, edge, mix, raisedLine, shine, starPath, two } from './flat';
 import { rt, type RankKey } from '../i18n/ranks';
 import { tierOf, type RankMoments, type Row, type Status } from '../together/ranks';
 import { h } from './dom';
@@ -20,48 +22,52 @@ const NS = 'http://www.w3.org/2000/svg';
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
 const num = (n: number) => n.toLocaleString();
 const vibrate = (p: number[]) => { try { navigator.vibrate?.(p); } catch { /* ignore */ } };
-let uid = 0;
 
-/** A tier's emblem (viewBox 100): lantern, eight-pointed star, crescent, dawn over the horizon, sun. */
+/** A tier's emblem (viewBox 100): lantern, eight-pointed star, crescent, dawn over the horizon, sun —
+ *  flat two-tone like the characters, with a chunky edge under each piece. */
 export function tierEmblem(tier: number): SVGSVGElement {
   const n = Math.max(0, Math.min(4, tier | 0));
   const c = TIER_RING[n];
-  const id = `rke${++uid}`;
+  const sh = mix(c, .26), ed = mix(c, .55), li = mix(c, -.6);
   const el = document.createElementNS(NS, 'svg');
   el.setAttribute('viewBox', '0 0 100 100');
   el.setAttribute('aria-hidden', 'true');
   el.classList.add('rkm-emblem');
-  const fill = `url(#${id}f)`;
-  const rays = (k: number, r1: number, r2: number, cy = 50, from = 0, to = 360) => Array.from({ length: k }, (_, i) => {
-    const a = ((from + ((to - from) * (i + 0.5)) / k) * Math.PI) / 180;
-    return `<path d="M${50 + r1 * Math.cos(a)} ${cy + r1 * Math.sin(a)}L${50 + r2 * Math.cos(a)} ${cy + r2 * Math.sin(a)}" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`;
-  }).join('');
-  const star = (cx: number, cy: number, R: number, r: number) => Array.from({ length: 16 }, (_, i) => {
-    const a = (i * Math.PI) / 8 - Math.PI / 2;
-    const d = i % 2 ? r : R;
-    return `${(cx + d * Math.cos(a)).toFixed(2)},${(cy + d * Math.sin(a)).toFixed(2)}`;
-  }).join(' ');
+  const piece = (d: string, base = c, shade = sh, e = 4, dx = -4, dy = -4) => `${edge(d, ed, e)}${two(d, base, shade, dx, dy)}`;
+  const ray = (a: number, r1: number, r2: number, cy: number, w: number) => {
+    const x = Math.cos(a), y = Math.sin(a), px = -y * w, py = x * w;
+    return `M${50 + x * r1 + px} ${cy + y * r1 + py}L${50 + x * r2} ${cy + y * r2}L${50 + x * r1 - px} ${cy + y * r1 - py}Z`;
+  };
+  const rays = (k: number, r1: number, r2: number, cy = 50, from = 0, to = 360, w = 5) => Array.from({ length: k }, (_, i) =>
+    ray(((from + ((to - from) * (i + 0.5)) / k) * Math.PI) / 180, r1, r2, cy, w)).join('');
   const art = [
-    // lantern: cap, ring, glass body with ribs, a flame inside
-    `<path d="M50 8v8M40 16h20l4 8H36z" fill="${fill}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
-     <path d="M34 26h32q8 18 0 46H34q-8-28 0-46z" fill="${fill}" stroke="${c}" stroke-width="2.4"/>
-     <path d="M44 27q-3 22 0 44M56 27q3 22 0 44" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" fill="none"/>
-     <path d="M50 38c6 7 7 12 7 16a7 7 0 0 1-14 0c0-4 1-9 7-16z" fill="#fff8de"/>
-     <path d="M38 74h24l-3 8H41z" fill="${fill}" stroke="${c}" stroke-width="2"/>`,
-    // star
-    `<polygon points="${star(50, 50, 40, 30)}" fill="${fill}" stroke="${c}" stroke-width="2.4" stroke-linejoin="round"/>
-     <polygon points="${star(50, 50, 22, 16)}" fill="#fff" fill-opacity=".85"/>`,
+    // lantern: cap with a ring, a glass body with ribs and a warm flame, a foot
+    `${raisedLine('M50 4V12', ed, 4, 'rgba(0,0,0,.25)')}<circle cx="50" cy="6" r="4" fill="none" stroke="${ed}" stroke-width="3"/>
+     ${piece('M39 14H61L66 25H34Z', c, sh, 3, -2.5, -2.5)}
+     ${piece('M33 26H67Q76 48 67 72H33Q24 48 33 26Z', '#fff2c4', '#f3c873', 3.5, -4, -3)}
+     <path d="M50 36C57 44 58.5 50 58.5 54.5A8.5 8.5 0 0 1 41.5 54.5C41.5 50 43 44 50 36Z" fill="#ffb238"/>
+     <path d="M50 44C54 49 54.5 52 54.5 55A4.5 4.5 0 0 1 45.5 55C45.5 52 46 49 50 44Z" fill="#fff8de"/>
+     <path d="M41 27Q36 49 41 71M59 27Q64 49 59 71" fill="none" stroke="${sh}" stroke-width="3.4" stroke-linecap="round"/>
+     ${piece('M36 72H64L60 84H40Z', c, sh, 3, -2.5, -2.5)}
+     ${shine('M30.5 40Q29 49 31 60', 3, .6)}`,
+    // star: the khatam, a lighter star inside
+    `${piece(starPath(50, 50, 42, 31))}${two(starPath(50, 50, 24, 17.5), li, c, -2.5, -2.5)}
+     ${shine('M22 32L30.5 27', 3.4, .55)}`,
     // moon: a crescent with a small star
-    `<path d="M62 12a38 38 0 1 0 22 58A31 31 0 0 1 62 12z" fill="${fill}" stroke="${c}" stroke-width="2.4" stroke-linejoin="round"/>
-     <polygon points="${star(72, 36, 9, 4)}" fill="#fff"/>`,
-    // dawn: half a sun on the horizon, rays fanning up
-    `${rays(7, 32, 44, 66, 190, 350)}<path d="M22 66a28 28 0 0 1 56 0z" fill="${fill}" stroke="${c}" stroke-width="2.4"/>
-     <path d="M10 66h80M24 76h52M36 86h28" stroke="${c}" stroke-width="3.2" stroke-linecap="round"/>`,
+    `${piece('M60 10A40 40 0 1 0 86 68A32 32 0 0 1 60 10Z', c, sh, 4, -5, -4)}
+     ${shine('M30 26Q20 38 21 54', 3.6, .5)}
+     ${edge(starPath(74, 34, 10, 4.2, 4), ed, 2)}${two(starPath(74, 34, 10, 4.2, 4), li, c, -1.5, -1.5)}`,
+    // dawn: half a sun on the horizon, rays fanning up, water lines under it
+    `${piece(rays(7, 33, 47, 64, 190, 350, 4.6), mix(c, -.25), c, 3, -1.5, -1.5)}
+     ${piece('M21 64A29 29 0 0 1 79 64Z')}
+     ${two('M33 64A17 17 0 0 1 67 64Z', li, mix(c, -.25), -2, -2)}
+     ${raisedLine('M10 70H90', ed, 4.4, 'rgba(0,0,0,.25)', 1.4)}${raisedLine('M24 80H76M36 90H64', sh, 4, 'rgba(0,0,0,.2)', 1.2)}`,
     // sun: a full disc in a ring of rays
-    `${rays(12, 34, 46)}<circle cx="50" cy="50" r="26" fill="${fill}" stroke="${c}" stroke-width="2.4"/>
-     <circle cx="50" cy="50" r="15" fill="#fff" fill-opacity=".8"/>`,
+    `${piece(rays(12, 35, 48, 50, 0, 360, 5), mix(c, -.2), c, 3, -1.5, -1.5)}
+     ${piece(circlePath(50, 50, 28))}${two(circlePath(50, 50, 16), li, mix(c, -.3), -2.5, -2.5)}
+     ${shine('M30 42A21 21 0 0 1 40 31', 3.6, .55)}`,
   ][n];
-  el.innerHTML = `<defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".25" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".75"/></linearGradient></defs>${art}`;
+  el.innerHTML = art;
   el.style.setProperty('--tc', c);
   return el;
 }
@@ -134,6 +140,9 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
   const arrow = h('span', { class: `rkm-arrow ${dir}`, 'aria-hidden': 'true' }, dir === 'down' ? '▼' : '▲');
   const stage = h('div', { class: `rkm-stage ${dir}`, style: `--tc:${TIER_RING[w.tierNow]};--tf:${TIER_RING[w.tier]}` },
     rays, ring, dir === 'stay' ? '' : from, to, dir === 'stay' ? '' : arrow);
+  // The user's character watches the result beside the emblem: cheers going up, nods staying, sinks a little going down.
+  const me = actor('rkm-actor', s.figure ?? null);
+  if (me) stage.append(me.el);
   const place = h('b', {}, `#${w.place}`);
   const pts = h('b', {}, num(w.score));
   const title = rt(dir === 'up' ? 'rk.wkUp' : dir === 'down' ? 'rk.wkDown' : 'rk.wkStay', { tier: tierName(w.tierNow) });
@@ -162,9 +171,9 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
     vibrate([8]);
     later(1300, () => {
       stage.classList.add('go');
-      if (dir === 'up') { burst(70, 1.05); sfx.open(); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
-      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); }
-      else vibrate([10]);
+      if (dir === 'up') { burst(70, 1.05); sfx.open(); me?.cheer(2600); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
+      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); me?.nod(); later(300, () => me?.hop(0.4)); }
+      else { vibrate([10]); me?.sink(); }
     });
   });
 }

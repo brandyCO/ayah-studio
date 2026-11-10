@@ -26,6 +26,8 @@ import { chestArt, chestTier } from './chest';
 import { rewardPalette, rgba } from './theme';
 import './cel.css';
 import './celebrate.css';
+import { actor as makeActor } from './actor';
+import { freezeArt } from './flat';
 import { bump, combo, noor as makeNoor, popIn, squash, tick as tickNum } from './juice';
 import { sfx } from './sfx';
 
@@ -148,15 +150,6 @@ function raysArt() {
     <g fill="${P.n3}">${motes(10, 100, 100, 50)}</g>`);
 }
 
-/** A streak freeze: an ice crystal holding a snowflake. */
-function freezeArt() {
-  return svg(48, `<defs><linearGradient id="cfz" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6f8ff"/><stop offset=".5" stop-color="#8fd8f5"/><stop offset="1" stop-color="#3a8fd0"/></linearGradient></defs>
-    <path d="M24 3L42 13.5V34.5L24 45L6 34.5V13.5Z" fill="url(#cfz)" stroke="#d9f4ff" stroke-width="1.2" stroke-linejoin="round"/>
-    <path d="M24 3V45M6 13.5L42 34.5M42 13.5L6 34.5" stroke="#fff" stroke-opacity=".22"/>
-    <g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M24 12V36M13.6 18L34.4 30M34.4 18L13.6 30"/>
-    <path d="M20.5 14.5L24 17.5L27.5 14.5M20.5 33.5L24 30.5L27.5 33.5M13.2 23.4L17.5 24.6M30.5 23.4L34.8 24.6" fill="none" stroke-width="1.6"/></g>`);
-}
-
 /** Cracks drawn over the chest (same viewBox as `chestArt`), lit one by one as it is tapped. */
 const CRACKS = ['M27 40l3 5.5-2.2 4.5 3.6 5.5 -1.6 4', 'M53 38.5l-2.4 6.5 3 3.6-2.2 6.4', 'M15 29l5.5 2.6 3.6-2.2', 'M64 45l-4.8 3 2 4.6-3.8 4', 'M41 15.5l-1.4 4.6 2.8 2.8-1.8 3.6', 'M33 60l3.4-3.2 3.6 2.6 3.2-3.4'];
 function crackArt() {
@@ -250,6 +243,9 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   // Noor watches the chest, hops with each tap and cheers when it opens.
   const nr = isChest && !still ? makeNoor('cel-noor') : null;
   if (nr) stage.append(nr.el);
+  // The user's own character (when they made one) stands beside the chest, watches and cheers.
+  const me = isChest && !still ? makeActor('cel-actor') : null;
+  if (me) stage.append(me.el);
   return new Promise((resolve) => {
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
@@ -332,6 +328,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const isRare = l.kind === 'item' && !!l.rare;
       sfx.pop(i, isRare);
       nr?.hop(isRare ? 1.2 : 0.6);
+      if (i > 0 || isRare) me?.hop(isRare ? 0.9 : 0.35);
       if (isRare) {
         c.classList.add('rare-in');
         fx?.burst(r.left + r.width / 2 - k.left, r.top + 32 - k.top, 40, 0.8);
@@ -365,6 +362,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       squash(jolt!, -0.3, { stiffness: 300, damping: 10 });
       sfx.open(epic);
       nr?.cheer();
+      me?.cheer(epic ? 3000 : 2200);
       chestBox!.classList.add('open');
       stage.classList.add('opened');
       el.classList.add('opened');
@@ -380,6 +378,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       taps++;
       sfx.tap(taps, TAPS);
       nr?.hop(taps / TAPS);
+      if (taps === 1) me?.lean(1); else me?.hop(0.25 + (0.35 * taps) / TAPS);
       nr?.glow(taps / TAPS);
       el.classList.add('tapped');
       const b = chestBox!.getBoundingClientRect(), k = canvasBox();
@@ -475,6 +474,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         later(360, () => {
           squash(jolt!, 0.26);
           sfx.land();
+          me?.hop(0.2);
           const b = chestBox!.getBoundingClientRect(), k = canvasBox();
           fx?.burst(b.left + b.width / 2 - k.left, b.bottom - b.height * 0.12 - k.top, 16, 0.4);
         });
