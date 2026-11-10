@@ -247,17 +247,17 @@ const kid = (f: Fig) => f.body === BOY || f.body === GIRL;
 export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean } = {}): string {
   const k = kid(f);
   const inner = k
-    ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)">${head(f)}</g>`
-    : body(f) + holds(f) + head(f);
+    ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)"><g class="fg-head">${head(f)}</g></g>`
+    : `${body(f)}${holds(f)}<g class="fg-head">${head(f)}</g>`;
   const size = o.size ? ` width="${o.size}" height="${Math.round(o.size * 1.31)}"` : '';
-  return `<svg viewBox="0 0 200 262"${size} class="fg${o.still ? ' still' : ''}" ${o.label ? `role="img" aria-label="${o.label}"` : 'aria-hidden="true"'}><ellipse cx="100" cy="250" rx="62" ry="9" fill="#000" opacity=".3"/><g class="fg-bob">${inner}</g></svg>`;
+  return `<svg viewBox="0 0 200 262"${size} class="fg${o.still ? ' still' : ''}" ${o.label ? `role="img" aria-label="${o.label}"` : 'aria-hidden="true"'}><ellipse class="fg-shadow" cx="100" cy="250" rx="62" ry="9" fill="#000" opacity=".3"/><g class="fg-act"><g class="fg-bob">${inner}</g></g></svg>`;
 }
 /** Head and shoulders for an avatar disc: SVG markup in the disc's own units (centre 20,20, radius r). */
 export function bustMarkup(f: Fig, r = 17): string {
   const k = kid(f);
   const inner = k
-    ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)">${head(f)}</g>`
-    : body(f) + holds(f) + head(f);
+    ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)"><g class="fg-head">${head(f)}</g></g>`
+    : `${body(f)}${holds(f)}<g class="fg-head">${head(f)}</g>`;
   const id = `fg${++uid}`;
   const [a, b] = BG[f.bg];
   // A window of 136 units round the head, a little below its middle so the shoulders show.

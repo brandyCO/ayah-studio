@@ -182,7 +182,14 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const tier = chestTier(light);
   const isChest = m.kind === 'chest';
   const loot: Loot[] = m.kind === 'chest' ? (m.loot ?? (light > 0 ? [{ kind: 'light', n: light }] : [])) : [];
-  const TAPS = tier >= 4 ? 5 : tier >= 2 ? 4 : 3;
+  // Rewards claimed one after another make a combo ("3 in a row"); from the third, the moment gets shorter:
+  // one tap fewer, a quicker drop-in and prizes that come out faster (feel pass, owner request 2026-11-10).
+  const streakN = combo();
+  const roll = streakN >= 3;
+  // A rare prize (a jewel avatar, a rare frame) or the biggest chest gets a bigger moment: the light gathers
+  // in slow motion before it bursts, a double burst, a rising swell, and the rare card lands with its own ring.
+  const epic = loot.some((l) => l.kind === 'item' && l.rare) ? 2 : tier >= 4 ? 1 : 0;
+  const TAPS = Math.max(2, (tier >= 4 ? 5 : tier >= 2 ? 4 : 3) - (roll ? 1 : 0));
   const jolt = isChest ? h('div', { class: 'cel-chest-jolt' }, chestArt(tier), crackArt()) : null;
   const chestBox = isChest ? h('div', { class: 'cel-chest-box' }, jolt!) : null;
   const hit = isChest ? h('button', { class: 'cel-chest-hit', 'aria-label': t('cel.tapOpen') }) : null;
@@ -196,7 +203,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       art = h('span', { class: 'cel-orb' });
       label = h('span', {}, lootLight, ` ${t('me.light')}`);
     } else if (l.kind === 'freeze') { art = freezeArt(); label = t('cel.freeze'); } else { art = l.art; label = l.label; }
-    return h('div', { class: `cel-loot-it${l.kind === 'item' && l.rare ? ' rare' : ''}` }, h('span', { class: 'cel-loot-art' }, art), h('span', { class: 'cel-loot-lb' }, label));
+    const rare = l.kind === 'item' && l.rare;
+    return h('div', { class: `cel-loot-it${rare ? ' rare' : ''}`, ...(rare ? { 'data-rare': t('cel.rare') } : {}) }, h('span', { class: 'cel-loot-art' }, art), h('span', { class: 'cel-loot-lb' }, label));
   });
   const slot = isChest ? h('div', { class: 'cel-slot' },
     h('p', { class: 'cel-tap', 'aria-hidden': 'true' }, t('cel.tapOpen'), h('span', { class: 'cel-dots' }, ...dots)),
@@ -238,8 +246,6 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const countUp = (num: HTMLElement | null, n: number) => { if (num) tickNum(num, n, { prefix: '+', onPop: sfx.tick }); };
   const countLight = () => countUp(lightNum, light);
   if (lightNum && still) lightNum.textContent = `+${light}`;
-  // Rewards claimed one after another make a combo ("3 in a row").
-  const streakN = combo();
   const comboPill = h('p', { class: 'cel-combo' }, streakN >= 2 ? t('cel.combo', { n: streakN }) : '');
   // Noor watches the chest, hops with each tap and cheers when it opens.
   const nr = isChest && !still ? makeNoor('cel-noor') : null;
@@ -322,12 +328,17 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const r = c.getBoundingClientRect(), k = canvasBox();
       fx?.burst(r.left + r.width / 2 - k.left, r.top + 32 - k.top, 22 + tier * 4, 0.55);
       squash(c.querySelector('.cel-loot-art')!, 0.3);
-      sfx.pop(i);
-      nr?.hop(0.6);
-      vibrate([14]);
       const l = loot[i];
+      const isRare = l.kind === 'item' && !!l.rare;
+      sfx.pop(i, isRare);
+      nr?.hop(isRare ? 1.2 : 0.6);
+      if (isRare) {
+        c.classList.add('rare-in');
+        fx?.burst(r.left + r.width / 2 - k.left, r.top + 32 - k.top, 40, 0.8);
+      }
       if (l.kind === 'light') countUp(lootLight, l.n);
     };
+    const GAP = roll ? 420 : 650;
     const pour = () => {
       // One prize after another: out of the chest's mouth in an arc, landing on its card.
       const s = stage.getBoundingClientRect();
@@ -344,22 +355,24 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         ], { duration: 780, easing: 'cubic-bezier(.3, 0, .3, 1)' });
         vibrate([8]);
         lootTimers.push(window.setTimeout(() => land(i), 700));
-      }, i * 650)));
-      lootTimers.push(window.setTimeout(reveal, lootCards.length * 650 + 500));
+      }, i * GAP)));
+      lootTimers.push(window.setTimeout(reveal, lootCards.length * GAP + (roll ? 300 : 500)));
     };
     const openChest = () => {
       const b = chestBox!.getBoundingClientRect(), k = canvasBox();
       jolt!.getAnimations().forEach((a) => a.cancel());
       // Released from the crouch: it stretches up, then wobbles and settles.
       squash(jolt!, -0.3, { stiffness: 300, damping: 10 });
-      sfx.open();
+      sfx.open(epic);
       nr?.cheer();
       chestBox!.classList.add('open');
       stage.classList.add('opened');
       el.classList.add('opened');
-      fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24, 0.95 + tier * 0.1);
-      vibrate(tier >= 3 ? [34, 60, 22, 60, 14] : tier >= 1 ? [30, 70, 16] : [26]);
-      later(650, pour);
+      el.classList.remove('charging');
+      if (epic) el.classList.add('epic');
+      fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24 + epic * 40, 0.95 + tier * 0.1 + epic * 0.15);
+      if (epic) later(260, () => fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 50 + epic * 20, 1.1));
+      later(roll ? 400 : 650 + epic * 250, pour);
     };
     const paths = jolt ? [...jolt.querySelectorAll<SVGPathElement>('.cel-crack path:not(.seam)')] : [];
     const tapChest = (x: number | null, y: number | null) => {
@@ -390,12 +403,16 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         // Anticipation: it crouches, gathering itself, for a breath before it bursts.
         isOpen = true;
         jolt!.getAnimations().forEach((a) => a.cancel());
-        jolt!.animate([{ transform: 'none' }, { transform: 'translateY(9px) scale(1.16, .8)' }], { duration: 170, easing: 'cubic-bezier(.3, 0, .7, 1)', fill: 'forwards' });
-        vibrate([8]);
-        later(180, openChest);
+        // A rare prize: the light gathers in slow motion first (the screen dims, the seam blazes, a swell rises).
+        const hold = epic ? 560 + epic * 220 : 170;
+        if (epic) { el.classList.add('charging'); sfx.rare(hold); }
+        jolt!.animate(epic
+          ? [{ transform: 'none' }, { transform: 'translateY(6px) scale(1.08, .9)', offset: 0.3 }, { transform: 'translate(-2px, 9px) scale(1.14, .84)', offset: 0.55 }, { transform: 'translate(2px, 10px) scale(1.16, .82)', offset: 0.75 }, { transform: 'translateY(11px) scale(1.18, .8)' }]
+          : [{ transform: 'none' }, { transform: 'translateY(9px) scale(1.16, .8)' }], { duration: hold, easing: 'cubic-bezier(.3, 0, .7, 1)', fill: 'forwards' });
+        if (!epic) vibrate([8]);
+        later(hold + 10, openChest);
         return;
       }
-      vibrate([10 + taps * 6]);
     };
     hit?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit.click(); } });
 
@@ -429,17 +446,17 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     const has = !!(r && r.width);
     const dx = has ? r!.left + r!.width / 2 - cx : 0;
     const dy = has ? r!.top + r!.height / 2 - cy : 40;
-    const FLY = has ? 560 : 360;
-    const T = FLY + 420;
+    const FLY = (has ? 560 : 360) * (roll ? 0.65 : 1);
+    const T = FLY + (roll ? 300 : 420);
     seed.animate([
       { transform: has ? `translate(${dx}px, ${dy}px) scale(${r!.width / 48}, ${r!.height / 48})` : `translate(0, ${dy}px) scale(.2)`, opacity: 0.9, offset: 0 },
       { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - (has ? 70 : 0)}px) scale(.8)`, opacity: 1, offset: (FLY * 0.55) / T },
       { transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: FLY / T },
-      { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + 300) / T },
+      { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + (roll ? 200 : 300)) / T },
       { transform: 'translate(0, 0) scale(2.6)', filter: 'brightness(2)', opacity: 0, offset: 1 },
     ], { duration: T, easing: 'cubic-bezier(.3, 0, .2, 1)', fill: 'forwards' });
     vibrate([8]);
-    const BURST = FLY + 300;
+    const BURST = FLY + (roll ? 200 : 300);
 
     // 2. The burst: a soft flash, light sweeping across, sparks flying out, the moment playing.
     later(BURST, () => {
@@ -457,20 +474,18 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         if (nr) popIn(nr.el, { delay: 520 });
         later(360, () => {
           squash(jolt!, 0.26);
-          sfx.tap(1, 4);
+          sfx.land();
           const b = chestBox!.getBoundingClientRect(), k = canvasBox();
           fx?.burst(b.left + b.width / 2 - k.left, b.bottom - b.height * 0.12 - k.top, 16, 0.4);
-          vibrate([16]);
         });
-        later(620, () => { ready = true; });
+        later(roll ? 420 : 620, () => { ready = true; });
         return;
       }
       // A second beat when the badge lands / the star fills / the lantern opens.
-      const beat = m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900;
+      const beat = (m.kind === 'khatm' ? 2200 : m.kind === 'rosette' ? 1500 : m.kind === 'flame' ? 1400 : m.kind === 'medal' ? 700 : 900) * (roll ? 0.6 : 1);
       later(beat, () => {
         const b2 = stage.getBoundingClientRect();
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
-        vibrate([14]);
         sfx.shimmer();
         showCombo();
       });

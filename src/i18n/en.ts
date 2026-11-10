@@ -1044,6 +1044,7 @@ const en = {
   'set.soundsOff': 'Reward sounds: off',
   'cel.tapOpen': 'Tap the chest to open it',
   'cel.freeze': 'Streak freeze',
+  'cel.rare': 'Rare',
   'chest.locked': 'A chest with {n} Light, ready when this goal is met',
   'chest.open': 'Open your chest: {n} Light',
   'chest.opened': 'Chest opened: {n} Light',

@@ -1104,6 +1104,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'set.soundsOff': 'أصوات المكافآت: متوقفة',
   'cel.tapOpen': 'انقر على الصندوق لفتحه',
   'cel.freeze': 'تجميد للسلسلة',
+  'cel.rare': 'نادر',
   'chest.locked': 'صندوق فيه {n} نور، يُفتح عند إتمام هذا الهدف',
   'chest.open': 'افتح صندوقك: {n} نور',
   'chest.opened': 'فُتح الصندوق: {n} نور',
