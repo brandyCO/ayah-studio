@@ -48,6 +48,7 @@ import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
 import { todayCard } from './todayCard';
+import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { chest } from './chest';
 import { mpt } from '../i18n/mePages';
@@ -869,7 +870,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(() => openLight()),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(),
+      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
       tabBar('me'));
     void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }

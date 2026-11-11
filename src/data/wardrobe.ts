@@ -33,10 +33,11 @@ export const ownsPiece = (id: string) => shopHas(`fg:${id}`);
 export function earnedPieces(now = new Date()): string[] {
   const best = Math.max(streak(now).best, streak(now).days);
   const season = seasonNow(now);
+  const qadr = season === 'ramadan' && (hijri(now)?.day ?? 0) >= 21;
   return Object.entries(WARDROBE).filter(([id, p]) => {
     if (ownsPiece(id)) return false;
     const n = STREAK[p.how];
-    return n ? best >= n : p.how === season;
+    return n ? best >= n : p.how === season || (p.how === 'qadr' && qadr);
   }).map(([id]) => id);
 }
 /** Gives a piece (a claim, a prize); false when it was already there. */
