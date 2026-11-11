@@ -1592,6 +1592,14 @@ duas/reflections section in Me.
       "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
       glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
       No sound, light vibration; reduced motion → the end picture
+      **Clearer + faster** (owner feedback 2026-11-11): points have their own mark (`ptsIcon()`: a violet badge with a rising
+      chevron) on every score, podium step and the hero's "n points this week" pill, never Light's star; an **ⓘ** in the top bar
+      (and the pill) opens **How Ranks work**: Points (what earns them, each with its +n, the page reading time), Light (from
+      chests, spent in the shop, never ranked), Leagues, When points show. Points arriving while Ranks is open float up from
+      your row ("+20"). Reports go 2.5 s after a change, spaced ≥ 5.2 s apart by the app (the server's limit is now 5 s,
+      migration `20261111200000_rank_report_faster.sql`; a report inside it used to be ignored and marked sent); listening
+      is counted every 15 s; Ranks polls every 8 s. The overtake moment glides at 0.26 s and lands in ~0.5 s, Continue ready
+      at 0.75 s, a tap closes it after 0.9 s
       **Characters** (owner request 2026-11-10, "users build their own character"; faces: the user's choice, off by default):
       `src/ui/figure.ts` draws a person from parts in the reward art style (two-tone shapes, light from the top left, ground
       shadow): man / woman / boy / girl, 8 skins, hair (bald, short, curly, swept, long, bun) + 6 colours, beard (short / full /

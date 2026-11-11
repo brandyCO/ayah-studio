@@ -42,14 +42,18 @@ const firstName = () => (account()?.name ?? '').trim().split(/\s+/)[0]?.slice(0,
 /** The name others see: the user's own choice, else the first name of the account. */
 export const rankName = () => { try { return localStorage.getItem('rankName') || firstName(); } catch { return firstName(); } };
 
-// --- reporting: today (and yesterday, until it is settled), at most every 90 s, only when changed ---
+// --- reporting: today (and yesterday, until it is settled), a few seconds after a change ---
+// The server takes one report per 5 s (rank_report); a report sent sooner would be ignored, so the app
+// waits out the gap itself instead of sending it and wrongly marking the numbers as sent.
+const GAP = 5_200;
+let lastAt = 0;
 function totals(k: string) {
   const d = allDays()[k];
   return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0 };
 }
 let timer = 0;
 let busy = false;
-export function reportSoon(delay = 8_000) {
+export function reportSoon(delay = 2_500) {
   if (!account() || timer) return;
   timer = window.setTimeout(() => { timer = 0; void report(); }, delay);
 }
@@ -57,6 +61,9 @@ export async function report(): Promise<void> {
   if (!account() || busy) return;
   busy = true;
   try {
+    const wait = lastAt + GAP - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    if (!account()) return;
     let sent: Record<string, string> = {};
     try { sent = JSON.parse(localStorage.getItem('rankSent') ?? '{}'); } catch { /* ignore */ }
     const today = dayKey();
@@ -64,6 +71,7 @@ export async function report(): Promise<void> {
       const v = totals(k);
       const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}`;
       if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons)) continue;
+      lastAt = Date.now();
       await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons });
       sent[k] = sig;
     }
