@@ -94,6 +94,8 @@ export function watchRanks() {
   onAccount((a) => {
     kept = null;
     cache.clear();
+    profs.clear();
+    profsLoaded = false;
     if (!a) return;
     reportSoon(3000);
     // A board invite opened before signing in: Ranks joins it.
@@ -414,7 +416,66 @@ export interface Profile extends Omit<Row, 'score'> {
 }
 export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
-export const rankProfile = (pid: string) => rpc<Profile | null>('rank_profile', { who: pid, d: dayKey() });
+// Profiles open at once (owner, 2026-11-11: "no loading, ever"): each one is kept on this device (per account, newest 60)
+// and the league's players are fetched ahead while Ranks is open, the top 3 first. A profile shown from the kept copy is
+// refreshed quietly and updated in place.
+const PROF_STORE = 'rankProfiles';
+const profs = new Map<string, { at: number; v: Profile | null }>();
+let profsLoaded = false;
+const loadProfs = () => {
+  if (profsLoaded) return;
+  profsLoaded = true;
+  try {
+    const v = JSON.parse(localStorage.getItem(PROF_STORE) ?? 'null');
+    if (v && v.who === account()?.id && v.p && typeof v.p === 'object') for (const [k, p] of Object.entries(v.p)) profs.set(k, { at: 0, v: p as Profile });
+  } catch { /* ignore */ }
+};
+let profTimer = 0;
+const keepProfs = () => {
+  clearTimeout(profTimer);
+  profTimer = window.setTimeout(() => {
+    const p: Record<string, Profile | null> = {};
+    for (const [k, e] of [...profs.entries()].slice(-60)) p[k] = e.v;
+    try { localStorage.setItem(PROF_STORE, JSON.stringify({ who: account()?.id, p })); } catch { /* full */ }
+  }, 600);
+};
+/** The profile kept on this device (undefined when never seen). */
+export function peekProfile(pid: string): Profile | null | undefined {
+  loadProfs();
+  return profs.get(pid)?.v;
+}
+/** Sets the kept profile (after an action, so a reopened profile shows the new state at once). */
+export function putProfile(pid: string, v: Profile | null) {
+  loadProfs();
+  profs.delete(pid);
+  profs.set(pid, { at: Date.now(), v });
+  keepProfs();
+}
+const inflight = new Map<string, Promise<Profile | null>>();
+/** A player's profile: kept for 2 minutes unless `fresh`. */
+export function rankProfile(pid: string, fresh = false): Promise<Profile | null> {
+  loadProfs();
+  const c = profs.get(pid);
+  if (!fresh && c && Date.now() - c.at < 120_000) return Promise.resolve(c.v);
+  const running = inflight.get(pid);
+  if (running) return running;
+  const p = rpc<Profile | null>('rank_profile', { who: pid, d: dayKey() }).then((v) => { putProfile(pid, v); return v; }).finally(() => inflight.delete(pid));
+  inflight.set(pid, p);
+  return p;
+}
+/** Fetches ahead the profiles a tap may open, in order (top 3 first), two at a time. */
+export async function preloadProfiles(pids: (string | null | undefined)[]) {
+  if (!account()) return;
+  loadProfs();
+  const todo = [...new Set(pids.filter((x): x is string => !!x))].filter((pid) => { const c = profs.get(pid); return !c || Date.now() - c.at > 120_000; });
+  const next = async (): Promise<void> => {
+    const pid = todo.shift();
+    if (!pid) return;
+    try { await rankProfile(pid); } catch { /* offline: tried again next time */ }
+    return next();
+  };
+  await Promise.all([next(), next()]);
+}
 export const myFriends = (fresh = false) => cached('friends', () => rpc<Friends>('rank_my_friends', { d: dayKey() }), fresh);
 export async function askFriend(pid: string): Promise<'sent' | 'friend'> {
   const r = await rpc<'sent' | 'friend'>('rank_friend_ask', { who: pid });

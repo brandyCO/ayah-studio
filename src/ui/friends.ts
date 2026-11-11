@@ -7,13 +7,14 @@ import { account } from '../cloud/auth';
 import { ft } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, rankProfile, removeFriend, sendProfile,
-  type Friend, type Profile, type Row, type ShowKey,
+  SHOW, answerFriend, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  type Friend, type Friends, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
 import { avatar } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
-import { ptsIcon, sheet, share, tierBadge } from './ranks';
+import { ptsIcon, share, tierBadge } from './ranks';
+import { t } from '../i18n';
 import { openAccount } from './account';
 import { flame } from './flame';
 import { h, haptic, toast } from './dom';
@@ -27,7 +28,7 @@ const PENDING = 'pendingFriend';
 const MILESTONES = [7, 30, 100, 365];
 
 /** Two people side by side: characters (on fire together when `on`), else their avatar discs. */
-function pair(me: string | null, them: Row | Profile | Friend, on: boolean, streak: number): HTMLElement {
+function pair(me: string | null, them: Row | Profile | Friend, on: boolean, streak: number, disc = 72): HTMLElement {
   const a = actor('fr-fig', me);
   const b = them.private ? null : actor('fr-fig', them.figure ?? null);
   if (a && b) {
@@ -37,8 +38,8 @@ function pair(me: string | null, them: Row | Profile | Friend, on: boolean, stre
     setTimeout(() => { if (on) { a.cheer(1600); b.cheer(1600); } else { a.wave(1400); b.hop(0.4); } }, 380);
     return box;
   }
-  const disc = (fig: string | null, r?: Row | Profile | Friend) => avatar(r?.private ? null : r?.avatar ?? 0, r?.tier ?? 0, 72, r?.frame ?? 0, fig);
-  return h('span', { class: `fr-pair discs${on ? ' on' : ''}` }, disc(me), disc(them.private ? null : them.figure ?? null, them));
+  const one = (fig: string | null, r?: Row | Profile | Friend) => avatar(r?.private ? null : r?.avatar ?? 0, r?.tier ?? 0, disc, r?.frame ?? 0, fig);
+  return h('span', { class: `fr-pair discs${on ? ' on' : ''}` }, one(me), one(them.private ? null : them.figure ?? null, them));
 }
 
 const streakLine = (f: { streak: number; meToday: boolean; themToday: boolean }, name: string) =>
@@ -47,60 +48,123 @@ const streakLine = (f: { streak: number; meToday: boolean; themToday: boolean },
     h('span', {}, h('b', {}, f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
       h('small', {}, f.meToday && f.themToday ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither'))));
 
-/** The profile of a player (from their row on a board). */
+/** A profile from a board row, while the full one is not kept yet (no loading text: the page fills in place). */
+function fromRow(row: Row): Profile {
+  const fr = friendsNow()?.friends.find((f) => f.pid === row.pid);
+  return { name: row.name, pid: row.pid, figure: row.figure, avatar: row.avatar, frame: row.frame ?? 0, tier: row.tier, xp: row.xp, private: row.private,
+    room: row.room, me: row.me, relation: row.me ? 'me' : fr ? 'friend' : 'none', show: 0, bestTier: row.tier ?? 0,
+    friend: fr ? { streak: fr.streak, meToday: fr.meToday, themToday: fr.themToday } : undefined };
+}
+let friendsKept: Friends | null = null;
+const friendsNow = () => friendsKept;
+
+/** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
+ *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
 export async function openProfile(row: Row, onChange: () => void = () => {}) {
-  if (!row.pid) return;
-  const box = h('div', { class: 'fr-prof' }, h('p', { class: 'muted' }, rt('rk.loading')));
-  const d = sheet(row.me ? ft('fr.mine') : row.name ?? rt('rk.private'), box);
-  d.classList.add('fr-sheet');
-  let p: Profile | null = null;
-  try { p = await rankProfile(row.pid); } catch (e) { box.replaceChildren(h('p', { class: 'muted' }, (e as Error).message)); return; }
-  if (!p) { box.replaceChildren(h('p', { class: 'muted' }, ft('fr.private'))); return; }
-  const prof = p;
-  const name = prof.name ?? rt('rk.private');
-  const f = prof.friend;
-  const on = !!f && f.meToday && f.themToday;
-  const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
-    v === undefined ? '' : h('span', { class: `fr-stat s-${k}` }, h('b', {}, icon, num(v)), h('small', {}, label));
-  const stats = h('div', { class: 'fr-stats' },
-    stat('week', ft('fr.week'), prof.week, ptsIcon()),
-    stat('streak', ft('fr.flame'), prof.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
-    stat('trophies', ft('fr.trophies'), prof.trophies, '🏆 '),
-    stat('pages', ft('fr.pages'), prof.pages),
-    stat('listen', ft('fr.listen'), prof.listen));
-  const act = async (fn: () => Promise<unknown>) => { try { await fn(); haptic(10); onChange(); d.close(); void openProfile(row, onChange); } catch (e) { toast((e as Error).message); } };
-  const main: Node[] = prof.relation === 'none' ? [h('button', { class: 'primary brand-btn fr-add', onclick: () => act(() => askFriend(row.pid!).then((r) => toast(r === 'friend' ? ft('fr.joined') : ft('fr.sent')))) }, `＋ ${ft('fr.add')}`)]
-    : prof.relation === 'sent' ? [h('button', { class: 'chip', onclick: () => act(() => removeFriend(row.pid!)) }, `${ft('fr.sent')} · ${ft('fr.cancel')}`)]
-      : prof.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act(() => answerFriend(row.pid!, true)) }, ft('fr.accept')),
-        h('button', { class: 'chip', onclick: () => act(() => answerFriend(row.pid!, false)) }, ft('fr.decline'))]
-        : prof.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`)] : [];
-  const actions = prof.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
-    prof.room && !prof.private ? h('button', { class: 'chip', onclick: () => { d.close(); void import('./room').then((m) => m.openVisit({ name: prof.name, figure: prof.figure ?? null, room: prof.room ?? null })); } }, ft('fr.visit')) : '',
-    prof.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) void act(() => removeFriend(row.pid!)); } }, ft('fr.remove')) : '');
-  // Your own profile: choose what it shows.
-  const mine = prof.relation === 'me' ? (() => {
-    let bits = myShow();
-    const keys: [ShowKey, string][] = [['week', ft('fr.week')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
-    return h('div', { class: 'fr-mine' }, h('p', { class: 'muted small' }, ft('fr.mineSub')),
-      h('div', { class: 'chips' }, ...keys.map(([k, label]) => {
-        const b: HTMLButtonElement = h('button', { class: `chip${bits & SHOW[k] ? ' on' : ''}`, 'aria-pressed': String(!!(bits & SHOW[k])), onclick: () => {
-          bits ^= SHOW[k];
-          b.classList.toggle('on', !!(bits & SHOW[k]));
-          b.setAttribute('aria-pressed', String(!!(bits & SHOW[k])));
-          haptic(6);
-          void sendProfile(bits, true);
-        } }, label);
-        return b;
-      })));
-  })() : '';
-  box.replaceChildren(
-    prof.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(prof)) : pair(myFigureCode(), prof, on, f?.streak ?? 0),
-    h('div', { class: 'fr-who' }, h('h3', {}, prof.relation === 'me' ? `${name} · ${ft('fr.you2')}` : name), prof.tier !== undefined ? tierBadge(prof.tier) : ''),
-    prof.xp != null ? levelLine(prof.xp) : '',
-    f ? streakLine(f, name) : '',
-    stats.childElementCount ? stats : '',
-    actions, mine,
-    f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : '');
+  const pid = row.pid;
+  if (!pid) return;
+  const kept = peekProfile(pid);
+  let prof: Profile | null = kept === undefined ? fromRow(row) : kept;
+  let known = kept !== undefined;
+  const title = h('h2', {}, row.me ? ft('fr.mine') : row.name ?? rt('rk.private'));
+  const back = h('button', { class: 'icon-btn fr-back', 'aria-label': t('common.close') }, '‹');
+  const stage = h('div', { class: 'fr-stage' });
+  const info = h('div', { class: 'fr-info' });
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title), h('div', { class: 'fr-page-body' }, stage, info));
+  // Back (and Android's back button) closes the page.
+  let pushed = false;
+  try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
+  const onPop = () => { pushed = false; d.close(); };
+  window.addEventListener('popstate', onPop);
+  const close = () => { if (pushed) history.back(); else d.close(); };
+  back.onclick = close;
+  d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
+  window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
+  document.body.append(d);
+  d.showModal();
+
+  let pairSig = '';
+  const paint = () => {
+    if (!prof) {
+      stage.replaceChildren(pairSolo({ ...fromRow(row), private: true }));
+      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.private')));
+      return;
+    }
+    const p = prof;
+    const name = p.name ?? rt('rk.private');
+    const f = p.friend;
+    const on = !!f && f.meToday && f.themToday;
+    // The characters are drawn once and kept while nothing about them changed (their animations keep running).
+    const sig = JSON.stringify([p.relation === 'me', p.figure, myFigureCode(), on, f?.streak ?? 0, p.xp ?? null]);
+    if (sig !== pairSig) {
+      pairSig = sig;
+      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, on, f?.streak ?? 0, 116));
+    }
+    title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
+    const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
+      v === undefined ? '' : h('span', { class: `fr-stat s-${k}` }, h('b', {}, icon, num(v)), h('small', {}, label));
+    const stats = h('div', { class: 'fr-stats' },
+      stat('week', ft('fr.week'), p.week, ptsIcon()),
+      stat('streak', ft('fr.flame'), p.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
+      stat('trophies', ft('fr.trophies'), p.trophies, '🏆 '),
+      stat('pages', ft('fr.pages'), p.pages),
+      stat('listen', ft('fr.listen'), p.listen));
+    // Each action shows its result at once; the server's answer follows quietly.
+    const act = (next: Profile['relation'], fn: () => Promise<unknown>, after?: (r: unknown) => void) => {
+      const was = p.relation;
+      prof = { ...p, relation: next, friend: next === 'friend' ? p.friend : undefined };
+      haptic(10);
+      paint();
+      void fn().then((r) => { after?.(r); onChange(); return refresh(); }).catch((e) => { toast((e as Error).message); prof = { ...p, relation: was }; paint(); });
+    };
+    const main: Node[] = !known ? [h('span', { class: 'fr-acts-wait', 'aria-hidden': 'true' })]
+      : p.relation === 'none' ? [h('button', { class: 'primary brand-btn fr-add', onclick: () => act('sent', () => askFriend(pid), (r) => toast(r === 'friend' ? ft('fr.joined') : ft('fr.sent'))) }, `＋ ${ft('fr.add')}`)]
+        : p.relation === 'sent' ? [h('button', { class: 'chip', onclick: () => act('none', () => removeFriend(pid)) }, `${ft('fr.sent')} · ${ft('fr.cancel')}`)]
+          : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
+            h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
+            : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`)] : [];
+    const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
+      known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
+      known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');
+    // Your own profile: choose what it shows (the stats above follow each switch).
+    const mine = p.relation === 'me' ? (() => {
+      let bits = myShow();
+      const keys: [ShowKey, string][] = [['week', ft('fr.week')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
+      return h('div', { class: 'fr-mine' }, h('h3', {}, ft('fr.mine')), h('p', { class: 'muted small' }, ft('fr.mineSub')),
+        h('div', { class: 'chips' }, ...keys.map(([k, label]) => {
+          const b: HTMLButtonElement = h('button', { class: `chip${bits & SHOW[k] ? ' on' : ''}`, 'aria-pressed': String(!!(bits & SHOW[k])), onclick: () => {
+            bits ^= SHOW[k];
+            b.classList.toggle('on', !!(bits & SHOW[k]));
+            b.setAttribute('aria-pressed', String(!!(bits & SHOW[k])));
+            stats.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & SHOW[k]));
+            haptic(6);
+            void sendProfile(bits, true);
+          } }, label);
+          return b;
+        })));
+    })() : '';
+    if (p.relation === 'me') { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) stats.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
+    info.replaceChildren(
+      h('div', { class: 'fr-who' }, h('h3', {}, p.relation === 'me' ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
+      p.xp != null ? levelLine(p.xp) : '',
+      f ? streakLine(f, name) : '',
+      stats.childElementCount ? stats : '',
+      actions, mine,
+      f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : '');
+  };
+  const refresh = async () => {
+    try {
+      const v = await rankProfile(pid, true);
+      if (!d.isConnected) return;
+      if (known && JSON.stringify(v) === JSON.stringify(prof)) return;
+      prof = v;
+      known = true;
+      paint();
+    } catch (e) { if (!known && d.isConnected) toast((e as Error).message); }
+  };
+  paint();
+  void refresh();
 }
 /** "Level 12" with a bar to the next level. */
 function levelLine(xp: number) {
@@ -112,7 +176,7 @@ function levelLine(xp: number) {
 }
 function pairSolo(p: Profile) {
   const a = actor('fr-fig', p.figure ?? null);
-  return a ? withLevel(a.el, levelOf(p.xp ?? myXp())) : avatar(p.avatar ?? 0, p.tier ?? 0, 96, p.frame ?? 0, p.figure);
+  return a ? withLevel(a.el, levelOf(p.xp ?? myXp())) : avatar(p.avatar ?? 0, p.tier ?? 0, 116, p.frame ?? 0, p.figure);
 }
 
 /** A friend streak milestone reached today (both earned points), each shown once: both characters power up together. */
@@ -133,18 +197,28 @@ async function milestone(list: Friend[]) {
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
 export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
   const data = await myFriends(fresh);
+  friendsKept = data;
+  void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
     try {
       const code = await friendInvite();
       await share(ft('fr.invite'), ft('fr.inviteText'), friendInviteLink(code));
     } catch (e) { toast((e as Error).message); }
   } }, h('span', { class: 'fr-invite-ic', 'aria-hidden': 'true' }, '＋'), h('span', {}, h('b', {}, ft('fr.invite')), h('small', {}, ft('fr.inviteSub'))));
+  // An answer shows at once: the ask leaves the list; the tab is redrawn quietly once the server has it.
+  const answer = (e: Event, pid: string, ok: boolean) => {
+    const row = (e.currentTarget as HTMLElement).closest('.fr-ask') as HTMLElement | null;
+    row?.classList.add('gone');
+    haptic(10);
+    if (ok) toast(ft('fr.joined'));
+    void answerFriend(pid, ok).then(onChange, (err) => { row?.classList.remove('gone'); toast((err as Error).message); });
+  };
   const asks = data.asks.length ? h('section', { class: 'fr-asks' }, h('h3', {}, ft('fr.asks')),
     ...data.asks.map((a) => h('div', { class: 'fr-ask' },
       avatar(a.private ? null : a.avatar ?? 0, a.tier ?? 0, 40, a.frame ?? 0, a.figure),
       h('span', { class: 'fr-ask-name' }, ft('fr.asked', { name: a.name ?? rt('rk.private') })),
-      h('button', { class: 'chip on', onclick: async () => { try { await answerFriend(a.pid!, true); toast(ft('fr.joined')); onChange(); } catch (e) { toast((e as Error).message); } } }, ft('fr.accept')),
-      h('button', { class: 'chip', onclick: async () => { try { await answerFriend(a.pid!, false); onChange(); } catch (e) { toast((e as Error).message); } } }, '✕')))) : '';
+      h('button', { class: 'chip on', onclick: (e: Event) => answer(e, a.pid!, true) }, ft('fr.accept')),
+      h('button', { class: 'chip', onclick: (e: Event) => answer(e, a.pid!, false) }, '✕')))) : '';
   const me = myFigureCode();
   const cards = data.friends.map((f) => {
     const on = f.meToday && f.themToday;
@@ -192,4 +266,10 @@ export async function takePendingFriend(): Promise<boolean> {
   if (!code || !account()) return false;
   try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
   try { await joinFriend(code); toast(ft('fr.joined')); return true; } catch (e) { toast((e as Error).message); return false; }
+}
+
+/** Called while the league shows: the Friends tab and the profiles a tap may open are fetched ahead. */
+export function warmFriends(leaguePids: (string | null | undefined)[]) {
+  void preloadProfiles(leaguePids);
+  void myFriends().then((f) => { friendsKept = f; void preloadProfiles(f.friends.map((x) => x.pid)); }).catch(() => {});
 }
