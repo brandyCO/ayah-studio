@@ -67,15 +67,21 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const grew = takeGrowth();
 
   const order = () => pathOrder(pathStart(), juzOf);
-  let earlier = 1; // surahs shown before the one where the path stands
+  let earlier = 1; // surahs shown open before the one where the path stands
+  const AHEAD = 3; // surahs shown open from where the path stands
+  const openRuns = new Set<string>(); // folded juz lines the learner opened
+  let due: { s: number }[] = []; // reviews still to weave in (paint → unitEl)
+  let leadDone = false; // the START mark is placed once a paint
+  let curHue = 'green';
   const list = h('div', { class: 'lp-list' });
   const top = h('header', { class: 'lp-top' });
-  root.append(scenery(), top, list, tabBar('learn'));
+  const cont = h('button', { class: 'lp-cont', type: 'button', hidden: true });
+  root.append(scenery(), top, list, cont, tabBar('learn'));
 
   function paintTop() {
     const st = streak();
     top.replaceChildren(
-      h('button', { class: 'lp-pill', type: 'button', onclick: () => void openStart(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), lt('learn.choose')),
+      h('button', { class: 'lp-pill', type: 'button', onclick: () => void openStart(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), h('span', { class: 'lp-pill-t' }, lt('learn.choose'))),
       h('span', { class: 'lp-gap' }),
       h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
       h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
@@ -87,7 +93,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   let pop: HTMLElement | null = null;
   const closePop = () => { pop?.remove(); pop = null; };
 
-  function nodeFor(st: PathStep, i: number, hue: string, m: SurahMeta): HTMLElement {
+  function nodeFor(st: PathStep, i: number, hue: string, m: SurahMeta, lead: boolean): HTMLElement {
     const label = st.kind === 'whole' ? lt('learn.stepTasmi') : st.range[0] === st.range[1] ? lt('learn.stepAyah', { a: st.range[0] }) : lt('learn.stepAyat', { a: st.range[0], b: st.range[1] });
     const kind = st.kind === 'whole' ? 'whole' : 'new';
     const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : G.star;
@@ -97,11 +103,11 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       onclick: () => openPop(btn, st, label, m, hue),
     }, svg(glyph, st.kind === 'whole' ? 40 : 34), h('span', { class: 'lp-shine', 'aria-hidden': 'true' }));
     const wrap = h('div', { class: 'lp-step', style: `--x:${SWAY[i % SWAY.length]}px` });
-    if (st.state === 'current') {
+    if (lead) {
       wrap.classList.add('is-current');
       wrap.append(h('div', { class: 'lp-start', 'aria-hidden': 'true' }, lt('learn.start')));
     }
-    wrap.append(h('div', { class: 'lp-nodewrap' }, st.state === 'current' ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn));
+    wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn));
     if (st.kind === 'whole') wrap.append(h('span', { class: 'lp-cap' }, lt('learn.stepTasmi')));
     return wrap;
   }
@@ -146,26 +152,79 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'lp-banner-sub' }, lt('learn.unitSub', { ayat, done, of: u.steps.length }))),
       h('span', { class: 'lp-banner-ar', lang: 'ar', dir: 'rtl' }, m.ar),
       h('button', { class: 'lp-banner-btn', type: 'button', 'aria-label': lt('learn.unitOptions', { name: surahName(m) }), onclick: () => openUnit(m) }, svg(G.dots, 22)));
-    const steps = u.steps.map((st, i) => nodeFor(st, i, hue, m));
+    const steps: HTMLElement[] = [];
+    let i = 0;
+    for (const st of u.steps) {
+      if (st.state === 'current' && due.length) { due.forEach((tr, q) => steps.push(reviewNode(tr.s, i++, q === 0 && !leadDone))); due = []; leadDone = true; }
+      const lead = st.state === 'current' && !leadDone;
+      if (lead) leadDone = true;
+      steps.push(nodeFor(st, i++, hue, m, lead));
+    }
     const box = h('section', { class: 'lp-unit', 'aria-label': `${kicker} · ${surahName(m)}` }, banner, h('div', { class: 'lp-steps' }, ...steps));
     if (u.last) box.append(treeEnd(m, hue));
     return box;
   }
 
-  function reviewEl(): HTMLElement | null {
-    const due = reviewSteps();
-    if (!due.length) return null;
+  /** A thirsty tree's review, woven into the path just before the step to do now. */
+  function reviewNode(s: number, i: number, lead: boolean): HTMLElement {
+    const m = meta[s - 1];
+    const label = lt('learn.reviewOf', { name: surahName(m) });
+    const wrap = h('div', { class: 'lp-step lp-rv', style: `--x:${SWAY[i % SWAY.length]}px` });
+    if (lead) { wrap.classList.add('is-current'); wrap.append(h('div', { class: 'lp-start hue-blue', 'aria-hidden': 'true' }, lt('learn.reviewHere'))); }
+    wrap.append(
+      h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: 'lp-ring hue-blue', 'aria-hidden': 'true' }) : '',
+        h('button', { class: 'lp-node current review hue-blue', type: 'button', 'aria-label': `${label} · ${lt('learn.reviewWater')}`, onclick: () => { location.hash = `#/learn/${s}`; } }, svg(G.drop, 32), h('span', { class: 'lp-shine', 'aria-hidden': 'true' }))),
+      h('span', { class: 'lp-cap' }, label));
+    return wrap;
+  }
+
+  /** Reviews when the path is finished (nothing left to weave them into). */
+  function reviewEl(list: readonly { s: number }[]): HTMLElement | null {
+    if (!list.length) return null;
     return h('section', { class: 'lp-unit lp-review', 'aria-label': lt('learn.reviewTitle') },
       h('div', { class: 'lp-banner hue-blue' },
-        h('div', { class: 'lp-banner-t' }, h('span', { class: 'lp-kicker' }, lt('learn.reviewKicker')), h('h2', {}, lt(due.length === 1 ? 'learn.review1' : 'learn.reviewN', { n: due.length })),
+        h('div', { class: 'lp-banner-t' }, h('span', { class: 'lp-kicker' }, lt('learn.reviewKicker')), h('h2', {}, lt(list.length === 1 ? 'learn.review1' : 'learn.reviewN', { n: list.length })),
           h('span', { class: 'lp-banner-sub' }, lt('learn.reviewWater')))),
-      h('div', { class: 'lp-steps' }, ...due.map((tr, i) => {
-        const m = meta[tr.s - 1];
-        const label = lt('learn.reviewOf', { name: surahName(m) });
-        return h('div', { class: 'lp-step', style: `--x:${SWAY[(i + 1) % SWAY.length]}px` },
-          h('button', { class: 'lp-node current review hue-blue', type: 'button', 'aria-label': label, onclick: () => { location.hash = `#/learn/${tr.s}`; } }, svg(G.drop, 32), h('span', { class: 'lp-shine', 'aria-hidden': 'true' })),
-          h('span', { class: 'lp-cap' }, label));
-      })));
+      h('div', { class: 'lp-steps' }, ...list.map((tr, i) => reviewNode(tr.s, i + 1, i === 0))));
+  }
+
+  /** Surahs far from where the path stands, folded into one line per juz (opened by a tap). */
+  function foldEl(run: number[], j: number, key: string, open: boolean): HTMLElement {
+    const grown = run.filter((s) => tree(s)?.full).length;
+    const juz = lt('learn.juzN', { n: j });
+    const a = surahName(meta[run[0] - 1]), b = surahName(meta[run[run.length - 1] - 1]);
+    const pct = Math.round((grown / run.length) * 100);
+    return h('button', {
+      class: `lp-fold${grown === run.length ? ' all' : grown ? ' some' : ''}${open ? ' open' : ''}`, type: 'button', 'aria-expanded': String(open),
+      'aria-label': lt(open ? 'learn.foldClose' : 'learn.foldOpen', { juz }),
+      onclick: () => { if (openRuns.has(key)) openRuns.delete(key); else openRuns.add(key); paint(); },
+    },
+      h('span', { class: 'lp-fold-n' }, String(j)),
+      h('span', { class: 'lp-fold-t' },
+        h('b', {}, juz, h('span', {}, ' · ', run.length === 1 ? lt('learn.foldSurah1') : lt('learn.foldSurahs', { n: run.length }))),
+        h('span', { class: 'lp-fold-sub' }, run.length === 1 ? a : `${a} – ${b}`),
+        h('span', { class: 'lp-fold-bar', 'aria-label': lt('learn.grownOf', { n: grown, of: run.length }) }, h('i', { style: `width:${pct}%` }))),
+      h('span', { class: 'lp-fold-c', 'aria-hidden': 'true' }, svg('<path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>', 22)));
+  }
+
+  /** The bottom Continue button: always the next thing to do (a review first, then the current step). */
+  function paintCont(ord: number[], pos: number, dueList: readonly { s: number }[]) {
+    let s = 0, what = '', hue = 'green';
+    if (dueList.length) { s = dueList[0].s; what = lt('learn.reviewOf', { name: surahName(meta[s - 1]) }); hue = 'blue'; }
+    else if (pos < ord.length) {
+      s = ord[pos];
+      const m = meta[s - 1];
+      const st = unitsOf(m, mushaf, true).flatMap((u) => u.steps).find((x) => x.state === 'current');
+      const label = !st || st.kind === 'whole' ? lt('learn.stepTasmi') : st.range[0] === st.range[1] ? lt('learn.stepAyah', { a: st.range[0] }) : lt('learn.stepAyat', { a: st.range[0], b: st.range[1] });
+      what = `${surahName(m)} · ${label}`;
+      hue = curHue;
+    }
+    cont.hidden = !s;
+    if (!s) return;
+    cont.className = `lp-cont hue-${hue}`;
+    cont.setAttribute('aria-label', lt('learn.contAria', { what }));
+    cont.replaceChildren(h('span', { class: 'lp-cont-t' }, h('b', {}, lt('learn.continue')), h('span', {}, what)), svg(dueList.length ? G.drop : G.star, 26));
+    cont.onclick = () => { haptic(); location.hash = `#/learn/${s}`; };
   }
 
   function paint() {
@@ -173,20 +232,38 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     paintTop();
     const ord = order();
     const pos = pathPosition(ord);
-    const from = Math.max(0, pos - earlier), to = Math.min(ord.length, pos + 4);
+    const dueList = reviewSteps();
+    due = pos < ord.length ? [...dueList] : [];
+    leadDone = false;
+    // Near where the path stands every unit is open; further away, one folded line per juz.
+    const lo = Math.max(0, pos - earlier), hi = Math.min(ord.length, pos + AHEAD);
     const out: HTMLElement[] = [];
-    if (from > 0) out.push(h('button', { class: 'lp-earlier', type: 'button', onclick: () => { earlier += 5; paint(); } }, lt('learn.earlier')));
-    let idx = from;
-    for (let k = from; k < to; k++) {
-      if (k === pos) { const r = reviewEl(); if (r) out.push(r); }
-      for (const u of unitsOf(meta[ord[k] - 1], mushaf, k <= pos)) out.push(unitEl(u, idx++));
+    let k = 0;
+    while (k < ord.length) {
+      if (k >= lo && k < hi) {
+        const units = unitsOf(meta[ord[k] - 1], mushaf, k <= pos);
+        if (k === pos) curHue = HUES[k % HUES.length];
+        for (const u of units) out.push(unitEl(u, k));
+        k++;
+        continue;
+      }
+      const j = juzOf[ord[k] - 1];
+      let e = k;
+      while (e < ord.length && !(e >= lo && e < hi) && juzOf[ord[e] - 1] === j) e++;
+      const run = ord.slice(k, e);
+      const key = `${j}:${run[0]}`;
+      const open = openRuns.has(key);
+      out.push(foldEl(run, j, key, open));
+      if (open) for (let q = k; q < e; q++) for (const u of unitsOf(meta[ord[q] - 1], mushaf, q <= pos)) out.push(unitEl(u, q));
+      k = e;
     }
     if (pos >= ord.length) {
-      const r = reviewEl(); if (r) out.push(r);
+      const r = reviewEl(dueList); if (r) out.push(r);
       out.push(h('p', { class: 'lp-end' }, lt('learn.allDone')));
     }
     out.push(noorLine('learn'));
     list.replaceChildren(...out);
+    paintCont(ord, pos, dueList);
   }
 
   // --- sheets ---

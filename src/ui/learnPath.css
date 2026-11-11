@@ -172,3 +172,59 @@
 }
 @media (prefers-reduced-motion: reduce) { .lp-start { animation: none; } .lp-tree.grew canvas { animation: none; } }
 html.lite .lp-start { animation: none; }
+
+/* Continue: always the next thing to do, just above the tab bar */
+.lp-list { padding-bottom: 96px; }
+.lp-cont {
+  position: fixed; z-index: 8; inset-inline: 0; margin: 0 auto; bottom: calc(80px + env(safe-area-inset-bottom));
+  width: min(528px, calc(100% - 32px)); min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 8px 18px;
+  border: 0; border-radius: 18px; background: var(--hc); color: #fff; box-shadow: 0 5px 0 var(--he), 0 10px 24px #0000002e;
+  font-family: var(--ui-round); text-align: start; cursor: pointer; animation: lp-pop var(--dur-2) var(--ease-spring);
+}
+.lp-cont[hidden] { display: none; }
+.lp-cont:active { translate: 0 4px; box-shadow: 0 1px 0 var(--he), 0 6px 16px #0000002e; }
+.lp-cont-t { flex: 1; min-width: 0; display: grid; }
+.lp-cont-t b { font: 900 18px var(--ui-round); letter-spacing: .05em; text-transform: uppercase; }
+.lp-cont-t span { font: 700 13px var(--ui-round); opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.listening-away .lp-cont { bottom: calc(146px + env(safe-area-inset-bottom)); }
+body:has(dialog[open]) .lp-cont { visibility: hidden; }
+
+/* Reviews woven into the path */
+.lp-node.review { --hc: #2f9be8; --he: #1d76b8; }
+.lp-rv .lp-cap { color: #1d76b8; }
+
+/* Far surahs folded: one line per juz */
+.lp-fold {
+  justify-self: stretch; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; cursor: pointer;
+  border: 2px solid var(--lp-line); background: color-mix(in srgb, var(--lp-card) 88%, transparent); color: var(--lp-ink);
+  box-shadow: 0 4px 0 var(--lp-line); font-family: var(--ui-round); text-align: start;
+}
+.lp-fold:active { translate: 0 3px; box-shadow: 0 1px 0 var(--lp-line); }
+.lp-fold-n {
+  flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font: 900 17px var(--ui-round);
+  background: var(--lp-locked); color: var(--lp-locked-ic); box-shadow: 0 3px 0 var(--lp-locked-edge);
+}
+.lp-fold.some .lp-fold-n { background: #17a273; color: #fff; box-shadow: 0 3px 0 #0e7d58; }
+.lp-fold.all .lp-fold-n { background: var(--lp-gold); color: #fff; box-shadow: 0 3px 0 var(--lp-gold-edge); }
+.lp-fold-t { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.lp-fold-t b { font: 900 16px var(--ui-round); }
+.lp-fold-t b span { font-weight: 700; color: var(--lp-sub); }
+.lp-fold-sub { font: 700 13px var(--ui-round); color: var(--lp-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-fold-bar { height: 8px; border-radius: 99px; background: var(--lp-locked); overflow: hidden; }
+.lp-fold-bar i { display: block; height: 100%; border-radius: inherit; background: var(--lp-gold); }
+.lp-fold-c { flex: none; color: var(--lp-sub); transition: rotate var(--dur-2); }
+.lp-fold.open .lp-fold-c { rotate: 180deg; }
+@media (prefers-color-scheme: dark) { .lp-rv .lp-cap { color: #7cc0f2; } }
+/* Small phones: the top bar's buttons must fit, or the browser zooms the whole page out */
+.lp-pill-t { white-space: nowrap; }
+@media (max-width: 374px) {
+  .lp-top { gap: 6px; }
+  .lp-pill-t { display: none; }
+  .lp-pill { padding: 0 9px; }
+  .lp-banner { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding-inline: 14px 10px; }
+  .lp-banner-t { grid-area: 1 / 1; }
+  .lp-banner-ar { grid-area: 2 / 1; justify-self: start; font-size: 20px; }
+  .lp-banner-btn { grid-area: 1 / 2 / 3; align-self: center; }
+  .lp-banner h2 { font-size: 19px; hyphens: none; }
+  .lp-banner-btn { width: 40px; height: 40px; }
+}

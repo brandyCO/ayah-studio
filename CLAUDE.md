@@ -1766,7 +1766,13 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       page; per surah in the unit's ⋯ sheet, which also starts the path there); **Already know some?** — picked surahs get a
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
-      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
+      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept).
+      Path pass (owner 2026-11-11, "all 6"): a **Continue** button always above the tab bar opens the next thing to do
+      (a thirsty tree's review first, then the current step); reviews are **woven into the path** as blue drop steps just
+      before the current step (the first one carries the START mark); surahs more than one behind or three ahead are
+      **folded into one line per juz** (surahs, first – last, grown bar; a tap opens the juz). Small phones: the top bar's
+      Choose pill shows only its icon and the unit banner puts the Arabic name under the title (< 375 px), so the page
+      never zooms out. Still to come in this thread:
       the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
 - [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
