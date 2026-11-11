@@ -146,16 +146,23 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
     if (key in k) return k[key] as T;
     throw new StaleMiss();
   }
-  const v = await load();
-  cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
-  keep(key, v);
-  return v;
+  // The same answer asked for twice at once (the league by the list and by the moments) goes to the server once.
+  const running = loading.get(key);
+  if (running) return running as Promise<T>;
+  const p = load().then((v) => {
+    cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
+    keep(key, v);
+    return v;
+  }).finally(() => loading.delete(key));
+  loading.set(key, p);
+  return p;
 }
+const loading = new Map<string, Promise<unknown>>();
 export const dropCache = () => { for (const c of cache.values()) c.at = 0; };
-/** Asks again for every answer used in the last 2 minutes; true when any of them changed. */
-export async function refreshCached(): Promise<boolean> {
+/** Asks again for the kept answers `live` picks (what is on screen now); true when any of them changed. */
+export async function refreshCached(live: (key: string) => boolean): Promise<boolean> {
   let changed = false;
-  await Promise.all([...cache.entries()].filter(([, c]) => Date.now() - c.at < 120_000 || c.at === 0).map(async ([key, c]) => {
+  await Promise.all([...cache.entries()].filter(([key]) => live(key)).map(async ([key, c]) => {
     try {
       const v = await c.load();
       const json = JSON.stringify(v) ?? '';
@@ -463,11 +470,28 @@ export function rankProfile(pid: string, fresh = false): Promise<Profile | null>
   inflight.set(pid, p);
   return p;
 }
-/** Fetches ahead the profiles a tap may open, in order (top 3 first), two at a time. */
+/** Fetches ahead the profiles a tap may open (top 3 first): in one call (`rank_profiles`), kept 10 minutes. A tap
+ *  shows the kept one at once and asks again (`rankProfile`). */
+let batchOk = true;
 export async function preloadProfiles(pids: (string | null | undefined)[]) {
   if (!account()) return;
   loadProfs();
-  const todo = [...new Set(pids.filter((x): x is string => !!x))].filter((pid) => { const c = profs.get(pid); return !c || Date.now() - c.at > 120_000; });
+  const todo = [...new Set(pids.filter((x): x is string => !!x))].filter((pid) => { const c = profs.get(pid); return !c || Date.now() - c.at > 600_000; });
+  if (!todo.length) return;
+  if (batchOk) {
+    try {
+      for (let i = 0; i < todo.length; i += 40) {
+        const part = todo.slice(i, i + 40);
+        const got = await rpc<Record<string, Profile | null>>('rank_profiles', { whos: part, d: dayKey() });
+        for (const pid of part) putProfile(pid, got?.[pid] ?? null);
+      }
+      return;
+    } catch (e) {
+      // A server without it yet: one by one, as before.
+      if (!navigator.onLine) return;
+      if (/rank_profiles|PGRST202|function/i.test(String((e as Error)?.message ?? e))) batchOk = false;
+    }
+  }
   const next = async (): Promise<void> => {
     const pid = todo.shift();
     if (!pid) return;

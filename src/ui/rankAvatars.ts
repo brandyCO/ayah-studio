@@ -63,7 +63,7 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
     svg.append(g);
     const f = Math.max(0, Math.min(FRAMES - 1, frame | 0));
     drawFrame(svg, f, tier);
-    return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 ? ' glow' : ''}` }, svg as unknown as Node);
+    return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 ? ' glow' : ''}` }, svg as unknown as Node, glintLayer(size));
   }
   const n = priv ? 0 : Math.max(0, Math.min(AVATARS - 1, i | 0));
   const f = priv ? 0 : Math.max(0, Math.min(FRAMES - 1, frame | 0));
@@ -96,7 +96,7 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
     svg.append(el('path', { d: SYMBOLS[L.sym], fill: 'none', stroke: L.ink, 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', transform: 'translate(8 8)' }));
   }
   drawFrame(svg, f, tier);
-  return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 || n >= 40 ? ' glow' : ''}` }, svg as unknown as Node);
+  return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 || n >= 40 ? ' glow' : ''}` }, svg as unknown as Node, glintLayer(size));
 }
 
 // Frames, drawn like jewellery in the characters' flat two-tone style: a metal rim with its deep edge under
@@ -123,8 +123,18 @@ function rim(r: number, w: number, [base, shade, ed, light]: [string, string, st
     <circle cx="20" cy="20" r="${r - w / 2 + .2}" fill="none" stroke="${ed}" stroke-width=".55" opacity=".55"/>`;
 }
 const still = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return true; } };
-const glint = (r: number, w: number) => still() ? '' :
-  `<g class="rk-glint"><path d="${arc(r, -Math.PI * .62, -Math.PI * .4)}" fill="none" stroke="#fff" stroke-width="${w * .5}" stroke-linecap="round" opacity=".85"/><animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="7s" repeatCount="indefinite"/></g>`;
+// The glint is not drawn in the frame's SVG: an SVG animation is repainted by the main thread every frame (it kept
+// Ranks ~70 % busy on a mid-range phone). drawFrame() notes it here and avatar() lays it over the frame as its own
+// layer, which the graphics chip turns.
+let glintAt: [number, number] | null = null;
+const glint = (r: number, w: number) => { if (!still()) glintAt = [r, w]; return ''; };
+function glintLayer(size: number): HTMLElement | null {
+  if (!glintAt) return null;
+  const [r, w] = glintAt;
+  const svg = el('svg', { viewBox: '-4 -4 48 48', width: String(size), height: String(size), overflow: 'visible' });
+  svg.innerHTML = `<path d="${arc(r, -Math.PI * .62, -Math.PI * .4)}" fill="none" stroke="#fff" stroke-width="${w * .5}" stroke-linecap="round" opacity=".85"/>`;
+  return h('span', { class: 'rk-glint', 'aria-hidden': 'true' }, svg as unknown as Node);
+}
 const gemAt = (x: number, y: number, r: number, c: string, d: string, ed = '#7d5710') =>
   `<circle cx="${(x + .2).toFixed(2)}" cy="${(y + .5).toFixed(2)}" r="${r + .5}" fill="${ed}"/><circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r + .5}" fill="#ffcf55"/>${two(circlePath(x, y, r), c, d, -r * .35, -r * .35)}<circle cx="${(x - r * .35).toFixed(2)}" cy="${(y - r * .4).toFixed(2)}" r="${(r * .32).toFixed(2)}" fill="#fff" opacity=".9"/>`;
 const starD = (x: number, y: number, R: number, k = 4) => {
@@ -214,6 +224,7 @@ function frameArt(f: number, tier: number): string {
   }
 }
 function drawFrame(svg: Element, f: number, tier: number) {
+  glintAt = null;
   const g = el('g', { class: `rk-frame${f >= 4 ? ' rare' : ''}` });
   g.innerHTML = frameArt(f, tier);
   svg.append(g);

@@ -92,7 +92,9 @@ export function hop(root: Element, height = 26, ms = 620, sound = true, quiet = 
     { transform: `translateY(${ty(-3)}) scale(.98, 1.03)`, offset: 0.86 },
     { transform: 'none' },
   ], { duration: ms, easing: 'cubic-bezier(.3, .7, .4, 1)' });
-  shadow?.animate([{ transform: 'none' }, { transform: 'scale(1.06)', offset: 0.16 }, { transform: 'scale(.6)', opacity: 0.14, offset: 0.42 }, { transform: 'scale(1.1)', offset: 0.72 }, { transform: 'none' }], { duration: ms });
+  // `scale` only: the shadow's breathing loop animates `transform` and `opacity`, and a hop on the same properties
+  // left that loop on the main processor for good (the podium kept Ranks ~15 % busy).
+  shadow?.animate([{ scale: '1' }, { scale: '1.06', offset: 0.16 }, { scale: '.45', offset: 0.42 }, { scale: '1.1', offset: 0.72 }, { scale: '1' }], { duration: ms });
   if (sound) setTimeout(() => sfx.land(), ms * 0.7);
 }
 /** A little nod of the head. */
