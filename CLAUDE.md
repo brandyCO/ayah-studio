@@ -681,6 +681,12 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
       page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
       streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
+- [x] Studio opens faster (owner question 2026-11-11, "optimise every main page"): the encoder check
+      (`capabilities()`, ~1 s of blocked page at 4× CPU) no longer runs when the studio opens — only at Export, and
+      only until the first H.264 + AAC path is found (the Device check still asks everything, `capabilities(true)`);
+      the path is remembered per browser version (localStorage `exportPath`, `knownPath()`). `voiceOnset()` measures
+      only the 4.5 s it looks at; Cinematic's breath is measured once the studio is idle (`knownBreath()`, and before
+      an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 
