@@ -1035,6 +1035,7 @@ const en = {
   'me.sub': 'Your journey with the Quran',
   'me.day': 'day streak',
   'me.days': 'day streak',
+  'me.powerUp': 'Power up your character',
   'me.statusStart': 'Meet one of today’s goals to light your flame',
   'me.statusLit': 'Today’s flame is lit. See you tomorrow',
   'me.statusKeep': 'Meet one goal today to keep it burning',

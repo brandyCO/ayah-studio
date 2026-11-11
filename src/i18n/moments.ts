@@ -13,6 +13,16 @@ const en = {
   'sm.m30': 'A month of light. Your room’s flame frame is now silver',
   'sm.m100': 'A hundred days. A new dawn. Your room’s flame frame is now gold',
   'sm.m365': 'A whole year of light, alhamdulillah. A crescent now crowns your room’s flame',
+  'pu.kicker': 'Power up',
+  'pu.up': 'New level!',
+  'pu.l1': 'Glowing',
+  'pu.l2': 'Burning',
+  'pu.l3': 'Blazing',
+  'pu.l4': 'Radiant',
+  'pu.l5': 'Like the dawn',
+  'pu.level': 'Level {n} · {name}',
+  'pu.next': '{n} more days to {name}',
+  'pu.max': 'The highest level, alhamdulillah',
 };
 export type MomentKey = keyof typeof en;
 const ar: Partial<Record<MomentKey, string>> = {
@@ -26,6 +36,16 @@ const ar: Partial<Record<MomentKey, string>> = {
   'sm.m30': 'شهر من النور. صار إطار الشعلة في غرفتك فضيًا',
   'sm.m100': 'مئة يوم. فجر جديد. صار إطار الشعلة في غرفتك ذهبيًا',
   'sm.m365': 'عام كامل من النور، الحمد لله. هلال يتوّج الآن شعلة غرفتك',
+  'pu.kicker': 'انطلاقة النور',
+  'pu.up': 'مستوى جديد!',
+  'pu.l1': 'متوهّج',
+  'pu.l2': 'مشتعل',
+  'pu.l3': 'متّقد',
+  'pu.l4': 'مشرق',
+  'pu.l5': 'كالفجر',
+  'pu.level': 'المستوى {n} · {name}',
+  'pu.next': 'المستوى التالي «{name}» بعد {n} يوم',
+  'pu.max': 'أعلى مستوى، الحمد لله',
 };
 
 /** A moment string, with {name} placeholders filled from `vars`. */
