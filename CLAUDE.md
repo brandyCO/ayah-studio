@@ -1109,6 +1109,18 @@ tafsir only from published, credited editions; UI strings only are translated by
       start / online / visible. `src/data/keptAudio.ts`: every audio read checks it first (reel Range slices and
       whole files via `cachedBytes()`, file sizes, the Listen tab via a blob URL). Me → ⚙ → Favourite reciters:
       progress, size, download more, remove (deletes the cache). This device only
+      **Listening pass** (owner report 2026-11-11): player ⋯ → **Repeat** Off / Ayah / Surah / Juz (localStorage
+      `listenRepeat`, ↻ before the reference) and **Play a juz** (from its first ayah, stops at its end unless Repeat ·
+      Juz; `after()` in `player.ts` decides at each ayah change and at a file's end). **Listened audio is kept**:
+      `src/data/listenCache.ts` downloads a streamed surah file (or everyayah ayah file) once more in the background into
+      Cache Storage `listen-audio` (≤ 800 MB, least recently played go first; `listenKept`), so a surah played before
+      plays from the phone, offline too (`keptBlob()` finds it). **Background playback** (Android closed the app after a
+      while): `PlaybackService.java` (foreground service, type `mediaPlayback`, wake + Wi-Fi lock while playing, notification
+      with previous / play-pause / next / stop → `PlaybackServicePlugin` → `listenGuard` in `src/native.ts`), let go
+      after 10 min paused. **Reciter downloads**: Choose juz…, a toast and the sheet open at once with a progress bar,
+      "downloading {surah} · n MB left · about n min left" (`downloadProgress()`), **Download now on mobile data**
+      (`favAnyNet`), and they carry on when the app is left (the export's foreground service with Pause; guards counted).
+      The ★ sheets moved to `src/ui/favourite.ts` (lazy; `favStar.ts`). First-load budget 141 KB
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)

@@ -10,11 +10,12 @@ const blobs = new Map<string, Blob>();
 export async function keptBlob(url: string): Promise<Blob | null> {
   const hit = blobs.get(url);
   if (hit) return hit;
-  if (typeof caches === 'undefined' || !anyKept()) return null;
+  if (typeof caches === 'undefined' || (!anyKept() && !anyListened())) return null;
   try {
     const res = await caches.match(url);
     if (!res?.ok || !/audio|mpeg|octet/.test(res.headers.get('Content-Type') ?? 'audio')) return null;
     const b = await res.blob();
+    if (anyListened()) void import('./listenCache').then((m) => m.touchListened(url)).catch(() => {});
     if (blobs.size >= 24) blobs.delete(blobs.keys().next().value!);
     blobs.set(url, b);
     return b;
@@ -22,6 +23,11 @@ export async function keptBlob(url: string): Promise<Blob | null> {
     return null;
   }
 }
+
+/** Whether anything was kept from listening (listenCache.ts). */
+const anyListened = () => {
+  try { return (localStorage.getItem('listenKept') ?? '{}') !== '{}'; } catch { return false; }
+};
 
 /** Whether any reciter has files kept (skips the cache lookups for everyone else). */
 const anyKept = () => {

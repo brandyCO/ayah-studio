@@ -99,6 +99,8 @@ interface ExportServicePlugin {
 }
 const ExportService = registerPlugin<ExportServicePlugin>('ExportService');
 
+let guards = 0;
+
 export interface ExportGuard {
   progress(fraction: number): void;
   stop(): void;
@@ -113,6 +115,7 @@ export function exportGuard(title: string, cancel: string, onCancel: () => void)
   if (!isNative()) return { progress() {}, stop() {} };
   let last = -1;
   let stopped = false;
+  guards++;
   const listener = ExportService.addListener('cancel', onCancel).catch(() => null);
   void ExportService.start({ title, cancel }).catch((e) => console.warn('Export service not started', e));
   return {
@@ -125,8 +128,38 @@ export function exportGuard(title: string, cancel: string, onCancel: () => void)
     stop() {
       if (stopped) return;
       stopped = true;
-      void ExportService.stop().catch(() => {});
+      // One service for every guard (an export and reciter downloads may overlap): it ends with the last one.
+      if (--guards === 0) void ExportService.stop().catch(() => {});
       void listener.then((l) => l?.remove());
     },
   };
 }
+
+/** Our native media service (android/…/PlaybackService.java): keeps the Listen player alive in the background. */
+interface PlaybackServicePlugin {
+  show(o: { title: string; text: string; playing: boolean; labels: string[] }): Promise<void>;
+  hide(): Promise<void>;
+  addListener(event: 'button', fn: (e: { b: 'prev' | 'toggle' | 'next' | 'stop' }) => void): Promise<{ remove(): Promise<void> }>;
+}
+const PlaybackService = registerPlugin<PlaybackServicePlugin>('PlaybackService');
+let playbackListener: Promise<unknown> | null = null;
+
+/**
+ * Android app: while the Listen player is open, a media notification (previous / play-pause / next / stop)
+ * and a foreground service keep the recitation going when the user leaves the app or the screen goes off.
+ * `show` again updates it; `hide` ends it. Elsewhere (web) it does nothing.
+ */
+export const listenGuard = {
+  show(title: string, text: string, playing: boolean, labels: string[], onButton: (b: 'prev' | 'toggle' | 'next' | 'stop') => void) {
+    if (!isNative()) return;
+    playbackListener ??= PlaybackService.addListener('button', (e) => listenGuard.onButton?.(e.b)).catch(() => null);
+    listenGuard.onButton = onButton;
+    void PlaybackService.show({ title, text, playing, labels }).catch(() => {});
+  },
+  hide() {
+    if (!isNative()) return;
+    listenGuard.onButton = null;
+    void PlaybackService.hide().catch(() => {});
+  },
+  onButton: null as ((b: 'prev' | 'toggle' | 'next' | 'stop') => void) | null,
+};

@@ -1842,3 +1842,13 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .mushaf-bar .icon-btn { background: #ffffff2e; border: 0; color: #fff; }
 .mushaf-bar .today-item { background: #ffffff26; color: #fff; }
 @media (prefers-color-scheme: dark) { .mushaf-bar { --tb: #0b6f63; } }
+
+/* Listen player ⋯: repeat chips and the juz picker */
+.pl-sec { margin: 4px 0 6px; font-weight: 700; }
+.pl-repeat { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.pl-juz { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding-bottom: 12px; }
+.pl-juz .chip { justify-content: center; }
+.fav-bar { height: 8px; border-radius: 4px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; margin: 4px 0 10px; }
+.fav-fill { height: 100%; width: 0; background: var(--brand-bar, var(--accent)); border-radius: 4px; transition: width .6s ease; }
+.fav-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.fav-actions:empty { display: none; }
