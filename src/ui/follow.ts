@@ -13,7 +13,7 @@ import { supabase } from '../cloud/supabase';
 import type { PartResult } from './harakatClips';
 
 interface SpeechNative {
-  available(): Promise<{ available: boolean; onDevice: boolean }>;
+  available(): Promise<{ available: boolean; onDevice: boolean; arabic?: 'yes' | 'no' | 'unknown' }>;
   start(o: { lang: string; hints?: string[] }): Promise<{ onDevice: boolean; way?: string }>;
   mic(): Promise<{ granted: boolean }>;
   stop(): Promise<void>;
@@ -62,10 +62,16 @@ export async function askMic(): Promise<boolean> {
   try { return (await Speech.mic()).granted; } catch { return true; }
 }
 
+/** A phone whose recogniser failed in Arabic hides the button for 3 days (then tries again: Arabic may have
+ * been added since). localStorage `followBroken` = when it failed. */
+const BROKEN_DAYS = 3;
+const broken = () => { try { return Date.now() - Number(localStorage.getItem('followBroken') || 0) < BROKEN_DAYS * 864e5; } catch { return false; } };
+function markBroken(on: boolean) { try { if (on) localStorage.setItem('followBroken', String(Date.now())); else localStorage.removeItem('followBroken'); } catch { /* blocked */ } }
+
 let avail: Promise<boolean> | null = null;
-/** Whether this device can follow a recitation. */
+/** Whether this device can follow a recitation (in the app: only when its recogniser knows Arabic or might). */
 export function followSupported(): Promise<boolean> {
-  avail ??= native() ? Speech.available().then((r) => r.available).catch(() => false) : Promise.resolve(!!WebCtor());
+  avail ??= native() ? Speech.available().then((r) => r.available && r.arabic !== 'no' && !broken()).catch(() => false) : Promise.resolve(!!WebCtor() && !broken());
   return avail.then(async (ok) => ok || !!(await serverToken()));
 }
 
@@ -93,10 +99,18 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
   let alive = true, fails = 0, lastHeard = Date.now();
   let stopNow = () => {};
   lastCode = 0;
-  const finish = (why: Why) => { if (!alive) return; stopNow(); alive = false; clearInterval(quiet); on.ended(why); };
+  let token: string | null = null;
+  const finish = (why: Why) => {
+    if (!alive) return;
+    stopNow(); alive = false; clearInterval(quiet);
+    // the phone's recogniser cannot do it: hide the button on this phone (not when it was the server)
+    if (why === 'failed' && !heardAny && !token) { markBroken(true); avail = Promise.resolve(false); }
+    on.ended(why);
+  };
   const quiet = window.setInterval(() => { if (Date.now() - lastHeard > QUIET_MS) finish('quiet'); }, 2000);
-  const got = (text: string, final: boolean) => { if (text.trim()) lastHeard = Date.now(); on.heard(text, final); };
-  const token = on.ahead ? await serverToken() : null;
+  let heardAny = false;
+  const got = (text: string, final: boolean) => { if (text.trim()) { lastHeard = Date.now(); if (!heardAny) { heardAny = true; markBroken(false); } } on.heard(text, final); };
+  token = on.ahead ? await serverToken() : null;
   if (token) {
     const r = await recordParts(token, on, got, finish, () => alive);
     if (!r) { alive = false; clearInterval(quiet); return null; }

@@ -75,11 +75,73 @@ public class SpeechPlugin extends Plugin {
 
     @PluginMethod
     public void available(PluginCall call) {
-        JSObject r = new JSObject();
         boolean onDevice = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(getContext());
-        r.put("available", !ways().isEmpty());
+        List<Object> w = ways();
+        if (w.isEmpty() || Build.VERSION.SDK_INT < 33) { answer(call, !w.isEmpty(), onDevice, "unknown"); return; }
+        // Android 13+: ask each recogniser whether it can do Arabic before showing the button.
+        main.post(() -> ask(call, w, 0, false, onDevice));
+    }
+
+    private void answer(PluginCall call, boolean ok, boolean onDevice, String arabic) {
+        JSObject r = new JSObject();
+        r.put("available", ok);
         r.put("onDevice", onDevice);
+        r.put("arabic", arabic);
         call.resolve(r);
+    }
+
+    /** Asks recogniser i whether it knows Arabic; `unsure` = one of them could not say. */
+    private void ask(PluginCall call, List<Object> w, int i, boolean unsure, boolean onDevice) {
+        if (i >= w.size()) { answer(call, unsure, onDevice, unsure ? "unknown" : "no"); return; }
+        if (Build.VERSION.SDK_INT < 33) { answer(call, true, onDevice, "unknown"); return; }
+        Object how = w.get(i);
+        final SpeechRecognizer probe;
+        try {
+            if (ON_DEVICE.equals(how)) probe = SpeechRecognizer.createOnDeviceSpeechRecognizer(getContext());
+            else if (how instanceof ComponentName) probe = SpeechRecognizer.createSpeechRecognizer(getContext(), (ComponentName) how);
+            else probe = SpeechRecognizer.createSpeechRecognizer(getContext());
+        } catch (Exception e) { ask(call, w, i + 1, true, onDevice); return; }
+        final boolean[] done = { false };
+        final Runnable timeout = () -> {
+            if (done[0]) return;
+            done[0] = true;
+            try { probe.destroy(); } catch (Exception ignored) { }
+            ask(call, w, i + 1, true, onDevice);
+        };
+        main.postDelayed(timeout, 1500);
+        Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        it.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        try {
+            probe.checkRecognitionSupport(it, getContext().getMainExecutor(), new android.speech.RecognitionSupportCallback() {
+                @Override public void onSupportResult(android.speech.RecognitionSupport s) {
+                    main.post(() -> {
+                        if (done[0]) return;
+                        done[0] = true;
+                        main.removeCallbacks(timeout);
+                        try { probe.destroy(); } catch (Exception ignored) { }
+                        List<String> all = new ArrayList<>();
+                        all.addAll(s.getInstalledOnDeviceLanguages());
+                        all.addAll(s.getOnlineLanguages());
+                        all.addAll(s.getSupportedOnDeviceLanguages());
+                        boolean ar = false;
+                        for (String l : all) if (l != null && l.toLowerCase().startsWith("ar")) ar = true;
+                        if (ar) {
+                            way = i; // start with the one that knows Arabic
+                            answer(call, true, onDevice, "yes");
+                        } else ask(call, w, i + 1, unsure, onDevice);
+                    });
+                }
+                @Override public void onError(int error) {
+                    main.post(() -> {
+                        if (done[0]) return;
+                        done[0] = true;
+                        main.removeCallbacks(timeout);
+                        try { probe.destroy(); } catch (Exception ignored) { }
+                        ask(call, w, i + 1, true, onDevice);
+                    });
+                }
+            });
+        } catch (Exception e) { main.removeCallbacks(timeout); done[0] = true; try { probe.destroy(); } catch (Exception ignored) { } ask(call, w, i + 1, true, onDevice); }
     }
 
     @PluginMethod

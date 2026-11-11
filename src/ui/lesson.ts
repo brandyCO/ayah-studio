@@ -448,7 +448,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
         else if (why === 'limit') toast(lt('learn.followLimit'));
-        else if (why === 'failed') { const f = followFailKey(); toast(lt(f.key, { code: f.code })); }
+        else if (why === 'failed') { const f = followFailKey(); toast(lt(f.key, { code: f.code })); canFollow = false; }
         else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (phase === 'memory') paintActions();
       },

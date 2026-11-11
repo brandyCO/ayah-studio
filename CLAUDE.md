@@ -1847,7 +1847,9 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       answer appears on the page; "where does ayah X start" is answered by tapping the line on the page.
       **Mic fixes**: SpeechPlugin tries on-device → the default service → each installed (Google first)
       recognition service, moving on at errors 3/4/11–15 (no Arabic) and keeping the one that worked; messages say
-      "no Arabic" or the error code. Record me asks for the microphone natively first (`Speech.mic`), picks a
+      "no Arabic" or the error code. The button shows only where it can work (owner, 2026-11-11): Android 13+ asks each
+      recogniser `checkRecognitionSupport` for Arabic first (none → no button); a phone whose recogniser fails before
+      hearing anything hides it for 3 days (localStorage `followBroken`). Record me asks for the microphone natively first (`Speech.mic`), picks a
       supported recording type and says why it could not start (denied / busy)
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
