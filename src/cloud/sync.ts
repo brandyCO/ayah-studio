@@ -8,22 +8,18 @@
 // newest edit wins). Everything else kept on the device follows too (cloud/kv.ts: one document per stored key,
 // merged so that neither device loses anything). Thumbnails, own media, voice recordings, downloads, caches
 // and the Kids space never leave the device.
-import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
-import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
-import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
-import { clearOtherJourneys, journeyRecord, mergeJourney } from '../data/journey';
-import { goalsRecord, mergeGoals } from '../data/goals';
-import type { Project } from '../engine/project';
-import { mergePrefs, prefRecords, prefsBehind } from '../ui/prefs';
+import { clearOtherJourneys } from '../data/journey';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 import { installId, jitter, remoteConfig } from '../net';
 // Loaded with the first round (keeps it out of the first load).
+// The merging and the documents (syncDocs.ts, with kv.ts) come with the first round, out of the first load.
+let docs: typeof import('./syncDocs') | null = null;
 let kvMod: typeof import('./kv') | null = null;
-const loadKv = async () => (kvMod ??= await import('./kv'));
+const loadDocs = async () => { docs ??= await import('./syncDocs'); kvMod = docs.kv; return docs; };
 
-type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
-interface Row {
+export type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
+export interface Row {
   user_id: string;
   kind: Kind;
   id: string;
@@ -52,7 +48,7 @@ function setStatus(s: Partial<SyncStatus>) {
 }
 
 // --- per-account sync memory on this device ---
-interface Meta {
+export interface Meta {
   user: string;
   pulled: string | null; // newest server updated_at merged
   pushed: Record<string, string>; // doc key → fingerprint of what was last pushed
@@ -78,61 +74,6 @@ function saveMeta(m: Meta) {
 }
 const deviceId = installId;
 
-// --- merging what other devices wrote ---
-async function applyRemote(rows: Row[], meta: Meta): Promise<boolean> {
-  await loadReflections();
-  let prefsChanged = false, kvChanged = false;
-  for (const r of rows) {
-    const key = `${r.kind}/${r.id}`;
-    // One row that cannot be merged (an older or newer app's shape) must never stop the rest syncing.
-    try {
-    if (r.kind === 'state' && r.id.startsWith('kv:')) {
-      const res = kvMod!.mergeKv(r.id.slice(3), r.data, r.deleted);
-      if (res.print) meta.pushed[key] = res.print; // already on the server: don't send it back
-      if (res.changed) kvChanged = true;
-    } else if (r.kind === 'state' && r.id === 'bookmarks') {
-      mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
-    } else if (r.kind === 'setting' && r.id === 'prefs') {
-      // The older all-in-one document (still written, for older app versions).
-      if (mergePrefs(r.data.prefs)) prefsChanged = true;
-      if (prefsBehind(r.data.prefs)) delete meta.pushed[key]; // it lacks a newer choice made here: send it again
-    } else if (r.kind === 'setting' && r.id.startsWith('pref:')) {
-      // One document per preference, so a device writing its reading place cannot put back an old theme.
-      const k = r.id.slice(5);
-      if (mergePrefs({ [k]: r.data })) prefsChanged = true;
-      if (prefsBehind({ [k]: r.data }, [k])) delete meta.pushed[key];
-      else meta.pushed[key] = String(r.data.at); // already on the server: don't send it back
-    } else if (r.kind === 'state' && r.id.startsWith('journey:')) {
-      mergeJourney(r.data, r.id.slice(8)); // kept per device and read combined
-    } else if (r.kind === 'state' && r.id === 'garden') {
-      (await import('../data/garden')).mergeGarden(r.data); // per tree / decoration, newest wins; purchases add up (pushed back merged)
-    } else if (r.kind === 'setting' && r.id === 'goals') {
-      mergeGoals(r.data.goals);
-    } else if (r.kind === 'reflection') {
-      mergeReflection(r.data); // merged per paragraph; the result is pushed back on this round
-    } else if (r.kind === 'draft') {
-      const updated = typeof r.data.updated === 'number' ? r.data.updated : 0;
-      const local = await getDraft(r.id);
-      if (r.deleted) {
-        if (local && local.updated <= updated) await deleteDraft(r.id);
-        meta.pushed[key] = `deleted:${updated}`;
-      } else if (!local || local.updated < updated) {
-        const project = r.data.project as Project | undefined;
-        if (!project || typeof project !== 'object') continue;
-        meta.pushed[key] = String(updated); // already on the server: don't send it back
-        await saveDraft({ id: r.id, project, created: Number(r.data.created) || updated, updated });
-      }
-    }
-    } catch (e) {
-      console.warn('Sync: could not merge', key, e);
-    }
-  }
-  if (prefsChanged) {
-    window.dispatchEvent(new Event('prefs-synced')); // the theme, the translation, …
-    window.dispatchEvent(new Event('journey-changed')); // a journey plan or the page reading time
-  }
-  return kvChanged;
-}
 /** Values that arrived from another device: every screen that shows them repaints. */
 function announceKv() {
   quiet = true;
@@ -141,36 +82,6 @@ function announceKv() {
   } finally { quiet = false; }
 }
 let quiet = false; // set while announcing what arrived, so it does not start another round
-
-// --- this device's documents ---
-const hasGarden = () => { try { return !!localStorage.getItem('garden'); } catch { return false; } };
-async function localRows(user: string): Promise<{ key: string; print: string; row: Row }[]> {
-  const dev = deviceId();
-  const out: { key: string; print: string; row: Row }[] = [];
-  const add = (kind: Kind, id: string, data: Record<string, unknown>, print: string, deleted = false) =>
-    out.push({ key: `${kind}/${id}`, print, row: { user_id: user, kind, id, data, deleted, device_id: dev } });
-
-  const items = bookmarkRecords();
-  add('state', 'bookmarks', { items }, JSON.stringify(items));
-  const prefs = prefRecords();
-  add('setting', 'prefs', { prefs }, JSON.stringify(prefs));
-  for (const [k, r] of Object.entries(prefs)) if (r.at > 0) add('setting', `pref:${k}`, r, String(r.at));
-  const journey = journeyRecord();
-  add('state', `journey:${dev}`, journey, JSON.stringify(journey));
-  const garden = hasGarden() ? (await import('../data/garden')).gardenRecord() : null;
-  if (garden) add('state', 'garden', garden as unknown as Record<string, unknown>, JSON.stringify(garden));
-  const g = goalsRecord();
-  if (g) add('setting', 'goals', { goals: g }, String(g.at));
-  await loadReflections();
-  for (const r of reflectionRecords()) {
-    const data = { s: r.s, a: r.a, entries: r.entries };
-    add('reflection', r.id, data, JSON.stringify(r.entries), r.entries.every((e) => e.deleted));
-  }
-  for (const r of (kvMod?.kvRecords() ?? [])) add('state', `kv:${r.key}`, r.data, r.print, r.deleted);
-  for (const d of await listDrafts()) add('draft', d.id, { project: d.project, created: d.created, updated: d.updated }, String(d.updated));
-  for (const [id, at] of Object.entries(deletedDrafts())) add('draft', id, { updated: at }, `deleted:${at}`, true);
-  return out;
-}
 
 // --- one sync round: pull, merge, push ---
 let running: Promise<void> | null = null;
@@ -199,7 +110,7 @@ async function round() {
   lastRound = Date.now();
   try {
     const sb = await supabase();
-    const { kvRecords, linkKv, mergeKv, scanKv } = await loadKv();
+    const { applyRemote, localRows, kv: { linkKv, scanKv } } = await loadDocs();
     const meta = loadMeta(acc.id);
     scanKv(); // what changed here since the last round, before anything arrives
     let kvChanged = false;
@@ -221,7 +132,16 @@ async function round() {
     if (kvChanged) announceKv();
 
     // Push what changed here since it was last pushed (merged state included).
-    const changed = (await localRows(acc.id)).filter((d) => meta.pushed[d.key] !== d.print);
+    // Fingerprints, not whole documents, are kept in the meta (a journey was ~100 KB rewritten each round).
+    const fp = (s: string) => (s.length > 64 ? kvMod!.hash(s) : s);
+    const changed: { key: string; print: string; row: Row }[] = [];
+    for (const d of await localRows(acc.id, meta)) {
+      const print = fp(d.print);
+      if (meta.pushed[d.key] === print) continue;
+      // Pushed by an earlier version, which kept the whole document: the same, now kept as a fingerprint.
+      if (meta.pushed[d.key] === d.print) { meta.pushed[d.key] = print; continue; }
+      changed.push({ ...d, print });
+    }
     const refused: string[] = [];
     for (let i = 0; i < changed.length; i += 50) {
       const batch = changed.slice(i, i + 50);
@@ -272,7 +192,7 @@ const soon = (ms = 4000) => {
  *  a reward claimed just before leaving would otherwise reach the other devices only at the next open.
  *  This is the round that was already due, only sooner (none after a failure: the back-off holds). */
 const onHide = () => {
-  if (account() && !failures && kvMod?.scanKv()) pending = true; // something else changed here (a lesson, a setting…)
+  if (account() && !failures && kvMod?.scanKv(Date.now(), true)) pending = true; // something else changed here (a lesson, a setting…)
   if (!pending || failures) return;
   clearTimeout(timer);
   pending = false;
@@ -305,7 +225,7 @@ export function startSync() {
   // Anything else saved on the device (a lesson, a setting, an icon picked…): looked for once a minute while
   // the app is open, so it reaches the other devices without waiting for the app to be left.
   window.setInterval(() => {
-    if (document.visibilityState === 'visible' && !pending && !failures && account() && kvMod?.scanKv()) soon();
+    if (document.visibilityState === 'visible' && !pending && !failures && account() && kvMod?.scanKv(Date.now(), true)) soon();
   }, 60e3);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') onReturn();
