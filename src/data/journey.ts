@@ -59,8 +59,10 @@ interface DayRec {
   cu?: Record<string, number>;
   /** Light earned by each reward claimed that day (goal id, 'all', or 'b:' + badge id). */
   n?: Record<string, number>;
+  /** Ayat shared (copied as text, or a reel shared). */
+  sh?: number;
 }
-export interface Totals { pages: number; ayat: number; listen: number; surahs: number; reels: number; dhikr: number; juz: number; memorised: number }
+export interface Totals { pages: number; ayat: number; listen: number; surahs: number; reels: number; dhikr: number; juz: number; memorised: number; shares: number }
 interface State {
   days: Record<string, DayRec>;
   frozen: string[];
@@ -83,11 +85,13 @@ interface State {
   settled?: string;
   /** Badges whose reward was claimed (the animation played). */
   claimed: Record<string, 1>;
+  /** Lifetime counts of the days dropped after KEEP_DAYS (dayCounts()), so badges keep counting them. */
+  past?: Record<string, number>;
 }
 
 const empty = (): State => ({
   days: {}, frozen: [], revived: [], pageLast: {}, finished: {}, juzDone: {}, badges: {}, claimed: {}, best: 0,
-  totals: { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0 },
+  totals: { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, shares: 0 },
 });
 
 let cache: State | null = null;
@@ -109,11 +113,12 @@ function load(): State {
       if (v.pageLast && typeof v.pageLast === 'object') s.pageLast = v.pageLast;
       if (v.finished && typeof v.finished === 'object') s.finished = v.finished;
       if (v.juzDone && typeof v.juzDone === 'object') s.juzDone = v.juzDone;
-      if (v.badges && typeof v.badges === 'object') s.badges = v.badges;
+      if (v.badges && typeof v.badges === 'object') s.badges = renameBadges(v.badges);
       if (v.lost && Array.isArray(v.lost.days)) s.lost = v.lost;
       if (Number.isFinite(v.best)) s.best = v.best;
       if (typeof v.settled === 'string') s.settled = v.settled;
-      if (v.claimed && typeof v.claimed === 'object') s.claimed = v.claimed;
+      if (v.claimed && typeof v.claimed === 'object') s.claimed = renameBadges(v.claimed);
+      if (v.past && typeof v.past === 'object') s.past = v.past;
     }
   } catch {
     /* ignore */
@@ -228,7 +233,10 @@ export function recordOpen(now = new Date()) {
   settle(s, k);
   today(now).o = 1;
   const cutoff = addDays(k, -KEEP_DAYS);
-  for (const d of Object.keys(s.days)) if (d < cutoff) delete s.days[d];
+  for (const d of Object.keys(s.days)) if (d < cutoff) {
+    for (const [f, n] of Object.entries(dayCounts(d, s.days[d]))) if (n) (s.past ??= {})[f] = (s.past[f] ?? 0) + n;
+    delete s.days[d];
+  }
   s.frozen = s.frozen.filter((d) => d >= cutoff);
   s.revived = s.revived.filter((d) => d >= cutoff);
   if (s.extra) s.extra = s.extra.filter((d) => d >= cutoff);
@@ -436,6 +444,52 @@ export function addListen(sec: number, now = new Date()) {
   save();
 }
 
+/** Ayat shared (copied as text or a reel shared). */
+export function addShare(n = 1, now = new Date()) {
+  if (!(n > 0)) return;
+  const d = today(now);
+  d.sh = (d.sh ?? 0) + n;
+  load().totals.shares += n;
+  save();
+}
+
+/** The badges of the first set (2026-10-28) → the family tier each became (src/data/badges.ts). */
+const OLD_BADGES: Record<string, string> = {
+  streak7: 'streak-0', streak30: 'streak-1', streak100: 'streak-2', streak180: 'streak-3', streak365: 'streak-4',
+  page1: 'pages-0', pages100: 'pages-1', surah1: 'surahs-0', surahs10: 'surahs-1', juz1: 'juz-0', khatm: 'pages-2',
+  memo10: 'memo-0', memo100: 'memo-1', dhikr1k: 'dhikr-0', dhikr10k: 'dhikr-1', listen10h: 'listen-1',
+  reel1: 'reels-0', reels10: 'reels-1', goals7: 'goals-0', goals30: 'goals-1', nights7: 'nights-0', nights30: 'nights-1',
+  lanterns7: 'fullday-0', lanterns100: 'lanterns-1',
+};
+/** Badges and claims under their new ids (nothing earned or claimed is lost). */
+function renameBadges<T>(o: Record<string, T>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [id, v] of Object.entries(o)) { const n = OLD_BADGES[id] ?? id; if (!(n in out) || (typeof v === 'string' && v < (out[n] as string))) out[n] = v; }
+  return out;
+}
+
+const LANTERN_KEYS = ['wake', 'salah:fajr', 'salah:dhuhr', 'salah:asr', 'salah:maghrib', 'salah:isha', 'sleep'];
+/** What one day adds to the lifetime badge counts: lessons, adhkar sessions, du'a lanterns, peaceful nights,
+ *  days with all seven lanterns, days with every goal met, weeks with every weekly goal met, Al-Kahf Fridays. */
+export function dayCounts(k: string, d: Readonly<DayRec>): Record<string, number> {
+  const lit = (d.dm ?? []).filter((x) => LANTERN_KEYS.includes(x)).length;
+  return {
+    ls: d.ls ?? 0, ad: (d.ad ? 1 : 0) + (d.am ? 1 : 0), lt: lit, nt: d.dm?.includes('sleep') ? 1 : 0, fd: lit >= 7 ? 1 : 0,
+    gd: d.g ? 1 : 0, gw: (d.cl ?? []).filter((x) => /^w:.*:all$/.test(x)).length,
+    kf: parse(k).getDay() === 5 && d.s?.includes(18) ? 1 : 0, wa: (d.cl ?? []).filter((x) => x.startsWith('gl:wa:')).length,
+  };
+}
+/** Lifetime badge counts (dayCounts) on every device: the days kept plus the ones already dropped. */
+let lifeMemo: { ver: number; v: Record<string, number> } | null = null;
+export function lifetime(): Readonly<Record<string, number>> {
+  if (lifeMemo?.ver === ver) return lifeMemo.v;
+  const s = view();
+  const v: Record<string, number> = { ...(s.past ?? {}) };
+  for (const [k, d] of Object.entries(s.days)) for (const [f, n] of Object.entries(dayCounts(k, d))) v[f] = (v[f] ?? 0) + n;
+  lifeMemo = { ver, v };
+  return v;
+}
+
 /** A reel was exported. */
 export function reelMade(now = new Date()) {
   const d = today(now);
@@ -461,7 +515,7 @@ export function stats(period: Period, now = new Date()): Stats {
     return v;
   }
   const from = period === 'week' ? weekOf(k) : `${k.slice(0, 8)}01`;
-  const out: Stats = { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, surahList: [], goalDays: 0, litDays: 0, light: 0 };
+  const out: Stats = { pages: 0, ayat: 0, listen: 0, surahs: 0, reels: 0, dhikr: 0, juz: 0, memorised: 0, shares: 0, surahList: [], goalDays: 0, litDays: 0, light: 0 };
   for (const [d, pages] of Object.entries(readLogAll())) if (d >= from && d <= k) out.pages += pages.length;
   for (const [d, r] of Object.entries(s.days)) {
     if (d < from || d > k) continue;
@@ -470,6 +524,7 @@ export function stats(period: Period, now = new Date()): Stats {
     out.reels += r.r ?? 0;
     out.juz += r.j?.length ?? 0;
     out.memorised += r.m ?? 0;
+    out.shares += r.sh ?? 0;
     out.light += dayLight(r);
     for (const n of Object.values(r.dk ?? {})) out.dhikr += n;
     if (r.g) out.goalDays++;
@@ -549,7 +604,7 @@ function cleanOther(v: unknown): Other | null {
     const d = d0 as Record<string, unknown>;
     const o: DayRec = {};
     for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (d[f]) o[f] = 1;
-    for (const f of ['ay', 'l', 'r', 'm', 'ls'] as const) if (num(d[f])) o[f] = num(d[f]);
+    for (const f of ['ay', 'l', 'r', 'm', 'ls', 'sh'] as const) if (num(d[f])) o[f] = num(d[f]);
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
     if (Array.isArray(d.cl)) o.cl = strs(d.cl);
@@ -568,7 +623,7 @@ function cleanOther(v: unknown): Other | null {
   const claimed: Record<string, 1> = {};
   if (j.claimed && typeof j.claimed === 'object') for (const id of Object.keys(j.claimed)) claimed[id] = 1;
   return {
-    days, log, totals, badges, claimed,
+    days, log, totals, badges: renameBadges(badges), claimed: renameBadges(claimed), past: nums(j.past),
     frozen: strs(j.frozen).filter(isDay), revived: strs(j.revived).filter(isDay), extra: strs(j.extra).filter(isDay),
     pageLast: nums(j.pageLast), finished: nums(j.finished), juzDone: nums(j.juzDone), best: num(j.best),
   };
@@ -659,14 +714,14 @@ function view(): State {
   const v: State = {
     ...mine, days: {}, totals: { ...mine.totals }, frozen: [...mine.frozen], revived: [...mine.revived], extra: [...(mine.extra ?? [])],
     pageLast: { ...mine.pageLast }, finished: { ...mine.finished }, juzDone: { ...mine.juzDone },
-    badges: { ...mine.badges }, claimed: { ...mine.claimed },
+    badges: { ...mine.badges }, claimed: { ...mine.claimed }, past: { ...(mine.past ?? {}) },
   };
   for (const [k, d] of Object.entries(mine.days)) v.days[k] = { ...d };
   for (const o of devs) {
     for (const [k, b] of Object.entries(o.days)) {
       const a = (v.days[k] ??= {});
       for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (b[f]) a[f] = 1;
-      for (const f of ['ay', 'l', 'r', 'm', 'ls'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
+      for (const f of ['ay', 'l', 'r', 'm', 'ls', 'sh'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);
       if (b.cl) a.cl = union(a.cl, b.cl);
@@ -686,6 +741,7 @@ function view(): State {
     for (const [id, d] of Object.entries(o.badges)) if (!v.badges[id] || d < v.badges[id]) v.badges[id] = d;
     Object.assign(v.claimed, o.claimed);
     v.best = Math.max(v.best, o.best);
+    for (const [f, n] of Object.entries(o.past ?? {})) v.past![f] = (v.past![f] ?? 0) + n;
   }
   // A day lit on any device needs no freeze; a flame kept alive elsewhere was not lost.
   v.frozen = v.frozen.filter((d) => !v.days[d]?.f);

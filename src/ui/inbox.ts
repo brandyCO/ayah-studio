@@ -10,6 +10,7 @@ import { earnedPieces } from '../data/wardrobe';
 import { account } from '../cloud/auth';
 import { t, type Key } from '../i18n';
 import { mpt } from '../i18n/mePages';
+import { badgeName } from '../i18n/badges';
 import { goalLabel } from './goalName';
 import { h, haptic } from './dom';
 
@@ -37,7 +38,7 @@ const rewardItem = (p: Pending): Item => {
   if (p.kind === 'goal') return { icon: '🎁', title: p.goal.week ? mpt('mp.inWeek') : mpt('mp.inGoal'), sub: goalLabel(p.goal), go: toMe };
   if (p.kind === 'all') return { icon: '🎁', title: mpt('mp.inAll'), sub: mpt('mp.inChest'), go: toMe };
   if (p.kind === 'weekAll') return { icon: '🎁', title: mpt('mp.inWeekAll'), sub: mpt('mp.inChest'), go: toMe };
-  return { icon: '🏅', title: mpt('mp.inBadge'), sub: t(p.badge.name as Key, { n: p.badge.need }), go: toMe };
+  return { icon: '🏅', title: mpt('mp.inBadge'), sub: badgeName({ fam: p.id.slice(0, -2), step: +p.id.slice(-1) }), go: toMe };
 };
 
 function localItems(): Item[] {

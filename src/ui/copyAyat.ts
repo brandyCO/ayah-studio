@@ -1,6 +1,7 @@
 // Copy selected ayat as text (selection bar → Copy): the Arabic with its reference, the Arabic with
 // the chosen translation, or the translation only. The Quran text is copied exactly as bundled,
 // ayah numbers included (rule 1); nothing is shortened. The last choice is remembered per device.
+import { addShare } from '../data/journey';
 import { reference, surahText, surahTranslation, type SurahMeta } from '../data/quran';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { t } from '../i18n';
@@ -70,7 +71,7 @@ export function openCopy(meta: SurahMeta, lo: number, hi: number) {
         let ok = false;
         try { ok = await copyText(await ayatText(meta, lo, hi, kind)); } catch { /* data not loaded */ }
         toast(t(ok ? 'copy.done' : 'copy.failed'));
-        if (ok) close();
+        if (ok) { addShare(); close(); }
       },
     }, h('span', { class: 'create-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
     kind === last ? icon('check', 20) : null);

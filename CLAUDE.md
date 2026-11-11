@@ -1745,6 +1745,21 @@ duas/reflections section in Me.
       phone's width (opens at the window, glides to the character and shelves; swipe sideways), the floor runs on into
       a dock — a button per place showing what stands there (Plant, Corner, Rug, Curtains, Lantern), Shop, Dress up,
       Share; decorating opens as a low panel and the room rises above it (`openRoomShop(…, { slot, inRoom })`)
+- [x] M17 Badges in five tiers + app icons to win (owner request 2026-11-11, "for everything that could be accomplished",
+      each tier "waaaay more beautiful" in the 2.5D style): `src/data/badges.ts` — 23 families (streak, pages, surahs, juz,
+      Al-Kahf Fridays, listening hours, Learn lessons, ayat memorised, trees grown, trees watered, strong pages, dhikr, adhkar
+      sessions, du'a lanterns, peaceful nights, days full of light, goal days, weeks of goals, leagues climbed, top 3 weeks,
+      #1 weeks, reels, shares) × Bronze / Silver / Gold / Platinum / Diamond; ids `{family}-{0..4}`, old ids renamed on load
+      (`renameBadges()` in `journey.ts`). Counted from the synced journey (lifetime counts survive the 400-day pruning in
+      `State.past`; `DayRec.sh` = shares: reel shared or ayat copied) plus the garden, page strength and the Ranks cache, so it
+      follows the account. Art `src/ui/badge.ts` (flat two-tone, each tier a richer object: coin → khatam star with studs →
+      amber sunburst with laurels and ribbons → violet rosette with crown → sapphire sunburst with a cut stone, crown and glints);
+      Light 25 / 50 / 100 / 200 / 400; Platinum and Diamond claims burst twice. Me shows the 3 newest claims (+n) and 4 tiles;
+      Stats & badges lists every family with its five tiers and the bar to the next. Strings lazy in `src/i18n/badges.ts`.
+      **App icons to win** (`src/ui/appIcons.ts`): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
+      #1 week), Mythic Celestial (5 Diamonds or #1 in the Sun league); unlocked ones can be worn from Stats (localStorage
+      `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
+      `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

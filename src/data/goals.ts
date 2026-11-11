@@ -337,7 +337,7 @@ export const ALL_LIGHT = 20;
 /** Every weekly goal met. */
 export const WEEK_ALL_LIGHT = 50;
 /** Light for a badge, by its tier. */
-export const BADGE_LIGHT: Record<string, number> = { bronze: 25, silver: 50, gold: 100, emerald: 200 };
+export const BADGE_LIGHT: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 400, emerald: 200 };
 /** The most Light today's goals can give (for the week's lantern). */
 export function dayLightMax(now = new Date()): number {
   const list = todayGoals(now);

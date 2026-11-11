@@ -179,12 +179,19 @@ function setFavicon(x: BrandTheme) {
 }
 
 let iconFor = '';
+/** An unlockable icon the user wears instead of the theme's (src/ui/appIcons.ts; synced as account data). */
+const pickedIcon = () => { try { const v = localStorage.getItem('appIconPick'); return v && /^(sapphire|legend|celestial)$/.test(v) ? v : ''; } catch { return ''; } };
 function setAppIcon(x: BrandTheme) {
-  if (iconFor === x.id) return;
-  iconFor = x.id;
-  if (Capacitor.isNativePlatform()) void AppIcon.set({ id: x.id }).catch(() => {});
+  const pick = pickedIcon();
+  const id = pick || x.id;
+  if (iconFor === id) return;
+  iconFor = id;
+  if (Capacitor.isNativePlatform()) void AppIcon.set({ id }).catch(() => {});
+  else if (pick) { const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]'); if (link) link.href = `${import.meta.env.BASE_URL}icons/app-${pick}.webp`; }
   else setFavicon(x);
 }
+/** The worn icon changed: apply it (or the theme's again). */
+export const refreshAppIcon = () => setAppIcon(themeById(themeId()));
 
 /** Applies the saved theme (call once at start, before the first screen). */
 export function applyTheme(id = themeId()) {

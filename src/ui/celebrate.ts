@@ -20,6 +20,7 @@ import type { BadgeDef } from '../data/badges';
 import { locale, t, type Key } from '../i18n';
 import { h } from './dom';
 import { badgeArt } from './badge';
+import { badgeGoal, badgeName } from '../i18n/badges';
 import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
 import { chestArt, chestTier } from './chest';
@@ -263,8 +264,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     title = m.title; sub = m.sub;
   } else {
     const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' | 'chest' }>).badge;
-    title = t(b.name as Key, { n: b.need });
-    sub = t(b.goal as Key, { n: b.need });
+    title = badgeName(b);
+    sub = badgeGoal(b);
     if (m.kind === 'flame') {
       kicker = t('cel.streak');
       count = h('b', { class: 'cel-num' }, String(still ? m.days : 0));
@@ -592,6 +593,13 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const cr = canvas.getBoundingClientRect();
       fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
       vibrate(m.kind === 'lantern' ? [18] : m.kind === 'rosette' || m.kind === 'khatm' ? [24, 90, 14] : [22]);
+      // A Platinum or Diamond badge: the gold wash and a second, bigger burst (a Diamond bigger still).
+      const bstep = 'badge' in m ? m.badge.step : 0;
+      if (bstep >= 3) {
+        el.classList.add('epic');
+        later(280, () => fx?.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));
+        if (bstep === 4) later(620, () => fx?.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, 60, 1.4));
+      }
       // A chest drops in, lands with a squash and a thud, then waits for the user's taps.
       if (isChest) {
         chestBox!.animate([{ transform: 'translateY(-260px) scale(.9, 1.1)', opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: 'none', opacity: 1 }],
