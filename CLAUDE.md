@@ -1515,6 +1515,18 @@ duas/reflections section in Me.
       surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
       after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
       Me idle at 6× CPU throttle ~880 → ~1 ms/s
+      **Round 5** (owner "yes to all that", 2026-11-11): **faces** (`figure.ts`: eyes 0–4, brows 0–3, mouth 0–3, cheeks /
+      freckles 0–4, older look with grey beard and smile lines; nose and moustache), **expressions** (every actor carries happy,
+      wow, sleepy, calm, proud and star faces, shown by class; `actor.face(xp, ms)`: chest "Almost!" wow, epic open star, streak
+      proud / star at milestones, Ranks up star; reciting calm), **hair** (hairline, strands; afro, braids, ponytail, white),
+      **Ummah dress** (djellaba, shalwar kameez, baju koko, boubou, baju kurung; peci), **hijab styles** (`wrap`: khimar, wrapped
+      bun, shayla), **patterns** on outfits, **extras** (`acc`: watch, prayer mat, backpack, siwak). Codes are 22 digits when any new
+      part is set, 14 otherwise (migration `20261111300000_rank_figure_more.sql`). **Room**: wall (zellige, panels, arches), floor
+      (terracotta, marble, mosaic), window view (desert, sea, mountains, city), new places seat (cushions, pouf, majlis) and pet
+      (a cat in four coats: sits, swishes its tail and blinks by day, sleeps curled at night); living items (a sprout that grows
+      with the streak, a dallah with steam, a lamp lit at night, books on a rehal, a prayer corner, mashrabiya); special days
+      (`specialNow()`: Jumu'ah light, Arafah, Laylat al-Qadr odd nights). **Visits**: a friend's room on Ranks, view only (tap
+      their row; `rank_set_room`, `rank_players.room`, migration `20261111310000_rank_rooms.sql`, none when private; pgTAP 81)
       **60 fps pass** (owner request 2026-11-10, "the characters lag when tapped… make every animation 60fps"): moving parts
       are HTML layers the compositor moves without repainting, never animations inside an SVG. Characters (`layer()` in
       `actor.ts`): body, head, raised / waving arms and shadow as stacked SVG copies in `span.fg-lay`; chests (`chestArt()`

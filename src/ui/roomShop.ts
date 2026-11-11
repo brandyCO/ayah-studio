@@ -9,17 +9,17 @@ import { seasonNow } from '../data/wardrobe';
 import { rt, type RankKey } from '../i18n/ranks';
 import { t } from '../i18n';
 import { SLOT_BOX, itemArt, rugArt } from './roomArt';
-import { backSvg } from './room';
+import { backSvg, specialNow } from './room';
 import { reduced } from './juice';
 import { actor } from './actor';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 
-const GLOW = '<defs><radialGradient id="rmglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>';
+const GLOW = '<defs><radialGradient id="rmglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient><clipPath id="rmglass"><path d="M33 98V54Q33 33 64 33Q95 33 95 54V98Z"/></clipPath></defs>';
 export function tileArt(slot: Slot, id: string | null): string {
   const [x, y, w, hh] = SLOT_BOX[slot];
   const wall = `<rect x="${x - 200}" y="${y - 200}" width="${w + 400}" height="${346 - y}" fill="#f3e2c7"/><rect x="${x - 200}" y="146" width="${w + 400}" height="260" fill="#c99a6a"/>`;
-  const win = slot === 'curtain' ? '<path d="M26 104V52Q26 26 64 26Q102 26 102 52V104Z" fill="#c08a52"/><path d="M33 98V54Q33 33 64 33Q95 33 95 54V98Z" fill="#9fd8ff"/>' : '';
+  const win = slot === 'curtain' || slot === 'view' ? '<path d="M26 104V52Q26 26 64 26Q102 26 102 52V104Z" fill="#c08a52"/><path d="M33 98V54Q33 33 64 33Q95 33 95 54V98Z" fill="#9fd8ff"/>' : '';
   const art = slot === 'rug' ? rugArt(id ?? undefined, false) : id ? itemArt(id, slot, false, true) : '';
   return `<svg viewBox="${x} ${y} ${w} ${hh}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${GLOW}${wall}${win}${art}</svg>`;
 }
@@ -50,7 +50,7 @@ export function openRoomShop(onChange: () => void, sit: string | null = null, op
 
   const paint = () => {
     const look = roomLook();
-    const svg = backSvg(sky, Math.max(streak().best, streak().days), false, look, season, reduced());
+    const svg = backSvg(sky, Math.max(streak().best, streak().days), false, look, season, reduced(), { days: streak().days, special: specialNow() });
     const old = view.querySelector('.rm-back');
     if (opt.inRoom) { /* the room behind follows through onChange */ } else if (old) old.outerHTML = svg;
     else {
@@ -64,14 +64,17 @@ export function openRoomShop(onChange: () => void, sit: string | null = null, op
     const items = ROOM_ITEMS.filter((i) => i.slot === slot);
     const cur = look[slot] ?? null;
     const none = h('button', { class: `rs-tile${cur ? '' : ' on'}`, type: 'button', onclick: () => put(null) },
-      h('span', { class: 'rs-art' }), h('span', { class: 'rs-name' }, slot === 'rug' ? rt('rs.default') : rt('rs.none')));
+      h('span', { class: 'rs-art' }), h('span', { class: 'rs-name' }, slot === 'rug' || slot === 'wall' || slot === 'floor' || slot === 'view' ? rt('rs.default') : rt('rs.none')));
     none.querySelector('.rs-art')!.innerHTML = tileArt(slot, null);
     grid.replaceChildren(none, ...items.map((it) => tile(it, cur === it.id)));
   };
+  // Friends see the room on a visit: what changed goes up a few seconds after the last change.
+  let sendT = 0;
+  const share = () => { clearTimeout(sendT); sendT = window.setTimeout(() => void import('../together/ranks').then((m) => m.sendRoom()), 3000); };
   const put = (id: string | null) => {
     setRoomLook(slot, id);
     haptic(6); sfx.tick();
-    paint(); onChange();
+    paint(); onChange(); share();
   };
   const tile = (it: RoomItem, on: boolean) => {
     const own = ownsRoom(it);
@@ -95,7 +98,7 @@ export function openRoomShop(onChange: () => void, sit: string | null = null, op
           if (!buyRoom(it)) return;
           sfx.pop(); haptic(14);
           toast(rt('rs.got', { name: name(it.id) }));
-          slot = it.slot; paint(); onChange();
+          slot = it.slot; paint(); onChange(); share();
           (opt.inRoom ? document.querySelector('.rm-full .rm-back') : view.querySelector('svg'))?.animate([{ transform: 'scale(1.03)', filter: 'brightness(1.15)' }, { transform: 'none', filter: 'none' }], { duration: 500, easing: 'ease-out' });
         } }, rt('rs.buyGo'))));
     q.querySelector('.rs-art')!.innerHTML = tileArt(it.slot, it.id);

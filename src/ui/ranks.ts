@@ -128,7 +128,12 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
 
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
-    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}` },
+    // Round 5: another player's room can be visited (view only) from their row.
+    const visit = !r.me && !r.private && !!r.figure;
+    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${visit ? ' visit' : ''}`,
+      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': rt('room.visit', { name: r.name ?? '' }),
+        onclick: () => void import('./room').then((m) => m.openVisit({ name: r.name, figure: r.figure ?? null, room: r.room ?? null })),
+        onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
       h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',

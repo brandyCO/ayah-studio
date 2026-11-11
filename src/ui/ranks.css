@@ -416,3 +416,5 @@
 .rkm-passed .cel-text h2 { animation-delay: .45s; animation-duration: .5s; }
 .rkm-passed .cel-sub { animation-delay: .6s; animation-duration: .4s; }
 .rkm-passed .cel-ok { animation: cel-up .35s .75s ease-out both; }
+.rk-row.visit { cursor: pointer; }
+.rk-row.visit:active { transform: translateY(1px); }
