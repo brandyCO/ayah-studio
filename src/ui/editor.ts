@@ -37,7 +37,7 @@ import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajwee
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
-import { reelMade } from '../data/journey';
+import { addShare, reelMade } from '../data/journey';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, SLOWMO, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
@@ -2544,6 +2544,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           // The caption goes along (WhatsApp, YouTube keep it) and onto the clipboard for apps that drop it.
           const text = captionEl?.value ?? captionText();
           void navigator.clipboard?.writeText(text).then(() => toast(ui('ed.caption-shared')), () => {});
+          addShare();
           return shareFile(r.uri, ui('ed.shareTitle'), text).catch((e) => {
             if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail(ui('ed.shareFailed'))(e);
           });
@@ -2606,7 +2607,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         creditsBlock() ?? '',
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
-          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).then(() => addShare()).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
         statusBlock(name),
         coverJpeg ? coverButton(coverJpeg, name.replace(/\.\w+$/, '-cover.jpg')) : '',
         makeAnother(),
@@ -2642,11 +2643,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (isNative()) {
         const saved: string[] = [];
         for (const m of made!) saved.push((await saveVideo(m.blob, m.name)).uri);
+        addShare();
         await shareFiles(saved, ui('st.title'), text);
         return;
       }
       const files = made!.map((m) => new File([m.blob], m.name, { type: m.blob.type }));
-      if (navigator.canShare?.({ files })) { await navigator.share({ files, text }).catch(() => {}); return; }
+      if (navigator.canShare?.({ files })) { await navigator.share({ files, text }).then(() => addShare()).catch(() => {}); return; }
       links.replaceChildren(...made!.map((m, i) => {
         const url = URL.createObjectURL(m.blob);
         coverUrls.push(url);

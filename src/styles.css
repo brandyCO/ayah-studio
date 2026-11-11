@@ -1858,3 +1858,11 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .fav-fill { height: 100%; width: 0; background: var(--brand-bar, var(--accent)); border-radius: 4px; transition: width .6s ease; }
 .fav-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .fav-actions:empty { display: none; }
+/* Diamond badges: four small glints that twinkle in turn (HTML layers, so the compositor does it). */
+.badge-art .bd-glint { position: absolute; width: 14%; height: 14%; margin: -7% 0 0 -7%; pointer-events: none; background: #fff;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); opacity: 0; scale: .3;
+  animation: bd-glint 4s ease-in-out infinite; filter: drop-shadow(0 0 3px #bfefff); }
+@keyframes bd-glint { 0%, 70%, 100% { opacity: 0; scale: .3; } 80% { opacity: 1; scale: 1; rotate: 45deg; } 90% { opacity: 0; scale: .5; rotate: 90deg; } }
+@media (prefers-reduced-motion: reduce) { .badge-art .bd-glint { animation: none; opacity: .8; scale: .7; } }
+.badge-art.earned.t-diamond svg { filter: drop-shadow(0 3px 6px rgba(0, 40, 90, .3)) drop-shadow(0 0 8px rgba(150, 225, 255, .55)); }
+.badge-art.earned.t-platinum svg { filter: drop-shadow(0 3px 6px rgba(20, 20, 60, .3)) drop-shadow(0 0 5px rgba(200, 195, 255, .45)); }

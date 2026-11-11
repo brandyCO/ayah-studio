@@ -14,9 +14,11 @@ import { reciterById } from '../data/reciters';
 import { dayKey, readLog } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
-import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
+import { badgeDone, badgeStates, type BadgeDef, type BadgeGroup, type BadgeState } from '../data/badges';
+import { badgeGoal, badgeName, bt, tierName, type BadgeKey } from '../i18n/badges';
+import { iconCard, newIconCard } from './appIcons';
 import { badgeMoment } from '../data/claims';
-import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
+import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
@@ -84,11 +86,11 @@ export function openBadge(b: BadgeState, fresh = false) {
   dialog(fresh ? t('bd.new') : t('bd.title'),
     h('div', { class: `bd-detail${fresh ? ' fresh' : ''}` },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 148),
-      h('h3', {}, t(b.def.name as Key, { n })),
-      h('p', { class: 'muted' }, t(b.def.goal as Key, { n })),
+      h('h3', {}, badgeName(b.def)),
+      h('p', { class: 'muted' }, badgeGoal(b.def)),
       b.earned
         ? h('p', { class: 'bd-when' }, t('bd.earned', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(parse(b.earned)) }))
-        : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, `${b.have} / ${n}`))));
+        : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, b.def.fam === 'league' ? `${b.have} / ${n}` : `${b.have.toLocaleString()} / ${n.toLocaleString()}`))));
 }
 
 // What the goal rings and the Light lantern showed last (this session), so they fill on from there.
@@ -703,25 +705,49 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintBadges = () => {
     const all = badgeStates();
     const got = all.filter((b) => b.earned).length;
-    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: (e: Event) => (b.earned && !badgeClaimed(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b)) },
+    const tap = (b: BadgeState) => (e: Event) => (b.earned && !badgeDone(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b));
+    const tile = (b: BadgeState) => h('button', { class: `bd-tile t-${b.def.tier}${b.earned ? ' earned' : ''}`, onclick: tap(b) },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
-      h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
+      h('span', { class: 'bd-name' }, badgeName(b.def)),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
-    // Earned first (newest first), then the ones closest to being earned.
-    const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
-    const next = all.filter((b) => !b.earned).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
-    const order = [...earned, ...next];
-    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
-    const waiting = earned.filter((b) => !badgeClaimed(b.def.id));
+    // One row per family: its five tiers, and a bar towards the next one.
+    const fams = new Map<string, BadgeState[]>();
+    for (const b of all) fams.set(b.def.fam, [...(fams.get(b.def.fam) ?? []), b]);
+    const famRow = (list: BadgeState[]) => {
+      const next = list.find((b) => !b.earned);
+      const d = list[0].def;
+      return h('div', { class: 'bdf' },
+        h('div', { class: 'bdf-head' }, h('b', {}, bt(`f.${d.fam}` as BadgeKey)),
+          h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
+        h('div', { class: 'bdf-tiers' }, ...list.map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
+          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
+          b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
+        next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
+          h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
+    };
+    const groups: BadgeGroup[] = ['read', 'listen', 'learn', 'dua', 'goals', 'ranks', 'create'];
+    const byFamily = () => groups.flatMap((g) => {
+      const rows = [...fams.values()].filter((l) => l[0].def.group === g);
+      return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
+    });
+    // On Me: the newest earned first, then the next tier of each family, closest first.
+    const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : b.earned! < a.earned! ? -1 : b.def.step - a.def.step));
+    const next = [...fams.values()].map((l) => l.find((b) => !b.earned)).filter((b): b is BadgeState => !!b).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
+    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, ...byFamily()));
+    const waiting = earned.filter((b) => !badgeDone(b.def.id)).sort((a, b) => b.def.step - a.def.step);
+    const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
     claimSlot.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
+      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
-        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, t(b.def.name as Key, { n: b.def.need }))),
-        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '');
+        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def))),
+        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`))),
+        waiting.length > shown.length ? h('a', { class: 'chip claim-more', href: '#/me/stats' }, `+${waiting.length - shown.length}`) : '') : '',
+      page ? '' : newIconCard() ?? '');
     badgeBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
         h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
-      page === 'stats' ? h('div', { class: 'bd-grid' }, ...order.map(tile)) : h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
+      page === 'stats' ? h('div', { class: 'bdf-list' }, ...byFamily()) : h('div', { class: 'bd-row' }, ...[...earned, ...next].slice(0, 4).map(tile)));
+    if (page === 'stats') badgeBox.append(iconCard());
   };
 
   // --- the doors: each opens its own full screen, so Me stays short ---
