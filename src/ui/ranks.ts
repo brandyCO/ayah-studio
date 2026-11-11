@@ -742,10 +742,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (pill) bump(pill, 0.14);
     haptic(8);
   }
+  const paintTabs = () => tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
   async function paint(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
-    tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
+    paintTabs();
     ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) });
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
@@ -776,10 +777,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
     try { await joinBoard(pending); view = 'boards'; toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
   }
-  // The Friends tab's name (its strings load with it).
-  let friendsLabel = 'Friends';
-  await import('../i18n/friends').then((m) => { friendsLabel = m.ft('fr.tab'); });
-  if (account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) view = 'friends'; });
+  // Its strings load beside the league (not before it): the tab is named as soon as they arrive.
+  let friendsLabel = '';
+  void import('../i18n/friends').then((m) => { friendsLabel = m.ft('fr.tab'); if (tabs.childElementCount) paintTabs(); });
+  const pendingFr = (() => { try { return sessionStorage.getItem('pendingFriend'); } catch { return null; } })();
+  if (pendingFr && account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) view = 'friends'; });
   const pendingCh = (() => { try { return sessionStorage.getItem(PENDING_CH); } catch { return null; } })();
   if (pendingCh && account()) {
     try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
@@ -788,14 +790,28 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   void open();
   const off = onAccount(() => void paint(true));
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
-  // Live while open: others' points, names and characters show within seconds, not after a minute.
-  let polling = false;
-  const live = window.setInterval(async () => {
-    if (document.hidden || polling || !account() || document.querySelector('dialog[open], .cel')) return;
-    polling = true;
-    try { await report(); if (await refreshCached()) await paint(false); } finally { polling = false; }
-  }, 8_000);
-  return () => { off(); clearInterval(tick); clearInterval(live); };
+  // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
+  // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
+  const onScreen = (k: string) => k === 'status' || (view === 'league' ? k === 'league'
+    : view === 'friends' ? k === 'friends'
+      : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
+        : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
+  let quiet = 0, stopped = false, live = 0;
+  const poll = async () => {
+    if (stopped) return;
+    if (!document.hidden && account() && !document.querySelector('dialog[open], .cel')) {
+      try {
+        await report();
+        if (await refreshCached(onScreen)) { quiet = 0; await paint(false); } else quiet++;
+      } catch { /* offline: try again later */ }
+    }
+    if (!stopped) live = window.setTimeout(poll, quiet < 3 ? 8_000 : quiet < 6 ? 15_000 : 30_000);
+  };
+  live = window.setTimeout(poll, 8_000);
+  // Back from another app or a sheet, or a tab switched: look again soon.
+  const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
+  document.addEventListener('visibilitychange', wake);
+  return () => { stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */

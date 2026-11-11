@@ -681,6 +681,19 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
       page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
       streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
+- [x] Main pages speed check (owner request 2026-11-11, "optimize every main page, front and back"; report: Claude Doc
+      "Ayah Studio: speed check of every main page"; production build, 4× CPU, 4G, 150 ms server). Fixed here: the
+      character's head sway is a `transform` keyframe (`fg-sway-l`) and a hop scales the shadow with `scale` only
+      (`actor.ts`): WAAPI on the same properties as a running CSS loop knocked that loop onto the main thread for good
+      (Me and Learn 20 % busy while still → 0); a rare frame's glint is an HTML layer turned by CSS (`.rk-glint`,
+      `glintLayer()` in `rankAvatars.ts`; the SVG `animateTransform` kept Ranks ~70 % busy) and the hero rays a
+      `transform` (Ranks 85 % → 0). Ranks: the list no longer waits for the Friends strings; polling asks only for what
+      is on screen (`refreshCached(live)`), every 8 s, slowing to 15 / 30 s while nothing changes; the same answer asked
+      twice at once goes out once; the league's profiles come in one call (`rank_profiles`, kept 10 min). Server
+      (migration `20261111500000_rank_speed.sql`, pgTAP `rank_speed.test.sql` 13): `rank_count()` keeps "of N players"
+      for a minute (table `rank_counts`), `rank_global` by a measure keeps the week's top 100 a minute
+      (`rank_measure_top`), `rank_board` by a measure adds up only its members. Left to their threads: Read (next page
+      built during the slide), Learn (0.4 s block building the path); Studio was fixed in its thread (next item)
 - [x] Studio opens faster (owner question 2026-11-11, "optimise every main page"): the encoder check
       (`capabilities()`, ~1 s of blocked page at 4× CPU) no longer runs when the studio opens — only at Export, and
       only until the first H.264 + AAC path is found (the Device check still asks everything, `capabilities(true)`);
