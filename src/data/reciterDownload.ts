@@ -3,15 +3,19 @@
 // network. When starring, the user picks how much (whole Quran / Juz 'Amma / this surah / chosen surahs /
 // nothing, with the size shown). Files go into the reciter's own cache (keptAudio.ts), exactly as served:
 // Quran.com and mp3quran full-surah MP3s (with the timings they are read by), or everyayah's per-ayah files
-// (with the aligned word times). Only on Wi-Fi (like the whole-mushaf download), while the app is open,
-// one surah at a time; it carries on later where it stopped. This device only.
+// (with the aligned word times). On Wi-Fi, or on any connection once the user says so ("Download now on
+// mobile data", `favAnyNet`); one surah at a time; it carries on later where it stopped. Progress, speed and the
+// time left are reported (`downloadProgress()`); in the Android app a progress notification keeps it going
+// when the user leaves the app (the export's foreground service). This device only.
 import { alignedWords } from './alignedWords';
 import { forgetKept, keptCache } from './keptAudio';
 import { mp3quranSizes, mp3quranSurah } from './mp3quran';
 import { idle, unmetered } from './mushafDownload';
 import { pinQdc } from './qdc';
 import { loadMeta } from './quran';
-import { covers, everyayahUrl, reciterById, RECITERS, type Reciter } from './reciters';
+import { covers, everyayahUrl, reciterById, reciterCredit, RECITERS, type Reciter } from './reciters';
+import type { ExportGuard } from '../native';
+import { t } from '../i18n';
 
 const WANT = 'favReciters'; // reciter id → surahs to keep ([] = a favourite with nothing to download)
 const KEPT = 'favKept'; // reciter id → surahs kept + bytes
@@ -40,16 +44,54 @@ export const favouritesFirst = (list: Reciter[]) => [...list.filter((r) => isFav
 /** Every surah this reciter has a recording of. */
 export const allSurahs = (r: Reciter) => Array.from({ length: 114 }, (_, i) => i + 1).filter((s) => covers(r, s));
 
-export interface KeptInfo { kept: number; wanted: number; bytes: number; waiting: boolean; running: boolean }
+export interface KeptInfo { kept: number; wanted: number; bytes: number; waiting: boolean; running: boolean; paused: boolean }
 export function keptInfo(id: number): KeptInfo {
   const want = wantedSurahs(id);
   const k = read<Kept>(KEPT)[id];
   const have = new Set(k?.s ?? []);
   return {
     kept: want.filter((s) => have.has(s)).length, wanted: want.length, bytes: k?.bytes ?? 0,
-    waiting: !unmetered() || !navigator.onLine, running: busy === id,
+    waiting: !navigator.onLine || (!unmetered() && !anyNet()), running: busy === id, paused: held,
   };
 }
+
+/** Downloads may use mobile data too (the user said so once; this device). */
+const anyNet = () => { try { return localStorage.getItem('favAnyNet') === '1'; } catch { return false; } };
+export function allowMobileData() {
+  try { localStorage.setItem('favAnyNet', '1'); } catch { /* ignore */ }
+  held = false;
+  changed();
+  keepFavourites();
+}
+export const mobileDataAllowed = anyNet;
+
+/** Paused from the notification (Cancel): until the user resumes or the app starts again. */
+let held = false;
+export function resumeDownloads() {
+  held = false;
+  changed();
+  keepFavourites();
+}
+
+// Live progress of the reciter being downloaded: bytes this run, speed, and an estimate of what is left.
+interface Live { id: number; surah: number; startedAt: number; bytes: number; left: number | null; surahBytes: number }
+let live: Live | null = null;
+export interface DownloadProgress { surah: number; bytes: number; left: number | null; bps: number; eta: number | null }
+/** What is happening now for reciter `id` (null when it is not downloading). */
+export function downloadProgress(id: number): DownloadProgress | null {
+  if (!live || live.id !== id) return null;
+  const secs = (Date.now() - live.startedAt) / 1000;
+  const bps = secs > 2 ? live.bytes / secs : 0;
+  const left = live.left === null ? null : Math.max(0, live.left - live.surahBytes);
+  return { surah: live.surah, bytes: live.bytes, left, bps, eta: left !== null && bps > 0 ? left / bps : null };
+}
+let lastTell = 0;
+const tellSoon = () => {
+  const now = Date.now();
+  if (now - lastTell < 700) return;
+  lastTell = now;
+  changed();
+};
 
 /** Star a reciter and keep `surahs` (added to what is wanted already); null = no longer a favourite,
  *  everything kept for it is deleted. */
@@ -108,7 +150,7 @@ export function keepFavourites() {
   void run();
 }
 
-const ready = () => document.visibilityState === 'visible' && navigator.onLine && unmetered();
+const ready = () => !held && navigator.onLine && (unmetered() || anyNet());
 
 function nextJob(): [Reciter, number] | null {
   const kept = read<Kept>(KEPT);
@@ -121,11 +163,27 @@ function nextJob(): [Reciter, number] | null {
 }
 
 async function run() {
+  let guard: ExportGuard | null = null;
+  let guardFor = 0;
   try {
     for (let job = nextJob(); job && ready(); job = nextJob()) {
       const [r, s] = job;
       busy = r.id;
       stopFor = 0;
+      // What is left of this reciter's wanted surahs (estimated), for the time left.
+      const have = new Set(read<Kept>(KEPT)[r.id]?.s ?? []);
+      const rest = wantedSurahs(r.id).filter((x) => !have.has(x));
+      if (!live || live.id !== r.id) live = { id: r.id, surah: s, startedAt: Date.now(), bytes: 0, left: null, surahBytes: 0 };
+      live.surah = s;
+      live.surahBytes = 0;
+      live.left = await estimateBytes(r, rest).catch(() => null);
+      if (guardFor !== r.id) {
+        guard?.stop();
+        guardFor = r.id;
+        guard = (await import('../native')).exportGuard(t('fav.notif', { name: reciterCredit(r) }), t('fav.pause'), () => { held = true; stopFor = r.id; changed(); });
+      }
+      const total = wantedSurahs(r.id).length;
+      guard?.progress(total ? (total - rest.length) / total : 0);
       changed();
       await idle();
       try {
@@ -143,6 +201,8 @@ async function run() {
     }
   } finally {
     busy = 0;
+    live = null;
+    guard?.stop();
     changed();
   }
 }
@@ -170,13 +230,32 @@ async function keepSurah(r: Reciter, s: number): Promise<number> {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // mp3quran sends a surah a reciter lacks from another reciter's folder: never keep that.
       if (!url.includes('archive.org/') && res.url && res.url.slice(0, res.url.lastIndexOf('/')) !== url.slice(0, url.lastIndexOf('/'))) throw new Error('redirected');
-      const blob = await res.blob();
+      const blob = await counted(res);
       await cache.put(url, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(blob.size) } }));
       bytes += blob.size;
     }
   };
   await Promise.all([worker(), worker(), worker()].slice(0, urls.length > 1 ? 3 : 1));
   return bytes;
+}
+
+/** The body, counted into the live progress as it arrives. */
+async function counted(res: Response): Promise<Blob> {
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const b = await res.blob();
+    if (live) { live.bytes += b.size; live.surahBytes += b.size; }
+    return b;
+  }
+  const parts: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value);
+    if (live) { live.bytes += value.length; live.surahBytes += value.length; }
+    tellSoon();
+  }
+  return new Blob(parts as BlobPart[], { type: 'audio/mpeg' });
 }
 
 /** Space this device says is free (bytes), if it can tell. */

@@ -4,9 +4,10 @@
 // Quran.com reciters stream their full-surah file; mp3quran ones their checked surah file (cut points
 // from public/data/mp3quran); everyayah ones play the per-ayah files one after another. Words are lit
 // only where real timings exist (QDC, or aligned and checked: public/data/words; rule 8).
-import { starButton } from './favourite';
+import { starButton } from './favStar';
 import { favouritesFirst } from '../data/reciterDownload';
 import { playableUrl } from '../data/keptAudio';
+import { listenGuard } from '../native';
 import { qdcSurah } from '../data/qdc';
 import { mp3quranSurah } from '../data/mp3quran';
 import { alignedWords } from '../data/alignedWords';
@@ -43,6 +44,24 @@ const SHIFTED = new Set(['2:181', '8:6', '13:37', '15:7', '27:20', '36:22', '37:
 const validSegs = (segs: unknown): [number, number, number][] => (Array.isArray(segs) ? segs : []).filter((x): x is [number, number, number] =>
   Array.isArray(x) && x.length >= 3 && x.slice(0, 3).every((n) => typeof n === 'number' && Number.isFinite(n))).map((x) => [x[0], x[1], x[2]]);
 
+/** What an <audio> element should play: the copy on this device, else the stream, which is then kept
+ *  in the background for next time (listenCache.ts). */
+async function local(url: string): Promise<string> {
+  const src = await playableUrl(url);
+  if (src === url) void import('../data/listenCache').then((m) => m.keepListened(url)).catch(() => {});
+  return src;
+}
+
+/** What follows an ayah: repeat it / the surah / the juz, or stop at the end of a juz being played. */
+export type Repeat = 'off' | 'ayah' | 'surah' | 'juz';
+const REPEAT_KEY = 'listenRepeat';
+const savedRepeat = (): Repeat => {
+  try {
+    const v = localStorage.getItem(REPEAT_KEY);
+    return v === 'ayah' || v === 'surah' || v === 'juz' ? v : 'off';
+  } catch { return 'off'; }
+};
+
 export function createPlayer(o: PlayerHooks) {
   // Two elements: everyayah ayat play from alternate ones, the next one started just before the current one
   // ends, so the files join without a gap (as the original recording ran). Others use only `audio`.
@@ -64,6 +83,45 @@ export function createPlayer(o: PlayerHooks) {
   let using: Reciter | null = null; // the reciter actually loaded (the default where the chosen one has no recording)
   let playing = 0;
   const listeners = new Set<(pos: { s: number; a: number; w: number | null } | null) => void>();
+
+  // --- repeat and juz ---
+  let repeat: Repeat = savedRepeat();
+  let bound = 0; // the juz being played: stops (or starts again, with repeat juz) at its end; 0 = none
+  let expect: { s: number; a: number } | null = null; // the ayah playFrom() went to (a jump, not the recitation moving on)
+  const juz: [number, number][] = [];
+  void import('../data/search').then((m) => m.loadDivisions()).then((d) => { juz.push(...d.juz); }).catch(() => {});
+  const before = (s: number, a: number, at: [number, number]) => s < at[0] || (s === at[0] && a < at[1]);
+  const juzOf = (s: number, a: number) => {
+    let j = 1;
+    juz.forEach((at, i) => { if (!before(s, a, at)) j = i + 1; });
+    return j;
+  };
+  /** Where playback goes once ayah a of surah s has been recited: on as recorded, stop, or another ayah. */
+  function after(s: number, a: number): 'go' | 'stop' | { s: number; a: number } {
+    if (repeat === 'ayah') return { s, a };
+    const next = a < o.meta[s - 1].ayahs ? { s, a: a + 1 } : s < 114 ? { s: s + 1, a: 1 } : null;
+    if (repeat === 'surah' && next?.s !== s) return { s, a: 1 };
+    if (bound && juz.length && (!next || juzOf(next.s, next.a) !== bound)) {
+      if (repeat !== 'juz') return 'stop';
+      const [js, ja] = juz[bound - 1];
+      return { s: js, a: ja };
+    }
+    return next ? 'go' : 'stop';
+  }
+  function setRepeat(r: Repeat) {
+    repeat = r;
+    try { localStorage.setItem(REPEAT_KEY, r); } catch { /* ignore */ }
+    const at = cur ?? pending;
+    if (r === 'juz' && !bound && at) bound = juzOf(at.s, Math.max(1, at.a));
+    paint();
+  }
+  /** Play juz j from its first ayah to its last (then stop, or again with repeat juz). */
+  function playJuz(j: number) {
+    if (!juz[j - 1]) return;
+    bound = j;
+    const [s, a] = juz[j - 1];
+    void playFrom(s, a);
+  }
   const tell = (pos: typeof cur) => { o.onPosition(pos); for (const f of listeners) f(pos); };
 
   const reciter = () => reciterById(reelReciter(DEFAULT_RECITER));
@@ -101,18 +159,44 @@ export function createPlayer(o: PlayerHooks) {
     playBtn.replaceChildren(loading ? h('span', { class: 'spinner' }) : icon(playing ? 'pause' : 'play', 22));
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
-    label.textContent = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '';
+    label.textContent = (repeat !== 'off' ? '↻ ' : '') + (at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}${loading ? ' · loading…' : ''}` : surah ? o.meta[surah - 1].en : '');
     who.textContent = `${(loading ? reciter() : using ?? reciter()).short} ▾`; // the new voice's name while it loads
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
       if (cur) navigator.mediaSession.metadata = new MediaMetadata({ title: label.textContent, artist: (using ?? reciter()).name, album: 'Ayah Studio' });
     }
+    guard(playing);
+  }
+
+  // Android: a media notification + foreground service while the bar is up, so the recitation carries on
+  // in the background (Android used to close the app after a while). Paused for 10 min, it is let go.
+  let guardKey = '';
+  let idleTimer = 0;
+  function guard(playing: boolean) {
+    clearTimeout(idleTimer);
+    if (!shown) return;
+    const at = cur ?? pending;
+    const title = at ? `${o.meta[at.s - 1].en} · ${at.s}:${at.a}` : surah ? o.meta[surah - 1].en : t('pl.listening');
+    const text = (using ?? reciter()).name;
+    const key = `${title}|${text}|${playing}`;
+    if (key !== guardKey) {
+      guardKey = key;
+      const show = (g: typeof listenGuard) => g.show(title, text, playing, [t('pl.prev'), t('pl.play'), t('pl.pause'), t('pl.next'), t('pl.stop')], (b) => {
+        if (b === 'prev') step(-1);
+        else if (b === 'next') step(1);
+        else if (b === 'stop') stop();
+        else toggle();
+      });
+      show(listenGuard);
+    }
+    if (!playing && !loading) idleTimer = window.setTimeout(() => { guardKey = ''; listenGuard.hide(); }, 10 * 60_000);
   }
 
   function show(on: boolean) {
     if (shown === on) return;
     shown = on;
     bar.classList.toggle('show', on);
+    if (!on) { clearTimeout(idleTimer); guardKey = ''; listenGuard.hide(); }
     o.onShow(on);
   }
 
@@ -153,7 +237,7 @@ export function createPlayer(o: PlayerHooks) {
         a: i + 1, from: 0, to: 0, words: SHIFTED.has(`${s}:${i + 1}`) ? [] : validSegs(words[i + 1]),
       }));
     }
-    const src = url ? await playableUrl(url) : ''; // a favourite's kept copy
+    const src = url ? await local(url) : ''; // a kept copy (favourite or listened before)
     if (id !== req) return false;
     perAyah = !url;
     using = r;
@@ -167,6 +251,11 @@ export function createPlayer(o: PlayerHooks) {
   let calls = 0;
   async function playFrom(s: number, a: number) {
     const call = ++calls;
+    expect = { s, a };
+    if (juz.length) {
+      if (bound && juzOf(s, Math.max(1, a)) !== bound) bound = 0; // went elsewhere: the juz is no longer the limit
+      if (!bound && repeat === 'juz') bound = juzOf(s, Math.max(1, a));
+    }
     introDone?.(false); // a Bismillah still playing gives way
     show(true);
     loading = true;
@@ -189,7 +278,7 @@ export function createPlayer(o: PlayerHooks) {
       if (perAyah) {
         playing = v.a;
         ahead.pause();
-        const src = await playableUrl(everyayahUrl(using!, s, v.a));
+        const src = await local(everyayahUrl(using!, s, v.a));
         if (stale()) return;
         audio.src = src;
         preload(v.a + 1);
@@ -220,7 +309,7 @@ export function createPlayer(o: PlayerHooks) {
   /** Plays the Bismillah; true when it finished, false when listening was stopped or moved on meanwhile. */
   async function playIntro(b: Basmala): Promise<boolean> {
     const mine = req;
-    intro.src = await playableUrl(b.url);
+    intro.src = await local(b.url);
     if (mine !== req) return false;
     await new Promise<void>((resolve, reject) => {
       if (intro.readyState >= 1) return resolve();
@@ -259,7 +348,7 @@ export function createPlayer(o: PlayerHooks) {
     if (!perAyah || !using || a > verses.length) return;
     const want = `${using.id}/${surah}/${a}`;
     aheadWant = want;
-    void playableUrl(everyayahUrl(using, surah, a)).then((src) => {
+    void local(everyayahUrl(using, surah, a)).then((src) => {
       if (aheadWant !== want) return;
       ahead.src = src;
       ahead.load();
@@ -271,6 +360,7 @@ export function createPlayer(o: PlayerHooks) {
   /** everyayah: start the next ayah's file 40 ms before this one ends (crossfaded by the overlap). */
   function switchOver() {
     if (!perAyah || aheadFor !== playing + 1 || ahead.readyState < 3) return false;
+    if (after(surah, playing) !== 'go') return false; // a repeat or the juz's end: 'ended' decides
     if (!(audio.duration > 0) || audio.currentTime < audio.duration - 0.04) return false;
     const prev = audio;
     audio = ahead;
@@ -328,6 +418,8 @@ export function createPlayer(o: PlayerHooks) {
     cancelAnimationFrame(raf);
     cur = null;
     last = '';
+    bound = 0;
+    expect = null;
     tell(null);
     show(false);
   }
@@ -350,6 +442,14 @@ export function createPlayer(o: PlayerHooks) {
       v = x;
     }
     if (!v) return;
+    if (expect) {
+      if (expect.s === surah && v.a >= expect.a) expect = null;
+    } else if (!perAyah && cur && cur.s === surah && cur.a >= 1 && v.a > cur.a) {
+      // The recitation moved on to the next ayah: a repeat, or the end of the juz being played.
+      const x = after(surah, cur.a);
+      if (x === 'stop') { stop(); return; }
+      if (x !== 'go') { void playFrom(x.s, x.a); return; }
+    }
     let w: number | null = null;
     for (const [pos, st, en] of v.words) if (st <= t && t < en) w = pos;
     // Between two words, keep the last one recited.
@@ -386,10 +486,14 @@ export function createPlayer(o: PlayerHooks) {
   on('playing', () => { loading = false; paint(); });
   on('ended', () => {
     cancelAnimationFrame(raf);
+    if (!surah) { stop(); return; }
     // A surah recited to its end: the character stands up happy (src/ui/actor.ts).
-    if (surah && !(perAyah && playing < verses.length)) window.dispatchEvent(new CustomEvent('recitation-surah', { detail: surah }));
-    if (perAyah && surah && playing < verses.length) void playFrom(surah, playing + 1);
-    else if (surah && surah < 114) void playFrom(surah + 1, 1);
+    if (!(perAyah && playing < verses.length)) window.dispatchEvent(new CustomEvent('recitation-surah', { detail: surah }));
+    const x = after(surah, perAyah ? playing : verses[verses.length - 1]?.a ?? 1);
+    if (x === 'stop') stop();
+    else if (x !== 'go') void playFrom(x.s, x.a);
+    else if (perAyah && playing < verses.length) void playFrom(surah, playing + 1);
+    else if (surah < 114) void playFrom(surah + 1, 1);
     else stop();
   });
 
@@ -465,11 +569,32 @@ export function createPlayer(o: PlayerHooks) {
       h('span', { class: 'mi-ic' }, icon(ic, 20)), label);
     const d = h('dialog', { class: 'sheet bottom' },
       h('div', { class: 'sheet-head' }, h('h2', {}, label.textContent || t('pl.more')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('p', { class: 'pl-sec' }, t('pl.repeat')),
+      h('div', { class: 'chips pl-repeat' }, ...(['off', 'ayah', 'surah', 'juz'] as Repeat[]).map((r) =>
+        h('button', { class: `chip${repeat === r ? ' on' : ''}`, 'aria-pressed': String(repeat === r), onclick: () => { setRepeat(r); d.close(); } }, t(`pl.rep.${r}`)))),
+      bound ? h('p', { class: 'muted small' }, t(repeat === 'juz' ? 'pl.juzLoop' : 'pl.juzStops', { n: bound })) : null,
       h('div', { class: 'menu' },
+        item(t('pl.playJuz'), 'book', pickJuz),
         away ? item(t('pl.follow'), 'book', followAlong) : null,
         item(t('pl.reel'), 'create', makeReel),
         item(t('night.open'), 'moon', openNightView),
         item(t('pl.report'), 'flag', report)));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /** Play a juz: 30 buttons, the one being recited marked. */
+  function pickJuz() {
+    const at = cur ?? pending;
+    const now = at && juz.length ? juzOf(at.s, Math.max(1, at.a)) : 0;
+    const d = h('dialog', { class: 'sheet bottom' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, t('pl.playJuz')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('p', { class: 'muted small' }, t('pl.juzHelp')),
+      h('div', { class: 'pl-juz' }, ...Array.from({ length: 30 }, (_, i) => h('button', {
+        class: `chip${now === i + 1 ? ' on' : ''}`, onclick: () => { d.close(); playJuz(i + 1); },
+      }, String(i + 1)))));
     d.addEventListener('close', () => d.remove());
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
@@ -512,6 +637,7 @@ export function createPlayer(o: PlayerHooks) {
   return {
     bar,
     playFrom,
+    playJuz,
     active: () => shown,
     toggle,
     pause: () => { if (introOn) intro.pause(); audio.pause(); },

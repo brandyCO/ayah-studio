@@ -25,6 +25,7 @@ public class AppActivity extends BridgeActivity {
         registerPlugin(MediaScanPlugin.class);
         registerPlugin(DailyPlugin.class);
         registerPlugin(ExportServicePlugin.class);
+        registerPlugin(PlaybackServicePlugin.class);
         registerPlugin(WidgetsPlugin.class);
         registerPlugin(AppIconPlugin.class);
         registerPlugin(SpeechPlugin.class);

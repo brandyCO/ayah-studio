@@ -7,7 +7,9 @@ import { gzipSync } from 'node:zlib';
 
 // 2026-11-09: raised from 135 (the extra recordings and the shared player took first load to 136.4 KB, and
 // the Pages deploy had stopped on it since #134).
-const BUDGET_KB = 138;
+// 2026-11-11: raised to 141 for the Listen player's repeat / juz playback and its background service (140.1 KB;
+// the favourite sheets were moved out of first load to keep it there).
+const BUDGET_KB = 141;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;
