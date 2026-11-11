@@ -12,7 +12,9 @@
 import './learn.css';
 import './learnPath.css';
 import { due, level, recordPage, strength } from '../data/pageMemory';
-import { addLesson } from '../data/journey';
+import { GATE_LIGHT, markPageRecited } from '../data/learnPath';
+import { grantJuzGate } from '../data/garden';
+import { addLesson, claimGoal } from '../data/journey';
 import { loadMeta, loadWordMap, reference, surahText, type SurahMeta } from '../data/quran';
 import { displayWords, parseSpans } from '../engine/words';
 import { surahName } from '../i18n';
@@ -426,10 +428,29 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   function done(k: 0 | 1 | 2) {
     jar.share(missed);
     recordPage(p, k);
-    if (k > 0) addLesson();
+    if (k > 0) { addLesson(); markPageRecited(p); }
+    // From the Learn path: a page step goes back to the path; a juz checkpoint raises its gate.
+    let gate = '', from = '';
+    try { gate = sessionStorage.getItem('pmGate') ?? ''; from = sessionStorage.getItem('pmFromPath') ?? ''; } catch { /* ignore */ }
+    const [gj, gp] = gate.split(':').map(Number);
+    if (gp === p && k > 0) {
+      try { sessionStorage.removeItem('pmGate'); } catch { /* ignore */ }
+      if (grantJuzGate(gj)) {
+        claimGoal(`jg:${gj}`, GATE_LIGHT);
+        void import('./celebrate').then((c) => c.celebrate({ kind: 'star', kicker: lt('learn.gateKicker', { n: gj }), title: lt('learn.gatePassed'), sub: lt('learn.gatePassedSub', { n: gj }) }, null, GATE_LIGHT))
+          .finally(() => { location.hash = '#/learn'; });
+        return;
+      }
+    }
+    if (gp === p && k === 0) toast(lt('learn.gateNotYet'));
     if (k === 2) sfx.shimmer();
     toast(lt('learn.pmSaved', { level: lt(LEVEL_KEY[level(p)]) }));
     paintBadge();
+    if (from === String(p) && k > 0) {
+      try { sessionStorage.removeItem('pmFromPath'); } catch { /* ignore */ }
+      window.setTimeout(() => { if (location.hash === `#/learn/page/${p}`) location.hash = '#/learn'; }, 1400);
+      return;
+    }
     setMode(k === 0 ? 'starts' : 'recite');
   }
 

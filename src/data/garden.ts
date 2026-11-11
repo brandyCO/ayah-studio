@@ -45,7 +45,7 @@ export interface Deco { id: string; k: DecoKind; juz: number; x: number; y: numb
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'prize';
 export type DecoKind = 'lamp' | 'flowers' | 'stones' | 'bench' | 'pond' | 'fountain' | 'arch' | 'pavilion' | 'moongate' | 'starwell'
-  | 'goldfountain' | 'winnerarch' | 'silvergate' | 'silverlamps' | 'bronzebench' | 'bronzelantern';
+  | 'goldfountain' | 'winnerarch' | 'silvergate' | 'silverlamps' | 'bronzebench' | 'bronzelantern' | 'juzgate';
 export const DECOS: { k: DecoKind; rarity: Rarity; price: number; place?: 1 | 2 | 3 }[] = [
   { k: 'flowers', rarity: 'common', price: 30 },
   { k: 'stones', rarity: 'common', price: 30 },
@@ -64,6 +64,8 @@ export const DECOS: { k: DecoKind; rarity: Rarity; price: number; place?: 1 | 2 
   { k: 'silverlamps', rarity: 'prize', price: 0, place: 2 },
   { k: 'bronzebench', rarity: 'prize', price: 0, place: 3 },
   { k: 'bronzelantern', rarity: 'prize', price: 0, place: 3 },
+  // Learn path (2026-11-11): a juz checkpoint passed raises that juz's gate. Never sold.
+  { k: 'juzgate', rarity: 'prize', price: 0 },
 ];
 /** Tree varieties: 0 free; the others bought per surah. */
 export const VARIETIES: { v: number; rarity: Rarity; price: number }[] = [
@@ -246,7 +248,7 @@ export function buyVariety(s: number, v: number): boolean {
 /** Buys a decoration; it waits unplaced until dragged into a garden. */
 export function buyDeco(k: DecoKind): Deco | null {
   const def = DECOS.find((d) => d.k === k);
-  if (!def || def.place || wallet() < def.price) return null;
+  if (!def || def.rarity === 'prize' || wallet() < def.price) return null;
   const id = `${k}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const st = load();
   st.owned[`d:${id}`] = def.price;
@@ -272,6 +274,21 @@ export function grantPrizeDeco(week: string, place: number): Deco | null {
   save();
   return d;
 }
+/** Juz checkpoint passed (the Learn path): a gate for that juz in Your garden, once. */
+export const juzGate = (j: number) => load().owned[`s:gate:${j}`] !== undefined;
+export function grantJuzGate(j: number): boolean {
+  if (!(j >= 1 && j <= 30)) return false;
+  const st = load();
+  const key = `s:gate:${j}`;
+  if (st.owned[key] !== undefined) return false;
+  st.owned[key] = 0;
+  const id = `gate-${j}`;
+  st.decos[id] = { id, k: 'juzgate', juz: j, x: -1, y: -1, at: Date.now() };
+  save();
+  return true;
+}
+/** Juz whose gates stand in Your garden. */
+export const juzGates = () => Array.from({ length: 30 }, (_, i) => i + 1).filter(juzGate);
 export function placeDeco(id: string, juz: number, x: number, y: number) {
   const d = load().decos[id];
   if (!d) return;
