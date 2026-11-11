@@ -9,7 +9,7 @@ import { h } from './dom';
 import { actor as makeActor, poseClass } from './actor';
 import { holdPage, lite, reduced } from './juice';
 import { sfx } from './sfx';
-import { Fire, firePalette } from './fire';
+import { FlatFire, flatPalette } from './flatFire';
 import { rewardPalette } from './theme';
 import { t } from '../i18n';
 import { mt, type MomentKey } from '../i18n/moments';
@@ -157,7 +157,7 @@ const wobble = (s: number, f = 3, k = 7) => (s < 0 ? 0 : Math.exp(-k * s) * Math
 
 // The moment's beats (ms): stand, crouch, leap, catch fire at the top, fall and land, the number slams in.
 const B = { crouch: 320, leap: 900, ignite: 1180, fall: 1520, land: 1760, slam: 1960, flip: 2480, done: 2900 };
-const APEX = -0.36;
+const APEX = -0.24;
 
 /** The character's jump at time `t` ms: height (share of the stage, negative is up), squash/stretch and tremble. */
 function pose(t: number, delay: number) {
@@ -215,7 +215,6 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
   const me = makeActor('sf-actor');
   if (!me) return null;
   const level = o.custom ? Math.max(1, Math.min(5, o.custom.aura)) : powerLevel(days);
-  const pal = firePalette(level);
   const still = reduced();
   const name = mt(`pu.l${level}` as MomentKey);
   const newLevel = level > 1 && days === LEVELS[level - 1];
@@ -273,7 +272,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     holdPage(true);
     ok.focus({ preventScroll: true });
 
-    const fire = new Fire(back, front, pal, lite());
+    const fire = new FlatFire(back, front, flatPalette(level), lite());
     // Where each character stands (read once, and again on a resize; the jump itself is drawn from the timeline).
     type Spot = { cx: number; foot: number; w: number; hgt: number; px: number };
     let spots: Spot[] = [];
@@ -290,9 +289,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     };
     place();
     window.addEventListener('resize', place);
-    const bodyE = spots.map((s) => fire.emitter({ kind: 'body', x: s.cx, y: s.foot, w: s.w * 0.8, h: s.hgt * 0.8, rate: lite() ? 240 : 380, heat: 0, front: 0.3 }));
-    const groundE = spots.map((s) => fire.emitter({ kind: 'line', x: s.cx, y: s.foot, w: s.w * 1.1, h: 0, rate: lite() ? 90 : 140, heat: 0, front: 0.1 }));
-    const numE = fire.emitter({ kind: 'line', x: 0, y: 0, w: 0, h: 0, rate: lite() ? 70 : 110, heat: 0, front: 0 });
+    const auras = spots.map((s) => fire.aura({ cx: s.cx, foot: s.foot, w: s.w, h: s.hgt }));
 
     const jolt = (px: number, ms: number) => {
       if (still) return;
@@ -303,7 +300,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     const ring = (i: number, big: number) => {
       for (const [j, r] of rings[i].entries()) r.animate([{ opacity: 0.95, scale: '0.15 0.05' }, { opacity: 0, scale: `${big + j * 0.8} ${(big + j * 0.8) * 0.3}` }], { duration: 620 + j * 160, delay: j * 70, easing: 'cubic-bezier(.1,.7,.3,1)' });
     };
-    const flashNow = () => flash.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' });
+    const flashNow = () => flash.animate([{ opacity: 0.45 }, { opacity: 0 }], { duration: 300, easing: 'ease-out' });
     const slamNum = () => {
       el.classList.add('slam');
       numOld.animate([{ scale: 3.2, opacity: 0 }, { scale: 0.86, opacity: 1, offset: 0.55 }, { scale: 1.07, offset: 0.78 }, { scale: 1, opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.3,0,.4,1)', fill: 'both' });
@@ -317,7 +314,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     // The beats: each runs once (a tap jumps to the end, running only what sets the picture).
     const beats: { at: number; run: (skip: boolean) => void; done?: boolean }[] = [
       { at: B.crouch, run: (skip) => { if (!skip) { sfx.gather(B.leap - B.crouch); me.face('calm', 0); buddy?.face('calm', 0); } } },
-      { at: B.leap, run: (skip) => { if (!skip) { sfx.leap(); spots.forEach((s) => fire.burst(s.cx, s.foot, 26, 220, 0.2, true)); } } },
+      { at: B.leap, run: (skip) => { if (!skip) { sfx.leap(); spots.forEach((s) => { fire.burst(s.cx, s.foot, 8, 300, true); fire.ring(s.cx, s.foot, s.w * 0.9); }); } } },
       { at: B.ignite, run: (skip) => {
         el.classList.add('lit');
         actors.forEach((a) => { poseClass(a.el, 'cheer', true); a.face('star', 0); });
@@ -325,20 +322,20 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
         sfx.ignite(level);
         flashNow();
         jolt(10 + level * 3, 560);
-        spots.forEach((s) => { const y = s.foot + APEX * s.px - s.hgt * 0.45; fire.burst(s.cx, y, 90 + level * 25, 420 + level * 40, 0.25); fire.embers(s.cx, y, s.w, 40 + level * 10); });
+        spots.forEach((s) => { const y = s.foot + APEX * s.px - s.hgt * 0.5; fire.burst(s.cx, y, 18 + level * 4, 560 + level * 40); });
         const burn = () => { if (closed) return; sfx.burn(2400, level); burns.push(window.setTimeout(burn, 2300)); };
         burns.push(window.setTimeout(burn, 500));
       } },
-      { at: B.land, run: (skip) => { if (!skip) { sfx.slam(); jolt(8 + level * 2, 380); spots.forEach((s, i) => { ring(i, 3.2); fire.burst(s.cx, s.foot, 70 + level * 10, 480, 0.1, true); }); } } },
+      { at: B.land, run: (skip) => { if (!skip) { sfx.slam(); jolt(8 + level * 2, 380); spots.forEach((s, i) => { ring(i, 3.2); fire.ring(s.cx, s.foot, s.w * 1.6); fire.burst(s.cx, s.foot, 14 + level * 2, 520, true); }); } } },
       { at: B.slam, run: (skip) => {
         if (skip) { el.classList.add('slam'); return; }
         slamNum();
-        setTimeout(() => { fire.burst(numBox.cx, numBox.top + 30, 40, 300, 0.4); fire.embers(numBox.cx, numBox.top + 20, numBox.w, 24); sfx.pop(4, true); jolt(6 + level, 260); }, 200);
+        setTimeout(() => { fire.sparks(numBox.cx, numBox.top + 30, 14, 420); sfx.pop(4, true); jolt(6 + level, 260); }, 200);
       } },
       { at: B.flip, run: (skip) => {
         if (skip) { el.classList.add('flip'); return; }
         flipNum();
-        setTimeout(() => { fire.burst(numBox.cx, numBox.top + 30, 60 + level * 10, 380, 0.5); sfx.ignite(Math.max(1, level - 1)); jolt(8, 300); }, 160);
+        setTimeout(() => { fire.burst(numBox.cx, numBox.top + 30, 12 + level * 2, 460); sfx.ignite(Math.max(1, level - 1)); jolt(8, 300); }, 160);
       } },
       { at: B.done, run: () => { el.classList.add('done'); } },
     ];
@@ -362,14 +359,12 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
         bodies[i].style.transform = `translate(${tr}, ${(p.y * s.px).toFixed(1)}px) scale(${p.sx.toFixed(3)}, ${p.sy.toFixed(3)})`;
         const hgt = heat(tt - i * 70, level);
         const lift = p.y * s.px;
-        // The body's fire rides with the character; the ground burns under it while it stands.
-        bodyE[i].y = s.foot + lift - s.hgt * 0.42;
-        bodyE[i].heat = tt < B.leap ? 0.05 + hgt * 0.4 : hgt;
-        groundE[i].heat = (tt < B.ignite ? hgt : hgt * 0.55) * (1 - clamp(-lift / (s.hgt * 0.5)));
+        // The fire rides with the character: a flicker at its feet while it gathers, then all round it.
+        const a = auras[i];
+        a.cx = s.cx; a.foot = s.foot; a.w = s.w; a.h = s.hgt; a.lift = lift;
+        a.heat = tt < B.ignite ? Math.max(0, hgt - 0.12) * 0.5 : hgt;
         figs[i].style.setProperty('--sh', (1 - clamp(-lift / (s.hgt * 0.6)) * 0.7).toFixed(2));
       });
-      numE.x = numBox.cx; numE.y = numBox.top; numE.w = numBox.w;
-      numE.heat = tt < B.slam + 150 ? 0 : 0.45 + 0.1 * Math.sin(tt / 120);
       heatGlow.style.opacity = Math.min(1, heat(tt, level) / 1.4).toFixed(2);
       fire.step(Math.min(0.05, (time - (last || time)) / 1000));
       last = time;
@@ -381,9 +376,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
       // Reduced motion: the end picture, its fire still (drawn once).
       for (const b of beats) { b.done = true; b.run(true); }
       for (let i = 0; i < 70; i++) {
-        bodyE.forEach((e) => { e.heat = 1; e.y = spots[0].foot - spots[0].hgt * 0.36; });
-        groundE.forEach((e) => { e.heat = 0.5; });
-        numE.x = numBox.cx; numE.y = numBox.top; numE.w = numBox.w; numE.heat = 0.5;
+        auras.forEach((a) => { a.heat = 1; });
         fire.step(1 / 60);
       }
       fire.draw();
