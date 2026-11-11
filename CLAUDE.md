@@ -1326,6 +1326,15 @@ duas/reflections section in Me.
       freeze), an extra freeze counts only where a day still needed it, a waiting push is sent when the app
       is hidden (timers stop there), another account's devices are dropped on an account switch, and the
       journey plan + page reading time are synced prefs (`journeyPlan`, `pageSeconds`).
+      **Everything syncs** (owner report 2026-11-11, "every piece of data"): `src/cloud/kv.ts` mirrors every other
+      localStorage key as a `user_docs` row `state/kv:{key}` = `{v, at}` (Learn path, page memory, weak words, adhkar /
+      du'a progress, room, character, styles, Ramadan, history, settings…); new keys sync by themselves unless listed as
+      device-only (`DEVICE`: caches, downloads, install id; prefixes `sb-`, `flag:`, `kids`, `debug`). Data from before
+      linking is merged, never replaced (objects key by key, lists joined, numbers the larger, dated records the newer);
+      progress keys (`UNION`) always merge; after that the newer change wins (deletions too). Locations are stripped
+      (`STRIP`) and kept on the device; values > 300 KB stay local. A pulled row that cannot be merged is skipped, a
+      refused batch is retried row by row and the refused keys show in the sync status, so one bad item never stops
+      the rest. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, settings match).
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);

@@ -5,7 +5,9 @@
 // log — as its own document, read combined; goals: the newest set wins), bookmarks and settings (one document each, merged per entry: the newest
 // change wins) and reel drafts (one document each, the most recently edited version wins; deletions
 // travel as tombstones), the Learn gardens (one document: trees, decorations, purchases) and reflections (one document per ayah's note, merged per paragraph: the
-// newest edit wins). Thumbnails and own media never leave the device.
+// newest edit wins). Everything else kept on the device follows too (cloud/kv.ts: one document per stored key,
+// merged so that neither device loses anything). Thumbnails, own media, voice recordings, downloads, caches
+// and the Kids space never leave the device.
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
 import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
@@ -16,6 +18,7 @@ import { mergePrefs, prefRecords, prefsBehind } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 import { installId, jitter, remoteConfig } from '../net';
+import { kvRecords, linkKv, mergeKv, resetKv, scanKv } from './kv';
 
 type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
 interface Row {
@@ -58,7 +61,7 @@ function loadMeta(user: string): Meta {
     const m = JSON.parse(localStorage.getItem(META_KEY) ?? 'null') as Meta | null;
     if (m && m.user === user && typeof m.pushed === 'object') return m;
     // Another account signed in here before: its other devices' streaks are not this account's.
-    if (m && m.user && m.user !== user) clearOtherJourneys();
+    if (m && m.user && m.user !== user) { clearOtherJourneys(); resetKv(); }
   } catch {
     /* fresh */
   }
@@ -74,12 +77,18 @@ function saveMeta(m: Meta) {
 const deviceId = installId;
 
 // --- merging what other devices wrote ---
-async function applyRemote(rows: Row[], meta: Meta) {
+async function applyRemote(rows: Row[], meta: Meta): Promise<boolean> {
   await loadReflections();
-  let prefsChanged = false;
+  let prefsChanged = false, kvChanged = false;
   for (const r of rows) {
     const key = `${r.kind}/${r.id}`;
-    if (r.kind === 'state' && r.id === 'bookmarks') {
+    // One row that cannot be merged (an older or newer app's shape) must never stop the rest syncing.
+    try {
+    if (r.kind === 'state' && r.id.startsWith('kv:')) {
+      const res = mergeKv(r.id.slice(3), r.data, r.deleted);
+      if (res.print) meta.pushed[key] = res.print; // already on the server: don't send it back
+      if (res.changed) kvChanged = true;
+    } else if (r.kind === 'state' && r.id === 'bookmarks') {
       mergeBookmarks(Array.isArray(r.data.items) ? r.data.items : []);
     } else if (r.kind === 'setting' && r.id === 'prefs') {
       // The older all-in-one document (still written, for older app versions).
@@ -112,12 +121,24 @@ async function applyRemote(rows: Row[], meta: Meta) {
         await saveDraft({ id: r.id, project, created: Number(r.data.created) || updated, updated });
       }
     }
+    } catch (e) {
+      console.warn('Sync: could not merge', key, e);
+    }
   }
   if (prefsChanged) {
     window.dispatchEvent(new Event('prefs-synced')); // the theme, the translation, …
     window.dispatchEvent(new Event('journey-changed')); // a journey plan or the page reading time
   }
+  return kvChanged;
 }
+/** Values that arrived from another device: every screen that shows them repaints. */
+function announceKv() {
+  quiet = true;
+  try {
+    for (const ev of ['kv-synced', 'prefs-synced', 'journey-changed', 'garden-changed', 'pages-changed', 'room-look', 'ramadan-changed', 'bookmarks-changed']) window.dispatchEvent(new Event(ev));
+  } finally { quiet = false; }
+}
+let quiet = false; // set while announcing what arrived, so it does not start another round
 
 // --- this device's documents ---
 const hasGarden = () => { try { return !!localStorage.getItem('garden'); } catch { return false; } };
@@ -143,6 +164,7 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
     const data = { s: r.s, a: r.a, entries: r.entries };
     add('reflection', r.id, data, JSON.stringify(r.entries), r.entries.every((e) => e.deleted));
   }
+  for (const r of kvRecords()) add('state', `kv:${r.key}`, r.data, r.print, r.deleted);
   for (const d of await listDrafts()) add('draft', d.id, { project: d.project, created: d.created, updated: d.updated }, String(d.updated));
   for (const [id, at] of Object.entries(deletedDrafts())) add('draft', id, { updated: at }, `deleted:${at}`, true);
   return out;
@@ -176,6 +198,8 @@ async function round() {
   try {
     const sb = await supabase();
     const meta = loadMeta(acc.id);
+    scanKv(); // what changed here since the last round, before anything arrives
+    let kvChanged = false;
 
     // Pull everything changed since the last sync (all of it the first time).
     for (;;) {
@@ -185,22 +209,37 @@ async function round() {
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data ?? []) as Row[];
-      await applyRemote(rows, meta);
+      if (await applyRemote(rows, meta)) kvChanged = true;
       if (rows.length) meta.pulled = rows[rows.length - 1].updated_at ?? meta.pulled;
       saveMeta(meta);
       if (rows.length < 500) break;
     }
 
+    if (kvChanged) announceKv();
+
     // Push what changed here since it was last pushed (merged state included).
     const changed = (await localRows(acc.id)).filter((d) => meta.pushed[d.key] !== d.print);
+    const refused: string[] = [];
     for (let i = 0; i < changed.length; i += 50) {
       const batch = changed.slice(i, i + 50);
       const { error } = await sb.from('user_docs').upsert(batch.map((d) => d.row), { onConflict: 'user_id,kind,id' });
-      if (error) throw error;
-      for (const d of batch) meta.pushed[d.key] = d.print;
+      if (error) {
+        if (!navigator.onLine) throw error;
+        // One document the server refuses (too large, say) must not hold back the others: send them one by one.
+        for (const d of batch) {
+          const one = await sb.from('user_docs').upsert([d.row], { onConflict: 'user_id,kind,id' });
+          if (one.error) { refused.push(d.key); console.warn('Sync: not saved', d.key, one.error.message); continue; }
+          meta.pushed[d.key] = d.print;
+          if (d.key.startsWith('state/kv:')) linkKv([d.key.slice(9)]);
+        }
+      } else {
+        for (const d of batch) meta.pushed[d.key] = d.print;
+        linkKv(batch.filter((d) => d.key.startsWith('state/kv:')).map((d) => d.key.slice(9)));
+      }
       saveMeta(meta);
     }
-    setStatus({ state: 'ok', at: Date.now() });
+    if (refused.length) setStatus({ state: 'error', at: Date.now(), error: `${refused.length} item(s) could not be saved: ${refused.slice(0, 3).join(', ')}` });
+    else setStatus({ state: 'ok', at: Date.now() });
     failures = 0;
   } catch (e) {
     console.warn('Sync failed', e);
@@ -230,6 +269,7 @@ const soon = (ms = 4000) => {
  *  a reward claimed just before leaving would otherwise reach the other devices only at the next open.
  *  This is the round that was already due, only sooner (none after a failure: the back-off holds). */
 const onHide = () => {
+  if (account() && !failures && scanKv()) pending = true; // something else changed here (a lesson, a setting…)
   if (!pending || failures) return;
   clearTimeout(timer);
   pending = false;
@@ -250,11 +290,11 @@ export function startSync() {
     if (a) void syncNow();
     else setStatus({ state: 'off', at: null });
   });
-  for (const ev of ['bookmarks-changed', 'reflections-changed', 'garden-changed']) window.addEventListener(ev, () => soon());
+  for (const ev of ['bookmarks-changed', 'reflections-changed', 'garden-changed', 'pages-changed', 'room-look', 'ramadan-changed']) window.addEventListener(ev, () => { if (!quiet) soon(); });
   // The Me tab (streak, goals, counts) changes often while counting dhikr: sync once it rests.
-  for (const ev of ['journey-changed', 'readlog-changed']) window.addEventListener(ev, () => soon(20_000));
+  for (const ev of ['journey-changed', 'readlog-changed']) window.addEventListener(ev, () => { if (!quiet) soon(20_000); });
   // The reel look is remembered at every studio edit, like the draft below.
-  window.addEventListener('prefs-changed', (e) => soon((e as CustomEvent).detail === 'reelLook' ? 20_000 : 4000));
+  window.addEventListener('prefs-changed', (e) => quiet || soon((e as CustomEvent).detail === 'reelLook' ? 20_000 : 4000));
   // The studio saves its draft ~1 s after every edit: sync once the editing has rested a while,
   // not a pull + push round after each pause (leaving the studio still syncs within 20 s).
   window.addEventListener('drafts-changed', () => soon(20_000));
