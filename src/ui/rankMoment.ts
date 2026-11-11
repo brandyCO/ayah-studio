@@ -176,8 +176,8 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
     vibrate([8]);
     later(1300, () => {
       stage.classList.add('go');
-      if (dir === 'up') { burst(70, 1.05); sfx.open(); me?.cheer(2600); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
-      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); me?.nod(); later(300, () => me?.hop(0.4)); }
+      if (dir === 'up') { burst(70, 1.05); sfx.open(); me?.cheer(2600); me?.face('star', 2600); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
+      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); me?.nod(); me?.face('proud', 1800); later(300, () => me?.hop(0.4)); }
       else { vibrate([10]); me?.sink(); }
     });
   });

@@ -5,7 +5,7 @@
 // Speed (owner 2026-11-10, "it lags a little when I press the characters"): the whole-body moves (hop, lean, sink,
 // stretch, the breathing bob) and the ground shadow run on HTML layers around the SVG (`layer()`), which the
 // compositor moves without repainting anything; only the head, eyes and arms still move inside the drawing.
-import { encode, figureSvg, normalize, parse } from './figure';
+import { FIG_CODE, encode, figureSvg, normalize, parse, type Xp } from './figure';
 import { h } from './dom';
 import { reduced } from './juice';
 import { sfx } from './sfx';
@@ -13,7 +13,7 @@ import './figure.css';
 
 /** The character this device last saved (kept by setFigure in together/ranks.ts). */
 export function myFigureCode(): string | null {
-  try { const c = localStorage.getItem('rankFigure'); return c && /^[0-9a-z]{14}$/.test(c) ? c : null; } catch { return null; }
+  try { const c = localStorage.getItem('rankFigure'); return c && FIG_CODE.test(c) ? c : null; } catch { return null; }
 }
 
 /** Keeps in this copy of the drawing only what `sel` matches (and the groups around it). */
@@ -148,6 +148,8 @@ export interface Actor {
   glance(dir?: number): void;
   /** A long slow stretch, arms up (mornings). */
   stretch(): void;
+  /** Shows an expression for `ms` (with a face; null = back to the face as built). */
+  face(xp: Xp | null, ms?: number): void;
 }
 
 /** How the character looks on Me at this moment of the day (owner idea 2026-11-10, "reacts to your day"):
@@ -194,7 +196,12 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
   el.innerHTML = figureSvg(f, { actor: true });
   layer(el);
   rest(el);
-  let armsT = 0;
+  let armsT = 0, faceT = 0;
+  const face = (xp: Xp | null, ms = 1600) => {
+    el.querySelectorAll('svg.fg').forEach((e) => { for (const c of [...e.classList]) if (c.startsWith('xp-')) e.classList.remove(c); if (xp) e.classList.add(`xp-${xp}`); });
+    clearTimeout(faceT);
+    if (xp && ms > 0) faceT = window.setTimeout(() => face(null), ms);
+  };
   const pose = (c: 'cheer' | 'waving', ms: number) => {
     poseClass(el, 'cheer', false); poseClass(el, 'waving', false);
     poseClass(el, c, true);
@@ -219,19 +226,23 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
     lean(dir) {
       const { act, tx } = parts(el);
       if (!act || reduced()) return;
+      face('wow', 900);
       act.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `${tx(dir * 5)} 0`, rotate: `${dir * 4}deg`, offset: 0.3 }, { translate: `${tx(dir * 5)} 0`, rotate: `${dir * 4}deg`, offset: 0.7 }, { translate: '0 0', rotate: '0deg' }], { duration: 700, easing: 'ease-in-out' });
     },
     sink() {
       const { act, head, ty } = parts(el);
+      face('calm', 1800);
       if (!act || reduced()) return;
       act.animate([{ transform: 'none' }, { transform: `translateY(${ty(5)}) scale(1.03, .95)`, offset: 0.35 }, { transform: `translateY(${ty(5)}) scale(1.03, .95)`, offset: 0.65 }, { transform: 'none' }], { duration: 1600, easing: 'ease-in-out' });
       head?.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.35 }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.65 }, { rotate: '0deg', translate: '0 0' }], { duration: 1600, easing: 'ease-in-out', composite: 'add' });
     },
     nod: () => nod(el),
+    face,
     glance: (dir) => glance(el, dir),
     stretch() {
       const { act, ty } = parts(el);
       if (!act || reduced()) return;
+      face('sleepy', 900);
       pose('cheer', 1700);
       act.animate([{ transform: 'none' }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.45 }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.7 }, { transform: `translateY(${ty(1)}) scale(1.03, .97)`, offset: 0.88 }, { transform: 'none' }], { duration: 1700, easing: 'ease-in-out' });
     },

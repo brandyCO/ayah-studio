@@ -418,6 +418,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       sfx.open(epic, tier);
       nr?.cheer();
       me?.cheer(epic ? 3000 : 2200);
+      if (epic) me?.face('star', 3000);
       chestBox!.classList.add('open');
       stage.classList.add('opened');
       el.classList.add('opened');
@@ -474,6 +475,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.4 - k.top, 30 + tier * 8, 0.75);
       nr?.glow(1);
       me?.hop(0.9);
+      me?.face('wow', 1100);
       later(470, () => {
         // Slammed shut: the whole chest squashes and the room shakes a little.
         squash(jolt!, 0.32, { stiffness: 420, damping: 12 });

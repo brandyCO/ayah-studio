@@ -140,6 +140,6 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       nr.hop(1);
       me?.glance(1);
     });
-    later(2500, () => { el.classList.add('done'); fx?.motes(true); sfx.shimmer(); nr.cheer(); nr.glow(1); me?.cheer(2400); });
+    later(2500, () => { el.classList.add('done'); fx?.motes(true); sfx.shimmer(); nr.cheer(); nr.glow(1); me?.cheer(2400); me?.face(isMilestone(days) ? 'star' : 'proud', 2400); });
   });
 }
