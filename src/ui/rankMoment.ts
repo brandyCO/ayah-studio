@@ -105,7 +105,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     const opened = performance.now();
     ok.addEventListener('click', close);
-    el.addEventListener('click', (e) => { if (e.target !== ok && performance.now() - opened > 2400) close(); });
+    el.addEventListener('click', (e) => { if (e.target !== ok && performance.now() - opened > (kind === 'passed' ? 900 : 2400)) close(); });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
@@ -208,11 +208,12 @@ function passedMoment(names: string[], { s, players }: Ctx): Promise<void> {
     h('p', { class: 'cel-sub' }, next ? rt('rk.passNext', { name: next.name ?? rt('rk.private'), n: num(gap) }) : rt('rk.passTop')));
   const c = TIER_RING[s.tier];
   return frame('passed', title, stage, text, [rgbaOf(c), rgbaOf('#fff7e0')], ({ later, burst }) => {
-    later(700, () => {
+    // Snappy (owner 2026-11-11, "a bit slow"): the glide starts almost at once and lands in about half a second.
+    later(260, () => {
       stage.classList.add('go');
       sfx.whoosh();
-      passed.forEach((_, k) => later(260 + k * 140, () => sfx.tick()));
+      passed.forEach((_, k) => later(120 + k * 90, () => sfx.tick()));
     });
-    later(700 + 650 + passed.length * 140, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); sfx.shimmer(); bump(mine, 0.12); if (duo) { meA!.cheer(); later(350, () => themA!.wave()); } });
+    later(260 + 480 + passed.length * 60, () => { burst(40, 0.7, -ladder.offsetHeight / 2 + 22); sfx.shimmer(); bump(mine, 0.12); if (duo) { meA!.cheer(); later(350, () => themA!.wave()); } });
   });
 }

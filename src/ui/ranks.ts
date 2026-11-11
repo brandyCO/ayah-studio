@@ -14,7 +14,9 @@ import {
   StaleMiss, staleFirst, refreshCached,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
+import { bump } from './juice';
 import { star } from './lightChip';
+import { pageSeconds } from '../data/journey';
 import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
@@ -72,6 +74,19 @@ const left = (ms: number) => {
   return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
 };
 
+/** Ranks points have their own mark (a violet badge with a rising chevron), so they never look like Light's star. */
+export function ptsIcon(cls = ''): SVGSVGElement {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('class', `rk-pts-ic ${cls}`.trim());
+  s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = '<path class="rk-pts-bg" d="M12 1.8 21 7v10l-9 5.2L3 17V7z"/>'
+    + '<path class="rk-pts-hi" d="M12 1.8 21 7v3.2L12 5 3 10.2V7z"/>'
+    + '<path class="rk-pts-up" d="m7.6 14.6 4.4-4.4 4.4 4.4" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
+  return s;
+}
+const pts = (n: number, unit = true) => h('span', { class: 'rk-pts' }, ptsIcon(), num(n), unit ? h('span', { class: 'rk-pts-u' }, rt('rk.ptsShort')) : '');
+
 /** Places moved since yesterday: a small green ▲2 or red ▼1 beside the name. */
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
@@ -94,7 +109,7 @@ export function podium(rows: Row[]): HTMLElement | '' {
       onclick: () => { if (a) (r.me ? a.wave() : a.hop(0.6)); else hopFig(el, 12, 480, false); haptic(8); } },
       h('span', { class: 'rk-pod-who' }, place === 1 ? h('span', { class: 'rk-pod-beam', 'aria-hidden': 'true' }) : '', who),
       h('span', { class: 'rk-pod-name' }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
-      h('span', { class: 'rk-pod-step' }, h('b', {}, String(place)), h('span', {}, num(r.score))));
+      h('span', { class: 'rk-pod-step' }, h('b', {}, String(place)), h('span', {}, ptsIcon(), num(r.score))));
     return { el, a };
   };
   const [g, sv, br] = [spot(top[0], 1), spot(top[1], 2), spot(top[2], 3)];
@@ -119,7 +134,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
       h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
-      h('span', { class: 'rk-score' }, num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
+      h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
     if (zones && i === LEAGUE.up - 1 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
   });
   return h('ol', { class: 'rk-list' }, ...items);
@@ -152,7 +167,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       avatar(fig ? 0 : null, 0, 36, 0, fig));
   };
   const signedOut = () => {
-    topActs.replaceChildren(localAv());
+    topActs.replaceChildren(infoBtn(), localAv());
     head.replaceChildren();
     tabs.replaceChildren();
     body.replaceChildren(h('div', { class: 'rk-signin me-card' },
@@ -162,21 +177,38 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'primary brand-btn', onclick: () => openAccount() }, rt('rk.signIn')),
       howBtn()));
   };
-  const howBtn = () => h('button', { class: 'chip rk-how-btn', onclick: openHow }, rt('rk.how'));
+  const howBtn = () => h('button', { class: 'chip rk-how-btn', onclick: openHow }, rt('rk.info'));
+  /** How Ranks work (the ⓘ in the top bar): points, Light and leagues side by side, so the two never get mixed up. */
   function openHow() {
-    sheet(rt('rk.how'), h('div', { class: 'sheet-scroll rk-how' },
-      h('ul', {},
-        h('li', {}, rt('rk.ptPage', { n: POINTS.page })),
-        h('li', {}, rt('rk.ptMinute', { n: POINTS.minute })),
-        h('li', {}, rt('rk.ptSurah', { n: POINTS.surah })),
-        h('li', {}, rt('rk.ptReel', { n: POINTS.reel })),
-        h('li', {}, rt('rk.ptLesson', { n: POINTS.lesson })),
-        h('li', {}, rt('rk.ptDay', { n: POINTS.day }))),
-      h('p', { class: 'rk-not-light' }, rt('rk.notLight')),
+    const secs = pageSeconds();
+    const rt2 = secs % 60 ? `${Math.floor(secs / 60)}½` : String(secs / 60);
+    const earn = (icon: string, label: string, sub: string, n: number | string) => h('li', { class: 'rk-earn' },
+      h('span', { class: 'rk-earn-ic', 'aria-hidden': 'true' }, icon),
+      h('span', { class: 'rk-earn-txt' }, h('b', {}, label), sub ? h('small', { class: 'muted' }, sub) : ''),
+      h('span', { class: 'rk-earn-n' }, `+${n}`));
+    const card = (cls: string, icon: Node, title: string, ...body: (Node | string)[]) => h('section', { class: `rk-info ${cls}` },
+      h('div', { class: 'rk-info-head' }, h('span', { class: 'rk-info-ic' }, icon), h('h3', {}, title)), ...body);
+    const big = (el: SVGSVGElement) => { el.classList.add('big'); return el; };
+    sheet(rt('rk.info'), h('div', { class: 'sheet-scroll rk-how' },
+      card('pts', ptsIcon('big'), rt('rk.iPtsTitle'),
+        h('p', {}, rt('rk.iPtsBody')),
+        h('p', { class: 'rk-info-sub' }, rt('rk.iEarn')),
+        h('ul', { class: 'rk-earns' },
+          earn('📖', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
+          earn('🎧', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
+          earn('🌿', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
+          earn('✅', rt('rk.eaSurah'), '', POINTS.surah),
+          earn('🎬', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
+          earn('📅', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
+          earn('🎯', rt('rk.eaQuest'), rt('rk.eaQuestSub'), 50))),
+      card('light', big(star()), rt('rk.iLightTitle'), h('p', {}, rt('rk.iLightBody'))),
+      card('league', tierEmblem(0) as unknown as Node, rt('rk.iLeagueTitle'),
+        h('p', {}, rt('rk.iLeagueBody', { size: LEAGUE.size, up: LEAGUE.up, down: LEAGUE.down }))),
+      card('when', h('span', { 'aria-hidden': 'true' }, '⏱'), rt('rk.iWhenTitle'), h('p', {}, rt('rk.iWhenBody'))),
       h('p', { class: 'muted small' }, rt('rk.fair')),
-      h('p', { class: 'muted small' }, rt('rk.fairNote')),
-      h('p', { class: 'muted small' }, rt('rk.league', { size: LEAGUE.size, up: LEAGUE.up, down: LEAGUE.down }))));
+      h('p', { class: 'muted small' }, rt('rk.fairNote'))));
   }
+  const infoBtn = () => h('button', { class: 'rk-info-btn', 'aria-label': rt('rk.info'), title: rt('rk.info'), onclick: openHow }, 'i');
   function openName() {
     const input = h('input', { class: 'search', maxlength: 24, value: rankName(), 'aria-label': rt('rk.name') });
     const d = sheet(rt('rk.name'), h('div', { class: 'sheet-scroll' },
@@ -199,11 +231,12 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const s = await rankStatus(fresh);
     status = s;
     if (!s) {
-      topActs.replaceChildren(localAv());
+      topActs.replaceChildren(infoBtn(), localAv());
       head.replaceChildren(h('div', { class: 'rk-me me-card' }, h('p', {}, rt('rk.notYet')), howBtn()));
       return;
     }
     topActs.replaceChildren(
+      infoBtn(),
       bell,
       h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, star(), num(lightLeft())),
       h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame, s.figure)));
@@ -211,7 +244,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('div', { class: `rk-hero t${s.tier}` },
         ladder(s.tier),
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
-        h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends)),
+        h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
+        h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
+          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);
@@ -243,7 +278,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('div', { class: 'rk-me-txt' },
           h('button', { class: 'rk-me-name', onclick: () => { d.close(); openName(); }, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
           tierBadge(s.tier)),
-        h('div', { class: 'rk-me-score' }, h('b', {}, num(s.week)), h('span', { class: 'muted small' }, rt('rk.ptsWeek')))),
+        h('div', { class: 'rk-me-score' }, h('b', {}, pts(s.week, false)), h('span', { class: 'muted small' }, rt('rk.ptsWeek')))),
         h('p', { class: 'muted small' }, rt('rk.notLight')),
       h('div', { class: 'rk-me-line' },
         h('span', {}, s.weekPlace ? rt('rk.place', { n: num(s.weekPlace), of: num(s.weekPlayers) }) : rt('rk.noPlace')),
@@ -254,7 +289,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, `🏆  ${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
         s.last ? h('button', { class: 'menu-item', onclick: () => { d.close(); void recap(s); } }, `↗  ${rt('rk.recapShare')}`) : '',
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `?  ${rt('rk.how')}`)),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `ⓘ  ${rt('rk.info')}`)),
       isNative() ? h('label', { class: 'rk-note-toggle small' },
         h('input', { type: 'checkbox', checked: leagueNoteOn(), onchange: (e: Event) => setLeagueNote((e.target as HTMLInputElement).checked) }),
         ` ${rt('rk.noteToggle')}`) : ''));
@@ -296,7 +331,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     momentsPlaying = true;
     try {
       // Let the screen settle first; skip it if the user has already left Ranks or a sheet is open.
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 200));
       if (!momentBox.isConnected || document.querySelector('dialog[open], .cel')) return;
       const { playRankMoments } = await import('./rankMoment');
       takeRankMoments(s, lg);
@@ -673,6 +708,24 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   let paintId = 0;
   // Painting from the answers kept on this device (Ranks opens at once, then the fresh paint follows).
   let fromKept = false;
+  /** Points that arrived since the last paint float up from your row ("+10") and the hero's pill bumps. */
+  let shownPts: number | null = null;
+  function showGain() {
+    const now = status?.week;
+    if (now == null) return;
+    const gain = shownPts == null ? 0 : now - shownPts;
+    shownPts = now;
+    if (gain <= 0) return;
+    const row = body.querySelector<HTMLElement>('.rk-row.me');
+    const score = row?.querySelector<HTMLElement>('.rk-score');
+    if (row && score && metric === 'all') {
+      score.append(h('span', { class: 'rk-gain', 'aria-hidden': 'true' }, `+${num(gain)}`));
+      row.classList.remove('gain'); void row.offsetWidth; row.classList.add('gain');
+    }
+    const pill = head.querySelector<HTMLElement>('.rk-hero-pts');
+    if (pill) bump(pill, 0.14);
+    haptic(8);
+  }
   async function paint(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
@@ -683,6 +736,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       if (fresh) await report();
       await paintHead(fresh);
       await paintBody(fresh);
+      showGain();
     } catch (e) {
       if (e instanceof StaleMiss) return;
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));
@@ -719,7 +773,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (document.hidden || polling || !account() || document.querySelector('dialog[open], .cel')) return;
     polling = true;
     try { await report(); if (await refreshCached()) await paint(false); } finally { polling = false; }
-  }, 12_000);
+  }, 8_000);
   return () => { off(); clearInterval(tick); clearInterval(live); };
 }
 
