@@ -1546,7 +1546,8 @@ duas/reflections section in Me.
       before dawn (2 h before Fajr: crescent, first blue line), Fajr (lilac and rose, low pale sun), Dhuhr (clear blue, high sun,
       clouds), Asr (golden afternoon), Maghrib (from 25 min before: orange into magenta, sun at the horizon), Isha (2½ h: deep
       blue, crescent) and the night's sleep (full moon, every star); each with its own horizon (hills, a masjid with lit windows
-      after dark) and clouds by day, as background layers; pills on dark glass. From the prayer times, else by the hour
+      after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
+      always pops. From the prayer times, else by the hour
       (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
