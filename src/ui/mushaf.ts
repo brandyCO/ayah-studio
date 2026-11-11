@@ -191,6 +191,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       el.classList.add('play-ayah');
       if (playing.w !== null && Number(el.dataset.p) === playing.w) el.classList.add('play-word');
     }
+    // A page that scrolls (phone on its side): keep the line being recited in view.
+    if (following && document.body.classList.contains('mushaf-wide')) {
+      const cur = strip.querySelector<HTMLElement>(`.mushaf-page[data-page="${page}"]`);
+      const w = cur?.querySelector<HTMLElement>('.play-word') ?? cur?.querySelector<HTMLElement>('.play-ayah');
+      if (cur && w) {
+        const top = w.offsetTop, bottom = top + w.offsetHeight;
+        if (top < cur.scrollTop || bottom > cur.scrollTop + cur.clientHeight) cur.scrollTo({ top: top - cur.clientHeight / 3, behavior: 'smooth' });
+      }
+    }
   }
 
   const playHere = (s: number, a: number) => { following = true; firstPosition = false; void player.playFrom(s, a); };
@@ -348,10 +357,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     return h('div', { class: 'mp-line text' }, ...words);
   };
 
-  /** Font size so the widest line spans the page width; lines spread over the full height. */
+  /** Font size so the widest line spans the page width; lines spread over the full height.
+   *  Wide and low (a phone on its side): the page keeps a mushaf page's shape at the full width
+   *  and scrolls up and down, so the words keep their size instead of shrinking into wide gaps. */
   function fit(el: HTMLElement) {
     const lines = el.querySelectorAll<HTMLElement>('.mp-line');
-    const lh = Math.floor((el.clientHeight - 10) / 15); // inside the page's 5 px top/bottom padding
+    const tall = document.body.classList.contains('mushaf-wide');
+    const lh = tall ? Math.floor((el.clientWidth * 1.45) / 15) : Math.floor((el.clientHeight - 10) / 15); // inside the page's 5 px top/bottom padding
     el.style.setProperty('--lh', `${lh}px`);
     const base = 30;
     el.style.setProperty('--f', `${base}px`);
@@ -367,7 +379,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     el.dataset.fit = '1';
     paintMarks(el); // positions depend on the line heights just set
   }
-  const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
+  const setWide = () => document.body.classList.toggle('mushaf-wide', innerWidth > innerHeight && innerHeight < 640);
+  setWide();
+  const refitAll = () => { setWide(); strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit); };
 
   // --- pages: built once (font loaded), kept while near the current page ---
   const built = new Map<number, HTMLElement>();
@@ -393,7 +407,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const W = () => view.clientWidth + 16; // a page width plus a small gap between the sheets
   function place() {
-    for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
+    for (const el of strip.children as HTMLCollectionOf<HTMLElement>) {
+      el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
+      if (Number(el.dataset.page) !== page) el.scrollTop = 0; // a page turned to starts at its top
+    }
   }
 
   let recentTimer = 0;
@@ -674,7 +691,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(resizeTimer);
     sel.destroy();
     detachPlayer(); // the recitation carries on (the bar moves above the tab bar)
-    if (mount === mounts) document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
+    if (mount === mounts) document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up', 'mushaf-wide');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };
