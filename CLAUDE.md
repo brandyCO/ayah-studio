@@ -1784,8 +1784,8 @@ duas/reflections section in Me.
       `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
       `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`
 - [x] M18 Character power-up (owner request 2026-11-11, "like Duolingo's streak where the character is on fire, a Dragon Ball
-      scene"): `src/ui/powerUp.ts` + `powerUp.css` (lazy). After the daily streak moment, and when the lit flame on Me is
-      tapped, the user's character crouches and trembles while light streams into it, then an aura of flat two-tone
+      scene"): `src/ui/powerUp.ts` + `powerUp.css` (lazy). On a level-up and at friend-streak milestones (owner 2026-11-11:
+      no tap on the Me flame, not after the streak moment), the user's character crouches and trembles while light streams into it, then an aura of flat two-tone
       flame-light erupts round it (two outlines per layer taking turns, tongues rising, a shockwave), it floats up and the
       streak number slams in over speed lines. Five levels by streak (`LEVELS` 1 / 7 / 30 / 100 / 365: Glowing, Burning,
       Blazing with lightning and rising stones, Radiant in gold with rays, Like the dawn in gold and rose); "New level!" on
@@ -1797,7 +1797,7 @@ duas/reflections section in Me.
       shockwave → the number rolls → the flame springs back tall → the week row fills (lit days joined into a bar); white
       background. **Power-up**: the character stands *inside* one big flame (`FlatFire.bigFlame`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
-      spiral up on the leap. The streak moment no longer chains into the power-up (tap the Me flame for it)
+      spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
 - [x] M19 Friends on Ranks (owner request 2026-11-11): a tap on a player in the **league** (not Global) opens their
       profile (`src/ui/friends.ts`, strings `src/i18n/friends.ts`): both characters side by side (on fire together while
       both earned XP today, `blazingPair()` in `powerUp.ts`), the name, tier, level, the friend streak and only the stats
