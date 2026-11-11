@@ -1801,6 +1801,11 @@ duas/reflections section in Me.
       `20261111400000_rank_friends.sql` (public `pid` per player, `rank_friends`, `rank_friend_asks` without table access;
       `rank_profile`, `rank_set_profile`, `rank_friend_ask` / `_answer` / `_remove` / `_invite` / `_invite_preview` /
       `_join`, `rank_my_friends`; ≤ 100 friends, 30 asks waiting, 20 a day); pgTAP `rank_friends.test.sql` (20)
+      No loading anywhere (owner, same day): the profile is a **full page** (`dialog.fr-page`, ‹ / Android back via a
+      history entry) shown at once from the profile kept on the device (`peekProfile()`, localStorage `rankProfiles`, per
+      account, newest 60) or from the board row, then updated in place; while the league shows, its players' profiles (top 3
+      first, `preloadProfiles()`) and the Friends tab are fetched ahead (`warmFriends()`); Add / Accept / Remove show their
+      result at once and the server's answer follows quietly
 - [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
       (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
       (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =

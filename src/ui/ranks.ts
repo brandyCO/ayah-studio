@@ -546,6 +546,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         podium(lg.players),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
+      // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
+      void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
     } else if (view === 'friends') {
       const m = await import('./friends');
       body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
