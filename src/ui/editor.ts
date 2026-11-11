@@ -7,7 +7,7 @@ import { starButton } from './favStar';
 import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
 import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
-import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadWordMap, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { covers, DEFAULT_RECITER, groupRecordings, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
@@ -60,7 +60,7 @@ import { exportQuality, reelLook, reelReciter, setExportQuality, setReelLook, se
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
-import { t as ui, tOr } from '../i18n';
+import { errMsg, t as ui, tOr, uiRef } from '../i18n';
 import { translationList } from './translationPicker';
 import { recordingChips, reciterSearchBox } from './recordings';
 
@@ -346,7 +346,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.sceneMode = project.scenes.length > 1 ? 'custom' : 'single';
   }
   function addScene(id: string) {
-    if (project.scenes.length >= MAX_SCENES && project.sceneMode !== 'single') return toast(`Up to ${MAX_SCENES} scenes`);
+    if (project.scenes.length >= MAX_SCENES && project.sceneMode !== 'single') return toast(ui('ed.maxScenes', { n: MAX_SCENES }));
     toCustom();
     const lens = project.sceneMode === 'custom' ? project.sceneLengths : [tl?.duration ?? 1];
     const sum = lens.reduce((a, b) => a + b, 0);
@@ -389,7 +389,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!tl) return;
     const sc = tl.scenes[i];
     if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(ui('ed.splitWhere', { s: MIN_SCENE }));
-    if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
+    if (project.scenes.length >= MAX_SCENES) return toast(ui('ed.maxScenes', { n: MAX_SCENES }));
     // The second part continues the video from the frame at the playhead.
     const v = media[sc.entry]?.video;
     const clip = fitClips()[sc.entry];
@@ -1026,7 +1026,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const r = await searchStock({ source: src.pixabay ? 'pixabay' : 'pexels', type: 'video', q: f.q, page: 1 });
       if (quick.pref === pref) quick.hits = r.hits.filter((x) => (x.duration ?? 0) >= 5).slice(0, 6);
     } catch (e) {
-      quick.error = e instanceof Error ? e.message : String(e);
+      quick.error = errMsg(e);
     }
     quick.searching = false;
     quickRefresh();
@@ -1050,7 +1050,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       scenesChanged();
       changed();
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e));
+      toast(errMsg(e));
     }
     quick.loading = null;
     quickRefresh();
@@ -2227,7 +2227,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         return loadAudio();
       }
       setStatus(navigator.onLine
-        ? ui('ed.audioFailed', { msg: e instanceof Error ? e.message : String(e) })
+        ? ui('ed.audioFailed', { msg: errMsg(e) })
         // Reels opened before keep their recitation on the device; this one was not downloaded yet.
         : ui('ed.offlineAudio'));
     }
@@ -2515,7 +2515,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
       if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
-      await LocalNotifications.schedule({ notifications: [{ id: 7300, title: ui('ed.ready-title'), body: reference(s, from, to), smallIcon: 'ic_stat_crescent' }] });
+      await LocalNotifications.schedule({ notifications: [{ id: 7300, title: ui('ed.ready-title'), body: uiRef(s, from, to), smallIcon: 'ic_stat_crescent' }] });
     } catch { /* fine */ }
   }
   /** Save / Share in the Android app: the file is written once, then shared by its URI. */
@@ -2535,7 +2535,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       });
       return saving;
     };
-    const fail = (what: string) => (e: unknown) => toast(`${what}: ${e instanceof Error ? e.message : e}`);
+    const fail = (what: string) => (e: unknown) => toast(`${what}: ${errMsg(e)}`);
     saveBtn.onclick = () => void save().catch(fail(ui('ed.saveFailed')));
     return h('div', { class: 'export-actions' }, saveBtn,
       h('button', {

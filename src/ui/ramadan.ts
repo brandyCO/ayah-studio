@@ -10,7 +10,7 @@
 import { ayahAudio } from '../data/audio';
 import { draftHash, newDraftId, saveDraft } from '../data/drafts';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
-import { loadMeta, reference, surahText } from '../data/quran';
+import { loadMeta, surahText } from '../data/quran';
 import {
   daysToRamadan, mostReturned, setTaraweeh, PAGES, planPages, ramadanData, ramadanNow, ramadanSettings, setPlan, setRamadanSettings, setRecapSeen,
   setWelcomed, todayPortion, type Plan,
@@ -22,7 +22,7 @@ import { PRAYERS, prayerDay, prayerSettings } from '../data/prayer';
 import { isNative } from '../native';
 import { h, toast } from './dom';
 import { lastRead, reelLook, reelReciter } from './prefs';
-import { locale, t as tr } from '../i18n';
+import { locale, t as tr, uiRef } from '../i18n';
 
 export interface RamadanContext {
   goToPage(page: number): void;
@@ -96,7 +96,7 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
   if (now.day && new Date().getHours() >= 16) {
     const t = await tonightsAyah();
     const meta = await loadMeta();
-    items.push({ icon: '✧', text: tr('ram.tonight', { ref: reference(meta[t.s - 1], t.a, t.a) }), onClick: () => void tonightsReel() });
+    items.push({ icon: '✧', text: tr('ram.tonight', { ref: uiRef(meta[t.s - 1], t.a, t.a) }), onClick: () => void tonightsReel() });
   }
   if (now.eid && (d.days.length || d.khatms)) items.push({ icon: '☾', text: tr('ram.eidYours'), onClick: () => void openRecap() });
   return items;
@@ -208,7 +208,7 @@ export async function openRecap() {
     ayahBlock = h('div', { class: 'recap-ayah' },
       h('p', { class: 'moment-sub' }, tr('ram.returnedMost')),
       h('p', { class: 'recap-ar', dir: 'rtl', lang: 'ar' }, text),
-      h('p', { class: 'muted' }, reference(meta[s - 1], a, a)),
+      h('p', { class: 'muted' }, uiRef(meta[s - 1], a, a)),
       listen);
   }
   const days = d.days.length;

@@ -22,8 +22,8 @@ import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
-import { loadMeta, reference, type SurahMeta } from '../data/quran';
-import { LANGS, lang, locale, setLang, surahName, t, type Key } from '../i18n';
+import { loadMeta, type SurahMeta } from '../data/quran';
+import { LANGS, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
@@ -773,7 +773,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintLibrary = () => {
     const bms = bookmarks();
     const recent = recentPages().slice(0, 3);
-    const ref = (s: number, a: number) => reference(meta[s - 1] as SurahMeta, a, a);
+    const ref = (s: number, a: number) => uiRef(meta[s - 1] as SurahMeta, a, a);
     libBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('lib.title')),
       h('div', { class: 'menu' },

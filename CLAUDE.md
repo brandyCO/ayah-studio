@@ -1033,6 +1033,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       `rf.*`, `dr.*`; module-level date formats built on use so they follow the language). Still
       English in the Arabic UI: the media picker and device check, and the small labels the reel
       engine draws on note/closing cards ("Word meanings: Quran.com", "a dua in X's own words"))
+      **Every notification in Arabic** (owner report 2026-11-11, "a lot of notifications are only in English"):
+      server error messages (Supabase functions raise them in English), proxy and data-layer errors are put into
+      Arabic by `src/i18n/arMessages.ts` (loaded with the Arabic strings): `toast()` and `errMsg(e)` never show an
+      English sentence in the Arabic UI (unknown ones → "تعذّر إتمام ذلك الآن، حاول مرة أخرى"; links kept), the
+      `rpc()` wrappers translate with `localMsg()`; the remaining hard-coded toasts and the media picker (`src/i18n/media.ts`,
+      lazy) are translated; references in the interface use `uiRef()` (Arabic surah name; reels keep `reference()`);
+      the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
+      start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
+      "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
 - [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
       (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,

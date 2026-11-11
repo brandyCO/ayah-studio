@@ -47,7 +47,7 @@ current = toAccount(storedUser());
 
 function set(a: Account | null) {
   if (a?.id === current?.id && a?.name === current?.name) return;
-  if (a && !current && cameBack) void import('../ui/dom').then(({ toast }) => toast(`Signed in as ${a.name} — syncing`));
+  if (a && !current && cameBack) void Promise.all([import('../ui/dom'), import('../i18n')]).then(([{ toast }, { t }]) => toast(t('notif.signedIn', { name: a.name })));
   current = a;
   for (const fn of listeners) fn(a);
 }

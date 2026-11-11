@@ -3,6 +3,7 @@
 // tonight after the bedtime session is said in full (kept in localStorage `pactMark` until it is sent).
 import { account } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
+import { localMsg } from '../i18n';
 import { claimGoal } from '../data/journey';
 import { dayKey } from '../data/readLog';
 import { nightKey } from '../data/duas';
@@ -11,7 +12,7 @@ import { shareableLink } from '../native';
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
   const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(localMsg(error.message));
   return data as T;
 }
 

@@ -1473,6 +1473,15 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'mo.running': 'جارٍ تنزيل المصحف كاملًا…',
   'mo.waiting': 'يستمر التنزيل عندما تكون متصلًا والتطبيق مفتوح.',
   'mo.done': 'المصحف كاملًا على هذا الجهاز: كل صفحة تفتح دون إنترنت.',
+  // notifications, toasts and the media picker (Arabic pass 2026-11-11)
+  'notif.channel': 'التنبيهات والتذكيرات',
+  'notif.exportChannel': 'تصدير المقاطع',
+  'notif.listenChannel': 'الاستماع',
+  'notif.signedIn': 'سجّلت الدخول باسم {name}، جارٍ مزامنة بياناتك',
+  'pl.playFailed': 'تعذّر تشغيل التلاوة',
+  'pl.needsNet': 'الاستماع يحتاج إلى اتصال بالإنترنت',
+  'sel.oneSurah': 'المقطع يضم آيات من سورة واحدة فقط',
+  'ed.maxScenes': '{n} مشهدًا على الأكثر',
 };
 
 export default ar;

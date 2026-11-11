@@ -4,7 +4,7 @@
 import { addShare } from '../data/journey';
 import { reference, surahText, surahTranslation, type SurahMeta } from '../data/quran';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { t } from '../i18n';
+import { t, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 
@@ -76,7 +76,7 @@ export function openCopy(meta: SurahMeta, lo: number, hi: number) {
     }, h('span', { class: 'create-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
     kind === last ? icon('check', 20) : null);
   const d = h('dialog', { class: 'sheet bottom copy-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, t('copy.title', { ref: reference(meta, lo, hi) })),
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('copy.title', { ref: uiRef(meta, lo, hi) })),
       h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
     h('div', { class: 'menu' },
       option('ar', t('copy.ar'), t('copy.arSub')),

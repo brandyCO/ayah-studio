@@ -3,10 +3,10 @@
 // texts in the chosen translation (DailyAyahWidget.java via DailyPlugin.java). Taps on either open
 // the ayah. The web build shows the ayah of the day on the Today card only.
 import { registerPlugin } from '@capacitor/core';
-import { loadMeta, reference, surahText, surahTranslation } from '../data/quran';
+import { loadMeta, surahText, surahTranslation } from '../data/quran';
 import { loadDaily, pick } from '../data/daily';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { t } from '../i18n';
+import { lang, t, uiRef } from '../i18n';
 import { isNative } from '../native';
 import { h, toast } from './dom';
 
@@ -60,10 +60,13 @@ export async function scheduleMorning(): Promise<boolean> {
     const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + k, hh, mm);
     if (at.getTime() < Date.now() + 60_000) continue;
     const x = pick(d, at);
-    const tr = await surahTranslation(x.s, info.id).catch(() => null);
-    const body = tr ? tr.slice(x.from - 1, x.to).join(' ') : x.en; // the whole translation, never cut
+    // In the Arabic interface the note carries the ayat themselves (the bundled text, unchanged);
+    // otherwise the chosen translation. Always whole, never cut.
+    const ar = lang() === 'ar' ? await surahText(x.s).catch(() => null) : null;
+    const tr = ar ? null : await surahTranslation(x.s, info.id).catch(() => null);
+    const body = ar ? ar.slice(x.from - 1, x.to).join(' ') : tr ? tr.slice(x.from - 1, x.to).join(' ') : x.en;
     list.push({
-      id: IDS[list.length], title: t('today.ayah', { ref: reference(meta[x.s - 1], x.from, x.to) }), body, largeBody: body,
+      id: IDS[list.length], title: t('today.ayah', { ref: uiRef(meta[x.s - 1], x.from, x.to) }), body, largeBody: body,
       smallIcon: 'ic_stat_crescent', schedule: { at, allowWhileIdle: true }, extra: { hash: `#/s/${x.s}/${x.from}` },
     });
   }

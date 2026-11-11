@@ -1414,6 +1414,15 @@ const en = {
   'mo.running': 'Downloading the whole mushaf…',
   'mo.waiting': 'Downloading continues when you are online with the app open.',
   'mo.done': 'The whole mushaf is on this device: every page opens without internet.',
+  // notifications, toasts and the media picker (Arabic pass 2026-11-11)
+  'notif.channel': 'Notes and reminders',
+  'notif.exportChannel': 'Exporting reels',
+  'notif.listenChannel': 'Listening',
+  'notif.signedIn': 'Signed in as {name} — syncing',
+  'pl.playFailed': 'Could not play the recitation',
+  'pl.needsNet': 'Listening needs an internet connection',
+  'sel.oneSurah': 'A reel uses ayat from one surah',
+  'ed.maxScenes': 'Up to {n} scenes',
 };
 
 export type Key = keyof typeof en;

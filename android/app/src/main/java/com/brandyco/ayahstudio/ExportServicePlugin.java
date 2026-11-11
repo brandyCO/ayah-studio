@@ -23,7 +23,8 @@ public class ExportServicePlugin extends Plugin {
         ExportService.onCancel = () -> notifyListeners("cancel", new JSObject());
         ContextCompat.startForegroundService(getContext(), ExportService.intent(getContext(), ExportService.ACTION_START)
             .putExtra("title", call.getString("title", ""))
-            .putExtra("cancel", call.getString("cancel", "")));
+            .putExtra("cancel", call.getString("cancel", ""))
+            .putExtra("channel", call.getString("channel", "")));
         rendererImportant(true);
         call.resolve();
     }

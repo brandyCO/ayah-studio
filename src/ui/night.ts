@@ -3,10 +3,10 @@
 // light); the ayah sits flat and still on top in the Quran font with its translation and reference
 // (Light rule 1), crossfading per ayah. A soft glow breathes with the word timings (never with guessed
 // audio levels) and brightens when a surah completes. Sleep timer fades to dark and pauses the recitation.
-import { loadWordMap, reference, surahText, surahTranslation, type SurahMeta } from '../data/quran';
+import { loadWordMap, surahText, surahTranslation, type SurahMeta } from '../data/quran';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans } from '../engine/words';
-import { t } from '../i18n';
+import { t, uiRef } from '../i18n';
 import { paintNightFlat } from '../light/flat';
 import { reducedMotion } from '../light/support';
 import { h } from './dom';
@@ -140,7 +140,7 @@ export async function openNight(src: NightSource) {
     const more = pages.length > 1 ? h('div', { class: 'night-more' }, `${t('night.swipe')}`) : null;
     const el = h('div', { class: 'night-block' },
       arEl, enEl,
-      h('p', { class: 'night-ref' }, reference(src.meta[s - 1], a)),
+      h('p', { class: 'night-ref' }, uiRef(src.meta[s - 1], a)),
       ...(more ? [more] : []));
     const b: Block = { el, ar: arEl, en: enEl, s, a, words, pages, page: 0, spans: parseSpans(wordMap[`${s}:${a}`]) };
     arEl.textContent = pageText(b);

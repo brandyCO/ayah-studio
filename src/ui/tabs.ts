@@ -8,8 +8,8 @@
 import { draftHash, listDrafts } from '../data/drafts';
 import { todaysAyah } from '../data/daily';
 import { weeklyTemplate } from '../data/popular';
-import { loadMeta, reference } from '../data/quran';
-import { t } from '../i18n';
+import { loadMeta } from '../data/quran';
+import { t, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { lastRead } from './prefs';
@@ -86,11 +86,11 @@ export async function openCreate() {
       }, h('span', { class: 'create-ic brand' }, icon('plus', 22)),
       h('span', { class: 'create-txt' }, h('b', {}, t('create.pick')), h('span', { class: 'muted small' }, t('create.pickSub')))),
       tpl && link(`#/t/${tpl.surah}/${tpl.from}-${tpl.to}/${tpl.reciter}${tpl.look ? `/${tpl.look}` : ''}`, t('create.template'),
-        reference(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle', 'c-tpl'),
+        uiRef(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle', 'c-tpl'),
       daily && link(`#/reel/${daily.s}/${daily.from}-${daily.to}`, t('create.today'),
-        reference(meta[daily.s - 1], daily.from, daily.to), 'sparkle', 'c-day'),
+        uiRef(meta[daily.s - 1], daily.from, daily.to), 'sparkle', 'c-day'),
       last && link(draftHash(last.project, last.id),
-        t('create.continue'), reference(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip', 'c-cont'),
+        t('create.continue'), uiRef(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip', 'c-cont'),
       link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes', 'c-mine')),
     noor ? noor.noorLine('create') : '');
   d.addEventListener('close', () => { d.remove(); window.removeEventListener('hashchange', close); });

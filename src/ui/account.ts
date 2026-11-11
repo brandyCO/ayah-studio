@@ -1,6 +1,6 @@
 // ☰ → Account: sign in with Google to sync bookmarks, settings and reel drafts between devices; see
 // the sync state; export or delete the account's data. Everything works without signing in.
-import { locale, t } from '../i18n';
+import { errMsg, locale, t } from '../i18n';
 import { account, deleteAccount, onAccount, signIn, signInAvailable, signOut } from '../cloud/auth';
 import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/sync';
 import { supabase } from '../cloud/supabase';
@@ -55,7 +55,7 @@ export function openAccount() {
               await signIn(); // on the web the page goes to Google and comes back
             } catch (err) {
               const msg = err instanceof Error ? err.message : String(err);
-              if (!/cancel/i.test(msg)) toast(t('acc.signInFailed', { msg }));
+              if (!/cancel/i.test(msg)) toast(t('acc.signInFailed', { msg: errMsg(err) }));
             } finally {
               btn.disabled = false;
             }

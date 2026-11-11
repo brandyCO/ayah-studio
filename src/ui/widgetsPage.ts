@@ -7,8 +7,8 @@ import { streak, todayRec } from '../data/journey';
 import { DHIKR, goals } from '../data/goals';
 import { PRAYERS, nextPrayer } from '../data/prayer';
 import { todaysAyah } from '../data/daily';
-import { loadMeta, reference } from '../data/quran';
-import { locale, t, type Key } from '../i18n';
+import { loadMeta } from '../data/quran';
+import { locale, t, type Key, uiRef } from '../i18n';
 import { isNative } from '../native';
 import { h, haptic, toast } from './dom';
 import { flame, flameTier } from './flame';
@@ -55,7 +55,7 @@ async function preview(kind: WidgetKind): Promise<HTMLElement> {
   if (item) {
     const meta = await loadMeta().catch(() => null);
     const sm = meta?.[item.s - 1];
-    if (sm) ref = reference(sm, item.from, item.to);
+    if (sm) ref = uiRef(sm, item.from, item.to);
   }
   return h('div', { class: 'wg-pv wg-daily' },
     h('div', {}, h('span', { class: 'wg-small' }, t('wg.dailyHead')), h('b', {}, ref || t('wg.daily'))));

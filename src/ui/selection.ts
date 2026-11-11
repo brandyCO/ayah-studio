@@ -4,7 +4,7 @@
 // the reel's estimated length for the last-used reciter. Selectable elements carry data-s (surah)
 // and data-a (ayah).
 import { qdcSurah } from '../data/qdc';
-import { reference, type SurahMeta } from '../data/quran';
+import { type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, reciterFor } from '../data/reciters';
 import { mp3quranSurah } from '../data/mp3quran';
 import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
@@ -12,7 +12,7 @@ import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
 import { openCopy } from './copyAyat';
 import { icon } from './icons';
-import { t } from '../i18n';
+import { t, uiRef } from '../i18n';
 import { reelLook, reelReciter } from './prefs';
 
 const fmtLength = (sec: number) => {
@@ -80,7 +80,7 @@ export function selectionController(o: SelectionOptions) {
     bar.classList.toggle('show', !!sel);
     document.body.classList.toggle('has-selbar', !!sel);
     if (sel) {
-      label.replaceChildren(`${reference(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${t(sel.hi > sel.lo ? 'common.ayat' : 'common.ayah', { n: sel.hi - sel.lo + 1 })}`, estimate);
+      label.replaceChildren(`${uiRef(o.meta[sel.surah - 1], sel.lo, sel.hi)} · ${t(sel.hi > sel.lo ? 'common.ayat' : 'common.ayah', { n: sel.hi - sel.lo + 1 })}`, estimate);
       void showEstimate(sel);
     }
   }
@@ -186,7 +186,7 @@ export function selectionController(o: SelectionOptions) {
     const sel = current();
     if (!sel) o.onTap?.(d.a ? { s: d.s, a: d.a } : null);
     else if (!d.a) set(0, null, null); // tap outside the ayat clears the selection
-    else if (d.s !== surah) toast('A reel uses ayat from one surah');
+    else if (d.s !== surah) toast(t('sel.oneSurah'));
     else if (sel.lo === sel.hi && d.a === anchor) set(0, null, null);
     else set(surah, anchor, d.a);
   }
