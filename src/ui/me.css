@@ -195,3 +195,33 @@
 .goal-harvest:active { translate: 0 3px; box-shadow: 0 1px 0 color-mix(in srgb, var(--rw-n1, #b06000) 70%, #000); }
 .goal-harvest b { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .goal-harvest svg { width: 18px; height: 18px; }
+/* The streak card's sky by the time of day (me.ts paintSky): night is the look above; dawn, day and dusk below. */
+.me-hero.sky-dawn {
+  background:
+    radial-gradient(1.2px 1.2px at 14% 12%, #fffa 99%, transparent), radial-gradient(1px 1px at 80% 10%, #fff8 99%, transparent),
+    radial-gradient(90% 50% at 50% 112%, #fff0b0 0%, #ffc59a 40%, transparent 75%),
+    linear-gradient(180deg, #3f5aa8 0%, #8c86c8 45%, #e3a4be 78%, #ffd1a6 100%);
+  box-shadow: 0 6px 0 #3e4f8e;
+}
+.me-hero.sky-day {
+  background:
+    radial-gradient(16% 6% at 42% 7%, #ffffffe8 40%, transparent 72%), radial-gradient(10% 5% at 48% 5%, #fff 45%, transparent 72%),
+    radial-gradient(20% 7% at 88% 66%, #ffffffc8 40%, transparent 72%), radial-gradient(14% 6% at 10% 70%, #ffffffb0 40%, transparent 72%),
+    linear-gradient(180deg, #2f86de 0%, #4fa8ec 55%, #8fd0f7 100%);
+  box-shadow: 0 6px 0 #1f65ad;
+}
+.me-hero.sky-dusk {
+  background:
+    radial-gradient(1.2px 1.2px at 20% 10%, #fff9 99%, transparent), radial-gradient(1px 1px at 66% 14%, #fff7 99%, transparent),
+    radial-gradient(110% 55% at 50% 115%, #ffc06a 0%, #ff7f50 45%, transparent 78%),
+    linear-gradient(180deg, #3b2a78 0%, #a24f84 52%, #f07a5c 88%, #ffb066 100%);
+  box-shadow: 0 6px 0 #5a2a5c;
+}
+/* The moon by night; a sun by dawn, day and dusk (low and warm at both ends of the day). */
+.me-hero.sky-day::before, .me-hero.sky-dawn::before, .me-hero.sky-dusk::before { transform: none;
+  background: radial-gradient(circle, #fffbe6 0 38%, #ffe27a 52%, #ffc94a 64%, transparent 70%); box-shadow: 0 0 24px 8px rgba(255, 220, 120, .45); }
+.me-hero.sky-dawn::before { top: 30px; background: radial-gradient(circle, #fffbea 0 36%, #ffe3a6 56%, #ffc98a 66%, transparent 71%); box-shadow: 0 0 26px 10px rgba(255, 210, 160, .5); }
+.me-hero.sky-dusk::before { top: 26px; background: radial-gradient(circle, #fff3d6 0 34%, #ffb36a 56%, #ff8a50 66%, transparent 71%);
+  box-shadow: 0 0 26px 10px rgba(255, 150, 90, .45); }
+.me-hero.sky-day .me-status { color: #fff; text-shadow: 0 1px 2px rgba(0, 40, 90, .35); }
+.me-hero.sky-day .me-count b { text-shadow: 0 3px 0 rgba(10, 60, 120, .3); }

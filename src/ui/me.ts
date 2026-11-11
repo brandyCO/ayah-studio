@@ -115,6 +115,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // The streak card's sky follows the user's time of day (owner request 2026-11-11): dawn from Fajr, day, golden dusk
+  // before Maghrib, night after Isha; by the hour until a location gives the prayer times.
+  const paintSky = async () => {
+    const now = new Date(), hr = now.getHours();
+    let sky = hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr < 16 ? 'day' : hr >= 16 && hr < 19 ? 'dusk' : 'night';
+    try {
+      const p = await prayerDay(now);
+      if (p) {
+        const at = now.getTime(), [fajr, sunrise, , , maghrib, isha] = p.map((d) => d.getTime());
+        sky = at >= fajr && at < sunrise + 45 * 60_000 ? 'dawn' : at >= sunrise && at < maghrib - 75 * 60_000 ? 'day' : at >= fajr && at < isha ? 'dusk' : 'night';
+      }
+    } catch { /* hours as above */ }
+    for (const k of ['dawn', 'day', 'dusk', 'night']) hero.classList.toggle(`sky-${k}`, k === sky);
+  };
+  void paintSky();
   // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
   const wardrobeSlot = h('div', { class: 'wd-slot' });
   // The character's room, decorated with prizes (src/ui/room.ts, lazy; only with a character).
@@ -780,7 +795,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); } }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); void paintSky(); } }, 30_000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();

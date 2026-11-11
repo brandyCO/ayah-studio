@@ -1542,6 +1542,9 @@ duas/reflections section in Me.
       (`src/fps.ts`): every chest / reward / streak / Ranks moment and the harvest record their fps, slowest frame and share of
       slow frames on the device (localStorage `fpsLog`, newest 40), shown in Device check with Clear. The streak moment reads
       positions before changing classes (its first beat forced a ~46 ms layout at 6× throttle). Strings `src/i18n/moments.ts` (`mt()`)
+      **Streak card sky by the time of day** (owner request 2026-11-11): Me's streak card is dawn from Fajr (a pale sun), day (blue,
+      clouds, sun), golden dusk from 75 min before Maghrib, night after Isha (moon, stars); by the hour without a location
+      (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
