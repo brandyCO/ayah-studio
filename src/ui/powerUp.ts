@@ -314,7 +314,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     // The beats: each runs once (a tap jumps to the end, running only what sets the picture).
     const beats: { at: number; run: (skip: boolean) => void; done?: boolean }[] = [
       { at: B.crouch, run: (skip) => { if (!skip) { sfx.gather(B.leap - B.crouch); me.face('calm', 0); buddy?.face('calm', 0); } } },
-      { at: B.leap, run: (skip) => { if (!skip) { sfx.leap(); spots.forEach((s) => { fire.burst(s.cx, s.foot, 8, 300, true); fire.ring(s.cx, s.foot, s.w * 0.9); }); } } },
+      { at: B.leap, run: (skip) => { if (!skip) { sfx.leap(); spots.forEach((s) => { fire.burst(s.cx, s.foot, 8, 300, true); fire.ring(s.cx, s.foot, s.w * 0.9); }); auras.forEach((a) => fire.swirl(a, (B.ignite - B.leap) / 1000 + 0.12)); } } },
       { at: B.ignite, run: (skip) => {
         el.classList.add('lit');
         actors.forEach((a) => { poseClass(a.el, 'cheer', true); a.face('star', 0); });

@@ -15,6 +15,7 @@ import { fpsStart } from '../fps';
 import { isMilestone, milestoneScene } from './milestone';
 import './cel.css';
 import './streakMoment.css';
+import { flamePath, type Shape } from './flatFire';
 
 export type WeekState = 'lit' | 'frozen' | 'revived' | 'today' | 'missed' | 'future';
 export interface WeekDay { day: string; state: WeekState; label: string }
@@ -29,9 +30,7 @@ export function dayMark(state: WeekState, animate = false): HTMLElement {
   return el;
 }
 
-/** The flame's shape: base half-width `w`, tip height `h`, tip `lean`, left bump height `bump`, vertical squash `sq`. */
-interface Shape { w: number; h: number; lean: number; bump: number; sq: number }
-const REST: Shape = { w: 66, h: 196, lean: 12, bump: 44, sq: 1 };
+const REST: Shape = { w: 64, h: 150, lean: 10, bump: 30, sq: 1 };
 const PUDDLE: Shape = { w: 84, h: 88, lean: 0, bump: 0, sq: 0.42 };
 
 const TAU = Math.PI * 2;
@@ -42,23 +41,6 @@ const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 const mixShape = (a: Shape, b: Shape, p: number): Shape => ({ w: lerp(a.w, b.w, p), h: lerp(a.h, b.h, p), lean: lerp(a.lean, b.lean, p), bump: lerp(a.bump, b.bump, p), sq: lerp(a.sq, b.sq, p) });
 /** A damped spring from `from` to `to`, `s` seconds after release. */
 const spring = (from: number, to: number, s: number, f = 2.6, damp = 4.2) => to + (from - to) * Math.exp(-damp * s) * Math.cos(TAU * f * s);
-
-/** Adds the flame outline (standing on (x, y), growing up) to the path. */
-function flamePath(c: CanvasRenderingContext2D, x: number, y: number, s: Shape) {
-  const { w, h: H, lean, bump } = s;
-  const sy = s.sq;
-  const P = (px: number, py: number) => [x + px, y + py * sy] as const;
-  const T = P(lean, -H), R = P(w, -w * 0.95), B = P(0, 0), L = P(-w, -w * 0.95);
-  const K = P(-w * 0.55 + lean * 0.25, -w * 0.95 - bump), N = P(-w * 0.12 + lean * 0.45, -w * 1.05 - bump * 0.35);
-  c.moveTo(...T);
-  c.bezierCurveTo(T[0] + w * 0.12, T[1] + (R[1] - T[1]) * 0.35, x + w, R[1] - (R[1] - T[1]) * 0.42, ...R);
-  c.bezierCurveTo(x + w, y - w * 0.4 * sy, x + w * 0.56, y, ...B);
-  c.bezierCurveTo(x - w * 0.56, y, x - w, y - w * 0.4 * sy, ...L);
-  c.bezierCurveTo(x - w, L[1] - bump * 0.5 * sy, K[0] - w * 0.22, K[1] + bump * 0.25 * sy, ...K);
-  c.bezierCurveTo(K[0] + w * 0.12, K[1] + bump * 0.35 * sy, N[0] - w * 0.06, N[1], ...N);
-  c.bezierCurveTo(N[0] + w * 0.1, N[1] - (N[1] - T[1]) * 0.45, T[0] - w * 0.05, T[1] + (N[1] - T[1]) * 0.3, ...T);
-  c.closePath();
-}
 
 /** A teardrop (round bottom at (x, y), tip `len` above, tilted by `ang`). */
 function drop(c: CanvasRenderingContext2D, x: number, y: number, r: number, len: number, ang = 0) {
@@ -77,7 +59,7 @@ interface Bit { x: number; y: number; vx: number; vy: number; r: number; life: n
 const B = { melt: 520, charge: 820, launch: 1080, apex: 1520, land: 1900, shoot: 1960, settle: 2180, label: 2650, week: 3000, fill: 3350, ok: 3700 };
 
 /** Plays the moment; resolves when it is closed. */
-export function streakMoment(days: number, week: WeekDay[], today: string): Promise<void> {
+export function streakMoment(days: number, week: WeekDay[], today: string, face = true): Promise<void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const from = Math.max(0, days - 1);
   const oldNum = h('b', { class: 'sx-n old' }, String(from));
@@ -144,7 +126,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     const grey = css.getPropertyValue('--sx-grey').trim() || '#c9c9c9';
     const greyIn = css.getPropertyValue('--sx-grey2').trim() || '#e9e9e9';
     // Fire is fire: yellow rim, orange-red heart, a white-hot drop (the same in every theme).
-    const col = { o: '#ffc21a', m: '#ff5a1f', c: '#fff6df' };
+    const col = { o: '#ffc21a', m: '#ff4f2e', m2: '#ff9a1f', c: '#fff6df' };
 
     // State drawn each frame.
     const bits: Bit[] = [];
@@ -234,15 +216,19 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       }
 
       if (showFlame) {
-        // Rim, then the deeper middle, then the white drop.
-        c.fillStyle = lit < 1 ? grey : col.o;
-        c.beginPath(); flamePath(c, 0, 0, s); c.fill();
-        if (lit > 0 && lit < 1) { c.globalAlpha = lit; c.fillStyle = col.o; c.beginPath(); flamePath(c, 0, 0, s); c.fill(); c.globalAlpha = 1; }
-        const inner = { w: s.w * 0.66, h: s.h * 0.68, lean: s.lean * 0.6, bump: s.bump * 0.55, sq: s.sq };
-        c.globalAlpha = lit; c.fillStyle = col.m; c.beginPath(); flamePath(c, 0, -s.w * 0.06 * s.sq, inner); c.fill(); c.globalAlpha = 1;
-        const dr = s.w * 0.24, dl = Math.max(dr * 1.6, s.h * 0.32);
-        c.fillStyle = lit < 1 ? greyIn : col.c;
-        c.beginPath(); drop(c, s.lean * 0.15, -dr * 1.15 * s.sq, dr, dl * s.sq); c.fill();
+        // Rim, then the deeper middle, then the white drop. Each shape is filled and then stroked in its own colour
+        // with round joins: every tip comes out soft and round (a friendly, chubby flame rather than a sharp one).
+        const soft = (fill: string | CanvasGradient, round: number) => { c.fillStyle = fill; c.fill(); c.strokeStyle = fill; c.lineWidth = round; c.lineJoin = 'round'; c.stroke(); };
+        const rr = Math.min(s.w, s.h) * 0.34;
+        c.beginPath(); flamePath(c, 0, -rr * 0.5 * s.sq, s); soft(lit < 1 ? grey : col.o, rr);
+        if (lit > 0 && lit < 1) { c.globalAlpha = lit; c.beginPath(); flamePath(c, 0, -rr * 0.5 * s.sq, s); soft(col.o, rr); c.globalAlpha = 1; }
+        const inner = { w: s.w * 0.6, h: s.h * 0.64, lean: s.lean * 0.6, bump: s.bump * 0.5, sq: s.sq };
+        const g = c.createLinearGradient(0, -s.h * 0.75, 0, 0);
+        g.addColorStop(0, col.m); g.addColorStop(1, col.m2);
+        c.globalAlpha = lit; c.beginPath(); flamePath(c, 0, -s.w * 0.12 * s.sq - rr * 0.35 * s.sq, inner); soft(g, rr * 0.7); c.globalAlpha = 1;
+        const dr = s.w * 0.21, dl = Math.max(dr * 1.7, s.h * 0.17);
+        c.beginPath(); drop(c, s.lean * 0.1, -dr * 1.05 * s.sq - rr * 0.2, dr, dl * s.sq); soft(lit < 1 ? greyIn : col.c, dr * 0.5);
+        if (face && tt > B.settle + 150) drawFace(s, tt, clamp((tt - B.settle - 150) / 250));
       }
 
       // The leap: a little flame trailing ribbons.
@@ -279,6 +265,22 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       }
       bits.length = j;
     };
+
+    /** Two round eyes with a shine, rosy cheeks and a small smile on the flame's body; it blinks now and then. */
+    function drawFace(sh: Shape, tt: number, a: number) {
+      const cx = sh.lean * 0.12, cy = -sh.w * 1.3;
+      const e = sh.w * 0.13, gap = sh.w * 0.34;
+      const ph = tt % 3400, blink = ph < 130 ? Math.abs(ph - 65) / 65 : 1;
+      c.globalAlpha = a;
+      c.fillStyle = 'rgba(255, 120, 120, .45)';
+      for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(cx + sx * gap * 1.35, cy + e * 1.7, e * 1.1, e * 0.65, 0, 0, TAU); c.fill(); }
+      c.fillStyle = '#4a2410';
+      for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(cx + sx * gap, cy, e, e * 1.3 * Math.max(0.12, blink), 0, 0, TAU); c.fill(); }
+      if (blink > 0.6) { c.fillStyle = '#fff'; for (const sx of [-1, 1]) { c.beginPath(); c.arc(cx + sx * gap + e * 0.32, cy - e * 0.45, e * 0.36, 0, TAU); c.fill(); } }
+      c.strokeStyle = '#4a2410'; c.lineWidth = e * 0.55; c.lineCap = 'round';
+      c.beginPath(); c.arc(cx, cy + e * 1.1, e * 0.85, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke();
+      c.globalAlpha = 1;
+    }
 
     /** A ribbon along the points (oldest first), widest at the head, tapering to nothing. */
     function ribbon(pts: { x: number; y: number }[], wd: number, color: string, _o: number) {

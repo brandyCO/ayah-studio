@@ -3,16 +3,16 @@
    sky with turning sun rays; the cartoon fire is drawn on two canvases (flatFire.ts); everything here moves by
    transform / opacity only. */
 .cel.sf { overflow: hidden; justify-content: flex-start; padding-top: max(5vh, env(safe-area-inset-top)); color: #4a2108;
-  --sf-bg: #fff7ea; --sf-bg2: #ffe2bd; --sf-ray: rgba(255, 170, 60, .16); --sf-ink: #4a2108; --sf-soft: #8a4d22;
-  background: radial-gradient(80% 60% at 50% 40%, var(--sf-bg), var(--sf-bg2)); }
+  --sf-bg: #ffffff; --sf-bg2: #ffffff; --sf-ray: rgba(255, 170, 60, .16); --sf-ink: #4a2108; --sf-soft: #8a4d22;
+  background: var(--sf-bg); }
 @media (prefers-color-scheme: dark) {
-  .cel.sf { --sf-bg: #2a1a2e; --sf-bg2: #140c18; --sf-ray: rgba(255, 150, 40, .07); --sf-ink: #fff2e2; --sf-soft: #f0c9a6; }
+  .cel.sf { --sf-bg: var(--rw-night3); --sf-bg2: var(--rw-night3); --sf-ray: rgba(255, 150, 40, .07); --sf-ink: #fff2e2; --sf-soft: #f0c9a6; }
 }
 .sf-sky { position: absolute; left: 50%; top: 36%; width: 220vmax; aspect-ratio: 1; margin: -110vmax 0 0 -110vmax; pointer-events: none;
   background: repeating-conic-gradient(var(--sf-ray) 0 9deg, transparent 9deg 18deg);
   -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 75%); mask: radial-gradient(closest-side, #000 20%, transparent 75%);
   animation: sf-turn 40s linear infinite; opacity: 0; transition: opacity .5s; }
-.sf.lit .sf-sky { opacity: 1; }
+.sf.lit .sf-sky { opacity: 0; }
 @keyframes sf-turn { to { rotate: 1turn; } }
 .sf-heat { position: absolute; inset: 0; pointer-events: none; opacity: 0; will-change: opacity;
   background: radial-gradient(50% 36% at 50% 40%, rgba(255, 170, 40, .28), transparent 72%); }
@@ -38,9 +38,9 @@
 .sf-text { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sf-count { display: flex; flex-direction: column; align-items: center; }
 .sf-num { display: grid; font-size: clamp(92px, 30vw, 156px); font-weight: 1000; line-height: .95; letter-spacing: -.02em; direction: ltr; }
-.sf-n { grid-area: 1 / 1; justify-self: center; opacity: 0; color: #ff8a00; text-shadow: 0 7px 0 #d35400; -webkit-text-stroke: 0; }
-.sf-l4 .sf-n { color: #ffb300; text-shadow: 0 7px 0 #c47a00; }
-.sf-l5 .sf-n { color: #ff5a8a; text-shadow: 0 7px 0 #b02a63; }
+.sf-n { grid-area: 1 / 1; justify-self: center; opacity: 0; color: #ff8a1f; -webkit-text-stroke: 0; }
+.sf-l4 .sf-n { color: #ffa600; }
+.sf-l5 .sf-n { color: #ff4f86; }
 .sf.slam:not(.flip) .sf-n.old, .sf.flip .sf-n.new { opacity: 1; }
 .sf-label { font-size: 22px; font-weight: 900; letter-spacing: .04em; color: var(--sf-soft); text-transform: lowercase; opacity: 0; translate: 0 8px; transition: opacity .3s, translate .3s; }
 .sf.slam .sf-label { opacity: 1; translate: 0 0; }

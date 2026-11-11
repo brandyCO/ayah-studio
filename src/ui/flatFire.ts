@@ -8,9 +8,30 @@
 export interface FlatPalette { edge: string; outer: string; mid: string; inner: string; core: string; spark: string }
 /** Per power level: 1–3 orange, 4 gold, 5 dawn rose and gold. */
 export function flatPalette(level: number): FlatPalette {
-  if (level >= 5) return { edge: '#a3245e', outer: '#ff4f86', mid: '#ff9562', inner: '#ffcf5c', core: '#fff3d6', spark: '#ffe9a8' };
-  if (level === 4) return { edge: '#b86200', outer: '#ffa600', mid: '#ffc81a', inner: '#ffe766', core: '#fffbe2', spark: '#fff3a0' };
-  return { edge: '#c2330a', outer: '#ff5a00', mid: '#ff9500', inner: '#ffd23f', core: '#fff4c2', spark: '#ffe27a' };
+  // The streak moment's friendly flame (streakMoment.ts): a yellow rim, an orange then red heart, a cream core.
+  if (level >= 5) return { edge: '#ffb3c9', outer: '#ffb3c9', mid: '#ff86a8', inner: '#ff4f86', core: '#fff1f5', spark: '#ffd6e2' };
+  if (level === 4) return { edge: '#ffd84a', outer: '#ffd84a', mid: '#ffb21a', inner: '#ff8a00', core: '#fffbe2', spark: '#fff3a0' };
+  return { edge: '#ffc21a', outer: '#ffc21a', mid: '#ff8a1f', inner: '#ff4f2e', core: '#fff6df', spark: '#ffe27a' };
+}
+
+/** The flame's shape: base half-width `w`, tip height `h`, tip `lean`, left bump height `bump`, vertical squash `sq`. */
+export interface Shape { w: number; h: number; lean: number; bump: number; sq: number }
+
+/** Adds the flame outline (standing on (x, y), growing up) to the path. */
+export function flamePath(c: CanvasRenderingContext2D, x: number, y: number, s: Shape) {
+  const { w, h: H, lean, bump } = s;
+  const sy = s.sq;
+  const P = (px: number, py: number) => [x + px, y + py * sy] as const;
+  const T = P(lean, -H), R = P(w, -w * 0.95), B = P(0, 0), L = P(-w, -w * 0.95);
+  const K = P(-w * 0.55 + lean * 0.25, -w * 0.95 - bump), N = P(-w * 0.12 + lean * 0.45, -w * 1.05 - bump * 0.35);
+  c.moveTo(...T);
+  c.bezierCurveTo(T[0] + w * 0.12, T[1] + (R[1] - T[1]) * 0.35, x + w, R[1] - (R[1] - T[1]) * 0.42, ...R);
+  c.bezierCurveTo(x + w, y - w * 0.4 * sy, x + w * 0.56, y, ...B);
+  c.bezierCurveTo(x - w * 0.56, y, x - w, y - w * 0.4 * sy, ...L);
+  c.bezierCurveTo(x - w, L[1] - bump * 0.5 * sy, K[0] - w * 0.22, K[1] + bump * 0.25 * sy, ...K);
+  c.bezierCurveTo(K[0] + w * 0.12, K[1] + bump * 0.35 * sy, N[0] - w * 0.06, N[1], ...N);
+  c.bezierCurveTo(N[0] - w * 0.04, N[1] - (N[1] - T[1]) * 0.55, T[0] - w * 0.3, T[1] + (N[1] - T[1]) * 0.22, ...T);
+  c.closePath();
 }
 
 /** One character's fire: set its place and heat every frame. */
@@ -31,19 +52,17 @@ export class FlatFire {
   private dpr: number;
   private t = 0;
   private bits: Bit[] = [];
-  private back: Tongue[] = [];
   private front: Tongue[] = [];
   private dropAcc: number[] = [];
   auras: Aura[] = [];
+  private swirls: { a: Aura; at: number; dur: number; ph: number }[] = [];
 
   constructor(private cb: HTMLCanvasElement, private cf: HTMLCanvasElement, private pal: FlatPalette, lite = false) {
     this.dpr = Math.min(lite ? 1.25 : 2, window.devicePixelRatio || 1);
     this.bx = cb.getContext('2d')!;
     this.fx = cf.getContext('2d')!;
     // Tongues across the body, the middle ones tallest; each flickers at its own speed.
-    const n = 9;
-    for (let i = 0; i < n; i++) this.back.push({ u: -1 + (2 * i) / (n - 1), ph: Math.random() * TAU, sp: 5 + Math.random() * 4, k: 0.85 + Math.random() * 0.3 });
-    for (let i = 0; i < 5; i++) this.front.push({ u: -1 + (2 * i) / 4 + (Math.random() - 0.5) * 0.2, ph: Math.random() * TAU, sp: 6 + Math.random() * 5, k: 0.6 + Math.random() * 0.8 });
+    for (const u of [-0.85, 0.85, -0.35]) this.front.push({ u, ph: Math.random() * TAU, sp: 5 + Math.random() * 4, k: 0.75 + Math.random() * 0.5 });
     this.resize();
   }
 
@@ -72,6 +91,9 @@ export class FlatFire {
         life: 0, max: 0.5 + Math.random() * 0.45, rot: Math.random() * TAU, front: true });
     }
   }
+
+  /** Two ribbons of flame spiralling up round a character from its feet to above its head, `dur` seconds. */
+  swirl(a: Aura, dur: number) { for (const ph of [0, Math.PI]) this.swirls.push({ a, at: this.t, dur, ph }); }
 
   /** A flat ring on the ground that opens out and thins. */
   ring(x: number, y: number, size: number) {
@@ -118,44 +140,63 @@ export class FlatFire {
     for (const a of this.auras) {
       if (a.heat < 0.3) continue;
       // Behind: the tall silhouette. Rim first (every tongue a little larger in the dark colour), then the layers.
-      this.layer(this.bx, a, this.back, 1, p.edge, 3.5);
-      this.layer(this.bx, a, this.back, 1, p.outer, 0);
-      this.layer(this.bx, a, this.back, 0.74, p.mid, 0);
-      this.layer(this.bx, a, this.back, 0.5, p.inner, 0);
-      this.layer(this.bx, a, this.back, 0.28, p.core, 0);
+      this.bigFlame(this.bx, a);
     }
     for (const b of this.bits) if (b.kind === 'drop' || (b.kind === 'shard' && !b.front)) this.drawBit(this.bx, b);
     for (const a of this.auras) {
       if (a.heat < 0.02) continue;
       // In front: low tongues round the feet.
-      this.feet(this.fx, a, p.edge, 1, 3);
       this.feet(this.fx, a, p.outer, 1, 0);
-      this.feet(this.fx, a, p.mid, 0.66, 0);
-      this.feet(this.fx, a, p.inner, 0.38, 0);
+      this.feet(this.fx, a, p.inner, 0.5, 0);
     }
     for (const b of this.bits) if ((b.kind === 'shard' && b.front) || b.kind === 'spark') this.drawBit(this.fx, b);
+    for (const w of this.swirls) this.drawSwirl(w);
+    this.swirls = this.swirls.filter((w) => this.t - w.at < w.dur + 0.25);
   }
 
-  private layer(c: CanvasRenderingContext2D, a: Aura, ts: Tongue[], k: number, color: string, grow: number) {
-    const t = this.t, heat = Math.min(1.25, a.heat);
-    const H = a.h * heat, foot = a.foot + a.lift;
-    c.fillStyle = color;
-    c.beginPath();
-    for (const g of ts) {
-      const au = Math.abs(g.u);
-      const flick = 1 + 0.16 * Math.sin(t * g.sp + g.ph) + 0.08 * Math.sin(t * g.sp * 2.3 + g.ph * 1.7);
-      const len = H * (0.5 + 0.42 * (1 - au * au)) * g.k * flick * k;
-      const r = a.w * (0.24 - 0.07 * au) * Math.max(0.5, Math.min(1.2, heat)) * (0.55 + 0.45 * k);
-      const bx = a.cx + g.u * a.w * 0.44;
-      const by = foot - a.h * (0.08 + 0.12 * (1 - au)) - r * 0.3;
-      // Outer tongues lean out, then the tips curl back in, swaying.
-      const sway = (Math.sin(t * g.sp * 0.6 + g.ph) * 0.35 + g.u * 0.25) * r;
-      tongue(c, bx, by, r + grow, len + grow * 1.6, sway);
+  /** The streak flame's own shape, big behind the character: yellow rim, red heart, swaying and breathing. */
+  private bigFlame(c: CanvasRenderingContext2D, a: Aura) {
+    const t = this.t, heat = Math.min(1.25, a.heat), p = this.pal;
+    const foot = a.foot + a.lift;
+    const fl = 1 + 0.05 * Math.sin(t * 5.2) + 0.025 * Math.sin(t * 13);
+    const s: Shape = { w: a.w * 0.6 * Math.min(1.15, 0.7 + heat * 0.35), h: a.h * 1.22 * heat * fl, lean: a.w * 0.08 + Math.sin(t * 2.1) * a.w * 0.07,
+      bump: a.h * 0.26 * heat * (1 + 0.1 * Math.sin(t * 4.3 + 1)), sq: 1 };
+    const rr = Math.min(s.w, s.h) * 0.34;
+    c.beginPath(); flamePath(c, a.cx, foot - rr * 0.4, s); round(c, p.outer, rr);
+    const inner: Shape = { w: s.w * 0.62, h: s.h * 0.66, lean: s.lean * 0.6, bump: s.bump * 0.5, sq: 1 };
+    c.beginPath(); flamePath(c, a.cx, foot - s.w * 0.1 - rr * 0.3, inner); round(c, p.inner, rr * 0.7);
+  }
+
+  private drawSwirl(sw: { a: Aura; at: number; dur: number; ph: number }) {
+    const a = sw.a, p = this.pal;
+    const u = (this.t - sw.at) / sw.dur;
+    if (u < 0 || u > 1.25) return;
+    const at = (v: number) => {
+      const ang = sw.ph + v * Math.PI * 3.2;
+      return { x: a.cx + Math.cos(ang) * a.w * (0.62 - 0.15 * v), y: a.foot + a.lift - v * a.h * 1.15, z: Math.sin(ang) };
+    };
+    const head = Math.min(1, u), tail = Math.max(0, head - 0.42);
+    const n = 22, L: [number, number][] = [], R: [number, number][] = [];
+    for (let i = 0; i <= n; i++) {
+      const v = tail + ((head - tail) * i) / n, q = at(v), q2 = at(v + 0.01);
+      let nx = -(q2.y - q.y), ny = q2.x - q.x;
+      const len = Math.hypot(nx, ny) || 1; nx /= len; ny /= len;
+      const wd = a.w * 0.11 * (i / n) * (u > 1 ? Math.max(0, 1 - (u - 1) * 4) : 1);
+      L.push([q.x + nx * wd, q.y + ny * wd]); R.push([q.x - nx * wd, q.y - ny * wd]);
     }
-    // A solid body joining the tongues' bases, so the silhouette has no holes.
-    const r0 = a.w * 0.5 * Math.max(0.5, Math.min(1.15, heat)) * (0.6 + 0.4 * k);
-    c.ellipse(a.cx, foot - a.h * 0.32, r0 + grow, a.h * 0.32 * k + grow, 0, 0, TAU);
-    c.fill();
+    const c = at(head).z > 0 ? this.fx : this.bx;
+    for (const [col, k] of [[p.outer, 1], [p.mid, 0.5]] as const) {
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(...L[0]);
+      for (let i = 0; i <= n; i++) c.lineTo(L[0][0] + (L[i][0] - L[0][0]), L[i][1]);
+      for (let i = n; i >= 0; i--) { const mx = (L[i][0] + R[i][0]) / 2, my = (L[i][1] + R[i][1]) / 2; c.lineTo(mx + (R[i][0] - mx) * k, my + (R[i][1] - my) * k); }
+      c.closePath();
+      c.fill();
+    }
+    if (u <= 1) { const h0 = at(head), h1 = at(head - 0.03); c.save(); c.translate(h0.x, h0.y); c.rotate(Math.atan2(h0.x - h1.x, -(h0.y - h1.y)));
+      c.beginPath(); tongue(c, 0, 0, a.w * 0.12, a.w * 0.34, 0); round(c, p.outer, 4);
+      c.beginPath(); tongue(c, 0, 1, a.w * 0.06, a.w * 0.17, 0); round(c, p.inner, 2); c.restore(); }
   }
 
   private feet(c: CanvasRenderingContext2D, a: Aura, color: string, k: number, grow: number) {
@@ -165,11 +206,11 @@ export class FlatFire {
     c.beginPath();
     for (const g of this.front) {
       const flick = 1 + 0.22 * Math.sin(t * g.sp + g.ph);
-      const len = a.h * 0.3 * heat * g.k * flick * k * (1 - 0.35 * Math.abs(g.u));
-      const r = a.w * 0.12 * Math.max(0.5, heat) * (0.5 + 0.5 * k);
+      const len = a.h * 0.46 * heat * g.k * flick * k * (1 - 0.35 * Math.abs(g.u));
+      const r = a.w * 0.1 * Math.max(0.5, heat) * (0.5 + 0.5 * k);
       tongue(c, a.cx + g.u * a.w * 0.48, foot + r * 0.2, r + grow, len + grow * 1.6, Math.sin(t * g.sp * 0.7 + g.ph) * r * 0.5);
     }
-    c.fill();
+    round(c, color, a.w * 0.1 * k);
   }
 
   private drawBit(c: CanvasRenderingContext2D, b: Bit) {
@@ -199,7 +240,6 @@ export class FlatFire {
     c.save();
     c.translate(b.x, b.y);
     c.rotate(ang);
-    c.beginPath(); tongue(c, 0, 0, r + 2, r * 2.4 + 3, 0); c.fillStyle = p.edge; c.fill();
     c.beginPath(); tongue(c, 0, 0, r, r * 2.4, 0); c.fillStyle = b.kind === 'drop' ? p.outer : p.mid; c.fill();
     c.beginPath(); tongue(c, 0, r * 0.25, r * 0.5, r * 1.2, 0); c.fillStyle = p.inner; c.fill();
     c.restore();
@@ -214,6 +254,12 @@ function tongue(c: CanvasRenderingContext2D, x: number, y: number, r: number, le
   c.arc(x, y, r, 0, Math.PI);
   c.bezierCurveTo(x - r * 1.05, y - len * 0.25, tx - r * 0.15, ty + len * 0.38, tx, ty);
   c.closePath();
+}
+
+/** Fills the path and strokes it in the same colour with round joins: every tip comes out soft and chubby. */
+function round(c: CanvasRenderingContext2D, color: string, w: number) {
+  c.fillStyle = color; c.fill();
+  c.strokeStyle = color; c.lineWidth = w; c.lineJoin = 'round'; c.stroke();
 }
 
 /** A four-point sparkle. */
