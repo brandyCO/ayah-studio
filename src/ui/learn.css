@@ -377,7 +377,7 @@
 .pm-key.weak i { background: var(--pm-weak); } .pm-key.fair i { background: var(--pm-fair); } .pm-key.strong i { background: var(--pm-strong); }
 
 .pm-drill { display: flex; flex-direction: column; }
-.pm-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 0 4px; text-align: center; }
+.pm-head { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 0 4px; text-align: center; }
 .pm-head h1 { margin: 0; font-size: 20px; }
 .pm-badge { padding: 4px 10px; border-radius: 99px; font-size: var(--fs-xs); font-weight: 800; background: var(--pm-none); color: #3c4a44; }
 .pm-badge.weak { background: var(--pm-weak); color: #fff; } .pm-badge.fair { background: var(--pm-fair); color: #3a2a00; } .pm-badge.strong { background: var(--pm-strong); color: #fff; }
@@ -398,8 +398,10 @@
 .pm-oline.wrong { background: #d4383d; color: #fff; animation: lk-shake .4s; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .pm { --pm-none: #3a4741; }
+  :root:not([data-theme="light"]) .pm-badge:not(.weak, .fair, .strong) { color: #d6e2dc; }
 }
 :root[data-theme="dark"] .pm { --pm-none: #3a4741; }
+:root[data-theme="dark"] .pm-badge:not(.weak, .fair, .strong) { color: #d6e2dc; }
 .pm-oline.head { cursor: default; background: transparent; border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 99px; }
 .pm-oline.basm { cursor: default; width: 55%; justify-self: center; background: color-mix(in srgb, var(--ink, #333) 8%, transparent); }
 
@@ -451,3 +453,117 @@
 .hk-review .hk-btns .hk-wrong { background: #d4383d; }
 .hk-review .hk-card input { width: 100%; }
 .hk-review .hk-empty { text-align: center; padding: 40px 16px; }
+
+/* Focus page (lessons in the page view): the page fills the screen between a slim top and bottom
+   margin; steps, translation and tools come up only on a tap of the light or a swipe up. */
+.ls-noor, .ls-focus-btn { display: none; }
+.ls-pageview .ls-focus-btn:not([hidden]) { display: inline-grid; }
+.screen-learn.lesson.ls-focus { padding-bottom: 0; }
+.ls-focus .ls-head { padding: calc(2px + env(safe-area-inset-top)) 0 0; gap: 4px; }
+.ls-focus .ls-head .icon-btn { width: 38px; height: 38px; }
+.ls-focus .ls-title h1 { font-size: 16px; line-height: 1.2; }
+.ls-focus .ls-title .ls-ref { font-size: 11px; margin: 0; }
+.ls-focus .ls-tree { display: none; }
+.ls-focus .ls-noor { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.ls-noor i { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fffbe6 0 35%, #ffd77a 60%, #ffd77a00 72%);
+  box-shadow: 0 0 12px 4px #ffd77a99; animation: ls-noor 3.2s ease-in-out infinite; }
+.ls-focus.peek .ls-noor i { box-shadow: 0 0 16px 7px #ffd77acc; }
+@keyframes ls-noor { 50% { scale: 1.18; opacity: .85; } }
+.ls-focus .ls-steps { display: none; }
+.ls-focus .ls-phase { margin: 2px 0 0; }
+.ls-focus .ls-goal { display: none; }
+/* The phases become a thin line of light: one segment each, the current one lit. */
+.ls-focus .ls-phases { width: 100%; gap: 4px; }
+.ls-focus .ls-phases span { flex: 1; height: 4px; border-radius: 9px; font-size: 0; background: color-mix(in srgb, var(--text) 12%, transparent); transition: background var(--dur-3); }
+.ls-focus .ls-phases span.on { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.ls-focus .ls-phases span:has(~ .on) { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.ls-focus .ls-main { overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; }
+.ls-focus .ls-main::-webkit-scrollbar { display: none; }
+.ls-focus .ls-page.mushaf-page { scroll-snap-align: start; }
+.ls-focus .ls-turn:has(.ls-status:empty) { display: none; }
+.ls-focus .ls-turn { min-height: 0; padding: 2px 0; }
+.ls-focus .ls-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0; padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); justify-content: flex-start; touch-action: pan-x; }
+.ls-focus .ls-actions::-webkit-scrollbar { display: none; }
+.ls-focus .ls-actions > * { flex: none; }
+.ls-focus .ls-actions .primary { flex: 1 0 auto; min-height: 44px; }
+.ls-focus .ls-actions .chip { min-height: 44px; }
+.ls-focus .ls-actions .ls-hint:not(.ts-sum) { display: none; }
+.ls-focus .ls-actions .ts-sum { margin: 0; align-self: center; font-weight: 800; white-space: nowrap; }
+.ls-focus .ls-trs, .ls-focus .ls-tools { display: none; }
+/* Tools on demand: a panel over the bottom of the page. */
+.ls-focus.peek .ls-tools, .ls-focus.peek .ls-trs, .ls-focus.peek .ls-steps {
+  display: flex; position: fixed; inset-inline: 12px; z-index: 20; margin: 0; border: 0; border-radius: 18px;
+  background: var(--card); box-shadow: 0 10px 40px #0004; padding: 12px; animation: lk-in var(--dur-2, .25s) var(--ease-spring, ease-out);
+}
+.ls-focus.peek .ls-steps { top: calc(52px + env(safe-area-inset-top)); justify-content: center; }
+.ls-focus.peek .ls-tools { bottom: calc(70px + env(safe-area-inset-bottom)); }
+.ls-focus.peek .ls-trs { display: block; top: calc(104px + env(safe-area-inset-top)); max-height: 34vh; overflow-y: auto; }
+@media (prefers-reduced-motion: reduce) { .ls-noor i { animation: none; } }
+html.lite .ls-noor i { animation: none; }
+.ls-memextra { display: contents; }
+.ls-memextra:empty { display: none; }
+/* Memory: the follow button shrinks to its microphone so Stuck and Show the text always fit. */
+.ls-focus.ls-memory .ls-actions .ts-follow { font-size: 0; gap: 0; padding-inline: 14px; }
+.ls-focus.ls-memory .ls-actions .ts-follow .ts-mic { margin: 0; }
+.ls-focus.ls-memory .ls-actions { gap: 6px; }
+.ls-focus.ls-memory .ls-actions .ts-stuck { flex: 1 1 auto; min-width: 0; padding-inline: 10px; font-size: var(--fs-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls-focus.ls-memory .ls-actions .primary { flex: 1 1 auto; min-width: 0; padding-inline: 12px; font-size: var(--fs-s); }
+/* The check: the result and its comparison buttons in one row, the three verdicts under it. */
+.ls-focus.ls-check .ls-actions { flex-wrap: wrap; overflow: visible; justify-content: center; row-gap: 6px; }
+.ls-focus.ls-check .ls-actions .ts-ab { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.ls-focus.ls-check .ls-actions .ts-ab .chip { min-height: 36px; }
+.ls-focus.ls-check .ls-actions > .chip, .ls-focus.ls-check .ls-actions > .primary { flex: 1 1 28%; min-width: 0; padding-inline: 6px; font-size: var(--fs-s); white-space: normal; line-height: 1.15; }
+.ls-focus.ls-check .ls-actions .ts-sum { flex-basis: 100%; text-align: center; white-space: normal; font-size: var(--fs-s); line-height: 1.3; }
+.ls-focus.ls-check .ls-actions .ts-ab { flex-basis: 100%; justify-content: center; }
+.ls-focus .ls-actions > :empty:not(button) { display: none; }
+
+/* Page memory: Focus page (same switch as lessons) and the quiz on the real page */
+.pm-head .ls-title { flex: 1; min-width: 0; }
+.pm-drill .ls-focus-btn { display: inline-grid; }
+.pm-drill.pm-focus, .screen.pm-drill.pm-focus:has(> .tabbar) { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: 0; }
+.pm-focus .pm-head { padding: calc(2px + env(safe-area-inset-top)) 0 0; }
+.pm-focus .pm-head h1 { font-size: 16px; }
+.pm-focus .pm-badge { padding: 3px 8px; font-size: 11px; }
+.pm-focus .pm-tabs { margin: 2px 0 6px; }
+.pm-focus .pm-tab { height: 32px; border-radius: 11px; border-bottom-width: 3px; font-size: 13px; }
+.pm-focus .pm-pagebox:not([hidden]) { flex: 1 1 0; min-height: 0; }
+.pm-focus .pm-pagebox .pm-page.mushaf-page { height: 100%; }
+.pm-focus .pm-nav, .pm-focus > .tabbar { display: none; }
+.pm-focus .pm-actions { margin: 0; }
+.pm-focus .pm-actions > .chip, .pm-focus .pm-actions > .primary { flex: 1 1 auto; min-width: 0; padding-inline: 12px; font-size: var(--fs-s); }
+.pm-focus.pm-quizon .pm-actions { display: none; }
+.pm-focus.peek .pm-nav {
+  display: flex; position: fixed; inset-inline: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 30; margin: 0;
+  padding: 8px; border-radius: 18px; background: var(--card); box-shadow: 0 10px 34px rgba(0,0,0,.28); animation: lk-in var(--dur-3, .35s) var(--ease-spring, ease-out) both;
+}
+.pm-focus.pm-quizon.peek .pm-nav { bottom: calc(12px + env(safe-area-inset-bottom)); }
+.pm-q { display: flex; flex-direction: column; gap: 8px; position: relative; }
+.pm-q .lk-stage { display: flex; flex-direction: column; }
+.pm-q .lk-card { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.pm-q .lk-q { margin: 2px 0 0; font-size: 17px; line-height: 1.3; text-align: center; }
+.pm-q .pm-qsub { margin: 0; text-align: center; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: 24px; line-height: 1.6; }
+.pm-qhint { margin: -4px 0 0; text-align: center; font-size: var(--fs-xs); color: var(--muted); }
+.pm-qpage { margin-inline: -16px; background: var(--paper, transparent); height: clamp(320px, 62dvh, 150vw); }
+.pm-qpage .pm-page.mushaf-page { height: 100%; }
+.pm-q .lk-opts { width: 100%; max-width: 440px; margin: 0 auto; gap: 6px; }
+.pm-q .lk-opt { min-height: 42px; padding: 0 12px; font-size: clamp(19px, 5.4vw, 25px); line-height: 1.7; }
+.pm-focus .pm-q .lk-bar { height: 10px; flex: none; }
+.pm-focus .pm-q .lk-q { font-size: 16px; }
+.pm-q .lk-foot.show { position: absolute; inset: auto 0 0; z-index: 4; margin: 0; box-shadow: 0 -8px 26px rgba(0,0,0,.14); }
+.pm-qdone { justify-content: center; align-items: center; gap: 12px; }
+.pm-focus .pm-quiz:not([hidden]) { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 0 0 calc(6px + env(safe-area-inset-bottom)); }
+.pm-focus .pm-q { flex: 1 1 0; min-height: 0; }
+.pm-focus .pm-q .lk-stage, .pm-focus .pm-q .lk-card { flex: 1 1 0; min-height: 0; }
+.pm-focus .pm-qpage { flex: 1 1 0; min-height: 0; height: auto; }
+.pm-page .mp-line.pm-mark { border-radius: 8px; background: color-mix(in srgb, #6c5ce7 12%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, #6c5ce7 38%, transparent); }
+.pm-page .lw.hid.pm-slot { background: color-mix(in srgb, #6c5ce7 32%, transparent); animation: pm-slot 1.6s ease-in-out infinite; }
+@keyframes pm-slot { 50% { background: color-mix(in srgb, #6c5ce7 52%, transparent); } }
+.pm-page .lw.pm-fill { color: var(--good); }
+.pm-q.tap .mp-line.text { border-radius: 8px; transition: background-color .15s; }
+.pm-q.tap .mp-line.text:active { background: color-mix(in srgb, #6c5ce7 14%, transparent); }
+.pm-page .mp-line.right { background: var(--good-bg); box-shadow: 0 0 0 2px var(--good); }
+.pm-page .mp-line.wrong { background: var(--bad-bg); box-shadow: 0 0 0 2px var(--bad); animation: lk-shake .4s; }
+.pm-page .mp-line.right.soft { box-shadow: 0 0 0 2px color-mix(in srgb, var(--good) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .pm-page .lw.hid.pm-slot, .pm-page .mp-line.wrong { animation: none; } }
+/* the tap card's answer is on the page: the feedback strip covers the question at the top instead */
+.pm-q.tap .lk-foot.show { inset: 0 0 auto; box-shadow: 0 8px 26px rgba(0,0,0,.14); }
