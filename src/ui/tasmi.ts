@@ -91,7 +91,7 @@ const marked = (ws: string[], same: boolean[]) => h('p', { class: 'ts-ayah', lan
   ...ws.flatMap((w, i) => [same[i] ? w : h('mark', { class: 'ts-diff' }, w), ' ']));
 
 /** A sheet: each ayah of the range with its similar ayat, the differing words marked. */
-export async function similarSheet(s: number, a: number, b: number) {
+export async function similarSheet(s: number, a: number, b: number, opts?: { done: string; onDone: () => void }) {
   const list = await similarIn(s, a, b);
   const meta = await loadMeta();
   const body = h('div', { class: 'ts-sim' }, h('p', { class: 'muted small' }, lt('learn.simLead')));
@@ -101,6 +101,7 @@ export async function similarSheet(s: number, a: number, b: number) {
   d.addEventListener('close', () => d.remove());
   document.body.append(d);
   d.showModal();
+  if (opts) d.append(h('div', { class: 'learn-sheet-foot ts-simfoot' }, h('button', { class: 'primary brand-btn', type: 'button', onclick: () => { opts.onDone(); d.close(); } }, opts.done)));
   const mine = await surahText(s);
   for (const [x, others] of list) {
     const ws = displayWords(mine[x - 1]);

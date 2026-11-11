@@ -7,9 +7,12 @@
 // #/learn/garden lists the trees grown so far ("Your garden").
 import './learn.css';
 import './learnPath.css';
-import { CHUNK_SIZES, DECOS, decos, setChunk, stageOf, started, surahJuz, thirsty, tree, trees, unplacedDecos, type ChunkSize, type DecoKind } from '../data/garden';
-import { pathChunk, pathOrder, pathPosition, pathSet, pathStart, reviewSteps, setPath, startQuick, takeGrowth, unitsOf, type PathStep, type PathUnit, type Start } from '../data/learnPath';
-import { streak } from '../data/journey';
+import { CHUNK_SIZES, DECOS, decos, juzGate, juzGates, setChunk, stageOf, started, surahJuz, thirsty, tree, trees, unplacedDecos, type ChunkSize, type DecoKind } from '../data/garden';
+import { CHEST_EVERY, GATE_LIGHT, PATH_CHEST, chestId, loadSimilarKeys, markSimilarSeen, pathChunk, pathOrder, pathPosition, pathSet, pathStart, reviewSteps, setPath, startQuick, takeGrowth, unitsOf, type PathCtx, type PathStep, type PathUnit, type Start } from '../data/learnPath';
+import { claimGoal, streak, todayRec } from '../data/journey';
+import { LESSON_GOALS, goals, setGoals } from '../data/goals';
+import { strength } from '../data/pageMemory';
+import { chest } from './chest';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { surahName, t } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
@@ -42,6 +45,7 @@ const G = {
   drop: '<path d="M12 3c3 4 6 7.2 6 10.5a6 6 0 0 1-12 0C6 10.2 9 7 12 3z" fill="currentColor"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   page: '<rect x="5" y="3" width="14" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  twin: '<rect x="3" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><rect x="13" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M5.5 9.5h3M5.5 13h3M15.5 9.5h3M15.5 13h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   book: '<path d="M4 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z M20 5h-4a2 2 0 0 0-2 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   dots: '<circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/>',
   tree: '<path d="M12 3c4 0 7 3 7 6.5 0 3-2.4 5.5-6 6V21h-2v-5.5c-3.6-.5-6-3-6-6C5 6 8 3 12 3z" fill="currentColor"/>',
@@ -62,7 +66,7 @@ function scenery(): SVGSVGElement {
 }
 
 export async function showPath(root: HTMLElement): Promise<() => void> {
-  const [meta, juzOf, mushaf] = await Promise.all([loadMeta(), surahJuz(), import('../data/mushaf').then((x) => x.loadMushaf())]);
+  const [meta, juzOf, mushaf, similar] = await Promise.all([loadMeta(), surahJuz(), import('../data/mushaf').then((x) => x.loadMushaf()), loadSimilarKeys()]);
   root.classList.add('learn', 'lp');
   const grew = takeGrowth();
 
@@ -72,11 +76,16 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const openRuns = new Set<string>(); // folded juz lines the learner opened
   let due: { s: number }[] = []; // reviews still to weave in (paint → unitEl)
   let leadDone = false; // the START mark is placed once a paint
-  let curHue = 'green';
+  /** The next thing to do (the step carrying START), for the Continue button. */
+  let next: { what: string; hue: string; glyph: string; run: () => void } | null = null;
   const list = h('div', { class: 'lp-list' });
   const top = h('header', { class: 'lp-top' });
-  const cont = h('button', { class: 'lp-cont', type: 'button', hidden: true });
-  root.append(scenery(), top, list, cont, tabBar('learn'));
+  const cont = h('button', { class: 'lp-cont', type: 'button' });
+  const day = h('button', { class: 'lp-day', type: 'button', onclick: () => openDay() });
+  const dock = h('div', { class: 'lp-dock' }, day, cont);
+  root.append(scenery(), top, list, dock, tabBar('learn'));
+  let ctx: PathCtx = { rank: new Map(), similar };
+  const units = (k: number, ord: number[], pos: number) => unitsOf(meta[ord[k] - 1], mushaf, k <= pos, ctx);
 
   function paintTop() {
     const st = streak();
@@ -93,23 +102,59 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   let pop: HTMLElement | null = null;
   const closePop = () => { pop?.remove(); pop = null; };
 
+  const stepLabel = (st: PathStep) => st.kind === 'whole' ? lt('learn.stepTasmi')
+    : st.kind === 'page' ? lt('learn.stepPage', { p: st.p! })
+      : st.kind === 'similar' ? lt('learn.stepSimilar')
+        : st.kind === 'chest' ? lt('learn.stepChest')
+          : st.range[0] === st.range[1] ? lt('learn.stepAyah', { a: st.range[0] }) : lt('learn.stepAyat', { a: st.range[0], b: st.range[1] });
+
   function nodeFor(st: PathStep, i: number, hue: string, m: SurahMeta, lead: boolean): HTMLElement {
-    const label = st.kind === 'whole' ? lt('learn.stepTasmi') : st.range[0] === st.range[1] ? lt('learn.stepAyah', { a: st.range[0] }) : lt('learn.stepAyat', { a: st.range[0], b: st.range[1] });
-    const kind = st.kind === 'whole' ? 'whole' : 'new';
-    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : G.star;
+    const label = stepLabel(st);
+    hue = st.kind === 'page' ? 'teal' : st.kind === 'similar' ? 'violet' : st.kind === 'chest' ? 'amber' : hue;
+    if (lead) next = { what: `${surahName(m)} · ${label}`, hue, run: () => runStep(st),
+      glyph: st.kind === 'page' ? G.page : st.kind === 'whole' ? G.mic : st.kind === 'similar' ? G.twin : G.star };
+    if (st.kind === 'chest') return chestNode(st, i, m, label);
+    const kind = st.kind;
+    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : st.kind === 'page' ? G.page : st.kind === 'similar' ? G.twin : G.star;
     const btn = h('button', {
       class: `lp-node ${st.state} ${kind} hue-${hue}`, type: 'button',
       'aria-label': `${label} · ${surahName(m)} · ${lt(st.state === 'done' ? 'learn.stateDone' : st.state === 'current' ? 'learn.stateCurrent' : 'learn.stateLocked')}`,
       onclick: () => openPop(btn, st, label, m, hue),
-    }, svg(glyph, st.kind === 'whole' ? 40 : 34), h('span', { class: 'lp-shine', 'aria-hidden': 'true' }));
+    }, svg(glyph, st.kind === 'whole' ? 40 : st.kind === 'new' ? 34 : 30), h('span', { class: 'lp-shine', 'aria-hidden': 'true' }));
     const wrap = h('div', { class: 'lp-step', style: `--x:${SWAY[i % SWAY.length]}px` });
     if (lead) {
       wrap.classList.add('is-current');
       wrap.append(h('div', { class: 'lp-start', 'aria-hidden': 'true' }, lt('learn.start')));
     }
     wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn));
-    if (st.kind === 'whole') wrap.append(h('span', { class: 'lp-cap' }, lt('learn.stepTasmi')));
+    if (st.kind !== 'new') wrap.append(h('span', { class: 'lp-cap' }, label));
     return wrap;
+  }
+
+  /** A chest on the path: Light for the lessons before it, opened straight from the path. */
+  function chestNode(st: PathStep, i: number, m: SurahMeta, label: string): HTMLElement {
+    const wrap = h('div', { class: `lp-step lp-chest ${st.state}`, style: `--x:${SWAY[i % SWAY.length]}px` });
+    const sub = lt('learn.chestSub', { n: CHEST_EVERY });
+    const el = chest(PATH_CHEST, st.state === 'current' ? 'ready' : st.state === 'done' ? 'open' : 'locked', `${lt('learn.chestTitle')} · ${surahName(m)} · ${sub}`,
+      (b) => void openChest(st, m, b));
+    if (st.state === 'locked') {
+      const b = h('button', { class: 'lp-chest-hit', type: 'button', 'aria-label': `${label} · ${lt('learn.stateLocked')}`, onclick: () => openPop(b, st, label, m, 'amber') }, el);
+      wrap.append(b);
+    } else wrap.append(el);
+    return wrap;
+  }
+  let opening = false;
+  async function openChest(st: PathStep, m: SurahMeta, from: Element) {
+    if (opening) return;
+    opening = true;
+    haptic();
+    try {
+      const c = await import('./celebrate');
+      await c.celebrate({ kind: 'chest', kicker: surahName(m), title: lt('learn.chestTitle'), sub: lt('learn.chestSub', { n: CHEST_EVERY }) }, from, PATH_CHEST);
+    } finally {
+      opening = false;
+      claimGoal(chestId(st.s, st.range[1]), PATH_CHEST);
+    }
   }
 
   function openPop(at: HTMLElement, st: PathStep, label: string, m: SurahMeta, hue: string) {
@@ -117,16 +162,123 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const same = pop && pop.dataset.for === `${st.s}:${st.range[0]}:${st.kind}`;
     closePop();
     if (same) return;
-    const go = () => { location.hash = `#/learn/${st.s}`; };
+    const go = () => runStep(st);
+    const sub: LearnKey = st.kind === 'whole' ? 'learn.tasmiSub' : st.kind === 'page' ? 'learn.pageSub' : st.kind === 'similar' ? 'learn.similarSub' : 'learn.newSub';
+    const act: LearnKey = st.kind === 'whole' ? 'learn.startTasmi' : st.kind === 'page' ? 'learn.startPage' : st.kind === 'similar' ? 'learn.startSimilar' : 'learn.startLesson';
     const body = st.state === 'locked'
-      ? [h('p', {}, lt('learn.lockedSub'))]
+      ? [h('p', {}, lt(st.kind === 'chest' ? 'learn.chestLocked' : 'learn.lockedSub'))]
       : st.state === 'done'
         ? [h('p', {}, lt('learn.doneStepSub')), h('button', { class: 'lp-btn ghost', type: 'button', onclick: go }, lt('learn.practise'))]
-        : [h('p', {}, lt(st.kind === 'whole' ? 'learn.tasmiSub' : 'learn.newSub')), h('button', { class: `lp-btn hue-${hue}`, type: 'button', onclick: go }, lt(st.kind === 'whole' ? 'learn.startTasmi' : 'learn.startLesson'))];
+        : [h('p', {}, lt(sub)), h('button', { class: `lp-btn hue-${hue}`, type: 'button', onclick: go }, lt(act))];
     pop = h('div', { class: `lp-pop ${st.state} hue-${hue}`, role: 'dialog', 'aria-label': label, 'data-for': `${st.s}:${st.range[0]}:${st.kind}` },
-      h('b', {}, label), h('span', { class: 'lp-pop-sub' }, `${surahName(m)} · ${m.n}:${st.range[0]}${st.range[1] > st.range[0] ? `–${st.range[1]}` : ''}`), ...body);
+      h('b', {}, label), h('span', { class: 'lp-pop-sub' }, st.kind === 'page' ? surahName(m) : `${surahName(m)} · ${m.n}:${st.range[0]}${st.range[1] > st.range[0] ? `–${st.range[1]}` : ''}`), ...body);
     at.parentElement!.append(pop);
     (pop.querySelector('button') as HTMLElement | null)?.focus({ preventScroll: true });
+  }
+
+  /** Opens a step: a lesson, a page's memory screen, the similar ayat or a chest. */
+  function runStep(st: PathStep, from?: Element) {
+    closePop();
+    if (st.kind === 'page') {
+      try { sessionStorage.setItem('pmFromPath', String(st.p)); sessionStorage.removeItem('pmGate'); sessionStorage.setItem('pmMode', 'starts'); } catch { /* ignore */ }
+      location.hash = `#/learn/page/${st.p}`;
+    } else if (st.kind === 'similar') {
+      const [a, b] = st.range;
+      void import('./tasmi').then((x) => x.similarSheet(st.s, a, b, { done: lt('learn.simGotIt'), onDone: () => markSimilarSeen(st.s, a, b) }));
+    } else if (st.kind === 'chest') {
+      const el = list.querySelector('.lp-chest.current .chest');
+      el?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
+      void openChest(st, meta[st.s - 1], el ?? from ?? cont);
+    } else location.hash = `#/learn/${st.s}`;
+  }
+
+  /** The surahs starting in each juz, and where in path order the last of them stands. */
+  function gatesOf(ord: number[]) {
+    const last = new Map<number, number>(); // path index → juz whose gate follows it
+    const byJuz = new Map<number, number>();
+    ord.forEach((s, k) => byJuz.set(juzOf[s - 1], k));
+    for (const [j, k] of byJuz) last.set(k, j);
+    return last;
+  }
+  const gateState = (j: number): PathStep['state'] => juzGate(j) ? 'done' : meta.every((m) => juzOf[m.n - 1] !== j || tree(m.n)?.full) ? 'current' : 'locked';
+  /** The weakest page of a juz's surahs (where its checkpoint is recited). */
+  function gatePage(j: number): number {
+    const pages = new Set<number>();
+    for (const m of meta) if (juzOf[m.n - 1] === j) for (let a = 1; a <= m.ayahs; a++) pages.add(mushaf.pageOf(m.n, a));
+    let best = 0, low = 2;
+    for (const p of [...pages].sort((a, b) => a - b)) { const v = strength(p); if (v < low) { low = v; best = p; } }
+    return best || [...pages][0];
+  }
+  function gateEl(j: number, lead: boolean): HTMLElement {
+    const state = gateState(j);
+    const title = lt('learn.gateTitle', { n: j });
+    const wrap = h('section', { class: `lp-gate ${state}${lead ? ' is-current' : ''}`, 'aria-label': lt('learn.gateKicker', { n: j }) });
+    if (lead) next = { what: lt('learn.gateKicker', { n: j }), hue: 'violet', glyph: G.mic, run: () => startGate(j, gatePage(j)) };
+    const pic = vignette(136, (c, x, y, u) => drawDeco(c, 'juzgate', x, y, u, 0, night()), night(), 1.5);
+    const btn = h('button', { class: 'lp-gate-btn', type: 'button', 'aria-label': `${title} · ${lt(state === 'done' ? 'learn.stateDone' : state === 'current' ? 'learn.stateCurrent' : 'learn.stateLocked')}`, onclick: () => {
+      haptic();
+      const same = pop?.dataset.for === `gate:${j}`;
+      closePop();
+      if (same) return;
+      const p = state === 'current' ? gatePage(j) : 0;
+      pop = h('div', { class: `lp-pop ${state} hue-violet`, role: 'dialog', 'aria-label': title, 'data-for': `gate:${j}` },
+        h('b', {}, title), h('span', { class: 'lp-pop-sub' }, lt('learn.gateKicker', { n: j })),
+        ...(state === 'done' ? [h('p', {}, lt('learn.gateDone', { n: j })), h('a', { class: 'lp-btn ghost', href: '#/learn/garden' }, lt('learn.gardenTitle'))]
+          : state === 'locked' ? [h('p', {}, lt('learn.gateLocked'))]
+            : [h('p', {}, lt('learn.gateSub')), h('span', { class: 'lp-pop-sub' }, `${lt('learn.gatePage', { p })} · +${GATE_LIGHT} ✦`),
+              h('button', { class: 'lp-btn hue-violet', type: 'button', onclick: () => startGate(j, p) }, lt('learn.gateStart'))]));
+      btn.parentElement!.append(pop);
+      (pop.querySelector('button, a') as HTMLElement | null)?.focus({ preventScroll: true });
+    } }, pic);
+    wrap.append(
+      lead ? h('div', { class: 'lp-start', 'aria-hidden': 'true' }, lt('learn.start')) : '',
+      h('span', { class: 'lp-kicker' }, lt('learn.gateKicker', { n: j })),
+      h('div', { class: 'lp-gate-wrap' }, btn),
+      h('span', { class: 'lp-cap' }, title));
+    return wrap;
+  }
+  /** A gate, with any thirsty trees' reviews just before it when it is the step to do now. */
+  function gateWithReviews(j: number): HTMLElement[] {
+    const cur = gateState(j) === 'current' && !leadDone;
+    const out: HTMLElement[] = [];
+    if (cur && due.length) {
+      out.push(h('div', { class: 'lp-steps' }, ...due.map((tr, q) => reviewNode(tr.s, q + 1, q === 0))));
+      due = [];
+      leadDone = true;
+    }
+    const lead = cur && !leadDone;
+    if (cur) leadDone = true;
+    out.push(gateEl(j, lead));
+    return out;
+  }
+  function startGate(j: number, p: number) {
+    closePop();
+    try { sessionStorage.setItem('pmGate', `${j}:${p}`); sessionStorage.removeItem('pmFromPath'); sessionStorage.setItem('pmMode', 'recite'); } catch { /* ignore */ }
+    location.hash = `#/learn/page/${p}`;
+  }
+
+  /** Daily lessons target (the Learn goal on Me): a ring beside Continue. */
+  function paintDay() {
+    const target = goals().lessons;
+    const done = todayRec().ls ?? 0;
+    const f = target ? Math.min(1, done / target) : 0;
+    const met = target > 0 && done >= target;
+    day.className = `lp-day${met ? ' met' : ''}${target ? '' : ' none'}`;
+    day.setAttribute('aria-label', target ? lt('learn.dayAria', { n: done, of: target }) : lt('learn.dayNoneAria', { n: done }));
+    const C = 2 * Math.PI * 21;
+    day.replaceChildren(svg(`<circle cx="24" cy="24" r="21" class="lp-day-bg"/><circle cx="24" cy="24" r="21" class="lp-day-fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - f)}" transform="rotate(-90 24 24)"/>`, 52),
+      h('span', { class: 'lp-day-n' }, met ? svg(G.check, 22) : target ? `${done}/${target}` : String(done)));
+    (day.firstChild as SVGSVGElement).setAttribute('viewBox', '0 0 48 48');
+  }
+  function openDay() {
+    haptic();
+    const cur = goals().lessons;
+    const d = sheet('lp-daysheet', lt('learn.daySet'),
+      h('p', { class: 'muted' }, lt('learn.daySetSub')),
+      h('div', { class: 'lp-chips', role: 'radiogroup' }, ...LESSON_GOALS.map((n) => h('button', {
+        class: `chip${n === cur ? ' on' : ''}`, type: 'button', role: 'radio', 'aria-checked': String(n === cur),
+        onclick: () => { setGoals({ ...goals(), lessons: n }); d.close(); },
+      }, n ? lt('learn.dayN', { n }) : lt('learn.dayOff')))));
   }
 
   function treeEnd(m: SurahMeta, hue: string): HTMLElement {
@@ -170,7 +322,10 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const m = meta[s - 1];
     const label = lt('learn.reviewOf', { name: surahName(m) });
     const wrap = h('div', { class: 'lp-step lp-rv', style: `--x:${SWAY[i % SWAY.length]}px` });
-    if (lead) { wrap.classList.add('is-current'); wrap.append(h('div', { class: 'lp-start hue-blue', 'aria-hidden': 'true' }, lt('learn.reviewHere'))); }
+    if (lead) {
+      wrap.classList.add('is-current'); wrap.append(h('div', { class: 'lp-start hue-blue', 'aria-hidden': 'true' }, lt('learn.reviewHere')));
+      next = { what: label, hue: 'blue', glyph: G.drop, run: () => { location.hash = `#/learn/${s}`; } };
+    }
     wrap.append(
       h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: 'lp-ring hue-blue', 'aria-hidden': 'true' }) : '',
         h('button', { class: 'lp-node current review hue-blue', type: 'button', 'aria-label': `${label} · ${lt('learn.reviewWater')}`, onclick: () => { location.hash = `#/learn/${s}`; } }, svg(G.drop, 32), h('span', { class: 'lp-shine', 'aria-hidden': 'true' }))),
@@ -208,23 +363,14 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   }
 
   /** The bottom Continue button: always the next thing to do (a review first, then the current step). */
-  function paintCont(ord: number[], pos: number, dueList: readonly { s: number }[]) {
-    let s = 0, what = '', hue = 'green';
-    if (dueList.length) { s = dueList[0].s; what = lt('learn.reviewOf', { name: surahName(meta[s - 1]) }); hue = 'blue'; }
-    else if (pos < ord.length) {
-      s = ord[pos];
-      const m = meta[s - 1];
-      const st = unitsOf(m, mushaf, true).flatMap((u) => u.steps).find((x) => x.state === 'current');
-      const label = !st || st.kind === 'whole' ? lt('learn.stepTasmi') : st.range[0] === st.range[1] ? lt('learn.stepAyah', { a: st.range[0] }) : lt('learn.stepAyat', { a: st.range[0], b: st.range[1] });
-      what = `${surahName(m)} · ${label}`;
-      hue = curHue;
-    }
-    cont.hidden = !s;
-    if (!s) return;
+  function paintCont() {
+    dock.hidden = !next;
+    if (!next) return;
+    const { what, hue, glyph, run } = next;
     cont.className = `lp-cont hue-${hue}`;
     cont.setAttribute('aria-label', lt('learn.contAria', { what }));
-    cont.replaceChildren(h('span', { class: 'lp-cont-t' }, h('b', {}, lt('learn.continue')), h('span', {}, what)), svg(dueList.length ? G.drop : G.star, 26));
-    cont.onclick = () => { haptic(); location.hash = `#/learn/${s}`; };
+    cont.replaceChildren(h('span', { class: 'lp-cont-t' }, h('b', {}, lt('learn.continue')), h('span', {}, what)), svg(glyph, 26));
+    cont.onclick = () => { haptic(); run(); };
   }
 
   function paint() {
@@ -232,18 +378,21 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     paintTop();
     const ord = order();
     const pos = pathPosition(ord);
+    ctx = { rank: new Map(ord.map((s, k) => [s, k])), similar };
+    const gates = gatesOf(ord);
     const dueList = reviewSteps();
     due = pos < ord.length ? [...dueList] : [];
     leadDone = false;
+    next = null;
     // Near where the path stands every unit is open; further away, one folded line per juz.
     const lo = Math.max(0, pos - earlier), hi = Math.min(ord.length, pos + AHEAD);
     const out: HTMLElement[] = [];
     let k = 0;
     while (k < ord.length) {
       if (k >= lo && k < hi) {
-        const units = unitsOf(meta[ord[k] - 1], mushaf, k <= pos);
-        if (k === pos) curHue = HUES[k % HUES.length];
-        for (const u of units) out.push(unitEl(u, k));
+        for (const u of units(k, ord, pos)) out.push(unitEl(u, k));
+        const j = gates.get(k);
+        if (j) out.push(...gateWithReviews(j));
         k++;
         continue;
       }
@@ -254,7 +403,11 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       const key = `${j}:${run[0]}`;
       const open = openRuns.has(key);
       out.push(foldEl(run, j, key, open));
-      if (open) for (let q = k; q < e; q++) for (const u of unitsOf(meta[ord[q] - 1], mushaf, q <= pos)) out.push(unitEl(u, q));
+      for (let q = k; q < e; q++) {
+        if (open) for (const u of units(q, ord, pos)) out.push(unitEl(u, q));
+        const gj = gates.get(q);
+        if (gj && (open || gateState(gj) === 'current')) out.push(...gateWithReviews(gj));
+      }
       k = e;
     }
     if (pos >= ord.length) {
@@ -263,7 +416,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     }
     out.push(noorLine('learn'));
     list.replaceChildren(...out);
-    paintCont(ord, pos, dueList);
+    paintCont();
+    paintDay();
   }
 
   // --- sheets ---
@@ -383,7 +537,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   });
   if (!pathSet()) void openStart(true);
 
-  const onClick = (e: MouseEvent) => { if (pop && !(e.target as Element).closest('.lp-pop, .lp-node')) closePop(); };
+  const onClick = (e: MouseEvent) => { if (pop && !(e.target as Element).closest('.lp-pop, .lp-node, .lp-gate-btn, .lp-chest-hit')) closePop(); };
   const onChange = () => paint();
   document.addEventListener('click', onClick);
   window.addEventListener('garden-changed', onChange);
@@ -414,13 +568,17 @@ export async function showYourGarden(root: HTMLElement): Promise<() => void> {
       h('b', {}, surahName(m)),
       h('span', { class: dry ? 'dry' : '' }, dry ? lt('learn.thirstyShort') : tr.full ? lt('learn.treeGrownShort') : lt('learn.ayatOf', { n: tr.learned, of: m.ayahs })));
   };
-  const kept = [...new Set([...unplacedDecos(), ...Array.from({ length: 30 }, (_, i) => decos(i + 1)).flat()].map((d) => d.k))] as DecoKind[];
+  const kept = [...new Set([...unplacedDecos(), ...Array.from({ length: 30 }, (_, i) => decos(i + 1)).flat()].map((d) => d.k))].filter((k) => k !== 'juzgate') as DecoKind[];
+  const gates = juzGates();
   root.append(
     h('header', { class: 'lp-top' },
       h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('h1', { class: 'lp-title' }, lt('learn.gardenTitle')),
       h('span', { class: 'lp-gap' }),
       lightChip()),
+    gates.length ? h('section', { class: 'lp-gsections' }, h('h2', { class: 'lp-gh' }, lt('learn.gatesTitle')),
+      h('div', { class: 'lp-ggrid' }, ...gates.reverse().map((j) => h('div', { class: 'lp-gcard lp-ggate' },
+        vignette(84, (c, x, y, u) => drawDeco(c, 'juzgate', x, y, u, 0, night()), night(), 1.5), h('b', {}, lt('learn.gateTitle', { n: j })))))) : '',
     mine.length
       ? h('div', { class: 'lp-gsections' }, ...[...byJuz.entries()].sort((a, b) => b[0] - a[0]).map(([j, list]) =>
         h('section', {}, h('h2', { class: 'lp-gh' }, lt('learn.juzN', { n: j }), h('span', {}, lt('learn.grownOf', { n: list.filter((x) => x.full).length, of: meta.filter((m) => juzOf[m.n - 1] === j).length }))),
