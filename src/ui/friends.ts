@@ -81,8 +81,6 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
-  document.body.append(d);
-  d.showModal();
 
   let pairSig = '';
   const paint = () => {
@@ -163,7 +161,10 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       paint();
     } catch (e) { if (!known && d.isConnected) toast((e as Error).message); }
   };
+  // Built before it is shown, so the page slides in smoothly from its first frame.
   paint();
+  document.body.append(d);
+  d.showModal();
   void refresh();
 }
 /** "Level 12" with a bar to the next level. */
