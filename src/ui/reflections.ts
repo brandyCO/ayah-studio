@@ -4,13 +4,13 @@
 // The user's words are shown in the UI font, never styled like the ayah, and never put on a video.
 import { currentTranslation, translationInfo } from '../data/translations';
 import { account } from '../cloud/auth';
-import { reference, surahTranslation, type SurahMeta } from '../data/quran';
+import { surahTranslation, type SurahMeta } from '../data/quran';
 import {
   deleteReflection, findFolded, fold, lastWritten, liveEntries, loadReflections, MAX_TEXT, reflectionAt, reflections, writeEntry,
   type Entry, type Reflection,
 } from '../data/reflections';
 import { h, toast } from './dom';
-import { locale, surahName, t as tr } from '../i18n';
+import { locale, surahName, t as tr, uiRef } from '../i18n';
 
 // Built on use: the interface language is known only after start-up.
 const dateFmt = { format: (d: number) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(d) };
@@ -45,7 +45,7 @@ function editor(value: string, placeholder: string, save: (text: string) => void
 /** The note on s:a — read it, add today's paragraph, edit earlier ones. */
 export async function openReflection(meta: SurahMeta[], s: number, a: number) {
   await loadReflections(); // never write over a stored note that is not loaded yet
-  const ref = reference(meta[s - 1], a, a);
+  const ref = uiRef(meta[s - 1], a, a);
   const pending: (() => void)[] = []; // savers to run when the sheet closes
   const status = h('span', { class: 'rf-status muted small' });
   const saved = () => { status.textContent = account() ? tr('rf.savedSynced') : tr('rf.savedDevice'); };

@@ -1,3 +1,4 @@
+import { errMsg } from '../i18n';
 type Child = Node | string | null | undefined | false;
 type Attrs = Record<string, unknown>;
 
@@ -22,7 +23,7 @@ export function toast(msg: string) {
     el = h('div', { class: 'toast', role: 'status' });
     document.body.append(el);
   }
-  el.textContent = msg;
+  el.textContent = errMsg(msg); // never English in the Arabic interface
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => el!.classList.remove('show'), 2200);

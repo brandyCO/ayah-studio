@@ -5,13 +5,13 @@ import { revive, streak } from '../data/journey';
 import { account } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import { isNative, shareableLink } from '../native';
-import { t } from '../i18n';
+import { t, localMsg } from '../i18n';
 import { toast } from '../ui/dom';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
   const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(localMsg(error.message));
   return data as T;
 }
 

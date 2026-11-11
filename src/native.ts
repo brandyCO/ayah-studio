@@ -4,6 +4,7 @@
 // The plugins are loaded only inside the app; the web build never downloads them.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { PUBLIC_URL } from './cloud/config';
+import { t } from './i18n';
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -92,7 +93,7 @@ export const shareableLink = (hash: string) =>
 
 /** Our native foreground service (android/…/ExportService.java): keeps an export running in the background. */
 interface ExportServicePlugin {
-  start(o: { title: string; cancel: string }): Promise<void>;
+  start(o: { title: string; cancel: string; channel: string }): Promise<void>;
   progress(o: { percent: number }): Promise<void>;
   stop(): Promise<void>;
   addListener(event: 'cancel', fn: () => void): Promise<{ remove(): Promise<void> }>;
@@ -117,7 +118,7 @@ export function exportGuard(title: string, cancel: string, onCancel: () => void)
   let stopped = false;
   guards++;
   const listener = ExportService.addListener('cancel', onCancel).catch(() => null);
-  void ExportService.start({ title, cancel }).catch((e) => console.warn('Export service not started', e));
+  void ExportService.start({ title, cancel, channel: t('notif.exportChannel') }).catch((e) => console.warn('Export service not started', e));
   return {
     progress(f) {
       const pct = Math.round(f * 100);
@@ -137,7 +138,7 @@ export function exportGuard(title: string, cancel: string, onCancel: () => void)
 
 /** Our native media service (android/…/PlaybackService.java): keeps the Listen player alive in the background. */
 interface PlaybackServicePlugin {
-  show(o: { title: string; text: string; playing: boolean; labels: string[] }): Promise<void>;
+  show(o: { title: string; text: string; playing: boolean; labels: string[]; channel: string }): Promise<void>;
   hide(): Promise<void>;
   addListener(event: 'button', fn: (e: { b: 'prev' | 'toggle' | 'next' | 'stop' }) => void): Promise<{ remove(): Promise<void> }>;
 }
@@ -154,7 +155,7 @@ export const listenGuard = {
     if (!isNative()) return;
     playbackListener ??= PlaybackService.addListener('button', (e) => listenGuard.onButton?.(e.b)).catch(() => null);
     listenGuard.onButton = onButton;
-    void PlaybackService.show({ title, text, playing, labels }).catch(() => {});
+    void PlaybackService.show({ title, text, playing, labels, channel: t('notif.listenChannel') }).catch(() => {});
   },
   hide() {
     if (!isNative()) return;

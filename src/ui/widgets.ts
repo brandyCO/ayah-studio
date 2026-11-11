@@ -137,14 +137,14 @@ export function dhikrReminders(): string[] {
   }
 }
 /** Saves the reminder times and schedules them (daily). False when notifications are not allowed. */
-export async function setDhikrReminders(times: string[]): Promise<boolean> {
+export async function setDhikrReminders(times: string[], ask = true): Promise<boolean> {
   try { localStorage.setItem('dhikrReminders', JSON.stringify(times)); } catch { /* ignore */ }
   if (!isNative()) return true;
   const { LocalNotifications } = await import('@capacitor/local-notifications');
   await LocalNotifications.cancel({ notifications: REMIND_IDS.map((id) => ({ id })) });
   if (!times.length) return true;
   let p = await LocalNotifications.checkPermissions();
-  if (p.display !== 'granted') p = await LocalNotifications.requestPermissions();
+  if (p.display !== 'granted' && ask) p = await LocalNotifications.requestPermissions();
   if (p.display !== 'granted') return false;
   await LocalNotifications.schedule({
     notifications: times.map((time) => {
@@ -173,6 +173,11 @@ export async function allowNotifications(): Promise<boolean> {
 export function initWidgets() {
   if (!isNative()) return;
   void import('./prayerAlerts').then((m) => m.initPrayerAlerts());
+  // The daily dhikr reminders repeat on their own, so their words were fixed when they were set:
+  // set them again on every start so they follow the app's language (and any wording change).
+  const times = dhikrReminders();
+  if (times.length) void setDhikrReminders(times, false).catch(() => {});
+  void import('./notifyChannels').then((m) => m.nameChannels());
   const refresh = () => void pullTasbih().then(() => syncWidgets(true));
   refresh();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });

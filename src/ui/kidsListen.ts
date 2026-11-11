@@ -10,7 +10,7 @@
 import { isKidsSurah, kidsSettings, learned, setKidsSettings, setLearned } from '../data/kids';
 import { kidsRecitation } from '../data/kidsAudio';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { everyayahUrl, reciterById } from '../data/reciters';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { h } from './dom';
@@ -18,7 +18,7 @@ import { icon } from './icons';
 import { bloomNext } from '../data/kidsPath';
 import { kidsReciter, makeKeepsake, parentButton } from './kids';
 import { kidsNoor } from './kidsNoor';
-import { dir, surahName, t } from '../i18n';
+import { dir, surahName, t, uiRef } from '../i18n';
 
 /** Where an ayah's recitation is: a span of the surah recording, or its own everyayah file (no word timings). */
 interface AyahAudio {
@@ -119,7 +119,7 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
       wordEls.push(el);
       return [i ? ' ' : '', el];
     }));
-    ref.textContent = reference(s, ayah);
+    ref.textContent = uiRef(s, ayah);
     en.textContent = english[ayah - 1];
     en.hidden = !kidsSettings().translation;
     meaning.textContent = '';

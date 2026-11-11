@@ -37,6 +37,7 @@ public class PlaybackService extends Service {
     private WifiManager.WifiLock wifi;
     private String title = "";
     private String text = "";
+    private String channelName = "";
     private boolean playing = false;
     private String[] labels = { "Previous", "Play", "Pause", "Next", "Stop" };
 
@@ -57,6 +58,7 @@ public class PlaybackService extends Service {
         if (intent != null) {
             title = orEmpty(intent.getStringExtra("title"));
             text = orEmpty(intent.getStringExtra("text"));
+            channelName = orEmpty(intent.getStringExtra("channel"));
             playing = intent.getBooleanExtra("playing", false);
             String[] l = intent.getStringArrayExtra("labels");
             if (l != null && l.length == 5) labels = l;
@@ -125,8 +127,16 @@ public class PlaybackService extends Service {
     private void channel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm.getNotificationChannel(CHANNEL) != null) return;
-        NotificationChannel ch = new NotificationChannel(CHANNEL, "Listening", NotificationManager.IMPORTANCE_LOW);
+        NotificationChannel had = nm.getNotificationChannel(CHANNEL);
+        if (had != null) {
+            // The name follows the app's language (shown in the phone's notification settings).
+            if (!channelName.isEmpty() && !channelName.contentEquals(had.getName())) {
+                had.setName(channelName);
+                nm.createNotificationChannel(had);
+            }
+            return;
+        }
+        NotificationChannel ch = new NotificationChannel(CHANNEL, channelName.isEmpty() ? "Listening" : channelName, NotificationManager.IMPORTANCE_LOW);
         ch.setSound(null, null);
         ch.enableVibration(false);
         ch.setShowBadge(false);

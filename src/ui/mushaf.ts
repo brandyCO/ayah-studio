@@ -4,7 +4,7 @@
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { addRecentPage } from '../data/history';
-import { loadMeta, reference, surahTranslation } from '../data/quran';
+import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
@@ -12,7 +12,7 @@ import { keepWholeMushaf } from '../data/mushafDownload';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { icon } from './icons';
 import { h, toast } from './dom';
-import { locale, surahName, t } from '../i18n';
+import { locale, surahName, t, uiRef } from '../i18n';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
@@ -52,7 +52,7 @@ registerToday(async () => {
   const tr = await surahTranslation(d.s, info.id).catch(() => null);
   const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: '✧', text: t('today.ayah', { ref: reference(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
+    icon: '✧', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
     sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
     actions: [
       { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
@@ -66,7 +66,7 @@ registerToday(async () => {
   const a = p.ayat[0];
   if (!a) return [];
   return [{
-    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: reference(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
+    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
     actions: [{ label: t('today.popularReel'), href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
   }];
 });
@@ -74,7 +74,7 @@ registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
   return b && Date.now() - b.at < 7 * DAY
-    ? [{ icon: '🔖', text: t('today.bookmark', { ref: reference(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
+    ? [{ icon: '🔖', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
     : [];
 });
 registerToday(async () => {
@@ -82,7 +82,7 @@ registerToday(async () => {
   const d = drafts[0];
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
-  return [{ icon: '🎬', text: t('today.draft', { ref: reference(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
+  return [{ icon: '🎬', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
 });
 
 // Ramadan (T7): today's portion, tonight's ayah, Eid.
@@ -225,7 +225,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       noteAyah(s.surah, s.lo);
       sel.clear();
       const on = toggleBookmark(s.surah, s.lo);
-      toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
+      toast(on ? t('mushaf.bookmarked', { ref: uiRef(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
@@ -584,7 +584,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       const tf = tafsirToggle(s.surah, a);
       if (tf) items.push(tf);
     }
-    const d: HTMLDialogElement = sheet(sheetHead(reference(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(uiRef(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
   }
 
@@ -601,7 +601,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const rows = list.map((b) => {
       const row = h('div', { class: 'bm-row' },
         h('button', { class: 'menu-item bm-go', onclick: () => { d.close(); toggleBar(false); go(mushaf.pageOf(b.s, b.a)); } },
-          h('span', {}, reference(meta[b.s - 1], b.a, b.a)),
+          h('span', {}, uiRef(meta[b.s - 1], b.a, b.a)),
           h('span', { class: 'muted small' }, t('bm.pageDate', { page: mushaf.pageOf(b.s, b.a), date: dateFmt.format(b.at) }))),
         h('button', { class: 'icon-btn', 'aria-label': t('bm.remove'), onclick: () => { removeBookmark(b.s, b.a); row.remove(); } }, '✕'));
       return row;
@@ -612,7 +612,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   function openBookmark(s: number, a: number) {
     const b = bookmarks().find((x) => x.s === s && x.a === a);
-    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${reference(meta[s - 1], a, a)}`, () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${uiRef(meta[s - 1], a, a)}`, () => d.close()),
       b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
         h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, `🎧  ${t('bm.listenHere')}`),

@@ -5,6 +5,7 @@
 // allows, and works out the score. Signed in with Google only; nothing is sent signed out.
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
+import { localMsg } from '../i18n';
 import { addDays, allDays, claimGoal } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
@@ -12,7 +13,7 @@ import { isNative, shareableLink } from '../native';
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
   const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(localMsg(error.message));
   return data as T;
 }
 

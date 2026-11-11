@@ -11,7 +11,7 @@ import { tabBar } from './tabs';
 import { h, skeletonRows } from './dom';
 import { lastRead } from './prefs';
 import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
-import { locale, surahName, t } from '../i18n';
+import { errMsg, locale, surahName, t } from '../i18n';
 
 function ago(at: number) {
   const s = (Date.now() - at) / 1000;
@@ -232,7 +232,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
       hits = arabic ? await searchArabic(q) : (await searchTranslation(q, info.id)).hits;
     } catch (e) {
       skel.remove();
-      if (id === searchId) status.textContent = e instanceof Error ? e.message : String(e);
+      if (id === searchId) status.textContent = errMsg(e);
       return;
     }
     skel.remove();
@@ -273,7 +273,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
     if (q) return void showSearch(q);
     searchId++;
     if (tab === 'surahs') body.replaceChildren(h('ol', { class: 'surah-list' }, ...meta.map(surahRow)));
-    else void showDivisions(tab).catch((e) => body.replaceChildren(h('p', { class: 'muted empty' }, e instanceof Error ? e.message : String(e))));
+    else void showDivisions(tab).catch((e) => body.replaceChildren(h('p', { class: 'muted empty' }, errMsg(e))));
   }
   fill();
 

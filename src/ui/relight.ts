@@ -2,7 +2,7 @@
 // relights it: the ember catches and the fire comes back. Signed out → sign in first, then back here.
 import { account, onAccount } from '../cloud/auth';
 import { giveRelight, relightPreview, type RelightPreview } from '../together/relight';
-import { t } from '../i18n';
+import { errMsg, t } from '../i18n';
 import { h, haptic } from './dom';
 import { flame } from './flame';
 import { openAccount } from './account';
@@ -62,7 +62,7 @@ export async function showRelight(root: HTMLElement, code: string): Promise<() =
         draw();
       } catch (e) {
         btn.disabled = false;
-        sub.textContent = e instanceof Error ? e.message : String(e);
+        sub.textContent = errMsg(e);
       }
     } }, `🔥  ${t('rl.relight')}`);
     act.append(btn);
