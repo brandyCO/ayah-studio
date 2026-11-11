@@ -1790,6 +1790,14 @@ duas/reflections section in Me.
       streak number slams in over speed lines. Five levels by streak (`LEVELS` 1 / 7 / 30 / 100 / 365: Glowing, Burning,
       Blazing with lightning and rising stones, Radiant in gold with rays, Like the dawn in gold and rose); "New level!" on
       the day one starts, "n more days to …" otherwise. Only with a character; tap skips, reduced motion → end picture
+      **Redo like Duolingo's streak** (owner, 2026-11-11, approved from a preview): one smooth flame drawn on canvas in the
+      theme's colours (`src/ui/flatFire.ts`: `flamePath()` one soft teardrop with a single tip, `drawFire()` outer gradient
+      flame + deeper inner flame + white drop, no outline, `themeFire()` from `rewardPalette()`). **Streak moment**
+      (`streakMoment.ts` + `.css`, rewritten): grey flame → melts into a puddle → leaps with swirling ribbons → splash +
+      shockwave → the number rolls → the flame springs back tall → the week row fills (lit days joined into a bar); white
+      background. **Power-up**: the character stands *inside* one big flame (`FlatFire.bigFlame`), lit in its colours by an
+      SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
+      spiral up on the leap. The streak moment no longer chains into the power-up (tap the Me flame for it)
 - [x] M19 Friends on Ranks (owner request 2026-11-11): a tap on a player in the **league** (not Global) opens their
       profile (`src/ui/friends.ts`, strings `src/i18n/friends.ts`): both characters side by side (on fire together while
       both earned XP today, `blazingPair()` in `powerUp.ts`), the name, tier, level, the friend streak and only the stats
