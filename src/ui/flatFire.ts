@@ -5,13 +5,13 @@
 // Two canvases: behind the character (the big silhouette) and in front of it (low tongues at its feet, so it stands
 // inside the fire and its face stays clear). No glow, no blur: solid fills only, so it stays crisp and cheap.
 
-export interface FlatPalette { edge: string; outer: string; mid: string; inner: string; core: string; spark: string }
+export interface FlatPalette { edge: string; outer: string; mid: string; inner: string; core: string; spark: string; look: FireLook }
 /** Per power level: 1–3 orange, 4 gold, 5 dawn rose and gold. */
 export function flatPalette(level: number): FlatPalette {
   // The streak moment's friendly flame (streakMoment.ts): a yellow rim, an orange then red heart, a cream core.
-  if (level >= 5) return { edge: '#ffb3c9', outer: '#ffb3c9', mid: '#ff86a8', inner: '#ff4f86', core: '#fff1f5', spark: '#ffd6e2' };
-  if (level === 4) return { edge: '#ffd84a', outer: '#ffd84a', mid: '#ffb21a', inner: '#ff8a00', core: '#fffbe2', spark: '#fff3a0' };
-  return { edge: '#ffc21a', outer: '#ffc21a', mid: '#ff8a1f', inner: '#ff4f2e', core: '#fff6df', spark: '#ffe27a' };
+  if (level >= 5) return { edge: '#ffb3c9', outer: '#ffb3c9', mid: '#ff86a8', inner: '#ff4f86', core: '#fff1f5', spark: '#ffd6e2', look: FIRE_ROSE };
+  if (level === 4) return { edge: '#ffd84a', outer: '#ffd84a', mid: '#ffb21a', inner: '#ff8a00', core: '#fffbe2', spark: '#fff3a0', look: FIRE_GOLD };
+  return { edge: '#ffc21a', outer: '#ffc21a', mid: '#ff8a1f', inner: '#ff4f2e', core: '#fff6df', spark: '#ffe27a', look: FIRE };
 }
 
 /** The flame's shape: base half-width `w`, tip height `h`, tip `lean`, left bump height `bump`, vertical squash `sq`. */
@@ -19,19 +19,50 @@ export interface Shape { w: number; h: number; lean: number; bump: number; sq: n
 
 /** Adds the flame outline (standing on (x, y), growing up) to the path. */
 export function flamePath(c: CanvasRenderingContext2D, x: number, y: number, s: Shape) {
-  const { w, h: H, lean, bump } = s;
-  const sy = s.sq;
-  const P = (px: number, py: number) => [x + px, y + py * sy] as const;
-  const T = P(lean, -H), R = P(w, -w * 0.95), B = P(0, 0), L = P(-w, -w * 0.95);
-  const K = P(-w * 0.55 + lean * 0.25, -w * 0.95 - bump), N = P(-w * 0.12 + lean * 0.45, -w * 1.05 - bump * 0.35);
-  c.moveTo(...T);
-  c.bezierCurveTo(T[0] + w * 0.12, T[1] + (R[1] - T[1]) * 0.35, x + w, R[1] - (R[1] - T[1]) * 0.42, ...R);
-  c.bezierCurveTo(x + w, y - w * 0.4 * sy, x + w * 0.56, y, ...B);
-  c.bezierCurveTo(x - w * 0.56, y, x - w, y - w * 0.4 * sy, ...L);
-  c.bezierCurveTo(x - w, L[1] - bump * 0.5 * sy, K[0] - w * 0.22, K[1] + bump * 0.25 * sy, ...K);
-  c.bezierCurveTo(K[0] + w * 0.12, K[1] + bump * 0.35 * sy, N[0] - w * 0.06, N[1], ...N);
-  c.bezierCurveTo(N[0] - w * 0.04, N[1] - (N[1] - T[1]) * 0.55, T[0] - w * 0.3, T[1] + (N[1] - T[1]) * 0.22, ...T);
+  // The streak flame's body (owner 2026-11-11, after Duolingo's: clean and geometric): a round base, a tall main tip
+  // leaning right, a shorter pointed tip on the left and a V between them. The yellow rim is added round it by
+  // drawFire(), so the outline here is the inner (red) shape.
+  const R = s.w, sq = s.sq, lean = s.lean;
+  const H = Math.max(s.h, R * 1.05), up = (v: number) => y + v * sq;
+  const cy = up(-R);
+  const Tx = x + R * 0.28 + lean, Ty = up(-H);
+  const Kx = x - R * 0.92 + lean * 0.35, Ky = up(-R * 0.95 - s.bump);
+  const Nx = x - R * 0.18 + lean * 0.55, Ny = up(-R * 1.08 - s.bump * 0.5);
+  c.moveTo(x + R, cy);
+  c.bezierCurveTo(x + R, up(-R - (H - R) * 0.45), Tx + R * 0.32, Ty + (H - R) * 0.22 * sq, Tx, Ty);
+  c.bezierCurveTo(Tx - R * 0.1, Ty + (Ny - Ty) * 0.45, Nx + R * 0.12, Ny - R * 0.08 * sq, Nx, Ny);
+  c.bezierCurveTo(Nx - R * 0.2, Ny + R * 0.05 * sq, Kx + R * 0.2, Ky + (Ny - Ky) * 0.5, Kx, Ky);
+  c.bezierCurveTo(Kx - R * 0.08, Ky + (cy - Ky) * 0.45, x - R, cy - (cy - Ky) * 0.25, x - R, cy);
+  c.ellipse(x, cy, R, R * sq, 0, Math.PI, 0, true);
   c.closePath();
+}
+
+export interface FireLook { rim: string; top: string; bottom: string; core: string }
+export const FIRE: FireLook = { rim: '#ffc800', top: '#ff4b3e', bottom: '#ff9500', core: '#ffffff' };
+export const FIRE_GOLD: FireLook = { rim: '#ffd84a', top: '#ff9a00', bottom: '#ffc21a', core: '#fffbea' };
+export const FIRE_ROSE: FireLook = { rim: '#ffc0d4', top: '#ff3f7f', bottom: '#ff8a5c', core: '#ffffff' };
+
+/** The whole flame standing on (x, y): yellow rim of even width, red-to-orange body, a round white drop. `drop`
+ *  0 hides the drop (a character stands there instead). */
+export function drawFire(c: CanvasRenderingContext2D, x: number, y: number, s: Shape, look: FireLook, drop = 1) {
+  const rim = Math.min(s.w * 0.62, Math.max(s.h, s.w) * 0.5);
+  c.lineJoin = 'round';
+  c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
+  c.fillStyle = look.rim; c.strokeStyle = look.rim; c.lineWidth = rim; c.fill(); c.stroke();
+  const g = c.createLinearGradient(0, y - s.h * s.sq, 0, y);
+  g.addColorStop(0, look.top); g.addColorStop(1, look.bottom);
+  c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
+  c.fillStyle = g; c.fill();
+  if (drop > 0) {
+    const r = s.w * 0.4 * drop, cx = x + s.lean * 0.12, cy = y - rim * 0.5 * s.sq - s.w * 0.92 * s.sq;
+    c.fillStyle = look.core;
+    c.beginPath();
+    c.moveTo(cx, cy - r * 1.75 * s.sq);
+    c.bezierCurveTo(cx + r * 0.35, cy - r * 1.25 * s.sq, cx + r, cy - r * 0.7 * s.sq, cx + r, cy);
+    c.ellipse(cx, cy, r, r * s.sq, 0, 0, Math.PI);
+    c.bezierCurveTo(cx - r, cy - r * 0.7 * s.sq, cx - r * 0.35, cy - r * 1.25 * s.sq, cx, cy - r * 1.75 * s.sq);
+    c.fill();
+  }
 }
 
 /** One character's fire: set its place and heat every frame. */
@@ -146,8 +177,7 @@ export class FlatFire {
     for (const a of this.auras) {
       if (a.heat < 0.02) continue;
       // In front: low tongues round the feet.
-      this.feet(this.fx, a, p.outer, 1, 0);
-      this.feet(this.fx, a, p.inner, 0.5, 0);
+
     }
     for (const b of this.bits) if ((b.kind === 'shard' && b.front) || b.kind === 'spark') this.drawBit(this.fx, b);
     for (const w of this.swirls) this.drawSwirl(w);
@@ -155,16 +185,15 @@ export class FlatFire {
   }
 
   /** The streak flame's own shape, big behind the character: yellow rim, red heart, swaying and breathing. */
+  /** The streak flame itself, big enough to hold the character: it stands inside it (owner: "not surrounded by
+   *  flames, he is in it"), swaying and breathing. */
   private bigFlame(c: CanvasRenderingContext2D, a: Aura) {
-    const t = this.t, heat = Math.min(1.25, a.heat), p = this.pal;
-    const foot = a.foot + a.lift;
-    const fl = 1 + 0.05 * Math.sin(t * 5.2) + 0.025 * Math.sin(t * 13);
-    const s: Shape = { w: a.w * 0.6 * Math.min(1.15, 0.7 + heat * 0.35), h: a.h * 1.22 * heat * fl, lean: a.w * 0.08 + Math.sin(t * 2.1) * a.w * 0.07,
-      bump: a.h * 0.26 * heat * (1 + 0.1 * Math.sin(t * 4.3 + 1)), sq: 1 };
-    const rr = Math.min(s.w, s.h) * 0.34;
-    c.beginPath(); flamePath(c, a.cx, foot - rr * 0.4, s); round(c, p.outer, rr);
-    const inner: Shape = { w: s.w * 0.62, h: s.h * 0.66, lean: s.lean * 0.6, bump: s.bump * 0.5, sq: 1 };
-    c.beginPath(); flamePath(c, a.cx, foot - s.w * 0.1 - rr * 0.3, inner); round(c, p.inner, rr * 0.7);
+    const t = this.t, heat = Math.min(1.25, a.heat);
+    const fl = 1 + 0.04 * Math.sin(t * 5.2) + 0.02 * Math.sin(t * 13);
+    const grow = Math.min(1, 0.55 + heat * 0.45);
+    const s: Shape = { w: a.w * 0.6 * grow, h: a.h * 1.18 * Math.min(1.15, heat) * fl, lean: a.w * 0.06 + Math.sin(t * 2.1) * a.w * 0.05,
+      bump: a.h * 0.42 * Math.min(1.1, heat) * (1 + 0.08 * Math.sin(t * 4.3 + 1)), sq: 1 };
+    drawFire(c, a.cx, a.foot + a.lift + a.w * 0.06, s, this.pal.look, 0);
   }
 
   private drawSwirl(sw: { a: Aura; at: number; dur: number; ph: number }) {
@@ -235,13 +264,12 @@ export class FlatFire {
       c.fill();
       return;
     }
-    // Drops and shards: a little flame pointing the way it flies (drops point up).
-    const ang = b.kind === 'drop' ? 0 : Math.atan2(b.vx, -b.vy);
+    // Drops: round sparks of the rim colour. Shards: tiny streak flames, tilted the way they fly.
+    if (b.kind === 'drop') { c.fillStyle = p.look.rim; c.beginPath(); c.arc(b.x, b.y, r * 0.55, 0, TAU); c.fill(); return; }
     c.save();
     c.translate(b.x, b.y);
-    c.rotate(ang);
-    c.beginPath(); tongue(c, 0, 0, r, r * 2.4, 0); c.fillStyle = b.kind === 'drop' ? p.outer : p.mid; c.fill();
-    c.beginPath(); tongue(c, 0, r * 0.25, r * 0.5, r * 1.2, 0); c.fillStyle = p.inner; c.fill();
+    c.rotate(Math.atan2(b.vx, -b.vy) * 0.6);
+    drawFire(c, 0, r * 0.4, { w: r * 0.55, h: r * 1.7, lean: r * 0.1, bump: r * 0.5, sq: 1 }, p.look, 0);
     c.restore();
   }
 }

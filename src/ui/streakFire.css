@@ -51,3 +51,8 @@
   background: #ff8a00 !important; color: #fff !important; box-shadow: 0 5px 0 #c85a00 !important; text-transform: uppercase; letter-spacing: .06em; font-weight: 900; }
 .sf.done :is(.sf-level, .sf-sub, .sf-ok) { opacity: 1; translate: 0 0; }
 .sf.done .sf-sub { transition-delay: .1s; }
+/* Once lit the character is part of the fire: warmed through to flame colours, still itself. */
+.sf-body .fg-actor { transition: filter .4s ease-out; }
+.sf.lit .sf-body .fg-actor { filter: sepia(.8) saturate(2.4) hue-rotate(-14deg) brightness(1.06); }
+.sf-l4.lit .sf-body .fg-actor { filter: sepia(.8) saturate(2) hue-rotate(-4deg) brightness(1.1); }
+.sf-l5.lit .sf-body .fg-actor { filter: sepia(.6) saturate(2.2) hue-rotate(-40deg) brightness(1.08); }
