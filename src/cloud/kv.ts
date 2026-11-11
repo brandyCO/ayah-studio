@@ -80,11 +80,41 @@ export function hash(s: string | null): string {
 const keys = (): string[] => { try { return Object.keys(localStorage); } catch { return []; } };
 const get = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 
+// Keys written since the last full look, so the minute check reads only those (not every value stored).
+const touched = new Set<string>();
+let everything = true; // nothing looked at yet, or the storage was cleared
+try {
+  const proto = Storage.prototype;
+  const { setItem, removeItem, clear } = proto;
+  const mark = (s: Storage, k: unknown) => { try { if (s === localStorage) touched.add(String(k)); } catch { /* no storage */ } };
+  proto.setItem = function (this: Storage, k: string, v: string) { mark(this, k); return setItem.call(this, k, v); };
+  proto.removeItem = function (this: Storage, k: string) { mark(this, k); return removeItem.call(this, k); };
+  proto.clear = function (this: Storage) { try { if (this === localStorage) everything = true; } catch { /* ignore */ } return clear.call(this); };
+  // Another tab of the app wrote it.
+  window.addEventListener('storage', (e) => { if (e.key === null) everything = true; else touched.add(e.key); });
+} catch { everything = true; }
+
 /** Notes every key that changed since the last look (its time = now). A key seen for the first time
- *  gets time 0: it holds data from before syncing, which is merged with the account's, never replaced. */
-export function scanKv(now = Date.now()): boolean {
+ *  gets time 0: it holds data from before syncing, which is merged with the account's, never replaced.
+ *  `quick`: only the keys written since the last look (the once-a-minute check, leaving the app). */
+export function scanKv(now = Date.now(), quick = false): boolean {
   const m = loadMeta();
   let dirty = false, changed = false;
+  if (quick && !everything) {
+    if (!touched.size) return false;
+    for (const k of touched) {
+      if (!kvSynced(k)) continue;
+      const v = get(k);
+      if (v === null && !m[k]) continue;
+      const h = hash(v);
+      if (!m[k]) { m[k] = { h, at: 0 }; dirty = true; } else if (m[k].h !== h) { m[k] = { ...m[k], h, at: now }; dirty = changed = true; }
+    }
+    touched.clear();
+    if (dirty) saveMeta(m);
+    return changed;
+  }
+  everything = false;
+  touched.clear();
   const seen = new Set<string>();
   for (const k of keys()) {
     if (!kvSynced(k)) continue;

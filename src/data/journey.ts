@@ -648,6 +648,21 @@ function loadOthers(): Record<string, Other> {
 export function mergeJourney(remote: unknown, device: string): boolean {
   const o = cleanOther(remote);
   if (!o || !device) return false;
+  const prev = loadOthers()[device];
+  const from = (remote as { from?: unknown }).from;
+  if (isDay(from) && prev) {
+    // A head (cloud/syncDocs.ts): earlier months and the page times come in their own documents.
+    for (const [k, d] of Object.entries(prev.days)) if (k < from) o.days[k] ??= d;
+    for (const [k, p] of Object.entries(prev.log)) if (k < from) o.log[k] ??= p;
+    o.pageLast = prev.pageLast;
+  }
+  return putOther(device, o);
+}
+
+/** Another device's journey as kept here (cloud/syncDocs.ts adds a part to it). */
+export const otherJourney = (device: string): Other | undefined => loadOthers()[device];
+
+function putOther(device: string, o: Other): boolean {
   const all = loadOthers();
   if (JSON.stringify(all[device]) === JSON.stringify(o)) return false;
   all[device] = o;

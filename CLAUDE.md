@@ -1363,7 +1363,13 @@ duas/reflections section in Me.
       progress keys (`UNION`) always merge; after that the newer change wins (deletions too). Locations are stripped
       (`STRIP`) and kept on the device; values > 300 KB stay local. A pulled row that cannot be merged is skipped, a
       refused batch is retried row by row and the refused keys show in the sync status, so one bad item never stops
-      the rest. A change saved while the app stays open is looked for once a minute. Server-side progress (Ranks points, XP, challenges, friends, pacts) is already the account's. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, theme, app icon, settings match).
+      the rest. A change saved while the app stays open is looked for once a minute. Server-side progress (Ranks points, XP, challenges, friends, pacts) is already the account's. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, theme, app icon, settings match). Sync pass (2026-11-11, measured at 4× CPU on 4G with a year of data): each device's journey is sent in parts
+      (`src/cloud/syncDocs.ts`): `journey:{device}` holds this month's days and everything but the page times (`from` = its first
+      day; older app versions sent the whole year here, still read), `jm:{device}:{YYYY-MM}` each earlier month, `jm:{device}:pages`
+      the page times, a month no longer kept goes as deleted — a tasbih tap sent ~96 KB, now ~3 KB; `syncMeta` keeps fingerprints,
+      not whole documents (~100 KB → 3 KB rewritten each round); the minute check reads only keys written since the last look
+      (`Storage.prototype` setItem/removeItem marked in kv.ts, other tabs by the `storage` event; a round still looks at all);
+      the merging (`syncDocs.ts`) loads with the first round, out of the first load. A quiet round = 1 small read, nothing sent.
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
