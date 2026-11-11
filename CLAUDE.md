@@ -1527,6 +1527,18 @@ duas/reflections section in Me.
       surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
       after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
       Me idle at 6× CPU throttle ~880 → ~1 ms/s
+      **Round 5** (owner "yes to all that", 2026-11-11): **faces** (`figure.ts`: eyes 0–4, brows 0–3, mouth 0–3, cheeks /
+      freckles 0–4, older look with grey beard and smile lines; nose and moustache), **expressions** (every actor carries happy,
+      wow, sleepy, calm, proud and star faces, shown by class; `actor.face(xp, ms)`: chest "Almost!" wow, epic open star, streak
+      proud / star at milestones, Ranks up star; reciting calm), **hair** (hairline, strands; afro, braids, ponytail, white),
+      **Ummah dress** (djellaba, shalwar kameez, baju koko, boubou, baju kurung; peci), **hijab styles** (`wrap`: khimar, wrapped
+      bun, shayla), **patterns** on outfits, **extras** (`acc`: watch, prayer mat, backpack, siwak). Codes are 22 digits when any new
+      part is set, 14 otherwise (migration `20261111300000_rank_figure_more.sql`). **Room**: wall (zellige, panels, arches), floor
+      (terracotta, marble, mosaic), window view (desert, sea, mountains, city), new places seat (cushions, pouf, majlis) and pet
+      (a cat in four coats: sits, swishes its tail and blinks by day, sleeps curled at night); living items (a sprout that grows
+      with the streak, a dallah with steam, a lamp lit at night, books on a rehal, a prayer corner, mashrabiya); special days
+      (`specialNow()`: Jumu'ah light, Arafah, Laylat al-Qadr odd nights). **Visits**: a friend's room on Ranks, view only (tap
+      their row; `rank_set_room`, `rank_players.room`, migration `20261111310000_rank_rooms.sql`, none when private; pgTAP 81)
       **60 fps pass** (owner request 2026-11-10, "the characters lag when tapped… make every animation 60fps"): moving parts
       are HTML layers the compositor moves without repainting, never animations inside an SVG. Characters (`layer()` in
       `actor.ts`): body, head, raised / waving arms and shadow as stacked SVG copies in `span.fg-lay`; chests (`chestArt()`
@@ -1538,6 +1550,29 @@ duas/reflections section in Me.
       gets `content-visibility: hidden` (was `visibility`, a 340 ms restyle) and its WAAPI animations pause. Chest styles
       moved to `src/ui/chest.css` (lazy, with `chest.ts`). 6× CPU throttle, headless: character tap 42 → ~50–57 fps, room
       38 → 55, chest 38 → 53, lantern 51 → 58, streak 38 → 57, Me scrolling 59; every picture checked identical
+      **Round 4** (owner "yes all that", 2026-11-11): **chest suspense** — the number of taps is hidden and random within the
+      tier's range (`CHEST_TAPS`: 3–5 … 5–8, one fewer in a combo), each tap cracks it by an uneven amount (quick taps a little
+      more), it strains and creaks on its own between taps, harder as it gives way, and may once lift its lid, flood light and
+      slam shut ("Almost!") before it gives; hints Keep tapping… / It's giving way… (the dots are gone). What is inside never
+      changes and is always shown. **Each tier its own sound and feel** (`sfx.tap(p, tier)`, `strain`, `almost`, `open(big, tier)`:
+      wood knocks, brass rings, cedar booms, emerald chimes, pearl hums; vibration patterns per tier). **Harvest**
+      (`src/ui/harvest.ts`): with 2+ goal chests waiting, Me's goals card shows "Open all n chests ★ total" → one moment, the
+      chests open one after another (quickening), their Light flying into one total that climbs; a tap plays the rest.
+      **Streak milestones** (`src/ui/milestone.ts`): day 7 seven lanterns light up in an arc, 30 lanterns rise up the sides,
+      100 dawn (sky warms, sun with slow rays over hills), 365 dawn + lanterns + a crescent with stars; the room's flame frame
+      follows the best streak (wood → bronze 7 → silver 30 → gold with gems 100 → crescent on top 365). **Listening**: while a
+      recitation plays (`html.reciting`, set by the player) characters sit still, head a little bowed, breathing slowly, taps
+      only nod; a surah recited to its end (`recitation-surah` event) makes every character on screen cheer. **Smoothness meter**
+      (`src/fps.ts`): every chest / reward / streak / Ranks moment and the harvest record their fps, slowest frame and share of
+      slow frames on the device (localStorage `fpsLog`, newest 40), shown in Device check with Clear. The streak moment reads
+      positions before changing classes (its first beat forced a ~46 ms layout at 6× throttle). Strings `src/i18n/moments.ts` (`mt()`)
+      **Streak card sky by the du'a lantern times** (owner request 2026-11-11): Me's streak card has seven skies like the lanterns —
+      before dawn (2 h before Fajr: crescent, first blue line), Fajr (lilac and rose, low pale sun), Dhuhr (clear blue, high sun,
+      clouds), Asr (golden afternoon), Maghrib (from 25 min before: orange into magenta, sun at the horizon), Isha (2½ h: deep
+      blue, crescent) and the night's sleep (full moon, every star); each with its own horizon (hills, a masjid with lit windows
+      after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
+      always pops. From the prayer times, else by the hour
+      (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
@@ -1850,6 +1885,19 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
       (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
       export, held-out report)
+- [x] **Focus page** (owner request 2026-11-11): in a lesson's page view (listen, practise, tasmi', check) and on
+      `#/learn/page/P` the mushaf page fills the screen with no bars and no scrolling; steps, translation, tools and
+      the page links come up with a tap of the small light (`.ls-noor`) or a swipe up from the bottom row. One
+      switch for both (⤢ in the top bar, localStorage `learnFocus`, on by default). **Page memory quiz** = the lesson
+      exercises' run (same bar, feedback strip, good lines, missed card back once, popIn/squash, sounds), asked on
+      the real page: all words hidden in place, the line in question marked, the words asked about pulsing; the
+      answer appears on the page; "where does ayah X start" is answered by tapping the line on the page.
+      **Mic fixes**: SpeechPlugin tries on-device → the default service → each installed (Google first)
+      recognition service, moving on at errors 3/4/11–15 (no Arabic) and keeping the one that worked; messages say
+      "no Arabic" or the error code. The button shows only where it can work (owner, 2026-11-11): Android 13+ asks each
+      recogniser `checkRecognitionSupport` for Arabic first (none → no button); a phone whose recogniser fails before
+      hearing anything hides it for 3 days (localStorage `followBroken`). Record me asks for the microphone natively first (`Speech.mic`), picks a
+      supported recording type and says why it could not start (denied / busy)
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;

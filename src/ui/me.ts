@@ -23,6 +23,7 @@ import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
 import { LANGS, lang, locale, setLang, surahName, t, type Key } from '../i18n';
 import { h, haptic, toast } from './dom';
+import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
@@ -114,6 +115,25 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // The streak card's sky follows the user's day in the same seven times as the du'a lanterns (owner request
+  // 2026-11-11): before dawn, Fajr, Dhuhr, Asr, Maghrib, Isha, and the night's sleep, each its own sky. From the prayer
+  // times when a location is set, else by the hour.
+  const SKIES = ['wake', 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'sleep'] as const;
+  const paintSky = async () => {
+    const now = new Date(), hr = now.getHours() + now.getMinutes() / 60;
+    let sky: (typeof SKIES)[number] = hr >= 3 && hr < 5 ? 'wake' : hr >= 5 && hr < 7 ? 'fajr' : hr >= 7 && hr < 15 ? 'dhuhr'
+      : hr >= 15 && hr < 17.5 ? 'asr' : hr >= 17.5 && hr < 19 ? 'maghrib' : hr >= 19 && hr < 22 ? 'isha' : 'sleep';
+    try {
+      const p = await prayerDay(now);
+      if (p) {
+        const at = now.getTime(), M = 60_000, [fajr, sunrise, , asr, maghrib, isha] = p.map((d) => d.getTime());
+        sky = at >= fajr - 120 * M && at < fajr ? 'wake' : at >= fajr && at < sunrise + 30 * M ? 'fajr' : at >= sunrise && at < asr ? 'dhuhr'
+          : at >= asr && at < maghrib - 25 * M ? 'asr' : at >= maghrib - 25 * M && at < isha ? 'maghrib' : at >= isha && at < isha + 150 * M ? 'isha' : 'sleep';
+      }
+    } catch { /* by the hour, as above */ }
+    for (const k of SKIES) hero.classList.toggle(`sky-${k}`, k === sky);
+  };
+  void paintSky();
   // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
   const wardrobeSlot = h('div', { class: 'wd-slot' });
   // The character's room, decorated with prizes (src/ui/room.ts, lazy; only with a character).
@@ -410,6 +430,28 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('span', { class: 'muted small' }, all && goalClaimed('all') ? t('goal.allMet') : `${n} / ${list.length}`)),
       goalChest('all', ALL_LIGHT, all, (el) => void claimAll(el)));
   };
+  // The harvest: every goal chest waiting (today's and this week's) opened in one moment.
+  const waitingChests = () => {
+    const out: { id: string; label: string; light: number }[] = [];
+    const list = todayGoals(), wk = weekGoals();
+    for (const g of list) if (g.done >= g.target && !goalClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
+    if (list.length > 1 && list.every((g) => g.done >= g.target) && !goalClaimed('all')) out.push({ id: 'all', label: t('chest.day'), light: ALL_LIGHT });
+    for (const g of wk) if (g.done >= g.target && !weekClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
+    if (wk.length > 1 && wk.every((g) => g.done >= g.target) && !weekClaimed(weekAllId())) out.push({ id: weekAllId(), label: t('wkg.chest'), light: WEEK_ALL_LIGHT });
+    return out;
+  };
+  const harvestAll = () => {
+    const list = waitingChests();
+    if (list.length < 2) return;
+    haptic();
+    void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
+  };
+  const harvestBtn = () => {
+    const list = waitingChests();
+    if (list.length < 2) return '';
+    return h('button', { class: 'goal-harvest', onclick: harvestAll },
+      h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
+  };
   // This week's goals (reset every Monday): their own rows and chest for all of them.
   const claimWeekAll = (from?: Element) => play(
     () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
@@ -533,6 +575,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           : h('h2', { class: 'me-h' }, t('goal.title')),
         tab === 'week' || list.length ? resetLabel(tab) : '',
         h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
+      harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },
         h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
@@ -756,7 +799,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); } }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); void paintSky(); } }, 30_000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();

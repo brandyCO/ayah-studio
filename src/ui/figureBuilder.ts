@@ -8,7 +8,7 @@ import { shopAdd, shopHas, wallet } from '../data/garden';
 import { setFigure, type Status } from '../together/ranks';
 import {
   DEFAULT, PRICE, PRIZE, SWATCH, WARDROBE, bustMarkup, encode, figureSvg, hairHidden, normalize, options, parse, random,
-  type Fig, type Rarity, type Slot,
+  type Fig, type Rarity, type Slot, type Xp,
 } from './figure';
 import { h, haptic, toast } from './dom';
 import { reduced } from './juice';
@@ -17,15 +17,17 @@ import { sfx } from './sfx';
 import { ownsPiece } from '../data/wardrobe';
 import './figure.css';
 
-type Tab = 'body' | 'wardrobe' | 'skin' | 'hair' | 'beard' | 'head' | 'outfit' | 'glasses' | 'hold' | 'pose' | 'bg';
-const TABS: Tab[] = ['body', 'wardrobe', 'skin', 'hair', 'beard', 'head', 'outfit', 'glasses', 'hold', 'pose', 'bg'];
+type Tab = 'body' | 'wardrobe' | 'skin' | 'eyes' | 'brows' | 'mouth' | 'cheeks' | 'age' | 'hair' | 'beard' | 'head' | 'wrap' | 'outfit' | 'pattern' | 'acc' | 'glasses' | 'hold' | 'pose' | 'bg';
+const TABS: Tab[] = ['body', 'wardrobe', 'skin', 'eyes', 'brows', 'mouth', 'cheeks', 'age', 'hair', 'beard', 'head', 'wrap', 'outfit', 'pattern', 'acc', 'glasses', 'hold', 'pose', 'bg'];
+/** Face tabs (round 5): shown only with a face; their tiles zoom in on it. */
+const FACE = new Set<Tab>(['eyes', 'brows', 'mouth', 'cheeks', 'age']);
 const RARITY: Rarity[] = ['legendary', 'epic', 'rare', 'cute'];
 /** A wardrobe piece (earned, never sold) other than the champion's outfit, which has its own rule. */
 const piece = (slot: Slot, v: number) => key(slot, v) !== PRIZE ? WARDROBE[key(slot, v)] : undefined;
 /** The colour each tab can also change. */
-const COLOUR: Partial<Record<Tab, 'hairC' | 'headC' | 'outC'>> = { hair: 'hairC', beard: 'hairC', head: 'headC', outfit: 'outC' };
+const COLOUR: Partial<Record<Tab, 'hairC' | 'headC' | 'outC'>> = { hair: 'hairC', beard: 'hairC', brows: 'hairC', age: 'hairC', head: 'headC', wrap: 'headC', outfit: 'outC', pattern: 'outC' };
 /** Tiles that show the whole character (the rest show head and shoulders). */
-const WHOLE = new Set<Tab>(['body', 'outfit', 'hold', 'pose', 'wardrobe']);
+const WHOLE = new Set<Tab>(['body', 'outfit', 'pattern', 'acc', 'hold', 'pose', 'wardrobe']);
 
 const key = (slot: Slot, v: number) => `${slot}:${v}`;
 const shopId = (slot: Slot, v: number) => `fg:${slot}:${v}`;
@@ -62,7 +64,11 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
   // Each change gets a reaction that fits it: a nod for the head and face, a hop for the rest.
   let lastSlot: Slot | 'face' | null = null;
   const react = () => {
-    if (lastSlot === 'head' || lastSlot === 'headC' || lastSlot === 'glasses' || lastSlot === 'face' || lastSlot === 'hair' || lastSlot === 'hairC' || lastSlot === 'beard') { nod(stage); hop(stage, 10, 480); } else hop(stage);
+    const faceSlot = lastSlot === 'eyes' || lastSlot === 'brows' || lastSlot === 'mouth' || lastSlot === 'cheeks' || lastSlot === 'age';
+    if (faceSlot) { nod(stage, 4); }
+    else if (lastSlot === 'head' || lastSlot === 'headC' || lastSlot === 'wrap' || lastSlot === 'glasses' || lastSlot === 'face' || lastSlot === 'hair' || lastSlot === 'hairC' || lastSlot === 'beard') { nod(stage); hop(stage, 10, 480); } else hop(stage);
+    // A new outfit or extra gets a smile (with a face).
+    if (f.face && !faceSlot && lastSlot !== 'face') expr('happy', 900);
     idleAt = performance.now();
   };
   // Idle: every 4–7 s a small fidget (a glance, a nod, a little hop), never while the user is busy.
@@ -71,8 +77,16 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     if (!d.open || document.hidden || performance.now() - idleAt < 4000) return;
     idleAt = performance.now() + Math.random() * 3000;
     const r = Math.random();
-    if (r < 0.45 && f.face) glance(stage); else if (r < 0.75) nod(stage, 3); else hop(stage, 12, 520);
+    if (r < 0.35 && f.face) glance(stage); else if (r < 0.5 && f.face) expr(Math.random() < 0.5 ? 'happy' : 'wow', 1100); else if (r < 0.75) nod(stage, 3); else hop(stage, 12, 520);
   }, 1000);
+  // A passing expression on the big character (only with a face).
+  let exprT = 0;
+  const expr = (x: Xp, ms: number) => {
+    if (!f.face) return;
+    clearTimeout(exprT);
+    stage.querySelectorAll('svg.fg').forEach((e) => e.classList.add(`xp-${x}`));
+    exprT = window.setTimeout(() => stage.querySelectorAll('svg.fg').forEach((e) => e.classList.remove(`xp-${x}`)), ms);
+  };
   const paintStage = (hop: boolean) => {
     const bg = SWATCH.bg[f.bg];
     stage.style.setProperty('--fb-a', bg[0]);
@@ -90,7 +104,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     light.textContent = `✦ ${wallet().toLocaleString()}`;
     faceChips.replaceChildren(...[0, 1].map((v) => h('button', {
       class: `chip${f.face === v ? ' on' : ''}`, 'aria-pressed': String(f.face === v),
-      onclick: () => { if (f.face !== v) { lastSlot = 'face'; f = { ...f, face: v }; paintStage(true); paintPanel(); } },
+      onclick: () => { if (f.face !== v) { lastSlot = 'face'; f = { ...f, face: v }; if (v) tab = 'eyes'; paintStage(true); paintTabs(); paintPanel(); } },
     }, rt(v ? 'fb.faceOn' : 'fb.faceOff'))));
   };
   const set = (slot: Slot, v: number) => {
@@ -102,7 +116,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     paintPanel();
   };
 
-  const visible = (x: Tab) => x === 'wardrobe' || (x === 'hair' ? options('hair', f).length > 0 && !hairHidden(f) : options(x, f).length > 1);
+  const visible = (x: Tab) => x === 'wardrobe' || (FACE.has(x) ? !!f.face : x === 'hair' ? options('hair', f).length > 0 && !hairHidden(f) : options(x, f).length > 1);
   const paintTabs = () => {
     if (!visible(tab)) tab = 'body';
     tabs.replaceChildren(...TABS.filter(visible).map((x) => h('button', {
@@ -118,7 +132,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     const pc = WARDROBE[key(slot, v)];
     const locked = (key(slot, v) === PRIZE && !champion) || (!!piece(slot, v) && !owned(slot, v));
     const art = h('span', { class: 'fb-art', 'aria-hidden': 'true' });
-    art.innerHTML = WHOLE.has(slot as Tab) ? figureSvg(g, { still: true }) : `<svg viewBox="2 2 36 36">${bustMarkup(g, 18)}</svg>`;
+    art.innerHTML = WHOLE.has(slot as Tab) ? figureSvg(g, { still: true }) : `<svg viewBox="2 2 36 36">${bustMarkup(g, 18, FACE.has(slot as Tab))}</svg>`;
     const how = pc ? rt(`fb.how.${key(slot, v) === PRIZE ? 'week' : pc.how}` as RankKey) : '';
     const name = slot === 'bg' ? (v >= 8 ? label(slot, v) : rt('fb.tab.bg')) : label(slot, v);
     return h('button', {

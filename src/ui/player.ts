@@ -154,6 +154,8 @@ export function createPlayer(o: PlayerHooks) {
   let pending: { s: number; a: number } | null = null;
   function paint() {
     const playing = !audio.paused || (introOn && !intro.paused);
+    // The user's character listens quietly while a recitation plays (src/ui/actor.ts).
+    document.documentElement.classList.toggle('reciting', playing);
     playBtn.replaceChildren(loading ? h('span', { class: 'spinner' }) : icon(playing ? 'pause' : 'play', 22));
     playBtn.setAttribute('aria-label', loading ? 'Loading' : playing ? 'Pause' : 'Play');
     const at = loading && pending ? pending : cur;
@@ -406,6 +408,7 @@ export function createPlayer(o: PlayerHooks) {
   }
 
   function stop() {
+    document.documentElement.classList.remove('reciting');
     req++;
     introDone?.(false);
     loading = false;
@@ -484,6 +487,8 @@ export function createPlayer(o: PlayerHooks) {
   on('ended', () => {
     cancelAnimationFrame(raf);
     if (!surah) { stop(); return; }
+    // A surah recited to its end: the character stands up happy (src/ui/actor.ts).
+    if (!(perAyah && playing < verses.length)) window.dispatchEvent(new CustomEvent('recitation-surah', { detail: surah }));
     const x = after(surah, perAyah ? playing : verses[verses.length - 1]?.a ?? 1);
     if (x === 'stop') stop();
     else if (x !== 'go') void playFrom(x.s, x.a);

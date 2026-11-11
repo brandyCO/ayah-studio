@@ -31,9 +31,9 @@
 .cel-slot > * { grid-area: 1 / 1; }
 .cel-tap { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; font-weight: 700; color: var(--rw-core); animation: cel-tap 1.8s ease-in-out infinite; }
 @keyframes cel-tap { 50% { opacity: .55; } }
-.cel-dots { display: flex; gap: 8px; }
-.cel-dots i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--rw-n3) 75%, transparent); transition: background .2s, box-shadow .2s, transform .25s cubic-bezier(.2, 1.6, .4, 1); }
-.cel-dots i.on { background: var(--rw-core); border-color: var(--rw-core); box-shadow: 0 0 10px var(--rw-n3); transform: scale(1.2); }
+.cel-tap > span { display: inline-block; }
+/* Almost open: the seam blazes for a moment before the lid slams back. */
+.cel-chest.almost .cel-crack .seam { opacity: 1; stroke-width: 3; }
 .cel-chest.opened .cel-tap { visibility: hidden; animation: none; }
 .cel-loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 8px; visibility: hidden; }
 .cel-loot-it { position: relative; width: 76px; display: flex; flex-direction: column; align-items: center; gap: 6px; visibility: hidden; }

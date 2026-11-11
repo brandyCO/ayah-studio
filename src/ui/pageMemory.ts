@@ -2,8 +2,9 @@
 //   #/learn/pages[/J]   the pages of a juz, each coloured by how firmly it is held (src/data/pageMemory.ts)
 //   #/learn/page/P      one page, three ways:
 //     Line starts   only the first word of each line shows (awa'il al-astur); recite each line, tap it to check
-//     Quiz          how does the page start / end, what starts the next page, which word starts line k,
-//                   where does ayah X start (tap its line on the page's outline)
+//     Quiz          the lesson exercises' cards, asked on the real page (words hidden in place): how does
+//                   the page start / end, what starts the next page, which word starts the marked line,
+//                   where does ayah X start (tap its line on the page)
 //     Recite page   the whole page from memory: peeks and "Stuck? Next word" are slips, then tap missed
 //                   words; the result moves the page's strength
 // The page is drawn with its QCF page font from the bundled glyph codes; choices are the bundled text
@@ -22,10 +23,10 @@ import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
-import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { followFailKey, followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
-import { popIn, reduced } from './juice';
+import { popIn, reduced, squash } from './juice';
 import { lightChip } from './lightChip';
 import { sfx } from './sfx';
 import { tabBar } from './tabs';
@@ -228,6 +229,11 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
 
   const titleEl = h('div', { class: 'ls-title' }, h('h1', {}, lt('learn.pageN', { n: p })), h('p', { class: 'ls-ref', dir: 'ltr' }, ref));
   const badge = h('span', { class: 'pm-badge' });
+  const focusOn = () => { try { return localStorage.getItem('learnFocus') !== 'off'; } catch { return true; } };
+  const svgIcon = (d: string) => { const e = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); e.setAttribute('viewBox', '0 0 24 24'); e.setAttribute('width', '22'); e.setAttribute('height', '22'); e.setAttribute('aria-hidden', 'true'); e.innerHTML = `<path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`; return e; };
+  const FOCUS_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', FOCUS_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
+  const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
+  const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { try { localStorage.setItem('learnFocus', focusOn() ? 'off' : 'on'); } catch { /* blocked */ } paintFocus(); } });
   const tabs = h('div', { class: 'pm-tabs', role: 'tablist' });
   const pageBox = h('div', { class: 'pm-pagebox' });
   const quizBox = h('div', { class: 'pm-quiz lk', hidden: true });
@@ -247,8 +253,31 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   root.append(
     h('header', { class: 'ls-head pm-head' },
       h('a', { class: 'icon-btn', href: `#/learn/pages/${mushaf.pages[p - 1].juz}`, 'aria-label': lt('learn.pmAll') }, icon('back', 22)),
-      titleEl, badge),
+      titleEl, badge, noorBtn, focusBtn),
     tabs, pageBox, quizBox, actions, nav, tabBar('learn'));
+
+  // Focus page (as in a lesson): the page fills the screen; the page links come up on a tap of the
+  // light or a swipe up from the bottom. Same switch as lessons (localStorage learnFocus).
+  function paintFocus() {
+    const on = focusOn();
+    root.classList.toggle('ls-focus', on);
+    root.classList.toggle('pm-focus', on);
+    if (!on) peek(false);
+    focusBtn.replaceChildren(svgIcon(on ? FOCUS_OUT : FOCUS_IN));
+    focusBtn.setAttribute('aria-label', lt(on ? 'learn.focusOff' : 'learn.focusOn'));
+    requestAnimationFrame(() => { if (!pageBox.hidden) fit(page); const q = quizBox.querySelector<HTMLElement>('.pm-qpage .pm-page'); if (q) fit(q); });
+  }
+  function peek(on: boolean) {
+    root.classList.toggle('peek', on);
+    noorBtn.setAttribute('aria-expanded', String(on));
+  }
+  let swipeY = -1;
+  actions.addEventListener('pointerdown', (e) => { swipeY = e.clientY; });
+  actions.addEventListener('pointermove', (e) => { if (swipeY >= 0 && swipeY - e.clientY > 36 && root.classList.contains('pm-focus')) { swipeY = -1; peek(true); } });
+  actions.addEventListener('pointerup', () => { swipeY = -1; });
+  root.addEventListener('click', (e) => { if (root.classList.contains('peek') && !(e.target as Element).closest('.pm-nav, .ls-noor')) peek(false); });
+  const pro = new ResizeObserver(() => { if (!pageBox.hidden) fit(page); });
+  pro.observe(pageBox);
 
   function paintBadge() {
     const lv = level(p);
@@ -318,7 +347,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
         else if (why === 'limit') toast(lt('learn.followLimit'));
-        else if (why === 'failed') toast(lt('learn.followFailed'));
+        else if (why === 'failed') { const f = followFailKey(); toast(lt(f.key, { code: f.code })); canFollow = false; }
         else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (mode === 'recite' && !checking) paintActions();
       },
@@ -394,6 +423,9 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   function paintActions() {
     const b = (label: string, on: () => void, cls = 'chip') => h('button', { class: cls, onclick: on }, label);
     const primary = (label: string, on: () => void) => b(label, on, 'primary brand-btn');
+    root.classList.toggle('ls-memory', mode === 'recite' && !checking);
+    root.classList.toggle('ls-check', mode === 'recite' && checking);
+    root.classList.toggle('pm-quizon', mode === 'quiz');
     if (mode === 'starts') {
       const left = textLines.filter((li) => !revealed.has(li));
       actions.replaceChildren(
@@ -455,88 +487,159 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   }
 
   // --- quiz ---
+  // The same run of cards as a lesson's exercises (src/ui/lessonKinds.ts: bar, feedback strip, a missed
+  // card back once at the end), asked on the real page: its words hidden in place, the line in question
+  // marked, the words asked about pulsing where they stand; the answer appears there.
+  const qro = new ResizeObserver(() => { const pg = quizBox.querySelector<HTMLElement>('.pm-qpage .pm-page'); if (pg) fit(pg); });
+  qro.observe(quizBox);
   function quiz(): HTMLElement {
-    interface Card { q: string; sub?: string; opts?: string[]; right: number; outline?: number; mark?: string }
-    const cards: Card[] = [];
+    type QC =
+      | { k: 'pick'; q: string; mark: number; slot: string[]; show?: boolean; opts: string[]; answer: string; before?: boolean }
+      | { k: 'tap'; q: string; sub: string; line: number };
+    const cards: QC[] = [];
     const others = (pages: number[], fn: (d: PageData) => string) => pages.map((x) => fn(pageCache.get(x)!)).filter(Boolean);
     const startOf = (d: PageData) => { const li = d.lines.findIndex((l) => l && l.some((g) => g.i >= 0)); const g = d.lines[li]!.find((x) => x.i >= 0)!; return run(g.s, g.a, g.i, 3); };
     const endOf = (d: PageData) => { const l = [...d.lines].reverse().find((x) => x && x.some((g) => g.i >= 0))!; const g = [...l].reverse().find((x) => x.i >= 0)!; return run(g.s, g.a, g.i, -3); };
-    const choose = (q: string, answer: string, wrong: string[], sub?: string) => {
+    // The page's words in reading order, and the glyphs that show n display words from one of them.
+    const seq: [number, number][] = [];
+    textLines.forEach((li) => data.lines[li]!.forEach((g, wi) => { if (g.i >= 0) seq.push([li, wi]); }));
+    const idOf = ([li, wi]: [number, number]) => { const g = data.lines[li]![wi]; return `${g.s}:${g.a}:${g.i}`; };
+    const glyphs = (from: number, n: number): string[] => {
+      const ids = new Set<string>(), out: string[] = [];
+      for (let x = from; x >= 0 && x < seq.length; x += n > 0 ? 1 : -1) {
+        const id = idOf(seq[x]);
+        if (!ids.has(id)) { if (ids.size >= Math.abs(n)) break; ids.add(id); }
+        out.push(`${seq[x][0]}:${seq[x][1]}`);
+      }
+      return out;
+    };
+    const lastLi = textLines[textLines.length - 1];
+    const pick = (q: string, answer: string, wrong: string[], mark: number, slot: string[], extra: { show?: boolean; before?: boolean } = {}) => {
       const opts = [...new Set(wrong.filter((w) => w && w !== answer))].slice(0, 2);
       if (opts.length < 2 || !answer) return;
-      const all = shuffle([answer, ...opts]);
-      cards.push({ q, sub, opts: all, right: all.indexOf(answer) });
+      cards.push({ k: 'pick', q, mark, slot, opts: shuffle([answer, ...opts]), answer, ...extra });
     };
     const near = neighbours.filter((x) => x !== p);
-    choose(lt('learn.pmQStart'), startOf(data), others(shuffle(near), startOf));
-    choose(lt('learn.pmQEnd'), endOf(data), others(shuffle(near), endOf));
-    if (next) choose(lt('learn.pmQNext'), startOf(next), others(shuffle(near.filter((x) => x !== p + 1)), startOf));
-    // Which word starts line k?
-    const lines = shuffle(textLines.filter((li) => li !== textLines[0])).slice(0, 2);
-    for (const li of lines) {
+    pick(lt('learn.pmQStart'), startOf(data), others(shuffle(near), startOf), textLines[0], glyphs(0, 3));
+    pick(lt('learn.pmQEnd'), endOf(data), others(shuffle(near), endOf), lastLi, glyphs(seq.length - 1, -3), { before: true });
+    if (next) pick(lt('learn.pmQNext'), startOf(next), others(shuffle(near.filter((x) => x !== p + 1)), startOf), lastLi, [], { show: true });
+    // Which word starts the marked line?
+    for (const li of shuffle(textLines.filter((li) => li !== textLines[0])).slice(0, 2)) {
       const g = data.lines[li]![firstOf(li)];
-      const ans = run(g.s, g.a, g.i, 2);
       const wrong = shuffle(textLines.filter((x) => x !== li)).map((x) => { const y = data.lines[x]![firstOf(x)]; return run(y.s, y.a, y.i, 2); });
-      choose(lt('learn.pmQLine', { n: li + 1 }), ans, wrong);
+      pick(lt('learn.pmQWhichLine'), run(g.s, g.a, g.i, 2), wrong, li, glyphs(seq.findIndex(([l]) => l === li), 2));
     }
-    // Where does ayah X start?
+    // Where does ayah X start? Tap its line on the page.
     const starts: [number, number, number][] = []; // s, a, line
     textLines.forEach((li) => data.lines[li]!.forEach((g) => { if (g.i === 0) starts.push([g.s, g.a, li]); }));
-    for (const [s, a, li] of shuffle(starts).slice(0, 2)) {
-      cards.push({ q: lt('learn.pmQWhere', { ref: reference(meta[s - 1], a) }), sub: run(s, a, 0, 3), right: li, outline: data.lines.length });
-    }
-    const order = shuffle(cards);
-    const box = h('div', { class: 'lk-drill pm-q' });
-    const bar = h('div', { class: 'lk-bar' }, h('span'));
+    for (const [s, a, li] of shuffle(starts).slice(0, 2)) cards.push({ k: 'tap', q: lt('learn.pmQWhere', { ref: reference(meta[s - 1], a) }), sub: run(s, a, 0, 3), line: li });
+
+    const dir = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr';
+    const ar = (text: string) => h('span', { class: 'lk-ar', lang: 'ar', dir: 'rtl' }, text);
+    const box = h('div', { class: 'lk lk-drill pm-q', dir });
+    const bar = h('div', { class: 'lk-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(cards.length) }, h('span'));
     const stage = h('div', { class: 'lk-stage', 'aria-live': 'polite' });
     const foot = h('div', { class: 'lk-foot' });
     box.append(bar, stage, foot);
-    let k = 0, right = 0;
-    const show = () => {
-      foot.className = 'lk-foot'; foot.replaceChildren();
-      stage.classList.remove('answered');
-      (bar.firstChild as HTMLElement).style.width = `${Math.max(4, (k / Math.max(1, order.length)) * 100)}%`;
-      const c = order[k];
-      if (!c) {
-        stage.replaceChildren(h('div', { class: 'lk-card' },
-          h('p', { class: 'lk-q' }, lt('learn.pmQuizDone', { n: right, of: order.length })),
-          h('button', { class: 'primary brand-btn', onclick: () => setMode('recite') }, lt('learn.pmRecitePage')),
-          h('button', { class: 'chip', onclick: () => setMode('quiz') }, lt('learn.pmAgain'))));
-        return;
-      }
-      const answer = (ok: boolean, el: HTMLElement, rightEl: HTMLElement | null) => {
-        if (stage.classList.contains('answered')) return;
-        stage.classList.add('answered');
-        el.classList.add(ok ? 'right' : 'wrong');
-        if (!ok) rightEl?.classList.add('right', 'soft');
-        if (ok) { right++; sfx.pop(Math.min(right, 4)); haptic(8); } else haptic(30);
-        foot.className = `lk-foot show ${ok ? 'good' : 'bad'}`;
-        const cont = h('button', { class: 'primary lk-continue', onclick: () => { k++; show(); } }, lt('learn.continue'));
-        foot.replaceChildren(h('div', { class: 'lk-verdict' }, h('strong', {}, lt(ok ? 'learn.good1' : 'learn.notQuite'))), cont);
-        if (!reduced()) popIn(foot.firstElementChild!);
-        setTimeout(() => cont.focus(), 30);
-      };
-      let body: Node;
-      if (c.outline) {
-        // The page's own 15 lines: surah headers and the basmala drawn as such, so the shape matches the page.
-        const kinds = mushaf.pages[p - 1].lines.map((l) => (l[0] === 'h' ? 'head' : l[0] === 'b' ? 'basm' : 'text'));
-        const rows = Array.from({ length: c.outline }, (_, i) => kinds[i] === 'text'
-          ? h('button', { class: 'pm-oline', 'aria-label': lt('learn.pmLineN', { n: i + 1 }) }, h('span', {}, String(i + 1)))
-          : h('div', { class: `pm-oline ${kinds[i]}`, 'aria-hidden': 'true' }));
-        rows.forEach((r, i) => { if (kinds[i] === 'text') r.addEventListener('click', () => answer(i === c.right, r, rows[c.right])); });
-        body = h('div', { class: 'pm-outline', dir: 'rtl' }, ...rows);
-      } else {
-        const btns = c.opts!.map((o) => h('button', { class: 'lk-opt' }, h('span', { class: 'lk-ar', lang: 'ar', dir: 'rtl' }, o, ' …')));
-        btns.forEach((b, i) => b.addEventListener('click', () => answer(i === c.right, b, btns[c.right])));
-        body = h('div', { class: 'lk-opts' }, ...btns);
-      }
-      stage.replaceChildren(h('div', { class: 'lk-card' },
-        h('p', { class: 'lk-q' }, c.q),
-        c.sub ? h('p', { class: 'lk-meant lk-ar', lang: 'ar', dir: 'rtl' }, c.sub, ' …') : '',
-        body));
-      if (!reduced()) popIn(stage.firstElementChild!, { stiffness: 260, damping: 22 });
+    const queue = shuffle(cards);
+    const retried = new Set<QC>();
+    let right = 0, firstTry = 0;
+    const setBar = () => {
+      (bar.firstChild as HTMLElement).style.width = `${Math.max(4, Math.min(1, right / Math.max(1, cards.length)) * 100)}%`;
+      bar.setAttribute('aria-valuenow', String(right));
     };
-    show();
+    function feedback(ok: boolean, card: QC, answerNode: Node | null) {
+      foot.className = `lk-foot show ${ok ? 'good' : 'bad'}`;
+      const cont = h('button', { class: 'primary lk-continue', onclick: () => nextCard() }, lt('learn.continue'));
+      const goods = ['learn.good1', 'learn.good2', 'learn.good3'] as const;
+      foot.replaceChildren(
+        h('div', { class: 'lk-verdict' },
+          h('strong', {}, lt(ok ? goods[Math.floor(Math.random() * 3)] : 'learn.notQuite')),
+          !ok && answerNode ? h('span', { class: 'lk-answer' }, ...((answerNode as Element).classList?.contains('lk-ar') ? [lt('learn.answerIs'), ' ', answerNode] : [answerNode])) : ''),
+        cont);
+      if (!reduced()) popIn(foot.firstElementChild!);
+      setTimeout(() => cont.focus(), 30);
+      if (ok) { right++; if (!retried.has(card)) firstTry++; setBar(); sfx.pop(Math.min(right, 4)); haptic(8); } else {
+        haptic(30);
+        if (!retried.has(card)) { retried.add(card); queue.push(card); }
+      }
+    }
+    function show(card: QC) {
+      stage.classList.remove('answered');
+      foot.className = 'lk-foot';
+      foot.replaceChildren();
+      let onLine = (_li: number) => {};
+      const pg = pageEl(mushaf, mod, p, data, (li) => onLine(li), (li) => onLine(li));
+      const wordEls = new Map<string, HTMLElement>();
+      pg.querySelectorAll<HTMLElement>('.mp-line.text').forEach((line) => {
+        const li = Number(line.dataset.line);
+        [...line.children].forEach((w, wi) => { if (w.classList.contains('lw')) { w.classList.add('hid'); wordEls.set(`${li}:${wi}`, w as HTMLElement); } });
+      });
+      const lineEl = (li: number) => pg.querySelector<HTMLElement>(`.mp-line[data-line="${li}"]`);
+      const showLine = (li: number, cls = '') => lineEl(li)?.querySelectorAll<HTMLElement>('.lw').forEach((w, i) => {
+        w.classList.remove('hid', 'pm-slot');
+        if (cls) { w.classList.add(cls); if (!reduced()) window.setTimeout(() => popIn(w), i * 40); }
+      });
+      const wrap = h('div', { class: 'pm-qpage' }, pg);
+      let body: Node[];
+      if (card.k === 'pick') {
+        lineEl(card.mark)?.classList.add('pm-mark');
+        for (const k of card.slot) wordEls.get(k)?.classList.add('pm-slot');
+        if (card.show) showLine(card.mark);
+        const fill = () => card.slot.forEach((k, i) => {
+          const w = wordEls.get(k);
+          if (!w) return;
+          w.classList.remove('hid', 'pm-slot'); w.classList.add('pm-fill');
+          if (!reduced()) window.setTimeout(() => popIn(w), i * 60);
+        });
+        const label = (o: string) => ar(card.before ? `… ${o}` : `${o} …`);
+        const btns = card.opts.map((o) => h('button', { class: 'lk-opt' }, label(o)));
+        btns.forEach((b, i) => b.addEventListener('click', () => {
+          if (stage.classList.contains('answered')) return;
+          stage.classList.add('answered');
+          const ok = card.opts[i] === card.answer;
+          fill();
+          if (ok) { b.classList.add('right'); squash(b, 0.15); feedback(true, card, null); } else {
+            b.classList.add('wrong');
+            btns[card.opts.indexOf(card.answer)]?.classList.add('right', 'soft');
+            feedback(false, card, label(card.answer));
+          }
+        }));
+        body = [h('p', { class: 'lk-q' }, card.q), wrap, h('div', { class: 'lk-opts' }, ...btns)];
+      } else {
+        box.classList.add('tap');
+        onLine = (li) => {
+          if (stage.classList.contains('answered')) return;
+          stage.classList.add('answered');
+          const ok = li === card.line;
+          const el = lineEl(li);
+          el?.classList.add(ok ? 'right' : 'wrong');
+          if (ok && el) squash(el, 0.06);
+          if (!ok) lineEl(card.line)?.classList.add('right', 'soft');
+          showLine(card.line, 'pm-fill');
+          feedback(ok, card, ok ? null : h('span', {}, lt('learn.pmLineN', { n: card.line + 1 })));
+        };
+        body = [h('p', { class: 'lk-q' }, card.q), h('p', { class: 'lk-meant lk-ar pm-qsub', lang: 'ar', dir: 'rtl' }, card.sub, ' …'),
+          h('p', { class: 'pm-qhint' }, lt('learn.pmQTapLine')), wrap];
+      }
+      box.classList.toggle('tap', card.k === 'tap');
+      stage.replaceChildren(h('div', { class: 'lk-card' }, ...body));
+      if (!reduced()) popIn(stage.firstElementChild!, { stiffness: 260, damping: 22 });
+    }
+    function nextCard() {
+      const card = queue.shift();
+      if (card) { show(card); return; }
+      box.classList.remove('tap');
+      foot.className = 'lk-foot'; foot.replaceChildren();
+      if (firstTry === cards.length && cards.length) sfx.shimmer();
+      stage.replaceChildren(h('div', { class: 'lk-card pm-qdone' },
+        h('p', { class: 'lk-q' }, lt('learn.pmQuizDone', { n: firstTry, of: cards.length })),
+        h('button', { class: 'primary brand-btn', onclick: () => setMode('recite') }, lt('learn.pmRecitePage')),
+        h('button', { class: 'chip', onclick: () => setMode('quiz') }, lt('learn.pmAgain'))));
+      if (!reduced()) popIn(stage.firstElementChild!, { stiffness: 260, damping: 22 });
+    }
+    setBar();
+    nextCard();
     return box;
   }
 
@@ -547,8 +650,9 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   for (const x of neighbours) pageCache.set(x, x === p ? data : x === p + 1 && next ? next : await pageData(mushaf, x));
 
   paintBadge();
+  paintFocus();
   setMode(mode);
   const onResize = () => { if (!pageBox.hidden) fit(page); };
   window.addEventListener('resize', onResize);
-  return () => { if (follower) stopFollow(); clearTimeout(peekTimer); window.removeEventListener('resize', onResize); };
+  return () => { if (follower) stopFollow(); clearTimeout(peekTimer); pro.disconnect(); qro.disconnect(); window.removeEventListener('resize', onResize); };
 }
