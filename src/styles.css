@@ -359,6 +359,7 @@ body.mushaf-wide .mushaf-page > * { flex-shrink: 0; }
 /* Each sheet is its own layer: moving the strip or swapping a neighbour repaints no other page. */
 .mushaf-page { will-change: transform; contain: layout paint style; backface-visibility: hidden; }
 /* a page whose font is still downloading: a skeleton of 15 lines with a soft light sweeping across */
+.mushaf-page.far { visibility: hidden; } /* prepared two pages away, out of sight */
 .mushaf-page.loading { justify-content: space-evenly; padding: 18px 22px; overflow: hidden; }
 .skel-line { display: block; align-self: center; width: 100%; height: calc(var(--lh, 40px) * .32); min-height: 10px; border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--ink, #888) 9%, transparent); }

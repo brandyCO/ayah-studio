@@ -407,9 +407,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const W = () => view.clientWidth + 16; // a page width plus a small gap between the sheets
   function place() {
+    const wide = document.body.classList.contains('mushaf-wide'); // only then do pages scroll
     for (const el of strip.children as HTMLCollectionOf<HTMLElement>) {
-      el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
-      if (Number(el.dataset.page) !== page) el.scrollTop = 0; // a page turned to starts at its top
+      const p = Number(el.dataset.page);
+      el.style.transform = `translateX(${(page - p) * W()}px)`;
+      el.classList.toggle('far', Math.abs(p - page) > 1); // pages two away wait unseen, already laid out
+      if (wide && p !== page && el.scrollTop) el.scrollTop = 0; // a page turned to starts at its top
     }
   }
 
@@ -465,7 +468,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const attach = () => {
       if (id !== renderId) return;
       const els = want.map((p) => built.get(p) ?? placeholder(p));
-      if (els.length !== strip.childElementCount || els.some((el, i) => strip.children[i] !== el)) strip.replaceChildren(...els);
+      // Pages two away stay in the strip once prepared (hidden, already fitted), so a page that
+      // becomes a neighbour after a flip needs no layout work then. Nothing already in place moves.
+      const keep = new Set<Element>(els);
+      for (const p of [page - 2, page + 2]) { const el = built.get(p); if (el?.isConnected && el.parentNode === strip) keep.add(el); }
+      for (const el of [...strip.children]) if (!keep.has(el)) el.remove();
+      for (const el of els) if (el.parentNode !== strip) strip.append(el);
       for (const el of els) if (!el.dataset.fit && !el.classList.contains('loading')) fit(el);
       place();
       sel.repaint();
@@ -478,8 +486,25 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10])
       if (valid(p)) void loadPageFont(p).catch(() => {});
-    // Build the pages two away while idle (their words, not yet fitted), so the next flip only fits.
-    idle(() => { if (id === renderId) for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p); });
+    // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
+    // at a time, so the flip after next lands without any layout work (it used to fit the new
+    // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).
+    const prepare = (p: number) => {
+      if (id !== renderId || !valid(p) || Math.abs(p - page) !== 2 || panning || animating) return;
+      // Someone flipping quickly: leave it for a quieter moment (the flip itself fits what it needs).
+      const quiet = performance.now() - lastPan;
+      if (quiet < 800) { window.setTimeout(() => idle(() => prepare(p)), 800 - quiet); return; }
+      const el = built.get(p);
+      if (!el || el.parentNode === strip) return;
+      el.classList.add('far');
+      strip.append(el);
+      place();
+      if (!el.dataset.fit) fit(el);
+    };
+    idle(() => {
+      if (id !== renderId) return;
+      for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p).then(() => idle(() => prepare(p)));
+    });
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
     releasePageFonts((p) => Math.abs(p - page) <= 12); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
@@ -495,7 +520,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   let panRaf = 0;
   let panX = 0;
+  let lastPan = 0; // when the finger last moved a page
   function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
+    lastPan = performance.now();
     // Swiping again while a page is still sliding: let it land at once and follow the new swipe.
     if (animating) finishNow?.();
     flushLayout();
