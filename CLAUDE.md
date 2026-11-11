@@ -1795,7 +1795,7 @@ duas/reflections section in Me.
       flame + deeper inner flame + white drop, no outline, `themeFire()` from `rewardPalette()`). **Streak moment**
       (`streakMoment.ts` + `.css`, rewritten): grey flame → melts into a puddle → leaps with swirling ribbons → splash +
       shockwave → the number rolls → the flame springs back tall → the week row fills (lit days joined into a bar); white
-      background. **Power-up**: the character stands *inside* one big flame (`FlatFire.bigFlame`), lit in its colours by an
+      background. **Power-up**: the character stands *inside* one big flame (`FlatFire`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
       spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
       **60 fps pass** (owner 2026-11-11): the power-up's big flame is drawn once per character (full sharpness) and moved
