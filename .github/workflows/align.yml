@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 355
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 8
       matrix:
         job: ${{ fromJson(needs.plan.outputs.jobs) }}
     env:
@@ -413,7 +413,7 @@ jobs:
     timeout-minutes: 340
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 8
       matrix:
         key: ${{ fromJson(needs.openings-plan.outputs.keys) }}
     env:
