@@ -25,7 +25,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -165,7 +165,7 @@ export async function refreshCached(): Promise<boolean> {
 
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: dayKey() });
-  if (s) { s.figure = await myFigure(); await sendLocalFigure(); }
+  if (s) { s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); }
   return s;
 }, fresh);
 // The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
@@ -187,6 +187,17 @@ export async function setFigure(code: string | null) {
   }
   try { localStorage.setItem(FIG, code ?? ''); } catch { /* ignore */ }
   dropCache();
+}
+/** Your room as friends see it on a visit (round 5): sent when it changed, once signed in and playing. */
+const ROOM_SENT = 'rankRoomSent';
+export async function sendRoom() {
+  if (!account()) return;
+  try {
+    const code = (await import('../data/roomItems')).myRoomCode();
+    if (localStorage.getItem(ROOM_SENT) === code) return;
+    await rpc('rank_set_room', { code });
+    localStorage.setItem(ROOM_SENT, code);
+  } catch { /* not playing yet, or offline: try again next time */ }
 }
 /** A character made before signing in goes up the first time the boards are read. */
 async function sendLocalFigure() {

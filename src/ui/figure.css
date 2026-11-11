@@ -165,3 +165,17 @@ html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: p
 @keyframes fg-wave-l { from { rotate: -14deg; } to { rotate: 12deg; } }
 @media (prefers-reduced-motion: reduce) { .fg-lay .fg-hd { animation: none; } }
 html.lite .fg-actor .fg-hd { animation-play-state: paused !important; }
+/* Listening to a recitation (html.reciting, set by the player): the character sits still with its head a little
+   bowed and breathes slowly; nothing moves to the words. */
+html.reciting .fg-lay .fg-hd { animation: none; translate: 0 1.2%; rotate: 0deg; transition: translate 1.2s ease; }
+html.reciting .fg-lay .fg-bb { animation-duration: 6s; }
+/* Expressions (round 5): an actor carries every face; one shows at a time. A class xp-{name} picks one for a moment
+   (actor.face()); a cheer or a wave smiles, a dozing character sleeps, during a recitation it listens calmly. */
+.fg .fg-xp { display: none; }
+.fg .fg-x0 { display: inline; }
+.fg[class*='xp-'] .fg-x0 { display: none; }
+.fg.xp-happy .fg-x-happy, .fg.xp-wow .fg-x-wow, .fg.xp-sleepy .fg-x-sleepy, .fg.xp-calm .fg-x-calm, .fg.xp-proud .fg-x-proud, .fg.xp-star .fg-x-star { display: inline; }
+.fg.cheer:not([class*='xp-']) .fg-x0, .fg.waving:not([class*='xp-']) .fg-x0, .fg.sleepy:not([class*='xp-']) .fg-x0 { display: none; }
+.fg.cheer:not([class*='xp-']) .fg-x-happy, .fg.waving:not(.cheer):not([class*='xp-']) .fg-x-happy, .fg.sleepy:not(.cheer):not(.waving):not([class*='xp-']) .fg-x-sleepy { display: inline; }
+html.reciting .fg:not(.cheer):not(.waving):not(.sleepy):not([class*='xp-']) .fg-x0 { display: none; }
+html.reciting .fg:not(.cheer):not(.waving):not(.sleepy):not([class*='xp-']) .fg-x-calm { display: inline; }

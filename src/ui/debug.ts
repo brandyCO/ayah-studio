@@ -4,6 +4,7 @@ import { capabilities } from '../engine/capabilities';
 import { h } from './dom';
 import { liteAuto, liteSetting, setLiteSetting, type LiteSetting } from '../lite';
 import { perfSummary } from '../perf';
+import { clearFpsLog, fpsLog } from '../fps';
 import { errorReportsOn } from '../errors';
 
 export function openDebugPanel() {
@@ -19,6 +20,7 @@ export function openDebugPanel() {
       h('span', {}, 'Tafsir beside the translation (preview: licence not confirmed yet)')),
     liteRow(),
     perfBlock(),
+    fpsBlock(),
     h('p', { class: 'muted small' }, errorReportsOn() ? 'Error reports: on (Sentry; no account or personal data)' : 'Error reports: off'),
     h('p', { class: 'muted small' }, `User agent: ${navigator.userAgent}`),
   );
@@ -59,4 +61,21 @@ function perfBlock() {
     h('h3', { class: 'small' }, 'Timings on this device'),
     h('table', { class: 'caps' }, ...rows.map((r) =>
       h('tr', {}, h('td', {}, r.name), h('td', {}, `${s(r.last)}${r.n > 1 ? ` · median ${s(r.median)} (${r.n})` : ''}`)))));
+}
+
+/** Reward moments recorded on this device: frames per second, slowest frame, share of slow frames. */
+function fpsBlock(): HTMLElement {
+  const log = fpsLog();
+  if (!log.length) return h('p', { class: 'muted small' }, 'Smoothness: open a chest or another reward moment, then come back here.');
+  const by = new Map<string, typeof log>();
+  for (const e of log) by.set(e.name, [...(by.get(e.name) ?? []), e]);
+  const box: HTMLElement = h('div', {},
+    h('h3', { class: 'small' }, 'Smoothness of reward moments (newest · median)'),
+    h('table', { class: 'caps' }, ...[...by].map(([name, v]) => {
+      const e = v[v.length - 1];
+      const med = [...v].sort((a, b) => a.fps - b.fps)[Math.floor(v.length / 2)].fps;
+      return h('tr', {}, h('td', {}, name), h('td', {}, `${e.fps} fps · slowest ${e.worst} ms · ${e.jank}% slow${v.length > 1 ? ` · median ${med} fps (${v.length})` : ''}`));
+    })),
+    h('button', { class: 'chip', onclick: () => { clearFpsLog(); box.replaceWith(fpsBlock()); } }, 'Clear'));
+  return box;
 }

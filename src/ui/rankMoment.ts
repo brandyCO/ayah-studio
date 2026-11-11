@@ -14,6 +14,7 @@ import { h } from './dom';
 import { TIER_RING, avatar } from './rankAvatars';
 import { bump, holdPage } from './juice';
 import { sfx } from './sfx';
+import { fpsStart } from '../fps';
 import { sparks, type Sparks } from './sparks';
 import './cel.css';
 import './ranks.css';
@@ -84,6 +85,7 @@ export async function playRankMoments(m: RankMoments, ctx: Ctx): Promise<void> {
 function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElement, colors: string[], run: (o: { fx: () => Sparks | null; later: (ms: number, f: () => void) => void; burst: (n: number, p: number, dy?: number) => void }) => void): Promise<void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   return new Promise((resolve) => {
+    const frames = still ? null : fpsStart(`Ranks · ${kind}`);
     const ok = h('button', { class: 'cel-ok' }, rt('rk.continue'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
     const el = h('div', { class: `cel go rkm rkm-${kind}${still ? ' still' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label },
@@ -94,6 +96,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
     const close = () => {
       if (done) return;
       done = true;
+      frames?.();
       timers.forEach(clearTimeout);
       fx?.stop();
       document.removeEventListener('keydown', onKey);
@@ -173,8 +176,8 @@ function weekMoment(w: NonNullable<RankMoments['week']>, { s }: Ctx): Promise<vo
     vibrate([8]);
     later(1300, () => {
       stage.classList.add('go');
-      if (dir === 'up') { burst(70, 1.05); sfx.open(); me?.cheer(2600); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
-      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); me?.nod(); later(300, () => me?.hop(0.4)); }
+      if (dir === 'up') { burst(70, 1.05); sfx.open(); me?.cheer(2600); me?.face('star', 2600); later(350, () => { fx()?.motes(true); sfx.shimmer(); }); }
+      else if (dir === 'stay') { burst(28, 0.6); sfx.pop(2); me?.nod(); me?.face('proud', 1800); later(300, () => me?.hop(0.4)); }
       else { vibrate([10]); me?.sink(); }
     });
   });

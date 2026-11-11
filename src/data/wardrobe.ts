@@ -9,7 +9,7 @@ import { streak } from './journey';
 
 const STREAK: Partial<Record<How, number>> = { s7: 7, s30: 30, s100: 100, s365: 365 };
 
-function hijri(d: Date): { month: number; day: number } | null {
+export function hijri(d: Date): { month: number; day: number } | null {
   try {
     const p = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'numeric', day: 'numeric' }).formatToParts(d);
     const n = (t: string) => parseInt(p.find((x) => x.type === t)?.value ?? '', 10);
