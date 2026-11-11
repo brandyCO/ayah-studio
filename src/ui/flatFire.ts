@@ -178,9 +178,11 @@ export class FlatFire {
     }
     for (const b of this.bits) if (b.kind === 'drop' || (b.kind === 'shard' && !b.front)) this.drawBit(this.bx, b);
     for (const a of this.auras) {
-      if (a.heat < 0.02) continue;
-      // In front: low tongues round the feet.
-
+      if (a.heat < 0.3) continue;
+      // In front: the same flame again, see-through, so the character's colours take on the flame's (he is inside it).
+      this.fx.globalAlpha = Math.min(1, (a.heat - 0.3) / 0.4) * 0.36;
+      this.bigFlame(this.fx, a);
+      this.fx.globalAlpha = 1;
     }
     for (const b of this.bits) if ((b.kind === 'shard' && b.front) || b.kind === 'spark') this.drawBit(this.fx, b);
     for (const w of this.swirls) this.drawSwirl(w);
@@ -228,8 +230,9 @@ export class FlatFire {
     }
     if (u <= 1) { const h0 = at(head), h1 = at(head - 0.03); c.save(); c.translate(h0.x, h0.y); c.rotate(Math.atan2(h0.x - h1.x, -(h0.y - h1.y)));
       // A soft round head (a pointed one read as horns on the flame).
-      c.fillStyle = p.outer; c.beginPath(); c.arc(0, 0, a.w * 0.11, 0, TAU); c.fill();
-      c.fillStyle = p.inner; c.beginPath(); c.arc(0, a.w * 0.02, a.w * 0.055, 0, TAU); c.fill(); c.restore(); }
+      const hk = Math.max(0, Math.min(1, (1 - u) / 0.35)); // the head melts into the flame as it arrives
+      c.fillStyle = p.outer; c.beginPath(); c.arc(0, 0, a.w * 0.11 * hk, 0, TAU); c.fill();
+      c.fillStyle = p.inner; c.beginPath(); c.arc(0, a.w * 0.02, a.w * 0.055 * hk, 0, TAU); c.fill(); c.restore(); }
   }
 
   private feet(c: CanvasRenderingContext2D, a: Aura, color: string, k: number, grow: number) {
