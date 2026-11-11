@@ -312,15 +312,6 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     catchNext = false;
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
     const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
-    // A tap on today's lit flame plays the character's power-up again.
-    if (s.litToday && s.days > 0 && hasFig()) {
-      flameBox.setAttribute('role', 'button');
-      flameBox.setAttribute('tabindex', '0');
-      flameBox.setAttribute('aria-label', t('me.powerUp'));
-      const play = () => { if (streakPlaying || document.querySelector('.cel')) return; streakPlaying = true; haptic(10); void import('./powerUp').then((p) => p.powerUp(s.days)).finally(() => { streakPlaying = false; }); };
-      flameBox.addEventListener('click', play);
-      flameBox.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
-    }
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
