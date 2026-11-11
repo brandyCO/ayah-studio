@@ -45,7 +45,7 @@ export const FIRE_ROSE: FireLook = { rim: '#ffc0d4', top: '#ff3f7f', bottom: '#f
 /** The whole flame standing on (x, y): yellow rim of even width, red-to-orange body, a round white drop. `drop`
  *  0 hides the drop (a character stands there instead). */
 export function drawFire(c: CanvasRenderingContext2D, x: number, y: number, s: Shape, look: FireLook, drop = 1) {
-  const rim = Math.min(s.w * 0.62, Math.max(s.h, s.w) * 0.5);
+  const rim = Math.min(s.w * 0.3, Math.max(s.h, s.w) * 0.25);
   c.lineJoin = 'round';
   c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
   c.fillStyle = look.rim; c.strokeStyle = look.rim; c.lineWidth = rim; c.fill(); c.stroke();
@@ -54,7 +54,7 @@ export function drawFire(c: CanvasRenderingContext2D, x: number, y: number, s: S
   c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
   c.fillStyle = g; c.fill();
   if (drop > 0) {
-    const r = s.w * 0.4 * drop, cx = x + s.lean * 0.12, cy = y - rim * 0.5 * s.sq - s.w * 0.92 * s.sq;
+    const r = s.w * 0.36 * drop, cx = x + s.lean * 0.12, cy = y - rim * 0.5 * s.sq - s.w * 0.8 * s.sq;
     c.fillStyle = look.core;
     c.beginPath();
     c.moveTo(cx, cy - r * 1.75 * s.sq);
