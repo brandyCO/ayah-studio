@@ -16,7 +16,7 @@ import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 
 const GLOW = '<defs><radialGradient id="rmglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>';
-function tileArt(slot: Slot, id: string | null): string {
+export function tileArt(slot: Slot, id: string | null): string {
   const [x, y, w, hh] = SLOT_BOX[slot];
   const wall = `<rect x="${x - 200}" y="${y - 200}" width="${w + 400}" height="${346 - y}" fill="#f3e2c7"/><rect x="${x - 200}" y="146" width="${w + 400}" height="260" fill="#c99a6a"/>`;
   const win = slot === 'curtain' ? '<path d="M26 104V52Q26 26 64 26Q102 26 102 52V104Z" fill="#c08a52"/><path d="M33 98V54Q33 33 64 33Q95 33 95 54V98Z" fill="#9fd8ff"/>' : '';
@@ -25,8 +25,9 @@ function tileArt(slot: Slot, id: string | null): string {
 }
 const name = (id: string) => rt(`rs.i.${id}` as RankKey);
 
-export function openRoomShop(onChange: () => void, sit: string | null = null) {
-  let slot: Slot = 'plant';
+export function openRoomShop(onChange: () => void, sit: string | null = null, opt: { slot?: Slot; inRoom?: boolean } = {}) {
+  // In the full-screen room the panel sits low over the room itself, so it shows no room of its own.
+  let slot: Slot = opt.slot ?? 'plant';
   const close = () => d.close();
   const hr = new Date().getHours();
   const sky = hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr < 16 ? 'day' : hr >= 16 && hr < 19 ? 'dusk' : 'night';
@@ -35,13 +36,15 @@ export function openRoomShop(onChange: () => void, sit: string | null = null) {
   const tabs = h('div', { class: 'rs-tabs', role: 'tablist' });
   const grid = h('div', { class: 'rs-grid' });
   const season = seasonNow();
-  const d = h('dialog', { class: 'sheet bottom rs-sheet' },
+  const d = h('dialog', { class: `sheet bottom rs-sheet${opt.inRoom ? ' in-room' : ''}` },
     h('div', { class: 'sheet-head' }, h('h2', {}, rt('rs.title')), purse, h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
-    view,
+    opt.inRoom ? '' : view,
     season ? h('p', { class: 'small rs-season' }, rt('rs.season', { name: rt(`rs.s.${season}` as RankKey) })) : '',
     tabs, grid,
     h('p', { class: 'muted small rs-sub' }, rt('rs.sub')));
-  d.addEventListener('close', () => d.remove());
+  const full = opt.inRoom ? document.querySelector('.rm-full') : null;
+  full?.classList.add('decorating');
+  d.addEventListener('close', () => { d.remove(); full?.classList.remove('decorating'); });
   d.addEventListener('click', (e) => { if (e.target === d) close(); });
   window.addEventListener('hashchange', close, { once: true });
 
@@ -49,7 +52,7 @@ export function openRoomShop(onChange: () => void, sit: string | null = null) {
     const look = roomLook();
     const svg = backSvg(sky, Math.max(streak().best, streak().days), false, look, season, reduced());
     const old = view.querySelector('.rm-back');
-    if (old) old.outerHTML = svg;
+    if (opt.inRoom) { /* the room behind follows through onChange */ } else if (old) old.outerHTML = svg;
     else {
       view.innerHTML = svg;
       const a = actor('rm-actor', sit);
@@ -93,7 +96,7 @@ export function openRoomShop(onChange: () => void, sit: string | null = null) {
           sfx.pop(); haptic(14);
           toast(rt('rs.got', { name: name(it.id) }));
           slot = it.slot; paint(); onChange();
-          view.querySelector('svg')?.animate([{ transform: 'scale(1.03)', filter: 'brightness(1.15)' }, { transform: 'none', filter: 'none' }], { duration: 500, easing: 'ease-out' });
+          (opt.inRoom ? document.querySelector('.rm-full .rm-back') : view.querySelector('svg'))?.animate([{ transform: 'scale(1.03)', filter: 'brightness(1.15)' }, { transform: 'none', filter: 'none' }], { duration: 500, easing: 'ease-out' });
         } }, rt('rs.buyGo'))));
     q.querySelector('.rs-art')!.innerHTML = tileArt(it.slot, it.id);
     q.addEventListener('close', () => q.remove());

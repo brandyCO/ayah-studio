@@ -15,8 +15,9 @@
 .cel-chest .cel-stage { width: min(62vw, 240px); }
 .cel-chest-jolt { position: absolute; inset: 0; transform-origin: 50% 88%; }
 .cel-chest-jolt > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cel-chest-jolt > .ck-art { position: absolute; left: 0; top: 50%; width: 100%; translate: 0 -50%; }
 .cel-chest.go:not(.tapped) .cel-chest-jolt { animation: cel-nudge 2.4s 1.2s ease-in-out infinite; }
-@keyframes cel-nudge { 0%, 70%, 100% { transform: none; } 76% { transform: translateY(-7px) rotate(-4deg); } 84% { transform: translateY(-3px) rotate(4deg); } 92% { transform: rotate(-1.5deg); } }
+@keyframes cel-nudge { 0%, 70%, 100% { translate: 0 0; rotate: 0deg; } 76% { translate: 0 -7px; rotate: -4deg; } 84% { translate: 0 -3px; rotate: 4deg; } 92% { translate: 0 0; rotate: -1.5deg; } }
 .cel-chest-hit { position: absolute; inset: 4%; z-index: 3; border: 0; border-radius: 28px; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cel-chest-hit:focus-visible { outline: 2px solid color-mix(in srgb, var(--rw-n3) 45%, transparent); outline-offset: 4px; }
 .cel-chest.opened .cel-chest-hit { display: none; }
@@ -57,19 +58,19 @@
 .cel-chest .cel-sub { animation-delay: .2s; } .cel-chest .cel-ok { animation-delay: .35s; }
 .cel-chest-box.open { animation: cel-chest-pop .5s cubic-bezier(.2, 1.6, .4, 1) both !important; }
 .cel-chest-box .ck-mouth { opacity: 0; }
-.cel-chest-box.open .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); transition-duration: .45s; }
-.cel-chest-box.open .ck-mouth { opacity: 1; transform-box: fill-box; transform-origin: center; animation: cel-mouth 1.6s ease-out both; }
-.cel-chest-box.open .ck-aura { opacity: 1; animation: ck-spin 22s linear infinite; }
+.cel-chest-box.open .ck-lid { translate: 0 -22.37%; rotate: -16deg; scale: 1 .5; transition-duration: .45s; }
+.cel-chest-box.open .ck-mouth { opacity: 1; animation: cel-mouth 1.6s ease-out both; }
+.cel-chest-box.open .ck-aura { opacity: 1; animation: spin 22s linear infinite; }
 .cel-chest-box.open .ck-glints { opacity: 1; }
-.cel-chest-box.open .ck-glints path { transform-box: fill-box; transform-origin: center; animation: ck-glint 1.6s calc(var(--i) * .3s) ease-in-out infinite; }
-.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both, ck-spin 26s linear infinite; }
+.cel-chest-box.open .ck-glints .ck-gl { animation: ck-glint 1.6s calc(var(--i) * .3s) ease-in-out infinite; }
+.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both, spin 26s linear infinite; }
 .cel-stage.opened .cel-chest-beam { animation: cel-beam 1.8s ease-out both; }
 @keyframes cel-chest-in { from { transform: translateY(-60px) scale(.4); opacity: 0; } 60% { opacity: 1; } to { transform: none; } }
 @keyframes cel-chest-pop { 0% { transform: scale(.92, 1.08); } 40% { transform: scale(1.12, .9); } 100% { transform: none; } }
-@keyframes cel-mouth { 0% { transform: scale(.6); } 30% { transform: scale(1.5, 2.2); } 100% { transform: scale(1.15, 1.4); } }
-@keyframes cel-rays-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+@keyframes cel-mouth { 0% { scale: .6; } 30% { scale: 1.5 2.2; } 100% { scale: 1.15 1.4; } }
+@keyframes cel-rays-in { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
 @keyframes cel-beam { 0% { opacity: 0; transform: scaleY(.1); } 25% { opacity: 1; transform: scaleY(1); } 100% { opacity: .35; transform: scaleY(.85); } }
-.cel.still .cel-chest-box .ck-lid { transform: translateY(-17px) rotate(-16deg) scaleY(.5); }
+.cel.still .cel-chest-box .ck-lid { translate: 0 -22.37%; rotate: -16deg; scale: 1 .5; }
 .cel.still .cel-chest-box .ck-mouth, .cel.still .cel-chest-rays { opacity: 1; }
 
 /* Duolingo-style craft pass: Noor beside the chest, the leading light, chunkier prize cards. */

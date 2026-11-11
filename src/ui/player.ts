@@ -372,7 +372,7 @@ export function createPlayer(o: PlayerHooks) {
     const dt = now - lastT;
     if (!audio.paused && lastT >= 0 && dt > 0 && dt < 2) heard += dt / (audio.playbackRate || 1);
     lastT = now;
-    if (heard >= 30) flush();
+    if (heard >= 15) flush();
   });
   on('seeking', () => { lastT = -1; });
   on('pause', () => { lastT = -1; flush(); });

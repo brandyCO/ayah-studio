@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Du'a lanterns (DuaWidget): today's string of seven lanterns, as on the Me tab — waking, the five
+     prayers, sleep. Lit when that du'a is said in full, the one whose time it is glows; a tap on a
+     lantern opens its session. On a night card in the theme colours (WidgetArt). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dw_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_frame"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/dw_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:contentDescription="@null" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <LinearLayout
+            android:id="@+id/dw_head"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:id="@+id/dw_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+            <TextView
+                android:id="@+id/dw_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp">
+            <ImageView
+                android:id="@+id/dw_string"
+                android:layout_width="match_parent"
+                android:layout_height="14dp"
+                android:scaleType="fitXY"
+                android:contentDescription="@null" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:orientation="horizontal">
+                <LinearLayout android:id="@+id/dw_c0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l0" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l1" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l2" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l3" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l4" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l5" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/dw_c6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+                    <ImageView android:id="@+id/dw_l6" android:layout_width="wrap_content" android:layout_height="46dp" android:adjustViewBounds="true" android:scaleType="fitCenter" android:contentDescription="@null" />
+                    <TextView android:id="@+id/dw_n6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="10sp" android:textStyle="bold" android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

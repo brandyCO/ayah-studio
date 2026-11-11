@@ -130,9 +130,9 @@
 .rkm-up, .rkm-down { font-size: 13px; font-weight: 800; opacity: 0; }
 .rkm-up { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, .6); }
 .rkm-down { color: #f87171; }
-.rkm-stage.go .rkm-row:not(.me) { transition: transform .6s .35s cubic-bezier(.3, 0, .2, 1); transform: translateY(var(--row)); }
-.rkm-stage.go .rkm-row.me { transition: transform .9s cubic-bezier(.5, -0.2, .2, 1.15); transform: translateY(calc(var(--row) * var(--k) * -1)) scale(1.04); }
-.rkm-stage.go .rkm-up, .rkm-stage.go .rkm-down { opacity: 1; transition: opacity .3s .9s; }
+.rkm-stage.go .rkm-row:not(.me) { transition: transform .38s .12s cubic-bezier(.3, 0, .2, 1); transform: translateY(var(--row)); }
+.rkm-stage.go .rkm-row.me { transition: transform .52s cubic-bezier(.45, -0.15, .25, 1.25); transform: translateY(calc(var(--row) * var(--k) * -1)) scale(1.04); }
+.rkm-stage.go .rkm-up, .rkm-stage.go .rkm-down { opacity: 1; transition: opacity .2s .45s; }
 .rkm-duo { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin-top: 14px; }
 .rkm-duo .fg-actor { position: relative; width: 92px; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
 .rkm-duo .fg-actor:first-child svg { transform: scaleX(-1); }
@@ -205,9 +205,9 @@
 .rk-top-acts { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; }
 .rk-top-acts .rk-me-av { display: flex; }
 .rk-top-chest { position: relative; display: flex; padding: 0; border: 0; background: none; cursor: pointer; animation: rk-nudge 2.4s ease-in-out infinite; }
-.rk-top-chest svg { width: 38px; height: 36px; }
+.rk-top-chest .ck-art { width: 38px; }
 .rk-dot { position: absolute; top: 0; inset-inline-end: 0; width: 9px; height: 9px; border-radius: 50%; background: #e0475b; box-shadow: 0 0 0 2px var(--bg); }
-@keyframes rk-nudge { 0%, 80%, 100% { transform: none; } 85% { transform: rotate(-8deg); } 90% { transform: rotate(7deg); } 95% { transform: rotate(-4deg); } }
+@keyframes rk-nudge { 0%, 80%, 100% { rotate: 0deg; } 85% { rotate: -8deg; } 90% { rotate: 7deg; } 95% { rotate: -4deg; } }
 @media (prefers-reduced-motion: reduce) { .rk-top-chest { animation: none; } }
 .rk-tabs { margin: 4px 0 8px; }
 .rk-headbox { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -235,7 +235,7 @@
   box-shadow: 0 10px 28px -12px color-mix(in srgb, var(--tc) 70%, transparent); }
 .rk-hero::before { content: ''; position: absolute; inset: -60% -20% auto; height: 200%; pointer-events: none; opacity: .22;
   background: repeating-conic-gradient(from 0deg at 50% 32%, #fff 0deg 6deg, transparent 6deg 18deg); animation: rk-spin 60s linear infinite; }
-@keyframes rk-spin { to { transform: rotate(360deg); } }
+@keyframes rk-spin { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .rk-hero::before { animation: none; } }
 .rk-hero > * { position: relative; }
 .rk-hero .rk-rung.on { filter: drop-shadow(0 0 14px rgba(255, 255, 255, .7)); }
@@ -262,7 +262,7 @@
 .rk-ch-row.me .rk-ch-bar span { background: linear-gradient(90deg, #6c5ce7, #8f7ff5); }
 .rk-ch-line { margin: 0; font-weight: 700; }
 .rk-ch-claim { display: inline-flex; align-items: center; gap: 6px; justify-self: start; }
-.rk-ch-claim svg { width: 30px; height: 30px; }
+.rk-ch-claim .ck-art { width: 30px; flex: none; }
 .rk-ch-vs { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .rk-ch-x { font: 900 1.1rem var(--ui-round, inherit); color: #6c5ce7; text-transform: uppercase; }
 .rk-ch-q { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 2px dashed #6c5ce7; color: #6c5ce7; font: 900 1.2rem var(--ui-round, inherit); }
@@ -351,3 +351,68 @@
 .rk-bub.out { opacity: 0; translate: -50% -8px; }
 @keyframes rk-bub-in { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) { .rk-bub { animation: none; } }
+.rk-not-light { padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, #6c5ce7 12%, var(--card)); font-weight: 600; font-size: var(--fs-s); }
+.rk-shop-btn { display: inline-flex; align-items: center; gap: 5px; } .rk-shop-btn .lt-chip-ic { width: 16px; height: 16px; }
+
+/* Points have their own mark (violet badge, rising chevron) so they never read as Light's star. */
+.rk-pts-ic { width: 1.05em; height: 1.05em; flex: none; vertical-align: -.16em; margin-inline-end: 3px; }
+.rk-pts-ic .rk-pts-bg { fill: #6c5ce7; }
+.rk-pts-ic .rk-pts-hi { fill: #8f83f0; }
+.rk-pts-ic .rk-pts-up { stroke: #fff; }
+.rk-pts-ic.big { width: 30px; height: 30px; margin: 0; }
+.rk-pts { display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+.rk-pts-u { margin-inline-start: 3px; font-size: .78em; font-weight: 700; opacity: .75; }
+.rk-score { display: inline-flex; align-items: center; }
+.rk-pod-step span { display: inline-flex; align-items: center; }
+.rk-pod-step .rk-pts-ic { width: 12px; height: 12px; }
+.rk-hero-pts { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 8px 6px 12px; border: 0; border-radius: 99px; cursor: pointer;
+  background: rgba(255, 255, 255, .94); color: #2b2160; font: 800 var(--fs-s)/1.2 var(--ui-round, inherit); box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
+.rk-hero-pts .rk-pts { font-size: 1.15em; }
+.rk-hero-pts > span:not(.rk-pts, .rk-hero-pts-i) { font-weight: 700; opacity: .75; }
+.rk-hero-pts-i { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #6c5ce7; color: #fff; font: 900 12px/1 Georgia, serif; font-style: italic; }
+.rk-hero-pts:active { translate: 0 2px; box-shadow: 0 1px 0 rgba(0, 0, 0, .18); }
+.rk-info-btn { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid color-mix(in srgb, #6c5ce7 55%, var(--line)); background: color-mix(in srgb, #6c5ce7 10%, var(--card)); color: #6c5ce7;
+  font: 900 16px/1 Georgia, serif; font-style: italic; }
+@media (prefers-color-scheme: dark) { .rk-info-btn { color: #b3a9ff; } }
+.rk-info-btn:active { scale: .92; }
+
+/* How Ranks work: points (violet), Light (gold border, the theme star), leagues, when points show. */
+.rk-how { display: grid; gap: 12px; padding-bottom: 16px; }
+.rk-info { display: grid; gap: 8px; padding: 14px; border-radius: 18px; border: 2px solid var(--ic, var(--line)); background: color-mix(in srgb, var(--ic, transparent) 9%, var(--card)); }
+.rk-info.pts { --ic: #6c5ce7; }
+.rk-info.light { --ic: #e9a514; }
+.rk-info.league { --ic: #2f7fd6; }
+.rk-info.when { --ic: var(--line); }
+.rk-info p { margin: 0; }
+.rk-info-head { display: flex; align-items: center; gap: 10px; }
+.rk-info-head h3 { margin: 0; font: 800 17px/1.25 var(--ui-round, inherit); }
+.rk-info-ic { display: grid; place-items: center; width: 36px; height: 36px; flex: none; font-size: 22px; }
+.rk-info-ic .lt-chip-ic.big { width: 32px; height: 32px; }
+.rk-info-ic .rkm-emblem { position: static; inset: auto; width: 36px; height: 36px; animation: none; }
+.rk-info-sub { font-weight: 800; font-size: var(--fs-s); color: #6c5ce7; }
+@media (prefers-color-scheme: dark) { .rk-info-sub { color: #b3a9ff; } }
+.rk-earns { list-style: none; margin: 0; padding: 0 !important; display: grid; gap: 6px !important; }
+.rk-earn { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.rk-earn-ic { font-size: 20px; width: 26px; text-align: center; }
+.rk-earn-txt { flex: 1; min-width: 0; display: grid; }
+.rk-earn-txt small { font-size: var(--fs-2xs); line-height: 1.35; }
+.rk-earn-n { padding: 3px 9px; border-radius: 99px; background: #6c5ce7; color: #fff; font: 800 13px/1.3 var(--ui-round, inherit); font-variant-numeric: tabular-nums; }
+
+/* Points arriving while Ranks is open: "+10" floats up from your score. */
+.rk-row.me .rk-score { position: relative; }
+.rk-gain { position: absolute; inset-inline-end: 0; bottom: 100%; padding: 2px 8px; border-radius: 99px; background: #6c5ce7; color: #fff; font: 800 12px/1.3 var(--ui-round, inherit);
+  white-space: nowrap; pointer-events: none; animation: rk-gain 1.6s cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes rk-gain { 0% { opacity: 0; translate: 0 8px; scale: .6; } 15% { opacity: 1; translate: 0 0; scale: 1.08; } 25% { scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -14px; } }
+.rk-row.me.gain { animation: rk-row-gain .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes rk-row-gain { 40% { scale: 1.03; } }
+@media (prefers-reduced-motion: reduce) { .rk-gain, .rk-row.me.gain { animation: none; } }
+
+/* Passing someone feels quick (owner 2026-11-11): rows drop in fast, the words follow the glide, Continue is ready in under a second. */
+.rkm-passed .rkm-row { animation: rkm-row-in .28s ease-out both; }
+.rkm-passed .rkm-row:nth-child(2) { animation-delay: .04s; } .rkm-passed .rkm-row:nth-child(3) { animation-delay: .08s; } .rkm-passed .rkm-row:nth-child(4) { animation-delay: .12s; }
+@keyframes rkm-row-in { from { opacity: 0; translate: 0 10px; } }
+.rkm-passed .cel-kicker { animation-delay: .1s !important; animation-duration: .35s !important; }
+.rkm-passed .cel-text h2 { animation-delay: .45s; animation-duration: .5s; }
+.rkm-passed .cel-sub { animation-delay: .6s; animation-duration: .4s; }
+.rkm-passed .cel-ok { animation: cel-up .35s .75s ease-out both; }

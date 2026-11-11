@@ -101,7 +101,8 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 .fb-spark { position: absolute; width: 14px; height: 14px; pointer-events: none; color: #fff3c2;
   background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
   filter: drop-shadow(0 0 6px #ffd76a); animation: fb-spark .9s cubic-bezier(.2, .8, .3, 1) both; }
-@keyframes fb-spark { from { transform: translate(0, 0) scale(.2) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); opacity: 0; } }
+/* Individual properties (no rotate() in transform, which re-layers the page each frame); --s is the spark's size. */
+@keyframes fb-spark { from { translate: 0 0; rotate: 0deg; scale: calc(.2 * var(--s, 1)); opacity: 1; } 70% { opacity: 1; } to { translate: calc(var(--dx) * var(--s, 1)) calc(var(--dy) * var(--s, 1)); rotate: 160deg; scale: var(--s, 1); opacity: 0; } }
 
 /* An actor in a moment: sized by its box, standing on its own shadow. */
 .fg-actor { position: absolute; display: block; pointer-events: none; }
@@ -135,3 +136,32 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 @media (prefers-reduced-motion: reduce) { .fg-actor.lp-buddy { animation: none; } }
 /* Off screen, or an old phone: the idle loop rests (src/ui/actor.ts, round 3 speed pass). */
 .fg-actor.fg-off *, html.lite .fg-actor .fg-bob, html.lite .fg-actor .fg-head, html.lite .fg-actor .fg-shadow, html.lite .fg-actor .fg-twinkle { animation-play-state: paused !important; }
+/* Layered actor (actor.ts `layer()`): the shadow, the whole-body moves and the breathing bob are HTML layers the
+   compositor moves without repainting; the SVG's own shadow and bob are switched off so the picture is the same. */
+.fg-lay { position: relative; display: block; flex: none; }
+.fg-lay > .fg-mv, .fg-lay .fg-bb { display: block; transform-origin: 50% 95.42%; }
+.fg-lay .fg-bb { animation: fg-bob-l 3.2s ease-in-out infinite; }
+.fg-lay.sleepy .fg-bb { animation-duration: 6s; }
+.fg-lay svg .fg-bob { animation: none; }
+.fg-lay svg .fg-shadow { display: none; }
+.fg-lay > .fg-sh { position: absolute; left: 19%; width: 62%; top: 91.98%; height: 6.87%; border-radius: 50%; background: #000; opacity: .3;
+  animation: fg-shadow 3.2s ease-in-out infinite; }
+@keyframes fg-bob-l { 50% { transform: translateY(-1.145%) scale(1.01, .99); } }
+@media (prefers-reduced-motion: reduce) { .fg-lay .fg-bb, .fg-lay > .fg-sh { animation: none; } }
+html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: paused !important; }
+/* The stacked copies (head, raised arms, waving arm) lie exactly over the body copy. */
+.fg-lay .fg-bb { position: relative; }
+.fg-lay .fg-hd, .fg-lay .fg-pt, .fg-lay .fg-wa { position: absolute; inset: 0; display: block; }
+.fg-lay .fg-hd > svg, .fg-lay .fg-pt > svg, .fg-lay .fg-wa > svg { display: block; width: 100%; height: auto; }
+.fg-lay svg .fg-head, .fg-lay svg .fg-wave-arm { animation: none; }
+.fg-lay .fg-hd { transform-origin: 50% 57.25%; animation: fg-sway-l 7.4s ease-in-out infinite; }
+.fg-lay.kid .fg-hd { transform-origin: 50% 64.89%; }
+/* Individual rotate / translate properties: Chrome re-layers the page every frame for an animated rotate() in
+   `transform`, not for the `rotate` property (measured). */
+@keyframes fg-sway-l { 0%, 100% { rotate: 0deg; translate: 0 0; } 30% { rotate: 2.2deg; translate: 0 0; } 62% { rotate: -1.6deg; translate: 0 .19%; } }
+.fg-lay .fg-wa { display: none; transform-origin: 67% 61.07%; }
+.fg-lay.kid .fg-wa { transform-origin: 64.62% 67.79%; }
+.fg-lay.waving .fg-wa { display: block; animation: fg-wave-l .5s ease-in-out infinite alternate; }
+@keyframes fg-wave-l { from { rotate: -14deg; } to { rotate: 12deg; } }
+@media (prefers-reduced-motion: reduce) { .fg-lay .fg-hd { animation: none; } }
+html.lite .fg-actor .fg-hd { animation-play-state: paused !important; }

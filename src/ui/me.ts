@@ -28,7 +28,8 @@ import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
 import { goMushaf, tabBar } from './tabs';
-import { lightChip } from './lightChip';
+import { lightChip, star } from './lightChip';
+import { wallet } from '../data/garden';
 import { lastRead, setReaderMode } from './prefs';
 import { setTimeTint, timeTintOn } from './living';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
@@ -45,6 +46,8 @@ import { dayCard } from './firstSteps';
 import { todayCard } from './todayCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { chest } from './chest';
+import { mpt } from '../i18n/mePages';
+import { inboxBell } from './inbox';
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -55,6 +58,11 @@ const timeLabel = (sec: number) => (sec % 60 ? t('me.minHalf', { n: Math.floor(s
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 
 let period: Period = 'week';
+/** Which goals the goals card shows: today's or this week's (remembered on this device). */
+let goalTab: 'day' | 'week' = (() => { try { return localStorage.getItem('meGoalTab') === 'week' ? 'week' : 'day'; } catch { return 'day'; } })();
+/** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
+export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
+export type MePage = (typeof ME_PAGES)[number];
 
 function dialog(title: string, ...body: (Node | string | false)[]) {
   const close = () => d.close();
@@ -84,9 +92,25 @@ export function openBadge(b: BadgeState, fresh = false) {
 
 // What the goal rings and the Light lantern showed last (this session), so they fill on from there.
 const ringWas = new Map<string, number>();
+
+/** ‹ on Me's own screens: step back in history when Me opened it, so the phone's back button does not loop. */
+const backToMe = (e: Event) => {
+  let fromMe = false;
+  try { fromMe = sessionStorage.getItem('meScroll') !== null; } catch { /* ignore */ }
+  if (fromMe && history.length > 1) { e.preventDefault(); history.back(); }
+};
+const svgIcon = (cls: string, body: string) => {
+  const el = h('span', { class: cls, 'aria-hidden': 'true' });
+  el.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  return el;
+};
+const roomIcon = () => svgIcon('me-room-ic', '<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>');
+const editIcon = () => svgIcon('goal-edit-ic', '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>');
+const clockIcon = () => svgIcon('goal-reset-ic', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>');
 let lanternWas: number | undefined;
 
-export async function showMe(root: HTMLElement): Promise<() => void> {
+export async function showMe(root: HTMLElement, at?: string): Promise<() => void> {
+  const page = (ME_PAGES as readonly string[]).includes(at ?? '') ? at as MePage : undefined;
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
@@ -97,7 +121,17 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const paintRoom = () => {
     let has = false;
     try { has = !!localStorage.getItem('rankFigure'); } catch { /* ignore */ }
-    if (has) void import('./room').then((m) => { const c = m.roomCard(dressUp); roomSlot.replaceChildren(c ?? ''); });
+    if (page !== 'room') { paintDoors(); return; }
+    // The room is the whole screen: its own floating top bar, no tab bar.
+    if (has) void import('./room').then((m) => {
+      const bar = h('div', { class: 'rm-full-bar' },
+        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('h1', {}, mpt('mp.room')),
+        lightChip(() => openLight()));
+      const c = m.roomScreen(dressUp, bar);
+      roomSlot.replaceChildren(c ?? '');
+    });
+    else roomSlot.replaceChildren(h('button', { class: 'primary me-make-fig', onclick: () => dressUp() }, mpt('mp.roomMake')));
   };
   const dressUp = (tab?: 'wardrobe') => void import('./figureBuilder').then((b) => {
     let code: string | null = null;
@@ -113,10 +147,40 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const duaBox = h('section', { class: 'me-card dl-card' });
   const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
   const noorEl = noorLine('me');
+  // Asked once, right under the lanterns: reminders after each adhan and salah (owner request 2026-11-10).
+  const duaAsk = h('div', { class: 'me-ask-slot' });
+  const paintAsk = () => {
+    let asked = true;
+    try { asked = !!localStorage.getItem('duaNotesAsked'); } catch { /* ignore */ }
+    const a = prayerAlerts();
+    if (asked || a.duas || a.salah || page) { duaAsk.replaceChildren(); return; }
+    const done = () => { try { localStorage.setItem('duaNotesAsked', '1'); } catch { /* ignore */ } duaAsk.replaceChildren(); };
+    duaAsk.replaceChildren(h('section', { class: 'me-card me-ask' },
+      h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, '🔔'),
+      h('div', { class: 'me-ask-txt' }, h('b', {}, mpt('mp.askTitle')), h('p', { class: 'muted small' }, mpt('mp.askBody')),
+        h('div', { class: 'chips' },
+          h('button', { class: 'chip on', onclick: async () => {
+            haptic();
+            done();
+            if (prayerSettings().lat === null) {
+              toast(t('pr.finding'));
+              const r = await locatePrayer();
+              if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
+            }
+            const ok = await import('./prayerAlerts').then((m) => m.turnOnDuaNotes());
+            toast(ok || !isNative() ? mpt('mp.askDone') : t('rem.denied'));
+          } }, mpt('mp.askYes')),
+          h('button', { class: 'chip', onclick: done }, mpt('mp.askNo'))))));
+  };
   const statsBox = h('section', { class: 'me-card' });
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
   const prayerBox = h('section', { class: 'me-card' });
+  // Badges waiting for their Claim stay on Me itself; the rest of the badges live behind a door.
+  const claimSlot = h('div', { class: 'me-claims' });
+  const doors = h('nav', { class: 'me-doors', 'aria-label': t('me.title') });
+  const prayerStrip = h('a', { class: 'me-pr-strip', href: '#/me/prayer' });
+  let prayerLine = '';
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
@@ -129,7 +193,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   let streakPlaying = false;
   const maybeStreak = () => {
     const s = streak();
-    if (streakPlaying || !s.litToday || s.days < 1 || document.hidden) return;
+    if (page || streakPlaying || !s.litToday || s.days < 1 || document.hidden) return;
     let seen = '';
     try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
     if (seen === dayKey()) return;
@@ -196,18 +260,20 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
       a.el.setAttribute('role', 'button');
       a.el.setAttribute('aria-hidden', 'true');
       if (look.mode === 'asleep') {
-        a.el.querySelector('svg')?.classList.add('sleepy');
+        m.poseClass(a.el, 'sleepy', true);
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
-      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); });
+      // A tap greets you, then goes into the room.
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
     });
   };
+  const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost]);
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig()]);
     if (sig === heroSig) return;
     heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
@@ -220,6 +286,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
     const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
+      hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
         flameBox,
         h('div', { class: 'me-top-txt' },
@@ -353,7 +420,6 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const n = list.filter((g) => g.done >= g.target).length;
     const all = n === list.length;
     return h('div', { class: 'week-goals' },
-      h('div', { class: 'me-row' }, h('h3', { class: 'me-h2' }, t('wkg.title')), resetLabel('week')),
       list.length > 1 ? h('div', { class: `goal-day${all ? ' met' : ''}` },
         h('span', { class: 'goal-txt' },
           h('b', {}, t('wkg.chest')),
@@ -368,14 +434,19 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
     return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
   };
+  // The time left sits as a small clock pill at the top right of the goals card (owner request 2026-11-10).
+  const resetText = (el: HTMLElement) => {
+    const full = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
+    el.title = full;
+    el.setAttribute('aria-label', full);
+    el.lastChild!.textContent = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+  };
   const resetLabel = (which: 'day' | 'week') => {
-    const el = h('span', { class: 'goal-reset muted small', 'data-reset': which });
-    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[which].getTime() - Date.now()) });
+    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
+    resetText(el);
     return el;
   };
-  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach((el) => {
-    el.textContent = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
-  });
+  const paintResets = () => root.querySelectorAll<HTMLElement>('.goal-reset').forEach(resetText);
   // Light (Noor): what claimed goals gathered today, this week and this month, private to the user.
   // The lantern fills with this week's Light against what seven days of today's goals could give.
   const lightStrip = () => {
@@ -401,8 +472,9 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     dialog(t('lt.title'),
       h('div', { class: 'lt-sheet' },
         h('div', { class: 'me-tiles' },
+          h('div', { class: 'me-tile lt-left' }, h('span', { class: 'me-tile-n' }, star(), h('b', {}, String(wallet()))), h('span', {}, mpt('mp.toSpend'))),
           ...([['lt.tToday', lightOn(dayKey())], ['lt.tWeek', stats('week').light], ['lt.tMonth', stats('month').light], ['lt.tAll', all]] as [Key, number][])
-            .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, t(k))))),
+            .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, k === 'lt.tAll' ? mpt('mp.earnedAll') : t(k))))),
         h('p', { class: 'muted small' }, t('lt.help'))));
   };
   // A first pace (once), then the goals; at most one gentle suggestion a week.
@@ -432,20 +504,42 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const list = todayGoals();
     const all = list.length > 0 && list.every((g) => g.done >= g.target);
     const tip = goalTip();
+    const wk = weekGoals();
+    // A chest waiting to be opened on the other side shows as a dot on its switch.
+    const dayReady = list.some((g) => g.done >= g.target && !goalClaimed(g.id)) || (all && list.length > 1 && !goalClaimed('all'));
+    const wkAll = wk.length > 0 && wk.every((g) => g.done >= g.target);
+    const weekReady = wk.some((g) => g.done >= g.target && !weekClaimed(g.id)) || (wkAll && wk.length > 1 && !weekClaimed(weekAllId()));
+    const tab = wk.length ? goalTab : 'day';
+    const pick = (v: 'day' | 'week') => {
+      if (goalTab === v) return;
+      goalTab = v;
+      try { localStorage.setItem('meGoalTab', v); } catch { /* ignore */ }
+      haptic(6);
+      paintGoals();
+    };
+    const seg = (v: 'day' | 'week', label: string, dot: boolean) => h('button', {
+      class: `goal-seg-b${tab === v ? ' on' : ''}`, role: 'tab', 'aria-selected': String(tab === v), onclick: () => pick(v),
+    }, label, dot && tab !== v ? h('i', { class: 'goal-seg-dot', 'aria-label': mpt('mp.weekReady') }) : '');
+    const body = tab === 'week'
+      ? [weekBox()]
+      : [tip ? tipCard(tip) : '',
+        list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
+        list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
+        list.length ? lightStrip() : ''];
     goalsBox.replaceChildren(
-      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('goal.title')),
-        h('button', { class: 'chip', onclick: openGoalEditor }, t('goal.edit'))),
-      list.length ? resetLabel('day') : '',
-      tip ? tipCard(tip) : '',
-      list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
-      list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-      list.length ? lightStrip() : '',
-      weekBox(),
-      h('div', { class: 'goal-links' },
-        h('button', { class: 'menu-item tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿  ${t('tb.title')}`),
-        h('button', { class: 'menu-item', onclick: () => openAdhkarSession('s') }, `☀  ${t('goal.adhkar')}`),
-        h('button', { class: 'menu-item', onclick: () => openAdhkarSession('m') }, `☾  ${t('goal.adhkarM')}`),
-        goals().custom.length < CUSTOM_MAX ? h('button', { class: 'menu-item', onclick: () => openCustom() }, `＋  ${t('cg.add')}`) : ''));
+      h('div', { class: 'me-row goal-head' },
+        wk.length
+          ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady), seg('week', mpt('mp.week'), weekReady))
+          : h('h2', { class: 'me-h' }, t('goal.title')),
+        tab === 'week' || list.length ? resetLabel(tab) : '',
+        h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
+      ...body,
+      h('div', { class: 'goal-links chips' },
+        h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
+        // The adhkar keep a way in here only when they are not a goal row already.
+        list.some((g) => g.kind === 'adhkar' && (g.period ?? 's') === 's') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('s') }, `☀ ${t('goal.adhkar')}`),
+        list.some((g) => g.kind === 'adhkar' && g.period === 'm') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('m') }, `☾ ${t('goal.adhkarM')}`),
+        goals().custom.length < CUSTOM_MAX ? h('button', { class: 'chip', onclick: () => openCustom() }, `＋ ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
   function openCustom(c?: CustomGoal) {
@@ -576,14 +670,35 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const order = [...earned, ...next];
     const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
     const waiting = earned.filter((b) => !badgeClaimed(b.def.id));
-    badgeBox.replaceChildren(
+    claimSlot.replaceChildren(
       waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
         h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, t(b.def.name as Key, { n: b.def.need }))),
-        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '',
+        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '');
+    badgeBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
         h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
-      h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
+      page === 'stats' ? h('div', { class: 'bd-grid' }, ...order.map(tile)) : h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
+  };
+
+  // --- the doors: each opens its own full screen, so Me stays short ---
+  const paintDoors = () => {
+    if (page) return;
+    let hasFigure = false;
+    try { hasFigure = !!localStorage.getItem('rankFigure'); } catch { /* ignore */ }
+    const earned = badgeStates().filter((b) => b.earned).length;
+    const door = (id: MePage, icon: string, title: string, sub: string, dot = false, tap?: () => void) =>
+      h('a', { class: `me-door d-${id}`, href: `#/me/${id}`, onclick: tap ? (e: Event) => { e.preventDefault(); tap(); } : null },
+        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon),
+        h('span', { class: 'me-door-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
+        dot ? h('i', { class: 'me-door-dot', 'aria-hidden': 'true' }) : '');
+    void hasFigure;
+    // The room is on the streak card and prayer times on the line at the top; these two are used less often.
+    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, '🕌'),
+      h('span', { class: 'me-pr-txt' }, prayerLine || mpt('mp.prayerSet')), h('span', { class: 'me-pr-go', 'aria-hidden': 'true' }, '›'));
+    doors.replaceChildren(
+      door('stats', '🏅', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
+      door('library', '📚', mpt('mp.lib'), mpt('mp.libSub')));
   };
 
   const paintLibrary = () => {
@@ -613,6 +728,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     } }, ps.lat === null ? t('pr.setLocation') : t('pr.update'));
     if (ps.lat === null) {
       prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate);
+      if (prayerLine) { prayerLine = ''; paintDoors(); }
       return;
     }
     const times = (await prayerDay(new Date(), ps))!;
@@ -622,6 +738,8 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
     const nextAt = tomorrow ?? times[next];
     if (next < 0) next = 0;
     const mins = Math.max(0, Math.round((nextAt.getTime() - now) / 60_000));
+    const line = t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) });
+    if (line !== prayerLine) { prayerLine = line; paintDoors(); }
     prayerBox.replaceChildren(
       h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, `🔔 ${t(anyAlert() ? 'pa.on' : 'pa.short')}`)),
       h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
@@ -633,7 +751,7 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   void import('../together/relight').then((m) => m.takeRelights());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); maybeStreak(); };
+  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
@@ -644,21 +762,49 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   const toAsr = eveningFrom().getTime() - Date.now();
   const asrTimer = toAsr > 0 && toAsr < 86_400_000 ? window.setTimeout(refresh, toAsr + 1000) : 0;
   const onPrayer = () => void paintPrayer();
-  root.append(
-    h('header', { class: 'topbar' },
-      h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
-      lightChip(() => openLight()),
-      h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-    hero, noorEl, dayCard() ?? '', wardrobeSlot, todayCard(), goalsBox, duaBox, prayerBox, statsBox, badgeBox, roomSlot, libBox,
-    tabBar('me'));
+  if (page === 'room') {
+    root.classList.add('me-room-screen');
+    root.append(roomSlot);
+  } else if (page) {
+    // A door's full screen: the same live sections, on their own.
+    const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib') }[page];
+    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
+    root.append(
+      h('header', { class: 'topbar' },
+        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('div', { class: 'brand' }, h('h1', {}, title)),
+        lightChip(() => openLight())),
+      h('div', { class: `me-page me-page-${page}` }, ...content),
+      tabBar('me'));
+  } else {
+    paintAsk();
+    root.append(
+      h('header', { class: 'topbar' },
+        h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
+        lightChip(() => openLight()),
+        inboxBell(),
+        h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
+      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(),
+      tabBar('me'));
+    void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
+  }
   paintRoom();
-  void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
 
+  // A lantern tapped on the home-screen widget (#/me/du:wake, #/me/du:salah:fajr…): its session opens over Me.
+  if (at?.startsWith('du:')) {
+    const [m, p] = at.slice(3).split(':');
+    history.replaceState(null, '', '#/me');
+    if (m === 'wake' || m === 'sleep' || m === 'salah') setTimeout(() => void import('./adhkar').then((x) => x.openDuas(m, p as never)), 350);
+  }
   // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
   try {
     if (sessionStorage.getItem('meFocus') === 'claim') {
       sessionStorage.removeItem('meFocus');
       setTimeout(() => {
+        if (!goalsBox.querySelector('.chest.ready') && goalsBox.querySelector('.goal-seg-dot')) {
+          goalTab = goalTab === 'day' ? 'week' : 'day';
+          paintGoals();
+        }
         const c = goalsBox.querySelector<HTMLElement>('.chest.ready') ?? root.querySelector<HTMLElement>('.claim-badge');
         if (!c) return;
         c.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
@@ -673,7 +819,22 @@ export async function showMe(root: HTMLElement): Promise<() => void> {
   // A sheet or the tasbih counter closed: the streak moment may play now.
   const onClose = () => setTimeout(maybeStreak, 350);
   document.addEventListener('close', onClose, true);
+  // Back from one of Me's own screens (a door, settings): Me opens where it was left, not at the top.
+  if (!page) {
+    let y = 0;
+    try { y = Number(sessionStorage.getItem('meScroll')) || 0; sessionStorage.removeItem('meScroll'); } catch { /* ignore */ }
+    if (y > 0) {
+      const go = () => window.scrollTo(0, Math.min(y, document.documentElement.scrollHeight - innerHeight));
+      requestAnimationFrame(go);
+      // Some cards (lanterns, today, the character) arrive a moment later and may lengthen the page.
+      setTimeout(() => { if (Math.abs(scrollY - y) > 4 && scrollY < y) go(); }, 250);
+    }
+  }
+  const leaveY = () => scrollY;
   return () => {
+    if (!page && location.hash.startsWith('#/me/')) {
+      try { sessionStorage.setItem('meScroll', String(Math.round(leaveY()))); } catch { /* ignore */ }
+    }
     document.removeEventListener('close', onClose, true);
     clearInterval(tick);
     clearTimeout(asrTimer);
@@ -810,6 +971,9 @@ export function showMeSettings(root: HTMLElement): () => void {
       h('b', { class: 'set-label' }, akt('du.notes')),
       h('p', { class: 'muted small' }, akt('du.notesHelp')),
       h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, a.duas ? akt('du.notesOn') : akt('du.notesOff')),
+      h('b', { class: 'set-label' }, akt('du.salahNotes')),
+      h('p', { class: 'muted small' }, akt('du.salahHelp')),
+      h('button', { class: `chip${a.salah ? ' on' : ''}`, 'aria-pressed': String(a.salah), onclick: () => save((c) => ({ ...c, salah: !c.salah })) }, a.salah ? akt('du.notesOn') : akt('du.notesOff')),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),

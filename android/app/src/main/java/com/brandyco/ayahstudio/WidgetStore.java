@@ -71,6 +71,20 @@ final class WidgetStore {
         return null;
     }
 
+    /** The six times of the day that holds `at` (a prayer time from the list), or null. */
+    static JSONArray dayOf(JSONObject data, long at) {
+        JSONObject p = data.optJSONObject("prayers");
+        JSONArray days = p == null ? null : p.optJSONArray("days");
+        if (days == null) return null;
+        for (int d = 0; d < days.length(); d++) {
+            JSONObject x = days.optJSONObject(d);
+            JSONArray t = x == null ? null : x.optJSONArray("t");
+            if (t == null) continue;
+            for (int i = 0; i < t.length(); i++) if (t.optLong(i) == at) return t;
+        }
+        return null;
+    }
+
     /** Today's six prayer times, or null. */
     static JSONArray todayTimes(JSONObject data) {
         JSONObject p = data.optJSONObject("prayers");

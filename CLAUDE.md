@@ -1515,6 +1515,17 @@ duas/reflections section in Me.
       surah / juz finished card. **Old-phone pass**: actors off screen pause (`fg-off`, shared IntersectionObserver), the room rests
       after 14 s (SMIL paused, CSS paused) and wakes on view / touch, breathing animations use transform / opacity, never a filter;
       Me idle at 6× CPU throttle ~880 → ~1 ms/s
+      **60 fps pass** (owner request 2026-11-10, "the characters lag when tapped… make every animation 60fps"): moving parts
+      are HTML layers the compositor moves without repainting, never animations inside an SVG. Characters (`layer()` in
+      `actor.ts`): body, head, raised / waving arms and shadow as stacked SVG copies in `span.fg-lay`; chests (`chestArt()`
+      returns `span.ck-art`: aura, mouth, box, lid, glints), flames (`flame.ts`: glow, body, inner flame, embers as `<i>`),
+      badge shines (a masked HTML band) and the lantern / star / rosette moments (`lift()` in `celebrate.ts`; motes as `<i>`
+      rising in `cqw`) likewise. Keyframes use the individual `translate` / `rotate` / `scale` properties (an animated
+      `rotate()` in `transform` re-layerized the page every frame). Sparks draw in a worker on an OffscreenCanvas
+      (`sparksWorker.ts`, engine `sparksCore.ts`; main-thread fallback). While a moment covers the screen the page behind
+      gets `content-visibility: hidden` (was `visibility`, a 340 ms restyle) and its WAAPI animations pause. Chest styles
+      moved to `src/ui/chest.css` (lazy, with `chest.ts`). 6× CPU throttle, headless: character tap 42 → ~50–57 fps, room
+      38 → 55, chest 38 → 53, lantern 51 → 58, streak 38 → 57, Me scrolling 59; every picture checked identical
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
@@ -1581,6 +1592,14 @@ duas/reflections section in Me.
       "A new week, a fresh start"; **overtake** — a ladder of the players passed (≤ 3) with your row under them, which
       glides up past theirs (▲ green / ▼ red), then "Next: {name}, n points ahead" or "You lead your league".
       No sound, light vibration; reduced motion → the end picture
+      **Clearer + faster** (owner feedback 2026-11-11): points have their own mark (`ptsIcon()`: a violet badge with a rising
+      chevron) on every score, podium step and the hero's "n points this week" pill, never Light's star; an **ⓘ** in the top bar
+      (and the pill) opens **How Ranks work**: Points (what earns them, each with its +n, the page reading time), Light (from
+      chests, spent in the shop, never ranked), Leagues, When points show. Points arriving while Ranks is open float up from
+      your row ("+20"). Reports go 2.5 s after a change, spaced ≥ 5.2 s apart by the app (the server's limit is now 5 s,
+      migration `20261111200000_rank_report_faster.sql`; a report inside it used to be ignored and marked sent); listening
+      is counted every 15 s; Ranks polls every 8 s. The overtake moment glides at 0.26 s and lands in ~0.5 s, Continue ready
+      at 0.75 s, a tap closes it after 0.9 s
       **Characters** (owner request 2026-11-10, "users build their own character"; faces: the user's choice, off by default):
       `src/ui/figure.ts` draws a person from parts in the reward art style (two-tone shapes, light from the top left, ground
       shadow): man / woman / boy / girl, 8 skins, hair (bald, short, curly, swept, long, bun) + 6 colours, beard (short / full /
@@ -1644,6 +1663,32 @@ duas/reflections section in Me.
       `ls`, `addLesson()`) is reported to Ranks (`rank_report(…, lessons)`, ≤ 20 a day, 15 points each; migration
       `20261110800000_rank_lessons.sql`, pgTAP `rank_lessons.test.sql`); a fifth weekly quest "Pass 5 Learn lessons" joins
       the turn; optional daily goal "Learn lessons" 0/1/2/3 (`Goals.lessons`, off by default, 15 Light each, Begin → `#/learn`)
+- [x] M16 Shorter Me + reminders + widgets + Ranks fixes (owner request 2026-11-10): **Me** = streak, waiting badge claims,
+      one goals card with a **Today | This week** switch (`meGoalTab`; a red dot on the other side when its chest is ready;
+      adhkar chips only when they are not goal rows), the du'a lanterns right under it (pact as a chip), then four **doors**
+      to full screens `#/me/room`, `#/me/prayer`, `#/me/stats` (stats + all badges), `#/me/library` (`showMe(root, page)`;
+      Room without a character opens the builder); strings `src/i18n/mePages.ts` (`mpt`). **Inbox bell** (`src/ui/inbox.ts`,
+      Me / Learn / Ranks top bars): count of everything waiting — goal and week chests, badges, new pieces, Ranks prizes and
+      challenge chests (from the kept Ranks answers, `rankCache`), pact chests (asked when opened) — each row goes straight
+      to it. **Reminders**: `prayerAlerts().salah` → a note after each salah (time + 25/20/20/12/20 min, ids 3500–3549) →
+      the adhkar after that salah; with the app open both notes come as a banner (`watchDuaBanners()`, web too); asked once on
+      Me under the lanterns (`duaNotesAsked`). **Widgets**: `DuaWidget` (seven lanterns from `duas.lit` = journey `dm`, the
+      one whose time it is glows, worked out natively; tap a lantern → `#/me/du:{key}` opens its session); `PrayerWidget`
+      redrawn (next prayer + live countdown, sunrise small, the five prayers with short times so nothing is cut, passed ones
+      dim, tomorrow after Isha, small sizes keep only the top; tap → `#/me/prayer`). **Light** is one currency drawn one way:
+      a star with the Light to spend (`wallet()`) in every top bar and the shop; the sheet shows "Earned all time"; Ranks says
+      points are a weekly score, never spent, and Light never counts there (owner decision). **Ranks speed**: answers kept on
+      the device (`rankCache`, per account) so Ranks paints at once (`staleFirst`), then fresh; while open it asks again
+      every 12 s and repaints only on a change (`refreshCached`), so others' points, names and characters show within
+      seconds; progress is reported 8 s after a change (was 90 s)
+      Second pass (owner feedback 2026-11-10): prayer times are one slim line at the top of Me (→ `#/me/prayer`); the
+      streak card has a **Room** button (and a tap on the character greets, then opens the room); only Stats and
+      Library stay as doors; the reset time is a clock pill at the goals card's top right (Edit is a pencil);
+      Me keeps its scroll place when you come back from its screens (sessionStorage `meScroll`; ‹ steps back in
+      history). **The room is the whole screen** (`roomScreen()` in `src/ui/room.ts`): wall above, the room 1.28× the
+      phone's width (opens at the window, glides to the character and shelves; swipe sideways), the floor runs on into
+      a dock — a button per place showing what stands there (Plant, Corner, Rug, Curtains, Lantern), Shop, Dress up,
+      Share; decorating opens as a low panel and the room rises above it (`openRoomShop(…, { slot, inRoom })`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
@@ -1721,7 +1766,25 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       page; per surah in the unit's ⋯ sheet, which also starts the path there); **Already know some?** — picked surahs get a
       quick tasmi' one after another (`#/learn/{s}/tasmi`: the lesson's whole-surah step straight away; "Not yet" leaves it on
       the path). A tree is made when its first lesson opens (`ensureTree()`, no grid place; `started()`). `#/learn/garden`:
-      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept). Still to come in this thread:
+      **Your garden** (the trees grown so far by juz, thirsty ones marked, decorations kept).
+      Path pass (owner 2026-11-11, "all 6"): a **Continue** button always above the tab bar opens the next thing to do
+      (a thirsty tree's review first, then the current step); reviews are **woven into the path** as blue drop steps just
+      before the current step (the first one carries the START mark); surahs more than one behind or three ahead are
+      **folded into one line per juz** (surahs, first – last, grown bar; a tap opens the juz). Small phones: the top bar's
+      Choose pill shows only its icon and the unit banner puts the Arabic name under the title (< 375 px), so the page
+      never zooms out.
+      More kinds of step (`unitsOf(…, ctx)` in `src/data/learnPath.ts`): **Page N** after the lesson that finishes a mushaf
+      page (held by the surah on that page that comes last in path order; a surah's last page comes after its tasmi') →
+      the page memory screen, done once the page is recited whole there (`learnPageTasmi`; then back to the path);
+      **Similar ayat** at each page end / surah end when the ayat since the last one have similar ayat → the similar sheet
+      with "I see the differences" (`learnSimilar`); a **chest** every 4 lessons (`PATH_CHEST` 15 Light, `lc:{s}:{a}`,
+      opened on the path with the chest moment). A grown surah counts everything before its tasmi' as done. Parts split by
+      lessons only. **Juz checkpoint** after the last surah (in path order) of the surahs starting in a juz, open once all
+      are grown: recite the juz's weakest page (`#/learn/page/P`, recite mode, sessionStorage `pmGate`); a pass (few slips
+      or clean) raises the **juz gate** (`grantJuzGate()`, deco `juzgate`, owned `s:gate:{j}`, synced; drawn in jade and
+      gold with a hanging lantern) shown under Juz gates in Your garden, + `GATE_LIGHT` 50. **Daily ring** beside
+      Continue: today's lessons (`DayRec.ls`) against `goals().lessons`; a tap sets it (1/2/3 a day or none), the same goal as
+      on Me. Continue follows the step carrying START (reviews first, then a gate, then the path). Still to come in this thread:
       the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
 - [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →

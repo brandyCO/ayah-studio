@@ -32,6 +32,8 @@ final class Widgets {
         if (ids.length > 0) TasbihWidget.draw(c, m, ids);
         ids = m.getAppWidgetIds(new ComponentName(c, PrayerWidget.class));
         if (ids.length > 0) PrayerWidget.draw(c, m, ids);
+        ids = m.getAppWidgetIds(new ComponentName(c, DuaWidget.class));
+        if (ids.length > 0) DuaWidget.draw(c, m, ids);
         DailyAyahWidget.refresh(c);
         prayerTick(c);
     }
@@ -58,7 +60,10 @@ final class Widgets {
         Intent tick = new Intent(c, PrayerAlarm.class).setAction(PrayerAlarm.ACTION);
         PendingIntent pi = PendingIntent.getBroadcast(c, 7401, tick, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (am != null) am.cancel(pi);
-        boolean anyPrayerWidget = AppWidgetManager.getInstance(c).getAppWidgetIds(new ComponentName(c, PrayerWidget.class)).length > 0;
+        AppWidgetManager wm = AppWidgetManager.getInstance(c);
+        // The du'a lanterns move on at each prayer too (the one whose time it is glows).
+        boolean anyPrayerWidget = wm.getAppWidgetIds(new ComponentName(c, PrayerWidget.class)).length > 0
+            || wm.getAppWidgetIds(new ComponentName(c, DuaWidget.class)).length > 0;
         boolean lock = data.optBoolean("lockScreen", false);
         if (next == null || (!lock && !anyPrayerWidget)) {
             if (nm != null) nm.cancel(NOTE_ID);

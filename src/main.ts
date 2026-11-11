@@ -9,6 +9,7 @@
 //   #/relight/CODE     relight a friend's streak flame
 //   #/me/settings      the Me tab's settings
 //   #/me/widgets       the home-screen widgets (Add to home screen)
+//   #/me/room, #/me/prayer, #/me/stats, #/me/library   Me's doors: full screens
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
@@ -97,7 +98,7 @@ async function route() {
     } else if (view === 'me') {
       const { showMe, showMeSettings } = await import('./ui/me');
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
-      else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen);
+      else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen, a);
     } else if (view === 'learn') {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
     } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp') && a)) {

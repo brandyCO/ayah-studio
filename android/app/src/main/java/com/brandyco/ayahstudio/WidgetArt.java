@@ -277,4 +277,86 @@ final class WidgetArt {
         }
         return b;
     }
+
+    // --- the du'a lanterns (DuaWidget), the same lantern as the Me tab's string (src/ui/dayLanterns.ts) ---
+
+    /** One lantern, 32 × 48 units plus room for its glow. state 0 = not yet, 1 = its time now, 2 = lit. */
+    static Bitmap lantern(Pal p, int state, int hPx) {
+        float pad = 6;
+        float s = hPx / (48f + pad * 2);
+        int wPx = Math.round((32 + pad * 2) * s);
+        Bitmap b = Bitmap.createBitmap(Math.max(8, wPx), Math.max(8, hPx), Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(b);
+        cv.scale(s, s);
+        cv.translate(pad, pad);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        boolean lit = state == 2, now = state == 1;
+        if (lit || now) {
+            int g = lit ? Color.rgb(255, 186, 80) : p.n2;
+            paint.setShader(new RadialGradient(16, 25, 26, new int[] { alpha(g, lit ? 0.55f : 0.32f), alpha(g, 0) }, null, Shader.TileMode.CLAMP));
+            cv.drawCircle(16, 25, 26, paint);
+            paint.setShader(null);
+        }
+        int line = Color.argb(lit ? 140 : 90, 255, 255, 255);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(1.5f);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setColor(line);
+        cv.drawLine(16, -pad, 16, 6, paint);
+        Path body = new Path();
+        body.moveTo(9, 12);
+        body.lineTo(23, 12);
+        body.cubicTo(26, 18, 26, 30, 23, 36);
+        body.lineTo(9, 36);
+        body.cubicTo(6, 30, 6, 18, 9, 12);
+        body.close();
+        paint.setStyle(Paint.Style.FILL);
+        if (lit) paint.setShader(new LinearGradient(0, 12, 0, 36, Color.rgb(255, 214, 140), Color.rgb(242, 160, 60), Shader.TileMode.CLAMP));
+        else paint.setColor(Color.argb(now ? 34 : 20, 255, 255, 255));
+        cv.drawPath(body, paint);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(now ? 2f : 1.4f);
+        paint.setColor(lit ? Color.rgb(232, 155, 44) : now ? p.n2 : Color.argb(110, 255, 255, 255));
+        cv.drawPath(body, paint);
+        // Ribs
+        paint.setStrokeWidth(1f);
+        paint.setColor(lit ? Color.argb(90, 176, 98, 10) : Color.argb(45, 255, 255, 255));
+        cv.drawLine(16, 12, 16, 36, paint);
+        Path rib = new Path();
+        rib.moveTo(12, 12); rib.cubicTo(10.4f, 19, 10.4f, 29, 12, 36);
+        rib.moveTo(20, 12); rib.cubicTo(21.6f, 19, 21.6f, 29, 20, 36);
+        cv.drawPath(rib, paint);
+        // Caps
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(lit ? Color.rgb(201, 133, 42) : Color.argb(now ? 170 : 110, 255, 255, 255));
+        cv.drawRoundRect(new RectF(10, 6, 22, 10), 2, 2, paint);
+        cv.drawRoundRect(new RectF(11, 36, 21, 39.5f), 1.7f, 1.7f, paint);
+        if (lit) {
+            paint.setColor(Color.rgb(255, 246, 216));
+            cv.drawOval(new RectF(12.6f, 20, 19.4f, 30), paint);
+        }
+        return b;
+    }
+
+    /** The string the lanterns hang from: a soft sag between the hooks of `n` equal columns. */
+    static Bitmap lanternString(int wPx, int hPx, int n) {
+        Bitmap b = Bitmap.createBitmap(Math.max(8, wPx), Math.max(4, hPx), Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(b);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(1.5f, hPx * 0.09f));
+        paint.setColor(Color.argb(70, 255, 255, 255));
+        float col = wPx / (float) n, top = hPx * 0.2f, sag = hPx * 0.55f;
+        Path path = new Path();
+        path.moveTo(col * 0.2f, top);
+        for (int i = 0; i < n; i++) {
+            float x0 = col * (i - 0.5f), x1 = col * (i + 0.5f);
+            if (i == 0) { path.lineTo(x1, top); continue; }
+            path.quadTo((x0 + x1) / 2, top + sag, x1, top);
+        }
+        path.lineTo(wPx - col * 0.2f, top);
+        cv.drawPath(path, paint);
+        return b;
+    }
 }
