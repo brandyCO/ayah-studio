@@ -290,3 +290,4 @@
 .aic-new .aic-img { width: 48px; height: 48px; border-radius: 12px; }
 .aic-go { font-size: 22px; opacity: .6; }
 @media (prefers-reduced-motion: reduce) { .aic-opt.r-celestial .aic-img, .aic-opt.fresh { animation: none; } }
+.me-chip.me-level { text-decoration: none; font-weight: 900; color: #fff; background: color-mix(in srgb, #6c5ce7 70%, transparent); }

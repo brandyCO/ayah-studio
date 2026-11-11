@@ -11,7 +11,7 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Board, type Challenge, type Metric, type Row, type Status,
-  StaleMiss, staleFirst, refreshCached,
+  StaleMiss, staleFirst, refreshCached, dropCache,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
@@ -31,19 +31,21 @@ import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
 import { h, haptic, toast } from './dom';
 import { goMushaf, tabBar } from './tabs';
+import { levelLabel, levelOf } from '../data/xp';
+import { withLevel } from './levelLook';
 import './ranks.css';
 
-type View = 'league' | 'global' | 'boards';
+type View = 'league' | 'friends' | 'global' | 'boards';
 const PENDING = 'pendingBoard';
 const PENDING_CH = 'pendingChallenge';
 
 const TIER_ICON: Record<string, string> = { lantern: '🏮', star: '⭐', moon: '🌙', dawn: '🌅', sun: '☀️' };
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
-const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
+export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
 const num = (n: number) => n.toLocaleString();
 
 /** The share sheet (app or browser), else the link copied. */
-async function share(title: string, text: string, url: string) {
+export async function share(title: string, text: string, url: string) {
   try {
     if (isNative()) {
       const { Share } = await import('@capacitor/share');
@@ -55,7 +57,7 @@ async function share(title: string, text: string, url: string) {
   try { await navigator.clipboard.writeText(`${text}\n${url}`); toast(rt('rk.copied')); } catch { toast(url); }
 }
 
-function sheet(title: string, ...body: (Node | string)[]) {
+export function sheet(title: string, ...body: (Node | string)[]) {
   const close = () => d.close();
   const d = h('dialog', { class: 'sheet bottom' },
     h('div', { class: 'sheet-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
@@ -91,6 +93,9 @@ const pts = (n: number, unit = true) => h('span', { class: 'rk-pts' }, ptsIcon()
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
+/** The character's level (from all-time XP) beside a name. */
+export const lvPill = (xp?: number | null) => xp == null ? '' : h('span', { class: `lv-pill${levelOf(xp) >= 40 ? ' gold' : ''}` }, levelLabel(levelOf(xp), true));
+
 /** The top 3 on a podium (owner pick 2026-11-10): gold in the middle, silver left, bronze right, each player
  *  standing as their own character (or their avatar disc on a stand). The steps rise and the players drop
  *  onto them the first time a day; #1 cheers, the rest bob; a tap makes a player hop (yours waves). */
@@ -104,6 +109,7 @@ export function podium(rows: Row[]): HTMLElement | '' {
   const spot = (r: Row, place: number) => {
     const code = r.private ? null : r.figure ?? null;
     const a = code ? actor('rk-pod-fig', code) : null;
+    if (a && r.xp != null) withLevel(a.el, levelOf(r.xp));
     const who = a ? a.el : h('span', { class: 'rk-pod-disc' }, avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, place === 1 ? 64 : 54, r.frame ?? 0));
     const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.name ?? rt('rk.private')} · ${num(r.score)}`,
       onclick: () => { if (a) (r.me ? a.wave() : a.hop(0.6)); else hopFig(el, 12, 480, false); haptic(8); } },
@@ -128,15 +134,15 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
 
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
-    // Round 5: another player's room can be visited (view only) from their row.
-    const visit = !r.me && !r.private && !!r.figure;
+    // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
+    const visit = !!r.pid && (r.me || !r.private);
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${visit ? ' visit' : ''}`,
-      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': rt('room.visit', { name: r.name ?? '' }),
-        onclick: () => void import('./room').then((m) => m.openVisit({ name: r.name, figure: r.figure ?? null, room: r.room ?? null })),
+      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.name ?? rt('rk.private'),
+        onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
@@ -540,6 +546,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         podium(lg.players),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
+    } else if (view === 'friends') {
+      const m = await import('./friends');
+      body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
     } else if (view === 'global') {
       const rows = await rankGlobal(metric === 'all' && allTime, metric, fresh);
       const sw = (on: boolean, label: string) => h('button', { class: `chip${allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; void paint(); } }, label);
@@ -734,12 +743,13 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   async function paint(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
-    tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
+    tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
     ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) });
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
       if (fresh) await report();
       await paintHead(fresh);
+      if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);
       showGain();
     } catch (e) {
@@ -764,6 +774,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
     try { await joinBoard(pending); view = 'boards'; toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
   }
+  // The Friends tab's name (its strings load with it).
+  let friendsLabel = 'Friends';
+  await import('../i18n/friends').then((m) => { friendsLabel = m.ft('fr.tab'); });
+  if (account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) view = 'friends'; });
   const pendingCh = (() => { try { return sessionStorage.getItem(PENDING_CH); } catch { return null; } })();
   if (pendingCh && account()) {
     try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
@@ -830,4 +844,5 @@ export async function showChallengeInvite(root: HTMLElement, code: string): Prom
 /** #/ranks, #/rb/{code} (a board invite) and #/rc/{code} (a friend challenge). */
 export const ranksRoute = (root: HTMLElement, view: string, code?: string) =>
   view === 'rb' ? showBoardInvite(root, code!) : view === 'rc' ? showChallengeInvite(root, code!)
+    : view === 'rf' ? import('./friends').then((m) => m.showFriendInvite(root, code!))
     : view === 'bp' ? import('./pact').then((m) => m.showPactInvite(root, code!)) : showRanks(root);

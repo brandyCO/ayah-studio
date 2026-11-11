@@ -101,7 +101,7 @@ async function route() {
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen, a);
     } else if (view === 'learn') {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
-    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp') && a)) {
+    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp' || view === 'rf') && a)) {
       c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');

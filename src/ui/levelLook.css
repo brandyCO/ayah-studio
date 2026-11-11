@@ -1,0 +1,29 @@
+/* levelLook.ts: the light a character gathers with its level. */
+.lv { --lv-a: var(--rw-n2, #3dd1ad); --lv-b: var(--rw-hi, #bff3e4); }
+.lv.lv-b5, .lv.lv-b6 { --lv-a: #ffc24a; --lv-b: #fff1b8; }
+.lv-deco { position: absolute; inset: 0; display: block; pointer-events: none; z-index: 0; }
+.lv > :not(.lv-deco) { position: relative; z-index: 1; }
+.lv-deco i { position: absolute; display: block; }
+.lv-ground { left: 12%; right: 12%; bottom: -1%; height: 12%; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--lv-a) 70%, transparent), transparent); }
+.lv-halo { left: 8%; right: 8%; top: 4%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--lv-b) 55%, transparent), color-mix(in srgb, var(--lv-a) 18%, transparent) 60%, transparent);
+  animation: lv-breathe 3.6s ease-in-out infinite alternate; }
+@keyframes lv-breathe { from { scale: .94; opacity: .8; } to { scale: 1.04; opacity: 1; } }
+.lv-orbit { inset: 10% 0 18%; animation: lv-spin 7s linear infinite; }
+.lv-orbit b { position: absolute; top: 50%; left: -2%; width: 9%; aspect-ratio: 1; border-radius: 50%; background: var(--lv-b);
+  box-shadow: 0 0 8px 3px color-mix(in srgb, var(--lv-a) 80%, transparent); }
+.lv-orbit b + b { left: auto; right: -2%; width: 6%; }
+@keyframes lv-spin { to { rotate: 360deg; } }
+.lv.lv-b4 > :not(.lv-deco), .lv.lv-b5 > :not(.lv-deco), .lv.lv-b6 > :not(.lv-deco) { filter: drop-shadow(0 0 3px var(--lv-b)) drop-shadow(0 0 7px color-mix(in srgb, var(--lv-a) 70%, transparent)); }
+.lv-rays { left: -30%; right: -30%; top: -12%; aspect-ratio: 1; border-radius: 50%; opacity: .55;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--lv-b) 70%, transparent) 0 6deg, transparent 6deg 20deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 72%); mask: radial-gradient(closest-side, #000 20%, transparent 72%);
+  animation: lv-spin 30s linear infinite; }
+.lv.lv-b6 .lv-rays { opacity: .8; }
+.fg-off .lv-deco i, .anim-off .lv-deco i { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .lv-deco i { animation: none !important; } }
+/* The level pill beside a name. */
+.lv-pill { display: inline-flex; align-items: center; margin-inline-start: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 900;
+  color: #fff; background: #6c5ce7; vertical-align: 2px; white-space: nowrap; }
+.lv-pill.gold { color: #5a3a00; background: linear-gradient(180deg, #ffe08a, #f5ad2a); }

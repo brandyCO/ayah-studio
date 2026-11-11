@@ -81,18 +81,11 @@ const BOLT = (r: () => number) => {
   return `M${pts.join('L')}`;
 };
 
-/** Plays the power-up for a streak of `days`; resolves when it is closed. Null when there is no character. */
-export function powerUp(days: number): Promise<void> | null {
-  const me = makeActor('pu-actor');
-  if (!me) return null;
-  const level = powerLevel(days);
+/** One character blazing: its aura layers, light gathering into it, lightning and stones (Blazing and up), the
+ *  character itself, wisps in front and tongues rising. A 200 × 300 box; the moment and the friend cards use it. */
+export function blaze(level: number, fig: HTMLElement, seed: number): HTMLElement {
   const T = tones(level);
-  const still = reduced();
-  const r = rng(days * 31 + level);
-  const name = mt(`pu.l${level}` as MomentKey);
-  const newLevel = level > 1 && days === LEVELS[level - 1];
-
-  // The aura: up to three layers behind the character, wisps in front of it, a ground glow and its shockwave.
+  const r = rng(seed);
   const size = [0, 0.74, 0.86, 0.96, 1.01, 1.05][level];
   const layers: HTMLElement[] = [];
   layers.push(auraLayer('pu-out', 11 + level, 150 * size, 230 * size, 7 + level, 70 * size, T.out));
@@ -128,10 +121,6 @@ export function powerUp(days: number): Promise<void> | null {
     }
     extras.push(bolts, stones);
   }
-  if (level >= 4) {
-    const rays = h('span', { class: 'pu-rays' });
-    extras.push(rays);
-  }
   // Light gathering into the character while it charges.
   const gather = h('span', { class: 'pu-gather' });
   for (let i = 0; i < 18; i++) {
@@ -140,29 +129,54 @@ export function powerUp(days: number): Promise<void> | null {
     g.style.cssText = `--dx:${(Math.cos(a) * d).toFixed(0)}px;--dy:${(Math.sin(a) * d).toFixed(0)}px;--d:${(r() * 0.9).toFixed(2)}s;background:${[T.inn[0], T.mid[0], T.core][i % 3]}`;
     gather.append(g);
   }
+  return h('span', { class: 'pu-fig', style: `--pu-a:${T.mid[0]};--pu-b:${T.out[0]};--pu-c:${T.inn[0]};--pu-core:${T.core}` },
+    h('span', { class: 'pu-aura' }, ...layers), gather, ...extras, h('span', { class: 'pu-body' }, fig), h('span', { class: 'pu-aura pu-aura-front' }, front), tongues);
+}
 
-  const body = h('span', { class: 'pu-body' }, me.el);
-  const stage = h('div', { class: 'pu-stage' },
+/** Two friends' characters standing side by side, both on fire (a card on Ranks; no moment). */
+export function blazingPair(level: number, a: HTMLElement, b: HTMLElement | null, on: boolean): HTMLElement {
+  const box = h('span', { class: `pu-mini${b ? ' duo' : ''}${on ? ' lit skip' : ''}` });
+  box.append(on ? blaze(level, a, 7) : h('span', { class: 'pu-fig' }, h('span', { class: 'pu-body' }, a)));
+  if (b) box.append(on ? blaze(level, b, 13) : h('span', { class: 'pu-fig' }, h('span', { class: 'pu-body' }, b)));
+  return box;
+}
+
+/** Plays the power-up for a streak of `days`; resolves when it is closed. Null when there is no character. */
+export interface PowerUpOpts {
+  friend?: { code: string | null; name: string };
+  /** A custom moment (a level up): its own kicker, label beside the number and line under it, and the aura level. */
+  custom?: { kicker: string; label: string; sub: string; aura: number };
+}
+export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null {
+  const me = makeActor('pu-actor');
+  if (!me) return null;
+  const level = o.custom ? Math.max(1, Math.min(5, o.custom.aura)) : powerLevel(days);
+  const T = tones(level);
+  const still = reduced();
+  const r = rng(days * 31 + level);
+  const name = mt(`pu.l${level}` as MomentKey);
+  const newLevel = level > 1 && days === LEVELS[level - 1];
+
+  const figs = [blaze(level, me.el, days * 31 + level)];
+  const buddy = o.friend ? makeActor('pu-actor', o.friend.code) : null;
+  if (buddy) figs.push(blaze(level, buddy.el, days * 17 + 5));
+  const body = figs[0].querySelector('.pu-body')!;
+  const stage = h('div', { class: `pu-stage${buddy ? ' duo' : ''}` },
     h('span', { class: 'pu-ground' }, h('i', { class: 'pu-glow' }), h('i', { class: 'pu-wave' }), h('i', { class: 'pu-wave w2' })),
-    ...extras.filter((e) => e.classList.contains('pu-rays')),
-    h('span', { class: 'pu-aura' }, ...layers),
-    gather,
-    ...extras.filter((e) => !e.classList.contains('pu-rays')),
-    body,
-    h('span', { class: 'pu-aura pu-aura-front' }, front),
-    tongues);
+    level >= 4 ? h('span', { class: 'pu-rays' }) : '',
+    ...figs);
   const num = h('b', { class: 'pu-num' }, String(days));
   const ok = h('button', { class: 'cel-ok pu-ok' }, t('sm.continue'));
   const nextAt = LEVELS[level];
   const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
   const shake = h('div', { class: 'pu-shake' },
-    h('p', { class: 'pu-kick' }, newLevel ? mt('pu.up') : mt('pu.kicker')),
+    h('p', { class: 'pu-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker')),
     stage,
-    h('div', { class: 'pu-count' }, h('span', { class: 'pu-lines', 'aria-hidden': 'true' }), num, h('span', { class: 'pu-label' }, t(days === 1 ? 'me.day' : 'me.days'))),
-    h('p', { class: 'pu-level' }, mt('pu.level', { n: level, name })),
-    h('p', { class: 'pu-sub' }, nextAt ? mt('pu.next', { n: nextAt - days, name: mt(`pu.l${level + 1}` as MomentKey) }) : mt('pu.max')),
+    h('div', { class: 'pu-count' }, h('span', { class: 'pu-lines', 'aria-hidden': 'true' }), num, h('span', { class: 'pu-label' }, o.custom ? o.custom.label : o.friend ? mt('pu.friendDays') : t(days === 1 ? 'me.day' : 'me.days'))),
+    o.custom ? '' : h('p', { class: 'pu-level' }, mt('pu.level', { n: level, name })),
+    h('p', { class: 'pu-sub' }, o.custom ? o.custom.sub : nextAt ? mt('pu.next', { n: nextAt - days, name: mt(`pu.l${level + 1}` as MomentKey) }) : mt('pu.max')),
     ok);
-  const label = `${mt('pu.level', { n: level, name })} · ${days} ${t(days === 1 ? 'me.day' : 'me.days')}`;
+  const label = o.custom ? `${o.custom.kicker} · ${o.custom.label} ${days}` : `${mt('pu.level', { n: level, name })} · ${days} ${t(days === 1 ? 'me.day' : 'me.days')}`;
   const el = h('div', { class: `cel pu pu-l${level}${still ? ' still lit slam done' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label,
     style: `--pu-a:${T.mid[0]};--pu-b:${T.out[0]};--pu-c:${T.inn[0]};--pu-core:${T.core}` },
     h('span', { class: 'pu-sky', 'aria-hidden': 'true' }),
