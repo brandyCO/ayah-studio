@@ -44,6 +44,8 @@ import { isNative } from '../native';
 import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
 import { account } from '../cloud/auth';
+import { firstSyncPending, onSyncStatus, syncNow, syncStatus } from '../cloud/sync';
+import { tick as tickNum } from './juice';
 import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
@@ -210,6 +212,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
   let heroSig = '';
+  // Sync, as the user sees it: "Bringing your progress…" on a new phone, a quiet status line, and
+  // progress from another phone counting up with a note (cloud/sync.ts).
+  let shownDays = -1, arriving = false;
   let catchNext = false;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // The streak moment: once a day, the first time Me is open with today's flame lit — and only
@@ -300,17 +305,24 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp()]);
+    const loading = firstSyncPending();
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp(), loading]);
     if (sig === heroSig) return;
     heroSig = sig;
-    const tier = flameTier(s.days, s.litToday);
+    const fromOther = arriving && !loading && shownDays >= 0;
+    const countFrom = fromOther && s.days > shownDays ? shownDays : -1;
+    arriving = false;
+    shownDays = loading ? -1 : s.days;
+    const lost = loading ? undefined : s.lost; // the other phones' days are on their way: nothing is lost
+    const tier = loading ? flameTier(1, true) : flameTier(s.days, s.litToday); // a new phone: a small flame, never an ember
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
       dayMark(w.state),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
     // After the streak moment, the card's flame catches (flares up, sparks, the count ticks on).
     const catchNow = catchNext && s.litToday && !reduced;
     catchNext = false;
-    const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
+    const num = h('b', {}, loading ? '…' : String(catchNow ? s.days - 1 : s.days));
+    hero.classList.toggle('loading', loading);
     const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
@@ -318,13 +330,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         flameBox,
         h('div', { class: 'me-top-txt' },
           h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
-          h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
-      s.lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: s.lost.n })) : '',
-      s.lost && s.lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
+          h('p', { class: 'me-status' }, loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
+      lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: lost.n })) : '',
+      lost && lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
         if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
         void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
       } }, `🔥  ${t('rl.askFriend')}`) : '',
-      s.lost ? keptFreezeButton(s.lost.days) : '',
+      lost ? keptFreezeButton(lost.days) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
@@ -333,6 +345,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
+    if (fromOther) {
+      if (countFrom >= 0) tickNum(num, s.days, { from: countFrom, ms: 900 });
+      const note = h('span', { class: 'me-arrived', role: 'status' }, mpt('mp.fromOther'));
+      hero.append(note);
+      setTimeout(() => note.remove(), 3600);
+    }
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
       hero.append(canvas);
@@ -837,6 +855,46 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const toAsr = eveningFrom().getTime() - Date.now();
   const asrTimer = toAsr > 0 && toAsr < 86_400_000 ? window.setTimeout(refresh, toAsr + 1000) : 0;
   const onPrayer = () => void paintPrayer();
+  // The sync line under the streak card (signed in only): tap it, or pull the page down, to sync now.
+  const syncLine = h('button', { class: 'me-sync', type: 'button', 'aria-label': mpt('mp.syncNow'), onclick: () => void syncNow() });
+  const agoText = (at: number) => {
+    const sec = (Date.now() - at) / 1000;
+    return sec < 60 ? mpt('mp.justNow') : sec < 3600 ? mpt('mp.minAgo', { n: Math.round(sec / 60) }) : mpt('mp.hAgo', { n: Math.round(sec / 3600) });
+  };
+  let pulling = false;
+  const paintSync = () => {
+    const st = syncStatus();
+    syncLine.hidden = !account() || st.state === 'off' && !st.at;
+    syncLine.classList.toggle('busy', st.state === 'syncing');
+    syncLine.textContent = pulling ? mpt('mp.pull')
+      : st.state === 'syncing' ? mpt('mp.syncing')
+        : st.state === 'offline' ? mpt('mp.savedOffline')
+          : st.state === 'error' ? mpt('mp.savedRetry')
+            : st.at ? mpt('mp.synced', { ago: agoText(st.at) }) : '';
+  };
+  let wasLoading = firstSyncPending();
+  const offSync = onSyncStatus(() => {
+    paintSync();
+    const loading = firstSyncPending();
+    if (loading !== wasLoading) { wasLoading = loading; refresh(); }
+  });
+  const syncTick = setInterval(paintSync, 30e3);
+  // Progress merged in from another phone while Me is open: the streak counts up with a note.
+  const onArrive = () => { if (syncStatus().state === 'syncing' && !firstSyncPending()) arriving = true; };
+  window.addEventListener('journey-changed', onArrive);
+  // Pull to refresh (at the top of Me).
+  let y0 = -1;
+  const onDown = (e: TouchEvent) => { y0 = !page && scrollY <= 0 && account() ? e.touches[0].clientY : -1; };
+  const onMove = (e: TouchEvent) => {
+    if (y0 < 0) return;
+    const p = e.touches[0].clientY - y0 > 80;
+    if (p !== pulling) { pulling = p; paintSync(); }
+  };
+  const onUp = () => { if (pulling) { pulling = false; void syncNow(); paintSync(); } y0 = -1; };
+  root.addEventListener('touchstart', onDown, { passive: true });
+  root.addEventListener('touchmove', onMove, { passive: true });
+  root.addEventListener('touchend', onUp);
+
   if (page === 'room') {
     root.classList.add('me-room-screen');
     root.append(roomSlot);
@@ -859,7 +917,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(() => openLight()),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
+      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
       tabBar('me'));
     void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
@@ -911,6 +969,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       try { sessionStorage.setItem('meScroll', String(Math.round(leaveY()))); } catch { /* ignore */ }
     }
     document.removeEventListener('close', onClose, true);
+    offSync();
+    clearInterval(syncTick);
+    window.removeEventListener('journey-changed', onArrive);
     clearInterval(tick);
     clearTimeout(asrTimer);
     cancelAnimationFrame(queued);

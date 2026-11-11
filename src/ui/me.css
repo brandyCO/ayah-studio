@@ -291,3 +291,29 @@
 .aic-go { font-size: 22px; opacity: .6; }
 @media (prefers-reduced-motion: reduce) { .aic-opt.r-celestial .aic-img, .aic-opt.fresh { animation: none; } }
 .me-chip.me-level { text-decoration: none; font-weight: 900; color: #fff; background: color-mix(in srgb, #6c5ce7 70%, transparent); }
+
+/* Sync, as the user sees it (cloud/sync.ts): a new phone's streak while the account's data arrives, the
+   quiet status line under the card, and the note when progress from another phone counts up. */
+.me-hero.loading .me-count b { animation: me-wait 1.4s ease-in-out infinite; }
+.me-hero.loading .me-week, .me-hero.loading .me-chips { opacity: .45; }
+@keyframes me-wait { 50% { opacity: .45; } }
+.me-sync {
+  display: block; margin: -8px auto 12px; padding: 4px 12px; border: 0; background: none; box-shadow: none;
+  font: 600 12.5px/1.3 var(--ui-round, inherit); color: var(--muted); text-align: center; cursor: pointer;
+}
+.me-sync[hidden] { display: none; }
+.me-sync.busy::before {
+  content: ''; display: inline-block; width: 9px; height: 9px; margin-inline-end: 6px; vertical-align: -1px;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: me-spin .9s linear infinite;
+}
+@keyframes me-spin { to { rotate: 360deg; } }
+.me-hero { position: relative; }
+.me-arrived {
+  position: absolute; inset-inline-start: 50%; top: 10px; translate: -50% 0; z-index: 3; white-space: nowrap;
+  padding: 5px 12px; border-radius: 999px; background: rgba(255, 255, 255, .92); color: #3b2a63;
+  font: 800 12.5px/1.2 var(--ui-round, inherit); box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  animation: me-arrive 3.6s ease both;
+}
+[dir='rtl'] .me-arrived { translate: 50% 0; }
+@keyframes me-arrive { 0% { opacity: 0; transform: translateY(-6px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .me-hero.loading .me-count b, .me-sync.busy::before, .me-arrived { animation: none; } }
