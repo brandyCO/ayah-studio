@@ -9,6 +9,9 @@ import { flame, flameTier } from './flame';
 import { actor as makeActor } from './actor';
 import { bump, holdPage, noor as makeNoor, popIn, squash } from './juice';
 import { sfx } from './sfx';
+import { mt, type MomentKey } from '../i18n/moments';
+import { fpsStart } from '../fps';
+import { isMilestone, milestoneScene } from './milestone';
 import './cel.css';
 import { sparks, type Sparks } from './sparks';
 import { rewardPalette, rgba } from './theme';
@@ -53,11 +56,14 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
       fl),
     canvas,
     countEl = h('div', { class: 'sm-count' }, roll, h('span', { class: 'sm-label' }, t(days === 1 ? 'me.day' : 'me.days'))),
-    h('p', { class: 'sm-sub' }, t(days === 1 ? 'sm.sub1' : 'sm.sub')),
+    h('p', { class: 'sm-sub' }, isMilestone(days) ? mt(`sm.m${days}` as MomentKey) : t(days === 1 ? 'sm.sub1' : 'sm.sub')),
     row,
     ok);
+  const scene = milestoneScene(days, still);
+  if (scene) { el.prepend(scene); el.classList.add('milestone'); }
 
   return new Promise((resolve) => {
+    const frames = still ? null : fpsStart('Streak');
     const timers: number[] = [];
     const later = (ms: number, f: () => void) => timers.push(window.setTimeout(f, ms));
     let fx: Sparks | null = null;
@@ -66,6 +72,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     const close = () => {
       if (closed) return;
       closed = true;
+      frames?.();
       timers.forEach(clearTimeout);
       fx?.stop();
       document.removeEventListener('keydown', onKey);
@@ -99,19 +106,22 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     const me = makeActor('sm-actor');
     if (me) stageEl.append(me.el);
     // 1. Light gathers, then the flame springs up out of a burst.
+    // Positions are read before any class changes in the same frame, so no beat forces a fresh layout
+    // (the flame's burst used to cost ~46 ms at 6× CPU throttle).
     later(380, () => {
+      const [x, y] = centre(fl);
       sfx.open();
+      if (scene) later(1100, () => sfx.shimmer());
       squash(stageEl, 0.22, { delay: 220 });
       later(500, () => { nr.el.style.opacity = ''; popIn(nr.el); nr.glow(0.6); });
       el.classList.add('go');
       fx = sparks(canvas, [rgba(P.n1, 1), rgba(P.n2, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1)]);
-      const [x, y] = centre(fl);
       fx.burst(x, y + 20, 80, 1.1);
     });
     // 2. The count rolls over: yesterday's number lifts away, today's drops in with a bounce.
     later(1250, () => {
-      roll.classList.add('go');
       const [x, y] = centre(roll);
+      roll.classList.add('go');
       fx?.burst(x, y, 36, 0.6);
       sfx.pop(1);
       later(260, () => bump(countEl, 0.3));
@@ -122,9 +132,9 @@ export function streakMoment(days: number, week: WeekDay[], today: string): Prom
     later(2000, () => {
       const slot = row.querySelector('.sm-slot');
       if (!slot) return;
+      const [x, y] = centre(slot);
       const mark = dayMark('lit', true);
       slot.replaceWith(mark);
-      const [x, y] = centre(mark);
       fx?.burst(x, y, 28, 0.45);
       sfx.pop(3);
       nr.hop(1);

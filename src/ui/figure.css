@@ -165,3 +165,7 @@ html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: p
 @keyframes fg-wave-l { from { rotate: -14deg; } to { rotate: 12deg; } }
 @media (prefers-reduced-motion: reduce) { .fg-lay .fg-hd { animation: none; } }
 html.lite .fg-actor .fg-hd { animation-play-state: paused !important; }
+/* Listening to a recitation (html.reciting, set by the player): the character sits still with its head a little
+   bowed and breathes slowly; nothing moves to the words. */
+html.reciting .fg-lay .fg-hd { animation: none; translate: 0 1.2%; rotate: 0deg; transition: translate 1.2s ease; }
+html.reciting .fg-lay .fg-bb { animation-duration: 6s; }

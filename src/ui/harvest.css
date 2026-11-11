@@ -1,0 +1,23 @@
+/* The harvest moment (src/ui/harvest.ts): every waiting goal chest opened in one go, the Light climbing into one total. */
+.cel-harvest .cel-text h2 { animation-delay: .1s; }
+.cel-harvest .cel-kicker { animation-delay: 0s; }
+.hv-row { position: relative; z-index: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 6px; max-width: 360px; margin: 18px 0 6px; }
+.hv-ch { position: relative; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hv-row.many .hv-ch { width: 62px; }
+.hv-ch .ck-art { position: relative; display: block; width: 100%; aspect-ratio: 80 / 76; }
+.hv-ch .ck-art > svg, .hv-ch .ck-art > span { position: absolute; inset: 0; }
+.hv-ch .ck-art svg { width: 100%; height: 100%; overflow: visible; }
+.hv-ch.open .ck-lid { translate: 0 -22.37%; rotate: -16deg; scale: 1 .5; }
+.hv-ch.open .ck-mouth { opacity: 1; transition: opacity .3s; }
+.hv-ch.open .ck-aura { opacity: .9; transition: opacity .4s; }
+.hv-n { font-size: var(--fs-xs); font-weight: 800; color: var(--rw-core); opacity: .55; font-variant-numeric: tabular-nums; transition: opacity .3s; }
+.hv-ch.open .hv-n { opacity: 1; }
+.hv-now { position: relative; z-index: 2; min-height: 1.3em; margin: 4px 0 0; font-size: var(--fs-s); color: color-mix(in srgb, var(--rw-hi) 60%, #bbb); }
+.hv-total { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; margin-top: 4px; font-size: 30px; font-weight: 800; color: var(--rw-core); }
+.hv-total b { font-variant-numeric: tabular-nums; }
+.hv-total .cel-orb { width: 34px; height: 34px; }
+.hv-dot { position: fixed; z-index: 3; width: 10px; height: 10px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 25%, var(--rw-hi) 55%, transparent 72%); box-shadow: 0 0 10px 3px color-mix(in srgb, var(--rw-n3) 60%, transparent); }
+.cel-harvest .cel-ok { animation: none; opacity: .35; transition: opacity .4s; }
+.cel-harvest.done .cel-ok { opacity: 1; }
+.hv-actor { position: absolute; right: max(8px, calc(50% - 200px)); bottom: calc(96px + env(safe-area-inset-bottom)); width: 86px; z-index: 2; }

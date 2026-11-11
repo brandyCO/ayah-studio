@@ -14,6 +14,7 @@ import { h } from './dom';
 import { TIER_RING, avatar } from './rankAvatars';
 import { bump, holdPage } from './juice';
 import { sfx } from './sfx';
+import { fpsStart } from '../fps';
 import { sparks, type Sparks } from './sparks';
 import './cel.css';
 import './ranks.css';
@@ -84,6 +85,7 @@ export async function playRankMoments(m: RankMoments, ctx: Ctx): Promise<void> {
 function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElement, colors: string[], run: (o: { fx: () => Sparks | null; later: (ms: number, f: () => void) => void; burst: (n: number, p: number, dy?: number) => void }) => void): Promise<void> {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   return new Promise((resolve) => {
+    const frames = still ? null : fpsStart(`Ranks · ${kind}`);
     const ok = h('button', { class: 'cel-ok' }, rt('rk.continue'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
     const el = h('div', { class: `cel go rkm rkm-${kind}${still ? ' still' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label },
@@ -94,6 +96,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
     const close = () => {
       if (done) return;
       done = true;
+      frames?.();
       timers.forEach(clearTimeout);
       fx?.stop();
       document.removeEventListener('keydown', onKey);

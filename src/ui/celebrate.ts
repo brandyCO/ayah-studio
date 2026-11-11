@@ -30,6 +30,8 @@ import { actor as makeActor } from './actor';
 import { freezeArt } from './flat';
 import { bump, combo, holdPage, noor as makeNoor, popIn, squash, tick as tickNum } from './juice';
 import { sfx } from './sfx';
+import { mt, type MomentKey } from '../i18n/moments';
+import { fpsStart } from '../fps';
 
 /** The theme's reward colours, read when a moment starts (so a theme change shows at once). */
 let P = rewardPalette();
@@ -191,6 +193,9 @@ function raysArt() {
 
 /** Cracks drawn over the chest (same viewBox as `chestArt`), lit one by one as it is tapped. */
 const CRACKS = ['M27 40l3 5.5-2.2 4.5 3.6 5.5 -1.6 4', 'M53 38.5l-2.4 6.5 3 3.6-2.2 6.4', 'M15 29l5.5 2.6 3.6-2.2', 'M64 45l-4.8 3 2 4.6-3.8 4', 'M41 15.5l-1.4 4.6 2.8 2.8-1.8 3.6', 'M33 60l3.4-3.2 3.6 2.6 3.2-3.4'];
+/** How many taps each chest tier may take to open (least, most); the exact number is hidden and random. */
+const CHEST_TAPS: [number, number][] = [[3, 5], [3, 5], [4, 6], [4, 7], [5, 8]];
+
 function crackArt() {
   const el = svg(80, `<path class="seam" d="M12 37.2H68"/>${CRACKS.map((d) => `<path d="${d}" pathLength="1"/>`).join('')}`);
   el.setAttribute('viewBox', '0 0 80 76');
@@ -221,11 +226,18 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   // A rare prize (a jewel avatar, a rare frame) or the biggest chest gets a bigger moment: the light gathers
   // in slow motion before it bursts, a double burst, a rising swell, and the rare card lands with its own ring.
   const epic = loot.some((l) => l.kind === 'item' && l.rare) ? 2 : tier >= 4 ? 1 : 0;
-  const TAPS = Math.max(2, (tier >= 4 ? 5 : tier >= 2 ? 4 : 3) - (roll ? 1 : 0));
+  // How it gives way is never the same twice (owner request 2026-11-11, "engaging, with uncertainty"): each
+  // chest has a hidden strength within its tier's range, each tap cracks it by an uneven amount (quick taps
+  // a little more), and it may lift its lid and slam shut again once before it gives. What is inside never
+  // changes and is always shown afterwards; only the opening is uncertain.
+  const [lo, hi] = CHEST_TAPS[tier];
+  const least = Math.max(2, lo - (roll ? 1 : 0)), most = Math.max(least + 1, hi - (roll ? 1 : 0));
+  const need = least + Math.random() * (most - least);
+  const almostAt = most >= 4 && Math.random() < (tier >= 2 ? 0.85 : 0.55) ? 0.5 + Math.random() * 0.3 : 2;
   const jolt = isChest ? h('div', { class: 'cel-chest-jolt' }, chestArt(tier), crackArt()) : null;
   const chestBox = isChest ? h('div', { class: 'cel-chest-box' }, jolt!) : null;
   const hit = isChest ? h('button', { class: 'cel-chest-hit', 'aria-label': t('cel.tapOpen') }) : null;
-  const dots = Array.from({ length: isChest ? TAPS : 0 }, () => h('i', {}));
+  const tapLine = h('span', {}, t('cel.tapOpen'));
   // The Light inside counts up when it lands; the other prizes carry their own picture and name.
   let lootLight: HTMLElement | null = null;
   const lootCards = loot.map((l) => {
@@ -239,7 +251,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     return h('div', { class: `cel-loot-it${rare ? ' rare' : ''}`, ...(rare ? { 'data-rare': t('cel.rare') } : {}) }, h('span', { class: 'cel-loot-art' }, art), h('span', { class: 'cel-loot-lb' }, label));
   });
   const slot = isChest ? h('div', { class: 'cel-slot' },
-    h('p', { class: 'cel-tap', 'aria-hidden': 'true' }, t('cel.tapOpen'), h('span', { class: 'cel-dots' }, ...dots)),
+    h('p', { class: 'cel-tap', 'aria-hidden': 'true' }, tapLine),
     h('div', { class: 'cel-loot' }, ...lootCards)) : null;
   if (m.kind === 'chest') {
     stage.append(h('span', { class: 'cel-chest-rays', 'aria-hidden': 'true' }), h('span', { class: 'cel-chest-beam', 'aria-hidden': 'true' }), chestBox!, hit!);
@@ -287,6 +299,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const me = (isChest || m.kind === 'rosette' || m.kind === 'khatm') && !still ? makeActor(`cel-actor${isChest ? '' : ' big'}`) : null;
   if (me) stage.append(me.el);
   return new Promise((resolve) => {
+    const frames = still ? null : fpsStart(isChest ? `Chest · ${['wood','brass','cedar','emerald','pearl'][tier]}` : `Moment · ${m.kind}`);
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
     const el = h('div', { class: `cel cel-${m.kind}${still ? ' still go' : ''}${still && isChest ? ' opened revealed' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
@@ -319,6 +332,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     const close = () => {
       if (done) return;
       done = true;
+      frames?.();
       timers.forEach((_, id) => clearTimeout(id));
       timers.clear();
       fx?.stop();
@@ -401,7 +415,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       jolt!.getAnimations().forEach((a) => a.cancel());
       // Released from the crouch: it stretches up, then wobbles and settles.
       squash(jolt!, -0.3, { stiffness: 300, damping: 10 });
-      sfx.open(epic);
+      sfx.open(epic, tier);
       nr?.cheer();
       me?.cheer(epic ? 3000 : 2200);
       chestBox!.classList.add('open');
@@ -414,45 +428,113 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       later(roll ? 400 : 650 + epic * 250, pour);
     };
     const paths = jolt ? [...jolt.querySelectorAll<SVGPathElement>('.cel-crack path:not(.seam)')] : [];
+    let force = 0, lastTap = 0, almostDone = false, strainT = 0, hint = '';
+    const setHint = (k: MomentKey) => {
+      if (k === hint) return;
+      hint = k;
+      tapLine.textContent = mt(k);
+      bump(tapLine, 0.25);
+    };
+    // Between taps it strains on its own, harder the more it has given way: it is alive, and close.
+    const strain = () => {
+      clearTimeout(strainT);
+      if (isOpen) return;
+      const p = Math.min(1, force / need);
+      strainT = window.setTimeout(() => {
+        if (isOpen || !el.isConnected) return;
+        const a = 1.5 + p * 5;
+        art?.animate([{ rotate: '0deg' }, { rotate: `${-a}deg` }, { rotate: `${a}deg` }, { rotate: `${-a * 0.6}deg` }, { rotate: `${a * 0.3}deg` }, { rotate: '0deg' }], { duration: 300 + p * 120, easing: 'ease-in-out' });
+        if (p > 0.35) {
+          lid?.animate([{ translate: '0 0' }, { translate: `0 ${-(2 + p * 4).toFixed(1)}%`, offset: 0.3 }, { translate: '0 0' }], { duration: 260 });
+          sfx.strain(p, tier);
+        }
+        strain();
+      }, 900 + Math.random() * 900 - p * 400);
+    };
+    const art = jolt?.querySelector<HTMLElement>('.ck-art');
+    const lid = jolt?.querySelector<SVGElement>('.ck-lid');
+    const mouth = jolt?.querySelector<SVGElement>('.ck-mouth');
+    const beam = stage.querySelector<HTMLElement>('.cel-chest-beam');
+    // Almost: the lid flies up, light floods out, and it slams shut again.
+    const almost = () => {
+      const b = chestBox!.getBoundingClientRect(), k = canvasBox();
+      sfx.almost(tier);
+      setHint('cel.tapAlmost');
+      el.classList.add('almost');
+      lid?.animate([
+        { translate: '0 0', rotate: '0deg' },
+        { translate: '0 -16%', rotate: '-11deg', offset: 0.3 },
+        { translate: '0 -18%', rotate: '-13deg', offset: 0.5 },
+        { translate: '0 0', rotate: '0deg', offset: 0.78 },
+        { translate: '0 -2%', rotate: '1deg', offset: 0.88 },
+        { translate: '0 0', rotate: '0deg' },
+      ], { duration: 620, easing: 'cubic-bezier(.3, 0, .5, 1)' });
+      mouth?.animate([{ opacity: 0.4 }, { opacity: 1, offset: 0.3 }, { opacity: 1, offset: 0.55 }, { opacity: 0.6, offset: 0.78 }, { opacity: 0.6 }], { duration: 620 });
+      beam?.animate([{ opacity: 0, scale: '1 .3' }, { opacity: 0.55, scale: '1 .8', offset: 0.35 }, { opacity: 0.4, scale: '1 .7', offset: 0.6 }, { opacity: 0, scale: '1 .2', offset: 0.8 }, { opacity: 0 }], { duration: 620 });
+      fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.4 - k.top, 30 + tier * 8, 0.75);
+      nr?.glow(1);
+      me?.hop(0.9);
+      later(470, () => {
+        // Slammed shut: the whole chest squashes and the room shakes a little.
+        squash(jolt!, 0.32, { stiffness: 420, damping: 12 });
+        stage.animate([{ translate: '0 0' }, { translate: '-4px 2px' }, { translate: '3px -1px' }, { translate: '-1px 0' }, { translate: '0 0' }], { duration: 240 });
+        const b2 = chestBox!.getBoundingClientRect(), k2 = canvasBox();
+        fx?.burst(b2.left + b2.width / 2 - k2.left, b2.bottom - b2.height * 0.14 - k2.top, 14, 0.4);
+        el.classList.remove('almost');
+      });
+    };
     const tapChest = (x: number | null, y: number | null) => {
-      if (taps >= TAPS) return;
+      if (isOpen) return;
       taps++;
-      sfx.tap(taps, TAPS);
-      nr?.hop(taps / TAPS);
-      if (taps === 1) me?.lean(1); else me?.hop(0.25 + (0.35 * taps) / TAPS);
-      nr?.glow(taps / TAPS);
+      const now = performance.now();
+      // Uneven: some taps crack it a lot, some barely; quick taps in a row a little more.
+      let w = 0.4 + Math.random() * 1.2;
+      if (now - lastTap < 380) w *= 1.2;
+      lastTap = now;
+      force += w;
+      // Never open before its least, always by its most.
+      if (taps < least) force = Math.min(force, need * (0.6 + 0.3 * taps / least));
+      if (taps >= most) force = Math.max(force, need);
+      let p = Math.min(1, force / need);
+      const doAlmost = !almostDone && p >= almostAt && taps < most;
+      if (doAlmost) { almostDone = true; force = Math.min(force, need * 0.9); p = force / need; }
+      const done = p >= 1;
+      sfx.tap(p, tier);
+      nr?.hop(p);
+      if (taps === 1) me?.lean(1); else me?.hop(0.25 + 0.35 * p);
+      nr?.glow(p);
       el.classList.add('tapped');
       const b = chestBox!.getBoundingClientRect(), k = canvasBox();
       const on = x != null && y != null && x > b.left && x < b.right && y > b.top && y < b.bottom;
-      fx?.burst((on ? x! : b.left + b.width / 2) - k.left, (on ? y! : b.top + b.height * 0.45) - k.top, 12 + taps * 7, 0.45 + taps * 0.09);
-      const a = (5 + tier) * (0.6 + (0.5 * taps) / TAPS);
+      fx?.burst((on ? x! : b.left + b.width / 2) - k.left, (on ? y! : b.top + b.height * 0.45) - k.top, 12 + Math.round(p * 30), 0.45 + p * 0.4);
+      // It pushes back harder as it gives way: a bigger jolt and a quicker rebound.
+      const a = (5 + tier) * (0.6 + 0.6 * p) * (0.85 + Math.random() * 0.3);
+      const side = Math.random() < 0.5 ? -1 : 1;
       jolt!.animate([
         { transform: 'none' },
         { transform: 'translateY(5px) scale(1.1, .88)', offset: 0.14 },
-        { transform: `translateY(${-10 - taps * 4}px) rotate(${-a}deg) scale(.95, 1.07)`, offset: 0.4 },
-        { transform: `translateY(-3px) rotate(${a * 0.8}deg)`, offset: 0.62 },
-        { transform: `rotate(${-a * 0.35}deg)`, offset: 0.82 },
+        { transform: `translateY(${-10 - p * 16}px) rotate(${-a * side}deg) scale(.95, 1.07)`, offset: 0.4 },
+        { transform: `translateY(-3px) rotate(${a * 0.8 * side}deg)`, offset: 0.62 },
+        { transform: `rotate(${-a * 0.35 * side}deg)`, offset: 0.82 },
         { transform: 'none' },
-      ], { duration: 440 + tier * 30, easing: 'ease-out' });
-      jolt!.querySelector('.ck-lid')?.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `0 ${((-2 - taps * 1.5) / 0.76).toFixed(2)}%`, rotate: `${-2 - taps}deg`, offset: 0.4 }, { translate: '0 0', rotate: '0deg' }], { duration: 420 });
-      const lit = Math.ceil((taps / TAPS) * paths.length);
-      paths.forEach((p, i) => p.classList.toggle('on', i < lit));
-      stage.style.setProperty('--crack', String(taps / TAPS));
-      dots[taps - 1]?.classList.add('on');
-      if (taps >= TAPS) {
-        // Anticipation: it crouches, gathering itself, for a breath before it bursts.
-        isOpen = true;
-        jolt!.getAnimations().forEach((a) => a.cancel());
-        // A rare prize: the light gathers in slow motion first (the screen dims, the seam blazes, a swell rises).
-        const hold = epic ? 560 + epic * 220 : 170;
-        if (epic) { el.classList.add('charging'); sfx.rare(hold); }
-        jolt!.animate(epic
-          ? [{ transform: 'none' }, { transform: 'translateY(6px) scale(1.08, .9)', offset: 0.3 }, { transform: 'translate(-2px, 9px) scale(1.14, .84)', offset: 0.55 }, { transform: 'translate(2px, 10px) scale(1.16, .82)', offset: 0.75 }, { transform: 'translateY(11px) scale(1.18, .8)' }]
-          : [{ transform: 'none' }, { transform: 'translateY(9px) scale(1.16, .8)' }], { duration: hold, easing: 'cubic-bezier(.3, 0, .7, 1)', fill: 'forwards' });
-        if (!epic) vibrate([8]);
-        later(hold + 10, openChest);
-        return;
-      }
+      ], { duration: 440 + tier * 30 - p * 60, easing: 'ease-out' });
+      if (!doAlmost) lid?.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `0 ${((-2 - p * 7) / 0.76).toFixed(2)}%`, rotate: `${-2 - p * 5}deg`, offset: 0.4 }, { translate: '0 0', rotate: '0deg' }], { duration: 420 });
+      const lit = done ? paths.length : Math.min(paths.length - 1, Math.ceil(p * paths.length));
+      paths.forEach((q, i) => q.classList.toggle('on', i < lit));
+      stage.style.setProperty('--crack', String(p));
+      if (doAlmost) { almost(); strain(); return; }
+      if (!done) { setHint(p >= 0.62 ? 'cel.tapNear' : 'cel.tapMore'); strain(); return; }
+      clearTimeout(strainT);
+      // Anticipation: it crouches, gathering itself, for a breath before it bursts.
+      isOpen = true;
+      jolt!.getAnimations().forEach((q) => q.cancel());
+      // A rare prize: the light gathers in slow motion first (the screen dims, the seam blazes, a swell rises).
+      const hold = epic ? 560 + epic * 220 : 170;
+      if (epic) { el.classList.add('charging'); sfx.rare(hold); }
+      jolt!.animate(epic
+        ? [{ transform: 'none' }, { transform: 'translateY(6px) scale(1.08, .9)', offset: 0.3 }, { transform: 'translate(-2px, 9px) scale(1.14, .84)', offset: 0.55 }, { transform: 'translate(2px, 10px) scale(1.16, .82)', offset: 0.75 }, { transform: 'translateY(11px) scale(1.18, .8)' }]
+        : [{ transform: 'none' }, { transform: 'translateY(9px) scale(1.16, .8)' }], { duration: hold, easing: 'cubic-bezier(.3, 0, .7, 1)', fill: 'forwards' });
+      later(hold + 10, openChest);
     };
     hit?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit.click(); } });
 
@@ -550,7 +632,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
 }
 
 /** The Light just claimed flies from the moment up into the Light counter (when one is on screen), which bumps. */
-function flyLight(from: Element, tier: number) {
+export function flyLight(from: Element, tier: number) {
   const chip = [...document.querySelectorAll<HTMLElement>('.lt-chip')].find((c) => c.getClientRects().length);
   if (!chip) return;
   const a = from.getBoundingClientRect();

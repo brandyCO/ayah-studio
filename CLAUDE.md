@@ -1526,6 +1526,22 @@ duas/reflections section in Me.
       gets `content-visibility: hidden` (was `visibility`, a 340 ms restyle) and its WAAPI animations pause. Chest styles
       moved to `src/ui/chest.css` (lazy, with `chest.ts`). 6× CPU throttle, headless: character tap 42 → ~50–57 fps, room
       38 → 55, chest 38 → 53, lantern 51 → 58, streak 38 → 57, Me scrolling 59; every picture checked identical
+      **Round 4** (owner "yes all that", 2026-11-11): **chest suspense** — the number of taps is hidden and random within the
+      tier's range (`CHEST_TAPS`: 3–5 … 5–8, one fewer in a combo), each tap cracks it by an uneven amount (quick taps a little
+      more), it strains and creaks on its own between taps, harder as it gives way, and may once lift its lid, flood light and
+      slam shut ("Almost!") before it gives; hints Keep tapping… / It's giving way… (the dots are gone). What is inside never
+      changes and is always shown. **Each tier its own sound and feel** (`sfx.tap(p, tier)`, `strain`, `almost`, `open(big, tier)`:
+      wood knocks, brass rings, cedar booms, emerald chimes, pearl hums; vibration patterns per tier). **Harvest**
+      (`src/ui/harvest.ts`): with 2+ goal chests waiting, Me's goals card shows "Open all n chests ★ total" → one moment, the
+      chests open one after another (quickening), their Light flying into one total that climbs; a tap plays the rest.
+      **Streak milestones** (`src/ui/milestone.ts`): day 7 seven lanterns light up in an arc, 30 lanterns rise up the sides,
+      100 dawn (sky warms, sun with slow rays over hills), 365 dawn + lanterns + a crescent with stars; the room's flame frame
+      follows the best streak (wood → bronze 7 → silver 30 → gold with gems 100 → crescent on top 365). **Listening**: while a
+      recitation plays (`html.reciting`, set by the player) characters sit still, head a little bowed, breathing slowly, taps
+      only nod; a surah recited to its end (`recitation-surah` event) makes every character on screen cheer. **Smoothness meter**
+      (`src/fps.ts`): every chest / reward / streak / Ranks moment and the harvest record their fps, slowest frame and share of
+      slow frames on the device (localStorage `fpsLog`, newest 40), shown in Device check with Clear. The streak moment reads
+      positions before changing classes (its first beat forced a ~46 ms layout at 6× throttle). Strings `src/i18n/moments.ts` (`mt()`)
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for

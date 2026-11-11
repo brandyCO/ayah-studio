@@ -1,0 +1,34 @@
+/* Streak milestone scenes (src/ui/milestone.ts), behind the streak moment. Resting style = the end picture. */
+.ms { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.cel-streak > .sm-stage, .cel-streak > .sm-count, .cel-streak > .sm-sub, .cel-streak > .sm-week { position: relative; z-index: 1; }
+.ms-sky { position: absolute; inset: 0; background: linear-gradient(to top, #ffb37a 0%, #f07a8c 22%, #8a4f9c 48%, transparent 78%); opacity: .55; }
+.ms-sun { position: absolute; left: 50%; bottom: 18%; width: 150vmin; aspect-ratio: 1; translate: -50% 50%; display: grid; place-items: center; }
+.ms-disc { position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #fff9e0 0 40%, #ffd88a 62%, rgba(255, 190, 110, 0) 72%); }
+.ms-rays { position: absolute; inset: 0; border-radius: 50%; opacity: .45;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 230, 170, .55) 0 5deg, transparent 5deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 8%, transparent 50%); mask: radial-gradient(circle, #000 8%, transparent 50%); animation: spin 60s linear infinite; }
+.ms-hills { position: absolute; left: -10%; right: -10%; bottom: 0; height: 22%; border-radius: 50% 50% 0 0 / 40% 40% 0 0;
+  background: linear-gradient(to top, #160d24, #2d1b3d); }
+.ms-arc { position: absolute; left: 50%; top: 0; width: min(92vw, 380px); aspect-ratio: 1; translate: -50% 0; margin-top: max(2vh, 8px); }
+.ms-l { position: absolute; width: 11%; translate: -50% -50%; filter: drop-shadow(0 0 8px rgba(255, 200, 110, .8)); }
+.ms-l, .ms-rise { aspect-ratio: 2 / 3; background: center / contain no-repeat; }
+.ms-moon svg { display: block; width: 100%; height: auto; }
+.ms-rise { position: absolute; bottom: -12%; opacity: var(--o); }
+.ms-moon { position: absolute; left: 50%; top: 5%; width: 64px; translate: -50% 0; filter: drop-shadow(0 0 14px rgba(255, 225, 150, .7)); }
+.ms-star { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 2px rgba(255, 240, 200, .7); }
+.ms.still .ms-rise { bottom: auto; top: calc(10% + var(--o) * 40%); }
+/* Motion (only when not still). */
+.ms:not(.still) .ms-sky { animation: ms-fade 2.4s .3s ease-out both; }
+.ms:not(.still) .ms-sun { animation: ms-sun 3s .3s cubic-bezier(.2, .8, .3, 1) both; }
+.ms:not(.still) .ms-hills { animation: ms-fade 1s ease-out both; }
+.ms:not(.still) .ms-l { animation: ms-lamp .7s calc(1.4s + var(--i) * .16s) cubic-bezier(.2, 1.5, .4, 1) both, ms-bob 3.2s calc(2.6s + var(--i) * .2s) ease-in-out infinite alternate; }
+.ms:not(.still) .ms-rise { animation: ms-rise var(--t) var(--d) cubic-bezier(.3, 0, .6, 1) infinite; }
+.ms:not(.still) .ms-moon { animation: ms-moon 1.6s 1.8s cubic-bezier(.2, 1.2, .4, 1) both; }
+.ms:not(.still) .ms-star { animation: ms-fade .8s calc(2s + var(--i) * .12s) ease-out both, ms-tw 2.4s calc(3s + var(--i) * .3s) ease-in-out infinite alternate; }
+@keyframes ms-fade { from { opacity: 0; } }
+@keyframes ms-sun { from { translate: -50% 95%; opacity: 0; } 30% { opacity: 1; } }
+@keyframes ms-lamp { from { scale: .2; opacity: 0; } }
+@keyframes ms-bob { to { translate: -50% calc(-50% - 5px); } }
+@keyframes ms-rise { 0% { translate: 0 0; opacity: 0; } 12% { opacity: var(--o); } 50% { translate: var(--sw) -60vh; } 88% { opacity: var(--o); } 100% { translate: 0 -118vh; opacity: 0; } }
+@keyframes ms-moon { from { scale: .3; opacity: 0; rotate: -30deg; } }
+@keyframes ms-tw { to { opacity: .35; scale: .7; } }

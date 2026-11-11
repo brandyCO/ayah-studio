@@ -79,9 +79,11 @@ const parts = (root: Element) => {
 };
 
 /** A hop: crouch, stretch on the way up, squash on landing. */
-export function hop(root: Element, height = 26, ms = 620, sound = true) {
+export function hop(root: Element, height = 26, ms = 620, sound = true, quiet = true) {
   const { act, shadow, ty } = parts(root);
   if (!act || reduced()) return;
+  // While a recitation plays the character only nods (it is listening), unless it is cheering a finished surah.
+  if (quiet && document.documentElement.classList.contains('reciting')) { nod(root, 3); return; }
   act.animate([
     { transform: 'none' },
     { transform: `translateY(${ty(4)}) scale(1.08, .9)`, offset: 0.16 },
@@ -165,6 +167,25 @@ export function dayLook(code: string | null, o: { read: boolean; bedtime: boolea
   return { code, mode: hr >= 4 && hr < 10 ? 'morning' : 'day' };
 }
 
+// During a recitation the character sits and listens quietly (owner pick 2026-11-11): no sway, a slow calm breath,
+// the head bowed a little, nothing moving to the words (html.reciting, set by the player). When a surah is recited
+// to its end, every character on screen stands up happy.
+const live = new Set<WeakRef<HTMLElement>>();
+const acts = new WeakMap<HTMLElement, Actor>();
+let heard = false;
+function listenForSurahs() {
+  if (heard || typeof WeakRef === 'undefined') return;
+  heard = true;
+  window.addEventListener('recitation-surah', () => {
+    for (const r of live) {
+      const el = r.deref();
+      if (!el || !el.isConnected) { live.delete(r); continue; }
+      if (el.classList.contains('fg-off')) continue;
+      setTimeout(() => acts.get(el)?.cheer(2200), 300);
+    }
+  });
+}
+
 /** The character as an actor, or null when the user has not made one. `cls` places it. */
 export function actor(cls = '', code: string | null = myFigureCode()): Actor | null {
   const f = parse(code);
@@ -180,14 +201,14 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
     clearTimeout(armsT);
     armsT = window.setTimeout(() => poseClass(el, c, false), ms);
   };
-  return {
+  const api: Actor = {
     el,
     hop: (k = 0.5) => hop(el, 10 + 22 * k, 480 + 160 * k, false),
     cheer(ms = 1900) {
       if (reduced()) { poseClass(el, 'cheer', true); return; }
       pose('cheer', ms);
-      hop(el, 34, 600, false);
-      setTimeout(() => hop(el, 20, 500, false), 580);
+      hop(el, 34, 600, false, false);
+      setTimeout(() => hop(el, 20, 500, false, false), 580);
       sparkle(el, 10, 0.3);
     },
     wave(ms = 2200) {
@@ -215,4 +236,8 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
       act.animate([{ transform: 'none' }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.45 }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.7 }, { transform: `translateY(${ty(1)}) scale(1.03, .97)`, offset: 0.88 }, { transform: 'none' }], { duration: 1700, easing: 'ease-in-out' });
     },
   };
+  acts.set(el, api);
+  listenForSurahs();
+  if (typeof WeakRef !== 'undefined') live.add(new WeakRef(el));
+  return api;
 }

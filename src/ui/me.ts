@@ -23,6 +23,7 @@ import { recentPages } from '../data/history';
 import { loadMeta, reference, type SurahMeta } from '../data/quran';
 import { LANGS, lang, locale, setLang, surahName, t, type Key } from '../i18n';
 import { h, haptic, toast } from './dom';
+import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
@@ -410,6 +411,28 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('span', { class: 'muted small' }, all && goalClaimed('all') ? t('goal.allMet') : `${n} / ${list.length}`)),
       goalChest('all', ALL_LIGHT, all, (el) => void claimAll(el)));
   };
+  // The harvest: every goal chest waiting (today's and this week's) opened in one moment.
+  const waitingChests = () => {
+    const out: { id: string; label: string; light: number }[] = [];
+    const list = todayGoals(), wk = weekGoals();
+    for (const g of list) if (g.done >= g.target && !goalClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
+    if (list.length > 1 && list.every((g) => g.done >= g.target) && !goalClaimed('all')) out.push({ id: 'all', label: t('chest.day'), light: ALL_LIGHT });
+    for (const g of wk) if (g.done >= g.target && !weekClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
+    if (wk.length > 1 && wk.every((g) => g.done >= g.target) && !weekClaimed(weekAllId())) out.push({ id: weekAllId(), label: t('wkg.chest'), light: WEEK_ALL_LIGHT });
+    return out;
+  };
+  const harvestAll = () => {
+    const list = waitingChests();
+    if (list.length < 2) return;
+    haptic();
+    void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
+  };
+  const harvestBtn = () => {
+    const list = waitingChests();
+    if (list.length < 2) return '';
+    return h('button', { class: 'goal-harvest', onclick: harvestAll },
+      h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
+  };
   // This week's goals (reset every Monday): their own rows and chest for all of them.
   const claimWeekAll = (from?: Element) => play(
     () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
@@ -533,6 +556,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           : h('h2', { class: 'me-h' }, t('goal.title')),
         tab === 'week' || list.length ? resetLabel(tab) : '',
         h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
+      harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },
         h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
