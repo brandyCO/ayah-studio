@@ -1,17 +1,17 @@
-// Cartoon fire for the streak power-up (owner 2026-11-11: "similar to Duolingo, the feel of fire and jumping up"; the
-// glowing particle fire before it was rejected). Flat, chunky shapes in the app's character style: every flame is a
-// solid teardrop tongue with a darker rim, laid in three layers (outer, middle, hot core), tips swaying and licking up.
-// Tongues pinch off as little drops that rise and shrink; bursts throw flame shards, four-point sparks and rings.
-// Two canvases: behind the character (the big silhouette) and in front of it (low tongues at its feet, so it stands
-// inside the fire and its face stays clear). No glow, no blur: solid fills only, so it stays crisp and cheap.
+// The streak flame (owner 2026-11-11, after Duolingo's streak animation, in our own design): smooth, no outline —
+// a light outer flame with a deeper flame inside and a white drop, soft gradients, rounded tips, in the theme's
+// colours. drawFire() is shared by the streak moment (streakMoment.ts) and the character power-up, where the
+// character stands inside one big flame (owner: "not surrounded by flames, he is in it"); a swirl of flame spirals
+// round it on the leap, and bursts throw little flames, sparks and rings. Two canvases: behind and in front.
 
-export interface FlatPalette { edge: string; outer: string; mid: string; inner: string; core: string; spark: string; look: FireLook }
+import { rewardPalette } from './theme';
+
+export interface FlatPalette { outer: string; inner: string; core: string; spark: string; look: FireLook }
 /** Per power level: 1–3 orange, 4 gold, 5 dawn rose and gold. */
-export function flatPalette(level: number): FlatPalette {
-  // The streak moment's friendly flame (streakMoment.ts): a yellow rim, an orange then red heart, a cream core.
-  if (level >= 5) return { edge: '#ffb3c9', outer: '#ffb3c9', mid: '#ff86a8', inner: '#ff4f86', core: '#fff1f5', spark: '#ffd6e2', look: FIRE_ROSE };
-  if (level === 4) return { edge: '#ffd84a', outer: '#ffd84a', mid: '#ffb21a', inner: '#ff8a00', core: '#fffbe2', spark: '#fff3a0', look: FIRE_GOLD };
-  return { edge: '#ffc21a', outer: '#ffc21a', mid: '#ff8a1f', inner: '#ff4f2e', core: '#fff6df', spark: '#ffe27a', look: FIRE };
+export function flatPalette(_level: number): FlatPalette {
+  // The theme's flame, the same as the streak moment's; the level shows in its size and its burst.
+  const look = themeFire();
+  return { outer: look.bottom, inner: look.inTop, core: look.core, spark: look.top, look };
 }
 
 /** The flame's shape: base half-width `w`, tip height `h`, tip `lean`, left bump height `bump`, vertical squash `sq`. */
@@ -37,24 +37,31 @@ export function flamePath(c: CanvasRenderingContext2D, x: number, y: number, s: 
   c.closePath();
 }
 
-export interface FireLook { rim: string; top: string; bottom: string; core: string }
-export const FIRE: FireLook = { rim: '#ffc800', top: '#ff4b3e', bottom: '#ff9500', core: '#ffffff' };
-export const FIRE_GOLD: FireLook = { rim: '#ffd84a', top: '#ff9a00', bottom: '#ffc21a', core: '#fffbea' };
-export const FIRE_ROSE: FireLook = { rim: '#ffc0d4', top: '#ff3f7f', bottom: '#ff8a5c', core: '#ffffff' };
+/** The flame's colours: a light outer flame and a deeper inner one, each a soft vertical gradient, and the drop. */
+export interface FireLook { rim: string; top: string; bottom: string; inTop: string; inBottom: string; core: string }
+/** In the theme's colours (owner 2026-11-11: "relative to the theme colour"), like the Me tab's flame. */
+export function themeFire(): FireLook {
+  const p = rewardPalette();
+  return { rim: p.n3, top: p.n2, bottom: p.n3, inTop: p.n1, inBottom: p.n2, core: '#ffffff' };
+}
 
-/** The whole flame standing on (x, y): yellow rim of even width, red-to-orange body, a round white drop. `drop`
- *  0 hides the drop (a character stands there instead). */
+/** The whole flame standing on (x, y): no outline, smooth and rounded (owner: "smooth like Duolingo"). A light outer
+ *  flame, a deeper inner flame low inside it, a round white drop. `drop` 0 hides the drop (a character stands there). */
 export function drawFire(c: CanvasRenderingContext2D, x: number, y: number, s: Shape, look: FireLook, drop = 1) {
-  const rim = Math.min(s.w * 0.3, Math.max(s.h, s.w) * 0.25);
-  c.lineJoin = 'round';
-  c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
-  c.fillStyle = look.rim; c.strokeStyle = look.rim; c.lineWidth = rim; c.fill(); c.stroke();
-  const g = c.createLinearGradient(0, y - s.h * s.sq, 0, y);
-  g.addColorStop(0, look.top); g.addColorStop(1, look.bottom);
-  c.beginPath(); flamePath(c, x, y - rim * 0.5 * s.sq, s);
-  c.fillStyle = g; c.fill();
+  const soft = Math.min(s.w * 0.22, Math.max(s.h, s.w) * 0.2);
+  const fill = (sh: Shape, yy: number, top: string, bottom: string, round: number) => {
+    const g = c.createLinearGradient(0, yy - sh.h * sh.sq, 0, yy);
+    g.addColorStop(0, top); g.addColorStop(1, bottom);
+    c.beginPath(); flamePath(c, x, yy, sh);
+    c.fillStyle = g; c.strokeStyle = g; c.lineWidth = round; c.lineJoin = 'round';
+    c.fill(); c.stroke();
+  };
+  const base = y - soft * 0.5 * s.sq;
+  fill(s, base, look.top, look.bottom, soft);
+  const inner: Shape = { w: s.w * 0.7, h: Math.max(s.w * 0.75, s.h * 0.68), lean: s.lean * 0.55, bump: s.bump * 0.5, sq: s.sq };
+  fill(inner, base - s.w * 0.08 * s.sq, look.inTop, look.inBottom, soft * 0.75);
   if (drop > 0) {
-    const r = s.w * 0.36 * drop, cx = x + s.lean * 0.12, cy = y - rim * 0.5 * s.sq - s.w * 0.8 * s.sq;
+    const r = s.w * 0.3 * drop, cx = x + s.lean * 0.1, cy = base - s.w * 0.62 * s.sq;
     c.fillStyle = look.core;
     c.beginPath();
     c.moveTo(cx, cy - r * 1.75 * s.sq);
@@ -214,7 +221,7 @@ export class FlatFire {
       L.push([q.x + nx * wd, q.y + ny * wd]); R.push([q.x - nx * wd, q.y - ny * wd]);
     }
     const c = at(head).z > 0 ? this.fx : this.bx;
-    for (const [col, k] of [[p.outer, 1], [p.mid, 0.5]] as const) {
+    for (const [col, k] of [[p.outer, 1], [p.outer, 0.5]] as const) {
       c.fillStyle = col;
       c.beginPath();
       c.moveTo(...L[0]);
@@ -246,7 +253,7 @@ export class FlatFire {
     const f = b.life / b.max, p = this.pal;
     if (b.kind === 'ring') {
       c.globalAlpha = 1 - f;
-      c.strokeStyle = p.mid;
+      c.strokeStyle = p.outer;
       c.lineWidth = 10 * (1 - f) + 1;
       c.beginPath();
       c.ellipse(b.x, b.y, b.r * (0.2 + f * 1.3), b.r * 0.28 * (0.2 + f * 1.3), 0, 0, TAU);

@@ -1,7 +1,7 @@
 /* The streak moment (streakMoment.ts): a plain, calm background so the flame is the only thing that moves; the
    number, label, week row and button come in on the timeline's classes (.rolled, .labelled, .weeked, .filled, .done). */
-/* Fire colours, the same in every theme. */
-.cel.sx { --sx-o: #ffc21a; --sx-m: #ff6a1f; --sx-d: #e8890a; --sx-num: #ff8a1f;
+/* The flame's colours follow the theme (rewardPalette). */
+.cel.sx { --sx-o: var(--rw-n1); --sx-num: color-mix(in srgb, var(--rw-n1) 55%, var(--rw-deep2));
   justify-content: flex-start; gap: 0; padding-top: max(7vh, env(safe-area-inset-top)); color: #3c3c3c;
   --sx-bg: #ffffff; --sx-grey: #d4d4d4; --sx-grey2: #ececec; --sx-dim: #e5e5e5; --sx-text: #777;
   background: var(--sx-bg); }

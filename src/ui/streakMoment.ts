@@ -15,7 +15,7 @@ import { fpsStart } from '../fps';
 import { isMilestone, milestoneScene } from './milestone';
 import './cel.css';
 import './streakMoment.css';
-import { drawFire, FIRE, type Shape } from './flatFire';
+import { drawFire, themeFire, type Shape } from './flatFire';
 
 export type WeekState = 'lit' | 'frozen' | 'revived' | 'today' | 'missed' | 'future';
 export interface WeekDay { day: string; state: WeekState; label: string }
@@ -114,8 +114,9 @@ export function streakMoment(days: number, week: WeekDay[], today: string, face 
     const css = getComputedStyle(el);
     const grey = css.getPropertyValue('--sx-grey').trim() || '#c9c9c9';
     const greyIn = css.getPropertyValue('--sx-grey2').trim() || '#e9e9e9';
-    // Fire is fire: yellow rim, orange-red heart, a white-hot drop (the same in every theme).
-    const col = { o: FIRE.rim, m: FIRE.top, m2: FIRE.bottom, c: FIRE.core };
+    // The theme's flame: light outer flame, deeper heart, a white drop.
+    const FIRE = themeFire();
+    const col = { o: FIRE.inBottom, m: FIRE.inTop, m2: FIRE.bottom, c: FIRE.core };
 
     // State drawn each frame.
     const bits: Bit[] = [];
@@ -193,8 +194,10 @@ export function streakMoment(days: number, week: WeekDay[], today: string, face 
           bump: spring(90, REST.bump, sec, 2.8, 4) * (1 + Math.sin(tt / 170 + 1) * 0.08), sq: 1 };
       }
       const groundW = (showFlame ? s.w : 44) * (tt >= B.launch && tt < B.land ? 0.6 + 0.4 * Math.abs(headAt(tt).u * 2 - 1) : 1);
-      c.fillStyle = tt < B.charge ? 'rgba(0,0,0,.1)' : 'rgba(255, 200, 0, .28)';
+      c.fillStyle = tt < B.charge ? 'rgba(0,0,0,.1)' : FIRE.bottom;
+      c.globalAlpha = tt < B.charge ? 1 : 0.3;
       c.beginPath(); c.ellipse(0, 4, groundW * 1.2, 10, 0, 0, TAU); c.fill();
+      c.globalAlpha = 1;
 
       // Shockwave on landing: a half ring opening out.
       if (tt >= B.land && tt < B.land + 600) {
@@ -206,7 +209,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string, face 
 
       if (showFlame) {
         // Grey while it waits, the colours coming in over it.
-        drawFire(c, 0, 0, s, { rim: grey, top: greyIn, bottom: greyIn, core: '#ffffff' });
+        drawFire(c, 0, 0, s, { rim: grey, top: greyIn, bottom: greyIn, inTop: grey, inBottom: grey, core: '#ffffff' });
         if (lit > 0) { c.globalAlpha = lit; drawFire(c, 0, 0, s, FIRE); c.globalAlpha = 1; }
         if (face && tt > B.settle + 150) drawFace(s, tt, clamp((tt - B.settle - 150) / 250));
       }
