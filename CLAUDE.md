@@ -1769,6 +1769,13 @@ duas/reflections section in Me.
       #1 week), Mythic Celestial (5 Diamonds or #1 in the Sun league); unlocked ones can be worn from Stats (localStorage
       `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
       `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`
+- [x] M18 Character power-up (owner request 2026-11-11, "like Duolingo's streak where the character is on fire, a Dragon Ball
+      scene"): `src/ui/powerUp.ts` + `powerUp.css` (lazy). After the daily streak moment, and when the lit flame on Me is
+      tapped, the user's character crouches and trembles while light streams into it, then an aura of flat two-tone
+      flame-light erupts round it (two outlines per layer taking turns, tongues rising, a shockwave), it floats up and the
+      streak number slams in over speed lines. Five levels by streak (`LEVELS` 1 / 7 / 30 / 100 / 365: Glowing, Burning,
+      Blazing with lightning and rising stones, Radiant in gold with rays, Like the dawn in gold and rose); "New level!" on
+      the day one starts, "n more days to …" otherwise. Only with a character; tap skips, reduced motion → end picture
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

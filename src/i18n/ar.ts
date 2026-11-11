@@ -1095,6 +1095,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'me.sub': 'رحلتك مع القرآن',
   'me.day': 'يوم متتالٍ',
   'me.days': 'أيام متتالية',
+  'me.powerUp': 'أطلِق نور شخصيتك',
   'me.statusStart': 'حقّق هدفًا واحدًا من أهداف اليوم لتشعل شعلتك',
   'me.statusLit': 'شعلة اليوم متّقدة. نراك غدًا',
   'me.statusKeep': 'حقّق هدفًا واحدًا اليوم لتبقى مشتعلة',
