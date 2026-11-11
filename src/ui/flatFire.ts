@@ -19,20 +19,16 @@ export interface Shape { w: number; h: number; lean: number; bump: number; sq: n
 
 /** Adds the flame outline (standing on (x, y), growing up) to the path. */
 export function flamePath(c: CanvasRenderingContext2D, x: number, y: number, s: Shape) {
-  // The streak flame's body (owner 2026-11-11, after Duolingo's: clean and geometric): a round base, a tall main tip
-  // leaning right, a shorter pointed tip on the left and a V between them. The yellow rim is added round it by
-  // drawFire(), so the outline here is the inner (red) shape.
+  // One soft teardrop (owner 2026-11-11: no spiky top): a round base rising to a single rounded tip that leans a
+  // little right; `bump` only swells the left shoulder, it never makes a second point.
   const R = s.w, sq = s.sq, lean = s.lean;
   const H = Math.max(s.h, R * 1.05), up = (v: number) => y + v * sq;
-  const cy = up(-R);
-  const Tx = x + R * 0.28 + lean, Ty = up(-H);
-  const Kx = x - R * 0.92 + lean * 0.35, Ky = up(-R * 0.95 - s.bump);
-  const Nx = x - R * 0.18 + lean * 0.55, Ny = up(-R * 1.08 - s.bump * 0.5);
+  const cy = up(-R), rise = H - R;
+  const Tx = x + R * 0.12 + lean, Ty = up(-H);
+  const sh = Math.min(R * 0.22, s.bump * 0.18);
   c.moveTo(x + R, cy);
-  c.bezierCurveTo(x + R, up(-R - (H - R) * 0.45), Tx + R * 0.32, Ty + (H - R) * 0.22 * sq, Tx, Ty);
-  c.bezierCurveTo(Tx - R * 0.1, Ty + (Ny - Ty) * 0.45, Nx + R * 0.12, Ny - R * 0.08 * sq, Nx, Ny);
-  c.bezierCurveTo(Nx - R * 0.2, Ny + R * 0.05 * sq, Kx + R * 0.2, Ky + (Ny - Ky) * 0.5, Kx, Ky);
-  c.bezierCurveTo(Kx - R * 0.08, Ky + (cy - Ky) * 0.45, x - R, cy - (cy - Ky) * 0.25, x - R, cy);
+  c.bezierCurveTo(x + R, cy - rise * 0.55 * sq, Tx + R * 0.32, Ty + rise * 0.28 * sq, Tx, Ty);
+  c.bezierCurveTo(Tx - R * 0.42, Ty + rise * 0.3 * sq, x - R - sh, cy - rise * 0.42 * sq, x - R, cy);
   c.ellipse(x, cy, R, R * sq, 0, Math.PI, 0, true);
   c.closePath();
 }
@@ -231,8 +227,9 @@ export class FlatFire {
       c.fill();
     }
     if (u <= 1) { const h0 = at(head), h1 = at(head - 0.03); c.save(); c.translate(h0.x, h0.y); c.rotate(Math.atan2(h0.x - h1.x, -(h0.y - h1.y)));
-      c.beginPath(); tongue(c, 0, 0, a.w * 0.12, a.w * 0.34, 0); round(c, p.outer, 4);
-      c.beginPath(); tongue(c, 0, 1, a.w * 0.06, a.w * 0.17, 0); round(c, p.inner, 2); c.restore(); }
+      // A soft round head (a pointed one read as horns on the flame).
+      c.fillStyle = p.outer; c.beginPath(); c.arc(0, 0, a.w * 0.11, 0, TAU); c.fill();
+      c.fillStyle = p.inner; c.beginPath(); c.arc(0, a.w * 0.02, a.w * 0.055, 0, TAU); c.fill(); c.restore(); }
   }
 
   private feet(c: CanvasRenderingContext2D, a: Aura, color: string, k: number, grow: number) {
