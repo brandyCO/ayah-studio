@@ -1790,6 +1790,24 @@ duas/reflections section in Me.
       streak number slams in over speed lines. Five levels by streak (`LEVELS` 1 / 7 / 30 / 100 / 365: Glowing, Burning,
       Blazing with lightning and rising stones, Radiant in gold with rays, Like the dawn in gold and rose); "New level!" on
       the day one starts, "n more days to …" otherwise. Only with a character; tap skips, reduced motion → end picture
+- [x] M19 Friends on Ranks (owner request 2026-11-11): a tap on a player in the **league** (not Global) opens their
+      profile (`src/ui/friends.ts`, strings `src/i18n/friends.ts`): both characters side by side (on fire together while
+      both earned XP today, `blazingPair()` in `powerUp.ts`), the name, tier, level, the friend streak and only the stats
+      that player chose to show (this week's XP, flame streak, trophies, pages, listening; bits in `rank_players.show`, your
+      own profile has the switches, `sendProfile()`); Add friend / Take back / Accept / Not now / Remove, Visit room. Ranks
+      tab **Friends**: asks, friend cards (the pair, the streak, today's state), invite link `#/rf/{code}` (whoever opens it
+      becomes your friend). **Friend streak**: days in a row you both earned XP (from `rank_days`, today counts once both
+      have); at 7 / 30 / 100 / 365 both characters power up together (once each, `frMs:`). Migration
+      `20261111400000_rank_friends.sql` (public `pid` per player, `rank_friends`, `rank_friend_asks` without table access;
+      `rank_profile`, `rank_set_profile`, `rank_friend_ask` / `_answer` / `_remove` / `_invite` / `_invite_preview` /
+      `_join`, `rank_my_friends`; ≤ 100 friends, 30 asks waiting, 20 a day); pgTAP `rank_friends.test.sql` (20)
+- [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
+      (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
+      (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =
+      ⌊√(xp/100)⌋ + 1). The level shows mainly on the character (`withLevel()`, `src/ui/levelLook.ts`): a glow on the
+      ground from 5, a halo from 10, two circling lights from 20, a rim of light from 30, slow rays from 40, all gold at 50;
+      plus a small "Lv n" pill on board rows, a bar to the next level on profiles and a Level chip on Me. A new level
+      plays the power-up with "Level up!" (`src/ui/levelUp.ts`, `rankLevelSeen`; the first look only records)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

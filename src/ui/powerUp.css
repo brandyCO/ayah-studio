@@ -4,9 +4,9 @@
 .pu-sky { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease-out;
   background: radial-gradient(70% 46% at 50% 40%, color-mix(in srgb, var(--pu-b) 34%, transparent), transparent 75%); }
 .pu.charging .pu-sky { opacity: .35; }
-.pu.lit .pu-sky { opacity: 1; }
+:is(.pu, .pu-mini).lit .pu-sky { opacity: 1; }
 .pu.go .pu-flash { animation: none; }
-.pu.lit:not(.skip) .pu-flash { animation: cel-flash .75s ease-out both; }
+:is(.pu, .pu-mini).lit:not(.skip) .pu-flash { animation: cel-flash .75s ease-out both; }
 .pu-shake { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
 .pu-kick { margin: 0 0 6px; position: relative; z-index: 3; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .16em; text-transform: uppercase; color: var(--pu-c);
   opacity: 0; transition: opacity .4s; }
@@ -14,14 +14,14 @@
 
 /* The stage (view-box 200 × 300): aura, character, ground. */
 .pu-stage { position: relative; z-index: 1; margin-top: 3vh; height: min(44vh, 420px); aspect-ratio: 2 / 3; max-width: 86vw; }
-.pu-stage > span:not(.pu-body), .pu-a, .pu-a i { position: absolute; inset: 0; display: block; pointer-events: none; }
+.pu-stage > span, .pu-fig > span:not(.pu-body), .pu-a, .pu-a i { position: absolute; inset: 0; display: block; pointer-events: none; }
 .pu-a svg { display: block; width: 100%; height: 100%; overflow: visible; }
 
 /* Aura: tiny and faint while charging, erupts with an overshoot, then flickers (two outlines take turns). */
 .pu-aura { transform-origin: 50% 92%; scale: .2; opacity: 0; }
 .pu.charging .pu-aura { scale: .42; opacity: .55; transition: scale 1.2s ease-out, opacity .6s; }
-.pu.lit .pu-aura { scale: 1; opacity: 1; }
-.pu.lit:not(.skip) .pu-aura { animation: pu-erupt .7s cubic-bezier(.2, 1.5, .4, 1) both; }
+:is(.pu, .pu-mini).lit .pu-aura { scale: 1; opacity: 1; }
+:is(.pu, .pu-mini).lit:not(.skip) .pu-aura { animation: pu-erupt .7s cubic-bezier(.2, 1.5, .4, 1) both; }
 @keyframes pu-erupt { from { scale: .42; opacity: .55; } 40% { opacity: 1; } }
 .pu-a { transform-origin: 50% 92%; animation: pu-flick .42s ease-in-out infinite alternate; }
 .pu-a.pu-mid { animation-duration: .36s; animation-delay: -.2s; }
@@ -32,9 +32,18 @@
 .pu-a .pu-f2 { animation: pu-swap .48s steps(1) -.24s infinite; }
 @keyframes pu-swap { 0% { opacity: 1; } 50% { opacity: 0; } }
 .pu-aura-front { opacity: 0; }
-.pu.lit .pu-aura-front { opacity: .42; }
+:is(.pu, .pu-mini).lit .pu-aura-front { opacity: .42; }
 .pu-front { scale: .9; }
 
+.pu-fig { position: absolute; inset: 0; display: block; }
+.pu-stage.duo { aspect-ratio: 4 / 3; height: min(36vh, 340px); max-width: 94vw; }
+.duo > .pu-fig { inset: 0 auto 0 0; width: 50%; }
+.duo > .pu-fig + .pu-fig { left: 50%; }
+/* A card's pair (friends on Ranks): the same aura, already lit, no moment. */
+.pu-mini { position: relative; display: block; aspect-ratio: 2 / 3; height: 100%; }
+.pu-mini.duo { aspect-ratio: 4 / 3; }
+.pu-mini .pu-gather, .pu-mini .pu-stones { display: none; }
+.pu-mini:not(.lit) .pu-body { bottom: 4%; }
 /* The character: crouches and trembles, then rises and floats in its aura. */
 .pu-body { position: absolute; left: 19%; width: 62%; bottom: 5%; display: block; transform-origin: 50% 100%; z-index: 1; }
 .pu-body .fg-actor { position: relative; width: 100%; display: block; }
@@ -42,9 +51,9 @@
 @keyframes pu-crouch { to { transform: translateY(2%) scale(1.05, .93); } }
 .pu.charging .pu-body .fg-actor { animation: pu-tremble .07s linear infinite; }
 @keyframes pu-tremble { 0% { translate: 0 0; } 25% { translate: 1.5px -1px; } 50% { translate: -1.5px 1px; } 75% { translate: 1px 1px; } }
-.pu.lit .pu-body { transform: translateY(-7%); }
-.pu.lit:not(.skip) .pu-body { animation: pu-rise .6s cubic-bezier(.2, 1.6, .4, 1) both, pu-float 2.6s .6s ease-in-out infinite alternate; }
-.pu.lit.skip .pu-body, .pu.lit.done .pu-body { animation: pu-float 2.6s ease-in-out infinite alternate; }
+:is(.pu, .pu-mini).lit .pu-body { transform: translateY(-7%); }
+:is(.pu, .pu-mini).lit:not(.skip) .pu-body { animation: pu-rise .6s cubic-bezier(.2, 1.6, .4, 1) both, pu-float 2.6s .6s ease-in-out infinite alternate; }
+:is(.pu, .pu-mini).lit.skip .pu-body, :is(.pu, .pu-mini).lit.done .pu-body { animation: pu-float 2.6s ease-in-out infinite alternate; }
 @keyframes pu-rise { from { transform: translateY(2%) scale(1.05, .93); } 45% { transform: translateY(-10%) scale(.95, 1.07); } }
 @keyframes pu-float { from { transform: translateY(-7%); } to { transform: translateY(-10%); } }
 
@@ -53,10 +62,10 @@
 .pu-ground i { position: absolute; left: 50%; top: 50%; display: block; border-radius: 50%; translate: -50% -50%; }
 .pu-glow { width: 70%; height: 46%; background: radial-gradient(closest-side, color-mix(in srgb, var(--pu-c) 75%, transparent), transparent); opacity: .35; transition: opacity .4s, scale .4s; }
 .pu.charging .pu-glow { opacity: .7; scale: .8; }
-.pu.lit .pu-glow { opacity: 1; scale: 1.25; }
+:is(.pu, .pu-mini).lit .pu-glow { opacity: 1; scale: 1.25; }
 .pu-wave { width: 40%; height: 26%; border: 3px solid var(--pu-c); opacity: 0; }
-.pu.lit:not(.skip) .pu-wave { animation: pu-wave .9s ease-out both; }
-.pu.lit:not(.skip) .pu-wave.w2 { animation-delay: .16s; border-width: 2px; }
+:is(.pu, .pu-mini).lit:not(.skip) .pu-wave { animation: pu-wave .9s ease-out both; }
+:is(.pu, .pu-mini).lit:not(.skip) .pu-wave.w2 { animation-delay: .16s; border-width: 2px; }
 @keyframes pu-wave { from { scale: .3; opacity: 1; } to { scale: 4.2; opacity: 0; } }
 
 /* Light streaming into the character while it charges. */
@@ -68,25 +77,25 @@
 /* Tongues rising off the aura. */
 .pu-tongues i { position: absolute; width: 9%; aspect-ratio: 20 / 32; margin-left: -4.5%; opacity: 0; }
 .pu-tongues svg { display: block; width: 100%; height: 100%; }
-.pu.lit .pu-tongues i { animation: pu-tongue var(--t) var(--d) ease-out infinite; }
+:is(.pu, .pu-mini).lit .pu-tongues i { animation: pu-tongue var(--t) var(--d) ease-out infinite; }
 @keyframes pu-tongue { from { translate: 0 0; scale: var(--s); opacity: 0; } 20% { opacity: .95; } to { translate: var(--x) -110px; scale: .1; opacity: 0; } }
 
 /* Lightning (Blazing and up) and stones lifting off the ground. */
 .pu-bolts { z-index: 2; }
 .pu-bolts i { position: absolute; width: 11%; aspect-ratio: 32 / 44; opacity: 0; filter: drop-shadow(0 0 4px var(--pu-c)); }
 .pu-bolts svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.pu.lit .pu-bolts i { animation: pu-bolt 1.7s var(--d) steps(1) infinite; }
+:is(.pu, .pu-mini).lit .pu-bolts i { animation: pu-bolt 1.7s var(--d) steps(1) infinite; }
 @keyframes pu-bolt { 0% { opacity: 1; } 5% { opacity: 0; } 9% { opacity: .9; } 13%, 100% { opacity: 0; } }
 .pu-stones i { position: absolute; bottom: 6%; width: var(--w); aspect-ratio: 1.2; border-radius: 45% 55% 40% 50%; opacity: 0;
   background: #5b4636; box-shadow: inset -2px -3px 0 #3a2c22, inset 2px 2px 0 #7a624e; }
-.pu.charging .pu-stones i, .pu.lit .pu-stones i { animation: pu-stone var(--t) var(--d) ease-out infinite; }
+.pu.charging .pu-stones i, :is(.pu, .pu-mini).lit .pu-stones i { animation: pu-stone var(--t) var(--d) ease-out infinite; }
 @keyframes pu-stone { from { translate: 0 0; rotate: 0deg; opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } to { translate: 0 var(--h); rotate: 120deg; opacity: 0; } }
 
 /* Rays behind it all (Radiant and up). */
 .pu-rays { inset: -30% !important; opacity: 0; transition: opacity .6s;
   background: repeating-conic-gradient(from 0deg at 50% 52%, color-mix(in srgb, var(--pu-core) 55%, transparent) 0 5deg, transparent 5deg 15deg);
   -webkit-mask: radial-gradient(closest-side at 50% 52%, transparent 18%, #000 30%, transparent 70%); mask: radial-gradient(closest-side at 50% 52%, transparent 18%, #000 30%, transparent 70%); }
-.pu.lit .pu-rays { opacity: .55; animation: pu-spin 26s linear infinite; }
+:is(.pu, .pu-mini).lit .pu-rays { opacity: .55; animation: pu-spin 26s linear infinite; }
 @keyframes pu-spin { to { rotate: 360deg; } }
 
 /* The streak number slams in over speed lines. */

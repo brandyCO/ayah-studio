@@ -23,6 +23,17 @@ const en = {
   'pu.level': 'Level {n} · {name}',
   'pu.next': '{n} more days to {name}',
   'pu.max': 'The highest level, alhamdulillah',
+  'pu.friend': 'Friend streak with {name}',
+  'pu.friendDays': 'day friend streak',
+  'lv.up': 'Level up!',
+  'lv.word': 'level',
+  'lv.sub': 'Your character gathers more light as it grows',
+  'lv.b1': 'Your character now stands on a glow of light',
+  'lv.b2': 'A soft halo of light now surrounds your character',
+  'lv.b3': 'Two lights now circle your character',
+  'lv.b4': 'Your character now shines at its edges',
+  'lv.b5': 'Rays of light now rise behind your character',
+  'lv.b6': 'Radiant: your character is all gold',
 };
 export type MomentKey = keyof typeof en;
 const ar: Partial<Record<MomentKey, string>> = {
@@ -46,6 +57,17 @@ const ar: Partial<Record<MomentKey, string>> = {
   'pu.level': 'المستوى {n} · {name}',
   'pu.next': 'المستوى التالي «{name}» بعد {n} يوم',
   'pu.max': 'أعلى مستوى، الحمد لله',
+  'pu.friend': 'سلسلة الصحبة مع {name}',
+  'pu.friendDays': 'يوم صحبة متتالٍ',
+  'lv.up': 'مستوى أعلى!',
+  'lv.word': 'المستوى',
+  'lv.sub': 'تجمع شخصيتك مزيدًا من النور كلما كبرت',
+  'lv.b1': 'تقف شخصيتك الآن على هالة من نور',
+  'lv.b2': 'هالة ناعمة من النور تحيط بشخصيتك الآن',
+  'lv.b3': 'نوران يدوران الآن حول شخصيتك',
+  'lv.b4': 'تتلألأ حواف شخصيتك بالنور الآن',
+  'lv.b5': 'أشعة من نور ترتفع الآن خلف شخصيتك',
+  'lv.b6': 'مشرقة: شخصيتك صارت ذهبية كلها',
 };
 
 /** A moment string, with {name} placeholders filled from `vars`. */

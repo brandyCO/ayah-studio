@@ -2,6 +2,7 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { levelLabel, levelOf, myXp } from '../data/xp';
 import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
@@ -282,6 +283,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       meActor = m.actor(`me-actor day-${look.mode}`, look.code);
       if (!meActor || !hero.isConnected) return;
       const a = meActor;
+      // The character's level (all-time XP from Ranks) shows on it as gathered light.
+      const xp = myXp();
+      if (xp > 0) void import('./levelLook').then((l) => l.withLevel(a.el, levelOf(xp)));
       a.el.setAttribute('role', 'button');
       a.el.setAttribute('aria-hidden', 'true');
       if (look.mode === 'asleep') {
@@ -298,7 +302,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig()]);
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp()]);
     if (sig === heroSig) return;
     heroSig = sig;
     const tier = flameTier(s.days, s.litToday);
@@ -337,7 +341,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
-        h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
+        h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
+        myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });

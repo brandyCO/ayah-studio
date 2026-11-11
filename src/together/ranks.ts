@@ -6,9 +6,10 @@
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import { localMsg } from '../i18n';
-import { addDays, allDays, claimGoal } from '../data/journey';
+import { addDays, allDays, claimGoal, streak } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
+import { setMyXp } from '../data/xp';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
@@ -26,7 +27,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -166,7 +167,7 @@ export async function refreshCached(): Promise<boolean> {
 
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: dayKey() });
-  if (s) { s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); }
+  if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }
   return s;
 }, fresh);
 // The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
@@ -399,4 +400,45 @@ export function lastWeekLocal(weekStart: string) {
     pages += p; listen += l; if (p || l) active++;
   }
   return { pages, listen, active };
+}
+
+// --- friends (owner request 2026-11-11; supabase/migrations/20261111400000_rank_friends.sql) ---
+/** What a profile shows (bits, as on the server): this week's points, the flame streak, trophies, pages, listening. */
+export const SHOW = { week: 1, streak: 2, trophies: 4, pages: 8, listen: 16 } as const;
+export type ShowKey = keyof typeof SHOW;
+/** Two friends' streak: the days in a row both earned points, and whether each has today. */
+export interface FriendStreak { streak: number; meToday: boolean; themToday: boolean }
+export interface Profile extends Omit<Row, 'score'> {
+  relation: 'me' | 'friend' | 'sent' | 'asked' | 'none'; show: number; bestTier: number;
+  week?: number; streak?: number; trophies?: number; pages?: number; listen?: number; friend?: FriendStreak;
+}
+export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
+export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
+export const rankProfile = (pid: string) => rpc<Profile | null>('rank_profile', { who: pid, d: dayKey() });
+export const myFriends = (fresh = false) => cached('friends', () => rpc<Friends>('rank_my_friends', { d: dayKey() }), fresh);
+export async function askFriend(pid: string): Promise<'sent' | 'friend'> {
+  const r = await rpc<'sent' | 'friend'>('rank_friend_ask', { who: pid });
+  dropCache();
+  return r;
+}
+export async function answerFriend(pid: string, ok: boolean) { await rpc('rank_friend_answer', { who: pid, ok }); dropCache(); }
+export async function removeFriend(pid: string) { await rpc('rank_friend_remove', { who: pid }); dropCache(); }
+export const friendInvite = () => rpc<string>('rank_friend_invite');
+export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
+export const friendInvitePreview = (code: string) =>
+  rpc<{ name: string; avatar: number; frame: number; figure: string | null; tier: number; mine: boolean; friend: boolean } | null>('rank_friend_invite_preview', { code: code.toLowerCase() });
+export async function joinFriend(code: string) { const r = await rpc<Row>('rank_friend_join', { code: code.toLowerCase() }); dropCache(); return r; }
+/** What your profile shows (kept on this device too) and your flame streak, sent when either changed. */
+const SHOWN = 'rankShow';
+export const myShow = (): number => { try { const v = Number(localStorage.getItem(SHOWN)); return Number.isInteger(v) && v >= 0 && v <= 31 && localStorage.getItem(SHOWN) !== null ? v : 7; } catch { return 7; } };
+export async function sendProfile(show = myShow(), force = false) {
+  if (!account()) return;
+  try {
+    const days = streak().days;
+    const sig = `${show}:${days}`;
+    if (!force && localStorage.getItem('rankShowSent') === sig) return;
+    await rpc('rank_set_profile', { show_bits: show, my_streak: days });
+    localStorage.setItem(SHOWN, String(show));
+    localStorage.setItem('rankShowSent', sig);
+  } catch { /* not playing yet, or offline: next time */ }
 }
