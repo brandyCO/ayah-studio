@@ -2011,6 +2011,12 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
 - [x] Lessons counted (2026-11-10): every passed lesson / tasmi' (and a page recited with slips or cleanly) adds to
       `DayRec.ls` (`addLesson()` in `journey.ts`, summed across devices); new ayat keep feeding the memorise goal
       (`addMemorised`). Ranks, quests and a Learn daily goal reading `ls` belong to the Ranks / goals work
+- [x] **Faster Learn tab** (speed check 2026-11-11: ~0.4 s freeze on opening): the 114 trees' combinations are a table
+      in `magicTrees.ts` (the search ran on every start, ~0.57 s at 4× CPU slowdown; `scripts/make-tree-plan.mjs` re-checks
+      it); path tree / gate pictures draw as they come near the screen, one a task (`vignette(…, lazy)`); the path builds up
+      to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
+      number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
+      ~200 ms); screenshots identical
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

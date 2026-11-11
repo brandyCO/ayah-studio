@@ -71,7 +71,9 @@ export function inboxBell(): HTMLElement {
   const evs = ['journey-changed', 'garden-changed', 'rank-cache', 'hashchange'];
   const off = () => evs.forEach((e) => window.removeEventListener(e, paint));
   evs.forEach((e) => window.addEventListener(e, paint));
-  requestAnimationFrame(paint);
+  // Counted when the browser is idle, not in the frame that first draws the screen (the count's first run
+  // sets up date formats and took part in opening Learn).
+  if ('requestIdleCallback' in window) requestIdleCallback(paint, { timeout: 600 }); else setTimeout(paint, 50);
   return el;
 }
 
