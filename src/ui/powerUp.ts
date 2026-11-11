@@ -7,16 +7,19 @@
 // (translate / scale / opacity); reduced motion → the end picture. A tap skips to the end, a second closes.
 import { h } from './dom';
 import { actor as makeActor, poseClass } from './actor';
-import { holdPage, reduced } from './juice';
+import { holdPage, lite, reduced } from './juice';
 import { sfx } from './sfx';
-import { sparks, type Sparks } from './sparks';
+import { FlatFire, flatPalette } from './flatFire';
 import { rewardPalette } from './theme';
 import { t } from '../i18n';
 import { mt, type MomentKey } from '../i18n/moments';
 import { fpsStart } from '../fps';
+import './streakFire.css';
 import { two } from './flat';
 import './cel.css';
 import './powerUp.css';
+
+let fireIds = 0;
 
 /** Streak days at which each power level starts. */
 export const LEVELS: readonly number[] = [1, 7, 30, 100, 365];
@@ -147,128 +150,269 @@ export interface PowerUpOpts {
   /** A custom moment (a level up): its own kicker, label beside the number and line under it, and the aura level. */
   custom?: { kicker: string; label: string; sub: string; aura: number };
 }
+
+const clamp = (x: number) => Math.max(0, Math.min(1, x));
+const outCubic = (x: number) => 1 - (1 - clamp(x)) ** 3;
+const inQuad = (x: number) => clamp(x) ** 2;
+/** A damped spring settling from 1 to 0 over time `s` seconds (`f` wobbles a second). */
+const wobble = (s: number, f = 3, k = 7) => (s < 0 ? 0 : Math.exp(-k * s) * Math.cos(Math.PI * 2 * f * s));
+
+// The moment's beats (ms): stand, crouch, leap, catch fire at the top, fall and land, the number slams in.
+const B = { crouch: 320, leap: 900, ignite: 1180, fall: 1520, land: 1760, slam: 1960, flip: 2480, done: 2900 };
+const APEX = -0.24;
+
+/** The character's jump at time `t` ms: height (share of the stage, negative is up), squash/stretch and tremble. */
+function pose(t: number, delay: number) {
+  t -= delay;
+  let y = 0, sx = 1, sy = 1, tr = 0;
+  if (t < B.crouch) {
+    // Standing: breathing a little.
+    sy = 1 + 0.012 * Math.sin(t / 140);
+  } else if (t < B.leap) {
+    // Crouch: squashes down, trembling harder as it gathers.
+    const e = outCubic((t - B.crouch) / 260);
+    sy = 1 - 0.2 * e; sx = 1 + 0.13 * e; y = 0.015 * e;
+    tr = clamp((t - B.crouch) / (B.leap - B.crouch)) * 3;
+  } else if (t < B.ignite) {
+    // Leap: shoots up stretched thin, rounding out on the way.
+    const p = (t - B.leap) / (B.ignite - B.leap);
+    y = APEX * outCubic(p);
+    sy = 1.24 - 0.24 * outCubic(p); sx = 0.84 + 0.16 * outCubic(p);
+  } else if (t < B.fall) {
+    // Hangs at the top as the fire catches, a little jolt from the blast.
+    const s = (t - B.ignite) / 1000;
+    y = APEX - 0.02 * Math.sin(Math.min(1, s * 3) * Math.PI);
+    sy = 1 + 0.1 * wobble(s, 4); sx = 1 - 0.07 * wobble(s, 4);
+  } else if (t < B.land) {
+    // Falls back down, speeding up, stretched a little.
+    const p = (t - B.fall) / (B.land - B.fall);
+    y = APEX * (1 - inQuad(p));
+    sy = 1 + 0.08 * inQuad(p); sx = 1 - 0.05 * inQuad(p);
+  } else if (t < B.done) {
+    // Lands with a heavy squash that springs back.
+    const s = (t - B.land) / 1000;
+    sy = 1 - 0.22 * wobble(s, 3, 6); sx = 1 + 0.15 * wobble(s, 3, 6);
+  } else {
+    // Bouncing on the spot in its flames, every 1.3 s.
+    const ph = ((t - B.done) % 1300) / 1300;
+    if (ph < 0.08) { const e = ph / 0.08; sy = 1 - 0.1 * Math.sin(e * Math.PI); sx = 1 + 0.07 * Math.sin(e * Math.PI); }
+    else if (ph < 0.42) { const p = (ph - 0.08) / 0.34; y = -0.09 * 4 * p * (1 - p); sy = 1 + 0.06 * (1 - Math.abs(2 * p - 1)); sx = 2 - sy; }
+    else if (ph < 0.52) { const e = (ph - 0.42) / 0.1; sy = 1 - 0.12 * Math.sin(e * Math.PI); sx = 1 + 0.08 * Math.sin(e * Math.PI); }
+  }
+  return { y, sx, sy, tr };
+}
+
+/** How hot the fire round a character burns at time `t` ms (0 none … 1 burning … 2 a flare). */
+function heat(t: number, level: number) {
+  const k = 0.85 + level * 0.06;
+  if (t < B.crouch) return 0.12;
+  if (t < B.leap) return 0.12 + 0.4 * clamp((t - B.crouch) / (B.leap - B.crouch));
+  if (t < B.ignite) return 0.6;
+  if (t < B.land) return k * (1 + 1.1 * Math.exp(-(t - B.ignite) / 260));
+  if (t < B.done) return k * (1 + 0.6 * Math.exp(-(t - B.land) / 300));
+  return k * (0.92 + 0.12 * Math.sin(t / 170) + 0.06 * Math.sin(t / 53));
+}
+
 export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null {
-  const me = makeActor('pu-actor');
+  const me = makeActor('sf-actor');
   if (!me) return null;
   const level = o.custom ? Math.max(1, Math.min(5, o.custom.aura)) : powerLevel(days);
-  const T = tones(level);
   const still = reduced();
-  const r = rng(days * 31 + level);
   const name = mt(`pu.l${level}` as MomentKey);
   const newLevel = level > 1 && days === LEVELS[level - 1];
+  const buddy = o.friend ? makeActor('sf-actor', o.friend.code) : null;
+  const actors = buddy ? [me, buddy] : [me];
 
-  const figs = [blaze(level, me.el, days * 31 + level)];
-  const buddy = o.friend ? makeActor('pu-actor', o.friend.code) : null;
-  if (buddy) figs.push(blaze(level, buddy.el, days * 17 + 5));
-  const body = figs[0].querySelector('.pu-body')!;
-  const stage = h('div', { class: `pu-stage${buddy ? ' duo' : ''}` },
-    h('span', { class: 'pu-ground' }, h('i', { class: 'pu-glow' }), h('i', { class: 'pu-wave' }), h('i', { class: 'pu-wave w2' })),
-    level >= 4 ? h('span', { class: 'pu-rays' }) : '',
-    ...figs);
-  const num = h('b', { class: 'pu-num' }, String(days));
-  const ok = h('button', { class: 'cel-ok pu-ok' }, t('sm.continue'));
+  const bodies = actors.map((a) => h('span', { class: 'sf-body' }, a.el));
+  const rings = bodies.map(() => [h('i', { class: 'sf-ring' }), h('i', { class: 'sf-ring' })]);
+  const figs = bodies.map((b, i) => h('span', { class: `sf-fig f${i}` }, ...rings[i], h('i', { class: 'sf-shadow' }), b));
+  const stage = h('div', { class: `sf-stage${buddy ? ' duo' : ''}` }, ...figs);
+  const back = h('canvas', { class: 'sf-cv sf-back', 'aria-hidden': 'true' });
+  const front = h('canvas', { class: 'sf-cv sf-front', 'aria-hidden': 'true' });
+  const prev = Math.max(0, days - 1);
+  const numOld = h('span', { class: 'sf-n old' }, String(prev));
+  const numNew = h('span', { class: 'sf-n new' }, String(days));
+  const num = h('b', { class: 'sf-num' }, numOld, numNew);
+  const ok = h('button', { class: 'cel-ok sf-ok' }, t('sm.continue'));
   const nextAt = LEVELS[level];
-  const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
-  const shake = h('div', { class: 'pu-shake' },
-    h('p', { class: 'pu-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker')),
-    stage,
-    h('div', { class: 'pu-count' }, h('span', { class: 'pu-lines', 'aria-hidden': 'true' }), num, h('span', { class: 'pu-label' }, o.custom ? o.custom.label : o.friend ? mt('pu.friendDays') : t(days === 1 ? 'me.day' : 'me.days'))),
-    o.custom ? '' : h('p', { class: 'pu-level' }, mt('pu.level', { n: level, name })),
-    h('p', { class: 'pu-sub' }, o.custom ? o.custom.sub : nextAt ? mt('pu.next', { n: nextAt - days, name: mt(`pu.l${level + 1}` as MomentKey) }) : mt('pu.max')),
+  const heatGlow = h('span', { class: 'sf-heat', 'aria-hidden': 'true' });
+  const flash = h('span', { class: 'sf-flash', 'aria-hidden': 'true' });
+  const text = h('div', { class: 'sf-text' },
+    h('div', { class: 'sf-count' }, num, h('span', { class: 'sf-label' }, o.custom ? o.custom.label : o.friend ? mt('pu.friendDays') : t(days === 1 ? 'me.day' : 'me.days'))),
+    o.custom ? '' : h('p', { class: 'sf-level' }, mt('pu.level', { n: level, name })),
+    h('p', { class: 'sf-sub' }, o.custom ? o.custom.sub : nextAt ? mt('pu.next', { n: nextAt - days, name: mt(`pu.l${level + 1}` as MomentKey) }) : mt('pu.max')),
     ok);
   const label = o.custom ? `${o.custom.kicker} · ${o.custom.label} ${days}` : `${mt('pu.level', { n: level, name })} · ${days} ${t(days === 1 ? 'me.day' : 'me.days')}`;
-  const el = h('div', { class: `cel pu pu-l${level}${still ? ' still lit slam done' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label,
-    style: `--pu-a:${T.mid[0]};--pu-b:${T.out[0]};--pu-c:${T.inn[0]};--pu-core:${T.core}` },
-    h('span', { class: 'pu-sky', 'aria-hidden': 'true' }),
-    h('span', { class: 'cel-flash pu-flash', 'aria-hidden': 'true' }),
-    canvas,
-    shake);
+  const shake = h('div', { class: 'sf-shake' },
+    h('p', { class: 'sf-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker')),
+    stage, text);
+  // Inside the flame (owner: "his colour becomes as if he is inside the flame"): the character is lit by the fire
+  // itself, not seen through it. A gradient map recolours him in the flame's own tones (dark → deep, light → the
+  // flame's pale core), blended with his own colours by `k`.
+  const fid = `pu-in-${++fireIds}`;
+  const fp = rewardPalette();
+  const ch = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const stops = [fp.deep2, fp.n3, fp.n2, fp.hi, fp.core].map(ch);
+  const tv = (i: number) => stops.map((c) => c[i].toFixed(3)).join(' ');
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('style', 'position:absolute;width:0;height:0');
+  svg.innerHTML = `<filter id="${fid}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".3 .59 .11 0 0 .3 .59 .11 0 0 .3 .59 .11 0 0 0 0 0 1 0" result="g"/>`
+    + `<feComponentTransfer in="g" result="m"><feFuncR type="table" tableValues="${tv(0)}"/><feFuncG type="table" tableValues="${tv(1)}"/><feFuncB type="table" tableValues="${tv(2)}"/></feComponentTransfer>`
+    + `<feComposite in="m" in2="SourceGraphic" operator="arithmetic" k1="0" k2="0" k3="1" k4="0"/></filter>`;
+  const mixer = svg.querySelector('feComposite')!;
+  const inFire = (k: number) => {
+    mixer.setAttribute('k2', k.toFixed(3));
+    mixer.setAttribute('k3', (1 - k).toFixed(3));
+    bodies.forEach((b) => { b.style.filter = `url(#${fid})`; });
+  };
+  const INSIDE = 0.8;
+  const glowIn = () => {
+    const t1 = performance.now();
+    const step = () => { const u = Math.min(1, (performance.now() - t1) / 420); inFire(INSIDE * (1 - (1 - u) ** 3)); if (u < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  const el = h('div', { class: `cel go sf sf-l${level}${still ? ' done slam' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label },
+    svg, h('span', { class: 'sf-sky', 'aria-hidden': 'true' }), heatGlow, back, shake, front, flash);
 
   return new Promise((resolve) => {
     const frames = still ? null : fpsStart('Power up');
-    const timers: number[] = [];
-    const later = (ms: number, f: () => void) => timers.push(window.setTimeout(f, ms));
-    let fx: Sparks | null = null;
-    let closed = false, ended = still;
+    let closed = false, raf = 0, t0 = 0, skipped = false;
+    const burns: number[] = [];
     const close = () => {
       if (closed) return;
       closed = true;
       frames?.();
-      timers.forEach(clearTimeout);
-      fx?.stop();
+      cancelAnimationFrame(raf);
+      burns.forEach(clearTimeout);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
+      window.removeEventListener('resize', place);
       el.classList.add('out');
       holdPage(false);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 280);
     };
-    const centre = (node: Element) => {
-      const a = node.getBoundingClientRect();
-      const c = canvas.getBoundingClientRect();
-      return [a.left + a.width / 2 - c.left, a.top + a.height / 2 - c.top] as const;
-    };
-    const jolt = (px: number, ms: number) => {
-      if (still) return;
-      const k: Keyframe[] = [];
-      for (let i = 0; i <= 8; i++) { const f = 1 - i / 8; k.push({ translate: i === 8 ? '0 0' : `${((r() - 0.5) * 2 * px * f).toFixed(1)}px ${((r() - 0.5) * 2 * px * f).toFixed(1)}px` }); }
-      shake.animate(k, { duration: ms, easing: 'linear' });
-    };
-    // The end picture at once (a tap during the build-up).
-    const finish = () => {
-      if (ended) return;
-      ended = true;
-      timers.forEach(clearTimeout);
-      timers.length = 0;
-      el.classList.remove('charging');
-      el.classList.add('go', 'lit', 'slam', 'done', 'skip');
-      poseClass(me.el, 'cheer', true);
-      me.face('star', 0);
-      fx?.motes(true);
-    };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') close(); };
     ok.addEventListener('click', (e) => { e.stopPropagation(); close(); });
-    el.addEventListener('click', () => { if (ended) close(); else finish(); });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
     document.body.append(el);
     holdPage(true);
     ok.focus({ preventScroll: true });
-    if (still) { poseClass(me.el, 'cheer', true); me.face('star', 0); return; }
 
-    // Higher levels take a little longer to charge, so the eruption is bigger.
-    const charge = [0, 800, 1000, 1250, 1400, 1550][level];
-    // 1. Charge: the character crouches and trembles, light streams into it, the ground hums.
-    later(260, () => {
-      el.classList.add('go', 'charging');
-      me.face('calm', 0);
-      sfx.rare(charge);
-      for (let i = 0; i < 3; i++) later(i * (charge / 3), () => sfx.strain(0.3 + i * 0.3, Math.min(4, level - 1)));
-    });
-    // 2. Ignite: a flash, the aura erupts with a shockwave, arms up, the screen jolts.
-    later(260 + charge, () => {
-      const [x, y] = centre(body);
-      el.classList.remove('charging');
-      el.classList.add('lit');
-      fx = sparks(canvas, T.spark);
-      fx.burst(x, y, 60 + level * 30, 0.9 + level * 0.15);
-      if (level >= 4) later(220, () => fx?.burst(x, y - 30, 80, 1.3));
-      sfx.open(level >= 4 ? 2 : level >= 3 ? 1 : 0, Math.min(4, level - 1));
-      poseClass(me.el, 'cheer', true);
-      me.face('star', 0);
-      jolt(6 + level * 2.5, 520);
-    });
-    // 3. The streak number slams in over speed lines.
-    later(260 + charge + 650, () => {
-      const [x, y] = centre(num);
+    const fire = new FlatFire(back, front, flatPalette(level), lite());
+    // Where each character stands (read once, and again on a resize; the jump itself is drawn from the timeline).
+    type Spot = { cx: number; foot: number; w: number; hgt: number; px: number };
+    let spots: Spot[] = [];
+    let numBox = { cx: 0, top: 0, w: 0 };
+    const place = () => {
+      fire.resize();
+      const c = back.getBoundingClientRect();
+      spots = figs.map((f) => {
+        const r = f.getBoundingClientRect();
+        return { cx: r.left + r.width / 2 - c.left, foot: r.bottom - c.top, w: r.width, hgt: r.height, px: stage.getBoundingClientRect().height };
+      });
+      const n = num.getBoundingClientRect();
+      numBox = { cx: n.left + n.width / 2 - c.left, top: n.top - c.top + n.height * 0.18, w: n.width * 0.8 };
+    };
+    place();
+    window.addEventListener('resize', place);
+    const auras = spots.map((s) => fire.aura({ cx: s.cx, foot: s.foot, w: s.w, h: s.hgt }));
+
+    const jolt = (px: number, ms: number) => {
+      if (still) return;
+      const k: Keyframe[] = [];
+      for (let i = 0; i <= 8; i++) { const f = 1 - i / 8; k.push({ translate: i === 8 ? '0 0' : `${((Math.random() - 0.5) * 2 * px * f).toFixed(1)}px ${((Math.random() - 0.5) * 2 * px * f).toFixed(1)}px` }); }
+      shake.animate(k, { duration: ms, easing: 'linear' });
+    };
+    const ring = (i: number, big: number) => {
+      for (const [j, r] of rings[i].entries()) r.animate([{ opacity: 0.95, scale: '0.15 0.05' }, { opacity: 0, scale: `${big + j * 0.8} ${(big + j * 0.8) * 0.3}` }], { duration: 620 + j * 160, delay: j * 70, easing: 'cubic-bezier(.1,.7,.3,1)' });
+    };
+    const flashNow = () => flash.animate([{ opacity: 0.45 }, { opacity: 0 }], { duration: 300, easing: 'ease-out' });
+    const slamNum = () => {
       el.classList.add('slam');
-      later(170, () => { fx?.burst(x, y, 36 + level * 6, 0.7); jolt(4 + level, 300); sfx.pop(4, level >= 3); });
-    });
-    // 4. It settles, floating in its aura; the level and the next one appear.
-    later(260 + charge + 1300, () => {
-      ended = true;
-      el.classList.add('done');
-      fx?.motes(true);
-      sfx.shimmer();
-    });
+      numOld.animate([{ scale: 3.2, opacity: 0 }, { scale: 0.86, opacity: 1, offset: 0.55 }, { scale: 1.07, offset: 0.78 }, { scale: 1, opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.3,0,.4,1)', fill: 'both' });
+    };
+    const flipNum = () => {
+      el.classList.add('flip');
+      numOld.animate([{ translate: '0 0', opacity: 1, scale: 1 }, { translate: '0 60%', opacity: 0, scale: 0.7 }], { duration: 260, easing: 'ease-in', fill: 'both' });
+      numNew.animate([{ translate: '0 -40%', opacity: 0, scale: 1.9 }, { translate: '0 0', opacity: 1, scale: 0.9, offset: 0.6 }, { scale: 1.06, offset: 0.82 }, { translate: '0 0', opacity: 1, scale: 1 }], { duration: 420, easing: 'cubic-bezier(.3,0,.4,1)', fill: 'both' });
+    };
+
+    // The beats: each runs once (a tap jumps to the end, running only what sets the picture).
+    const beats: { at: number; run: (skip: boolean) => void; done?: boolean }[] = [
+      { at: B.crouch, run: (skip) => { if (!skip) { sfx.gather(B.leap - B.crouch); me.face('calm', 0); buddy?.face('calm', 0); } } },
+      { at: B.leap, run: (skip) => { if (!skip) { sfx.leap(); spots.forEach((s) => { fire.burst(s.cx, s.foot, 8, 300, true); fire.ring(s.cx, s.foot, s.w * 0.9); }); auras.forEach((a) => fire.swirl(a, (B.ignite - B.leap) / 1000 + 0.12)); } } },
+      { at: B.ignite, run: (skip) => {
+        el.classList.add('lit');
+        actors.forEach((a) => { poseClass(a.el, 'cheer', true); a.face('star', 0); });
+        if (skip) { inFire(INSIDE); return; }
+        glowIn();
+        sfx.ignite(level);
+        flashNow();
+        jolt(10 + level * 3, 560);
+        spots.forEach((s) => { const y = s.foot + APEX * s.px - s.hgt * 0.5; fire.burst(s.cx, y, 18 + level * 4, 560 + level * 40); });
+        const burn = () => { if (closed) return; sfx.burn(2400, level); burns.push(window.setTimeout(burn, 2300)); };
+        burns.push(window.setTimeout(burn, 500));
+      } },
+      { at: B.land, run: (skip) => { if (!skip) { sfx.slam(); jolt(8 + level * 2, 380); spots.forEach((s, i) => { ring(i, 3.2); fire.ring(s.cx, s.foot, s.w * 1.6); fire.burst(s.cx, s.foot, 14 + level * 2, 520, true); }); } } },
+      { at: B.slam, run: (skip) => {
+        if (skip) { el.classList.add('slam'); return; }
+        slamNum();
+        setTimeout(() => { fire.sparks(numBox.cx, numBox.top + 30, 14, 420); sfx.pop(4, true); jolt(6 + level, 260); }, 200);
+      } },
+      { at: B.flip, run: (skip) => {
+        if (skip) { el.classList.add('flip'); return; }
+        flipNum();
+        setTimeout(() => { fire.burst(numBox.cx, numBox.top + 30, 12 + level * 2, 460); sfx.ignite(Math.max(1, level - 1)); jolt(8, 300); }, 160);
+      } },
+      { at: B.done, run: () => { el.classList.add('done'); } },
+    ];
+    const skipToEnd = () => {
+      if (skipped) return;
+      skipped = true;
+      for (const b of beats) if (!b.done) { b.done = true; b.run(true); }
+      el.classList.add('skip');
+      t0 = performance.now() - B.done;
+    };
+    el.addEventListener('click', () => { if (el.classList.contains('done')) close(); else skipToEnd(); });
+
+    const frame = (time: number) => {
+      if (closed) return;
+      if (!t0) t0 = time;
+      const tt = time - t0;
+      for (const b of beats) if (!b.done && tt >= b.at) { b.done = true; b.run(false); }
+      spots.forEach((s, i) => {
+        const p = pose(tt, i * 70);
+        const tr = p.tr ? `${((Math.random() - 0.5) * 2 * p.tr).toFixed(1)}px` : '0px';
+        bodies[i].style.transform = `translate(${tr}, ${(p.y * s.px).toFixed(1)}px) scale(${p.sx.toFixed(3)}, ${p.sy.toFixed(3)})`;
+        const hgt = heat(tt - i * 70, level);
+        const lift = p.y * s.px;
+        // The fire rides with the character: a flicker at its feet while it gathers, then all round it.
+        const a = auras[i];
+        a.cx = s.cx; a.foot = s.foot; a.w = s.w; a.h = s.hgt; a.lift = lift;
+        a.heat = tt < B.ignite ? Math.max(0, hgt - 0.12) * 0.5 : hgt;
+        figs[i].style.setProperty('--sh', (1 - clamp(-lift / (s.hgt * 0.6)) * 0.7).toFixed(2));
+      });
+      heatGlow.style.opacity = Math.min(1, heat(tt, level) / 1.4).toFixed(2);
+      fire.step(Math.min(0.05, (time - (last || time)) / 1000));
+      last = time;
+      fire.draw();
+      raf = requestAnimationFrame(frame);
+    };
+    let last = 0;
+    if (still) {
+      // Reduced motion: the end picture, its fire still (drawn once).
+      for (const b of beats) { b.done = true; b.run(true); }
+      for (let i = 0; i < 70; i++) {
+        auras.forEach((a) => { a.heat = 1; });
+        fire.step(1 / 60);
+      }
+      fire.draw();
+      heatGlow.style.opacity = '0.8';
+      return;
+    }
+    raf = requestAnimationFrame(frame);
   });
 }

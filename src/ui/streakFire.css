@@ -1,0 +1,55 @@
+/* The streak power-up (powerUp.ts): the character crouches, leaps, catches fire at the top of its jump, lands in the
+   flames and the streak number slams in. Bright and flat like the app's character art (owner: "like Duolingo"): a warm
+   sky with turning sun rays; the cartoon fire is drawn on two canvases (flatFire.ts); everything here moves by
+   transform / opacity only. */
+/* Theme colours (owner 2026-11-11). */
+.cel.sf { --sf-c: color-mix(in srgb, var(--rw-n1) 55%, var(--rw-deep2)); overflow: hidden; justify-content: flex-start; padding-top: max(5vh, env(safe-area-inset-top)); color: var(--sf-ink);
+  --sf-bg: #ffffff; --sf-bg2: #ffffff; --sf-ray: rgba(255, 170, 60, .16); --sf-ink: #3c3c3c; --sf-soft: #777;
+  background: var(--sf-bg); }
+@media (prefers-color-scheme: dark) {
+  .cel.sf { --sf-bg: var(--rw-night3); --sf-bg2: var(--rw-night3); --sf-ray: rgba(255, 150, 40, .07); --sf-ink: #f1f3f2; --sf-soft: #aab3b0; }
+}
+.sf-sky { position: absolute; left: 50%; top: 36%; width: 220vmax; aspect-ratio: 1; margin: -110vmax 0 0 -110vmax; pointer-events: none;
+  background: repeating-conic-gradient(var(--sf-ray) 0 9deg, transparent 9deg 18deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 75%); mask: radial-gradient(closest-side, #000 20%, transparent 75%);
+  animation: sf-turn 40s linear infinite; opacity: 0; transition: opacity .5s; }
+.sf.lit .sf-sky { opacity: 0; }
+@keyframes sf-turn { to { rotate: 1turn; } }
+.sf-heat { position: absolute; inset: 0; pointer-events: none; opacity: 0; will-change: opacity;
+  background: radial-gradient(50% 36% at 50% 40%, rgba(255, 170, 40, .28), transparent 72%); }
+.sf-cv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.sf-back { z-index: 1; }
+.sf-front { z-index: 3; }
+.sf-flash { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: #ffffff; }
+.sf-shake { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 100%; flex: 1; }
+.sf-kick { margin: 0 0 4px; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: var(--sf-c); }
+
+.sf-stage { position: relative; width: 100%; max-width: 520px; height: min(50vh, 440px); }
+.sf-fig { position: absolute; left: 50%; bottom: 8%; height: 54%; aspect-ratio: 200 / 262; translate: -50% 0; display: block; }
+.sf-stage.duo .sf-fig { height: 54%; }
+.sf-stage.duo .f0 { left: 30%; }
+.sf-stage.duo .f1 { left: 70%; }
+.sf-body { position: absolute; inset: 0; display: block; transform-origin: 50% 100%; will-change: transform; z-index: 1; }
+.sf-body .fg-actor { position: relative; width: 100%; display: block; }
+.sf-shadow { position: absolute; left: 12%; right: 12%; bottom: -3%; height: 9%; border-radius: 50%; display: block;
+  background: radial-gradient(closest-side, rgba(90, 40, 0, .3), transparent); scale: var(--sh, 1) 1; }
+.sf-ring { position: absolute; left: 50%; bottom: -2%; width: 60%; aspect-ratio: 1; margin-left: -30%; margin-bottom: -30%; display: block; border-radius: 50%; opacity: 0;
+  border: 6px solid var(--rw-n3); pointer-events: none; }
+
+.sf-text { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sf-count { display: flex; flex-direction: column; align-items: center; }
+.sf-num { display: grid; font-size: clamp(92px, 30vw, 156px); font-weight: 1000; line-height: .95; letter-spacing: -.02em; direction: ltr; }
+.sf-n { grid-area: 1 / 1; justify-self: center; opacity: 0; color: var(--sf-c); -webkit-text-stroke: 0; }
+.sf.slam:not(.flip) .sf-n.old, .sf.flip .sf-n.new { opacity: 1; }
+.sf-label { font-size: 22px; font-weight: 900; letter-spacing: .04em; color: var(--sf-soft); text-transform: lowercase; opacity: 0; translate: 0 8px; transition: opacity .3s, translate .3s; }
+.sf.slam .sf-label { opacity: 1; translate: 0 0; }
+.sf-level, .sf-sub { margin: 0; opacity: 0; translate: 0 10px; transition: opacity .4s, translate .4s cubic-bezier(.2, 1.4, .4, 1); }
+.sf-level { margin-top: 8px; font-weight: 900; color: var(--sf-c); }
+.sf-sub { color: var(--sf-soft); font-size: var(--fs-s); max-width: 320px; }
+.sf-ok { margin-top: 14px; opacity: 0; translate: 0 14px; transition: opacity .35s .15s, translate .45s .15s cubic-bezier(.2, 1.5, .4, 1);
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 900; }
+.sf.done :is(.sf-level, .sf-sub, .sf-ok) { opacity: 1; translate: 0 0; }
+.sf.done .sf-sub { transition-delay: .1s; }
+/* Once lit the character glows in the flame's colour. */
+.sf-body .fg-actor { transition: filter .4s ease-out; }
+.sf.lit .sf-body .fg-actor { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rw-n2) 70%, transparent)); }

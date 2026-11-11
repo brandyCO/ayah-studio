@@ -225,9 +225,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
     streakPlaying = true;
     const week = s.week.map((w) => ({ ...w, label: dayFmt.format(parse(w.day)) }));
-    // Then the user's character powers up in its aura (when they made one).
-    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey()))
-      .then(() => (hasFig() ? import('./powerUp').then((p) => p.powerUp(s.days) ?? undefined) : undefined)).finally(() => {
+    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).finally(() => {
       streakPlaying = false;
       catchNext = true;
       heroSig = '';
