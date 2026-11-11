@@ -1,4 +1,6 @@
-// Startup capability check: which export path can this device use?
+// Which export path can this device use? Asked only when it is needed (an export, the device check):
+// each isConfigSupported() call can hold the page for a few hundred ms on a phone. The path found is
+// remembered for this browser version, so later studios and exports skip the check.
 import { SAMPLE_RATE } from '../data/audio';
 
 export interface ExportPath {
@@ -35,7 +37,7 @@ async function audioSupport(codec: string): Promise<boolean> {
   return !!res?.supported;
 }
 
-async function detect(): Promise<Capabilities> {
+async function detect(full: boolean): Promise<Capabilities> {
   if (!('VideoEncoder' in window) || !('AudioEncoder' in window)) {
     return { rows: [['WebCodecs available', false]], path: null };
   }
@@ -45,11 +47,12 @@ async function detect(): Promise<Capabilities> {
     const s = await videoSupport(codec);
     rows.push([`${label} (${codec}) 1080×1920`, s ?? false]);
     if (s && !avc) avc = { codec, hw: s === 'hardware' };
+    if (avc && !full) break; // the export only needs the first one that works
   }
-  const vp9 = await videoSupport(VP9);
-  rows.push([`VP9 fallback 1080×1920`, vp9 ?? false]);
-  const aac = await audioSupport('mp4a.40.2');
-  const opus = await audioSupport('opus');
+  const vp9 = avc && !full ? null : await videoSupport(VP9);
+  if (full || !avc) rows.push([`VP9 fallback 1080×1920`, vp9 ?? false]);
+  const aac = avc || full ? await audioSupport('mp4a.40.2') : false;
+  const opus = !avc || full ? await audioSupport('opus') : false;
   rows.push(['AAC audio (native)', aac], ['Opus audio', opus]);
 
   let path: ExportPath | null = null;
@@ -68,5 +71,25 @@ export function describePath(p: ExportPath): string {
     : `WebM · VP9${p.hardware ? ' (hardware)' : ''} · Opus`;
 }
 
+const KEY = 'exportPath';
+/** The path found before in this browser version, without asking the encoders again (undefined = not known). */
+export function knownPath(): ExportPath | null | undefined {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { ua: string; path: ExportPath | null } | null;
+    if (v && v.ua === navigator.userAgent) return v.path;
+  } catch { /* private window */ }
+  return undefined;
+}
 let cached: Promise<Capabilities> | null = null;
-export const capabilities = () => (cached ??= detect());
+let cachedFull: Promise<Capabilities> | null = null;
+/** The export path (only the checks needed to find it; remembered). `full` = every row, for the device check. */
+export const capabilities = (full = false): Promise<Capabilities> => {
+  if (full) return (cachedFull ??= detect(true));
+  if (cached) return cached;
+  const known = knownPath();
+  if (known !== undefined) return (cached = Promise.resolve({ rows: [], path: known }));
+  return (cached = detect(false).then((c) => {
+    try { localStorage.setItem(KEY, JSON.stringify({ ua: navigator.userAgent, path: c.path })); } catch { /* private window */ }
+    return c;
+  }));
+};

@@ -258,13 +258,14 @@ export function voiceOnset(data: Float32Array, rate: number, timed: number): num
   const win = Math.max(1, Math.round(rate * 0.01));
   const n = Math.floor(data.length / win);
   if (n < 10) return null;
+  const ti = Math.min(n - 1, Math.max(0, Math.round(timed / 0.01)));
+  // Only the windows looked at below (1.5 s before to 3 s after the timing), not the whole reel.
   const rms = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
+  for (let i = Math.max(0, ti - 150); i < Math.min(n, ti + 300); i++) {
     let sum = 0;
     for (let k = i * win; k < (i + 1) * win; k++) sum += data[k] * data[k];
     rms[i] = Math.sqrt(sum / win);
   }
-  const ti = Math.min(n - 1, Math.max(0, Math.round(timed / 0.01)));
   let peak = 0;
   for (let i = ti; i < Math.min(n, ti + 300); i++) peak = Math.max(peak, rms[i]);
   if (peak < 1e-4) return null;

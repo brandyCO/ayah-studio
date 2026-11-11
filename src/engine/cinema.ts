@@ -17,6 +17,9 @@ const cache = new WeakMap<AudioBuffer, Breath>();
 
 /** The recitation's loudness, 50 values a second, scaled so a full voice reads ≈ 1 and smoothed
  *  both ways (a swell rises with the voice and settles over ~0.4 s). Computed once per audio. */
+/** The breath already worked out for this audio, without working it out. */
+export const knownBreath = (audio: AudioBuffer): Breath | undefined => cache.get(audio);
+
 export function breathOf(audio: AudioBuffer): Breath {
   const hit = cache.get(audio);
   if (hit) return hit;
