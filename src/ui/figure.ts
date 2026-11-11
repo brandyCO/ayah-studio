@@ -27,8 +27,8 @@ export const BG: Pair[] = [['#5b8cf0', '#2f5fc4'], ['#3fd0b4', '#13836f'], ['#a9
   ['#ff9aa8', '#d2566c'], ['#79d46a', '#3a9a2c'], ['#3b4a7a', '#121a36'], ['#ffe08a', '#c47f10'],
   // 8 aurora and 9 sun rays: weekly prize pieces (PIECES)
   ['#3dd1ad', '#5b3fc4'], ['#ffd25e', '#e0761f'],
-  // 10 night garden (a 30-day streak), 11 Eid lights (Eid al-Adha)
-  ['#33459a', '#0d1433'], ['#ff9a6b', '#b23a6e']];
+  // 10 night garden (a 30-day streak), 11 Eid lights (Eid al-Adha), 12 Night of Qadr (the last ten nights of Ramadan)
+  ['#33459a', '#0d1433'], ['#ff9a6b', '#b23a6e'], ['#4b3a9e', '#0c0a2c']];
 export const SWATCH: Record<'skin' | 'hairC' | 'headC' | 'outC' | 'bg', Pair[]> = { skin: SKIN, hairC: HAIR, headC: HEADC, outC: CLOTH, bg: BG };
 
 const MAN = 0, WOMAN = 1, BOY = 2, GIRL = 3;
@@ -49,7 +49,7 @@ export function options(slot: Slot, f: Fig): number[] {
     case 'outfit': return [...(b === MAN ? [0, 1, 2, 12, 13, 14, 15, 6] : b === BOY ? [0, 1, 2, 12, 13, 14] : b === WOMAN ? [3, 4, 12, 13, 15, 16, 6] : [3, 2, 12, 13, 16]), 7, 8, 9, 10, 11];
     case 'outC': return n(CLOTH.length);
     case 'glasses': return [0, 1, 2, 3];
-    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
     case 'pose': return [0, 1];
     case 'bg': return n(BG.length);
     // Round 5. The face slots keep their value while the face is off (the builder hides them then).
@@ -82,7 +82,7 @@ export const isPiece = (slot: string, v: number) => PIECES.includes(`${slot}:${v
  *  that are earned, never sold. How: a week in a league's top 3, a streak reached, or a season of the year (kept for
  *  good once earned; seasons come back every year). */
 export type Rarity = 'cute' | 'rare' | 'epic' | 'legendary';
-export type How = 'week' | 's7' | 's30' | 's100' | 's365' | 'ramadan' | 'fitr' | 'hajj' | 'adha';
+export type How = 'week' | 's7' | 's30' | 's100' | 's365' | 'ramadan' | 'qadr' | 'fitr' | 'hajj' | 'adha';
 export const WARDROBE: Record<string, { r: Rarity; how: How }> = {
   'glasses:3': { r: 'cute', how: 'week' }, 'hold:7': { r: 'cute', how: 'week' }, 'hold:6': { r: 'rare', how: 'week' },
   'bg:8': { r: 'rare', how: 'week' }, 'bg:9': { r: 'epic', how: 'week' }, 'outfit:7': { r: 'epic', how: 'week' },
@@ -90,6 +90,8 @@ export const WARDROBE: Record<string, { r: Rarity; how: How }> = {
   'outfit:9': { r: 'legendary', how: 's365' },
   'hold:9': { r: 'rare', how: 'ramadan' }, 'outfit:10': { r: 'epic', how: 'fitr' }, 'outfit:11': { r: 'rare', how: 'hajj' },
   'bg:11': { r: 'epic', how: 'adha' },
+  // The Ramadan season (2026-11-11): the Musaharati's suhoor drum, the iftar dates, the Night of Qadr sky.
+  'hold:10': { r: 'epic', how: 'ramadan' }, 'hold:11': { r: 'cute', how: 'ramadan' }, 'bg:12': { r: 'legendary', how: 'qadr' },
   'outfit:6': { r: 'legendary', how: 'week' },
 };
 /** The week's piece (week 0 = 2026-11-09), as the server gives it. */
@@ -511,6 +513,28 @@ function holds(f: Fig): string {
       s += S('M126 234h32l-5 8h-22z', '#e0a33a', '#9c6a1a', -1, -1) + S('M136 242h12l-2 5h-8z', '#e0a33a', '#9c6a1a', -1, -1);
       return s + hand(74, 206) + hand(142, 196);
     }
+    case 10: {
+      // The Musaharati's suhoor drum (epic, Ramadan): a red and gold baza on a strap at the hip, a stick raised to beat it.
+      s += arm(70, 160, 66, 202, k) + arm(130, 160, 146, 176, k);
+      s += '<path d="M54 202Q62 172 80 158" stroke="#6a3c1a" stroke-width="3.4" fill="none" stroke-linecap="round"/>';
+      s += S('M44 206h44v20q-22 11 -44 0z', '#d0453c', '#8f2420', -2, -2)
+        + '<path d="M46 214l6 6l6 -6l6 6l6 -6l6 6l6 -6l6 6" stroke="#ffd25e" stroke-width="2" fill="none" stroke-linejoin="round"/>'
+        + S('M44 206a22 7 0 1 0 44 0a22 7 0 1 0 -44 0z', '#f6e7c6', '#cdb68a', -1, -1)
+        + '<path d="M44 206a22 7 0 0 0 44 0" stroke="#b9862c" stroke-width="2" fill="none"/>' + shine('M50 214v8', 2.4, .35);
+      s += '<path d="M146 176L96 200" stroke="#5a3214" stroke-width="5" stroke-linecap="round"/><path d="M146 176L97 199.5" stroke="#9a6a3a" stroke-width="2" stroke-linecap="round"/>'
+        + S(circ(96, 200, 4.6), '#f6e7c6', '#cdb68a', -1, -1);
+      return s + hand(66, 204) + hand(146, 176);
+    }
+    case 11: {
+      // Iftar dates (cute, Ramadan): a brass plate of dates held out in both hands, a glass of water on it.
+      s += arm(70, 160, 72, 200, k) + arm(130, 160, 128, 200, k);
+      s += S('M64 204a36 10 0 1 0 72 0a36 10 0 1 0 -72 0z', '#e8b04a', '#a8731e', -2, -2) + '<path d="M70 203a30 7 0 0 0 60 0" stroke="#fff3c4" stroke-width="1.6" fill="none" opacity=".55"/>';
+      for (const [x, y, a] of [[80, 199, -20], [90, 196, 15], [100, 200, -8], [88, 203, 30], [76, 205, 10], [98, 206, -25]] as [number, number, number][]) {
+        s += `<g transform="rotate(${a} ${x} ${y})"><ellipse cx="${x}" cy="${y + 1}" rx="7" ry="4.2" fill="#3a1608"/><ellipse cx="${x}" cy="${y}" rx="7" ry="4.2" fill="#7a3414"/><ellipse cx="${x - 2}" cy="${y - 1.4}" rx="3" ry="1.2" fill="#c06a3a" opacity=".7"/></g>`;
+      }
+      s += S('M112 178h16l-2 24h-12z', '#dff4ff', '#a8cfe0', -1, -1) + '<path d="M114.5 186h11l-1.3 14h-8.4z" fill="#7cc6ec" opacity=".55"/>' + shine('M115 181v17', 1.8, .7);
+      return s + hand(68, 206) + hand(132, 206);
+    }
     default:
       s += arm(70, 160, 74, 204, k) + arm(130, 160, 140, 192, k);
       s += '<circle cx="142" cy="224" r="30" fill="#ffd36b" opacity=".18" class="fg-glow"/><path d="M142 196v10" stroke="#8a5a1c" stroke-width="3"/>';
@@ -808,6 +832,16 @@ export function bgDeco(bg: number, x: number, y: number, r: number): string {
     const p = (rr: number, t: number) => `${(x + Math.cos(t) * rr).toFixed(2)} ${(y + Math.sin(t) * rr).toFixed(2)}`;
     return `<path d="M${x} ${y}L${p(r * .97, a - w)}L${p(r * .97, a + w)}Z" fill="#fff6c8" opacity="${i % 2 ? .22 : .38}"/>`;
   }).join('');
+  if (bg === 12) {
+    // Night of Qadr: soft light coming down from above, a thin crescent, a few rising lights.
+    const rays = [-.5, -.22, .06, .34, .6].map((a, i) => {
+      const x0 = x + a * r * .5, w = r * (.07 + (i % 2) * .04);
+      return `<path d="M${(x0 - w * .3).toFixed(2)} ${y - r}L${(x0 + w * .3).toFixed(2)} ${y - r}L${(x0 + a * r * .9 + w).toFixed(2)} ${y + r}L${(x0 + a * r * .9 - w).toFixed(2)} ${y + r}Z" fill="#fff3c4" opacity="${i % 2 ? .12 : .2}"/>`;
+    }).join('');
+    const m = `M${x - r * .5} ${y - r * .74}a${r * .22} ${r * .22} 0 1 0 ${r * .12} ${r * .4}a${r * .17} ${r * .17} 0 1 1 ${-r * .12} ${-r * .4}z`;
+    return rays + `<path d="${m}" fill="#ffe7a3"/>` + [[.55, -.5, .05], [.7, .2, .04], [-.7, .3, .035], [.3, .6, .03], [-.35, .7, .03]].map(([a, b, k]) =>
+      `<circle cx="${(x + a * r).toFixed(2)}" cy="${(y + b * r).toFixed(2)}" r="${(k * r * 2.4).toFixed(2)}" fill="#ffd36b" opacity=".25"/><circle cx="${(x + a * r).toFixed(2)}" cy="${(y + b * r).toFixed(2)}" r="${(k * r).toFixed(2)}" fill="#fff6d8"/>`).join('');
+  }
   return '';
 }
 /** Head and shoulders for an avatar disc: SVG markup in the disc's own units (centre 20,20, radius r). */

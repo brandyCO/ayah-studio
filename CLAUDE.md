@@ -940,6 +940,20 @@ cloud. Build in this order:
       Suhoor ends at …** with a countdown from the prayer times (only with a location, never guessed; also in the
       Ramadan sheet); **taraweeh**: after Isha a Today line marks tonight, the sheet has a toggle, the recap counts
       the nights (`RamadanData.taraweeh`, `setTaraweeh()`)
+      **Ramadan season** (owner request 2026-11-11): `#/season` (`src/ui/season.ts` + `season.css`, lazy; data
+      `src/data/season.ts`; strings `src/i18n/season.ts`, `snt()`). Before Ramadan: night sky, swaying fanous garland,
+      crescent, a live countdown (days / hours / minutes / seconds to 1 Ramadan 00:00 local, Umm al-Qura + the ±1 shift,
+      `nextRamadan()`), and what unlocks, each locked: **four new characters** (`CAST`: Abu Salim the Musaharati, Noura with
+      the fanous, Teta Huda the iftar host, Yusuf seeking the Night of Qadr; faces off), each bringing a wardrobe piece —
+      new `hold:10` suhoor drum (epic), `hold:11` iftar dates (cute), `bg:12` Night of Qadr (legendary, how `qadr` = the
+      last ten nights) plus the existing fanous `hold:9`; the **Khatm tracker** (30 juz arcs on one ring, filled from
+      `ramadanData().read`; the plan can be picked early); the Ramadan room sky, the Ramadan streak card (a garland on Me's
+      streak card all month, `html.season-ramadan`) and four **seasonal badges** shown on the screen (first night, ten
+      days, Ramadan Khatm, 5 of the last ten nights). In Ramadan the screen is the season's home (day, live ring, today's
+      portion, Dress up); on Eid the recap. Me: a card "Ramadan in N days" (`src/ui/seasonCard.ts`). Android: "Remind me"
+      → notifications 3 days before and on the eve (ids 7600–7601, tap → `#/season`). **First-day teaser**: once, to a
+      new user (only one day opened) right after their account's first successful sync (`initSeason()`; localStorage
+      `seasonTeaser`, synced). No Khatm circle (circles were removed 2026-10-28)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
