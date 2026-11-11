@@ -18,7 +18,9 @@ import { mergePrefs, prefRecords, prefsBehind } from '../ui/prefs';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
 import { installId, jitter, remoteConfig } from '../net';
-import { kvRecords, linkKv, mergeKv, resetKv, scanKv } from './kv';
+// Loaded with the first round (keeps it out of the first load).
+let kvMod: typeof import('./kv') | null = null;
+const loadKv = async () => (kvMod ??= await import('./kv'));
 
 type Kind = 'draft' | 'bookmark' | 'state' | 'setting' | 'reflection' | 'lamp';
 interface Row {
@@ -61,7 +63,7 @@ function loadMeta(user: string): Meta {
     const m = JSON.parse(localStorage.getItem(META_KEY) ?? 'null') as Meta | null;
     if (m && m.user === user && typeof m.pushed === 'object') return m;
     // Another account signed in here before: its other devices' streaks are not this account's.
-    if (m && m.user && m.user !== user) { clearOtherJourneys(); resetKv(); }
+    if (m && m.user && m.user !== user) { clearOtherJourneys(); try { localStorage.removeItem('kvMeta'); } catch { /* ignore */ } }
   } catch {
     /* fresh */
   }
@@ -85,7 +87,7 @@ async function applyRemote(rows: Row[], meta: Meta): Promise<boolean> {
     // One row that cannot be merged (an older or newer app's shape) must never stop the rest syncing.
     try {
     if (r.kind === 'state' && r.id.startsWith('kv:')) {
-      const res = mergeKv(r.id.slice(3), r.data, r.deleted);
+      const res = kvMod!.mergeKv(r.id.slice(3), r.data, r.deleted);
       if (res.print) meta.pushed[key] = res.print; // already on the server: don't send it back
       if (res.changed) kvChanged = true;
     } else if (r.kind === 'state' && r.id === 'bookmarks') {
@@ -164,7 +166,7 @@ async function localRows(user: string): Promise<{ key: string; print: string; ro
     const data = { s: r.s, a: r.a, entries: r.entries };
     add('reflection', r.id, data, JSON.stringify(r.entries), r.entries.every((e) => e.deleted));
   }
-  for (const r of kvRecords()) add('state', `kv:${r.key}`, r.data, r.print, r.deleted);
+  for (const r of (kvMod?.kvRecords() ?? [])) add('state', `kv:${r.key}`, r.data, r.print, r.deleted);
   for (const d of await listDrafts()) add('draft', d.id, { project: d.project, created: d.created, updated: d.updated }, String(d.updated));
   for (const [id, at] of Object.entries(deletedDrafts())) add('draft', id, { updated: at }, `deleted:${at}`, true);
   return out;
@@ -197,6 +199,7 @@ async function round() {
   lastRound = Date.now();
   try {
     const sb = await supabase();
+    const { kvRecords, linkKv, mergeKv, scanKv } = await loadKv();
     const meta = loadMeta(acc.id);
     scanKv(); // what changed here since the last round, before anything arrives
     let kvChanged = false;
@@ -269,7 +272,7 @@ const soon = (ms = 4000) => {
  *  a reward claimed just before leaving would otherwise reach the other devices only at the next open.
  *  This is the round that was already due, only sooner (none after a failure: the back-off holds). */
 const onHide = () => {
-  if (account() && !failures && scanKv()) pending = true; // something else changed here (a lesson, a setting…)
+  if (account() && !failures && kvMod?.scanKv()) pending = true; // something else changed here (a lesson, a setting…)
   if (!pending || failures) return;
   clearTimeout(timer);
   pending = false;
