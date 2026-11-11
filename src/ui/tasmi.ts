@@ -8,6 +8,7 @@ import { displayWords } from '../engine/words';
 import { surahName, t } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h } from './dom';
+import { askMic } from './follow';
 
 // --- recording ---
 
@@ -19,16 +20,24 @@ export class Recorder {
   private stream: MediaStream | null = null;
   get on() { return !!this.mr && this.mr.state === 'recording'; }
   static get supported() { return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia; }
-  async start(): Promise<boolean> {
-    if (this.on) return true;
+  /** Starts recording: '' when it did, else why not ('denied', 'busy' or 'failed'). */
+  async start(): Promise<'' | 'denied' | 'busy' | 'failed'> {
+    if (this.on) return '';
+    if (!(await askMic())) return 'denied';
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       this.chunks = [];
-      this.mr = new MediaRecorder(this.stream);
+      // a type the WebView can record and play back (Android: Opus in WebM; iPhone: AAC in MP4)
+      const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'].find((t) => MediaRecorder.isTypeSupported?.(t));
+      this.mr = type ? new MediaRecorder(this.stream, { mimeType: type }) : new MediaRecorder(this.stream);
       this.mr.ondataavailable = (e) => { if (e.data.size) this.chunks.push(e.data); };
       this.mr.start(1000);
-      return true;
-    } catch { this.release(); return false; }
+      return '';
+    } catch (e) {
+      this.release();
+      const n = (e as DOMException)?.name;
+      return n === 'NotAllowedError' || n === 'SecurityError' ? 'denied' : n === 'NotReadableError' || n === 'AbortError' ? 'busy' : 'failed';
+    }
   }
   /** Stops and returns what was recorded (null when nothing was). */
   stop(): Promise<Blob | null> {
@@ -38,7 +47,7 @@ export class Recorder {
       mr.onstop = () => {
         const b = this.chunks.length ? new Blob(this.chunks, { type: mr.mimeType || 'audio/webm' }) : null;
         this.release();
-        resolve(b && b.size > 2000 ? b : null);
+        resolve(b && b.size > 600 ? b : null);
       };
       mr.stop();
     });

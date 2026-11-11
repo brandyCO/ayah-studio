@@ -14,7 +14,8 @@ import type { PartResult } from './harakatClips';
 
 interface SpeechNative {
   available(): Promise<{ available: boolean; onDevice: boolean }>;
-  start(o: { lang: string; hints?: string[] }): Promise<{ onDevice: boolean }>;
+  start(o: { lang: string; hints?: string[] }): Promise<{ onDevice: boolean; way?: string }>;
+  mic(): Promise<{ granted: boolean }>;
   stop(): Promise<void>;
   addListener(e: 'partial' | 'result', f: (d: { text: string }) => void): Promise<PluginListenerHandle>;
   addListener(e: 'end', f: () => void): Promise<PluginListenerHandle>;
@@ -49,6 +50,18 @@ async function serverToken(): Promise<string | null> {
 /** Whether the harakat are checked too (server set up and signed in). */
 export async function followChecksHarakat(): Promise<boolean> { return !!(await serverToken()); }
 
+/** The last error the phone's recogniser gave before listening stopped ('failed'), for the message. */
+let lastCode = 0;
+/** Why Follow my voice stopped with 'failed', in words: no Arabic on the phone's recogniser, or the code. */
+export function followFailKey(): { key: 'learn.followNoArabic' | 'learn.followFailedCode'; code: number } {
+  return { key: [12, 13, 14, 15].includes(lastCode) ? 'learn.followNoArabic' : 'learn.followFailedCode', code: lastCode };
+}
+/** In the app: asks for the microphone the native way first, so a refusal is clear (Record me). */
+export async function askMic(): Promise<boolean> {
+  if (!native()) return true;
+  try { return (await Speech.mic()).granted; } catch { return true; }
+}
+
 let avail: Promise<boolean> | null = null;
 /** Whether this device can follow a recitation. */
 export function followSupported(): Promise<boolean> {
@@ -79,6 +92,7 @@ const QUIET_MS = 20_000;
 export async function startFollow(on: FollowHandlers): Promise<Follower | null> {
   let alive = true, fails = 0, lastHeard = Date.now();
   let stopNow = () => {};
+  lastCode = 0;
   const finish = (why: Why) => { if (!alive) return; stopNow(); alive = false; clearInterval(quiet); on.ended(why); };
   const quiet = window.setInterval(() => { if (Date.now() - lastHeard > QUIET_MS) finish('quiet'); }, 2000);
   const got = (text: string, final: boolean) => { if (text.trim()) lastHeard = Date.now(); on.heard(text, final); };
@@ -94,13 +108,20 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
     const again = async () => {
       if (!alive) return;
       try { await Speech.start({ lang: 'ar-SA', hints: on.hints?.() ?? [] }); }
-      catch (e) { finish(String((e as { code?: string })?.code ?? e).includes('denied') ? 'denied' : 'failed'); }
+      catch (e) { lastCode = lastCode || -1; finish(String((e as { code?: string })?.code ?? e).includes('denied') ? 'denied' : 'failed'); }
     };
     subs.push(await Speech.addListener('partial', (d) => { if (alive && d.text) { fails = 0; got(d.text, false); } }));
     subs.push(await Speech.addListener('result', (d) => { if (alive) { if (d.text) fails = 0; got(d.text ?? '', true); } }));
-    // 7 no match, 6 silence: just listen again; 9 no permission; others a few times, then give up
-    subs.push(await Speech.addListener('error', (d) => { if (d.code === 9) finish('denied'); else if (d.code !== 6 && d.code !== 7 && ++fails > 4) finish('failed'); }));
-    subs.push(await Speech.addListener('end', () => { if (alive) window.setTimeout(() => void again(), 60); }));
+    // 7 no match, 6 silence: just listen again; 8 busy: again a little later; 9 no permission; others a few
+    // times, then give up (the plugin has already tried every recogniser on the phone for 12/13)
+    let wait = 60;
+    subs.push(await Speech.addListener('error', (d) => {
+      wait = d.code === 8 ? 400 : 60;
+      if (d.code === 9) finish('denied');
+      else if (d.code === 8) { if (++fails > 12) { lastCode = 8; finish('failed'); } }
+      else if (d.code !== 6 && d.code !== 7 && ++fails > 4) { lastCode = d.code; finish('failed'); }
+    }));
+    subs.push(await Speech.addListener('end', () => { if (alive) window.setTimeout(() => void again(), wait); }));
     stopNow = () => { void Speech.stop(); subs.forEach((x) => void x.remove()); };
     await again();
     return { stop: () => finish('stopped') };

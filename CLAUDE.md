@@ -1838,6 +1838,17 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
       (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
       export, held-out report)
+- [x] **Focus page** (owner request 2026-11-11): in a lesson's page view (listen, practise, tasmi', check) and on
+      `#/learn/page/P` the mushaf page fills the screen with no bars and no scrolling; steps, translation, tools and
+      the page links come up with a tap of the small light (`.ls-noor`) or a swipe up from the bottom row. One
+      switch for both (⤢ in the top bar, localStorage `learnFocus`, on by default). **Page memory quiz** = the lesson
+      exercises' run (same bar, feedback strip, good lines, missed card back once, popIn/squash, sounds), asked on
+      the real page: all words hidden in place, the line in question marked, the words asked about pulsing; the
+      answer appears on the page; "where does ayah X start" is answered by tapping the line on the page.
+      **Mic fixes**: SpeechPlugin tries on-device → the default service → each installed (Google first)
+      recognition service, moving on at errors 3/4/11–15 (no Arabic) and keeping the one that worked; messages say
+      "no Arabic" or the error code. Record me asks for the microphone natively first (`Speech.mic`), picks a
+      supported recording type and says why it could not start (denied / busy)
 - [x] **Page memory** (2026-11-10, `src/ui/pageMemory.ts`, `src/data/pageMemory.ts`; path top bar → page icon):
       `#/learn/pages[/J]` — a juz's pages as tiles coloured by strength (Not yet / Needs revision / Getting there /
       Strong, a bar, a dot when due), localStorage `pageStrength` (Leitner boxes 1/2/4/8/16/30 days, fading when unrevised;

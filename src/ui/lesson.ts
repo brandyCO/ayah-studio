@@ -31,13 +31,14 @@ import { drills, meaningCards, type KindCtx } from './lessonKinds';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
-import { followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { followFailKey, followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
 import { drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
+import { reduced } from './juice';
 import { reelReciter } from './prefs';
 
 type Step = 'new' | 'link' | 'whole' | 'water';
@@ -107,13 +108,17 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const meaningBtn = h('button', { class: 'chip', onclick: () => { setPref('learnMeaning', showMeaning() ? 'off' : 'on'); paintChips(); paintText(); } });
   const reciterSel = h('select', { class: 'ls-reciter', 'aria-label': lt('learn.reciter'), onchange: () => { setPref('learnReciter', reciterSel.value); audios = null; stopAll(); } },
     ...TIMED_RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === learnReciter() }, reciterCredit(r))));
-  const tools = h('div', { class: 'ls-tools' }, playBtn, speedBtn, repBtn, viewBtn, meaningBtn, reciterSel);
+  const memExtras = h('div', { class: 'ls-memextra' });
+  const tools = h('div', { class: 'ls-tools' }, memExtras, playBtn, speedBtn, repBtn, viewBtn, meaningBtn, reciterSel);
   const art = h('span', { class: 'ls-tree' });
+  // Focus page: the page fills the screen between two thin margins; the tools come up only when asked.
+  const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
+  const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
   root.append(
     h('header', { class: 'ls-head' },
       h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
-      art),
+      noorBtn, focusBtn, art),
     stepsEl, phaseEl,
     h('main', { class: 'ls-main' }, textEl, pop), trEl,
     h('div', { class: 'ls-turn' }, ring, status),
@@ -153,6 +158,31 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   /** Extra page words that show the same display word (the few ayat whose word positions differ). */
   const moreEls: [string, HTMLElement][] = [];
   const showMeaning = () => pref('learnMeaning', ['on', 'off'], 'on') === 'on';
+  const focusOn = () => pref('learnFocus', ['on', 'off'], 'on') === 'on';
+  const svgIcon = (d: string) => { const e = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); e.setAttribute('viewBox', '0 0 24 24'); e.setAttribute('width', '22'); e.setAttribute('height', '22'); e.setAttribute('aria-hidden', 'true'); e.innerHTML = `<path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`; return e; };
+  const FOCUS_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', FOCUS_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
+  // Swipe up from the bottom margin brings the tools up for a moment; a tap elsewhere puts them away.
+  let swipeY = -1;
+  actions.addEventListener('pointerdown', (e) => { swipeY = e.clientY; });
+  actions.addEventListener('pointermove', (e) => { if (swipeY >= 0 && swipeY - e.clientY > 36 && root.classList.contains('ls-focus')) { swipeY = -1; peek(true); } });
+  actions.addEventListener('pointerup', () => { swipeY = -1; });
+  root.addEventListener('click', (e) => { if (root.classList.contains('peek') && !(e.target as Element).closest('.ls-tools, .ls-trs, .ls-steps, .ls-noor')) peek(false); });
+  new ResizeObserver(() => { if (root.classList.contains('ls-focus')) textEl.querySelectorAll<HTMLElement>('.ls-page').forEach(fitPage); }).observe(textEl.parentElement ?? textEl);
+  /** Focus page is on in the page view while the page itself is the lesson (not Meaning or Exercises). */
+  function paintFocus() {
+    const on = focusOn() && pageView() && !kindEl && phase !== 'done';
+    const was = root.classList.contains('ls-focus');
+    root.classList.toggle('ls-focus', on);
+    if (!on) peek(false);
+    focusBtn.hidden = !pageView() || !!kindEl;
+    focusBtn.replaceChildren(svgIcon(on ? FOCUS_OUT : FOCUS_IN));
+    focusBtn.setAttribute('aria-label', lt(on ? 'learn.focusOff' : 'learn.focusOn'));
+    if (on !== was) requestAnimationFrame(() => textEl.querySelectorAll<HTMLElement>('.ls-page').forEach(fitPage));
+  }
+  function peek(on: boolean) {
+    root.classList.toggle('peek', on);
+    noorBtn.setAttribute('aria-expanded', String(on));
+  }
   const speed = () => Number(pref('learnSpeed', ['1', '0.75'], '1'));
   const reps = () => Number(pref('learnReps', ['1', '3', '5'], '3'));
 
@@ -253,6 +283,10 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   /** Same fit as the reader: the widest line spans the page, 15 lines over the height. */
   function fitPage(el: HTMLElement) {
     if (!el.isConnected) return;
+    if (root.classList.contains('ls-focus')) {
+      const main = el.closest('.ls-main') as HTMLElement | null;
+      if (main) el.style.height = `${main.clientHeight}px`;
+    } else el.style.height = '';
     const lh = Math.floor((el.clientHeight - 10) / 15);
     el.style.setProperty('--lh', `${lh}px`);
     el.style.setProperty('--f', '30px');
@@ -270,12 +304,14 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     textEl.classList.toggle('ls-kind', !!kindEl);
     if (kindEl) {
       root.classList.remove('ls-pageview');
+      paintFocus();
       wordEls.clear(); moreEls.length = 0;
       trEl.replaceChildren();
       if (kindEl.parentElement !== textEl) textEl.replaceChildren(kindEl);
       return;
     }
     root.classList.toggle('ls-pageview', pageView());
+    paintFocus();
     if (pageView()) { paintPage(); return; }
     trEl.replaceChildren();
     wordEls.clear(); moreEls.length = 0;
@@ -334,10 +370,13 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       const slips = new Set([...helped, ...skip, ...skipP]).size;
       const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
         h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
+      // Focus page: only the voice, the next-word prompt and Show the text sit under the page; the rest is with the tools.
+      const extra = [follower ? '' : recBtn, step === 'new' ? b(lt('learn.practiseFirst'), () => go('practice')) : ''];
+      const focus = root.classList.contains('ls-focus');
+      memExtras.replaceChildren(...(focus ? extra : []));
       actions.replaceChildren(
         h('p', { class: 'ls-hint muted small' }, slips ? lt(skip.size || skipP.size ? 'learn.followSkipped' : 'learn.slipsSoFar', { n: slips }) : lt(follower ? 'learn.followHint' : 'learn.memoryHint')),
-        folBtn, b(lt('learn.stuck'), promptNext, 'chip ts-stuck'), follower ? '' : recBtn,
-        step === 'new' ? b(lt('learn.practiseFirst'), () => go('practice')) : '', primary(lt('learn.reveal'), () => go('check')));
+        folBtn, b(lt('learn.stuck'), promptNext, 'chip ts-stuck'), ...(focus ? [] : extra), primary(lt('learn.reveal'), () => go('check')));
     } else if (phase === 'check') {
       const total = new Set([...helped, ...missed]).size;
       let all = 0;
@@ -409,7 +448,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         follower = null;
         if (why === 'denied') toast(lt('learn.followDenied'));
         else if (why === 'limit') toast(lt('learn.followLimit'));
-        else if (why === 'failed') toast(lt('learn.followFailed'));
+        else if (why === 'failed') { const f = followFailKey(); toast(lt(f.key, { code: f.code })); }
         else if (why === 'quiet') toast(lt('learn.followQuiet'));
         if (phase === 'memory') paintActions();
       },
@@ -469,7 +508,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
   async function toggleRec() {
     if (rec.on) { await stopRec(); paintActions(); return; }
-    if (!(await rec.start())) { toast(lt('learn.noMic')); return; }
+    const why = await rec.start();
+    if (why) { toast(lt(why === 'denied' ? 'learn.followDenied' : why === 'busy' ? 'learn.micBusy' : 'learn.noMic')); return; }
     haptic(10);
     paintActions();
   }
@@ -513,12 +553,15 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     pop.hidden = true;
     peeked.clear();
     kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), () => go('memory')) : null;
+    if (root.classList.contains('ls-focus') && !reduced()) textEl.animate([{ opacity: 0.25, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 420, easing: 'ease-out' });
     textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
     paintText();
     paintActions();
     status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
     root.classList.toggle('ls-memory', p === 'memory');
+    root.classList.toggle('ls-check', p === 'check');
+    if (p !== 'memory') memExtras.replaceChildren();
   }
 
   function startStep() {
