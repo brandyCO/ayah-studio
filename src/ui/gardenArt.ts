@@ -534,7 +534,7 @@ const WARM = 'rgba(255, 210, 130, A)';
 
 /** Height of a decoration in tile widths (hit tests). */
 export const decoHeight = (k: DecoKind) => ({ lamp: 0.9, flowers: 0.25, stones: 0.1, bench: 0.35, pond: 0.12, fountain: 0.7, arch: 1.25, pavilion: 1.3, moongate: 1.15, starwell: 1.2,
-  goldfountain: 0.95, winnerarch: 1.25, silvergate: 1.15, silverlamps: 0.9, bronzebench: 0.5, bronzelantern: 0.95 })[k];
+  goldfountain: 0.95, winnerarch: 1.25, silvergate: 1.15, silverlamps: 0.9, bronzebench: 0.5, bronzelantern: 0.95, juzgate: 1.4 })[k];
 /** Ranks prizes: a won decoration in its metal (gold #1, silver #2, bronze #3), light / mid / shade. */
 const METAL = {
   gold: ['#ffe7a0', '#e0b04a', '#a8771f'], silver: ['#f4f6f8', '#c3c9d0', '#8d949c'], bronze: ['#f0c39a', '#c8834f', '#8d5530'],
@@ -762,6 +762,35 @@ export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number,
       drawDeco(ctx, 'bench', cx, cy, u, t, night, false, METAL.bronze);
       star8(ctx, cx - u * 0.06, cy - u * 0.36, u * 0.045, dim(METAL.bronze[0]), Math.PI / 8);
       star8(ctx, cx - u * 0.06, cy - u * 0.36, u * 0.02, '#fff0dc', Math.PI / 8);
+      break;
+    }
+    case 'juzgate': { // a juz checkpoint passed: a tall jade gate, gold-edged, a lantern hanging in it, a star on top
+      const jade = ['#dff5ec', '#86cdb3', '#3f8f78'], gold = METAL.gold.map(dim);
+      prizeShine(ctx, cx, cy, u, t, 'rgba(170, 240, 210, A)', 1.2);
+      ctx.save();
+      ctx.translate(cx, cy); ctx.scale(1.12, 1.12); ctx.translate(-cx, -cy);
+      drawDeco(ctx, 'arch', cx, cy, u, t, night, false, jade);
+      ctx.restore();
+      // Gold line along the arch.
+      const lx = cx - 0.28 * u, ly = cy - 0.14 * u - u * 0.95, rx = cx + 0.28 * u, ry = cy + 0.14 * u - u * 0.95;
+      const ax = (lx + rx) / 2, ay = (ly + ry) / 2 - u * 0.4;
+      ctx.strokeStyle = gold[1]; ctx.lineWidth = Math.max(1, u * 0.016); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(lx + u * 0.03, ly - u * 0.33, ax, ay); ctx.quadraticCurveTo(rx - u * 0.02, ry - u * 0.33, rx, ry); ctx.stroke();
+      // Gold caps on the columns.
+      for (const [x, y] of [[cx - 0.28 * u, cy - 0.14 * u], [cx + 0.28 * u, cy + 0.14 * u]] as const) {
+        ctx.fillStyle = gold[1]; ctx.beginPath(); ctx.ellipse(x, y - u * 0.96, u * 0.06, u * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = gold[0]; ctx.beginPath(); ctx.arc(x, y - u * 1.0, u * 0.022, 0, Math.PI * 2); ctx.fill();
+      }
+      star8(ctx, ax, ay - u * 0.06, u * 0.045, gold[0], t * 0.25);
+      star8(ctx, ax, ay - u * 0.06, u * 0.02, '#fffbe6', t * 0.25 + Math.PI / 8);
+      // The lantern, swaying a little.
+      const sw = Math.sin(t * 1.2) * u * 0.01, lyy = ay + u * 0.32;
+      ctx.strokeStyle = gold[2]; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay + u * 0.02); ctx.lineTo(ax + sw, lyy - u * 0.06); ctx.stroke();
+      glowAt(ctx, ax + sw, lyy, u * (night ? 0.34 : 0.2), WARM, night ? 0.75 : 0.45);
+      ctx.fillStyle = gold[1]; ctx.fillRect(ax + sw - u * 0.035, lyy - u * 0.07, u * 0.07, u * 0.016);
+      ctx.fillStyle = `rgba(255, 214, 140, ${0.88 + 0.12 * Math.sin(t * 2.4)})`;
+      ctx.beginPath(); ctx.ellipse(ax + sw, lyy, u * 0.04, u * 0.058, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = gold[1]; ctx.fillRect(ax + sw - u * 0.025, lyy + u * 0.05, u * 0.05, u * 0.014);
       break;
     }
     case 'bronzelantern': { // the garden lamp in bronze, a turning star on top

@@ -1772,7 +1772,19 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       before the current step (the first one carries the START mark); surahs more than one behind or three ahead are
       **folded into one line per juz** (surahs, first – last, grown bar; a tap opens the juz). Small phones: the top bar's
       Choose pill shows only its icon and the unit banner puts the Arabic name under the title (< 375 px), so the page
-      never zooms out. Still to come in this thread:
+      never zooms out.
+      More kinds of step (`unitsOf(…, ctx)` in `src/data/learnPath.ts`): **Page N** after the lesson that finishes a mushaf
+      page (held by the surah on that page that comes last in path order; a surah's last page comes after its tasmi') →
+      the page memory screen, done once the page is recited whole there (`learnPageTasmi`; then back to the path);
+      **Similar ayat** at each page end / surah end when the ayat since the last one have similar ayat → the similar sheet
+      with "I see the differences" (`learnSimilar`); a **chest** every 4 lessons (`PATH_CHEST` 15 Light, `lc:{s}:{a}`,
+      opened on the path with the chest moment). A grown surah counts everything before its tasmi' as done. Parts split by
+      lessons only. **Juz checkpoint** after the last surah (in path order) of the surahs starting in a juz, open once all
+      are grown: recite the juz's weakest page (`#/learn/page/P`, recite mode, sessionStorage `pmGate`); a pass (few slips
+      or clean) raises the **juz gate** (`grantJuzGate()`, deco `juzgate`, owned `s:gate:{j}`, synced; drawn in jade and
+      gold with a hanging lantern) shown under Juz gates in Your garden, + `GATE_LIGHT` 50. **Daily ring** beside
+      Continue: today's lessons (`DayRec.ls`) against `goals().lessons`; a tap sets it (1/2/3 a day or none), the same goal as
+      on Me. Continue follows the step carrying START (reviews first, then a gate, then the path). Still to come in this thread:
       the 114 trees redrawn as vectors,
       lessons in Ranks / quests / goals
 - [x] **Lesson kinds** (2026-11-10, `src/ui/lessonKinds.ts`): a new chunk now goes Meaning → Listen → Practise →
