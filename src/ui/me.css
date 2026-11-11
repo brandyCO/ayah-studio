@@ -195,33 +195,50 @@
 .goal-harvest:active { translate: 0 3px; box-shadow: 0 1px 0 color-mix(in srgb, var(--rw-n1, #b06000) 70%, #000); }
 .goal-harvest b { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .goal-harvest svg { width: 18px; height: 18px; }
-/* The streak card's sky by the time of day (me.ts paintSky): night is the look above; dawn, day and dusk below. */
-.me-hero.sky-dawn {
-  background:
-    radial-gradient(1.2px 1.2px at 14% 12%, #fffa 99%, transparent), radial-gradient(1px 1px at 80% 10%, #fff8 99%, transparent),
+/* The streak card's sky in the seven times of the du'a lanterns (me.ts paintSky). Without a class: the Isha night above. */
+.me-hero[class*='sky-'] { --st: radial-gradient(1.4px 1.4px at 10% 14%, #fff 99%, transparent), radial-gradient(1.1px 1.1px at 25% 30%, #fffc 99%, transparent),
+    radial-gradient(1.6px 1.6px at 84% 12%, #fff 99%, transparent), radial-gradient(1px 1px at 70% 34%, #fff9 99%, transparent),
+    radial-gradient(1.2px 1.2px at 46% 8%, #fffb 99%, transparent), radial-gradient(1px 1px at 92% 46%, #fff9 99%, transparent),
+    radial-gradient(1px 1px at 58% 22%, #fff8 99%, transparent), radial-gradient(1.2px 1.2px at 6% 44%, #fffa 99%, transparent); }
+/* Before dawn: the last of the night, a thin crescent, a first blue line on the horizon. */
+.me-hero.sky-wake { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%2326326a'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%23151a40'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%23151a40'/%3E%3Cpath d='M250 70h4v5h-4zM262 70h4v5h-4zM295 52h2v4h-2z' fill='%23ffd88a'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, var(--st), radial-gradient(120% 40% at 50% 118%, #3f6aa8 0%, transparent 70%),
+    linear-gradient(180deg, #0f1235 0%, #232a63 60%, #34488a 100%); box-shadow: 0 6px 0 #141a45; }
+/* Fajr: rose and pale gold rising under a lilac sky, the stars fading, the sun not yet up. */
+.me-hero.sky-fajr { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffe9f0' fill-opacity='0.5'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 72% 26% / 24% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%23a08cc0'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%2362568e'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%2362568e'/%3E%3Cpath d='M250 70h4v5h-4zM262 70h4v5h-4zM295 52h2v4h-2z' fill='%23ffe2a8'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, radial-gradient(1px 1px at 18% 12%, #fff9 99%, transparent), radial-gradient(1px 1px at 78% 9%, #fff7 99%, transparent),
     radial-gradient(90% 50% at 50% 112%, #fff0b0 0%, #ffc59a 40%, transparent 75%),
-    linear-gradient(180deg, #3f5aa8 0%, #8c86c8 45%, #e3a4be 78%, #ffd1a6 100%);
-  box-shadow: 0 6px 0 #3e4f8e;
-}
-.me-hero.sky-day {
-  background:
-    radial-gradient(16% 6% at 42% 7%, #ffffffe8 40%, transparent 72%), radial-gradient(10% 5% at 48% 5%, #fff 45%, transparent 72%),
+    linear-gradient(180deg, #3f5aa8 0%, #8c86c8 45%, #e3a4be 78%, #ffd1a6 100%); box-shadow: 0 6px 0 #3e4f8e; }
+/* Dhuhr: high clear blue, the sun overhead, a few clouds. */
+.me-hero.sky-dhuhr { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffffff' fill-opacity='0.95'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 36% 5% / 28% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffffff' fill-opacity='0.85'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 96% 44% / 20% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffffff' fill-opacity='0.75'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 2% 50% / 16% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%237cc0ec'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%234b97cf'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%234b97cf'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, radial-gradient(16% 6% at 42% 7%, #ffffffe8 40%, transparent 72%), radial-gradient(10% 5% at 48% 5%, #fff 45%, transparent 72%),
     radial-gradient(20% 7% at 88% 66%, #ffffffc8 40%, transparent 72%), radial-gradient(14% 6% at 10% 70%, #ffffffb0 40%, transparent 72%),
-    linear-gradient(180deg, #2f86de 0%, #4fa8ec 55%, #8fd0f7 100%);
-  box-shadow: 0 6px 0 #1f65ad;
-}
-.me-hero.sky-dusk {
-  background:
-    radial-gradient(1.2px 1.2px at 20% 10%, #fff9 99%, transparent), radial-gradient(1px 1px at 66% 14%, #fff7 99%, transparent),
+    linear-gradient(180deg, #2f86de 0%, #4fa8ec 55%, #8fd0f7 100%); box-shadow: 0 6px 0 #1f65ad; }
+/* Asr: the afternoon turns golden, the sun lower, a warm haze. */
+.me-hero.sky-asr { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23fff6e0' fill-opacity='0.8'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 24% 8% / 26% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23fff2d6' fill-opacity='0.6'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 98% 42% / 18% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%23d3bd8e'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%239a8460'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%239a8460'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, radial-gradient(20% 7% at 30% 10%, #ffffffb8 40%, transparent 72%),
+    radial-gradient(110% 50% at 50% 115%, #ffe2a0 0%, transparent 72%),
+    linear-gradient(180deg, #3d8fd0 0%, #79b6dc 50%, #e9cf98 100%); box-shadow: 0 6px 0 #2f6f9e; }
+/* Maghrib: the sun at the horizon, orange into magenta. */
+.me-hero.sky-maghrib { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffb8a0' fill-opacity='0.45'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 12% 34% / 22% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cg fill='%23ffc0a0' fill-opacity='0.35'%3E%3Ccircle cx='34' cy='26' r='12'/%3E%3Ccircle cx='56' cy='18' r='16'/%3E%3Ccircle cx='80' cy='25' r='11'/%3E%3Crect x='22' y='25' width='70' height='13' rx='6.5'/%3E%3C/g%3E%3C/svg%3E") 92% 48% / 16% auto no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%238a3f6e'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%234a2550'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%234a2550'/%3E%3Cpath d='M250 70h4v5h-4zM262 70h4v5h-4zM295 52h2v4h-2z' fill='%23ffcf8a'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, radial-gradient(1px 1px at 22% 9%, #fff8 99%, transparent),
     radial-gradient(110% 55% at 50% 115%, #ffc06a 0%, #ff7f50 45%, transparent 78%),
-    linear-gradient(180deg, #3b2a78 0%, #a24f84 52%, #f07a5c 88%, #ffb066 100%);
-  box-shadow: 0 6px 0 #5a2a5c;
-}
-/* The moon by night; a sun by dawn, day and dusk (low and warm at both ends of the day). */
-.me-hero.sky-day::before, .me-hero.sky-dawn::before, .me-hero.sky-dusk::before { transform: none;
+    linear-gradient(180deg, #3b2a78 0%, #a24f84 52%, #f07a5c 88%, #ffb066 100%); box-shadow: 0 6px 0 #5a2a5c; }
+/* Isha: deep blue night, the crescent, stars coming out, a last glow low down. */
+.me-hero.sky-isha { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%233a3473'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%231e1a46'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%231e1a46'/%3E%3Cpath d='M250 70h4v5h-4zM262 70h4v5h-4zM295 52h2v4h-2z' fill='%23ffd88a'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, var(--st), radial-gradient(120% 50% at 50% 115%, #7a4a8e 0%, transparent 70%),
+    linear-gradient(180deg, #1d1446 0%, #33306e 62%, #4b3f7e 100%); box-shadow: 0 6px 0 #22184d; }
+/* Sleep: the quiet of the night, the moon high and full of light, every star out. */
+.me-hero.sky-sleep { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 74Q60 46 120 64T240 56T400 64V120H0Z' fill='%231e2450'/%3E%3Cpath d='M0 96Q70 78 150 90Q200 96 236 88V70Q236 54 258 48Q280 54 280 70V88H290V48L294 36L298 48V88Q340 84 400 92V120H0Z' fill='%230f122e'/%3E%3Cpath d='M256 42h4v7h-4z' fill='%230f122e'/%3E%3C/svg%3E") bottom / 100% 30% no-repeat, var(--st), radial-gradient(1px 1px at 34% 18%, #fff9 99%, transparent), radial-gradient(1px 1px at 88% 30%, #fff8 99%, transparent),
+    linear-gradient(180deg, #0a0c26 0%, #161a44 70%, #1f2552 100%); box-shadow: 0 6px 0 #0b0e2e; }
+/* Each sky starts with its own horizon (far hills, the near ridge with a masjid, lit windows after dark) and soft
+   clouds by day, all background layers so nothing covers the card's content (premium pass, 2026-11-11). */
+/* What hangs in each sky: a crescent (before dawn, Isha), a full moon (sleep), the sun (low at Fajr and Maghrib, high at Dhuhr). */
+.me-hero.sky-wake::before { top: 30px; box-shadow: -5px 3px 0 0 #dfe6ff; }
+.me-hero.sky-sleep::before { transform: none; background: radial-gradient(circle at 42% 40%, #fffdf2 0 50%, #f3eccb 66%, transparent 70%); box-shadow: 0 0 22px 6px rgba(240, 236, 210, .3); }
+.me-hero.sky-fajr::before, .me-hero.sky-dhuhr::before, .me-hero.sky-asr::before, .me-hero.sky-maghrib::before { transform: none;
   background: radial-gradient(circle, #fffbe6 0 38%, #ffe27a 52%, #ffc94a 64%, transparent 70%); box-shadow: 0 0 24px 8px rgba(255, 220, 120, .45); }
-.me-hero.sky-dawn::before { top: 30px; background: radial-gradient(circle, #fffbea 0 36%, #ffe3a6 56%, #ffc98a 66%, transparent 71%); box-shadow: 0 0 26px 10px rgba(255, 210, 160, .5); }
-.me-hero.sky-dusk::before { top: 26px; background: radial-gradient(circle, #fff3d6 0 34%, #ffb36a 56%, #ff8a50 66%, transparent 71%);
-  box-shadow: 0 0 26px 10px rgba(255, 150, 90, .45); }
-.me-hero.sky-day .me-status { color: #fff; text-shadow: 0 1px 2px rgba(0, 40, 90, .35); }
-.me-hero.sky-day .me-count b { text-shadow: 0 3px 0 rgba(10, 60, 120, .3); }
+.me-hero.sky-fajr::before { top: 34px; background: radial-gradient(circle, #fffbea 0 36%, #ffe3a6 56%, #ffc98a 66%, transparent 71%); box-shadow: 0 0 26px 10px rgba(255, 210, 160, .5); }
+.me-hero.sky-dhuhr::before { top: 10px; }
+.me-hero.sky-asr::before { top: 22px; background: radial-gradient(circle, #fff6dc 0 36%, #ffd27a 54%, #ffb54a 64%, transparent 70%); }
+.me-hero.sky-maghrib::before { top: 34px; width: 34px; height: 34px; background: radial-gradient(circle, #fff3d6 0 32%, #ffb36a 54%, #ff8a50 66%, transparent 71%);
+  box-shadow: 0 0 28px 12px rgba(255, 140, 80, .5); }
+.me-hero.sky-dhuhr .me-status, .me-hero.sky-asr .me-status { color: #fff; text-shadow: 0 1px 2px rgba(0, 40, 90, .35); }
+.me-hero.sky-dhuhr .me-count b, .me-hero.sky-asr .me-count b { text-shadow: 0 3px 0 rgba(10, 60, 120, .3); }
+/* The small pills sit over the horizon: a soft dark glass so they read on every sky, light skies included. */
+.me-hero[class*='sky-'] .me-chip { color: #fff; background: rgba(12, 16, 40, .34); border-color: rgba(255, 255, 255, .16);
+  -webkit-backdrop-filter: none; backdrop-filter: none; }

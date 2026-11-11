@@ -115,19 +115,23 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
-  // The streak card's sky follows the user's time of day (owner request 2026-11-11): dawn from Fajr, day, golden dusk
-  // before Maghrib, night after Isha; by the hour until a location gives the prayer times.
+  // The streak card's sky follows the user's day in the same seven times as the du'a lanterns (owner request
+  // 2026-11-11): before dawn, Fajr, Dhuhr, Asr, Maghrib, Isha, and the night's sleep, each its own sky. From the prayer
+  // times when a location is set, else by the hour.
+  const SKIES = ['wake', 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'sleep'] as const;
   const paintSky = async () => {
-    const now = new Date(), hr = now.getHours();
-    let sky = hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr < 16 ? 'day' : hr >= 16 && hr < 19 ? 'dusk' : 'night';
+    const now = new Date(), hr = now.getHours() + now.getMinutes() / 60;
+    let sky: (typeof SKIES)[number] = hr >= 3 && hr < 5 ? 'wake' : hr >= 5 && hr < 7 ? 'fajr' : hr >= 7 && hr < 15 ? 'dhuhr'
+      : hr >= 15 && hr < 17.5 ? 'asr' : hr >= 17.5 && hr < 19 ? 'maghrib' : hr >= 19 && hr < 22 ? 'isha' : 'sleep';
     try {
       const p = await prayerDay(now);
       if (p) {
-        const at = now.getTime(), [fajr, sunrise, , , maghrib, isha] = p.map((d) => d.getTime());
-        sky = at >= fajr && at < sunrise + 45 * 60_000 ? 'dawn' : at >= sunrise && at < maghrib - 75 * 60_000 ? 'day' : at >= fajr && at < isha ? 'dusk' : 'night';
+        const at = now.getTime(), M = 60_000, [fajr, sunrise, , asr, maghrib, isha] = p.map((d) => d.getTime());
+        sky = at >= fajr - 120 * M && at < fajr ? 'wake' : at >= fajr && at < sunrise + 30 * M ? 'fajr' : at >= sunrise && at < asr ? 'dhuhr'
+          : at >= asr && at < maghrib - 25 * M ? 'asr' : at >= maghrib - 25 * M && at < isha ? 'maghrib' : at >= isha && at < isha + 150 * M ? 'isha' : 'sleep';
       }
-    } catch { /* hours as above */ }
-    for (const k of ['dawn', 'day', 'dusk', 'night']) hero.classList.toggle(`sky-${k}`, k === sky);
+    } catch { /* by the hour, as above */ }
+    for (const k of SKIES) hero.classList.toggle(`sky-${k}`, k === sky);
   };
   void paintSky();
   // Pieces earned for the character (streaks, seasons) wait here in a chest (src/ui/wardrobeCard.ts, lazy).
