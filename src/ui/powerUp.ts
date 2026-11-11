@@ -19,6 +19,8 @@ import { two } from './flat';
 import './cel.css';
 import './powerUp.css';
 
+let fireIds = 0;
+
 /** Streak days at which each power level starts. */
 export const LEVELS: readonly number[] = [1, 7, 30, 100, 365];
 export const powerLevel = (days: number) => LEVELS.reduce((l, d, i) => (days >= d ? i + 1 : l), 1);
@@ -244,8 +246,35 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
   const shake = h('div', { class: 'sf-shake' },
     h('p', { class: 'sf-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker')),
     stage, text);
+  // Inside the flame (owner: "his colour becomes as if he is inside the flame"): the character is lit by the fire
+  // itself, not seen through it. A gradient map recolours him in the flame's own tones (dark → deep, light → the
+  // flame's pale core), blended with his own colours by `k`.
+  const fid = `pu-in-${++fireIds}`;
+  const fp = rewardPalette();
+  const ch = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const stops = [fp.deep2, fp.n3, fp.n2, fp.hi, fp.core].map(ch);
+  const tv = (i: number) => stops.map((c) => c[i].toFixed(3)).join(' ');
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('style', 'position:absolute;width:0;height:0');
+  svg.innerHTML = `<filter id="${fid}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".3 .59 .11 0 0 .3 .59 .11 0 0 .3 .59 .11 0 0 0 0 0 1 0" result="g"/>`
+    + `<feComponentTransfer in="g" result="m"><feFuncR type="table" tableValues="${tv(0)}"/><feFuncG type="table" tableValues="${tv(1)}"/><feFuncB type="table" tableValues="${tv(2)}"/></feComponentTransfer>`
+    + `<feComposite in="m" in2="SourceGraphic" operator="arithmetic" k1="0" k2="0" k3="1" k4="0"/></filter>`;
+  const mixer = svg.querySelector('feComposite')!;
+  const inFire = (k: number) => {
+    mixer.setAttribute('k2', k.toFixed(3));
+    mixer.setAttribute('k3', (1 - k).toFixed(3));
+    bodies.forEach((b) => { b.style.filter = `url(#${fid})`; });
+  };
+  const INSIDE = 0.8;
+  const glowIn = () => {
+    const t1 = performance.now();
+    const step = () => { const u = Math.min(1, (performance.now() - t1) / 420); inFire(INSIDE * (1 - (1 - u) ** 3)); if (u < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
   const el = h('div', { class: `cel go sf sf-l${level}${still ? ' done slam' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label },
-    h('span', { class: 'sf-sky', 'aria-hidden': 'true' }), heatGlow, back, shake, front, flash);
+    svg, h('span', { class: 'sf-sky', 'aria-hidden': 'true' }), heatGlow, back, shake, front, flash);
 
   return new Promise((resolve) => {
     const frames = still ? null : fpsStart('Power up');
@@ -318,7 +347,8 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
       { at: B.ignite, run: (skip) => {
         el.classList.add('lit');
         actors.forEach((a) => { poseClass(a.el, 'cheer', true); a.face('star', 0); });
-        if (skip) return;
+        if (skip) { inFire(INSIDE); return; }
+        glowIn();
         sfx.ignite(level);
         flashNow();
         jolt(10 + level * 3, 560);

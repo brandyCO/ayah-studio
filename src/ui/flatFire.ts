@@ -179,10 +179,17 @@ export class FlatFire {
     for (const b of this.bits) if (b.kind === 'drop' || (b.kind === 'shard' && !b.front)) this.drawBit(this.bx, b);
     for (const a of this.auras) {
       if (a.heat < 0.3) continue;
-      // In front: the same flame again, see-through, so the character's colours take on the flame's (he is inside it).
-      this.fx.globalAlpha = Math.min(1, (a.heat - 0.3) / 0.4) * 0.36;
-      this.bigFlame(this.fx, a);
-      this.fx.globalAlpha = 1;
+      // In front, only low down: the flame's base closes over his feet, fading in from his knees, so he stands
+      // in the fire rather than in front of it.
+      const c = this.fx, foot = a.foot + a.lift, top = foot - a.h * 0.2, n = 6, k = Math.min(1, (a.heat - 0.3) / 0.4);
+      for (let i = 0; i < n; i++) {
+        const y0 = top + ((foot - top) * i) / n;
+        c.save();
+        c.beginPath(); c.rect(a.cx - a.w * 2, y0, a.w * 4, i === n - 1 ? a.h : (foot - top) / n + 0.5); c.clip();
+        c.globalAlpha = k * ((i + 1) / n) ** 1.4;
+        this.bigFlame(c, a);
+        c.restore();
+      }
     }
     for (const b of this.bits) if ((b.kind === 'shard' && b.front) || b.kind === 'spark') this.drawBit(this.fx, b);
     for (const w of this.swirls) this.drawSwirl(w);
