@@ -1382,7 +1382,12 @@ duas/reflections section in Me.
       the page times, a month no longer kept goes as deleted — a tasbih tap sent ~96 KB, now ~3 KB; `syncMeta` keeps fingerprints,
       not whole documents (~100 KB → 3 KB rewritten each round); the minute check reads only keys written since the last look
       (`Storage.prototype` setItem/removeItem marked in kv.ts, other tabs by the `storage` event; a round still looks at all);
-      the merging (`syncDocs.ts`) loads with the first round, out of the first load. A quiet round = 1 small read, nothing sent.
+      the merging (`syncDocs.ts`) loads with the first round, out of the first load. A quiet round = 1 small read, nothing sent. **Sync you can trust** (owner question 2026-11-11, "users must not think their data is lost"): an open app pulls every 2 min
+      and when Me / Learn / Ranks open (`freshen()`, unless a round ran < 30 s ago); a new phone shows "Bringing your progress…"
+      on the streak card (a small flame, no lost-streak line) until its first pull (`firstSyncPending()`, `syncMeta.synced`); a
+      status line under the card (Syncing… / Synced · n min ago / Saved on this phone · syncs when online), tap it or pull Me down
+      to sync now; progress merged from another phone while Me is open counts up with a "From your other phone" note
+      (`sync-arrived` event too). Supabase Realtime is not used: the free plan allows 200 connections
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);

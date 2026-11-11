@@ -33,6 +33,9 @@ export interface SyncStatus {
   state: 'off' | 'syncing' | 'ok' | 'error' | 'offline';
   at: number | null; // last successful sync (ms)
   error?: string;
+  /** This account's data has not reached this device yet (signed in on a new phone): screens say
+   *  "Bringing your progress…" rather than show an empty streak. */
+  first?: boolean;
 }
 let status: SyncStatus = { state: 'off', at: null };
 const statusListeners = new Set<(s: SyncStatus) => void>();
@@ -52,6 +55,7 @@ export interface Meta {
   user: string;
   pulled: string | null; // newest server updated_at merged
   pushed: Record<string, string>; // doc key → fingerprint of what was last pushed
+  synced?: 1; // everything on the server has been pulled here once
 }
 const META_KEY = 'syncMeta';
 function loadMeta(user: string): Meta {
@@ -64,6 +68,13 @@ function loadMeta(user: string): Meta {
     /* fresh */
   }
   return { user, pulled: null, pushed: {} };
+}
+/** A round has finished here for this account (rounds before `synced` existed left pulled / pushed). */
+const synced = (m: Meta) => !!(m.synced || m.pulled || Object.keys(m.pushed).length);
+/** Signed in, and this account's data has not reached this phone yet. */
+export function firstSyncPending(): boolean {
+  const acc = account();
+  return !!acc && !synced(loadMeta(acc.id));
 }
 function saveMeta(m: Meta) {
   try {
@@ -104,10 +115,13 @@ export function syncNow(): Promise<void> {
 
 async function round() {
   const acc = account();
-  if (!acc) return setStatus({ state: 'off' });
-  if (!navigator.onLine) return setStatus({ state: 'offline' });
-  setStatus({ state: 'syncing', error: undefined });
+  if (!acc) return setStatus({ state: 'off', first: false });
+  const first = !synced(loadMeta(acc.id));
+  if (!navigator.onLine) return setStatus({ state: 'offline', first });
+  setStatus({ state: 'syncing', error: undefined, first });
   lastRound = Date.now();
+  let arrived = false;
+  const wasSynced = !first;
   try {
     const sb = await supabase();
     const { applyRemote, localRows, kv: { linkKv, scanKv } } = await loadDocs();
@@ -123,11 +137,14 @@ async function round() {
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data ?? []) as Row[];
+      // Progress from another phone (not this phone's first pull, which shows as "Bringing your progress…").
+      if (wasSynced && rows.some((r) => r.kind === 'state' && (r.id.startsWith('journey:') || r.id.startsWith('jm:') || r.id === 'garden'))) arrived = true;
       if (await applyRemote(rows, meta)) kvChanged = true;
       if (rows.length) meta.pulled = rows[rows.length - 1].updated_at ?? meta.pulled;
       saveMeta(meta);
       if (rows.length < 500) break;
     }
+    if (!meta.synced) { meta.synced = 1; saveMeta(meta); }
 
     if (kvChanged) announceKv();
 
@@ -162,8 +179,9 @@ async function round() {
       saveMeta(meta);
     }
     if (refused.length) setStatus({ state: 'error', at: Date.now(), error: `${refused.length} item(s) could not be saved: ${refused.slice(0, 3).join(', ')}` });
-    else setStatus({ state: 'ok', at: Date.now() });
+    else setStatus({ state: 'ok', at: Date.now(), first: false });
     failures = 0;
+    if (arrived) window.dispatchEvent(new Event('sync-arrived'));
   } catch (e) {
     console.warn('Sync failed', e);
     // Wait longer after each failure (30 s → 15 min, spread randomly), so a server that comes back
@@ -204,6 +222,12 @@ const onReturn = () => void remoteConfig().then((c) => {
   if (Date.now() - lastRound >= c.syncMinutes * 60e3) soon(jitter(3000));
 });
 
+/** A screen showing progress opened: fetch what the other phones did, unless a round ran in the last 30 s. */
+export function freshen() {
+  if (!account() || failures || running || Date.now() - lastRound < 30e3) return;
+  soon(jitter(400));
+}
+
 let started = false;
 /** Starts syncing whenever an account is signed in (call once at startup). */
 export function startSync() {
@@ -224,9 +248,13 @@ export function startSync() {
   window.addEventListener('online', onReturn);
   // Anything else saved on the device (a lesson, a setting, an icon picked…): looked for once a minute while
   // the app is open, so it reaches the other devices without waiting for the app to be left.
+  // The other phones' changes: looked for every 2 minutes while the app is open (one small read when
+  // nothing changed), and when a screen showing progress opens (freshen()).
   window.setInterval(() => {
-    if (document.visibilityState === 'visible' && !pending && !failures && account() && kvMod?.scanKv(Date.now(), true)) soon();
+    if (document.visibilityState !== 'visible' || pending || failures || !account()) return;
+    if (kvMod?.scanKv(Date.now(), true) || Date.now() - lastRound >= 2 * 60e3) soon(jitter(3000));
   }, 60e3);
+  window.addEventListener('hashchange', () => { if (/^#\/(me|learn|ranks)(\/|$)/.test(location.hash)) freshen(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') onReturn();
     else onHide();
