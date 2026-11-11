@@ -53,3 +53,12 @@
 /* Once lit the character glows in the flame's colour. */
 .sf-body .fg-actor { transition: filter .4s ease-out; }
 .sf.lit .sf-body .fg-actor { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rw-n2) 70%, transparent)); }
+
+/* The power-up's big flame (flatFire.ts staticFlame): drawn once, moved by transforms only. */
+.ff-flame { position: absolute; pointer-events: none; will-change: transform, opacity; }
+.ff-back { z-index: 1; }
+.ff-front { z-index: 3; }
+.ff-flame > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ff-drops i { position: absolute; border-radius: 50%; background: var(--ff-rim); animation: ff-drop linear infinite; will-change: transform, opacity; }
+@keyframes ff-drop { 0% { translate: 0 0; scale: 1; opacity: 1; } 100% { translate: var(--dx) var(--rise); scale: .25; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ff-drops { display: none; } }

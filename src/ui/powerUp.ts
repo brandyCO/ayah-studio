@@ -280,11 +280,13 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     const frames = still ? null : fpsStart('Power up');
     let closed = false, raf = 0, t0 = 0, skipped = false;
     const burns: number[] = [];
+    let stopFire = () => {};
     const close = () => {
       if (closed) return;
       closed = true;
       frames?.();
       cancelAnimationFrame(raf);
+      stopFire();
       burns.forEach(clearTimeout);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', close);
@@ -302,6 +304,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     ok.focus({ preventScroll: true });
 
     const fire = new FlatFire(back, front, flatPalette(level), lite());
+    stopFire = () => fire.stop();
     // Where each character stands (read once, and again on a resize; the jump itself is drawn from the timeline).
     type Spot = { cx: number; foot: number; w: number; hgt: number; px: number };
     let spots: Spot[] = [];

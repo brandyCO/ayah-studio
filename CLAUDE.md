@@ -1798,6 +1798,10 @@ duas/reflections section in Me.
       background. **Power-up**: the character stands *inside* one big flame (`FlatFire.bigFlame`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
       spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
+      **60 fps pass** (owner 2026-11-11): the power-up's big flame is drawn once per character (full sharpness) and moved
+      only by transforms (`staticFlame()`; drops as CSS); the flying bits (`flatFireCore.ts` `FireBits`) draw in a worker on
+      OffscreenCanvases (`flatFireWorker.ts`, page fallback) and leave the canvases alone while nothing flies; streak canvas
+      2×; a friend profile is built before it slides in. 4× CPU throttle: power-up 26 → 57 fps, streak 54 → 58, profile 59
 - [x] M19 Friends on Ranks (owner request 2026-11-11): a tap on a player in the **league** (not Global) opens their
       profile (`src/ui/friends.ts`, strings `src/i18n/friends.ts`): both characters side by side (on fire together while
       both earned XP today, `blazingPair()` in `powerUp.ts`), the name, tier, level, the friend streak and only the stats

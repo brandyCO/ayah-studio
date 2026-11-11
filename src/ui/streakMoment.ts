@@ -101,7 +101,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string, face 
     ok.focus({ preventScroll: true });
 
     const c = cv.getContext('2d')!;
-    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     let W = 0, Hh = 0, k = 1;
     const size = () => {
       const r = cv.getBoundingClientRect();
