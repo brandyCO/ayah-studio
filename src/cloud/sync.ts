@@ -302,6 +302,11 @@ export function startSync() {
   // not a pull + push round after each pause (leaving the studio still syncs within 20 s).
   window.addEventListener('drafts-changed', () => soon(20_000));
   window.addEventListener('online', onReturn);
+  // Anything else saved on the device (a lesson, a setting, an icon picked…): looked for once a minute while
+  // the app is open, so it reaches the other devices without waiting for the app to be left.
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible' && !pending && !failures && account() && kvMod?.scanKv()) soon();
+  }, 60e3);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') onReturn();
     else onHide();

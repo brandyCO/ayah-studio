@@ -1357,7 +1357,7 @@ duas/reflections section in Me.
       progress keys (`UNION`) always merge; after that the newer change wins (deletions too). Locations are stripped
       (`STRIP`) and kept on the device; values > 300 KB stay local. A pulled row that cannot be merged is skipped, a
       refused batch is retried row by row and the refused keys show in the sync status, so one bad item never stops
-      the rest. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, settings match).
+      the rest. A change saved while the app stays open is looked for once a minute. Server-side progress (Ranks points, XP, challenges, friends, pacts) is already the account's. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, theme, app icon, settings match).
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
