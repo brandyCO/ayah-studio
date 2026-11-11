@@ -13,7 +13,7 @@ import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary, smallImage } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
-import { capabilities, describePath } from '../engine/capabilities';
+import { capabilities, describePath, knownPath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { STATUS_LIMIT, statusParts } from '../engine/status';
@@ -32,7 +32,7 @@ import { markPanel, saveMark, savedMark } from './markPanel';
 import { bloom, bokeh, caustics, leak, MAX_TOUCHES, mist, motes, rain, ripple, snow, TOUCHES, type Touch } from '../engine/touches';
 import { markKeyAt, markPlaced } from '../engine/mark';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
-import { breathOf } from '../engine/cinema';
+import { breathOf, knownBreath } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
@@ -168,6 +168,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startCtx = 0;
   let startT = 0;
   let dirty = true;
+  /** Work that can wait until the studio has opened and is idle. */
+  const idle = (f: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(f, { timeout: 1500 }); else setTimeout(f, 300); };
   // The user's logo is decoded now, so the preview shows it from the first frame (not only once the
   // watermark panel or an export has loaded it).
   void loadLogo(project.mark?.logo).then(() => (dirty = true));
@@ -2066,13 +2068,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   refreshUI();
 
-  capabilities().then(({ path }) => {
-    exportPathLabel.textContent = path ? describePath(path) : '';
-    if (!path) {
-      exportBtn.disabled = true;
-      exportBtn.title = ui('ed.noExport');
-    }
-  });
+  // The encoder check can hold the page for a second on a phone, so it runs only at Export; a device
+  // already known to have no export path shows it at once.
+  if (knownPath() === null) {
+    exportBtn.disabled = true;
+    exportBtn.title = ui('ed.noExport');
+  }
 
   // --- preview sizing ---
   // One canvas pixel per screen pixel (phones are often 2.6–3.5×), so the text is as sharp as the
@@ -2142,7 +2143,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
-    if (voice ?? audio) tl.breath = breathOf((voice ?? audio)!);
+    const src = voice ?? audio;
+    if (src) {
+      // Only Cinematic uses the breath; a new recitation is measured once the studio is idle, not while it opens.
+      const known = knownBreath(src);
+      if (known) tl.breath = known;
+      else if (project.cinema) idle(() => { if (!alive || (voice ?? audio) !== src) return; const b = breathOf(src); if (tl) tl.breath = b; dirty = true; });
+    }
     if (project.tajweed) {
       if (tajweedData) tl.ayat.forEach((a, i) => { a.tajweed = tajweedData![i]; });
       else ensureTajweed();
@@ -2559,6 +2566,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     pause();
     commit();
+    exportPathLabel.textContent = describePath(path);
+    if (project.cinema && (voice ?? audio)) tl.breath = breathOf((voice ?? audio)!); // in case the idle measure has not run yet
     await loadLogo(project.mark?.logo); // the user's logo is decoded before the first frame
     exporting = new AbortController();
     overlay.hidden = false;

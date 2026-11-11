@@ -27,7 +27,7 @@ export function openDebugPanel() {
   dialog.addEventListener('close', () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
-  capabilities().then(({ rows }) => {
+  capabilities(true).then(({ rows }) => {
     table.replaceChildren(...rows.map(([label, v]) => {
       const ok = v === true || v === 'hardware' || v === 'software';
       const text = typeof v === 'string' ? (ok ? `Yes · ${v}` : v) : v ? 'Yes' : 'No';

@@ -12,7 +12,9 @@ import { h } from './dom';
 
 export function lightChip(onclick?: () => void): HTMLElement {
   const n = h('b', {});
-  const fmt = new Intl.NumberFormat(locale());
+  // Made on first paint (after the wallet loads), so its first-time set-up is not part of opening a screen.
+  let nf: Intl.NumberFormat | null = null;
+  const fmt = { format: (x: number) => (nf ??= new Intl.NumberFormat(locale())).format(x) };
   const el = h(onclick ? 'button' : 'span', { class: 'lt-chip', ...(onclick ? { onclick, type: 'button' } : {}) },
     star(), n);
   let shown = -1;

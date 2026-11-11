@@ -78,6 +78,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   let leadDone = false; // the START mark is placed once a paint
   /** The next thing to do (the step carrying START), for the Continue button. */
   let next: { what: string; hue: string; glyph: string; run: () => void } | null = null;
+  let paintGen = 0; // a newer paint drops the pieces an older one still had to build
   const list = h('div', { class: 'lp-list' });
   const top = h('header', { class: 'lp-top' });
   const cont = h('button', { class: 'lp-cont', type: 'button' });
@@ -214,7 +215,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const title = lt('learn.gateTitle', { n: j });
     const wrap = h('section', { class: `lp-gate ${state}${lead ? ' is-current' : ''}`, 'aria-label': lt('learn.gateKicker', { n: j }) });
     if (lead) next = { what: lt('learn.gateKicker', { n: j }), hue: 'violet', glyph: G.mic, run: () => startGate(j, gatePage(j)) };
-    const pic = vignette(136, (c, x, y, u) => drawDeco(c, 'juzgate', x, y, u, 0, night()), night(), 1.5);
+    const pic = vignette(136, (c, x, y, u) => drawDeco(c, 'juzgate', x, y, u, 0, night()), night(), 1.5, true);
     const btn = h('button', { class: 'lp-gate-btn', type: 'button', 'aria-label': `${title} · ${lt(state === 'done' ? 'learn.stateDone' : state === 'current' ? 'learn.stateCurrent' : 'learn.stateLocked')}`, onclick: () => {
       haptic();
       const same = pop?.dataset.for === `gate:${j}`;
@@ -284,7 +285,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   function treeEnd(m: SurahMeta, hue: string): HTMLElement {
     const tr = tree(m.n);
     const stage = tr ? stageOf(tr, m.ayahs) : 0;
-    const pic = vignette(112, (c, x, y, u) => drawTree(c, x, y, u, { s: m.n, v: tr?.v ?? 0, stage, thirsty: !!tr && thirsty(tr), t: 0, night: night() }), night(), stageHeight(m.n, stage));
+    const pic = vignette(112, (c, x, y, u) => drawTree(c, x, y, u, { s: m.n, v: tr?.v ?? 0, stage, thirsty: !!tr && thirsty(tr), t: 0, night: night() }), night(), stageHeight(m.n, stage), true);
     const el = h('button', { class: `lp-tree${tr?.full ? ' full' : ''}${grew?.s === m.n ? ' grew' : ''} hue-${hue}`, type: 'button', 'aria-label': lt('learn.treeOf', { name: surahName(m) }), onclick: () => openTree(m) },
       pic, h('span', { class: 'lp-cap' }, tr?.full ? lt('learn.treeGrown') : lt('learn.treeOf', { name: surahName(m) })));
     return el;
@@ -384,15 +385,18 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     due = pos < ord.length ? [...dueList] : [];
     leadDone = false;
     next = null;
-    // Near where the path stands every unit is open; further away, one folded line per juz.
+    // Near where the path stands every unit is open; further away, one folded line per juz. Each piece is
+    // built in path order; what lies well below the step to do now is built after the screen shows, a few
+    // pieces a task, so opening the tab never freezes (a long surah's parts and chests are many nodes).
     const lo = Math.max(0, pos - earlier), hi = Math.min(ord.length, pos + AHEAD);
-    const out: HTMLElement[] = [];
+    const parts: { big: boolean; make: () => HTMLElement[] }[] = [];
     let k = 0;
     while (k < ord.length) {
       if (k >= lo && k < hi) {
-        for (const u of units(k, ord, pos)) out.push(unitEl(u, k));
+        const q = k;
+        for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => [unitEl(u, q)] });
         const j = gates.get(k);
-        if (j) out.push(...gateWithReviews(j));
+        if (j) parts.push({ big: false, make: () => gateWithReviews(j) });
         k++;
         continue;
       }
@@ -402,22 +406,40 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       const run = ord.slice(k, e);
       const key = `${j}:${run[0]}`;
       const open = openRuns.has(key);
-      out.push(foldEl(run, j, key, open));
+      parts.push({ big: false, make: () => [foldEl(run, j, key, open)] });
       for (let q = k; q < e; q++) {
-        if (open) for (const u of units(q, ord, pos)) out.push(unitEl(u, q));
+        if (open) for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => [unitEl(u, q)] });
         const gj = gates.get(q);
-        if (gj && (open || gateState(gj) === 'current')) out.push(...gateWithReviews(gj));
+        if (gj && (open || gateState(gj) === 'current')) parts.push({ big: false, make: () => gateWithReviews(gj) });
       }
       k = e;
     }
-    if (pos >= ord.length) {
-      const r = reviewEl(dueList); if (r) out.push(r);
-      out.push(h('p', { class: 'lp-end' }, lt('learn.allDone')));
+    if (pos >= ord.length) parts.push({ big: false, make: () => {
+      const r = reviewEl(dueList);
+      return [...(r ? [r] : []), h('p', { class: 'lp-end' }, lt('learn.allDone'))];
+    } });
+    parts.push({ big: false, make: () => [noorLine('learn')] });
+    // Built now: everything up to the step to do now and two open units after it (room to centre it).
+    // A tree that just grew may stand anywhere, so then everything is built at once.
+    const out: HTMLElement[] = [];
+    let i = 0, after = -1;
+    while (i < parts.length) {
+      const pt = parts[i++];
+      out.push(...pt.make());
+      if (after < 0) { if (leadDone && !grew) after = 0; } else if (pt.big && ++after >= 2) break;
     }
-    out.push(noorLine('learn'));
     list.replaceChildren(...out);
     paintCont();
     paintDay();
+    const gen = ++paintGen;
+    const step = () => {
+      if (gen !== paintGen) return;
+      const t0 = performance.now(), more: HTMLElement[] = [];
+      while (i < parts.length && performance.now() - t0 < 8) more.push(...parts[i++].make());
+      list.append(...more);
+      if (i < parts.length) setTimeout(step, 0);
+    };
+    if (i < parts.length) setTimeout(step, 0);
   }
 
   // --- sheets ---
@@ -544,6 +566,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   window.addEventListener('journey-changed', onChange);
   return () => {
     closePop();
+    paintGen++;
     document.removeEventListener('click', onClick);
     window.removeEventListener('garden-changed', onChange);
     window.removeEventListener('journey-changed', onChange);

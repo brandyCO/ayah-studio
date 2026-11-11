@@ -831,7 +831,34 @@ export function drawDeco(ctx: CanvasRenderingContext2D, k: DecoKind, cx: number,
 }
 
 /** A tile with one thing on it, for the store and sheets (crisp at the device's pixel ratio). */
-export function vignette(size: number, draw: (ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number) => void, night: boolean, tall = 1.95): HTMLCanvasElement {
+// Pictures made with `lazy` draw their tree / decoration when they come near the screen (a page of path
+// pictures drawn at once froze the Learn tab), the tile under it straight away.
+let lazyIo: IntersectionObserver | null = null;
+const lazyDraw = new WeakMap<Element, () => void>();
+const lazyQueue: (() => void)[] = [];
+let lazyBusy = false;
+/** One picture a task, so drawing never holds a tap or a scroll for long. */
+function drainLazy() {
+  if (lazyBusy || !lazyQueue.length) return;
+  lazyBusy = true;
+  setTimeout(() => { lazyBusy = false; lazyQueue.shift()?.(); drainLazy(); }, 0);
+}
+function whenNear(c: HTMLCanvasElement, run: () => void) {
+  if (typeof IntersectionObserver === 'undefined') { run(); return; }
+  lazyIo ??= new IntersectionObserver((es) => {
+    for (const e of es) {
+      if (!e.isIntersecting) continue;
+      lazyIo!.unobserve(e.target);
+      const f = lazyDraw.get(e.target); lazyDraw.delete(e.target);
+      if (f) lazyQueue.push(f);
+    }
+    drainLazy();
+  }, { rootMargin: '900px 0px' });
+  lazyDraw.set(c, run);
+  lazyIo.observe(c);
+}
+
+export function vignette(size: number, draw: (ctx: CanvasRenderingContext2D, cx: number, cy: number, u: number) => void, night: boolean, tall = 1.95, lazy = false): HTMLCanvasElement {
   const c = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   c.width = c.height = Math.round(size * dpr);
@@ -843,7 +870,7 @@ export function vignette(size: number, draw: (ctx: CanvasRenderingContext2D, cx:
   const iso: Iso = { tw: u, th: u / 2, ox: size / 2, oy: size * 0.8 - u / 4 };
   drawGround(ctx, iso, 1, night, 0, 0);
   const p = cellCenter(iso, 0, 0);
-  draw(ctx, p.x, p.y, u);
+  if (lazy) whenNear(c, () => draw(ctx, p.x, p.y, u)); else draw(ctx, p.x, p.y, u);
   c.setAttribute('aria-hidden', 'true');
   return c;
 }

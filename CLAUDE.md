@@ -693,7 +693,13 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       (migration `20261111500000_rank_speed.sql`, pgTAP `rank_speed.test.sql` 13): `rank_count()` keeps "of N players"
       for a minute (table `rank_counts`), `rank_global` by a measure keeps the week's top 100 a minute
       (`rank_measure_top`), `rank_board` by a measure adds up only its members. Left to their threads: Read (next page
-      built during the slide), Learn (0.4 s block building the path), Studio (encoder check + voice analysis on open)
+      built during the slide), Learn (0.4 s block building the path); Studio was fixed in its thread (next item)
+- [x] Studio opens faster (owner question 2026-11-11, "optimise every main page"): the encoder check
+      (`capabilities()`, ~1 s of blocked page at 4× CPU) no longer runs when the studio opens — only at Export, and
+      only until the first H.264 + AAC path is found (the Device check still asks everything, `capabilities(true)`);
+      the path is remembered per browser version (localStorage `exportPath`, `knownPath()`). `voiceOnset()` measures
+      only the 4.5 s it looks at; Cinematic's breath is measured once the studio is idle (`knownBreath()`, and before
+      an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 
@@ -2018,6 +2024,12 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
 - [x] Lessons counted (2026-11-10): every passed lesson / tasmi' (and a page recited with slips or cleanly) adds to
       `DayRec.ls` (`addLesson()` in `journey.ts`, summed across devices); new ayat keep feeding the memorise goal
       (`addMemorised`). Ranks, quests and a Learn daily goal reading `ls` belong to the Ranks / goals work
+- [x] **Faster Learn tab** (speed check 2026-11-11: ~0.4 s freeze on opening): the 114 trees' combinations are a table
+      in `magicTrees.ts` (the search ran on every start, ~0.57 s at 4× CPU slowdown; `scripts/make-tree-plan.mjs` re-checks
+      it); path tree / gate pictures draw as they come near the screen, one a task (`vignette(…, lazy)`); the path builds up
+      to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
+      number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
+      ~200 ms); screenshots identical
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only
