@@ -28,7 +28,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, flawless: 10, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -84,6 +84,12 @@ export async function report(): Promise<void> {
       if (v.flawless) await rpc('rank_flawless', { d: k, n: v.flawless }).catch(() => undefined);
       sent[k] = sig;
       if (k === today) setTimeout(() => void friendMoments(), 1500);
+    }
+    // The lamp of Light by the name (sent when it changes).
+    const lamp = (await import('../data/shop')).lampOf();
+    if (String(lamp) !== (localStorage.getItem('rankLamp') ?? '0')) {
+      await rpc('rank_set_lamp', { n: lamp });
+      try { localStorage.setItem('rankLamp', String(lamp)); } catch { /* ignore */ }
     }
     for (const k of Object.keys(sent)) if (k < addDays(today, -3)) delete sent[k];
     try { localStorage.setItem('rankSent', JSON.stringify(sent)); } catch { /* ignore */ }

@@ -265,7 +265,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           const surahs = (now.s ?? []).slice(s0).map((n) => meta[n - 1]).filter(Boolean);
           const juz = (now.j ?? []).slice(j0);
           void import('./pageMoments').then((m) => {
-            m.pageCounted(area);
+            m.pageCounted(area, m.surahLeft(mushaf, meta, p));
             // While listening, "surah finished" waits until the recitation has finished it too.
             const last = surahs[surahs.length - 1];
             if (last && playing && playing.s <= last.n) doneLater = () => m.finished(surahs, juz);
@@ -550,6 +550,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   function slideTo(target: number, from = 0, speed = 0) {
     if (animating) finishNow?.();
     flushLayout();
+    void import('./sfx').then((m) => m.sfx.page()); // a soft paper swish + a light tap (silent while reciting)
     const dir = target > page ? 1 : -1;
     if (!strip.querySelector(`[data-page="${target}"]`)) {
       page = target;

@@ -1922,6 +1922,27 @@ duas/reflections section in Me.
       ground from 5, a halo from 10, two circling lights from 20, a rim of light from 30, slow rays from 40, all gold at 50;
       plus a small "Lv n" pill on board rows, a bar to the next level on profiles and a Level chip on Me. A new level
       plays the power-up with "Level up!" (`src/ui/levelUp.ts`, `rankLevelSeen`; the first look only records)
+- [x] M21 Light worth more (owner "yes yes yes and yes", 2026-11-12): **Friday double XP** — `rank_xp_mult(d)` (Friday ×2;
+      table `rank_xp_days` for Ramadan's last ten nights 1448–1452: odd nights ×2, even ×1.5; the larger wins) scales
+      `rank_report`'s score; Ranks hero pill. **Friday Al-Kahf** on Me (`src/data/friday.ts`, pages 293–304 read today, 60 Light
+      chest `kahf`). **Surprise chests**: 1 in 6 goal chests holds double Light (`surprise(id)`, seeded by day + id, never
+      random to the user after the fact). **Streak repair**: a flame out ≤ 7 days can be relit with Light (150 + 15 a day,
+      ≤ 1500; `shopAdd('rp:…')` → `revive()`). **Limited pieces** (`src/data/limited.ts`): frames 14–19 (600–1500) and six
+      legendary room pieces (madinah view, chandelier, fountain, silk rug, medallion wall, brocade; 1000–2500) on a 12-week
+      rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
+      (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
+      **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
+      `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
+      multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
+- [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on
+      every page turn (`sfx.page()`, from `slideTo()`), a wooden bead click on each tasbih count and a deeper click + shimmer when
+      the round is full (`sfx.bead()`); right answers already pop (lessons, page quiz). All silent while reciting, in the Kids
+      space and with Me → ⚙ → App → Sounds off (the setting is now "Sounds"). The free freezes sit **on the flame** (`freezeBadge()`:
+      an ice badge with how many are ready, tap → what they do and when the next comes back; the two freeze chips are gone).
+      **Honest progress**: when a page counts, a second pill says "4 pages to finish Al-Baqarah" (`surahLeft()` in
+      `pageMoments.ts`: pages from here to the end of the surah the page carries on into). Opening measured (production build,
+      Chromium, 390 px): mushaf lines on screen 0.51 s cold / 0.28 s reopen; at 4× CPU 0.99 s / 0.74 s
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

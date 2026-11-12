@@ -1713,7 +1713,7 @@ button.lt-chip { cursor: pointer; }
 /* Reading: the page-counted light and the surah-finished card (src/ui/pageMoments.ts). Both stay off
    the Arabic: the light runs along the page's bottom edge, the card rises from the bottom. */
 .page-light { position: absolute; inset-inline: 0; bottom: 0; height: 48px; pointer-events: none; z-index: 3;
-  display: flex; justify-content: center; align-items: flex-end; padding-bottom: 6px; }
+  display: flex; justify-content: center; align-items: flex-end; gap: 6px; padding-bottom: 6px; }
 .page-light-line { position: absolute; inset-inline: 10%; bottom: 2px; height: 2px; border-radius: 2px;
   background: linear-gradient(to left, transparent, var(--rw-n1, var(--accent)) 30%, #fff 50%, var(--rw-n1, var(--accent)) 70%, transparent);
   box-shadow: 0 0 10px var(--rw-n1, var(--accent)); transform-origin: right;

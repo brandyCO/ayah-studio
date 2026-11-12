@@ -93,6 +93,15 @@ const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
 /** The character's level (from all-time XP) beside a name. */
+/** The lamp of Light by a name (owner request 2026-11-12): bronze, silver, gold or diamond, by the Light spent. */
+export const lampPill = (n?: number) => !n ? '' : h('span', { class: `rk-lamp l${n}`, title: rt(`rk.lamp${n}` as RankKey), 'aria-label': rt(`rk.lamp${n}` as RankKey) }, lampSvg());
+function lampSvg(): SVGSVGElement {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 16 16');
+  s.innerHTML = '<circle class="g" cx="8" cy="9" r="7"/><path class="e" d="M5.2 4.6h5.6l.8 1.4H4.4z"/><path class="b" d="M4.4 6h7.2q1.4 3-1 6.2H5.4Q3 9 4.4 6z"/>'
+    + '<path class="f" d="M8 7.2c1 1.1 1.2 1.9 1.2 2.5a1.2 1.2 0 0 1-2.4 0c0-.6.2-1.4 1.2-2.5z"/><path class="t" d="M6.8 3.4h2.4l-.4 1.2H7.2z"/>';
+  return s;
+}
 export const lvPill = (xp?: number | null) => xp == null ? '' : h('span', { class: `lv-pill${levelOf(xp) >= 40 ? ' gold' : ''}` }, levelLabel(levelOf(xp), true));
 
 /** The top 3 on a podium (owner pick 2026-11-10): gold in the middle, silver left, bronze right, each player
@@ -141,7 +150,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
@@ -258,7 +267,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
         h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
-          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')))),
+          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')),
+        new Date().getDay() === 5 ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);

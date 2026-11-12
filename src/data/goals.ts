@@ -343,3 +343,4 @@ export function dayLightMax(now = new Date()): number {
   const list = todayGoals(now);
   return list.reduce((a, g) => a + lightFor(g), 0) + (list.length > 1 ? ALL_LIGHT : 0);
 }
+

@@ -211,3 +211,6 @@ span.cel-lantern { transform-origin: 50% 52%; }
 .cel.epic.bm-t4 .cel-flash { animation-name: bm-wash-d; }
 @keyframes bm-wash-p { 0% { opacity: 0; } 12% { opacity: .85; background: radial-gradient(circle at 50% 42%, #f6f1ff, rgba(180, 150, 255, .55) 40%, transparent 75%); } 100% { opacity: 0; } }
 @keyframes bm-wash-d { 0% { opacity: 0; } 12% { opacity: .9; background: radial-gradient(circle at 50% 42%, #ffffff, rgba(160, 230, 255, .55) 40%, transparent 75%); } 100% { opacity: 0; } }
+/* A surprise inside a chest: double the Light. */
+.cel-x2 { display: grid; place-items: center; width: 100%; height: 100%; font: 900 1.6rem/1 var(--font-display, inherit); color: #2b1a00;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6c9, #ffcf4d 55%, #e59a1c); box-shadow: 0 0 18px #ffd36b99; }

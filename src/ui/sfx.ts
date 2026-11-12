@@ -177,6 +177,23 @@ export const sfx = {
     const v = vary();
     breath(c, c.currentTime, 0.5, 600 * v, 2800 * v, 1.4, 0.3, 0.12);
   },
+  /** A page turned in the mushaf: a soft paper swish, felt as one light tap (owner request 2026-11-12). */
+  page() {
+    buzz(5);
+    const c = ready(); if (!c) return;
+    const t = c.currentTime, v = vary();
+    breath(c, t, 0.24, 3200 * v, 1100 * v, 0.9, 0.07, 0.07);
+    breath(c, t + 0.05, 0.12, 1500 * v, 900 * v, 2.2, 0.035, 0.03);
+  },
+  /** A tasbih bead: a small wooden click; `full` = the round is complete (a deeper click and a soft shimmer). */
+  bead(full = false) {
+    buzz(full ? [16, 60, 26] : 7);
+    const c = ready(); if (!c) return;
+    const t = c.currentTime, v = vary();
+    breath(c, t, 0.035, 2300 * v, 1500 * v, 5, 0.16, 0.002);
+    thud(c, t, 0.18, 260 * v, 140, 0.05);
+    if (full) for (let i = 0; i < 3; i++) breath(c, t + 0.08 + i * 0.08, 0.45, (5600 + i * 800) * v, 9200, 7, 0.08, 0.04);
+  },
   /** A tiny tick (counters, at most every 70 ms by the caller). */
   tick() {
     buzz(3);
