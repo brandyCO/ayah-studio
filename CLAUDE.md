@@ -1388,6 +1388,17 @@ duas/reflections section in Me.
       status line under the card (Syncing… / Synced · n min ago / Saved on this phone · syncs when online), tap it or pull Me down
       to sync now; progress merged from another phone while Me is open counts up with a "From your other phone" note
       (`sync-arrived` event too). Supabase Realtime is not used: the free plan allows 200 connections
+      **Never emptier** (owner report 2026-11-12, "it says synced and the streak, Light and goals went back to zero"): a phone
+      whose storage came back older or empty but kept its install id (an Android backup restored, data cleared) never pulled
+      its own rows (the pull skips this device's writes) and then pushed its emptier journey over them, deleting months too.
+      Now: journeys only ever grow (`src/data/journeyMerge.ts`, lazy: days, flags, claims and Light joined, counts the larger;
+      `m` stays the device's own); once a session — and whenever the journey holds far fewer days than it last sent
+      (`syncMeta.ownDays`) — the round fetches this device's own rows newer than it knows (`syncMeta.own`, the server's
+      `updated_at` returned by the upsert) and joins them in before anything is sent (`mergeOwnJourney`, `mergeOwnLog`;
+      kv, garden, goals, drafts through their usual merges); a month part is sent as deleted only when older than the days
+      kept (`keptFrom()`); a device holding a fuller copy of another device's journey than what arrived sends it back joined
+      (`syncMeta.heal`), and that device takes it in. Tested: restored backup, wiped storage (same id), only the journey
+      lost, fresh install, server already emptied (healed from the other device)
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);

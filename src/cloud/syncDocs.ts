@@ -3,7 +3,8 @@
 import { bookmarkRecords, mergeBookmarks } from '../data/bookmarks';
 import { deleteDraft, deletedDrafts, getDraft, listDrafts, saveDraft } from '../data/drafts';
 import { loadReflections, mergeReflection, reflectionRecords } from '../data/reflections';
-import { journeyRecord, mergeJourney, otherJourney } from '../data/journey';
+import { journeyRecord, otherJourney, keptFrom } from '../data/journey';
+import { mergeJourney, mergeOwnJourney } from '../data/journeyMerge';
 import { dayKey } from '../data/readLog';
 import { goalsRecord, mergeGoals } from '../data/goals';
 import type { Project } from '../engine/project';
@@ -38,11 +39,17 @@ export async function applyRemote(rows: Row[], meta: Meta): Promise<boolean> {
       if (prefsBehind({ [k]: r.data }, [k])) delete meta.pushed[key];
       else meta.pushed[key] = String(r.data.at); // already on the server: don't send it back
     } else if (r.kind === 'state' && r.id.startsWith('jm:')) {
-      // A part of another device's journey: a month's days or its page times ('jm:{device}:{part}').
+      // A part of a device's journey: a month's days or its page times ('jm:{device}:{part}').
       const rest = r.id.slice(3), i = rest.lastIndexOf(':');
-      mergeJourneyPart(rest.slice(0, i), rest.slice(i + 1), r.data, r.deleted);
+      const dev = rest.slice(0, i), part = rest.slice(i + 1);
+      if (dev === deviceId()) { if (!r.deleted) mergeOwnJourney(partAsJourney(part, r.data)); }
+      else if (mergeJourneyPart(dev, part, r.data, r.deleted)) heal(meta, dev);
     } else if (r.kind === 'state' && r.id.startsWith('journey:')) {
-      mergeJourney(r.data, r.id.slice(8)); // kept per device and read combined
+      // Every device's journey is kept per device and read combined; this device's own comes back only
+      // when its storage here came back older or empty, or another device sent back what it kept of it.
+      const dev = r.id.slice(8);
+      if (dev === deviceId()) mergeOwnJourney(r.data);
+      else if (mergeJourney(r.data, dev).behind) heal(meta, dev);
     } else if (r.kind === 'state' && r.id === 'garden') {
       (await import('../data/garden')).mergeGarden(r.data); // per tree / decoration, newest wins; purchases add up (pushed back merged)
     } else if (r.kind === 'setting' && r.id === 'goals') {
@@ -90,9 +97,22 @@ export async function localRows(user: string, meta: Meta): Promise<{ key: string
   const { head, parts } = journeyParts();
   add('state', `journey:${dev}`, head, JSON.stringify(head));
   for (const [p, data] of Object.entries(parts)) add('state', `jm:${dev}:${p}`, data, JSON.stringify(data));
-  const mine = `state/jm:${dev}:`;
-  for (const key of Object.keys(meta.pushed)) // a month dropped here (older than the days kept)
-    if (key.startsWith(mine) && meta.pushed[key] !== 'deleted' && !(key.slice(mine.length) in parts)) add('state', key.slice(6), {}, 'deleted', true);
+  const mine = `state/jm:${dev}:`, oldest = keptFrom().slice(0, 7);
+  for (const key of Object.keys(meta.pushed)) { // a month dropped here because it is older than the days kept — never one still kept
+    const p = key.slice(mine.length);
+    if (key.startsWith(mine) && meta.pushed[key] !== 'deleted' && !(p in parts) && /^\d{4}-\d{2}$/.test(p) && p < oldest) add('state', key.slice(6), {}, 'deleted', true);
+  }
+  // Another device's journey that came back emptier than the copy kept here: sent back joined, so that
+  // device gets its days, Light and claims back (it joins its own journey with what arrives).
+  for (const other of meta.heal ?? []) {
+    const o = otherJourney(other);
+    if (!o) continue;
+    const { log, ...j } = o;
+    const split = partsOf(j as unknown as Record<string, unknown> & { days: Days; pageLast?: unknown }, log);
+    add('state', `journey:${other}`, split.head, JSON.stringify(split.head));
+    for (const [p, data] of Object.entries(split.parts)) add('state', `jm:${other}:${p}`, data, JSON.stringify(data));
+  }
+  delete meta.heal;
   const garden = hasGarden() ? (await import('../data/garden')).gardenRecord() : null;
   if (garden) add('state', 'garden', garden as unknown as Record<string, unknown>, JSON.stringify(garden));
   const g = goalsRecord();
@@ -118,6 +138,9 @@ type Log = Record<string, number[]>;
 /** head = 'state/journey:{device}' (`from` = the first day it holds); parts = 'state/jm:{device}:{part}'. */
 export function journeyParts(): { head: Record<string, unknown>; parts: Record<string, Record<string, unknown>> } {
   const { j, log } = journeyRecord();
+  return partsOf(j as unknown as Record<string, unknown> & { days: Days }, log);
+}
+function partsOf(j: Record<string, unknown> & { days: Days; pageLast?: unknown }, log: Log): { head: Record<string, unknown>; parts: Record<string, Record<string, unknown>> } {
   const from = `${dayKey().slice(0, 7)}-01`;
   const { days: allDays, pageLast, ...rest } = j;
   const days: Days = {}, recent: Log = {};
@@ -128,21 +151,33 @@ export function journeyParts(): { head: Record<string, unknown>; parts: Record<s
   return { head: { j: { ...rest, days }, log: recent, from }, parts: { ...parts, pages: { pageLast } } };
 }
 
-/** One part of another device's journey arrived: put it into that device's journey kept here. */
+/** A part ('YYYY-MM' or 'pages') as a journey holding only that part. */
+function partAsJourney(part: string, data: unknown): { j: Record<string, unknown>; log: Log } {
+  const d = (data && typeof data === 'object' ? data : {}) as { days?: Days; log?: Log; pageLast?: unknown };
+  if (part === 'pages') return { j: { days: {}, pageLast: d.pageLast ?? {} }, log: {} };
+  const inMonth = <T,>(o: Record<string, T> = {}) => Object.fromEntries(Object.entries(o).filter(([k]) => k.startsWith(part)));
+  return { j: { days: inMonth(d.days), pageLast: {} }, log: inMonth(d.log) };
+}
+
+/** Marks another device's journey to be sent back joined (what arrived was emptier than the copy here). */
+function heal(meta: Meta, dev: string) {
+  meta.heal = [...new Set([...(meta.heal ?? []), dev])];
+  for (const k of Object.keys(meta.pushed)) if (k === `state/journey:${dev}` || k.startsWith(`state/jm:${dev}:`)) delete meta.pushed[k];
+}
+
+/** One part of another device's journey arrived: joined into that device's journey kept here (days only
+ *  ever added; a month is dropped only when it is older than the days kept). True when the copy here holds
+ *  more of that part than what arrived. */
 export function mergeJourneyPart(device: string, part: string, data: unknown, deleted: boolean): boolean {
   if (!device) return false;
-  const { log: oldLog = {}, ...j } = (otherJourney(device) ?? { days: {}, pageLast: {} }) as { log?: Log; days: Days; pageLast: unknown };
-  const d = (data && typeof data === 'object' ? data : {}) as { days?: Days; log?: Log; pageLast?: unknown };
-  const days: Days = { ...j.days }, log: Log = { ...oldLog };
-  let pageLast = j.pageLast;
-  if (part === 'pages') pageLast = deleted ? {} : d.pageLast;
-  else if (/^\d{4}-\d{2}$/.test(part)) {
-    for (const k of Object.keys(days)) if (k.startsWith(part)) delete days[k];
-    for (const k of Object.keys(log)) if (k.startsWith(part)) delete log[k];
-    if (!deleted) {
-      for (const [k, v] of Object.entries(d.days ?? {})) if (k.startsWith(part)) days[k] = v;
-      for (const [k, v] of Object.entries(d.log ?? {})) if (k.startsWith(part)) log[k] = v;
-    }
-  } else return false;
-  return mergeJourney({ j: { ...j, days, pageLast }, log }, device);
+  if (part !== 'pages' && !/^\d{4}-\d{2}$/.test(part)) return false;
+  if (deleted) {
+    if (part === 'pages' || part >= keptFrom().slice(0, 7)) return !!otherJourney(device); // still kept: never dropped
+    return false;
+  }
+  const m = /^\d{4}-\d{2}$/.test(part) ? part : '';
+  return mergeJourney(partAsJourney(part, data), device, m ? { from: `${m}-01`, to: `${m}-31` } : { from: '9999', to: '9999' }).behind;
 }
+
+/** Days in this device's own journey (a sudden drop means its storage came back older or empty). */
+export const ownDays = () => Object.keys(journeyRecord().j.days).length;
