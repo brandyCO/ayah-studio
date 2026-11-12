@@ -195,15 +195,24 @@ export async function friendMilestone(list: Friend[]) {
   try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '' } }); } finally { playing = false; }
 }
 
-/** The daily friend streak moment: "You kept it together" with each friend whose streak went on today, both
- *  characters side by side (or their discs) and the count; a tap or Continue closes it. Once a day per friend. */
+/** The daily friend streak moment (owner 2026-11-12: "the same flame … animated, the character inside the flame"):
+ *  the power-up with both characters inside the smooth flame, for the friend with the longest streak kept today
+ *  (the others are marked seen with it). Once a day per friend. Without a character: a small card with the discs. */
 export async function friendDayMoment(list: Friend[]) {
   const route = location.hash;
   if (playing || document.hidden || document.querySelector('dialog[open], .cel, .fd-moment') || /^#\/(reel|kids|t\/)/.test(route)) return;
   const today = dayKey();
   try { for (const f of list) localStorage.setItem(`frDay:${today}:${f.pid}`, '1'); } catch { return; }
-  await import('./challenges.css');
   const me = myFigureCode();
+  if (me) {
+    const top = [...list].sort((x, y) => y.streak - x.streak)[0];
+    playing = true;
+    try {
+      const p = powerUp(Math.max(1, top.streak), { friend: { code: top.private ? null : top.figure ?? null, name: top.private ? rt('rk.private') : top.name ?? '' } });
+      if (p) { await p; return; }
+    } finally { playing = false; }
+  }
+  await import('./challenges.css');
   const rows = list.slice(0, 4).map((f) => {
     const name = f.private ? rt('rk.private') : f.name ?? rt('rk.private');
     return h('div', { class: 'fd-row' },
@@ -211,16 +220,12 @@ export async function friendDayMoment(list: Friend[]) {
       h('b', {}, name),
       h('span', { class: 'fd-n' }, flame(2, 22, true), String(f.streak)));
   });
-  const a = actor('fd-fig', me);
-  const b = list.length === 1 && !list[0].private ? actor('fd-fig', list[0].figure ?? null) : null;
-  const pairEl = a ? h('span', { class: 'fr-pair' }, blazingPair(powerLevel(Math.max(1, list[0].streak)), a.el, b?.el ?? null, true)) : '';
   const ok = h('button', { class: 'primary brand-btn' }, ft('fr.keepGoing'));
   const box = h('div', { class: 'fd-moment', role: 'dialog', 'aria-modal': 'true', 'aria-label': ft('fr.keptTitle') },
-    h('div', { class: 'fd-card' }, pairEl, h('h2', {}, ft('fr.keptTitle')), h('p', { class: 'muted' }, ft('fr.keptSub')), h('div', { class: 'fd-list' }, ...rows), ok));
+    h('div', { class: 'fd-card' }, h('h2', {}, ft('fr.keptTitle')), h('p', { class: 'muted' }, ft('fr.keptSub')), h('div', { class: 'fd-list' }, ...rows), ok));
   document.body.append(box);
   haptic(14);
   void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
-  setTimeout(() => { a?.cheer(1600); b?.cheer(1600); }, 350);
   await new Promise<void>((res) => {
     const close = () => { box.remove(); res(); };
     ok.addEventListener('click', close);

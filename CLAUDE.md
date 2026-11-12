@@ -1828,6 +1828,12 @@ duas/reflections section in Me.
       background. **Power-up**: the character stands *inside* one big flame (`FlatFire`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
       spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
+      **Friends in the same flame** (owner 2026-11-12, "the same flame … the character inside the flame"): the daily friend
+      streak moment is the power-up itself with both characters inside the smooth flame (the longest streak kept today; the
+      card stays only without a character); friend cards and profiles show the two inside the streak flame at rest
+      (`blazingPair()` → `flame()` behind, its base over the feet, the character lit by the flame's gradient map); the old
+      two-tone aura (`blaze()`) is gone. Me's goals card: the reset countdown sits on its own line under Today | This week |
+      Challenges
       **On fire every week** (owner 2026-11-12, "make it every single week", counted from each person's own first day): on a fire
       day (`src/data/fireDays.ts`: 3, every 7th, 30, 50, 100, 365, every 100th after) the daily streak moment leads into the
       power-up when Me opens (once a day, `fireSeen:{day}`, only with a character); friend streaks use the same days plus day 1

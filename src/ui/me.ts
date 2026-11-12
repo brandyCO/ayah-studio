@@ -522,7 +522,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const clock = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
     return d ? `${t('wkg.days', { d })} ${clock}` : clock;
   };
-  // The time left sits as a small clock pill at the top right of the goals card (owner request 2026-11-10).
+  // The time left sits as a small clock pill under the Today / This week / Challenges switch.
   const resetText = (el: HTMLElement) => {
     const left = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
     el.lastChild!.textContent = left;
@@ -629,8 +629,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady),
             wk.length ? seg('week', mpt('mp.week'), weekReady) : '', withCh ? seg('ch', mpt('mp.challenges'), challengeWaiting()) : '')
           : h('h2', { class: 'me-h' }, t('goal.title')),
-        tab === 'week' || (tab === 'day' && list.length) ? resetLabel(tab) : '',
         h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
+      // The countdown sits on its own line under the switch (owner 2026-11-12: with Challenges the head was too full).
+      tab === 'week' || (tab === 'day' && list.length) ? h('div', { class: 'goal-reset-row' }, resetLabel(tab)) : '',
       harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },

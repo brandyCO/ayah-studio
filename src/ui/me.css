@@ -119,7 +119,6 @@
 .goal-seg-dot { position: absolute; top: 5px; inset-inline-end: 8px; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4f;
   box-shadow: 0 0 0 2px var(--card); animation: seg-dot 1.6s ease-in-out infinite; }
 @keyframes seg-dot { 50% { transform: scale(1.35); } }
-.goal-head + .goal-reset { margin-top: 6px; }
 .me-card .week-goals { margin-top: 0; padding-top: 0; border-top: 0; }
 .me-card .goal-links { gap: 6px; margin-top: 12px; }
 .me-card .goal-links .chip { font-weight: 700; }
@@ -175,17 +174,18 @@
 .me-pr-ic { font-size: 18px; }
 .me-pr-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .me-pr-go { font-size: 20px; color: #12a594; }
-/* Reset countdown: a clock pill at the top right of the goals card. */
-.goal-head .goal-reset { display: inline-flex; align-items: center; gap: 4px; flex: none; margin: 0 0 0 auto; padding: 5px 9px; border-radius: 999px;
+/* Reset countdown: a clock pill on its own line under the switch. */
+.goal-reset-row { display: flex; margin: 8px 0 2px; }
+.goal-reset-row .goal-reset { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 5px 9px; border-radius: 999px;
   background: color-mix(in srgb, #f59f00 16%, var(--card)); color: #b06a00; font: 900 var(--fs-xs) var(--ui-round); font-variant-numeric: tabular-nums; }
-.goal-head .goal-seg { flex: 1 1 auto; min-width: 0; }
+.goal-head .goal-seg { flex: 1 1 auto; min-width: 0; max-width: none; }
 .goal-head > .chip { flex: none; }
 .goal-reset-ic { width: 14px; height: 14px; display: inline-flex; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .goal-head .goal-reset { color: #ffc154; } }
-:root[data-theme="dark"] .goal-head .goal-reset { color: #ffc154; }
-.goal-head .goal-reset + .chip { margin-inline-start: 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .goal-reset-row .goal-reset { color: #ffc154; } }
+:root[data-theme="dark"] .goal-reset-row .goal-reset { color: #ffc154; }
 .goal-head { flex-wrap: nowrap; }
 .goal-head .goal-seg-b { white-space: nowrap; padding-inline: 6px; }
+.goal-head .goal-seg-dot { top: 3px; inset-inline-end: 3px; }
 .goal-head .goal-edit { width: 40px; height: 40px; padding: 0; justify-content: center; }
 .goal-edit-ic { width: 18px; height: 18px; display: inline-flex; }
 /* Open every waiting goal chest at once (the harvest moment, src/ui/harvest.ts). */
