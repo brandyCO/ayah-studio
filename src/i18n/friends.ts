@@ -4,6 +4,9 @@ import { lang } from './index';
 
 const en = {
   'fr.tab': 'Friends',
+  'fr.keptTitle': 'You kept it together!',
+  'fr.keptSub': 'Your friend streak goes on today.',
+  'fr.keepGoing': 'Keep going',
   'fr.add': 'Add friend',
   'fr.sent': 'Ask sent',
   'fr.cancel': 'Take back',
@@ -48,6 +51,9 @@ const en = {
 };
 export type FriendKey = keyof typeof en;
 const ar: Partial<Record<FriendKey, string>> = {
+  'fr.keptTitle': 'حافظتما عليها معًا!',
+  'fr.keptSub': 'سلسلة الصحبة مستمرة اليوم.',
+  'fr.keepGoing': 'تابع',
   'fr.tab': 'الأصدقاء',
   'fr.add': 'أضف صديقًا',
   'fr.sent': 'أُرسل الطلب',

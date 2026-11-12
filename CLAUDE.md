@@ -1858,6 +1858,18 @@ duas/reflections section in Me.
       account, newest 60) or from the board row, then updated in place; while the league shows, its players' profiles (top 3
       first, `preloadProfiles()`) and the Friends tab are fetched ahead (`warmFriends()`); Add / Accept / Remove show their
       result at once and the server's answer follows quietly
+      **Challenges + weekly rivals** (owner request 2026-11-12; migration `20261112000000_challenges_duels.sql`, pgTAP
+      `challenges_duels.test.sql` 22): a friend challenge has a kind — Pages, Dhikr (tasbih), Adhkar (sessions said in full),
+      Listening, Learn lessons, or Read & listen — picked from ⚔ Challenge on a friend card or profile (`openChallengePicker`,
+      `src/ui/challenges.ts`, strings `src/i18n/challenges.ts`); the friend accepts / declines, 7 days from yes, chests as
+      before. `rank_report` now also takes the day's adhkar sessions and dhikr (never scored in XP; dhikr ≤ 3000 a day and
+      no faster than it can be said, adhkar ≤ 12). Me's goals card has **Today | This week | Challenges** (signed in).
+      **Weekly rival** (opt-in): tap the league card on Ranks → a full-screen duel (both characters walk in and face off,
+      then the score, today's and the duel's countdowns with seconds, two daily duel quests +30 each that open where they
+      are done); pairing in the same tier by the closest 14-day average (`rank_my_duel`); score = the week's XP + dhikr
+      (1 a 33, ≤ 10 a day) + adhkar (10 a session, ≤ 4 a day) + quests; last week's chest 100 / 60 / 30. **Daily friend
+      moment**: the first time both kept a friend streak today, a small card with both characters on fire (`frDay:`).
+      The goals reset pill counts down with seconds
 - [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
       (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
       (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =

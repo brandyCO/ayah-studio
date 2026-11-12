@@ -1223,6 +1223,7 @@ const en = {
   'wkg.chest': 'Every goal this week',
   'wkg.allTitle': 'Every goal this week',
   'wkg.allSub': 'A whole week of goals met',
+  'wkg.days': '{d} d',
   'wkg.resets': 'Resets in {left}',
   'wkg.leftD': '{d} d {h} h',
   'wkg.leftH': '{h} h {m} m',

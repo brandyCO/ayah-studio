@@ -21,6 +21,7 @@ import { h, haptic, toast } from './dom';
 import { tabBar } from './tabs';
 import { levelLabel, levelOf, levelProgress, myXp } from '../data/xp';
 import { withLevel } from './levelLook';
+import { dayKey } from '../data/readLog';
 import './friends.css';
 
 const num = (n: number) => n.toLocaleString();
@@ -120,7 +121,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
         : p.relation === 'sent' ? [h('button', { class: 'chip', onclick: () => act('none', () => removeFriend(pid)) }, `${ft('fr.sent')} · ${ft('fr.cancel')}`)]
           : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
             h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
-            : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`)] : [];
+            : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`),
+              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, `⚔ ${chLabel}`)] : [];
     const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
       known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
       known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');
@@ -193,6 +195,49 @@ export async function friendMilestone(list: Friend[]) {
   try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '' } }); } finally { playing = false; }
 }
 
+/** The daily friend streak moment: "You kept it together" with each friend whose streak went on today, both
+ *  characters side by side (or their discs) and the count; a tap or Continue closes it. Once a day per friend. */
+export async function friendDayMoment(list: Friend[]) {
+  const route = location.hash;
+  if (playing || document.hidden || document.querySelector('dialog[open], .cel, .fd-moment') || /^#\/(reel|kids|t\/)/.test(route)) return;
+  const today = dayKey();
+  try { for (const f of list) localStorage.setItem(`frDay:${today}:${f.pid}`, '1'); } catch { return; }
+  await import('./challenges.css');
+  const me = myFigureCode();
+  const rows = list.slice(0, 4).map((f) => {
+    const name = f.private ? rt('rk.private') : f.name ?? rt('rk.private');
+    return h('div', { class: 'fd-row' },
+      h('span', { class: 'fd-pair' }, avatar(0, 0, 40, 0, me), avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.private ? null : f.figure)),
+      h('b', {}, name),
+      h('span', { class: 'fd-n' }, flame(2, 22, true), String(f.streak)));
+  });
+  const a = actor('fd-fig', me);
+  const b = list.length === 1 && !list[0].private ? actor('fd-fig', list[0].figure ?? null) : null;
+  const pairEl = a ? h('span', { class: 'fr-pair' }, blazingPair(powerLevel(Math.max(1, list[0].streak)), a.el, b?.el ?? null, true)) : '';
+  const ok = h('button', { class: 'primary brand-btn' }, ft('fr.keepGoing'));
+  const box = h('div', { class: 'fd-moment', role: 'dialog', 'aria-modal': 'true', 'aria-label': ft('fr.keptTitle') },
+    h('div', { class: 'fd-card' }, pairEl, h('h2', {}, ft('fr.keptTitle')), h('p', { class: 'muted' }, ft('fr.keptSub')), h('div', { class: 'fd-list' }, ...rows), ok));
+  document.body.append(box);
+  haptic(14);
+  void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
+  setTimeout(() => { a?.cheer(1600); b?.cheer(1600); }, 350);
+  await new Promise<void>((res) => {
+    const close = () => { box.remove(); res(); };
+    ok.addEventListener('click', close);
+    box.addEventListener('click', (e) => { if (e.target === box) close(); });
+    window.addEventListener('hashchange', close, { once: true });
+  });
+}
+
+/** Challenge a friend in a good deed (src/ui/challenges.ts). */
+let chLabel = 'Challenge';
+void import('../i18n/challenges').then((m) => { chLabel = m.clt('cl.challenge'); });
+function challenge(pid: string | null | undefined, name: string, after?: () => void) {
+  if (!pid) return;
+  haptic(8);
+  void import('./challenges').then((m) => m.openChallengePicker({ pid, name }, after));
+}
+
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
 export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
   const data = await myFriends(fresh);
@@ -222,11 +267,12 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
   const cards = data.friends.map((f) => {
     const on = f.meToday && f.themToday;
     const name = f.name ?? rt('rk.private');
-    return h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
+    const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, `⚔ ${chLabel}`);
+    return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, name),
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
-        h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither'))));
+        h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });
   setTimeout(() => void friendMilestone(data.friends), 900);
   return h('div', { class: 'fr-tab' }, asks,

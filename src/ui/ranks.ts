@@ -253,16 +253,32 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, star(), num(lightLeft())),
       h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame, s.figure)));
     head.replaceChildren(view === 'league' ? h('div', { class: 'rk-headbox' },
-      h('div', { class: `rk-hero t${s.tier}` },
+      heroTap(h('div', { class: `rk-hero t${s.tier} duel-tap`, role: 'button', tabindex: '0', 'aria-label': `${rt('rk.leagueTitle', { tier: tierName(s.tier) })} · ${duelLabel}` },
         ladder(s.tier),
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
         h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
-          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
+          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')))),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);
     void moments(s);
+  }
+  const kindNames: Record<string, string> = {};
+  void import('../i18n/challenges').then((m) => { for (const k of ['pages', 'listen', 'lessons', 'adhkar', 'dhikr'] as const) kindNames[k] = m.clt(`cl.k.${k}`); });
+  // The league card opens the weekly rival full screen (owner 2026-11-12); a "VS" badge with the rival's face says so.
+  let duelLabel = '';
+  void import('../i18n/challenges').then((m) => { duelLabel = m.clt('du.title'); });
+  function heroTap(el: HTMLElement): HTMLElement {
+    const open = (e: Event) => {
+      if ((e.target as Element).closest('.rk-hero-pts')) return;
+      haptic(10);
+      void import('./challenges').then((m) => m.openDuel(() => void paint(true)));
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
+    void import('./challenges').then((m) => m.duelBadge()).then((b) => { if (el.isConnected || !el.querySelector('.du-badge')) el.append(b); });
+    return el;
   }
   /** The five tiers in a row, yours lit and larger, the ones above still to reach. */
   const ladder = (tier: number) => h('div', { class: 'rk-ladder', role: 'img', 'aria-label': rt('rk.leagueTitle', { tier: tierName(tier) }) },
@@ -667,6 +683,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     return { el, a, b };
   }
   function challengeBox(list: Challenge[]): HTMLElement {
+    // Challenges sent straight to a friend wait for their answer on Me → Challenges; here the running ones show.
+    list = list.filter((c) => !c.asked && !c.incoming);
     const live = list.filter((c) => !c.expired && !(c.over && c.claimed));
     const done = list.filter((c) => c.over && c.claimed).slice(0, 3);
     const card = (c: Challenge) => {
@@ -692,7 +710,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       claim?.addEventListener('click', () => void openChallenge(c, claim));
       const cast = duo(me, them, c.friend);
       return h('div', { class: `rk-ch me-card${c.over ? ' over' : ''}` },
-        h('div', { class: 'me-row' }, h('b', {}, rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
+        h('div', { class: 'me-row' }, h('b', {}, kindNames[c.kind ?? 'read'] ?? rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
         cast?.el ?? '',
         bar(me, true, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 30, status?.frame ?? 0, status?.figure), rt('rk.you')),
         bar(them, false, avatar(c.friend?.private ? null : c.friend?.avatar ?? 0, c.friend?.tier ?? 0, 30, c.friend?.frame ?? 0, c.friend?.figure), who),
