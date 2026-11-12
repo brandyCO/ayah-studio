@@ -13,6 +13,8 @@ import {
 import { chestArt, chestTier } from './chest';
 import { h, haptic, toast } from './dom';
 import { avatar } from './rankAvatars';
+import { lampPill } from './lampPill';
+import { lampOf } from '../data/shop';
 import './challenges.css';
 
 const num = (n: number) => n.toLocaleString();
@@ -175,11 +177,13 @@ export async function openDuel(onChange?: () => void): Promise<void> {
     const d = st.duel;
     const mine = actor('du-fig mine'), theirs = d && !d.rival.private ? actor('du-fig theirs', d.rival.figure ?? null) : null;
     if (first || !stage.childElementCount || (d && stage.querySelector('.empty'))) {
-      const side = (a: ReturnType<typeof actor>, disc: HTMLElement, cls: string) => h('div', { class: `du-hero ${cls}` }, h('i', { class: 'du-glow' }), a ? a.el : disc);
+      // Under each hero their lamp of Light (owner 2026-11-12, "Light visible to others").
+      const side = (a: ReturnType<typeof actor>, disc: HTMLElement, cls: string, lamp = 0) => h('div', { class: `du-hero ${cls}` }, h('i', { class: 'du-glow' }), a ? a.el : disc,
+        lamp ? h('span', { class: 'du-lamp' }, lampPill(lamp, true)) : '');
       stage.replaceChildren(
-        side(mine, meDisc(110), 'l'),
+        side(mine, meDisc(110), 'l', lampOf()),
         h('div', { class: 'du-clash', 'aria-hidden': 'true' }, h('i', { class: 'du-ring' }), h('i', { class: 'du-ring r2' }), h('b', {}, clt('du.vs').toUpperCase())),
-        d ? side(theirs, theirDisc(d.rival, 110), 'r') : h('div', { class: 'du-hero r empty' }, h('span', { class: 'du-q-mark' }, '?')));
+        d ? side(theirs, theirDisc(d.rival, 110), 'r', d.rival.private ? 0 : d.rival.lamp ?? 0) : h('div', { class: 'du-hero r empty' }, h('span', { class: 'du-q-mark' }, '?')));
       if (!still) {
         setTimeout(() => { mine?.hop(); theirs?.hop(); }, 650);
         setTimeout(() => { if (!d) return; (d.me >= d.them ? mine : theirs)?.cheer(1600); setTimeout(() => (d.me >= d.them ? theirs : mine)?.wave(1400), 400); }, 1350);

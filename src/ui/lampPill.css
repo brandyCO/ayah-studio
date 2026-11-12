@@ -1,0 +1,15 @@
+/* The lamp of Light by a name (src/ui/lampPill.ts). */
+.rk-lamp { display: inline-grid; width: 16px; height: 16px; margin-inline-start: 4px; vertical-align: -2px; }
+.rk-lamp svg { width: 100%; height: 100%; overflow: visible; }
+.rk-lamp .g { fill: var(--lg); opacity: .28; }
+.rk-lamp .e, .rk-lamp .t { fill: var(--le); }
+.rk-lamp .b { fill: var(--lb); stroke: var(--le); stroke-width: .7; }
+.rk-lamp .f { fill: #ff9a2e; }
+.rk-lamp.l1 { --lb: #f0b27f; --le: #8a4a1f; --lg: #ffb37a; }
+.rk-lamp.l2 { --lb: #eef2f6; --le: #6b7785; --lg: #dfe8f2; }
+.rk-lamp.l3 { --lb: #ffe08a; --le: #a8761a; --lg: #ffd36b; }
+.rk-lamp.l4 { --lb: #e6f7ff; --le: #3a8fc2; --lg: #9fe2ff; }
+.rk-lamp.l4 .g { opacity: .5; }
+.rk-lamp.big { width: 22px; height: 22px; }
+.lamp-line { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 0; font-weight: 800; }
+.lamp-line .rk-lamp { margin: 0; }

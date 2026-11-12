@@ -1,4 +1,4 @@
-// Monday recap card (owner request 2026-11-09): last week's league as a picture to share — the tier
+// Week recap card (owner request 2026-11-09; shown from the player's Friday Maghrib, when their week ends): last week's league as a picture to share — the tier
 // emblem, the place, the points and this device's own pages and listening. Drawn on a canvas (1080×1350,
 // a 4:5 post / status size), shared as a PNG (Android share sheet, Web Share with files, else a download).
 // No Quran text and no faces on it; only numbers the app checked itself.
@@ -8,6 +8,10 @@ import { lastWeekLocal, tierOf, type Status } from '../together/ranks';
 import { TIER_RING } from './rankAvatars';
 import { tierEmblem } from './rankMoment';
 import { toast } from './dom';
+import { myFigureCode } from './actor';
+import { figureSvg, parse } from './figure';
+import { lampOf } from '../data/shop';
+import { streak } from '../data/journey';
 
 const W = 1080, H = 1350;
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
@@ -50,44 +54,63 @@ export async function recapCanvas(s: Status): Promise<HTMLCanvasElement> {
   g.font = font(900, 64);
   g.fillText(rt('rk.recapTitle'), W / 2, 180);
 
-  const em = await svgImage(tierEmblem(last.tier), 300);
-  g.drawImage(em, W / 2 - 150, 250, 300, 300);
-  g.font = font(900, 120);
-  g.fillText(`#${last.place}`, W / 2, 690);
+  // With a character (owner 2026-11-12, "Friday shareable recap"): the character cheering, the league's emblem as a
+  // badge at its side, and the lamp of Light under the title. Without one, the emblem alone as before.
+  const fig = parse(myFigureCode() ?? '');
+  const lamp = lampOf();
+  if (lamp) {
+    g.fillStyle = ['', '#f0b27f', '#eef2f6', '#ffe08a', '#bfeaff'][lamp];
+    g.font = font(800, 34);
+    g.fillText(`✦ ${rt(`rk.lamp${lamp}` as RankKey)}`, W / 2, 232);
+  }
+  const em = await svgImage(tierEmblem(last.tier), fig ? 250 : 300);
+  let y0 = 0;
+  if (fig) {
+    const s = figureSvg(fig, { still: true, cheer: true }).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="655" ');
+    const im = await new Promise<HTMLImageElement>((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`; });
+    g.drawImage(im, W / 2 - 340, 168, 500, 655);
+    g.drawImage(em, W / 2 + 100, 470, 250, 250);
+    y0 = 196;
+  } else g.drawImage(em, W / 2 - 150, 250, 300, 300);
+  g.fillStyle = '#fff';
+  g.font = font(900, fig ? 110 : 120);
+  g.fillText(`#${last.place}`, W / 2, 690 + y0);
   g.font = font(800, 44);
   g.fillStyle = '#e8e4ff';
-  g.fillText(rt('rk.recapOf', { n: last.size, tier: tierName(last.tier) }), W / 2, 756);
+  g.fillText(rt('rk.recapOf', { n: last.size, tier: tierName(last.tier) }), W / 2, 750 + y0);
   const moved = s.tier > last.tier ? rt('rk.recapUp', { tier: tierName(s.tier) }) : s.tier < last.tier ? rt('rk.recapFresh', { tier: tierName(s.tier) }) : rt('rk.recapStay', { tier: tierName(s.tier) });
   g.fillStyle = s.tier > last.tier ? '#b6f5a3' : '#fff';
   g.font = font(800, 42);
-  g.fillText(`${s.tier > last.tier ? '▲ ' : ''}${moved}`, W / 2, 822);
+  g.fillText(`${s.tier > last.tier ? '▲ ' : ''}${moved}`, W / 2, 806 + y0);
 
   // Three tiles: points, pages, minutes.
   const mine = lastWeekLocal(s.weekStart);
   // (This device's numbers only when it has them: a card never shows "0 pages".)
-  const tiles = ([[last.score, rt('rk.recapPts'), '#6c5ce7'], [mine.pages, rt('rk.recapPages'), '#12a594'], [mine.listen, rt('rk.recapMin'), '#2f7fd6']] as [number, string, string][])
-    .filter(([v], i) => i === 0 || v > 0);
-  const tw = 296, gap = 30, x0 = (W - (tw * tiles.length + gap * (tiles.length - 1))) / 2, y = 890;
+  const days = streak().days;
+  const tiles = ([[last.score, rt('rk.recapPts'), '#6c5ce7'], [mine.pages, rt('rk.recapPages'), '#12a594'], [mine.listen, rt('rk.recapMin'), '#2f7fd6'], [days, rt('rk.recapStreak'), '#f08a1c']] as [number, string, string][])
+    .filter(([v], i) => i === 0 || v > 0).slice(0, 3);
+  const tw = 296, gap = 30, x0 = (W - (tw * tiles.length + gap * (tiles.length - 1))) / 2, y = fig ? 1036 : 890;
+  const th = fig ? 168 : 200;
   tiles.forEach(([n, label, col], i) => {
     const v = num(n);
     const x = x0 + i * (tw + gap);
     g.fillStyle = 'rgba(0,0,0,.18)';
-    round(g, x, y + 10, tw, 200, 36); g.fill();
+    round(g, x, y + 10, tw, th, 36); g.fill();
     g.fillStyle = '#fff';
-    round(g, x, y, tw, 200, 36); g.fill();
+    round(g, x, y, tw, th, 36); g.fill();
     g.fillStyle = col;
     g.font = font(900, 72);
-    g.fillText(v, x + tw / 2, y + 108);
+    g.fillText(v, x + tw / 2, y + th * 0.54);
     g.fillStyle = '#5b5a6e';
     g.font = font(800, 32);
-    g.fillText(label, x + tw / 2, y + 158);
+    g.fillText(label, x + tw / 2, y + th * 0.79);
   });
   g.fillStyle = '#fff';
   g.font = font(800, 40);
-  g.fillText(rt('rk.recapCta'), W / 2, 1210);
+  g.fillText(rt('rk.recapCta'), W / 2, fig ? 1262 : 1210);
   g.fillStyle = '#d9d4ff';
   g.font = font(700, 30);
-  g.fillText(rt('rk.recapNote'), W / 2, 1268);
+  g.fillText(rt('rk.recapNote'), W / 2, fig ? 1312 : 1268);
   return c;
 }
 

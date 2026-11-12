@@ -93,16 +93,10 @@ const pts = (n: number, unit = true) => h('span', { class: 'rk-pts' }, ptsIcon()
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
-/** The character's level (from all-time XP) beside a name. */
 /** The lamp of Light by a name (owner request 2026-11-12): bronze, silver, gold or diamond, by the Light spent. */
-export const lampPill = (n?: number) => !n ? '' : h('span', { class: `rk-lamp l${n}`, title: rt(`rk.lamp${n}` as RankKey), 'aria-label': rt(`rk.lamp${n}` as RankKey) }, lampSvg());
-function lampSvg(): SVGSVGElement {
-  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  s.setAttribute('viewBox', '0 0 16 16');
-  s.innerHTML = '<circle class="g" cx="8" cy="9" r="7"/><path class="e" d="M5.2 4.6h5.6l.8 1.4H4.4z"/><path class="b" d="M4.4 6h7.2q1.4 3-1 6.2H5.4Q3 9 4.4 6z"/>'
-    + '<path class="f" d="M8 7.2c1 1.1 1.2 1.9 1.2 2.5a1.2 1.2 0 0 1-2.4 0c0-.6.2-1.4 1.2-2.5z"/><path class="t" d="M6.8 3.4h2.4l-.4 1.2H7.2z"/>';
-  return s;
-}
+export { lampPill } from './lampPill';
+import { lampPill } from './lampPill';
+/** The character's level (from all-time XP) beside a name. */
 export const lvPill = (xp?: number | null) => xp == null ? '' : h('span', { class: `lv-pill${levelOf(xp) >= 40 ? ' gold' : ''}` }, levelLabel(levelOf(xp), true));
 
 /** The top 3 on a podium (owner pick 2026-11-10): gold in the middle, silver left, bronze right, each player
@@ -538,7 +532,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     return h('div', { class: 'rk-rival me-card' },
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 48, r.frame ?? 0, r.figure),
       h('div', { class: 'rk-rival-txt' },
-        h('span', { class: 'rk-rival-k small' }, rt('rk.rivalK')),
+        h('span', { class: 'rk-rival-k small' }, rt('rk.rivalK'), r.private ? '' : lampPill(r.lamp)),
         h('b', {}, r.gap > 0 ? rt('rk.rivalShort', { name, n: num(r.gap), pages: Math.max(1, Math.ceil((r.gap + 1) / POINTS.page)) }) : rt('rk.rivalTie', { name })),
         h('span', { class: 'muted small' }, actLine(name, r.act))));
   }

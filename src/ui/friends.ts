@@ -14,6 +14,7 @@ import { myFigureCode, actor } from './actor';
 import { avatar } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, tierBadge } from './ranks';
+import { lampLine, lampPill } from './lampPill';
 import { t } from '../i18n';
 import { openAccount } from './account';
 import { flame } from './flame';
@@ -148,6 +149,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     info.replaceChildren(
       h('div', { class: 'fr-who' }, h('h3', {}, p.relation === 'me' ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
       p.xp != null ? levelLine(p.xp) : '',
+      p.private ? '' : lampLine(p.lamp),
       f ? streakLine(f, name) : '',
       stats.childElementCount ? stats : '',
       actions, mine,
@@ -193,7 +195,7 @@ export async function friendMilestone(list: Friend[]) {
   if (!f) return;
   try { localStorage.setItem(`frMs:${f.pid}:${f.streak}`, '1'); } catch { return; }
   playing = true;
-  try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '' } }); } finally { playing = false; }
+  try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '', lamp: f.private ? '' : lampPill(f.lamp, true) } }); } finally { playing = false; }
 }
 
 /** The daily friend streak moment (owner 2026-11-12: "the same flame … animated, the character inside the flame"):
@@ -209,7 +211,7 @@ export async function friendDayMoment(list: Friend[]) {
     const top = [...list].sort((x, y) => y.streak - x.streak)[0];
     playing = true;
     try {
-      const p = powerUp(Math.max(1, top.streak), { friend: { code: top.private ? null : top.figure ?? null, name: top.private ? rt('rk.private') : top.name ?? '' } });
+      const p = powerUp(Math.max(1, top.streak), { friend: { code: top.private ? null : top.figure ?? null, name: top.private ? rt('rk.private') : top.name ?? '', lamp: top.private ? '' : lampPill(top.lamp, true) } });
       if (p) { await p; return; }
     } finally { playing = false; }
   }
@@ -218,7 +220,7 @@ export async function friendDayMoment(list: Friend[]) {
     const name = f.private ? rt('rk.private') : f.name ?? rt('rk.private');
     return h('div', { class: 'fd-row' },
       h('span', { class: 'fd-pair' }, avatar(0, 0, 40, 0, me), avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.private ? null : f.figure)),
-      h('b', {}, name),
+      h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
       h('span', { class: 'fd-n' }, flame(2, 22, true), String(f.streak)));
   });
   const ok = h('button', { class: 'primary brand-btn' }, ft('fr.keepGoing'));
@@ -276,7 +278,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
     const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, `⚔ ${chLabel}`);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
-      h('span', { class: 'fr-card-txt' }, h('b', {}, name),
+      h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });
