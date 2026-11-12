@@ -13,7 +13,11 @@ import { h, haptic, toast } from './dom';
 import { locale } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
 import { snt, type SeasonKey } from '../i18n/season';
-import { countdown, juzFill, juzStart, seasonBadges, seasonState, type SeasonState } from '../data/season';
+import { countdown, juzFill, juzStart, lastTen, nightClaimId, QADR_NIGHTS, seasonBadges, seasonState, type NightState, type QuestTask, type SeasonState } from '../data/season';
+import { claimGoal } from '../data/journey';
+import { ownsPiece } from '../data/wardrobe';
+import { chest } from './chest';
+import { goMushaf } from './tabs';
 import { PAGES, planPages, ramadanData, setPlan, type Plan } from '../data/ramadan';
 import { WARDROBE } from './figure';
 import { t as tr } from '../i18n';
@@ -203,6 +207,70 @@ function rewardsSection(st: SeasonState): HTMLElement {
       h('span', {}, b.earned ? snt('sn.earned') : open ? `${snt(`sn.b.${b.id}Goal` as SeasonKey)} · ${b.have}/${b.need}` : snt(`sn.b.${b.id}Goal` as SeasonKey))))));
 }
 
+// --- the last ten nights ---
+const LANTERN = (n: number, odd: boolean) => `<svg viewBox="0 0 40 64" aria-hidden="true"><path d="M20 0v9" class="ln-cord"/><path d="M11 9h18l5 7H6z" class="ln-cap"/>`
+  + `<path d="M7 16Q20 12 33 16L30 46H10Z" class="ln-body"/><rect x="14" y="20" width="12" height="20" rx="5" class="ln-glass"/><path d="M8 46h24l-5 6H13z" class="ln-cap"/>`
+  + (odd ? '<path d="M20 25l1.6 3.4 3.7.4-2.8 2.5.8 3.7-3.3-1.9-3.3 1.9.8-3.7-2.8-2.5 3.7-.4z" class="ln-star"/>' : `<circle cx="20" cy="30" r="3.2" class="ln-flame"/>`)
+  + `<text x="20" y="62" class="ln-n">${n}</text></svg>`;
+const TASK_GO: Record<QuestTask, () => void> = {
+  pages: () => goMushaf(),
+  listen: () => goMushaf('listen'),
+  dhikr: () => void import('./tasbih').then((m) => m.openTasbih()),
+  evening: () => void import('./adhkar').then((m) => m.openAdhkar('m')),
+};
+
+function questCard(night: NightState, year: number, repaint: () => void): HTMLElement {
+  const ready = night.done && !night.claimed;
+  const label = night.claimed ? snt('sn.kept') : snt('sn.chestT', { n: night.n });
+  const box = chest(night.light, night.claimed ? 'open' : ready ? 'ready' : 'locked', label, async (b) => {
+    haptic();
+    try {
+      const c = await import('./celebrate');
+      await c.celebrate({ kind: 'chest', kicker: snt('sn.ten'), title: snt('sn.chestT', { n: night.n }), sub: snt('sn.chestSub') }, b, night.light);
+    } finally {
+      claimGoal(nightClaimId(year, night.n), night.light);
+      repaint();
+    }
+  });
+  return h('div', { class: `sn-quest${night.odd ? ' odd' : ''}${night.done ? ' done' : ''}` },
+    h('div', { class: 'sn-quest-h' },
+      h('div', {}, h('span', { class: 'sn-qk' }, h('span', { class: 'sn-kicker' }, snt('sn.tonight'))),
+        h('b', {}, snt('sn.night', { n: night.n })), night.odd ? h('span', { class: 'sn-odd' }, `★ ${snt('sn.odd')}`) : '',
+        h('span', { class: 'sn-xp' }, night.odd ? snt('sn.xp2') : snt('sn.xp15'))),
+      box),
+    h('ul', { class: 'sn-parts' }, ...night.parts.map((p) => {
+      const met = p.have >= p.need;
+      const txt = snt(`sn.q.${p.k}` as SeasonKey, { n: p.need });
+      return h('li', { class: met ? 'met' : '' },
+        h('span', { class: 'sn-pt' }, h('i', { 'aria-hidden': 'true' }, met ? '✓' : ''), txt),
+        p.need > 1 ? h('span', { class: 'sn-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(p.need), 'aria-valuenow': String(p.have), 'aria-label': txt },
+          h('span', { style: `width:${Math.round((p.have / p.need) * 100)}%` })) : '',
+        p.need > 1 ? h('small', {}, `${p.have}/${p.need}`) : '',
+        met ? '' : h('button', { class: 'sn-go', type: 'button', onclick: () => { haptic(10); TASK_GO[p.k](); } }, snt('sn.go')));
+    })));
+}
+
+function lastTenSection(st: SeasonState, repaint: () => void): HTMLElement {
+  const t10 = lastTen();
+  const soon = st.phase === 'soon' || (st.phase === 'open' && !t10.tonight);
+  const nights = t10.nights.filter((x) => x.n <= t10.length);
+  const tonight = nights.find((x) => x.when === 'now');
+  const row = h('div', { class: 'sn-nights', role: 'list' }, ...nights.map((x) => {
+    const state = x.done ? 'kept' : x.when === 'now' ? 'now' : x.when === 'past' ? 'gone' : 'soon';
+    const sr = [snt('sn.night', { n: x.n }), x.odd ? snt('sn.odd') : '', state === 'kept' ? snt('sn.kept') : state === 'gone' ? snt('sn.missed') : ''].filter(Boolean).join(' · ');
+    return h('span', { class: `sn-ln ${state}${x.odd ? ' odd' : ''}`, role: 'listitem', 'aria-label': sr });
+  }));
+  row.querySelectorAll<HTMLElement>('.sn-ln').forEach((e, i) => { e.innerHTML = LANTERN(nights[i].n, nights[i].odd); });
+  const qadr = ownsPiece('bg:12');
+  return h('section', { class: `sn-sec sn-ten${soon ? ' soon' : ''}` },
+    h('div', { class: 'sn-sec-h' }, h('h2', {}, snt('sn.ten')), soon ? lockPill(snt('sn.tenSoon')) : ''),
+    h('p', { class: 'sn-sub' }, snt('sn.tenSub')),
+    row,
+    tonight ? questCard(tonight, t10.year, repaint) : '',
+    h('p', { class: 'sn-note' }, soon ? snt('sn.qadrGoal', { n: QADR_NIGHTS })
+      : `${snt('sn.keptN', { n: t10.kept })} · ${qadr ? snt('sn.qadrHave') : snt('sn.qadrGoal', { n: QADR_NIGHTS })}`));
+}
+
 const REMIND = 'seasonRemind';
 export const remindOn = () => { try { return localStorage.getItem(REMIND) === '1'; } catch { return false; } };
 
@@ -235,12 +303,37 @@ export async function showSeason(screen: HTMLElement): Promise<() => void> {
         h('p', { class: 'sn-sub' }, open ? snt('sn.castLive') : snt('sn.castSub')),
         h('div', { class: 'sn-cast' }, ...CAST.map((c) => castCard(c, open))),
         open ? h('a', { class: 'sn-btn ghost', href: '#/me/room' }, snt('sn.dress')) : ''),
+      lastTenSection(st, paint),
       khatmSection(st, paint),
       rewardsSection(st)));
   };
   paint();
+  // Progress made elsewhere (a page counted, the tasbih, the adhkar) fills tonight's quest: repainted once nothing
+  // covers the screen, at most twice a second.
+  let dirty = false, timer = 0;
+  const later = () => {
+    dirty = true;
+    if (timer) return;
+    timer = window.setTimeout(() => {
+      timer = 0;
+      if (!dirty || !screen.isConnected || document.querySelector('dialog[open]')) return;
+      dirty = false;
+      const y = scrollY;
+      paint();
+      scrollTo(0, y);
+    }, 500);
+  };
+  const evs = ['journey-changed', 'readlog-changed'];
   window.addEventListener('ramadan-changed', paint);
-  return () => { stopHero(); window.removeEventListener('ramadan-changed', paint); };
+  for (const e of evs) window.addEventListener(e, later);
+  document.addEventListener('close', later, true);
+  return () => {
+    stopHero();
+    clearTimeout(timer);
+    window.removeEventListener('ramadan-changed', paint);
+    for (const e of evs) window.removeEventListener(e, later);
+    document.removeEventListener('close', later, true);
+  };
 }
 
 /** The first-day teaser (once): the sky, the countdown, the four new characters, and a way in. */

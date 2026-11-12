@@ -973,6 +973,13 @@ cloud. Build in this order:
       → notifications 3 days before and on the eve (ids 7600–7601, tap → `#/season`). **First-day teaser**: once, to a
       new user (only one day opened) right after their account's first successful sync (`initSeason()`; localStorage
       `seasonTeaser`, synced). No Khatm circle (circles were removed 2026-10-28)
+      **Last ten nights** (owner request 2026-11-12): the season screen's "The last ten nights" — ten lanterns (odd nights gold with a
+      star; kept ones lit; tonight's sways) and tonight's quest from what the app counts (`NIGHT_QUESTS` in `data/season.ts`: pages
+      counted, minutes listened, tasbih dhikr, evening adhkar; odd nights ask a little more, the 27th most), each part with a Go;
+      night N = Ramadan day N (local, with the shift). A kept night opens a chest (20 Light, odd 40, the 27th 60; claim
+      `qn:{year}:{n}`). Keeping 5 gives the Night of Qadr piece (`bg:12`, `nightsKept()` in `earnedPieces`, checked on Eid too).
+      Ranks XP on those days is raised by the server (`rank_xp_mult`: ×1.5, odd ×2, front-end thread); the quest card says so.
+      Me's season card shows tonight's quest state
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
@@ -1648,6 +1655,14 @@ duas/reflections section in Me.
       after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
       always pops. From the prayer times, else by the hour
       (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
+      **Badge moments by tier** (owner 2026-11-12: "lags and a mix of old and new… each animation unique to its tier, 60fps"):
+      the old gradient rosette / rays (petals drawn inside the SVG) are gone; `badgeStage()` in `celebrate.ts` gives each tier its own
+      moment in its metal (`TIER_C`, CSS `--b0…--b3`, `bm-*` in `cel.css`): Bronze tossed like a coin (flips, squash, dust ring),
+      Silver two squares lock into the khatam star + studs + ripple, Gold a sunburst unfolds and turns, laurels sweep up, the badge
+      rises, Platinum two petal rings bloom, a pillar of light, the badge drops in, rings pulse, Diamond beams wheel in, light
+      condenses into the badge, diamonds orbit, glints twinkle; Khatm adds a breathing halo + outer petals. Sparks, sounds, vibration
+      and the wash (lavender / ice) per tier. Every moving part an HTML layer (transform / opacity only); the title no longer blurs
+      in. 6× CPU throttle: 29–43 → 52–60 fps
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
