@@ -21,6 +21,8 @@ import { h, haptic, toast } from './dom';
 import { drawDeco, drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
 import { lightChip } from './lightChip';
+import { isFlawless } from '../data/learnLamps';
+import { lampChip } from './learnLamps';
 import { inboxBell } from './inbox';
 import { noorLine } from './noor';
 import { tabBar } from './tabs';
@@ -96,6 +98,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
       h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
       h('span', { class: 'lp-streak', 'aria-label': lt('learn.streakAria', { n: st.days }) }, svg(G.flame, 22), String(st.days)),
+      lampChip(),
       lightChip(),
       inboxBell());
   }
@@ -127,7 +130,11 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       wrap.classList.add('is-current');
       wrap.append(h('div', { class: 'lp-start', 'aria-hidden': 'true' }, lt('learn.start')));
     }
-    wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn));
+    // A lesson passed with no mistake keeps a gold star on its step.
+    const flaw = st.kind === 'new' && st.state === 'done' && isFlawless(st.s, st.range[1]);
+    if (flaw) btn.setAttribute('aria-label', `${btn.getAttribute('aria-label')} · ${lt('learn.flawlessMark')}`);
+    wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn,
+      flaw ? h('span', { class: 'lp-flaw', 'aria-hidden': 'true' }, svg(G.star, 14)) : ''));
     if (st.kind !== 'new') wrap.append(h('span', { class: 'lp-cap' }, label));
     return wrap;
   }
@@ -151,7 +158,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     haptic();
     try {
       const c = await import('./celebrate');
-      await c.celebrate({ kind: 'chest', kicker: surahName(m), title: lt('learn.chestTitle'), sub: lt('learn.chestSub', { n: CHEST_EVERY }), time: { lesson: 0, today: (await import('../data/learnClock')).learnToday() } }, from, PATH_CHEST);
+      await c.celebrate({ kind: 'chest', kicker: surahName(m), title: lt('learn.chestTitle'), sub: lt('learn.chestSub', { n: CHEST_EVERY }) }, from, PATH_CHEST);
     } finally {
       opening = false;
       claimGoal(chestId(st.s, st.range[1]), PATH_CHEST);
@@ -190,7 +197,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       const el = list.querySelector('.lp-chest.current .chest');
       el?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
       void openChest(st, meta[st.s - 1], el ?? from ?? cont);
-    } else location.hash = `#/learn/${st.s}`;
+    } else location.hash = st.state === 'done' && (st.kind === 'new' || st.kind === 'whole') ? `#/learn/${st.s}/review` : `#/learn/${st.s}`;
   }
 
   /** The surahs starting in each juz, and where in path order the last of them stands. */

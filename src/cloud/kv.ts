@@ -27,7 +27,7 @@ const DEVICE = new Set([
 const DEVICE_PREFIX = ['sb-', 'flag:', 'kids', 'debug'];
 /** Progress: always merged, so two devices used the same day both keep what they did. */
 const UNION = new Set([
-  'pageStrength', 'learnWeak', 'learnPageTasmi', 'learnSimilar', 'adhkarProgress', 'ramadan', 'goalTips',
+  'pageStrength', 'learnWeak', 'learnPageTasmi', 'learnSimilar', 'learnFlawless', 'adhkarProgress', 'ramadan', 'goalTips',
   'rkCheerSeen', 'nudgeFreeze',
 ]);
 /** Fields kept on the device only (a location): left out of what is sent, kept as they are here. */

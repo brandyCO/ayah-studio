@@ -3,11 +3,8 @@
 import { lang } from './index';
 
 const en = {
-  'mt.cel.mins': '{n} min',
   'mt.pm.left1': '1 page to finish {name}',
   'mt.pm.left': '{n} pages to finish {name}',
-  'mt.cel.thisLesson': 'this lesson',
-  'mt.cel.learnToday': 'learning today',
   'mt.cel.surprise': 'Surprise! Double Light',
   'cel.tapMore': 'Keep tapping…',
   'cel.tapNear': 'It’s giving way…',
@@ -43,11 +40,8 @@ const en = {
 };
 export type MomentKey = keyof typeof en;
 const ar: Partial<Record<MomentKey, string>> = {
-  'mt.cel.mins': '{n} د',
   'mt.pm.left1': 'صفحة واحدة لتختم {name}',
   'mt.pm.left': '{n} صفحات لتختم {name}',
-  'mt.cel.thisLesson': 'في هذا الدرس',
-  'mt.cel.learnToday': 'تعلّمًا اليوم',
   'mt.cel.surprise': 'مفاجأة! ضعف النور',
   'cel.tapMore': 'واصل النقر…',
   'cel.tapNear': 'بدأ يتشقق…',

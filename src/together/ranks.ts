@@ -25,7 +25,7 @@ export const tierOf = (n: number): Tier => TIERS[Math.max(0, Math.min(4, n | 0))
 /** League size and how many move up / down at the week's end (server: rank_join_league). */
 export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 /** Points, as the server counts them (rank_score). */
-export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, day: 20 };
+export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, flawless: 10, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
 export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
@@ -56,7 +56,7 @@ function totals(k: string) {
   // duels, never in the league score; the server limits how fast they may grow.
   const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
   const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, adhkar, dhikr };
+  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, flawless: d?.lf ?? 0, adhkar, dhikr };
 }
 let timer = 0;
 let busy = false;
@@ -76,10 +76,12 @@ export async function report(): Promise<void> {
     const today = dayKey();
     for (const k of [addDays(today, -1), today]) {
       const v = totals(k);
-      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.adhkar}:${v.dhikr}`;
+      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.flawless}:${v.adhkar}:${v.dhikr}`;
       if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons && !v.adhkar && !v.dhikr)) continue;
       lastAt = Date.now();
       await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons, adhkar: v.adhkar, dhikr: v.dhikr });
+      // Flawless lessons: 10 extra XP each (rank_flawless; an older server without it is skipped).
+      if (v.flawless) await rpc('rank_flawless', { d: k, n: v.flawless }).catch(() => undefined);
       sent[k] = sig;
       if (k === today) setTimeout(() => void friendMoments(), 1500);
     }

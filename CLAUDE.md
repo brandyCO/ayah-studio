@@ -1655,6 +1655,14 @@ duas/reflections section in Me.
       after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
       always pops. From the prayer times, else by the hour
       (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
+      **Badge moments by tier** (owner 2026-11-12: "lags and a mix of old and new… each animation unique to its tier, 60fps"):
+      the old gradient rosette / rays (petals drawn inside the SVG) are gone; `badgeStage()` in `celebrate.ts` gives each tier its own
+      moment in its metal (`TIER_C`, CSS `--b0…--b3`, `bm-*` in `cel.css`): Bronze tossed like a coin (flips, squash, dust ring),
+      Silver two squares lock into the khatam star + studs + ripple, Gold a sunburst unfolds and turns, laurels sweep up, the badge
+      rises, Platinum two petal rings bloom, a pillar of light, the badge drops in, rings pulse, Diamond beams wheel in, light
+      condenses into the badge, diamonds orbit, glints twinkle; Khatm adds a breathing halo + outer petals. Sparks, sounds, vibration
+      and the wash (lavender / ice) per tier. Every moving part an HTML layer (transform / opacity only); the title no longer blurs
+      in. 6× CPU throttle: 29–43 → 52–60 fps
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
@@ -1924,10 +1932,9 @@ duas/reflections section in Me.
       rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
       (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
       **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
-      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112200000_light_value.sql` (`rank_gifts`,
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
       `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
-      multiplier to 1). **Learning time** in celebrations: `learnClock()` counts visible lesson / page-memory time into
-      `DayRec.lm`; lantern / star / chest moments show "n min this lesson · n min learning today"
+      multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
 - [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on
       every page turn (`sfx.page()`, from `slideTo()`), a wooden bead click on each tasbih count and a deeper click + shimmer when
       the round is full (`sfx.bead()`); right answers already pop (lessons, page quiz). All silent while reciting, in the Kids
@@ -2122,6 +2129,20 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
       number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
       ~200 ms); screenshots identical
+- [x] **Lamps for mistakes** (owner decision 2026-11-12): five lamps a day (`src/data/learnLamps.ts`, localStorage
+      `learnLamps`, synced, newest wins). A wrong answer in a new lesson's exercises dims one (the lamp row beside the bar
+      dims it with a wisp of smoke); with none lit the exercises rest and a new lesson does not start (`lampsOut()` in
+      `src/ui/learnLamps.ts`): a lamp comes back every 30 min and all five each new day, +1 for each review / tasmi' /
+      watering / page recited from memory (`earnLamp()`; "Review {surah}" in place, `#/learn/{s}/review` = what was learned
+      from memory, also the path's "Practise again"), or all five for 50 Light (`refillLamps()`, a shop `s:lr:…` entry).
+      Memorisation tests never use a lamp and are never held back (the resting panel offers "Recite these ayat from
+      memory"). Path top bar: a lamps chip → sheet. **Kindness**: a wrong answer shows the right word's meaning and plays
+      it; before reciting, **Look again** lists the words missed (meaning, tap to hear). **Flawless**: a new lesson with no
+      wrong answer and no slip in its tasmi' → a gold star on its path step (`learnFlawless`, merged) and 10 extra XP
+      (`DayRec.lf` → `rank_flawless()`, migration `20261112200000_rank_flawless.sql`, ≤ the day's lessons, added to the
+      week and the total like the quest bonus; pgTAP `rank_flawless.test.sql`); its celebration is the star with "Flawless".
+      **Time spent**: every lesson's celebration shows "Learning · 4 min 12 s" / "Memorising · …" (visible time only;
+      `MomentStat` lines in `celebrate()`)
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

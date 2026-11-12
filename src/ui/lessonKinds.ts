@@ -2,7 +2,9 @@
 //   Meaning first   every word of the chunk with its Quran.com meaning, then the ayah's translation
 //   Exercises       a short run of cards: which word means …, what comes next, fill the word, put the
 //                   ayat (or the parts of one ayah) in order. A missed card comes back once at the end,
-//                   and the word is kept as weak (src/data/weakWords.ts) so it returns with a hint.
+//                   and the word is kept as weak (src/data/weakWords.ts) so it returns with a hint. A wrong
+//                   answer shows the right word with its meaning and sound at once, dims a lamp (src/data/learnLamps.ts),
+//                   and the words missed are looked at once more before reciting.
 // Only the bundled text is used, split at its spaces (rule 1); wrong choices are other words of the
 // same surah, never altered words. The reference stays on screen (rule 2).
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
@@ -142,18 +144,30 @@ function orderCard(c: KindCtx): Card | null {
   return { k: 'order', ayat: false, pieces: [ws.slice(0, cut1), ws.slice(cut1, cut2), ws.slice(cut2)].map((p) => ({ label: '', text: p.join(' ').replace(NUM, '') })) };
 }
 
+/** Lamps (src/data/learnLamps.ts): a wrong answer dims one; with none left the run rests (`rest`). */
+export interface DrillLamps {
+  /** Shown above the bar. */
+  row: HTMLElement;
+  /** A wrong answer: dims a lamp, returns the lamps still lit. */
+  wrong(): number;
+  /** The resting panel; `resume` carries on with the next card once a lamp is lit again. */
+  rest(resume: () => void): HTMLElement;
+}
+
 /** The run of exercise cards; `done(missed)` when the last one is answered. */
-export function drills(c: KindCtx, done: (missed: number) => void): HTMLElement {
+export function drills(c: KindCtx, done: (missed: number) => void, lamps?: DrillLamps): HTMLElement {
   const cards = buildCards(c);
   const box = h('div', { class: 'lk lk-drill', dir: uiDir() });
   const bar = h('div', { class: 'lk-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(cards.length) }, h('span'));
   const stage = h('div', { class: 'lk-stage', 'aria-live': 'polite' });
   const foot = h('div', { class: 'lk-foot' });
-  box.append(bar, stage, foot);
+  box.append(lamps ? h('div', { class: 'lk-top' }, bar, lamps.row) : bar, stage, foot);
   if (!cards.length) { queueMicrotask(() => done(0)); return box; }
   const queue = cards.slice();
-  let right = 0, missed = 0;
+  let right = 0, missed = 0, lit = 1;
   const retried = new Set<Card>();
+  // The words missed in this run, looked at once more before reciting (kindness: the right word, its meaning, its sound).
+  const slips: [number, number][] = [];
 
   const setBar = () => {
     const p = Math.min(1, right / cards.length);
@@ -175,6 +189,8 @@ export function drills(c: KindCtx, done: (missed: number) => void): HTMLElement 
       haptic(30);
       missed++;
       if (!retried.has(card)) { retried.add(card); queue.push(card); }
+      if (card.k !== 'order' && !slips.some(([a, i]) => a === card.a && i === card.i)) slips.push([card.a, card.i]);
+      if (lamps) lit = lamps.wrong();
     }
   }
 
@@ -196,6 +212,10 @@ export function drills(c: KindCtx, done: (missed: number) => void): HTMLElement 
         stage.querySelector('.lk-opt.is')?.classList.add('right', 'soft');
         markWeak(c.s, a, i);
         feedback(false, card, ar(c.words[a - 1][i]));
+        // Right away: the right word's meaning beside it, and its sound where the reciter's timings cover it.
+        const mean = c.meaningOf(a, i).trim();
+        if (mean && card.k !== 'mean') foot.querySelector('.lk-answer')?.append(h('span', { class: 'lk-ansmean', dir: 'ltr', lang: 'en' }, `“${mean}”`));
+        setTimeout(() => void c.sayWord(a, i), 350);
       }
     });
     if (isRight) b.classList.add('is');
@@ -271,9 +291,35 @@ export function drills(c: KindCtx, done: (missed: number) => void): HTMLElement 
   }
 
   function next() {
+    // No lamp left: the run rests here until one is lit again (reciting from memory stays open).
+    if (lamps && lit <= 0 && queue.length) {
+      foot.className = 'lk-foot';
+      foot.replaceChildren();
+      stage.replaceChildren(lamps.rest(() => { lit = 1; next(); }));
+      return;
+    }
     const card = queue.shift();
-    if (!card) { done(missed); return; }
+    if (!card) { if (slips.length) lookAgain(); else done(missed); return; }
     show(card);
+  }
+
+  /** Before reciting: each word missed once more, with its meaning; tap to hear it. */
+  function lookAgain() {
+    foot.className = 'lk-foot';
+    foot.replaceChildren();
+    const go = h('button', { class: 'primary lk-continue', onclick: () => done(missed) }, lt('learn.fixGo'));
+    stage.replaceChildren(h('div', { class: 'lk-card lk-fix' },
+      h('p', { class: 'lk-q' }, lt('learn.fixTitle')),
+      h('p', { class: 'muted small' }, lt('learn.fixSub')),
+      h('div', { class: 'lk-fixlist' }, ...slips.map(([a, i], k) => {
+        const mean = c.meaningOf(a, i).trim();
+        const b = h('button', { class: 'lk-fixw', style: `--d:${k * 70}ms`, onclick: () => { squash(b, 0.12); void c.sayWord(a, i); } },
+          ar(c.words[a - 1][i]), h('span', { class: 'lk-gloss', dir: 'ltr', lang: 'en' }, mean || '·'), h('span', { class: 'lk-fixref' }, c.refOf(a)));
+        return b;
+      })),
+      go));
+    if (!reduced()) popIn(stage.firstElementChild!, { stiffness: 260, damping: 22 });
+    setTimeout(() => go.focus(), 30);
   }
   setBar();
   next();

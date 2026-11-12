@@ -20,7 +20,7 @@ export type { Log, Other };
 // of the other. The one exception: ayat memorised (`m`) can be taken down by its device, so the device's
 // own word is kept for a day both copies hold.
 const DAY_FLAGS = ['o', 'f', 'g', 'ad', 'am'] as const;
-const DAY_COUNTS = ['ay', 'l', 'r', 'ls', 'lm', 'sh'] as const;
+const DAY_COUNTS = ['ay', 'l', 'r', 'ls', 'lf', 'sh'] as const;
 function growDay(a: DayRec, b: DayRec, keepM: 'a' | 'b'): DayRec {
   const o: DayRec = { ...a };
   for (const f of DAY_FLAGS) if (b[f]) o[f] = 1;
