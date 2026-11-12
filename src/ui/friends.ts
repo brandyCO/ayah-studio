@@ -97,7 +97,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const sig = JSON.stringify([p.relation === 'me', p.figure, myFigureCode(), on, f?.streak ?? 0, p.xp ?? null]);
     if (sig !== pairSig) {
       pairSig = sig;
-      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, on, f?.streak ?? 0, 116));
+      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, false, f?.streak ?? 0, 116));
     }
     title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
@@ -202,7 +202,7 @@ export async function friendDayMoment(list: Friend[]) {
   const route = location.hash;
   if (playing || document.hidden || document.querySelector('dialog[open], .cel, .fd-moment') || /^#\/(reel|kids|t\/)/.test(route)) return;
   const today = dayKey();
-  try { for (const f of list) localStorage.setItem(`frDay:${today}:${f.pid}`, '1'); } catch { return; }
+  try { for (const f of list) localStorage.setItem(`frUp:${today}:${f.pid}`, '1'); } catch { return; }
   const me = myFigureCode();
   if (me) {
     const top = [...list].sort((x, y) => y.streak - x.streak)[0];

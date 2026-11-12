@@ -491,7 +491,7 @@ export async function friendMoments(): Promise<void> {
   const today = dayKey();
   const kept = data.friends.filter((f) => {
     if (!f.pid || !f.meToday || !f.themToday || f.streak < 1) return false;
-    try { return !localStorage.getItem(`frDay:${today}:${f.pid}`); } catch { return false; }
+    try { return !localStorage.getItem(`frUp:${today}:${f.pid}`); } catch { return false; }
   });
   if (!kept.length) return;
   const m = await import('../ui/friends');
