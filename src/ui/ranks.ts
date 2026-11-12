@@ -208,6 +208,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
           earn('📖', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
           earn('🎧', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
           earn('🌿', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
+          earn('✨', rt('rk.eaFlawless'), rt('rk.eaFlawlessSub'), POINTS.flawless),
           earn('✅', rt('rk.eaSurah'), '', POINTS.surah),
           earn('🎬', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
           earn('📅', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
