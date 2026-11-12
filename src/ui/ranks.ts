@@ -152,6 +152,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
 }
 
 export async function showRanks(root: HTMLElement): Promise<() => void> {
+  setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
   let view: View = (() => { try { return (sessionStorage.getItem('rankView') as View) || 'league'; } catch { return 'league'; } })();
   let allTime = false;
   let metric: Metric = 'all';

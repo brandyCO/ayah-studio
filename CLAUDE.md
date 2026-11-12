@@ -1843,7 +1843,10 @@ duas/reflections section in Me.
       own profile has the switches, `sendProfile()`); Add friend / Take back / Accept / Not now / Remove, Visit room. Ranks
       tab **Friends**: asks, friend cards (the pair, the streak, today's state), invite link `#/rf/{code}` (whoever opens it
       becomes your friend). **Friend streak**: days in a row you both earned XP (from `rank_days`, today counts once both
-      have); at 7 / 30 / 100 / 365 both characters power up together (once each, `frMs:`). Migration
+      have); at 1 / 3 / 7 / 30 / 100 / 365 both characters power up together (once each, `frMs:`; `FRIEND_MILESTONES`).
+      Fix 2026-11-12 (owner: "we got a one-day friend streak and it didn't play"): day 1 and 3 added, and `friendMoments()`
+      (`together/ranks.ts`) checks on app open, on return, after today's points go out and when Ranks opens — not only on the
+      Friends tab; a friend without a character joins as a solo moment. Migration
       `20261111400000_rank_friends.sql` (public `pid` per player, `rank_friends`, `rank_friend_asks` without table access;
       `rank_profile`, `rank_set_profile`, `rank_friend_ask` / `_answer` / `_remove` / `_invite` / `_invite_preview` /
       `_join`, `rank_my_friends`; ≤ 100 friends, 30 asks waiting, 20 a day); pgTAP `rank_friends.test.sql` (20)

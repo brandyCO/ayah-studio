@@ -76,6 +76,7 @@ export async function report(): Promise<void> {
       lastAt = Date.now();
       await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons });
       sent[k] = sig;
+      if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
     for (const k of Object.keys(sent)) if (k < addDays(today, -3)) delete sent[k];
     try { localStorage.setItem('rankSent', JSON.stringify(sent)); } catch { /* ignore */ }
@@ -90,7 +91,10 @@ export function watchRanks() {
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
   window.addEventListener('readlog-changed', soon);
-  document.addEventListener('visibilitychange', () => { if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); }
+    if (!document.hidden) setTimeout(() => void friendMoments(), 2500);
+  });
   onAccount((a) => {
     kept = null;
     cache.clear();
@@ -98,6 +102,7 @@ export function watchRanks() {
     profsLoaded = false;
     if (!a) return;
     reportSoon(3000);
+    setTimeout(() => void friendMoments(), 4000);
     // A board invite opened before signing in: Ranks joins it.
     try { if ((sessionStorage.getItem('pendingBoard') || sessionStorage.getItem('pendingChallenge')) && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
     void scheduleLeagueNote();
@@ -423,6 +428,32 @@ export interface Profile extends Omit<Row, 'score'> {
 }
 export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
+
+/** Friend streak days that play the power-up together: the first day (owner 2026-11-12: "we got one day and it
+ *  didn't play"), then 3, 7, 30, 100, 365. */
+export const FRIEND_MILESTONES = [1, 3, 7, 30, 100, 365];
+/** A friend streak that reached a milestone and was not shown on this device yet (`frMs:{pid}:{n}`). */
+export function friendMilestoneDue(list: Friend[]): Friend | null {
+  for (const f of list) {
+    if (!f.pid || !FRIEND_MILESTONES.includes(f.streak)) continue;
+    try { if (localStorage.getItem(`frMs:${f.pid}:${f.streak}`)) continue; } catch { continue; }
+    return f;
+  }
+  return null;
+}
+let momentAt = 0;
+/** Checks the friend streaks (app open, return, after today's points went out, Ranks) and plays a milestone reached:
+ *  both characters on fire together. Not over the studio, the Kids space or another moment; at most every 20 s. */
+export async function friendMoments(): Promise<void> {
+  if (!account() || document.hidden || Date.now() - momentAt < 20_000) return;
+  try { if (!localStorage.getItem('rankFigure')) return; } catch { return; }
+  momentAt = Date.now();
+  let data: Friends;
+  try { data = await myFriends(true); } catch { return; }
+  if (!friendMilestoneDue(data.friends)) return;
+  const m = await import('../ui/friends');
+  await m.friendMilestone(data.friends);
+}
 // Profiles open at once (owner, 2026-11-11: "no loading, ever"): each one is kept on this device (per account, newest 60)
 // and the league's players are fetched ahead while Ranks is open, the top 3 first. A profile shown from the kept copy is
 // refreshed quietly and updated in place.
