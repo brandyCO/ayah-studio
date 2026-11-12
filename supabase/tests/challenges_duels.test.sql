@@ -1,9 +1,10 @@
--- Friend challenges by kind and weekly duels (supabase/migrations/20261112000000_challenges_duels.sql).
+-- Friend challenges by kind and weekly duels (supabase/migrations/20261112000000_challenges_duels.sql,
+-- 20261112100000_duels_for_all.sql).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(22);
+select plan(23);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000061', 'amal@example.com'),
@@ -59,14 +60,14 @@ select ok((rank_my_challenges(current_date) -> 0 ->> 'me')::int >= 300, 'and the
 select is(rank_challenge_claim((select v from ids where k = 'ch')::uuid), null, 'no chest before the week is over');
 select is((rank_challenge_create('lessons') ->> 'code') is not null, true, 'a link challenge takes a kind');
 
--- 3. Duels: opt-in, paired within the tier, the same quests, chest only after the week.
-select is(rank_my_duel(current_date) -> 'duel', 'null'::jsonb, 'no duel while duels are off');
-select rank_set_duels(true);
-select is(rank_my_duel(current_date) -> 'duel', 'null'::jsonb, 'no rival yet when nobody else is in');
-select pg_temp.act_as('cccccccc-0000-0000-0000-000000000063');
-select rank_set_duels(true);
-select is(rank_my_duel(current_date) -> 'duel' -> 'rival' ->> 'name', 'Amal', 'paired with the other player of the tier');
+-- 3. Duels: everyone has a rival at once (no opt-in, no way out), the closest first; the same quests; chest after the week.
+select is(rank_my_duel(current_date) -> 'duel' -> 'rival' ->> 'name', 'Bilal', 'a rival at once, without turning anything on');
+select rank_set_duels(false);
+select is(rank_my_duel(current_date) ->> 'on', 'true', 'weekly rivals cannot be stopped mid-week');
 select is(jsonb_array_length(rank_my_duel(current_date) -> 'quests'), 2, 'two duel quests today');
+select pg_temp.act_as('cccccccc-0000-0000-0000-000000000063');
+select is(rank_my_duel(current_date) -> 'duel', 'null'::jsonb, 'the odd one out waits for the next free player');
+select is(rank_my_duel(current_date) -> 'quests', 'null'::jsonb, 'no quests before there is a rival');
 select throws_ok($$ select * from rank_duels $$, '42501', null, 'the duels table cannot be read');
 reset role;
 

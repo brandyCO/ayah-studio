@@ -329,16 +329,11 @@ export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 't
   return r;
 }
 
-// --- weekly duel (opt-in): this week's closest rival of the tier, the week's XP + dhikr / adhkar points + quests ---
+// --- weekly duel (everyone, no way out: owner 2026-11-12): this week's closest rival (league, then pace), the week's XP + dhikr / adhkar points + quests ---
 export interface DuelQuest { kind: 'pages' | 'listen' | 'lessons' | 'adhkar' | 'dhikr'; target: number; done: boolean }
 export interface Duel { id: string; week: string; end: string; day: number; me: number; them: number; rival: Row }
-export interface DuelState { on: boolean; duel: Duel | null; quests: DuelQuest[]; last: { id: string; week: string; me: number; them: number; rival: Row } | null }
+export interface DuelState { on: boolean; duel: Duel | null; quests: DuelQuest[] | null; last: { id: string; week: string; me: number; them: number; rival: Row } | null }
 export const myDuel = (fresh = false) => cached('duel', () => rpc<DuelState>('rank_my_duel', { d: dayKey() }), fresh);
-export async function setDuels(on: boolean) {
-  if (on) await report();
-  await rpc('rank_set_duels', { turn_on: on });
-  dropCache();
-}
 /** Opens last week's duel chest once (won 100, tie 60, otherwise 30). */
 export async function claimDuel(id: string): Promise<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null> {
   const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null>('rank_duel_claim', { duel: id });

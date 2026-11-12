@@ -7,7 +7,7 @@
 import { account } from '../cloud/auth';
 import { clt, type ChallengeKey } from '../i18n/challenges';
 import {
-  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, claimDuel, myChallenges, myDuel, setDuels,
+  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, claimDuel, myChallenges, myDuel,
   type Challenge, type ChallengeKind, type DuelQuest, type DuelState, type Row,
 } from '../together/ranks';
 import { chestArt, chestTier } from './chest';
@@ -174,7 +174,7 @@ export async function openDuel(onChange?: () => void): Promise<void> {
     try { st = await myDuel(fresh); } catch (e) { info.replaceChildren(h('p', {}, (e as Error).message)); return; }
     const d = st.duel;
     const mine = actor('du-fig mine'), theirs = d && !d.rival.private ? actor('du-fig theirs', d.rival.figure ?? null) : null;
-    if (first || !stage.childElementCount) {
+    if (first || !stage.childElementCount || (d && stage.querySelector('.empty'))) {
       const side = (a: ReturnType<typeof actor>, disc: HTMLElement, cls: string) => h('div', { class: `du-hero ${cls}` }, h('i', { class: 'du-glow' }), a ? a.el : disc);
       stage.replaceChildren(
         side(mine, meDisc(110), 'l'),
@@ -192,13 +192,16 @@ export async function openDuel(onChange?: () => void): Promise<void> {
       b.addEventListener('click', () => void openChest(clt('du.title'), () => claimDuel(l.id), who, b).then(() => paint(true, false)));
       return b;
     })() : '';
-    if (!st.on) {
-      info.replaceChildren(h('h2', {}, clt('du.offTitle')), h('p', { class: 'muted' }, clt('du.offSub')), lastBtn,
-        h('button', { class: 'primary brand-btn du-go', onclick: async () => {
-          haptic(12);
-          try { await setDuels(true); } catch (e) { toast((e as Error).message); return; }
-          void paint(true, true);
-        } }, clt('du.on')));
+    if (!d) {
+      // No rival free yet (owner 2026-11-12): only the search, no quests or scores until someone is paired. The server
+      // pairs on each ask, so it looks again every 12 s while this is open.
+      info.replaceChildren(
+        h('div', { class: 'du-search', 'aria-hidden': 'true' }, h('i', {}), h('i', {}), h('i', {})),
+        h('p', { class: 'du-line' }, clt('du.waiting')),
+        h('p', { class: 'small muted du-how' }, clt('du.waitSub')),
+        lastBtn);
+      clearInterval(tick);
+      tick = window.setInterval(() => { if (!document.hidden) void paint(true, false); }, 12_000);
       return;
     }
     const who = d ? (d.rival.private ? '…' : d.rival.name ?? '…') : '';
@@ -224,9 +227,8 @@ export async function openDuel(onChange?: () => void): Promise<void> {
         h('div', {}, h('small', {}, clt('du.today')), day),
         h('div', {}, h('small', {}, clt('du.week')), week)),
       h('h3', { class: 'du-qh' }, clt('du.quests')),
-      h('div', { class: 'du-quests' }, ...st.quests.map(quest)),
-      h('p', { class: 'small muted du-how' }, clt('du.how')),
-      h('button', { class: 'chip du-stop', onclick: async () => { try { await setDuels(false); } catch (e) { toast((e as Error).message); return; } void paint(true, true); } }, clt('du.off')));
+      h('div', { class: 'du-quests' }, ...(st.quests ?? []).map(quest)),
+      h('p', { class: 'small muted du-how' }, clt('du.how')));
   };
   await paint(false, true).catch(() => {});
   void paint(true, false);
