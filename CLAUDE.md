@@ -2093,6 +2093,20 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
       number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
       ~200 ms); screenshots identical
+- [x] **Lamps for mistakes** (owner decision 2026-11-12): five lamps a day (`src/data/learnLamps.ts`, localStorage
+      `learnLamps`, synced, newest wins). A wrong answer in a new lesson's exercises dims one (the lamp row beside the bar
+      dims it with a wisp of smoke); with none lit the exercises rest and a new lesson does not start (`lampsOut()` in
+      `src/ui/learnLamps.ts`): a lamp comes back every 30 min and all five each new day, +1 for each review / tasmi' /
+      watering / page recited from memory (`earnLamp()`; "Review {surah}" in place, `#/learn/{s}/review` = what was learned
+      from memory, also the path's "Practise again"), or all five for 50 Light (`refillLamps()`, a shop `s:lr:…` entry).
+      Memorisation tests never use a lamp and are never held back (the resting panel offers "Recite these ayat from
+      memory"). Path top bar: a lamps chip → sheet. **Kindness**: a wrong answer shows the right word's meaning and plays
+      it; before reciting, **Look again** lists the words missed (meaning, tap to hear). **Flawless**: a new lesson with no
+      wrong answer and no slip in its tasmi' → a gold star on its path step (`learnFlawless`, merged) and 10 extra XP
+      (`DayRec.lf` → `rank_flawless()`, migration `20261112200000_rank_flawless.sql`, ≤ the day's lessons, added to the
+      week and the total like the quest bonus; pgTAP `rank_flawless.test.sql`); its celebration is the star with "Flawless".
+      **Time spent**: every lesson's celebration shows "Learning · 4 min 12 s" / "Memorising · …" (visible time only;
+      `MomentStat` lines in `celebrate()`)
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

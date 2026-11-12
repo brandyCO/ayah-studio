@@ -567,3 +567,76 @@ html.lite .ls-noor i { animation: none; }
 @media (prefers-reduced-motion: reduce) { .pm-page .lw.hid.pm-slot, .pm-page .mp-line.wrong { animation: none; } }
 /* the tap card's answer is on the page: the feedback strip covers the question at the top instead */
 .pm-q.tap .lk-foot.show { inset: 0 0 auto; box-shadow: 0 8px 26px rgba(0,0,0,.14); }
+
+/* Lamps (src/ui/learnLamps.ts): five a day; a wrong answer in a new lesson's exercises dims one. */
+.lamps { display: inline-flex; align-items: flex-end; gap: 2px; }
+.lamp { position: relative; display: inline-grid; line-height: 0; }
+.lamp-art .lg { fill: #ffbf3c; opacity: .28; transition: opacity .6s; }
+.lamp-art .lc { fill: #b9772a; transition: fill .6s; }
+.lamp-art .lb { fill: #e3a03b; transition: fill .6s; }
+.lamp-art .lw { fill: #fff0c2; transition: fill .6s; }
+.lamp-art .lf { fill: #ff8f1f; transform-origin: 12px 19px; transition: transform .5s, opacity .5s; }
+.lamp-art .lfi { fill: #fff6cf; transform-origin: 12px 19px; transition: transform .5s, opacity .5s; }
+.lamp-art .lh { fill: #fff; opacity: .55; }
+.lamp:not(.out) .lf { animation: lamp-flick 2.6s ease-in-out infinite; }
+.lamp:nth-child(2) .lf { animation-delay: -.7s; } .lamp:nth-child(3) .lf { animation-delay: -1.3s; }
+.lamp:nth-child(4) .lf { animation-delay: -.4s; } .lamp:nth-child(5) .lf { animation-delay: -1.9s; }
+@keyframes lamp-flick { 50% { transform: scale(.92, 1.06); } }
+.lamp.out .lg { opacity: 0; }
+.lamp.out .lc { fill: #a9b0ac; } .lamp.out .lb { fill: #c9cfcb; } .lamp.out .lw { fill: #e7ebe8; }
+.lamp.out .lf, .lamp.out .lfi { transform: scale(.1); opacity: 0; }
+.lamp.out .lh { opacity: .3; }
+.lamp.dimming::after { content: ''; position: absolute; left: 50%; top: 2px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+  background: #9aa39e; opacity: 0; animation: lamp-smoke 1.2s ease-out both; }
+.lamp.dimming .lamp-art { animation: lamp-dim .5s ease-out; }
+@keyframes lamp-smoke { 15% { opacity: .55; } to { opacity: 0; transform: translate(4px, -18px) scale(2.2); } }
+@keyframes lamp-dim { 40% { transform: translateY(1px) scale(.94); } }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lamp.out .lc { fill: #4d5551; } :root:not([data-theme="light"]) .lamp.out .lb { fill: #5d6762; }
+  :root:not([data-theme="light"]) .lamp.out .lw { fill: #3a423e; }
+}
+:root[data-theme="dark"] .lamp.out .lc { fill: #4d5551; } :root[data-theme="dark"] .lamp.out .lb { fill: #5d6762; } :root[data-theme="dark"] .lamp.out .lw { fill: #3a423e; }
+.lamps.big { justify-content: center; gap: 6px; margin: 4px 0 8px; }
+.lamps.big .lamp-art { width: 40px; height: 50px; }
+.lk-top { display: flex; align-items: center; gap: 10px; }
+.lk-top .lk-bar { flex: 1; }
+.lp-lamps svg { color: inherit; }
+.lp-lamps.none { color: #8a948f; }
+
+.lamp-out { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 8px 4px 16px; width: min(100%, 420px); margin: 0 auto; }
+.lamp-out h2 { margin: 0; }
+.lamp-out > p { max-width: 34ch; margin: 0; }
+.lamp-out-art { display: grid; place-items: center; width: 104px; height: 104px; border-radius: 50%; background: color-mix(in srgb, var(--line) 60%, transparent); }
+.lamp-out-art .lamp-art .lg { opacity: 0; } .lamp-out-art .lamp-art .lf, .lamp-out-art .lamp-art .lfi { opacity: 0; transform: scale(.1); }
+.lamp-out-art .lamp-art .lb { fill: #c9cfcb; } .lamp-out-art .lamp-art .lc { fill: #a9b0ac; } .lamp-out-art .lamp-art .lw { fill: #e7ebe8; }
+.lamp-out.lit .lamp-out-art { background: #ffe9b8; }
+.lamp-out.lit .lamp-out-art .lamp-art .lg { opacity: .3; } .lamp-out.lit .lamp-out-art .lamp-art .lf, .lamp-out.lit .lamp-out-art .lamp-art .lfi { opacity: 1; transform: none; }
+.lamp-out.lit .lamp-out-art .lamp-art .lb { fill: #e3a03b; } .lamp-out.lit .lamp-out-art .lamp-art .lc { fill: #b9772a; } .lamp-out.lit .lamp-out-art .lamp-art .lw { fill: #fff0c2; }
+.lamp-ways, .lamp-earn { display: grid; gap: 10px; width: 100%; }
+.lamp-wait { margin: 4px 0 0; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lamp-btn {
+  --hc: #2f9be8; --he: #1d76b8;
+  display: flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 16px; border: 0; border-radius: 16px; width: 100%;
+  background: var(--hc); color: #fff; font: 900 16px var(--ui-round, inherit); text-decoration: none; box-shadow: 0 4px 0 var(--he); cursor: pointer;
+}
+.lamp-btn:active { translate: 0 3px; box-shadow: 0 1px 0 var(--he); }
+.lamp-btn.go { --hc: #4caf2a; --he: #3a8a1f; }
+.lamp-btn.recite { --hc: #7b5ce0; --he: #5a3fb4; }
+.lamp-btn.refill { --hc: #ffc83d; --he: #d99a12; color: #3a2a00; }
+.lamp-btn.refill.short, .lamp-btn:disabled { --hc: #e6e9e7; --he: #cdd3cf; color: #7d8783; }
+.lamp-btn:disabled { cursor: default; }
+.lamp-btn.ghost { --hc: transparent; --he: transparent; color: var(--text); border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+.lamp-btn[hidden] { display: none; }
+.lk-ansmean { display: block; font-size: var(--fs-s); font-weight: 700; opacity: .9; }
+.lk-fix { width: min(100%, 460px); }
+.lk-fixlist { display: grid; gap: 8px; width: 100%; }
+.lk-fixw { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 16px;
+  border: 2px solid var(--line); border-bottom-width: 4px; background: var(--card); color: var(--text); cursor: pointer; text-align: start;
+  animation: lk-in var(--dur-3, .4s) var(--ease-spring, ease-out) both; animation-delay: var(--d, 0ms); }
+.lk-fixw .lk-ar { font-size: clamp(26px, 7vw, 32px); }
+.lk-fixw .lk-gloss { font-size: var(--fs-s); color: var(--text); font-weight: 700; }
+.lk-fixref { font-size: var(--fs-xs); color: var(--muted); }
+.lk-fixw:active { transform: translateY(2px); border-bottom-width: 2px; }
+.lk-fix .lk-continue { width: min(100%, 320px); margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .lamp .lf, .lamp.dimming::after, .lamp.dimming .lamp-art, .lk-fixw { animation: none !important; } }
+.lesson:has(.lk-drill .lamp-out) .ls-actions { display: none; }

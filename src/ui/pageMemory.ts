@@ -16,6 +16,7 @@ import { due, level, recordPage, strength } from '../data/pageMemory';
 import { GATE_LIGHT, markPageRecited } from '../data/learnPath';
 import { grantJuzGate } from '../data/garden';
 import { addLesson, claimGoal } from '../data/journey';
+import { earnLamp } from '../data/learnLamps';
 import { loadMeta, loadWordMap, surahText, type SurahMeta } from '../data/quran';
 import { displayWords, parseSpans } from '../engine/words';
 import { surahName, uiRef } from '../i18n';
@@ -460,6 +461,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   function done(k: 0 | 1 | 2) {
     jar.share(missed);
     recordPage(p, k);
+    // A page recited from memory lights a lamp again (src/data/learnLamps.ts).
+    const lit = k > 0 && earnLamp();
     if (k > 0) { addLesson(); markPageRecited(p); }
     // From the Learn path: a page step goes back to the path; a juz checkpoint raises its gate.
     let gate = '', from = '';
@@ -476,7 +479,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     }
     if (gp === p && k === 0) toast(lt('learn.gateNotYet'));
     if (k === 2) sfx.shimmer();
-    toast(lt('learn.pmSaved', { level: lt(LEVEL_KEY[level(p)]) }));
+    toast(`${lt('learn.pmSaved', { level: lt(LEVEL_KEY[level(p)]) })}${lit ? ` · ${lt('learn.lampEarned')}` : ''}`);
     paintBadge();
     if (from === String(p) && k > 0) {
       try { sessionStorage.removeItem('pmFromPath'); } catch { /* ignore */ }

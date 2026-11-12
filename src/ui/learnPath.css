@@ -279,3 +279,18 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
   .lp-gate .lp-kicker, .lp-gate .lp-start { color: #b3a2ff; }
   .lp-day { box-shadow: 0 4px 0 #0e1714, 0 10px 24px #0000004d; }
 }
+
+/* A lesson passed with no mistake: a gold star on its step (src/data/learnLamps.ts). */
+.lp-flaw { position: absolute; top: -4px; inset-inline-end: -6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; color: #f0a500; box-shadow: 0 2px 0 #d99a12, 0 0 0 2px #ffd65c; pointer-events: none; }
+.lp-flaw svg { width: 16px; height: 16px; }
+.lp-lamps { padding: 0 10px; gap: 4px; }
+.lp-lamps .lamp-art { width: 16px; height: 20px; }
+.lp-lamps.none .lamp-art .lf, .lp-lamps.none .lamp-art .lfi, .lp-lamps.none .lamp-art .lg { opacity: 0; }
+.lp-lamps.none .lamp-art .lb { fill: #c9cfcb; } .lp-lamps.none .lamp-art .lc { fill: #a9b0ac; } .lp-lamps.none .lamp-art .lw { fill: #e7ebe8; }
+/* With the lamps chip the top bar is one pill wider: the Choose pill keeps only its icon below 440 px. */
+@media (max-width: 439px) {
+  .lp-top { gap: 6px; }
+  .lp-pill-t { display: none; }
+  .lp-pill { padding: 0 9px; }
+}

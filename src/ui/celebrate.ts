@@ -38,10 +38,13 @@ import { fpsStart } from '../fps';
 let P = rewardPalette();
 
 export type Moment =
-  | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string }
+  | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string; stats?: MomentStat[] }
   | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[] }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
+
+/** A line under a moment's title (a Learn lesson: the time it took, flawless, a lamp lit again). */
+export interface MomentStat { text: string; icon?: 'time' | 'flawless' | 'lamp' }
 
 /** What a chest holds, shown one by one as it opens. Without `loot` a chest holds the Light it was given. */
 export type Loot =
@@ -50,6 +53,18 @@ export type Loot =
   | { kind: 'item'; art: Node; label: string; rare?: boolean };
 
 const NS = 'http://www.w3.org/2000/svg';
+const STAT_ICONS = {
+  time: '<circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 9v4l3 2M10 3h4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  flawless: '<path d="M12 2l2.6 6.4L21 9l-5 4.4L17.6 20 12 16.6 6.4 20 8 13.4 3 9l6.4-.6z" fill="currentColor"/>',
+  lamp: '<path d="M12 3c2.4 2.7 3.4 4.7 3.4 6.8a3.4 3.4 0 0 1-6.8 0C8.6 7.7 9.6 5.7 12 3z" fill="currentColor"/><path d="M7 15h10l-1 6H8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>',
+};
+function statIcon(k: keyof typeof STAT_ICONS): SVGSVGElement {
+  const el = document.createElementNS(NS, 'svg');
+  el.setAttribute('viewBox', '0 0 24 24');
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = STAT_ICONS[k];
+  return el;
+}
 const svg = (box: number, inner: string) => {
   const el = document.createElementNS(NS, 'svg');
   el.setAttribute('viewBox', `0 0 ${box} ${box}`);
@@ -216,6 +231,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const stage = h('div', { class: 'cel-stage' });
   let kicker = '', title = '', sub = '';
   let count: HTMLElement | null = null;
+  const stats = m.kind === 'lantern' || m.kind === 'star' ? m.stats ?? [] : [];
   // A chest: dropped in, then tapped open (a bigger one takes more taps), then what it holds comes out.
   const tier = chestTier(light);
   const isChest = m.kind === 'chest';
@@ -310,6 +326,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       slot ?? '',
       canvas,
       h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub)),
+      stats.length ? h('div', { class: 'cel-stats' }, ...stats.map((x, i) => h('span', { class: `cel-stat ${x.icon ?? ''}`, style: `--i:${i}` }, x.icon ? statIcon(x.icon) : '', x.text))) : '',
       comboPill,
       lightPill ?? '',
       ok);
