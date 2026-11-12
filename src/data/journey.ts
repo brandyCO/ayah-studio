@@ -644,20 +644,18 @@ function loadOthers(): Record<string, Other> {
   return others;
 }
 
-/** Another device's journey arrived from the cloud; true when it changed anything here. */
-export function mergeJourney(remote: unknown, device: string): boolean {
-  const o = cleanOther(remote);
-  if (!o || !device) return false;
-  const prev = loadOthers()[device];
-  const from = (remote as { from?: unknown }).from;
-  if (isDay(from) && prev) {
-    // A head (cloud/syncDocs.ts): earlier months and the page times come in their own documents.
-    for (const [k, d] of Object.entries(prev.days)) if (k < from) o.days[k] ??= d;
-    for (const [k, p] of Object.entries(prev.log)) if (k < from) o.log[k] ??= p;
-    o.pageLast = prev.pageLast;
-  }
-  return putOther(device, o);
-}
+// Journeys only ever grow (data/journeyMerge.ts, loaded with the sync): the hooks it needs.
+/** The first day still kept (older days were folded into `past`). */
+export const keptFrom = () => addDays(dayKey(), -KEEP_DAYS);
+export const journeyHooks = {
+  clean: (v: unknown) => cleanOther(v),
+  others: () => loadOthers(),
+  putOther: (device: string, o: Other) => putOther(device, o),
+  own: (): State => load(),
+  /** The own journey was joined with what the cloud held: counted again, settled again, saved. */
+  ownChanged: () => { ver++; const s = load(); resettle(); if (!s.settled) save(); },
+};
+export type { DayRec, State, Other };
 
 /** Another device's journey as kept here (cloud/syncDocs.ts adds a part to it). */
 export const otherJourney = (device: string): Other | undefined => loadOthers()[device];

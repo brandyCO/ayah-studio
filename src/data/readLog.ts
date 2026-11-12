@@ -47,6 +47,24 @@ export function logPageRead(page: number, now = new Date()): boolean {
   return true;
 }
 
+/** This device's own log as the server last had it (its storage came back older or empty): pages are only
+ *  ever added, never taken away. True when anything was added. */
+export function mergeOwnLog(remote: Log): boolean {
+  const log = readLog();
+  const cutoff = dayKey(new Date(Date.now() - KEEP_DAYS * 86_400_000));
+  let changed = false;
+  for (const [k, pages] of Object.entries(remote)) {
+    if (k < cutoff || !/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+    const add = pages.filter((p) => Number.isInteger(p) && p >= 1 && p <= 604 && !log[k]?.includes(p));
+    if (add.length) { log[k] = [...(log[k] ?? []), ...add]; changed = true; }
+  }
+  if (!changed) return false;
+  try { localStorage.setItem(KEY, JSON.stringify(log)); } catch { /* ignore */ }
+  allCache = null;
+  window.dispatchEvent(new Event('readlog-changed'));
+  return true;
+}
+
 // The user's other devices' logs (journey.ts keeps them), joined with this one by readLogAll().
 let otherLogs: Log[] = [];
 let allCache: Log | null = null;

@@ -56,6 +56,9 @@ export interface Meta {
   pulled: string | null; // newest server updated_at merged
   pushed: Record<string, string>; // doc key → fingerprint of what was last pushed
   synced?: 1; // everything on the server has been pulled here once
+  own?: string | null; // newest server updated_at of the rows this device wrote (as the server answered)
+  ownDays?: number; // days in this device's journey when it was last sent
+  heal?: string[]; // devices whose journey came back emptier than the copy here: send it back joined
 }
 const META_KEY = 'syncMeta';
 function loadMeta(user: string): Meta {
@@ -96,6 +99,9 @@ let quiet = false; // set while announcing what arrived, so it does not start an
 
 // --- one sync round: pull, merge, push ---
 let running: Promise<void> | null = null;
+let selfChecked = false; // this device's own rows were looked at this session
+/** The later of server times (ISO strings of one format compare as text). */
+const maxAt = (...ts: (string | null | undefined)[]) => ts.reduce<string | undefined>((a, b) => (b && (!a || b > a) ? b : a), undefined);
 let again = false;
 
 export function syncNow(): Promise<void> {
@@ -124,7 +130,7 @@ async function round() {
   const wasSynced = !first;
   try {
     const sb = await supabase();
-    const { applyRemote, localRows, kv: { linkKv, scanKv } } = await loadDocs();
+    const { applyRemote, localRows, ownDays, kv: { linkKv, scanKv } } = await loadDocs();
     const meta = loadMeta(acc.id);
     scanKv(); // what changed here since the last round, before anything arrives
     let kvChanged = false;
@@ -146,6 +152,28 @@ async function round() {
     }
     if (!meta.synced) { meta.synced = 1; saveMeta(meta); }
 
+    // This device's own rows, before anything is sent (owner report 2026-11-12): the storage here can come
+    // back older or empty while the install's id stays (an Android backup restored, data cleared). The pull
+    // above skips this device's writes, so they would never come back, and the next push would put the older
+    // journey over the newer one. Once a session (and whenever the journey here holds far fewer days than it
+    // last sent), the rows this device wrote that are newer than it knows are fetched and joined in.
+    const days = ownDays();
+    const emptied = !!meta.ownDays && days < meta.ownDays * 0.8 - 1;
+    if (!selfChecked || emptied || !meta.own) {
+      for (let since = emptied ? null : meta.own ?? null; ;) {
+        let q = sb.from('user_docs').select('kind,id,data,deleted,updated_at').eq('device_id', deviceId()).order('updated_at').limit(500);
+        if (since) q = q.gt('updated_at', since);
+        const { data, error } = await q;
+        if (error) throw error;
+        const rows = (data ?? []) as Row[];
+        if (await applyRemote(rows, meta)) kvChanged = true;
+        if (rows.length) { since = rows[rows.length - 1].updated_at ?? since; meta.own = maxAt(meta.own, since); }
+        saveMeta(meta);
+        if (rows.length < 500) break;
+      }
+      selfChecked = true;
+    }
+
     if (kvChanged) announceKv();
 
     // Push what changed here since it was last pushed (merged state included).
@@ -162,22 +190,26 @@ async function round() {
     const refused: string[] = [];
     for (let i = 0; i < changed.length; i += 50) {
       const batch = changed.slice(i, i + 50);
-      const { error } = await sb.from('user_docs').upsert(batch.map((d) => d.row), { onConflict: 'user_id,kind,id' });
+      const { data: back, error } = await sb.from('user_docs').upsert(batch.map((d) => d.row), { onConflict: 'user_id,kind,id' }).select('updated_at');
       if (error) {
         if (!navigator.onLine) throw error;
         // One document the server refuses (too large, say) must not hold back the others: send them one by one.
         for (const d of batch) {
-          const one = await sb.from('user_docs').upsert([d.row], { onConflict: 'user_id,kind,id' });
+          const one = await sb.from('user_docs').upsert([d.row], { onConflict: 'user_id,kind,id' }).select('updated_at');
           if (one.error) { refused.push(d.key); console.warn('Sync: not saved', d.key, one.error.message); continue; }
+          meta.own = maxAt(meta.own, ...((one.data ?? []) as { updated_at?: string }[]).map((r) => r.updated_at));
           meta.pushed[d.key] = d.print;
           if (d.key.startsWith('state/kv:')) linkKv([d.key.slice(9)]);
         }
       } else {
         for (const d of batch) meta.pushed[d.key] = d.print;
+        meta.own = maxAt(meta.own, ...((back ?? []) as { updated_at?: string }[]).map((r) => r.updated_at));
         linkKv(batch.filter((d) => d.key.startsWith('state/kv:')).map((d) => d.key.slice(9)));
       }
       saveMeta(meta);
     }
+    meta.ownDays = ownDays();
+    saveMeta(meta);
     if (refused.length) setStatus({ state: 'error', at: Date.now(), error: `${refused.length} item(s) could not be saved: ${refused.slice(0, 3).join(', ')}` });
     else setStatus({ state: 'ok', at: Date.now(), first: false });
     failures = 0;
