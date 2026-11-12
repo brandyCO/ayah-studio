@@ -25,7 +25,7 @@ const SYMBOLS = [
 ];
 export const AVATARS = 52;
 export const FRAMES = 20;
-export const TIER_RING = ['#b07a43', '#c3c9d2', '#9cc2e8', '#eaa07a', '#f2c14e'];
+export const TIER_RING = ['#c47a4c', '#a9b0f2', '#5fcfc0', '#e891aa', '#f2c14e']; // Dar al-Arqam clay, Hijrah night, Badr water, Al-Khandaq dusk, Fath Makkah gold
 const GOLD = '#f2c14e';
 const LAUREL = ['#f2c14e', '#cfd6de', '#d08a4e'];
 

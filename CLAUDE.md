@@ -1943,6 +1943,20 @@ duas/reflections section in Me.
       **Honest progress**: when a page counts, a second pill says "4 pages to finish Al-Baqarah" (`surahLeft()` in
       `pageMoments.ts`: pages from here to the end of the surah the page carries on into). Opening measured (production build,
       Chromium, 390 px): mushaf lines on screen 0.51 s cold / 0.28 s reopen; at 4× CPU 0.99 s / 0.74 s
+- [x] M23 The week ends at each person's Friday Maghrib (owner decision 2026-11-12, "Friday is the last day and the end is not
+      midnight but Maghrib … each at their time zone"): ranks count by the Islamic day (`src/data/rankDay.ts`: local day K-1 after
+      its Maghrib + local K up to its Maghrib, what a day held at its Maghrib kept in `rankSnap`; Maghrib from the prayer settings,
+      else 18:00, cached in `maghribAt`); the ranked week runs Saturday → Friday (bridge week Mon 9 → Fri 13 Nov 2026) and ends at
+      the player's own Friday Maghrib (`rank_weeks.ends_at`, sent with each report and clamped by the server). Leagues and rivals are
+      made of people on clocks within 2 hours (`rank_players.utc_off`, `rank_leagues.off`); a league's results come once the last
+      member's Maghrib has passed — until then Ranks shows last week's league with "Waiting for the others' Maghrib" and a
+      countdown, and what is done meanwhile counts for the new week. Friday double XP runs Thursday's Maghrib → Friday's. Last 3 days
+      in the bottom 3: a red danger box and row; the last 3 hours box and the Android note (3 h before Maghrib); the rival as a
+      person (character, gap, "Bilal today: 5 pages, 12 min listening · 22 min ago", `rank_act`); Global → **Hall of fame**
+      (`rank_hall`: every week's #1 per league, most weeks won); the recap card on Saturday and Sunday; limited pieces and the shop's
+      week follow the ranked week. **Leagues named after the Sahaba's journey** (owner pick 2026-11-12): Dar al-Arqam, Hijrah, Badr,
+      Al-Khandaq, Fath Makkah, in the order they happened (no Companion is ranked), each with its own emblem (`tierEmblem()`) and
+      colours. Migration `20261112300000_maghrib_week.sql`, pgTAP `maghrib_week.test.sql` (25)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -9,8 +9,8 @@ import { isNative, shareableLink } from '../native';
 import {
   LEAGUE, METRICS, POINTS, boardGoal, boardLink, boardPreview, boardRanks, createBoard, joinBoard, leaveBoard, myBoards, rankGlobal,
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
-  myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
-  type Board, type Challenge, type Metric, type Row, type Status,
+  myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
+  type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
   StaleMiss, staleFirst, refreshCached, dropCache,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
@@ -32,6 +32,7 @@ import { h, haptic, toast } from './dom';
 import { goMushaf, tabBar } from './tabs';
 import { levelLabel, levelOf } from '../data/xp';
 import { withLevel } from './levelLook';
+import { isRankFriday, rankDay } from '../data/rankDay';
 import './ranks.css';
 
 type View = 'league' | 'friends' | 'global' | 'boards';
@@ -134,17 +135,19 @@ export function podium(rows: Row[]): HTMLElement | '' {
 }
 
 /** One list of players, best first; zones mark who moves up or down in a league. */
-function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): HTMLElement {
+function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', waiting = false): HTMLElement {
   const n = rows.length;
+  const danger3 = zones && !waiting && lastDays(); // the last 3 days: the bottom zone glows red
   const items: Node[] = [];
   rows.forEach((r, i) => {
     const up = zones && i < LEAGUE.up && r.score > 0;
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
+    const danger = down && r.me && danger3;
 
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
     // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
     const visit = !!r.pid && (r.me || !r.private);
-    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${visit ? ' visit' : ''}`,
+    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${danger ? ' danger' : ''}${visit ? ' visit' : ''}`,
       ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.name ?? rt('rk.private'),
         onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
@@ -163,6 +166,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
   let view: View = (() => { try { return (sessionStorage.getItem('rankView') as View) || 'league'; } catch { return 'league'; } })();
   let allTime = false;
+  let hall = false;
   let metric: Metric = 'all';
   const metricChips = () => h('div', { class: 'chips rk-metrics', role: 'group', 'aria-label': rt('rk.measure') },
     ...METRICS.map((m) => h('button', { class: `chip${metric === m ? ' on' : ''}`, 'aria-pressed': String(metric === m),
@@ -268,7 +272,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
         h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
           pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')),
-        new Date().getDay() === 5 ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
+        isRankFriday() ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);
@@ -477,7 +481,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       } }, rt('rk.save')))));
   }
 
-  /** Sunday evening: the hours left and the one number that matters now. */
+  /** Friday's last hours before Maghrib: the hours left and the one number that matters now. */
   function hoursBox(players: Row[]) {
     const st = standing(players);
     const line = st.kind === 'up' ? rt('rk.noteUp', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) })
@@ -489,14 +493,73 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('p', { class: 'small' }, line),
       h('button', { class: 'chip', onclick: () => goMushaf() }, rt('rk.hoursRead')));
   }
-  /** Monday and Tuesday: last week's result as a card to share (until closed). */
+  /** Every week's #1 of each league, newest first, and who has won most often. */
+  function hallView(hf: Hall) {
+    if (!hf.recent.length) return h('p', { class: 'muted' }, rt('rk.hallEmpty'));
+    const face = (r: Row, sub: string, i?: number) => h('li', { class: `rk-row rk-hall-row${r.me ? ' me' : ''}` },
+      i !== undefined ? h('span', { class: `rk-place p${i + 1}` }, String(i + 1)) : h('span', { class: 'rk-hall-cup', 'aria-hidden': 'true' }, trophy(1) as unknown as Node),
+      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', h('small', { class: 'rk-note muted' }, sub)));
+    const day = (w: string) => new Date(`${w}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return h('div', { class: 'rk-hall' },
+      h('h3', { class: 'me-h' }, rt('rk.hallMost')),
+      h('ol', { class: 'rk-list' }, ...hf.most.slice(0, 10).map((r, i) => face(r, rt('rk.hallWins', { n: r.wins }), i))),
+      h('h3', { class: 'me-h' }, rt('rk.hallRecent')),
+      h('ul', { class: 'rk-list' }, ...hf.recent.map((r) => face(r, rt('rk.hallWeek', { d: day(r.week), tier: tierName(r.tier) })))));
+  }
+  /** My week ended at my Maghrib; the league's ends at its last member's. */
+  function waitBox(lg: { players: Row[]; until?: string | null }) {
+    const until = lg.until ? Date.parse(lg.until) : 0;
+    const me = lg.players.findIndex((x) => x.me);
+    const line = h('span', {}, until > Date.now() ? rt('rk.waitIn', { left: left(until - Date.now()) }) : rt('rk.waitSoon'));
+    const tick = window.setInterval(() => {
+      if (!line.isConnected) { clearInterval(tick); return; }
+      if (until > Date.now()) line.textContent = rt('rk.waitIn', { left: left(until - Date.now()) });
+      else { clearInterval(tick); void paint(true); }
+    }, 30_000);
+    return h('div', { class: 'rk-wait me-card', role: 'status' },
+      h('span', { class: 'rk-wait-moon', 'aria-hidden': 'true' }),
+      h('div', {},
+        h('b', {}, rt('rk.wait')),
+        h('p', { class: 'small' }, line, me >= 0 ? ` · ${rt('rk.waitPlace', { place: me + 1, n: lg.players.length })}` : ''),
+        h('p', { class: 'muted small' }, rt('rk.waitSub'))));
+  }
+  /** The last 3 days in the bottom zone: how far to safety. */
+  function dangerBox(players: Row[]) {
+    const st = standing(players);
+    return h('div', { class: 'rk-danger me-card', role: 'status' },
+      h('b', {}, `▼ ${rt('rk.dangerTitle', { left: left(weekEnds().getTime() - Date.now()) })}`),
+      h('p', { class: 'small' }, st.kind === 'safe' ? rt('rk.noteSafe', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) }) : rt('rk.dangerSub')),
+      h('button', { class: 'chip', onclick: () => goMushaf() }, rt('rk.hoursRead')));
+  }
+  /** The rival as a person: their character, the gap, and what they did today. */
+  function rivalCard(r: Row & { gap: number; act?: Act | null }) {
+    const name = r.name ?? rt('rk.private');
+    return h('div', { class: 'rk-rival me-card' },
+      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 48, r.frame ?? 0, r.figure),
+      h('div', { class: 'rk-rival-txt' },
+        h('span', { class: 'rk-rival-k small' }, rt('rk.rivalK')),
+        h('b', {}, r.gap > 0 ? rt('rk.rivalShort', { name, n: num(r.gap), pages: Math.max(1, Math.ceil((r.gap + 1) / POINTS.page)) }) : rt('rk.rivalTie', { name })),
+        h('span', { class: 'muted small' }, actLine(name, r.act))));
+  }
+  function actLine(name: string, a?: Act | null): string {
+    const parts: string[] = [];
+    if (a?.pages) parts.push(rt(a.pages === 1 ? 'rk.actPage' : 'rk.actPages', { n: num(a.pages) }));
+    if (a?.listen) parts.push(rt('rk.actListen', { n: num(a.listen) }));
+    if (a?.lessons) parts.push(rt(a.lessons === 1 ? 'rk.actLesson' : 'rk.actLessons', { n: num(a.lessons) }));
+    if (!a || !parts.length) return rt('rk.actNone', { name });
+    const ago = Math.max(0, Date.now() - Date.parse(a.at));
+    const when = ago < 5 * 60_000 ? rt('rk.agoNow') : ago < 36e5 ? rt('rk.agoMin', { n: Math.round(ago / 60_000) }) : rt('rk.agoH', { n: Math.round(ago / 36e5) });
+    return `${rt('rk.act', { name, what: parts.join(', ') })} · ${when}`;
+  }
+  /** Saturday and Sunday (the week's first two days): last week's result as a card to share (until closed). */
   function recapCard() {
     const s = status;
     if (!s?.last) return '';
-    const dow = new Date().getDay();
+    const dow = new Date(`${rankDay()}T12:00`).getDay();
     let seen = '';
     try { seen = localStorage.getItem('rankRecapSeen') ?? ''; } catch { /* ignore */ }
-    if ((dow !== 1 && dow !== 2) || seen === s.weekStart) return '';
+    if ((dow !== 6 && dow !== 0) || seen === s.weekStart) return '';
     const el: HTMLElement = h('div', { class: `rk-recap me-card t${s.last.tier}` },
       h('span', { class: 'rk-recap-em' }, tierEmblem(s.last.tier) as unknown as Node),
       h('div', { class: 'rk-recap-txt' },
@@ -515,14 +578,18 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (view === 'league') {
       const lg = await rankLeague(fresh);
       if (!lg) { body.replaceChildren(h('p', { class: 'muted' }, rt('rk.notYet'))); return; }
-      void scheduleLeagueNote(lg.players);
+      if (!lg.waiting) void scheduleLeagueNote(lg.players);
+      const meRow = lg.players.find((x) => x.me);
+      const meAt = meRow ? lg.players.indexOf(meRow) : -1;
+      const inDanger = !lg.waiting && lastDays() && lg.players.length >= LEAGUE.downFrom && meAt >= lg.players.length - LEAGUE.down;
       body.replaceChildren(
-        lastHours() ? hoursBox(lg.players) : '',
+        lg.waiting ? waitBox(lg) : lastHours() ? hoursBox(lg.players) : inDanger ? dangerBox(lg.players) : '',
+        !lg.waiting && status?.rival ? rivalCard(status.rival) : '',
         recapCard(),
         // The character is everyone's avatar by default (owner decision 2026-11-10): until one is made, ask here.
         status && !status.figure && !status.private ? builderCard(status, () => openBuilder(status!, () => void paint(true))) : '',
         podium(lg.players),
-        list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
+        list(lg.players, true, 'all', !lg.waiting && status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : '', !!lg.waiting),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
       // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
       void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
@@ -530,13 +597,21 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       const m = await import('./friends');
       body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
     } else if (view === 'global') {
+      const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; void paint(); } }, label);
+      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, `🏆 ${rt('rk.hall')}`);
+      if (hall) {
+        const hf = await rankHall(fresh);
+        body.replaceChildren(
+          h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()),
+          hallView(hf));
+        return;
+      }
       const rows = await rankGlobal(metric === 'all' && allTime, metric, fresh);
-      const sw = (on: boolean, label: string) => h('button', { class: `chip${allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; void paint(); } }, label);
       const s = await rankStatus();
       const meIn = rows.some((r) => r.me);
       body.replaceChildren(
         metricChips(),
-        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab'))) : '',
+        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()) : '',
         rows.length ? list(rows, false, metric) : h('p', { class: 'muted' }, rt('rk.empty')),
         !meIn && s && metric === 'all' ? h('p', { class: 'rk-mine' }, allTime ? rt('rk.youAll', { place: num(s.allPlace), n: num(s.total) })
           : s.weekPlace ? rt('rk.youWeek', { place: num(s.weekPlace), n: num(s.week) }) : '') : '');

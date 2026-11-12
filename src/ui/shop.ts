@@ -25,7 +25,7 @@ import { shopAdd, shopHas, wallet } from '../data/garden';
 import { ownsPiece, hijri, seasonNow, streakNeed } from '../data/wardrobe';
 import { lightOn, stats, streak } from '../data/journey';
 import { dayKey } from '../data/readLog';
-import { resetsAt } from '../data/goals';
+import { rankWeek, weekEndAt } from '../data/rankDay';
 import { myFigureCode } from './actor';
 import type { Status } from '../together/ranks';
 
@@ -89,12 +89,6 @@ function pieceWeeks(id: string, week: string): number {
   }
   return -1;
 }
-function mondayKey(): string {
-  const w = resetsAt().week;
-  const m = new Date(w.getFullYear(), w.getMonth(), w.getDate() - 7);
-  return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}-${String(m.getDate()).padStart(2, '0')}`;
-}
-
 /** The character to show a part on: the user's own when it can wear it, else the default look that can. */
 function figFor(piece: string): Fig | null {
   const [slot, v] = piece.split(':');
@@ -132,7 +126,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const signedIn = async () => !!(await import('../cloud/auth')).account();
   const wins = (): Wins => ({ bestTier: status?.bestTier ?? status?.tier ?? 0, bestPlace: status?.bestPlace ?? null, wins: status?.wins ?? 0, items: wonItems });
   const tier = () => status?.tier ?? 0;
-  const week = () => status?.weekStart ?? mondayKey();
+  const week = () => status?.weekStart ?? rankWeek();
 
   // --- every piece the app has ---
   const wares = (): Ware[] => {
@@ -351,7 +345,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const ids = [weekPrize(wk, 1), weekPrize(wk, 2), `fg:${weekPiece(wk)}`];
     const tags = [sht('sh.first'), sht('sh.top23'), sht('sh.top3')];
     const prizes = ids.map((id) => all.find((w) => w.id === id)).filter((w): w is Ware => !!w);
-    const left = resetsAt().week.getTime() - Date.now();
+    const left = weekEndAt().getTime() - Date.now();
     const dd = Math.floor(left / 864e5), hh = Math.floor((left % 864e5) / 36e5);
     const weekCard = h('div', { class: 'sh-feat week' },
       h('div', { class: 'sh-feat-head' }, h('b', {}, `🏆 ${sht('sh.weekTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: sht('sh.dh', { d: dd, h: hh }) }))),
