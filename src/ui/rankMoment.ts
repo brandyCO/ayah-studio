@@ -24,7 +24,8 @@ const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
 const num = (n: number) => n.toLocaleString();
 const vibrate = (p: number[]) => { try { navigator.vibrate?.(p); } catch { /* ignore */ } };
 
-/** A tier's emblem (viewBox 100): lantern, eight-pointed star, crescent, dawn over the horizon, sun —
+/** A league's emblem (viewBox 100), the Sahaba's journey in order (owner decision 2026-11-12): Dar al-Arqam, Hijrah,
+ *  Badr, Al-Khandaq, Fath Makkah — no Companion is ranked; a later league is only later in the story. Drawn
  *  flat two-tone like the characters, with a chunky edge under each piece. */
 export function tierEmblem(tier: number): SVGSVGElement {
   const n = Math.max(0, Math.min(4, tier | 0));
@@ -41,32 +42,41 @@ export function tierEmblem(tier: number): SVGSVGElement {
   };
   const rays = (k: number, r1: number, r2: number, cy = 50, from = 0, to = 360, w = 5) => Array.from({ length: k }, (_, i) =>
     ray(((from + ((to - from) * (i + 0.5)) / k) * Math.PI) / 180, r1, r2, cy, w)).join('');
+  const warm = (d: string) => two(d, '#fff2c4', '#f3c873', -2, -2);
   const art = [
-    // lantern: cap with a ring, a glass body with ribs and a warm flame, a foot
-    `${raisedLine('M50 4V12', ed, 4, 'rgba(0,0,0,.25)')}<circle cx="50" cy="6" r="4" fill="none" stroke="${ed}" stroke-width="3"/>
-     ${piece('M39 14H61L66 25H34Z', c, sh, 3, -2.5, -2.5)}
-     ${piece('M33 26H67Q76 48 67 72H33Q24 48 33 26Z', '#fff2c4', '#f3c873', 3.5, -4, -3)}
-     <path d="M50 36C57 44 58.5 50 58.5 54.5A8.5 8.5 0 0 1 41.5 54.5C41.5 50 43 44 50 36Z" fill="#ffb238"/>
-     <path d="M50 44C54 49 54.5 52 54.5 55A4.5 4.5 0 0 1 45.5 55C45.5 52 46 49 50 44Z" fill="#fff8de"/>
-     <path d="M41 27Q36 49 41 71M59 27Q64 49 59 71" fill="none" stroke="${sh}" stroke-width="3.4" stroke-linecap="round"/>
-     ${piece('M36 72H64L60 84H40Z', c, sh, 3, -2.5, -2.5)}
-     ${shine('M30.5 40Q29 49 31 60', 3, .6)}`,
-    // star: the khatam, a lighter star inside
-    `${piece(starPath(50, 50, 42, 31))}${two(starPath(50, 50, 24, 17.5), li, c, -2.5, -2.5)}
-     ${shine('M22 32L30.5 27', 3.4, .55)}`,
-    // moon: a crescent with a small star
-    `${piece('M60 10A40 40 0 1 0 86 68A32 32 0 0 1 60 10Z', c, sh, 4, -5, -4)}
-     ${shine('M30 26Q20 38 21 54', 3.6, .5)}
-     ${edge(starPath(74, 34, 10, 4.2, 4), ed, 2)}${two(starPath(74, 34, 10, 4.2, 4), li, c, -1.5, -1.5)}`,
-    // dawn: half a sun on the horizon, rays fanning up, water lines under it
-    `${piece(rays(7, 33, 47, 64, 190, 350, 4.6), mix(c, -.25), c, 3, -1.5, -1.5)}
-     ${piece('M21 64A29 29 0 0 1 79 64Z')}
-     ${two('M33 64A17 17 0 0 1 67 64Z', li, mix(c, -.25), -2, -2)}
-     ${raisedLine('M10 70H90', ed, 4.4, 'rgba(0,0,0,.25)', 1.4)}${raisedLine('M24 80H76M36 90H64', sh, 4, 'rgba(0,0,0,.2)', 1.2)}`,
-    // sun: a full disc in a ring of rays
-    `${piece(rays(12, 35, 48, 50, 0, 360, 5), mix(c, -.2), c, 3, -1.5, -1.5)}
-     ${piece(circlePath(50, 50, 28))}${two(circlePath(50, 50, 16), li, mix(c, -.3), -2.5, -2.5)}
-     ${shine('M30 42A21 21 0 0 1 40 31', 3.6, .55)}`,
+    // Dar al-Arqam: the house where the first Muslims met, a lamp glowing in its arched door
+    `${piece('M20 40H80V86H20Z')}${piece('M15 31H85V41H15Z', mix(c, -.2), c, 3, -2.5, -2.5)}
+     ${raisedLine('M15 31V25M85 31V25M50 31V25', ed, 4, 'rgba(0,0,0,.22)')}
+     <path d="M37 86V61A13 13 0 0 1 63 61V86Z" fill="${ed}"/>${warm('M40 86V62A10 10 0 0 1 60 62V86Z')}
+     <path d="M50 66C54 70 55 73 55 75.5A5 5 0 0 1 45 75.5C45 73 46 70 50 66Z" fill="#ffb238"/>
+     ${two('M67 50H76V59H67Z', '#fff2c4', '#f3c873', -1.5, -1.5)}${two('M24 50H33V59H24Z', '#fff2c4', '#f3c873', -1.5, -1.5)}
+     ${raisedLine('M8 88H92', ed, 4.4, 'rgba(0,0,0,.25)', 1.4)}${shine('M24 44V56', 3, .45)}`,
+    // Hijrah: a guiding star over the dunes, a path of footsteps between them
+    `${edge(starPath(68, 24, 15, 5.5, 4), ed, 2)}${two(starPath(68, 24, 15, 5.5, 4), li, c, -1.5, -1.5)}
+     ${two(circlePath(32, 22, 3), li, c, -1, -1)}${two(circlePath(86, 46, 2.4), li, c, -1, -1)}
+     ${piece('M2 70Q28 46 58 66Q76 56 98 64V94H2Z', '#efcf94', '#d4a865', 3.5, -3, -3)}
+     ${piece('M2 82Q40 66 70 80Q86 74 98 78V94H2Z', '#e2b673', '#c08a48', 3, -2.5, -2.5)}
+     ${[[20, 88, 2.6], [34, 84, 2.4], [47, 82, 2.2], [59, 80, 2], [70, 76, 1.8], [79, 72, 1.6]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#9a6a34" opacity=".75"/>`).join('')}
+     ${shine('M14 64Q26 54 38 54', 3.2, .5)}`,
+    // Badr: the well, a beam over it, a rope and a bucket, water catching the light
+    `${raisedLine('M28 56V18M72 56V18', ed, 6, 'rgba(0,0,0,.25)', 1.4)}${raisedLine('M22 18H78', mix(c, .4), 6.5, 'rgba(0,0,0,.25)', 1.4)}
+     ${raisedLine('M50 18V36', ed, 2.4, 'rgba(0,0,0,.2)')}${piece('M42 36H58L55.5 47H44.5Z', mix(c, .15), sh, 2.5, -1.5, -1.5)}
+     ${piece('M20 56H80V82Q50 94 20 82Z')}
+     ${edge('M20 56A30 9 0 0 1 80 56A30 9 0 0 1 20 56Z', ed, 2)}${two('M23 56A27 7 0 0 1 77 56A27 7 0 0 1 23 56Z', '#bfeaf0', '#5fb3c9', -2, -1.5)}
+     ${raisedLine('M30 66H46M54 72H70M28 78H40', sh, 3, 'rgba(0,0,0,.15)')}${shine('M24 62V76', 3, .45)}`,
+    // Al-Khandaq: the trench between two banks, a row of stakes, a crescent in the cold sky
+    `${edge('M30 8A19 19 0 1 0 46 37A14.5 14.5 0 0 1 30 8Z', ed, 2)}${two('M30 8A19 19 0 1 0 46 37A14.5 14.5 0 0 1 30 8Z', li, c, -2, -2)}
+     ${piece('M2 58H38L44 92H2Z', c, sh, 3.5, -3, -3)}${piece('M58 92L64 58H98V92Z', c, sh, 3.5, -3, -3)}
+     ${two('M38 58H64L58 92H44Z', mix(c, .62), mix(c, .45), 2, 2)}
+     ${[68, 76, 84, 92].map((x) => piece(`M${x - 3} 58V46L${x} 41L${x + 3} 46V58Z`, mix(c, .35), mix(c, .5), 2, -1, -1)).join('')}
+     ${shine('M6 64H30', 3, .45)}`,
+    // Fath Makkah: the Ka'bah in light, its gold band and door
+    `${piece(rays(12, 36, 49, 52, 0, 360, 4.6), mix(c, -.2), c, 3, -1.5, -1.5)}
+     ${edge('M26 40L40 30H78L64 40ZM64 40L78 30V76L64 86ZM26 40H64V86H26Z', 'rgba(0,0,0,.35)', 3)}
+     <path d="M26 40L40 30H78L64 40Z" fill="#4a4a54"/><path d="M64 40L78 30V76L64 86Z" fill="#26262c"/><path d="M26 40H64V86H26Z" fill="#17171b"/>
+     <path d="M26 49H64V55H26Z" fill="${c}"/><path d="M64 49L78 39V45L64 55Z" fill="${mix(c, .25)}"/>
+     <path d="M48 64H58V86H48Z" fill="${c}"/><path d="M50 66H56V84H50Z" fill="${mix(c, .25)}"/>
+     ${shine('M30 44H44', 2.4, .35)}`,
   ][n];
   el.innerHTML = art;
   el.style.setProperty('--tc', c);
