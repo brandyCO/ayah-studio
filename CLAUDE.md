@@ -1655,6 +1655,14 @@ duas/reflections section in Me.
       after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
       always pops. From the prayer times, else by the hour
       (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
+      **Badge moments by tier** (owner 2026-11-12: "lags and a mix of old and new… each animation unique to its tier, 60fps"):
+      the old gradient rosette / rays (petals drawn inside the SVG) are gone; `badgeStage()` in `celebrate.ts` gives each tier its own
+      moment in its metal (`TIER_C`, CSS `--b0…--b3`, `bm-*` in `cel.css`): Bronze tossed like a coin (flips, squash, dust ring),
+      Silver two squares lock into the khatam star + studs + ripple, Gold a sunburst unfolds and turns, laurels sweep up, the badge
+      rises, Platinum two petal rings bloom, a pillar of light, the badge drops in, rings pulse, Diamond beams wheel in, light
+      condenses into the badge, diamonds orbit, glints twinkle; Khatm adds a breathing halo + outer petals. Sparks, sounds, vibration
+      and the wash (lavender / ice) per tier. Every moving part an HTML layer (transform / opacity only); the title no longer blurs
+      in. 6× CPU throttle: 29–43 → 52–60 fps
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
