@@ -28,6 +28,8 @@ import { LANGS, lang, locale, setLang, surahName, t, type Key, uiRef } from '../
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
+import { isFireDay } from '../data/fireDays';
+const hasFigure = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
@@ -230,7 +232,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
     streakPlaying = true;
     const week = s.week.map((w) => ({ ...w, label: dayFmt.format(parse(w.day)) }));
-    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).finally(() => {
+    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).then(async () => {
+      // Every week of the streak (and the other fire days, data/fireDays.ts) the character then goes up in flames.
+      if (!isFireDay(s.days) || !hasFigure() || document.hidden) return;
+      const key = `fireSeen:${dayKey()}`;
+      try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { return; }
+      await (await import('./powerUp')).powerUp(s.days);
+    }).finally(() => {
       streakPlaying = false;
       catchNext = true;
       heroSig = '';

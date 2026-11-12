@@ -10,6 +10,7 @@ import { addDays, allDays, claimGoal, streak } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
+import { isFriendFireDay } from '../data/fireDays';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
@@ -429,13 +430,10 @@ export interface Profile extends Omit<Row, 'score'> {
 export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
 
-/** Friend streak days that play the power-up together: the first day (owner 2026-11-12: "we got one day and it
- *  didn't play"), then 3, 7, 30, 100, 365. */
-export const FRIEND_MILESTONES = [1, 3, 7, 30, 100, 365];
 /** A friend streak that reached a milestone and was not shown on this device yet (`frMs:{pid}:{n}`). */
 export function friendMilestoneDue(list: Friend[]): Friend | null {
   for (const f of list) {
-    if (!f.pid || !FRIEND_MILESTONES.includes(f.streak)) continue;
+    if (!f.pid || !isFriendFireDay(f.streak)) continue;
     try { if (localStorage.getItem(`frMs:${f.pid}:${f.streak}`)) continue; } catch { continue; }
     return f;
   }

@@ -1828,6 +1828,9 @@ duas/reflections section in Me.
       background. **Power-up**: the character stands *inside* one big flame (`FlatFire`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
       spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
+      **On fire every week** (owner 2026-11-12, "make it every single week", counted from each person's own first day): on a fire
+      day (`src/data/fireDays.ts`: 3, every 7th, 30, 50, 100, 365, every 100th after) the daily streak moment leads into the
+      power-up when Me opens (once a day, `fireSeen:{day}`, only with a character); friend streaks use the same days plus day 1
       **One flame everywhere** (owner 2026-11-12, "put the new streak flame in the streak card, stop using the old flame"): `flame()`
       (`src/ui/flame.ts`: Me streak card, friends, widgets page, relight, season, streak badges) draws the same teardrop with
       `drawFire()` once on two canvases (outer; inner + drop, `part`) and keeps the CSS sway / flicker / glow / embers; out = the
