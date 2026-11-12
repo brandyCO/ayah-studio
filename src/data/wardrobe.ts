@@ -6,6 +6,7 @@
 import { WARDROBE, type How } from '../ui/figure';
 import { shopAdd, shopHas } from './garden';
 import { streak } from './journey';
+import { nightsKept, QADR_NIGHTS } from './season';
 
 const STREAK: Partial<Record<How, number>> = { s7: 7, s30: 30, s100: 100, s365: 365 };
 
@@ -33,7 +34,8 @@ export const ownsPiece = (id: string) => shopHas(`fg:${id}`);
 export function earnedPieces(now = new Date()): string[] {
   const best = Math.max(streak(now).best, streak(now).days);
   const season = seasonNow(now);
-  const qadr = season === 'ramadan' && (hijri(now)?.day ?? 0) >= 21;
+  // The Night of Qadr piece: keep 5 of the last ten nights' quests (checked on Eid too, for a fifth kept on the 29th/30th).
+  const qadr = (season === 'ramadan' || season === 'fitr') && WARDROBE['bg:12'] && !ownsPiece('bg:12') && nightsKept(now) >= QADR_NIGHTS;
   return Object.entries(WARDROBE).filter(([id, p]) => {
     if (ownsPiece(id)) return false;
     const n = STREAK[p.how];
