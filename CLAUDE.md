@@ -1870,6 +1870,14 @@ duas/reflections section in Me.
       (1 a 33, ≤ 10 a day) + adhkar (10 a session, ≤ 4 a day) + quests; last week's chest 100 / 60 / 30. **Daily friend
       moment**: the first time both kept a friend streak today, a small card with both characters on fire (`frDay:`).
       The goals reset pill counts down with seconds
+      **The shop, full screen** (owner request 2026-11-12, "a shop-like feeling … every single item"): every Light chip (Me,
+      Learn, the studio) and Ranks' ✦ open `src/ui/shop.ts` (+ `shop.css`, strings `src/i18n/shop.ts`, lazy): a lantern-lit stall
+      with the Light to spend and the character at the counter, sticky categories (Featured · Power-ups · Character · Room ·
+      Avatars & frames · Only to win · Seasonal · App icons), rarity-coloured tiles; Featured = this week's three prizes and the
+      next season (days until Ramadan). Everything is listed: Light parts (`PRICE`), room pieces, avatars / frames, the freeze;
+      locked ones say how (streak progress, Ranks weeks, badges) and when they come back (weekly prizes in n weeks, seasonal
+      pieces in n days by the Umm al-Qura calendar). A tap opens the piece large: Get / Wear it / Put it in my room / Use it.
+      Me's lantern strip still opens "Your Light"
 - [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
       (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
       (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =

@@ -17,12 +17,11 @@ import { inboxBell } from './inbox';
 import { bump } from './juice';
 import { star } from './lightChip';
 import { pageSeconds } from '../data/journey';
-import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
+import { lightLeft, owns, weekPrize, won, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
 import { actor, hop as hopFig, type Actor } from './actor';
 import { gestureRow } from './cheers';
-import { freezeArt } from './flat';
 import { pieceArt } from './wardrobeCard';
 import { grantPiece } from '../data/wardrobe';
 import { WARDROBE, weekPiece } from './figure';
@@ -427,58 +426,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   }
 
   const winsOf = (s: Status): Wins => ({ bestTier: s.bestTier ?? s.tier, bestPlace: s.bestPlace ?? null, wins: s.wins ?? 0, items: wonItems });
-  let shopWeek = '';
-  const winText = (w: Win, it?: Item) => {
-    if (w !== 'week' || !it) return rt(`rk.win.${w}` as RankKey);
-    const n = weeksUntil(it.id, shopWeek);
-    const who = it.kind === 'avatar' ? '#1' : '#2 · #3';
-    return n === 0 ? rt('rk.win.weekNow', { who }) : rt('rk.win.weekIn', { who, n });
-  };
-  /** The shop: freezes kept for later, avatars and frames for Light; what can only be won, and how. */
-  function openShop(s: Status, prizes = false) {
-    const x = winsOf(s);
-    shopWeek = s.weekStart;
-    const left = h('b', {});
-    const freezeRow = h('div', { class: 'rk-shop-freeze me-card' });
-    const grid = (items: Item[]) => h('div', { class: 'rk-shop-grid' }, ...items.map((it) => {
-      const own = owns(it.kind as 'avatar' | 'frame', it.ref as number, x);
-      const art = it.kind === 'avatar' ? avatar(it.ref as number, s.tier, 46) : avatar(s.private ? 0 : s.avatar, s.tier, 46, it.ref as number, s.figure);
-      const wk = it.win === 'week' ? ` wk${weeksUntil(it.id, shopWeek) === 0 ? ' now' : ''}` : '';
-      return h('button', { class: `rk-shop-item${own ? ' own' : ''}${it.win && !own ? ` locked${wk}` : ''}`, onclick: () => {
-        if (own) { d.close(); openLook(s); return; }
-        if (it.win) { toast(winText(it.win, it)); return; }
-        if (!confirm(rt('rk.buyQ', { n: it.price ?? 0 }))) return;
-        if (buy(it)) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
-      } }, art, h('span', { class: 'small' }, own ? rt('rk.owned') : it.win ? `🔒 ${winText(it.win, it)}` : `✦ ${it.price}`));
-    }));
-    const body = h('div', { class: 'sheet-scroll rk-shop' });
-    const repaint = () => {
-      left.textContent = num(lightLeft());
-      const kept = bankedFreezes();
-      freezeRow.replaceChildren(
-        h('span', { class: 'rk-shop-fz' }, freezeArt(44) as unknown as Node),
-        h('div', {}, h('b', {}, rt('rk.freezeTitle')), h('p', { class: 'muted small' }, rt('rk.freezeSub', { n: kept, max: FREEZE_MAX }))),
-        h('button', { class: 'primary brand-btn', disabled: kept >= FREEZE_MAX, onclick: () => {
-          if (!confirm(rt('rk.buyQ', { n: FREEZE_PRICE }))) return;
-          if (buyFreeze()) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
-        } }, `✦ ${FREEZE_PRICE}`));
-      body.replaceChildren(
-        h('p', { class: 'rk-shop-left' }, rt('rk.lightLeft'), ' ', left),
-        freezeRow,
-        h('h3', { class: 'me-h2' }, rt('rk.shopAvatars')), grid(ITEMS.filter((i) => i.kind === 'avatar' && i.price)),
-        h('h3', { class: 'me-h2' }, rt('rk.shopFrames')), grid(ITEMS.filter((i) => i.kind === 'frame' && i.price)),
-        h('h3', { class: 'me-h2' }, rt('rk.shopWin')), h('p', { class: 'muted small' }, rt('rk.shopWinSub')),
-        grid(ITEMS.filter((i) => i.win && i.win !== 'week' && i.kind !== 'icon')),
-        weekHead,
-        h('p', { class: 'muted small' }, rt('rk.weekPrizesSub')),
-        // This week's first, then in the order they come round.
-        grid(ITEMS.filter((i) => i.win === 'week').sort((a, b) => weeksUntil(a.id, shopWeek) - weeksUntil(b.id, shopWeek))),
-        h('p', { class: 'muted small' }, rt('rk.shopNote')));
-    };
-    const weekHead = h('h3', { class: 'me-h2' }, rt('rk.shopWeek'));
-    repaint();
-    const d = sheet(rt('rk.shop'), body);
-    if (prizes) requestAnimationFrame(() => weekHead.scrollIntoView({ block: 'start' }));
+  /** The shop, full screen (src/ui/shop.ts); `prizes` opens it on this week's prizes. */
+  function openShop(_s: Status, prizes = false) {
+    void import('./shop').then((m) => m.openShop({ focus: prizes ? 'featured' : undefined, onChange: () => void paint(true) }));
   }
 
   function openLook(s: Status) {
