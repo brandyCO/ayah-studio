@@ -3,6 +3,8 @@
 // the user's ±1 day moon-sighting shift from Ramadan mode (data/ramadan.ts), whose records the tracker reads. No
 // drawing here, so Me can show its small card without the season screen.
 import { PAGES, ramadanData, ramadanNow, ramadanSettings, type RamadanData, type RamadanNow } from './ramadan';
+import { allDays } from './journey';
+import { dayKey, readLogAll } from './readLog';
 
 const DAY = 86_400_000;
 
@@ -92,6 +94,82 @@ export function seasonBadges(d: RamadanData = ramadanData()): SeasonBadge[] {
   const b = (id: SeasonBadgeId, have: number, need: number): SeasonBadge => ({ id, have: Math.min(have, need), need, earned: have >= need });
   return [b('first', Math.max(days, pages ? 1 : 0), 1), b('ten', days, 10), b('khatm', d.khatms, 1), b('nights', nights, 5)];
 }
+
+// --- the last ten nights (owner request 2026-11-12) ---
+// Each of Ramadan's last ten days and nights has its own quest, checked from what the app already counts (pages after
+// their reading time, recitation listened to, tasbih dhikr, the evening adhkar said in full). Night N = Ramadan day N
+// (the local day, with the user's shift). The odd nights are marked and ask a little more. A kept night opens a chest
+// (claim `qn:{year}:{n}`, the journey's claims, so it syncs and counts once); keeping 5 gives the Night of Qadr piece.
+// Ranks XP on these days is raised by the server (rank_xp_mult: ×1.5, odd ×2), nothing is sent from here.
+export type QuestTask = 'pages' | 'listen' | 'dhikr' | 'evening';
+export interface QuestPart { k: QuestTask; need: number }
+const q = (...p: [QuestTask, number][]): QuestPart[] => p.map(([k, need]) => ({ k, need }));
+export const NIGHT_QUESTS: Record<number, QuestPart[]> = {
+  21: q(['pages', 10], ['dhikr', 100]),
+  22: q(['listen', 15]),
+  23: q(['pages', 10], ['evening', 1]),
+  24: q(['dhikr', 100]),
+  25: q(['listen', 20], ['dhikr', 100]),
+  26: q(['pages', 5]),
+  27: q(['pages', 10], ['listen', 15], ['dhikr', 100]),
+  28: q(['evening', 1]),
+  29: q(['pages', 10], ['evening', 1]),
+  30: q(['pages', 5]),
+};
+/** Light in a kept night's chest: 20, odd nights 40, the 27th 60. */
+export const nightLight = (n: number) => (n === 27 ? 60 : n % 2 ? 40 : 20);
+/** Nights to keep for the Night of Qadr piece. */
+export const QADR_NIGHTS = 5;
+export const nightClaimId = (year: number, n: number) => `qn:${year}:${n}`;
+
+export interface NightState {
+  n: number;
+  odd: boolean;
+  /** 'past' (gone), 'now' (tonight), 'soon' (to come). */
+  when: 'past' | 'now' | 'soon';
+  parts: (QuestPart & { have: number })[];
+  done: boolean;
+  claimed: boolean;
+  light: number;
+}
+
+function haveOn(k: string, task: QuestTask): number {
+  const d = allDays()[k];
+  if (task === 'pages') return readLogAll()[k]?.length ?? 0;
+  if (task === 'listen') return Math.floor((d?.l ?? 0) / 60);
+  if (task === 'dhikr') return Object.values(d?.dk ?? {}).reduce((a, b) => a + b, 0);
+  return d?.am ? 1 : 0;
+}
+
+/** The ten nights of this Ramadan (or the one just ended, on Eid), with each quest's progress. */
+export function lastTen(at = new Date()): { year: number; tonight: number | null; length: number; nights: NightState[]; kept: number } {
+  const now = ramadanNow(at);
+  const year = now.year;
+  // Which local day was Ramadan day N: today first, then back two weeks (in the preview every day is the preview's).
+  const dayOf: Record<number, string> = {};
+  for (let i = 0; i <= 14; i++) {
+    const d = new Date(at.getFullYear(), at.getMonth(), at.getDate() - i, 12);
+    const r = ramadanNow(d);
+    if (r.day && r.day >= 21 && r.year === year && !dayOf[r.day]) dayOf[r.day] = dayKey(d);
+  }
+  const claims = new Set<string>();
+  for (const k of Object.values(dayOf)) for (const c of allDays()[k]?.cl ?? []) claims.add(c);
+  const today = dayKey(at);
+  for (const c of allDays()[today]?.cl ?? []) claims.add(c);
+  const tonight = now.day && now.day >= 21 ? now.day : null;
+  const length = now.day ? now.length : 30;
+  const nights: NightState[] = [];
+  for (let n = 21; n <= 30; n++) {
+    const k = dayOf[n];
+    const parts = NIGHT_QUESTS[n].map((p) => ({ ...p, have: k ? Math.min(p.need, haveOn(k, p.k)) : 0 }));
+    const claimed = claims.has(nightClaimId(year, n));
+    const when = tonight === n ? 'now' : (tonight && n < tonight) || now.eid ? 'past' : 'soon';
+    nights.push({ n, odd: n % 2 === 1, when, parts, done: claimed || (!!k && parts.every((p) => p.have >= p.need)), claimed, light: nightLight(n) });
+  }
+  return { year, tonight, length, nights, kept: nights.filter((x) => x.done).length };
+}
+/** Last-ten nights kept this Ramadan (for the Night of Qadr piece). */
+export const nightsKept = (at = new Date()) => lastTen(at).kept;
 
 // --- the first-day teaser (owner: "send that to all new users … in the first day … after syncing their account") ---
 const SEEN = 'seasonTeaser';

@@ -973,6 +973,13 @@ cloud. Build in this order:
       → notifications 3 days before and on the eve (ids 7600–7601, tap → `#/season`). **First-day teaser**: once, to a
       new user (only one day opened) right after their account's first successful sync (`initSeason()`; localStorage
       `seasonTeaser`, synced). No Khatm circle (circles were removed 2026-10-28)
+      **Last ten nights** (owner request 2026-11-12): the season screen's "The last ten nights" — ten lanterns (odd nights gold with a
+      star; kept ones lit; tonight's sways) and tonight's quest from what the app counts (`NIGHT_QUESTS` in `data/season.ts`: pages
+      counted, minutes listened, tasbih dhikr, evening adhkar; odd nights ask a little more, the 27th most), each part with a Go;
+      night N = Ramadan day N (local, with the shift). A kept night opens a chest (20 Light, odd 40, the 27th 60; claim
+      `qn:{year}:{n}`). Keeping 5 gives the Night of Qadr piece (`bg:12`, `nightsKept()` in `earnedPieces`, checked on Eid too).
+      Ranks XP on those days is raised by the server (`rank_xp_mult`: ×1.5, odd ×2, front-end thread); the quest card says so.
+      Me's season card shows tonight's quest state
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 

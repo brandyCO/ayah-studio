@@ -4,7 +4,7 @@
 // … in the first day of using, after syncing their account").
 import { h } from './dom';
 import { snt } from '../i18n/season';
-import { daysLeft, seasonState, setTeaserSeen, teaserSeen } from '../data/season';
+import { daysLeft, lastTen, seasonState, setTeaserSeen, teaserSeen } from '../data/season';
 import { PAGES, planPages, ramadanData } from '../data/ramadan';
 import { allDays } from '../data/journey';
 import { kidsOn } from '../data/kids';
@@ -31,6 +31,9 @@ export function seasonCard(): HTMLElement | null {
     const d = ramadanData(st.now);
     title = snt('sn.cardLive', { day: st.now.day ?? 1 });
     sub = d.plan && d.plan !== 'company' ? snt('sn.cardLiveSub', { n: d.khatms * PAGES + d.read.length, total: planPages(d.plan) }) : snt('sn.cardLiveCompany');
+    // The last ten nights: tonight's quest first.
+    const night = (st.now.day ?? 0) >= 21 ? lastTen().nights.find((x) => x.when === 'now') : undefined;
+    if (night) sub = snt(night.claimed ? 'sn.cardNightDone' : night.done ? 'sn.cardNightChest' : 'sn.cardNight', { n: night.n });
   } else {
     if (!st.start) return null;
     const n = daysLeft(st.start);
