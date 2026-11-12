@@ -74,6 +74,19 @@ const steam = (x: number, y: number, night: boolean, still: boolean, n = 2) => s
   + `<animate attributeName="opacity" values="0;.6;0" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 3;0 -5" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/></path>`).join('');
 
 function side(id: string, night: boolean, still: boolean): string {
+  if (id === 'fountain') {
+    // Legendary (2026-11-12): a small zellige fountain, water falling from its top bowl into the basin.
+    const basin = 'M236 176Q274 164 312 176V186Q274 196 236 186Z', rim2 = 'M236 176Q274 164 312 176Q274 186 236 176Z';
+    const stem = 'M268 176V150H280V176Z', bowl = 'M256 150Q274 158 292 150Q290 140 274 140Q258 140 256 150Z', top = 'M268 140Q274 126 280 140Z';
+    let tiles = '';
+    for (let x = 242; x < 308; x += 9) tiles += `<path d="${starPath(x, 184, 3.4, 1.6, 8)}" fill="${x % 18 < 9 ? '#2f8ab0' : '#2fa37a'}"/>`;
+    const jet = (dx: number, i: number) => `<path d="M274 132Q${274 + dx * 10} 128 ${274 + dx * 16} 148" stroke="#bfe6ff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".9"/>
+      <path d="M${274 + dx * 17} 151Q${274 + dx * 24} 158 ${274 + dx * 26} 172" stroke="#bfe6ff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-dasharray="3 3" opacity=".9">${still ? '' : `<animate attributeName="stroke-dashoffset" values="0;-12" dur="${0.9 + i * 0.1}s" repeatCount="indefinite"/>`}</path>`;
+    const ripple = still ? '' : `<ellipse cx="274" cy="176" rx="10" ry="2.4" fill="none" stroke="#e6f6ff" stroke-width="1"><animate attributeName="rx" values="6;30" dur="2.4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2.4s" repeatCount="indefinite"/></ellipse>`;
+    return `${night ? '<circle cx="274" cy="160" r="40" fill="url(#rmglow)" opacity=".5"/>' : ''}${edge(basin, '#1a3a52', 2.5)}${two(basin, '#f4efe6', '#d9cfbf', 0, -1.5)}${tiles}
+      ${two(rim2, '#4fb3e0', '#2f8ab0', 0, -1)}${ripple}${edge(stem, '#8a6a3a', 1.5)}${two(stem, '#f4efe6', '#d9cfbf', -1, 0)}
+      ${edge(bowl, '#8a5a12', 1.5)}${two(bowl, '#f2c94c', '#cf9f22', -1, -1)}${two(top, '#ffd970', '#e0a830', -.6, -.6)}${jet(-1, 0)}${jet(1, 1)}${shine('M260 148Q262 143 268 142', 1.2, .6)}`;
+  }
   if (id === 'lamp') {
     // A low desk with a reading lamp, lit at night (a pool of warm light on the floor).
     const top = 'M238 156H310V162H238Z', legs = 'M244 162V188M304 162V188', shade = 'M262 128H292L298 142H256Z';
@@ -152,6 +165,16 @@ export function rugArt(id: string | undefined, night: boolean): string {
     kilim: ['#e2b77a', '#c99a5a', '#8a6232', '#b23d55'], prayer: ['#2f8a5a', '#1f6b45', '#13442c', '#f3d27a'],
     persian: ['#3a5fb0', '#2a4790', '#1a2c5c', '#f0e2c0'], royal: ['#f4e6c4', '#e2cfa0', '#a07a35', '#d4a22a'],
   };
+  if (id === 'silk') {
+    // Legendary (2026-11-12): gold silk with a deep blue medallion, a fringe and a sheen that crosses it.
+    const fringe = Array.from({ length: 22 }, (_, i) => { const x = 46 + i * 8.2, y = 168 + Math.sin((i / 21) * Math.PI) * -0.5; return `<path d="M${(x - 6).toFixed(1)} ${(y + 1).toFixed(1)}l-3 2" stroke="#e6c25a" stroke-width="1"/>`; }).join('');
+    const med = 'M104 168L130 156L156 168L130 180Z', med2 = 'M114 168L130 161L146 168L130 175Z';
+    return `${edge(shape, '#7a5212', 3)}${two(shape, '#f6d97a', '#e2b84a')}${fringe}<path d="${inner}" fill="none" stroke="#1f3a8a" stroke-width="2.4"/>
+      <path d="M52 168Q130 152 208 168Q130 186 52 168Z" fill="none" stroke="#b23d55" stroke-width="1.2" stroke-dasharray="2 3"/>
+      ${edge(med, '#0f1f52', 1.5)}${two(med, '#2a4fb0', '#1f3a8a', 0, -1)}${two(med2, '#f6d97a', '#e2b84a', 0, -.6)}<path d="${starPath(130, 168, 5.4, 2.4, 8)}" fill="#b23d55"/>
+      ${[78, 182].map((x) => `<path d="${starPath(x, 168, 4.6, 2, 8)}" fill="#1f3a8a"/>`).join('')}
+      <path d="M70 162Q130 154 190 162" stroke="#fffbe6" stroke-width="3" fill="none" opacity=".35"/>${glow}`;
+  }
   const [c1, c2, ed, trim] = (id && P[id]) || ['#d9566a', '#b23d55', '#7a2f3f', '#ffd27a'];
   let pat = `<path d="${starPath(130, 168, 8, 3.6, 8)}" fill="${trim}" opacity=".9"/>`;
   if (id === 'kilim') pat = `<path d="M74 168L84 162L94 168L104 162L114 168L124 162L134 168L144 162L154 168L164 162L174 168L184 162" stroke="${trim}" stroke-width="2.4" fill="none" stroke-linejoin="round"/><path d="M84 172L94 176L104 172L114 176L124 172L134 176L144 172L154 176L164 172L174 176" stroke="#5a3a8a" stroke-width="1.8" fill="none"/>`;
@@ -162,6 +185,17 @@ export function rugArt(id: string | undefined, night: boolean): string {
 }
 
 function curtain(id: string): string {
+  if (id === 'brocade') {
+    // Legendary (2026-11-12): midnight brocade with gold stars, a gold valance and tassels.
+    const L = 'M16 17H42Q34 56 40 106H16Z', R = 'M112 17H86Q94 56 88 106H112Z';
+    const stars = [[22, 34], [30, 52], [24, 72], [32, 90], [106, 34], [98, 52], [104, 72], [96, 90]].map(([x, y]) => `<path d="${starPath(x, y, 3.2, 1.4, 8)}" fill="#f2c94c" opacity=".9"/>`).join('');
+    const val = 'M10 13H118V28Q110 36 100 28Q90 36 80 28Q70 36 64 28Q58 36 48 28Q38 36 28 28Q18 36 10 28Z';
+    const tassel = (x: number) => `<path d="M${x} 66V72" stroke="#cf9f22" stroke-width="1.4"/>${two(`M${x - 3} 72H${x + 3}L${x + 2} 82H${x - 2}Z`, '#ffd25e', '#cf9f22', -.4, -.4)}${two(`M${x - 7} 64H${x + 7}V69H${x - 7}Z`, '#ffd25e', '#cf9f22', 0, -1)}`;
+    return `${edge(L, '#0a0f2a', 2)}${two(L, '#1f2a6e', '#141b4c')}${edge(R, '#0a0f2a', 2)}${two(R, '#1f2a6e', '#141b4c')}${stars}
+      <path d="M25 22Q23 60 27 104M101 22Q103 60 99 104" stroke="#3a4aa0" stroke-width="2" opacity=".7" fill="none"/>${tassel(30)}${tassel(98)}
+      <path d="M8 13H120" stroke="#8a5a12" stroke-width="3.4" stroke-linecap="round"/>${edge(val, '#5a3a0a', 2)}${two(val, '#ffd25e', '#e0a830', 0, -1.5)}
+      <path d="M12 21H116" stroke="#1f2a6e" stroke-width="2" stroke-dasharray="4 3"/>${[28, 48, 64, 80, 100].map((x) => `<path d="${circlePath(x, 31, 1.4)}" fill="#fff6c9"/>`).join('')}`;
+  }
   if (id === 'mashrabiya') {
     // Turned-wood lattice shutters opened to the sides of the window.
     const panel = (x: number) => {
@@ -188,6 +222,20 @@ function curtain(id: string): string {
 }
 
 function hang(id: string, night: boolean, still: boolean): string {
+  if (id === 'chandelier') {
+    // Legendary (2026-11-12): a gold chandelier of two rings, its small lamps lit, crystal drops below.
+    const x = 111, G1 = '#ffd25e', G2 = '#e09a1f', GD = '#8a5a12';
+    const ring = (y: number, r: number) => `<ellipse cx="${x}" cy="${y + .8}" rx="${r}" ry="${r * .28}" fill="none" stroke="${GD}" stroke-width="2.6"/><ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * .28}" fill="none" stroke="${G1}" stroke-width="2"/>`;
+    const lamp = (lx: number, ly: number, i: number) => `<circle cx="${lx}" cy="${ly - 3}" r="${night ? 6 : 4}" fill="url(#rmglow)">${still ? '' : `<animate attributeName="opacity" values=".6;1;.6" dur="${2.4 + (i % 3) * .5}s" repeatCount="indefinite"/>`}</circle>
+      ${two(`M${lx - 1.6} ${ly}H${lx + 1.6}L${lx + 1.2} ${ly - 4}H${lx - 1.2}Z`, '#fff6c9', '#ffd27a', -.3, -.3)}<path d="M${lx} ${ly - 6.4}c.8 1 .9 1.6 0 2.4c-.9-.8-.8-1.4 0-2.4z" fill="#ff9a2e"/>`;
+    const drop = (dx: number, y: number) => `<path d="M${x + dx} ${y}l1.4 2.6l-1.4 2.6l-1.4 -2.6z" fill="#e6f6ff" stroke="#9fd8ff" stroke-width=".4"/>`;
+    const big = [-14, -7, 0, 7, 14].map((dx, i) => lamp(x + dx, 26 + Math.abs(dx) * -.05, i)).join('');
+    const small = [-7, 0, 7].map((dx, i) => lamp(x + dx, 15, i + 5)).join('');
+    return `<path d="M${x} 0V10" stroke="${GD}" stroke-width="1.6"/>${night ? `<circle cx="${x}" cy="22" r="34" fill="url(#rmglow)"/>` : ''}
+      <path d="M${x} 10V36" stroke="${G2}" stroke-width="2"/>${ring(15, 9)}${ring(27, 17)}${small}${big}
+      ${[-16, -8, 0, 8, 16].map((dx, i) => drop(dx, 30 + (i % 2) * 2)).join('')}${two(`M${x - 3} 36H${x + 3}L${x} 42Z`, G1, G2, -.4, -.4)}${drop(0, 42)}
+      ${still ? '' : `<path d="${starPath(x + 12, 20, 2.6, .7, 4)}" fill="#fff" opacity="0"><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;.6;.7;.8;1" dur="3.6s" repeatCount="indefinite"/></path>`}`;
+  }
   const M: Record<string, [string, string, string]> = {
     brass: ['#d9a53a', '#b07f22', '#7a5212'], gold: ['#ffd25e', '#e09a1f', '#a8650e'],
     silver: ['#e8eef6', '#b8c4d4', '#6a7a90'], bronze: ['#e3a06a', '#b8743f', '#7a4a22'], glass: ['#d9a53a', '#b07f22', '#7a5212'],
@@ -280,6 +328,16 @@ export function wallArt(id: string | undefined, night: boolean): string {
     }
     return `<rect width="320" height="146" fill="${wall}"/>${g}<rect y="136" width="320" height="10" fill="${mix(wallSh, -0.08)}"/>`;
   }
+  if (id === 'medallion') {
+    // Legendary (2026-11-12): a deep emerald wall with gold eight-pointed medallions and a carved gold band.
+    const base = night ? '#0f3a30' : '#145c48', sh = night ? '#0b2c24' : '#0f4a3a';
+    let g = `<rect width="320" height="146" fill="${base}"/>`;
+    for (let y = 18, r = 0; y < 140; y += 30, r++) for (let x = (r % 2) * 20; x < 330; x += 40) {
+      g += `<path d="${starPath(x, y, 11, 6, 8)}" fill="${sh}"/><path d="${starPath(x, y, 8, 4.4, 8)}" fill="none" stroke="#d4a22a" stroke-width="1.2" opacity=".85"/><path d="${circlePath(x, y, 2)}" fill="#f2c94c"/>`;
+    }
+    return g + `<rect y="128" width="320" height="18" fill="${sh}"/><path d="M0 130H320M0 144H320" stroke="#e0b04a" stroke-width="1.6"/>`
+      + Array.from({ length: 20 }, (_, i) => `<path d="${starPath(8 + i * 16, 137, 3.6, 1.6, 8)}" fill="#e0b04a"/>`).join('');
+  }
   return [40, 120, 200, 280].map((x) => `<path d="M${x} 0V132" stroke="${wallSh}" stroke-width="10" opacity=".45"/>`).join('');
 }
 /** The floor (round 5): terracotta tiles, marble with soft veins, or a small mosaic. */
@@ -318,6 +376,16 @@ export function viewArt(id: string | undefined, sky: string): string {
   if (id === 'sea') g = `<rect x="30" y="80" width="72" height="24" fill="${dim('#3a8fd0')}"/><path d="M30 80H102" stroke="${dim('#bfe6ff')}" stroke-width="1.4"/>`
     + [[40, 88], [62, 94], [84, 89], [50, 99], [76, 100]].map(([x, y]) => `<path d="M${x} ${y}q3 -2 6 0" stroke="${dim('#e6f6ff')}" stroke-width="1.2" fill="none"/>`).join('');
   if (id === 'mountains') g = `<path d="M30 92L46 64L58 80L72 56L88 78L100 70V104H30Z" fill="${dim('#7a8fb0')}"/><path d="M46 64L42 71L48 70ZM72 56L67 65L75 63Z" fill="${dim('#ffffff')}"/><path d="M30 96Q60 86 100 94V104H30Z" fill="${dim('#5fa06a')}"/>`;
+  if (id === 'madinah') {
+    // Legendary (2026-11-12): the Prophet's Masjid at evening — the green dome, its minarets, the white umbrellas.
+    const w = dim('#f4efe6'), w2 = dim('#ddd3c2'), green = dim('#2f9a5a'), gold = dim('#e0b04a');
+    const minaret = (x: number, h0: number) => `<path d="M${x - 2.4} 104V${h0}H${x + 2.4}V104Z" fill="${w}"/><path d="M${x - 3.4} ${h0 + 8}H${x + 3.4}V${h0 + 10}H${x - 3.4}Z" fill="${w2}"/>`
+      + `<path d="M${x - 2} ${h0}Q${x} ${h0 - 6} ${x + 2} ${h0}Z" fill="${green}"/><path d="M${x} ${h0 - 6}V${h0 - 9}" stroke="${gold}" stroke-width="1"/>`;
+    g = `${minaret(38, 58)}${minaret(92, 54)}${minaret(50, 66)}<path d="M30 92H102V104H30Z" fill="${w2}"/><path d="M34 86H98V92H34Z" fill="${w}"/>`
+      + `<path d="M58 86Q58 70 68 68Q78 70 78 86Z" fill="${green}"/><path d="M68 68V63" stroke="${gold}" stroke-width="1.2"/><path d="M66.6 62.6a1.6 1.6 0 1 0 2.8 0z" fill="${gold}"/>`
+      + [[40, 96], [52, 96], [84, 96], [96, 96]].map(([x, y]) => `<path d="M${x - 5} ${y}Q${x} ${y - 4} ${x + 5} ${y}Z" fill="${w}"/><path d="M${x} ${y}V${y + 6}" stroke="${w2}" stroke-width=".8"/>`).join('')
+      + (night ? [[36, 100], [46, 100], [62, 100], [74, 100], [88, 100], [98, 100]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.1" fill="#ffd27a"/>`).join('') + '<circle cx="68" cy="78" r="16" fill="url(#rmglow)" opacity=".5"/>' : '');
+  }
   if (id === 'city') {
     const c1 = dim('#e8d2b0'), c2 = dim('#d4b88e');
     g = `<path d="M30 88H44V82H52V90H60V84H70V88H80V80H90V90H100V104H30Z" fill="${c2}"/>`

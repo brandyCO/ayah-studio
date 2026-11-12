@@ -141,3 +141,11 @@ span.cel-ring, span.cel-halo, span.cel-rays { transform-origin: 50% 50%; }
   color: var(--rw-core); background: color-mix(in srgb, var(--rw-n2) 22%, transparent); border: 1px solid color-mix(in srgb, var(--rw-n2) 45%, transparent);
   box-shadow: 0 0 18px color-mix(in srgb, var(--rw-n2) 35%, transparent); animation: cel-up .6s 1s ease-out both; }
 .cel-light b { font-variant-numeric: tabular-nums; }
+/* Time spent learning (lessons): two small pills under the line. */
+.cel-time { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 0; animation: cel-up .6s 1s ease-out both; }
+.cel-time span { padding: 5px 11px; border-radius: 999px; font-size: var(--fs-s); color: color-mix(in srgb, var(--rw-hi) 70%, #ccc);
+  background: color-mix(in srgb, var(--rw-n1) 16%, transparent); }
+.cel-time b { color: var(--rw-hi); font-variant-numeric: tabular-nums; }
+/* A surprise inside a chest: double the Light. */
+.cel-x2 { display: grid; place-items: center; width: 100%; height: 100%; font: 900 1.6rem/1 var(--font-display, inherit); color: #2b1a00;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6c9, #ffcf4d 55%, #e59a1c); box-shadow: 0 0 18px #ffd36b99; }

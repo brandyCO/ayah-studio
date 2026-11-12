@@ -39,6 +39,7 @@
 .rs-tile { --rc: #9aa6b8; --rc2: #5f6b7d; }
 .rs-tile.r-rare { --rc: #5fb4ff; --rc2: #2a6cc4; }
 .rs-tile.r-epic { --rc: #b98aff; --rc2: #6d3fd0; }
+.rs-tile.r-legendary { --rc: #ffd36b; --rc2: #d9881c; }
 .rs-tile.r-prize { --rc: #ffd25e; --rc2: #c4860f; background: linear-gradient(180deg, color-mix(in srgb, #ffd25e 20%, var(--card)), var(--card)); }
 .rs-rar { position: absolute; top: 5px; inset-inline-start: 5px; font: 900 9.5px/1.4 var(--ui-round, system-ui); color: #1d1230; background: var(--rc); border-radius: 999px; padding: 0 7px; box-shadow: 0 2px 0 var(--rc2); }
 .rs-art { width: 78px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden; }

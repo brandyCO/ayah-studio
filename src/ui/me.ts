@@ -20,6 +20,8 @@ import { badgeGoal, badgeName, bt, tierName, type BadgeKey } from '../i18n/badge
 import { iconCard, newIconCard } from './appIcons';
 import { badgeMoment } from '../data/claims';
 import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
+import { KAHF_LIGHT, KAHF_PAGES, isFriday, surprise } from '../data/friday';
+import { pageReadSince } from '../data/journey';
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
@@ -181,6 +183,28 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     if (c) wardrobeSlot.replaceChildren(c);
   });
   const goalsBox = h('section', { class: 'me-card' });
+  // Gifts from friends (owner request 2026-11-12): each waits as a chest with who sent it.
+  const giftSlot = h('div', { class: 'me-gifts' });
+  const paintGifts = () => {
+    if (!account()) return;
+    void import('../together/lightGifts').then(async (g) => {
+      const list = await g.myGifts().catch(() => []);
+      if (!giftSlot.isConnected && giftSlot.parentNode) return;
+      giftSlot.replaceChildren(...list.map((x) => {
+        const who = (x.from.private ? null : x.from.name) ?? mpt('mp.gift.someone');
+        return h('div', { class: 'me-gift' },
+          h('span', { class: 'me-gift-ic', 'aria-hidden': 'true' }, '🎁'),
+          h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.gift.from', { name: who })), h('span', { class: 'muted small' }, x.item ? mpt('mp.gift.piece') : mpt('mp.gift.light', { n: x.light }))),
+          chest(Math.max(10, x.light), 'ready', t('chest.open', { n: x.light }), (el) => void play(async () => {
+            if (!(await g.openGift(x))) return;
+            const c = await import('./celebrate');
+            const loot = x.item ? [{ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, '🎁'), label: mpt('mp.gift.piece'), rare: true }] : undefined;
+            await c.celebrate({ kind: 'chest', title: mpt('mp.gift.from', { name: who }), sub: mpt('mp.gift.sub'), kicker: mpt('mp.gift.kicker'), loot }, el, x.light);
+          }, paintGifts)));
+      }));
+    });
+  };
+  paintGifts();
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
   const duaBox = h('section', { class: 'me-card dl-card' });
   const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
@@ -355,6 +379,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
       } }, `🔥  ${t('rl.askFriend')}`) : '',
       lost ? keptFreezeButton(lost.days) : '',
+      lost && lost.days.length <= 7 ? repairButton(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
@@ -400,12 +425,18 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
   };
   const openAdhkarSession = (p: 's' | 'm') => { haptic(); void import('./adhkar').then((m) => m.openAdhkar(p)); };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: goalLabel(g), sub: t('cel.goalSub') }, from, lightFor(g))),
-    () => claimGoal(g.id, lightFor(g)));
-  const claimAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from, ALL_LIGHT)),
-    () => claimGoal('all', ALL_LIGHT));
+  // A chest: its Light, and now and then a surprise inside (double the Light), shown as a prize of its own.
+  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element) => {
+    const x = surprise(id);
+    const n = base * x;
+    return play(
+      () => import('./celebrate').then((c) => c.celebrate({ kind: 'chest', ...m,
+        loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
+      () => claimGoal(id, n));
+  };
+  const claimGoalRow = (g: GoalProgress, from?: Element) => openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
+  const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
       const k = badgeMoment(b);
@@ -480,6 +511,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = todayGoals(), wk = weekGoals();
     for (const g of list) if (g.done >= g.target && !goalClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
     if (list.length > 1 && list.every((g) => g.done >= g.target) && !goalClaimed('all')) out.push({ id: 'all', label: t('chest.day'), light: ALL_LIGHT });
+    if (isFriday() && !goalClaimed('kahf')) {
+      const since = new Date(); since.setHours(0, 0, 0, 0);
+      if (KAHF_PAGES.every((p) => pageReadSince(p, since.getTime()))) out.push({ id: 'kahf', label: mpt('mp.fri.kahf'), light: KAHF_LIGHT });
+    }
     for (const g of wk) if (g.done >= g.target && !weekClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
     if (wk.length > 1 && wk.every((g) => g.done >= g.target) && !weekClaimed(weekAllId())) out.push({ id: weekAllId(), label: t('wkg.chest'), light: WEEK_ALL_LIGHT });
     return out;
@@ -488,6 +523,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = waitingChests();
     if (list.length < 2) return;
     haptic();
+    for (const c of list) c.light *= surprise(c.id);
     void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
   };
   const harvestBtn = () => {
@@ -497,9 +533,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
   };
   // This week's goals (reset every Monday): their own rows and chest for all of them.
-  const claimWeekAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
-    () => claimGoal(weekAllId(), WEEK_ALL_LIGHT));
+  const claimWeekAll = (from?: Element) => openChest(weekAllId(), WEEK_ALL_LIGHT, { title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from);
   const weekBox = () => {
     const list = weekGoals();
     if (!list.length) return '';
@@ -513,6 +547,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('span', { class: 'muted small' }, `${n} / ${list.length}`)),
         goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
       h('div', { class: 'goals' }, ...list.map(goalRow)));
+  };
+  // Friday (owner request 2026-11-12): double XP all day, and Al-Kahf as a quest with its own chest.
+  const fridayBox = () => {
+    if (!isFriday()) return '';
+    const since = new Date(); since.setHours(0, 0, 0, 0);
+    const read = KAHF_PAGES.filter((p) => pageReadSince(p, since.getTime()));
+    const met = read.length >= KAHF_PAGES.length;
+    const next = KAHF_PAGES.find((p) => !read.includes(p));
+    return h('div', { class: 'fri-box' },
+      h('div', { class: 'fri-head' }, h('b', {}, `☾ ${mpt('mp.fri.title')}`), h('span', { class: 'fri-xp' }, mpt('mp.fri.xp'))),
+      h('div', { class: `goal k-kahf${met ? ' met' : ''}` },
+        h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.fri.kahf')), bar('kahf', read.length / KAHF_PAGES.length),
+          h('span', { class: 'muted small' }, mpt('mp.fri.pages', { n: read.length, of: KAHF_PAGES.length }))),
+        met ? '' : h('button', { class: 'chip', onclick: () => goMushaf(`page:${next ?? KAHF_PAGES[0]}`) }, t('goal.read')),
+        goalChest('kahf', KAHF_LIGHT, met, (el) => void claimKahf(el))));
   };
   // "Resets in 05:12:09" (owner 2026-11-12: "include the seconds, so it gets more urgency"): ticks every second
   // while Me is on screen; the week shows its days first ("6 d 05:12:09").
@@ -619,7 +668,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
     const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
-      : [tip ? tipCard(tip) : '',
+      : [fridayBox(), tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
         list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
         list.length ? lightStrip() : ''];
@@ -949,7 +998,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
+      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
       tabBar('me'));
     void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
@@ -1196,6 +1245,23 @@ export function showMeSettings(root: HTMLElement): () => void {
 }
 
 /** A flame that went out can be relit with streak freezes kept from the Ranks shop or prizes. */
+/** Streak repair (owner request 2026-11-12, "make Light way more valuable"): a flame that went out can be bought back
+ *  with Light while it is still warm; the longer the streak, the more it costs. */
+export const repairPrice = (n: number) => Math.min(1500, 150 + 15 * n);
+function repairButton(lost: { n: number; days: string[] }): HTMLElement {
+  const price = repairPrice(lost.n);
+  const left = wallet();
+  return h('button', { class: `me-relight me-repair${left < price ? ' short' : ''}`, onclick: () => {
+    if (wallet() < price) { toast(mpt('mp.rep.need', { n: price - wallet() })); return; }
+    void Promise.all([import('../data/garden'), import('../data/journey')]).then(([g, j]) => {
+      if (!g.shopAdd(`rp:${lost.days[0]}`, price)) return;
+      j.revive(lost.days);
+      haptic(24);
+      toast(mpt('mp.rep.done', { n: lost.n }));
+      void import('./powerUp').then((m) => m.powerUp(lost.n)).catch(() => {});
+    });
+  } }, h('span', {}, mpt('mp.rep.btn', { n: lost.n })), h('b', { class: 'me-repair-p' }, star(), ` ${price}`));
+}
 function keptFreezeButton(days: string[]): HTMLElement {
   const box = h('div', {});
   void Promise.all([import('../data/shop'), import('../i18n/ranks')]).then(([shop, { rt }]) => {

@@ -24,7 +24,7 @@ const SYMBOLS = [
   'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z', // drop
 ];
 export const AVATARS = 52;
-export const FRAMES = 14;
+export const FRAMES = 20;
 export const TIER_RING = ['#b07a43', '#c3c9d2', '#9cc2e8', '#eaa07a', '#f2c14e'];
 const GOLD = '#f2c14e';
 const LAUREL = ['#f2c14e', '#cfd6de', '#d08a4e'];
@@ -219,6 +219,64 @@ function frameArt(f: number, tier: number): string {
         p += `${edge(d1, G[2], .7)}${two(d1, G[0], G[1], -.5, -.5)}${edge(d2, '#03463a', .6)}${two(d2, '#3ee0c0', '#11806f', -.4, -.4)}`;
       }
       return `${p}${rim(18.6, 2.8, METAL.emerald)}${glint(18.6, 2.8)}`;
+    }
+    // Frames 14–19 (owner request 2026-11-12, "make Light way more valuable"): limited frames sold for Light, one a week.
+    case 14: { // ruby crown: a ruby band, gold crown points along its top, gems between
+      const R: [string, string, string, string] = ['#e8435f', '#a91f3a', '#540818', '#ffc2cc'];
+      let pts = '';
+      for (let k = -2; k <= 2; k++) {
+        const a = -Math.PI / 2 + k * .36, tip = k === 0 ? 26.2 : 24.2, w = .12;
+        const d = `M${P2(19.6, a - w)}L${P2(tip, a)}L${P2(19.6, a + w)}Z`;
+        pts += `${edge(d, G[2], .7)}${two(d, G[3], G[0], -.4, -.4)}<circle cx="${P2(tip + .6, a).split(' ')[0]}" cy="${P2(tip + .6, a).split(' ')[1]}" r="${k === 0 ? 1.2 : .8}" fill="#fff6c9"/>`;
+      }
+      return `${pts}${rim(18.6, 3.2, R)}${glint(18.6, 3.2)}${[1, 3, 5, 7].map((k) => { const a = (k / 8) * Math.PI * 2; return gemAt(20 + Math.cos(a) * 18.6, 20 + Math.sin(a) * 18.6, 1.2, '#ffd36b', '#d39a26'); }).join('')}`;
+    }
+    case 15: { // sapphire halo: a deep blue band, a double halo of light and four cut diamonds
+      const S: [string, string, string, string] = ['#3c7cf0', '#1f4fb8', '#0b1f55', '#bcd4ff'];
+      const cut = (x: number, y: number, r: number) => { const d = `M${x} ${y - r}L${x + r * .8} ${y}L${x} ${y + r}L${x - r * .8} ${y}Z`; return `${edge(d, '#0b1f55', .6)}${two(d, '#eaf3ff', '#8fb5ff', -.3, -.3)}`; };
+      return `<circle cx="20" cy="20" r="22.4" fill="none" stroke="#9cc0ff" stroke-width="1" opacity=".45"/><circle cx="20" cy="20" r="23.8" fill="none" stroke="#9cc0ff" stroke-width=".6" opacity=".25"/>
+        ${rim(18.6, 3.4, S)}<circle cx="20" cy="20" r="16.7" fill="none" stroke="#e6eefc" stroke-width=".6"/>${glint(18.6, 3.4)}
+        ${[0, 1, 2, 3].map((k) => { const a = (k / 4) * Math.PI * 2 - Math.PI / 2; return cut(20 + Math.cos(a) * 18.6, 20 + Math.sin(a) * 18.6, 2.6); }).join('')}`;
+    }
+    case 16: { // rose garden: small roses and leaves round a silver band
+      const rose = (x: number, y: number) => `<circle cx="${(x + .2).toFixed(2)}" cy="${(y + .5).toFixed(2)}" r="2.1" fill="#7a1534"/>${two(circlePath(x, y, 2), '#ff8fb0', '#d94a77', -.5, -.5)}
+        <path d="M${(x - .9).toFixed(2)} ${y.toFixed(2)}a.9 .9 0 1 1 1.8 0a.6 .6 0 1 1 -1.2 0" fill="none" stroke="#a82352" stroke-width=".45"/>`;
+      const leaf = (x: number, y: number, a: number) => `<ellipse cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" rx=".9" ry="1.8" fill="#3aa86b" transform="rotate(${((a * 180) / Math.PI + 90).toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})"/>`;
+      let p = '';
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2, b = a + Math.PI / 8;
+        p += leaf(20 + Math.cos(b) * 19.4, 20 + Math.sin(b) * 19.4, b) + rose(20 + Math.cos(a) * 19.2, 20 + Math.sin(a) * 19.2);
+      }
+      return `${rim(18.6, 2.2, METAL.silver)}${glint(18.6, 2.2)}${p}`;
+    }
+    case 17: { // dawn: a rose-gold band with a small rising sun and pearls
+      const RG: [string, string, string, string] = ['#f4b39a', '#cf7c62', '#6f3324', '#fff0e6'];
+      const sun = `M${P2(4.2, Math.PI)}A4.2 4.2 0 0 1 ${P2(4.2, 0)}Z`;
+      let rays = '';
+      for (let k = 0; k < 7; k++) { const a = Math.PI + (k + .5) * (Math.PI / 7); rays += `<path d="M${(20 + Math.cos(a) * 5.2).toFixed(2)} ${(1 + Math.sin(a) * 5.2).toFixed(2)}L${(20 + Math.cos(a) * 7.4).toFixed(2)} ${(1 + Math.sin(a) * 7.4).toFixed(2)}" stroke="#ffd36b" stroke-width=".8" stroke-linecap="round"/>`; }
+      return `<circle cx="20" cy="1" r="8" fill="#ffd9a8" opacity=".35"/>${rays}<g transform="translate(16 -3)">${edge(sun, '#c4541a', .7)}${two(sun, '#ffe38a', '#ff9a3d', -.4, -.4)}</g>
+        ${rim(18.6, 3, RG)}${glint(18.6, 3)}${[2, 4, 6, 8, 10].map((k) => { const a = (k / 12) * Math.PI * 2 - Math.PI / 2; const x = 20 + Math.cos(a) * 18.6, y = 20 + Math.sin(a) * 18.6;
+          return `${two(circlePath(x, y, 1.2), METAL.pearl[0], METAL.pearl[1], -.4, -.4)}<circle cx="${(x - .4).toFixed(2)}" cy="${(y - .4).toFixed(2)}" r=".35" fill="#fff"/>`; }).join('')}`;
+    }
+    case 18: { // jade arches: a jade band with six gold mihrab arches standing on it
+      const J: [string, string, string, string] = ['#5fcf9f', '#2f9a6c', '#0f4a31', '#d4fbe8'];
+      let a6 = '';
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2 - Math.PI / 2, deg = (a * 180) / Math.PI + 90;
+        const x = 20 + Math.cos(a) * 21.4, y = 20 + Math.sin(a) * 21.4;
+        const d = `M${(x - 1.7).toFixed(2)} ${(y + 1.6).toFixed(2)}V${(y - .2).toFixed(2)}Q${(x - 1.7).toFixed(2)} ${(y - 2.2).toFixed(2)} ${x.toFixed(2)} ${(y - 2.9).toFixed(2)}Q${(x + 1.7).toFixed(2)} ${(y - 2.2).toFixed(2)} ${(x + 1.7).toFixed(2)} ${(y - .2).toFixed(2)}V${(y + 1.6).toFixed(2)}Z`;
+        a6 += `<g transform="rotate(${deg.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})">${edge(d, G[2], .6)}${two(d, G[0], G[1], -.3, -.3)}<path d="M${(x - .8).toFixed(2)} ${(y + 1.6).toFixed(2)}V${(y - .1).toFixed(2)}Q${x.toFixed(2)} ${(y - 1.5).toFixed(2)} ${(x + .8).toFixed(2)} ${(y - .1).toFixed(2)}V${(y + 1.6).toFixed(2)}Z" fill="#0f4a31"/></g>`;
+      }
+      return `${a6}${rim(18.6, 3.2, J)}${glint(18.6, 3.2)}`;
+    }
+    case 19: { // diamond: a white-gold band set all round with cut stones that catch the light
+      let st = '';
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2 - Math.PI / 2, x = 20 + Math.cos(a) * 18.8, y = 20 + Math.sin(a) * 18.8, r = k % 3 ? 1.5 : 2.2;
+        const d = `M${x.toFixed(2)} ${(y - r).toFixed(2)}L${(x + r).toFixed(2)} ${y.toFixed(2)}L${x.toFixed(2)} ${(y + r).toFixed(2)}L${(x - r).toFixed(2)} ${y.toFixed(2)}Z`;
+        st += `${edge(d, '#4f5a66', .55)}${two(d, '#ffffff', '#b9e6ff', -.3, -.3)}<path d="M${(x - r * .5).toFixed(2)} ${y.toFixed(2)}H${(x + r * .5).toFixed(2)}" stroke="#7cc7f2" stroke-width=".3"/>`;
+      }
+      return `<circle cx="20" cy="20" r="22.6" fill="none" stroke="#dff4ff" stroke-width="1.2" opacity=".35"/>${rim(18.8, 2.6, METAL.silver)}${glint(18.8, 2.6)}${st}`;
     }
     default: return rim(18.6, 2.8, tierM);
   }

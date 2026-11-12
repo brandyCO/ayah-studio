@@ -317,3 +317,23 @@
 [dir='rtl'] .me-arrived { translate: 50% 0; }
 @keyframes me-arrive { 0% { opacity: 0; transform: translateY(-6px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .me-hero.loading .me-count b, .me-sync.busy::before, .me-arrived { animation: none; } }
+/* Friday (owner request 2026-11-12): double XP all day and the Al-Kahf quest. */
+.fri-box { margin: 0 0 12px; padding: 12px; border-radius: 18px; background: linear-gradient(160deg, #0f2a3a, #173a2c); color: #eaf6ef; }
+.fri-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.fri-head b { font-family: var(--font-display, inherit); font-size: 1.05rem; }
+.fri-xp { padding: 4px 10px; border-radius: 999px; font-size: var(--fs-s); font-weight: 800; color: #2b1a00;
+  background: linear-gradient(90deg, #ffd36b, #ffb347); box-shadow: 0 0 14px #ffc85a66; }
+.fri-box .goal { background: #ffffff12; }
+.fri-box .muted { color: #cfe3d8; }
+.me-relight.me-repair { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-inline: auto;
+  background: linear-gradient(180deg, #ffd66b, #ffb43d); color: #3a2300; border: 0; font-weight: 800; box-shadow: 0 4px 0 #c97f12; opacity: 1; }
+.me-relight.me-repair:active { translate: 0 3px; box-shadow: 0 1px 0 #c97f12; }
+.me-repair-p { display: inline-flex; align-items: center; gap: 3px; padding: 3px 10px; border-radius: 999px; background: #fff8; color: #3a2300; }
+.me-repair.short { opacity: .75; }
+/* Gifts from friends (owner request 2026-11-12). */
+.me-gifts:empty { display: none; }
+.me-gifts { display: grid; gap: 8px; margin: 0 0 12px; }
+.me-gift { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, #ff6b8a 18%, var(--card, #fff)), color-mix(in srgb, #ffd36b 22%, var(--card, #fff))); }
+.me-gift-ic { font-size: 1.6rem; }
+.me-gift .goal-txt { flex: 1; display: grid; gap: 2px; }

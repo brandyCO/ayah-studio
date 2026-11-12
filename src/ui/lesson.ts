@@ -19,6 +19,7 @@ import {
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
 import { addLesson, addMemorised, claimGoal } from '../data/journey';
+import { learnClock, timeFor } from '../data/learnClock';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
@@ -59,6 +60,7 @@ const learnReciter = () => {
 
 /** `mode` 'tasmi': the whole surah from memory straight away ("Already know some?" on the path). */
 export async function showLesson(root: HTMLElement, s: number, mode?: string): Promise<() => void> {
+  const clock = learnClock();
   ensureTree(s, pathChunk());
   const quick = mode === 'tasmi';
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
@@ -811,6 +813,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   // --- passing a step ---
   async function pass(smooth: boolean, from: Element | null) {
     stopAll();
+    const time = timeFor(clock.lap());
     const before = tree(s)!;
     const stage0 = stageOf(before, m.ayahs);
     const today = dayKey(new Date());
@@ -821,25 +824,25 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       learnTo(s, range[1]);
       if (n > 0) addMemorised(n);
       claimGoal(`gl:n:${s}:${range[1]}`, LIGHT.new);
-      moment = celebrate({ kind: 'lantern', kicker: lt('learn.celNew'), title: ref0, sub: lt('learn.celNewSub') }, from, LIGHT.new);
+      moment = celebrate({ kind: 'lantern', kicker: lt('learn.celNew'), title: ref0, sub: lt('learn.celNewSub'), time }, from, LIGHT.new);
     } else if (step === 'link') {
       const wasDry = thirsty(before);
       const fresh = range[1] > before.linked;
       linkTo(s, range[1]);
       const light = fresh ? LIGHT.link : wasDry ? LIGHT.water : 0;
       if (light) claimGoal(fresh ? `gl:l:${s}:${range[1]}` : `gl:wa:${s}:${today}`, light);
-      moment = celebrate({ kind: 'lantern', kicker: lt(wasDry && !fresh ? 'learn.celWater' : 'learn.celLink'), title: ref0, sub: lt('learn.celLinkSub') }, from, light);
+      moment = celebrate({ kind: 'lantern', kicker: lt(wasDry && !fresh ? 'learn.celWater' : 'learn.celLink'), title: ref0, sub: lt('learn.celLinkSub'), time }, from, light);
     } else {
       const first = !before.full;
       const wasDry = thirsty(before);
       reciteWhole(s, m.ayahs, smooth);
       if (first) {
         claimGoal(`gl:w:${s}`, LIGHT.whole);
-        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub') }, from, LIGHT.whole);
+        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub'), time }, from, LIGHT.whole);
       } else {
         const light = wasDry ? LIGHT.water : 0;
         if (light) claimGoal(`gl:wa:${s}:${today}`, light);
-        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
+        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips'), time }, from, light);
       }
     }
     addLesson();
@@ -896,6 +899,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   startStep();
   if (tree(s)!.learned === 0 && step === 'new') toast(lt('learn.firstLesson'));
   return () => {
+    clock.stop();
     stopAll();
     if (follower) stopFollow();
     void rec.stop();

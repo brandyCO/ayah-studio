@@ -3,6 +3,20 @@
 import { lang } from './index';
 
 const en = {
+  'mp.fri.title': 'Friday',
+  'mp.fri.xp': 'Double XP all day',
+  'mp.fri.kahf': 'Read Surah Al-Kahf',
+  'mp.fri.kahfDone': 'The light of Al-Kahf for your Friday',
+  'mp.fri.pages': '{n} / {of} pages',
+  'mp.gift.from': 'A gift from {name}',
+  'mp.gift.light': '{n} Light inside',
+  'mp.gift.piece': 'A piece from the shop',
+  'mp.gift.sub': 'Sent with love from a friend',
+  'mp.gift.kicker': 'Gift',
+  'mp.gift.someone': 'a friend',
+  'mp.rep.btn': 'Repair your {n}-day streak',
+  'mp.rep.need': 'You need {n} more Light',
+  'mp.rep.done': 'Your {n}-day streak is back',
   'mp.today': 'Today',
   'mp.week': 'This week',
   'mp.challenges': 'Challenges',
@@ -60,6 +74,20 @@ const en = {
 export type MePageKey = keyof typeof en;
 
 const ar: Partial<Record<MePageKey, string>> = {
+  'mp.fri.title': 'الجمعة',
+  'mp.fri.xp': 'نقاط خبرة مضاعفة طوال اليوم',
+  'mp.fri.kahf': 'اقرأ سورة الكهف',
+  'mp.fri.kahfDone': 'نور الكهف لجمعتك',
+  'mp.fri.pages': '{n} / {of} صفحات',
+  'mp.gift.from': 'هدية من {name}',
+  'mp.gift.light': 'بداخلها {n} نور',
+  'mp.gift.piece': 'قطعة من المتجر',
+  'mp.gift.sub': 'أرسلها إليك صديق بمحبة',
+  'mp.gift.kicker': 'هدية',
+  'mp.gift.someone': 'صديق',
+  'mp.rep.btn': 'أصلح سلسلتك ({n} يومًا)',
+  'mp.rep.need': 'تحتاج {n} نورًا إضافيًا',
+  'mp.rep.done': 'عادت سلسلتك ({n} يومًا)',
   'mp.today': 'اليوم',
   'mp.week': 'هذا الأسبوع',
   'mp.challenges': 'التحديات',

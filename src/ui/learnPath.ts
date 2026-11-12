@@ -151,7 +151,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     haptic();
     try {
       const c = await import('./celebrate');
-      await c.celebrate({ kind: 'chest', kicker: surahName(m), title: lt('learn.chestTitle'), sub: lt('learn.chestSub', { n: CHEST_EVERY }) }, from, PATH_CHEST);
+      await c.celebrate({ kind: 'chest', kicker: surahName(m), title: lt('learn.chestTitle'), sub: lt('learn.chestSub', { n: CHEST_EVERY }), time: { lesson: 0, today: (await import('../data/learnClock')).learnToday() } }, from, PATH_CHEST);
     } finally {
       opening = false;
       claimGoal(chestId(st.s, st.range[1]), PATH_CHEST);

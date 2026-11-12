@@ -2,17 +2,18 @@
 // Ranks prizes buys streak freezes kept for later, avatars and frames. Some things can only be won:
 // the Sun tier's avatars and frame, the laurel frames of a week's top 3, and the champion avatars for
 // weeks won at #1 (the server checks those, rank_set_look). Never money, never a measure of reward.
-import { shopAdd, shopHas, shopIds, wallet } from './garden';
+import { shopAdd, shopHas, shopIds, spent, wallet } from './garden';
 import { revive } from './journey';
 
 export const FREEZE_PRICE = 250;
 export const FREEZE_MAX = 3;
 /** What can only be won, and how. */
 export type Win = 'sun' | 'p1' | 'p2' | 'p3' | 'w1' | 'w3' | 'w5' | 'w10' | 'week';
-export interface Item { id: string; kind: 'avatar' | 'frame' | 'icon'; ref: number | string; price?: number; win?: Win }
+export interface Item { id: string; kind: 'avatar' | 'frame' | 'icon'; ref: number | string; price?: number; win?: Win; limited?: boolean }
 /** What the player has won so far (from rank_status). */
 export interface Wins { bestTier: number; bestPlace: number | null; wins: number; items?: string[] }
 
+const LIMITED_PRICES = [600, 700, 800, 900, 1200, 1500];
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 export const ITEMS: Item[] = [
   ...range(24, 31).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, price: 150 })),
@@ -28,8 +29,13 @@ export const ITEMS: Item[] = [
   // Weekly prizes: each week its own jewel avatar for #1 and frame for #2 and #3 (server: rank_prize_item).
   ...range(40, 51).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, win: 'week' })),
   ...range(8, 13).map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, win: 'week' })),
+  // Limited frames (owner request 2026-11-12, "make Light way more valuable"): sold for Light one week at a time, in turn.
+  ...LIMITED_PRICES.map((p, i): Item => ({ id: `fr:${14 + i}`, kind: 'frame', ref: 14 + i, price: p, limited: true })),
   // App icons join here (bought or won) once their designs are in the app.
 ];
+
+export { limitedIn, limitedNow } from './limited';
+import { limitedNow } from './limited';
 
 /** The week's prize for a place, as the server gives it (rank_prize_item; week 0 = 2026-11-09). */
 export function weekPrize(week: string, place: number): string | null {
@@ -57,8 +63,9 @@ export function owns(kind: 'avatar' | 'frame', ref: number, x: Wins): boolean {
 }
 /** Light left to spend: all earned (every device) minus the garden's and the shop's purchases. */
 export const lightLeft = wallet;
-export function buy(it: Item): boolean {
+export function buy(it: Item, week?: string): boolean {
   if (!it.price || it.win || shopHas(it.id) || lightLeft() < it.price) return false;
+  if (it.limited && (!week || limitedNow(week) !== it.id)) return false;
   return shopAdd(it.id, it.price);
 }
 
@@ -78,3 +85,9 @@ export function useFreezes(days: string[]): boolean {
   revive(days);
   return true;
 }
+
+// The lamp of Light (owner request 2026-11-12): how much Light a player has spent, shown by their name on boards.
+export const LAMP_AT = [500, 2000, 5000, 15000];
+export const lampOf = (n = spent()) => LAMP_AT.filter((x) => n >= x).length;
+/** Light still to spend for the next lamp, or null at diamond. */
+export const lampNext = (n = spent()) => { const x = LAMP_AT.find((v) => n < v); return x === undefined ? null : x - n; };

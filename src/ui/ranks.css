@@ -418,3 +418,17 @@
 .rkm-passed .cel-ok { animation: cel-up .35s .75s ease-out both; }
 .rk-row.visit { cursor: pointer; }
 .rk-row.visit:active { transform: translateY(1px); }
+.rk-x2 { display: inline-block; margin-top: 8px; padding: 5px 12px; border-radius: 999px; font-weight: 900; font-size: var(--fs-s);
+  color: #2b1a00; background: linear-gradient(90deg, #ffd36b, #ffb347); box-shadow: 0 0 16px #ffc85a77; }
+/* The lamp of Light by a name (Light spent): bronze, silver, gold, diamond. */
+.rk-lamp { display: inline-grid; width: 16px; height: 16px; margin-inline-start: 4px; vertical-align: -2px; }
+.rk-lamp svg { width: 100%; height: 100%; overflow: visible; }
+.rk-lamp .g { fill: var(--lg); opacity: .28; }
+.rk-lamp .e, .rk-lamp .t { fill: var(--le); }
+.rk-lamp .b { fill: var(--lb); stroke: var(--le); stroke-width: .7; }
+.rk-lamp .f { fill: #ff9a2e; }
+.rk-lamp.l1 { --lb: #f0b27f; --le: #8a4a1f; --lg: #ffb37a; }
+.rk-lamp.l2 { --lb: #eef2f6; --le: #6b7785; --lg: #dfe8f2; }
+.rk-lamp.l3 { --lb: #ffe08a; --le: #a8761a; --lg: #ffd36b; }
+.rk-lamp.l4 { --lb: #e6f7ff; --le: #3a8fc2; --lg: #9fe2ff; }
+.rk-lamp.l4 .g { opacity: .5; }

@@ -38,10 +38,14 @@ import { fpsStart } from '../fps';
 let P = rewardPalette();
 
 export type Moment =
-  | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string }
-  | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[] }
+  | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string; time?: LearnTime }
+  | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[]; time?: LearnTime }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
+
+/** Time spent learning (seconds): this lesson and all of today (owner request 2026-11-12). */
+export interface LearnTime { lesson: number; today: number }
+const mins = (secs: number) => Math.max(1, Math.round(secs / 60));
 
 /** What a chest holds, shown one by one as it opens. Without `loot` a chest holds the Light it was given. */
 export type Loot =
@@ -215,6 +219,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stage = h('div', { class: 'cel-stage' });
   let kicker = '', title = '', sub = '';
+  const time = (m.kind === 'lantern' || m.kind === 'star' || m.kind === 'chest') && m.time && m.time.today >= 20 ? m.time : null;
   let count: HTMLElement | null = null;
   // A chest: dropped in, then tapped open (a bigger one takes more taps), then what it holds comes out.
   const tier = chestTier(light);
@@ -309,7 +314,10 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       stage,
       slot ?? '',
       canvas,
-      h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub)),
+      h('div', { class: 'cel-text' }, h('p', { class: 'cel-kicker' }, kicker), h('h2', {}, title), h('p', { class: 'cel-sub' }, sub),
+        time ? h('p', { class: 'cel-time' },
+          time.lesson >= 20 ? h('span', {}, h('b', {}, mt('mt.cel.mins', { n: mins(time.lesson) })), ` ${mt('mt.cel.thisLesson')}`) : '',
+          h('span', {}, h('b', {}, mt('mt.cel.mins', { n: mins(time.today) })), ` ${mt('mt.cel.learnToday')}`)) : ''),
       comboPill,
       lightPill ?? '',
       ok);

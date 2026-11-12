@@ -36,6 +36,10 @@ function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
   } catch { return { prizes: [], challenges: 0 }; }
 }
 
+/** Gifts from friends counted when Me last asked (src/together/lightGifts.ts, kept per account). */
+function giftsWaitingHere(): number {
+  try { const v = JSON.parse(localStorage.getItem('giftsWaiting') ?? 'null'); return v && v.who === account()?.id ? Math.min(20, v.n | 0) : 0; } catch { return 0; }
+}
 const rewardItem = (p: Pending): Item => {
   if (p.kind === 'goal') return { icon: '🎁', title: p.goal.week ? mpt('mp.inWeek') : mpt('mp.inGoal'), sub: goalLabel(p.goal), go: toMe };
   if (p.kind === 'all') return { icon: '🎁', title: mpt('mp.inAll'), sub: mpt('mp.inChest'), go: toMe };
@@ -50,6 +54,7 @@ function localItems(): Item[] {
     const r = rankWaiting();
     for (const p of r.prizes) out.push({ icon: '🏆', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
     for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toChallenges });
+    for (let i = 0; i < giftsWaitingHere(); i++) out.push({ icon: '🎁', title: mpt('mp.gift.kicker'), go: () => { location.hash = '#/me'; } });
   }
   return out;
 }

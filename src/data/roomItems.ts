@@ -4,14 +4,15 @@
 // the room is this device's choice (localStorage `roomLook`). Never money, nothing random.
 import { prizeWins, shopAdd, shopHas, wallet } from './garden';
 import { streak } from './journey';
+import { limitedNow, thisWeek } from './limited';
 
 // Round 5 (owner request 2026-11-11): the room itself (wall, floor, the view from the window), floor seating and a
 // cat, more pieces (a dallah, a bookcase with a mushaf on its rehal, a desk lamp that lights at night, a prayer
 // corner, a mashrabiya screen, a sprout that grows with the streak).
 export type Slot = 'wall' | 'floor' | 'view' | 'plant' | 'side' | 'seat' | 'rug' | 'curtain' | 'hang' | 'pet';
 export const SLOTS: Slot[] = ['wall', 'floor', 'view', 'plant', 'side', 'seat', 'rug', 'curtain', 'hang', 'pet'];
-export type Rarity = 'common' | 'rare' | 'epic' | 'prize';
-export interface RoomItem { id: string; slot: Slot; r: Rarity; price?: number; win?: 1 | 2 | 3 }
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'prize';
+export interface RoomItem { id: string; slot: Slot; r: Rarity; price?: number; win?: 1 | 2 | 3; /** Sold one week at a time, in turn (src/data/limited.ts). */ limited?: true }
 
 export const ROOM_ITEMS: RoomItem[] = [
   { id: 'zellige', slot: 'wall', r: 'rare', price: 160 },
@@ -52,6 +53,13 @@ export const ROOM_ITEMS: RoomItem[] = [
   { id: 'bronze', slot: 'hang', r: 'prize', win: 3 },
   { id: 'silver', slot: 'hang', r: 'prize', win: 2 },
   { id: 'gold', slot: 'hang', r: 'prize', win: 1 },
+  // Legendary (owner request 2026-11-12, "make Light way more valuable"): sold for Light one week at a time.
+  { id: 'madinah', slot: 'view', r: 'legendary', price: 2500, limited: true },
+  { id: 'chandelier', slot: 'hang', r: 'legendary', price: 1500, limited: true },
+  { id: 'fountain', slot: 'side', r: 'legendary', price: 1200, limited: true },
+  { id: 'silk', slot: 'rug', r: 'legendary', price: 1200, limited: true },
+  { id: 'medallion', slot: 'wall', r: 'legendary', price: 1000, limited: true },
+  { id: 'brocade', slot: 'curtain', r: 'legendary', price: 1000, limited: true },
   { id: 'ginger', slot: 'pet', r: 'rare', price: 200 },
   { id: 'tabby', slot: 'pet', r: 'rare', price: 200 },
   { id: 'snow', slot: 'pet', r: 'epic', price: 280 },
@@ -67,6 +75,7 @@ export function ownsRoom(it: RoomItem): boolean {
 }
 export function buyRoom(it: RoomItem): boolean {
   if (!it.price || it.win || ownsRoom(it) || wallet() < it.price) return false;
+  if (it.limited && limitedNow(thisWeek()) !== `rm:${it.id}`) return false;
   if (!shopAdd(`rm:${it.id}`, it.price)) return false;
   setRoomLook(it.slot, it.id);
   return true;

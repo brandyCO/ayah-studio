@@ -122,7 +122,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
             h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
             : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`),
-              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, `⚔ ${chLabel}`)] : [];
+              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, `⚔ ${chLabel}`),
+              h('button', { class: 'chip fr-gift', onclick: () => void import('./giftSend').then((m) => m.openGiftSheet(pid, name)) }, `🎁 ${ft('fr.gift')}`)] : [];
     const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
       known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
       known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');

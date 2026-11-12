@@ -2,6 +2,7 @@
 // seen in its place, then a tab per place (plant, corner, rug, curtains, lantern) and its pieces: tap one you
 // have to put it in, tap one you don't to get it for its Light (asked once), the prize lanterns show how they are
 // won. The room on Me follows at once (`onChange`).
+import { limitedIn, limitedNow, thisWeek } from '../data/limited';
 import { ROOM_ITEMS, SLOTS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem, type Slot } from '../data/roomItems';
 import { wallet } from '../data/garden';
 import { streak } from '../data/journey';
@@ -78,12 +79,17 @@ export function openRoomShop(onChange: () => void, sit: string | null = null, op
   };
   const tile = (it: RoomItem, on: boolean) => {
     const own = ownsRoom(it);
+    // A limited piece is sold only in its week; the rest of the time it says when it comes back.
+    const away = !!it.limited && limitedNow(thisWeek()) !== `rm:${it.id}`;
+    const n = it.limited ? limitedIn(`rm:${it.id}`, thisWeek()) : -1;
+    const back = n === 1 ? rt('rs.limNext') : rt('rs.limBack', { n });
     const el = h('button', { class: `rs-tile r-${it.r}${on ? ' on' : ''}${own ? '' : ' locked'}`, type: 'button',
-      onclick: () => (own ? put(it.id) : it.win ? toast(rt(`rs.win${it.win}` as RankKey)) : void ask(it)) },
+      onclick: () => (own ? put(it.id) : it.win ? toast(rt(`rs.win${it.win}` as RankKey)) : away ? toast(back) : void ask(it)) },
       h('span', { class: 'rs-rar' }, rt(`rs.r.${it.r}` as RankKey)),
       h('span', { class: 'rs-art' }),
       h('span', { class: 'rs-name' }, name(it.id)),
-      own ? '' : it.win ? h('span', { class: 'rs-how' }, rt(`rs.win${it.win}` as RankKey)) : h('span', { class: 'rs-price' }, `✦ ${it.price}`));
+      own ? '' : it.win ? h('span', { class: 'rs-how' }, rt(`rs.win${it.win}` as RankKey)) : away ? h('span', { class: 'rs-how' }, `🔒 ${back}`)
+        : h('span', { class: 'rs-price' }, `✦ ${it.price}`, it.limited ? h('small', {}, ` · ${rt('rs.limNow')}`) : ''));
     el.querySelector('.rs-art')!.innerHTML = tileArt(it.slot, it.id);
     return el;
   };
