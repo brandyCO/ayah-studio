@@ -14,7 +14,8 @@ language sql immutable set search_path = '' as $$
               when d <= date '2026-11-13' then date '2026-11-09'
               else d - ((extract(isodow from d)::int + 1) % 7) end;
 $$;
-revoke all on function public.rank_week(date) from public, anon, authenticated;
+revoke all on function public.rank_week(date) from public, anon;
+grant execute on function public.rank_week(date) to authenticated;
 
 -- The week's last day (Friday), and the week before (the bridge week is five days long).
 create or replace function public.rank_week_last(wk date) returns date
@@ -30,7 +31,9 @@ create or replace function public.rank_week_no(wk date) returns int
 language sql immutable set search_path = '' as $$
   select case when wk <= date '2026-11-09' then (wk - date '2026-11-09') / 7 else (wk - date '2026-11-07') / 7 end;
 $$;
-revoke all on function public.rank_week_last(date), public.rank_prev_week(date), public.rank_week_no(date) from public, anon, authenticated;
+revoke all on function public.rank_week_last(date), public.rank_prev_week(date), public.rank_week_no(date) from public, anon;
+-- Plain date sums, used by functions the app calls as itself (rank_prize_piece, rank_prize_item).
+grant execute on function public.rank_week_last(date), public.rank_prev_week(date), public.rank_week_no(date) to authenticated;
 
 -- An Islamic day can be a day ahead of the date in the player's time zone, and that can be two ahead of UTC.
 create or replace function public.rank_check_day(d date) returns void
