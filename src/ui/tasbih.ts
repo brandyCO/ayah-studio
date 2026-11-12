@@ -4,7 +4,7 @@
 import { addDhikr, todayRec } from '../data/journey';
 import { DHIKR, goals, type DhikrId } from '../data/goals';
 import { t, type Key } from '../i18n';
-import { h, haptic } from './dom';
+import { h } from './dom';
 
 const R = 104;
 const C = 2 * Math.PI * R;
@@ -49,7 +49,7 @@ export function openTasbih(start: DhikrId = 'subhan') {
       const before = count();
       addDhikr(id, 1);
       const goal = target();
-      haptic(before + 1 === goal ? 60 : 12);
+      void import('./sfx').then((m) => m.sfx.bead(before + 1 === goal));
       paint(true);
     },
   }, ring, h('span', { class: 'tb-center' }, num, of));

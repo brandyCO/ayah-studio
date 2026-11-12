@@ -365,7 +365,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     catchNext = false;
     const num = h('b', {}, loading ? '…' : String(catchNow ? s.days - 1 : s.days));
     hero.classList.toggle('loading', loading);
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced), freezeBadge(s));
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
@@ -383,8 +383,6 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
-        h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
-        h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
         h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
@@ -1248,6 +1246,19 @@ export function showMeSettings(root: HTMLElement): () => void {
 /** Streak repair (owner request 2026-11-12, "make Light way more valuable"): a flame that went out can be bought back
  *  with Light while it is still warm; the longer the streak, the more it costs. */
 export const repairPrice = (n: number) => Math.min(1500, 150 + 15 * n);
+/** The free freezes, shown right on the flame (owner request 2026-11-12, "a streak that forgives"): a small ice
+ *  shield with how many are ready; a tap says what it does and when one was last used. */
+function freezeBadge(s: ReturnType<typeof streak>): HTMLElement | string {
+  const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
+  const n = (s.freeze.free ? 1 : 0) + (s.extra.free ? 1 : 0);
+  const lines = [mpt('mp.freezeHelp'),
+    s.freeze.free ? mpt('mp.freezeReady') : mpt('mp.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) }),
+    s.extra.free ? mpt('mp.extraReady') : mpt('mp.extraNext', { day: longDay.format(parse(s.extra.next!)) })];
+  return h('button', { class: `me-freeze${n ? '' : ' none'}`, type: 'button', 'aria-label': lines.join('. '), onclick: (e: Event) => {
+    e.stopPropagation(); haptic(6); toast(lines.join(' · '));
+  } }, h('span', { 'aria-hidden': 'true' }, '❄'), n ? h('b', {}, String(n)) : '');
+}
+
 function repairButton(lost: { n: number; days: string[] }): HTMLElement {
   const price = repairPrice(lost.n);
   const left = wallet();

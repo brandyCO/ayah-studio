@@ -3,6 +3,12 @@
 import { lang } from './index';
 
 const en = {
+  'mp.freezeHelp': 'One free streak freeze each week: a missed day is covered by itself',
+  'mp.freezeReady': '❄ Freeze ready',
+  'mp.freezeUsed': '❄ Freeze used on {day}',
+  'mp.extraHelp': 'One extra freeze every 30 days: it covers a second missed day in the same week',
+  'mp.extraReady': '❄ Extra freeze ready',
+  'mp.extraNext': '❄ Extra freeze back on {day}',
   'mp.fri.title': 'Friday',
   'mp.fri.xp': 'Double XP all day',
   'mp.fri.kahf': 'Read Surah Al-Kahf',
@@ -74,6 +80,12 @@ const en = {
 export type MePageKey = keyof typeof en;
 
 const ar: Partial<Record<MePageKey, string>> = {
+  'mp.freezeHelp': 'تجميد مجاني واحد كل أسبوع: يغطي يومًا فائتًا تلقائيًا',
+  'mp.freezeReady': '❄ التجميد متاح',
+  'mp.freezeUsed': '❄ استُخدم التجميد يوم {day}',
+  'mp.extraHelp': 'تجميد إضافي كل 30 يومًا: يغطي يومًا فائتًا ثانيًا في الأسبوع نفسه',
+  'mp.extraReady': '❄ التجميد الإضافي جاهز',
+  'mp.extraNext': '❄ يعود التجميد الإضافي يوم {day}',
   'mp.fri.title': 'الجمعة',
   'mp.fri.xp': 'نقاط خبرة مضاعفة طوال اليوم',
   'mp.fri.kahf': 'اقرأ سورة الكهف',

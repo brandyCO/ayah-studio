@@ -337,3 +337,12 @@
   background: linear-gradient(135deg, color-mix(in srgb, #ff6b8a 18%, var(--card, #fff)), color-mix(in srgb, #ffd36b 22%, var(--card, #fff))); }
 .me-gift-ic { font-size: 1.6rem; }
 .me-gift .goal-txt { flex: 1; display: grid; gap: 2px; }
+/* Free freezes on the flame (owner request 2026-11-12). */
+.me-flame { position: relative; }
+.me-freeze { position: absolute; left: calc(50% + 24px); bottom: -4px; z-index: 2; display: inline-flex; align-items: center; gap: 1px;
+  min-width: 34px; height: 34px; padding: 0 7px; border-radius: 999px; border: 2px solid #fff; cursor: pointer; font: inherit;
+  background: linear-gradient(180deg, #9be7ff, #3fb5f0); color: #fff; box-shadow: 0 3px 0 #1f86c4, 0 0 14px #9be7ffaa; }
+.me-freeze span { font-size: 17px; line-height: 1; }
+.me-freeze b { font-size: 14px; font-weight: 900; }
+.me-freeze.none { background: #ffffff55; box-shadow: none; opacity: .75; }
+.me-freeze:active { translate: 0 2px; box-shadow: 0 1px 0 #1f86c4; }

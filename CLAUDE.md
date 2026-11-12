@@ -1928,6 +1928,14 @@ duas/reflections section in Me.
       `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
       multiplier to 1). **Learning time** in celebrations: `learnClock()` counts visible lesson / page-memory time into
       `DayRec.lm`; lantern / star / chest moments show "n min this lesson · n min learning today"
+- [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on
+      every page turn (`sfx.page()`, from `slideTo()`), a wooden bead click on each tasbih count and a deeper click + shimmer when
+      the round is full (`sfx.bead()`); right answers already pop (lessons, page quiz). All silent while reciting, in the Kids
+      space and with Me → ⚙ → App → Sounds off (the setting is now "Sounds"). The free freezes sit **on the flame** (`freezeBadge()`:
+      an ice badge with how many are ready, tap → what they do and when the next comes back; the two freeze chips are gone).
+      **Honest progress**: when a page counts, a second pill says "4 pages to finish Al-Baqarah" (`surahLeft()` in
+      `pageMoments.ts`: pages from here to the end of the surah the page carries on into). Opening measured (production build,
+      Chromium, 390 px): mushaf lines on screen 0.51 s cold / 0.28 s reopen; at 4× CPU 0.99 s / 0.74 s
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
