@@ -1350,6 +1350,10 @@ body.tabs-up .rf-hint { opacity: 0; }
 .welcome-option.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .welcome-option .welcome-name { flex: 1; min-width: 0; }
 .welcome-option > svg { color: var(--accent); }
+.welcome-reciters { display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; }
+.welcome-search { width: 100%; }
+.welcome-list .rec-group[hidden] { display: none; }
+.welcome-list .rec-chips { padding: 6px 4px 2px; }
 .welcome-theme { width: 100%; max-height: min(52dvh, 460px); overflow-y: auto; text-align: start; }
 
 /* Old-phone mode (src/lite.ts): the heaviest decorations off — paper grain and sheet shadows, glass
