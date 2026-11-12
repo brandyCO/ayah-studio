@@ -52,7 +52,11 @@ const GAP = 5_200;
 let lastAt = 0;
 function totals(k: string) {
   const d = allDays()[k];
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0 };
+  // Adhkar sessions said in full (morning, evening, the du'a moments) and dhikr counted: kept for friend challenges and
+  // duels, never in the league score; the server limits how fast they may grow.
+  const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
+  const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, adhkar, dhikr };
 }
 let timer = 0;
 let busy = false;
@@ -72,10 +76,10 @@ export async function report(): Promise<void> {
     const today = dayKey();
     for (const k of [addDays(today, -1), today]) {
       const v = totals(k);
-      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}`;
-      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons)) continue;
+      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.adhkar}:${v.dhikr}`;
+      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons && !v.adhkar && !v.dhikr)) continue;
       lastAt = Date.now();
-      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons });
+      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons, adhkar: v.adhkar, dhikr: v.dhikr });
       sent[k] = sig;
       if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
@@ -266,15 +270,19 @@ export async function leaveBoard(id: string) {
 export const boardPreview = (code: string) => rpc<{ name: string; members: number; joined: boolean } | null>('rank_board_preview', { board_code: code.toLowerCase() });
 export const boardLink = (code: string) => shareableLink(`#/rb/${code}`);
 
-// --- friend challenge: one friend, the 7 days from the day they accept, pages + listening ---
+// --- friend challenge: one friend, the 7 days from the day they accept, in one kind of good deed ---
+/** read = pages 10 + minutes 2 (the first kind); the others count their own unit. */
+export type ChallengeKind = 'read' | 'pages' | 'listen' | 'lessons' | 'adhkar' | 'dhikr';
+export const CHALLENGE_KINDS: ChallengeKind[] = ['pages', 'dhikr', 'adhkar', 'listen', 'lessons', 'read'];
 export interface Challenge {
   id: string; code: string | null; start: string | null; end: string | null; waiting: boolean; expired: boolean;
   day: number | null; over: boolean; claimed: boolean; me: number | null; them: number | null; friend: Row | null;
+  kind?: ChallengeKind; asked?: boolean; incoming?: boolean;
 }
 export const myChallenges = (fresh = false) => cached('challenges', () => rpc<Challenge[]>('rank_my_challenges', { d: dayKey() }), fresh);
-export async function createChallenge(): Promise<{ id: string; code: string }> {
+export async function createChallenge(kind: ChallengeKind = 'read'): Promise<{ id: string; code: string }> {
   await report();
-  const r = await rpc<{ id: string; code: string }>('rank_challenge_create');
+  const r = await rpc<{ id: string; code: string }>('rank_challenge_create', { k: kind });
   dropCache();
   return r;
 }
@@ -283,6 +291,19 @@ export async function acceptChallenge(code: string): Promise<string> {
   const id = await rpc<string>('rank_challenge_accept', { ch_code: code.trim().toLowerCase(), d: dayKey() });
   dropCache();
   return id;
+}
+/** Challenges a friend straight away (no link); it waits for their yes. */
+export async function challengeFriend(pid: string, kind: ChallengeKind): Promise<string> {
+  await report();
+  const id = await rpc<string>('rank_challenge_friend', { who: pid, k: kind });
+  dropCache();
+  return id;
+}
+/** The friend's answer: yes starts the 7 days today, no removes it. */
+export async function answerChallenge(id: string, yes: boolean) {
+  if (yes) await report();
+  await rpc('rank_challenge_answer', { ch: id, yes, d: dayKey() });
+  dropCache();
 }
 export async function cancelChallenge(id: string) {
   await rpc('rank_challenge_cancel', { ch: id });
@@ -305,6 +326,24 @@ export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 't
   const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });
   dropCache();
   if (r) claimGoal(`ch:${c.id}`, r.light);
+  return r;
+}
+
+// --- weekly duel (opt-in): this week's closest rival of the tier, the week's XP + dhikr / adhkar points + quests ---
+export interface DuelQuest { kind: 'pages' | 'listen' | 'lessons' | 'adhkar' | 'dhikr'; target: number; done: boolean }
+export interface Duel { id: string; week: string; end: string; day: number; me: number; them: number; rival: Row }
+export interface DuelState { on: boolean; duel: Duel | null; quests: DuelQuest[]; last: { id: string; week: string; me: number; them: number; rival: Row } | null }
+export const myDuel = (fresh = false) => cached('duel', () => rpc<DuelState>('rank_my_duel', { d: dayKey() }), fresh);
+export async function setDuels(on: boolean) {
+  if (on) await report();
+  await rpc('rank_set_duels', { turn_on: on });
+  dropCache();
+}
+/** Opens last week's duel chest once (won 100, tie 60, otherwise 30). */
+export async function claimDuel(id: string): Promise<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null> {
+  const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null>('rank_duel_claim', { duel: id });
+  dropCache();
+  if (r) claimGoal(`du:${id}`, r.light);
   return r;
 }
 
@@ -448,9 +487,20 @@ export async function friendMoments(): Promise<void> {
   momentAt = Date.now();
   let data: Friends;
   try { data = await myFriends(true); } catch { return; }
-  if (!friendMilestoneDue(data.friends)) return;
+  if (friendMilestoneDue(data.friends)) {
+    const m = await import('../ui/friends');
+    await m.friendMilestone(data.friends);
+    return;
+  }
+  // Every other day the streak goes on: one small card for all the friends kept today (owner 2026-11-12).
+  const today = dayKey();
+  const kept = data.friends.filter((f) => {
+    if (!f.pid || !f.meToday || !f.themToday || f.streak < 1) return false;
+    try { return !localStorage.getItem(`frDay:${today}:${f.pid}`); } catch { return false; }
+  });
+  if (!kept.length) return;
   const m = await import('../ui/friends');
-  await m.friendMilestone(data.friends);
+  await m.friendDayMoment(kept);
 }
 // Profiles open at once (owner, 2026-11-11: "no loading, ever"): each one is kept on this device (per account, newest 60)
 // and the league's players are fetched ahead while Ranks is open, the top 3 first. A profile shown from the kept copy is

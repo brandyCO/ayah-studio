@@ -87,3 +87,8 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-ask { transition: opacity .2s, translate .2s; }
 .fr-ask.gone { opacity: 0; translate: 0 -6px; pointer-events: none; height: 0; padding-block: 0; margin: 0; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { dialog.fr-page { animation: none; } }
+/* Challenge a friend from their card (src/ui/challenges.ts). */
+.fr-card-wrap { position: relative; }
+.fr-card-wrap .fr-card { padding-bottom: 52px; }
+.fr-ch-btn { position: absolute; z-index: 1; bottom: 12px; inset-inline-end: 12px; white-space: nowrap; min-height: 34px; padding: 4px 14px; font-size: 14px; }
+.fr-ch { display: inline-flex; align-items: center; gap: 6px; }

@@ -1283,6 +1283,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'wkg.chest': 'كل أهداف الأسبوع',
   'wkg.allTitle': 'كل أهداف الأسبوع',
   'wkg.allSub': 'أسبوع كامل من الأهداف المحققة',
+  'wkg.days': '{d} ي',
   'wkg.resets': 'يتجدد بعد {left}',
   'wkg.leftD': '{d} ي {h} س',
   'wkg.leftH': '{h} س {m} د',

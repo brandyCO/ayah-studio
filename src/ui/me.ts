@@ -68,7 +68,15 @@ const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); retur
 
 let period: Period = 'week';
 /** Which goals the goals card shows: today's or this week's (remembered on this device). */
-let goalTab: 'day' | 'week' = (() => { try { return localStorage.getItem('meGoalTab') === 'week' ? 'week' : 'day'; } catch { return 'day'; } })();
+type GoalTab = 'day' | 'week' | 'ch';
+let goalTab: GoalTab = (() => { try { const v = localStorage.getItem('meGoalTab'); return v === 'week' || v === 'ch' ? v : 'day'; } catch { return 'day'; } })();
+/** A friend challenge waits for an answer or a chest, from the Ranks answers kept on this device (no network). */
+const challengeWaiting = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null')?.v?.challenges as { incoming?: boolean; over?: boolean; claimed?: boolean; start?: string | null }[] | undefined;
+    return !!v?.some((c) => c.incoming || (c.over && !c.claimed && c.start));
+  } catch { return false; }
+};
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
 export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
 export type MePage = (typeof ME_PAGES)[number];
@@ -120,6 +128,8 @@ let lanternWas: number | undefined;
 
 export async function showMe(root: HTMLElement, at?: string): Promise<() => void> {
   const page = (ME_PAGES as readonly string[]).includes(at ?? '') ? at as MePage : undefined;
+  // Sent here to a tab (the inbox's friend challenges): open on it.
+  try { const v = sessionStorage.getItem('meGoalTab'); if (v === 'ch' || v === 'week' || v === 'day') { goalTab = v; sessionStorage.removeItem('meGoalTab'); } } catch { /* ignore */ }
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
@@ -504,18 +514,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
       h('div', { class: 'goals' }, ...list.map(goalRow)));
   };
-  // "Resets in 5 h 12 m": kept current by the screen's 30 s tick.
+  // "Resets in 05:12:09" (owner 2026-11-12: "include the seconds, so it gets more urgency"): ticks every second
+  // while Me is on screen; the week shows its days first ("6 d 05:12:09").
   const leftText = (ms: number) => {
-    const m = Math.max(1, Math.ceil(ms / 60_000));
-    const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
-    return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+    const clock = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    return d ? `${t('wkg.days', { d })} ${clock}` : clock;
   };
   // The time left sits as a small clock pill at the top right of the goals card (owner request 2026-11-10).
   const resetText = (el: HTMLElement) => {
-    const full = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
-    el.title = full;
-    el.setAttribute('aria-label', full);
-    el.lastChild!.textContent = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+    const left = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+    el.lastChild!.textContent = left;
+    // The spoken label changes once a minute, not every second.
+    const full = t('wkg.resets', { left: left.slice(0, -3) });
+    if (el.title !== full) { el.title = full; el.setAttribute('aria-label', full); }
   };
   const resetLabel = (which: 'day' | 'week') => {
     const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
@@ -585,18 +598,26 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const dayReady = list.some((g) => g.done >= g.target && !goalClaimed(g.id)) || (all && list.length > 1 && !goalClaimed('all'));
     const wkAll = wk.length > 0 && wk.every((g) => g.done >= g.target);
     const weekReady = wk.some((g) => g.done >= g.target && !weekClaimed(g.id)) || (wkAll && wk.length > 1 && !weekClaimed(weekAllId()));
-    const tab = wk.length ? goalTab : 'day';
-    const pick = (v: 'day' | 'week') => {
+    // Challenges (owner 2026-11-12): friend challenges beside Today and This week, for people signed in.
+    const withCh = !!account();
+    const tab: GoalTab = goalTab === 'ch' ? (withCh ? 'ch' : 'day') : wk.length ? goalTab : 'day';
+    const pick = (v: GoalTab) => {
       if (goalTab === v) return;
       goalTab = v;
       try { localStorage.setItem('meGoalTab', v); } catch { /* ignore */ }
       haptic(6);
       paintGoals();
     };
-    const seg = (v: 'day' | 'week', label: string, dot: boolean) => h('button', {
+    const seg = (v: GoalTab, label: string, dot: boolean) => h('button', {
       class: `goal-seg-b${tab === v ? ' on' : ''}`, role: 'tab', 'aria-selected': String(tab === v), onclick: () => pick(v),
     }, label, dot && tab !== v ? h('i', { class: 'goal-seg-dot', 'aria-label': mpt('mp.weekReady') }) : '');
-    const body = tab === 'week'
+    const chBox = h('div', { class: 'goal-ch' });
+    if (tab === 'ch') {
+      const fill = (fresh: boolean) => void import('./challenges').then((m) => m.challengesPanel(() => fill(true), fresh)).then((el) => chBox.replaceChildren(el)).catch(() => {});
+      fill(false);
+      setTimeout(() => { if (chBox.isConnected) fill(true); }, 400);
+    }
+    const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
       : [tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
@@ -604,10 +625,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         list.length ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },
-        wk.length
-          ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady), seg('week', mpt('mp.week'), weekReady))
+        wk.length || withCh
+          ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady),
+            wk.length ? seg('week', mpt('mp.week'), weekReady) : '', withCh ? seg('ch', mpt('mp.challenges'), challengeWaiting()) : '')
           : h('h2', { class: 'me-h' }, t('goal.title')),
-        tab === 'week' || list.length ? resetLabel(tab) : '',
+        tab === 'week' || (tab === 'day' && list.length) ? resetLabel(tab) : '',
         h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
       harvestBtn(),
       ...body,
@@ -857,7 +879,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); void paintSky(); } }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
+  const secTick = window.setInterval(() => { if (!document.hidden) paintResets(); }, 1000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();
@@ -981,6 +1004,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     clearInterval(syncTick);
     window.removeEventListener('journey-changed', onArrive);
     clearInterval(tick);
+    clearInterval(secTick);
     clearTimeout(asrTimer);
     cancelAnimationFrame(queued);
     window.removeEventListener('prayer-changed', onPrayer);

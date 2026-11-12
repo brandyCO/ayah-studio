@@ -22,6 +22,8 @@ const toMe = () => {
   else location.hash = '#/me';
 };
 const toRanks = () => { location.hash = '#/ranks'; };
+// Friend challenges (an answer to give, a chest) wait on Me → goals → Challenges.
+const toChallenges = () => { try { sessionStorage.setItem('meGoalTab', 'ch'); } catch { /* ignore */ } location.hash = '#/me'; };
 
 /** Prizes and challenge chests from what Ranks kept on this device (no network). */
 function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
@@ -29,7 +31,7 @@ function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
     const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null');
     if (!v || v.who !== account()?.id) return { prizes: [], challenges: 0 };
     const prizes = (Array.isArray(v.v?.prizes) ? v.v.prizes : []).filter((p: { claimed?: boolean }) => !p.claimed);
-    const challenges = (Array.isArray(v.v?.challenges) ? v.v.challenges : []).filter((c: { over?: boolean; claimed?: boolean }) => c.over && !c.claimed).length;
+    const challenges = (Array.isArray(v.v?.challenges) ? v.v.challenges : []).filter((c: { over?: boolean; claimed?: boolean; incoming?: boolean; start?: string | null }) => c.incoming || (c.over && !c.claimed && c.start)).length;
     return { prizes, challenges };
   } catch { return { prizes: [], challenges: 0 }; }
 }
@@ -47,7 +49,7 @@ function localItems(): Item[] {
   if (account()) {
     const r = rankWaiting();
     for (const p of r.prizes) out.push({ icon: '🏆', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
-    for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toRanks });
+    for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toChallenges });
   }
   return out;
 }

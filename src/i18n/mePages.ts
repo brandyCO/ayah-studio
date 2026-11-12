@@ -5,6 +5,7 @@ import { lang } from './index';
 const en = {
   'mp.today': 'Today',
   'mp.week': 'This week',
+  'mp.challenges': 'Challenges',
   'mp.weekReady': 'A weekly chest is ready',
   'mp.room': 'Your room',
   'mp.roomBtn': 'Room',
@@ -61,6 +62,7 @@ export type MePageKey = keyof typeof en;
 const ar: Partial<Record<MePageKey, string>> = {
   'mp.today': 'اليوم',
   'mp.week': 'هذا الأسبوع',
+  'mp.challenges': 'التحديات',
   'mp.weekReady': 'صندوق الأسبوع جاهز',
   'mp.room': 'غرفتك',
   'mp.roomBtn': 'الغرفة',
