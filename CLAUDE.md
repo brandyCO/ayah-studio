@@ -1828,6 +1828,10 @@ duas/reflections section in Me.
       background. **Power-up**: the character stands *inside* one big flame (`FlatFire`), lit in its colours by an
       SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
       spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
+      **One flame everywhere** (owner 2026-11-12, "put the new streak flame in the streak card, stop using the old flame"): `flame()`
+      (`src/ui/flame.ts`: Me streak card, friends, widgets page, relight, season, streak badges) draws the same teardrop with
+      `drawFire()` once on two canvases (outer; inner + drop, `part`) and keeps the CSS sway / flicker / glow / embers; out = the
+      flame in grey with a curl of smoke. The Android streak widget (`WidgetArt.fire()`) and the shortcut icon `ic_flame` use it too
       **60 fps pass** (owner 2026-11-11): the power-up's big flame is drawn once per character (full sharpness) and moved
       only by transforms (`staticFlame()`; drops as CSS); the flying bits (`flatFireCore.ts` `FireBits`) draw in a worker on
       OffscreenCanvases (`flatFireWorker.ts`, page fallback) and leave the canvases alone while nothing flies; streak canvas

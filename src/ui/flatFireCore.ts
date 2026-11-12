@@ -28,8 +28,9 @@ export function flamePath(c: Ctx2D, x: number, y: number, s: Shape) {
 export interface FireLook { rim: string; top: string; bottom: string; inTop: string; inBottom: string; core: string }
 
 /** The whole flame standing on (x, y): no outline, smooth and rounded (owner: "smooth like Duolingo"). A light outer
- *  flame, a deeper inner flame low inside it, a round white drop. `drop` 0 hides the drop (a character stands there). */
-export function drawFire(c: Ctx2D, x: number, y: number, s: Shape, look: FireLook, drop = 1) {
+ *  flame, a deeper inner flame low inside it, a round white drop. `drop` 0 hides the drop (a character stands there).
+ *  `part` draws only the outer flame, or only the inner flame + drop (the Me flame moves them as separate layers). */
+export function drawFire(c: Ctx2D, x: number, y: number, s: Shape, look: FireLook, drop = 1, part: 'all' | 'outer' | 'inner' = 'all') {
   const soft = Math.min(s.w * 0.22, Math.max(s.h, s.w) * 0.2);
   const fill = (sh: Shape, yy: number, top: string, bottom: string, round: number) => {
     const g = c.createLinearGradient(0, yy - sh.h * sh.sq, 0, yy);
@@ -39,7 +40,8 @@ export function drawFire(c: Ctx2D, x: number, y: number, s: Shape, look: FireLoo
     c.fill(); c.stroke();
   };
   const base = y - soft * 0.5 * s.sq;
-  fill(s, base, look.top, look.bottom, soft);
+  if (part !== 'inner') fill(s, base, look.top, look.bottom, soft);
+  if (part === 'outer') return;
   const inner: Shape = { w: s.w * 0.7, h: Math.max(s.w * 0.75, s.h * 0.68), lean: s.lean * 0.55, bump: s.bump * 0.5, sq: s.sq };
   fill(inner, base - s.w * 0.08 * s.sq, look.inTop, look.inBottom, soft * 0.75);
   if (drop > 0) {
