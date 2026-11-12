@@ -3,7 +3,8 @@
 // picked, so Next / Skip always works. Shown once instead of the tour (☰ → Tour still shows that).
 // Picking another language reloads the app; the welcome then continues at the reciter step.
 import { LANGS, lang, setLang, t } from '../i18n';
-import { DEFAULT_RECITER, TIMED_RECITERS, reciterPickerLabel } from '../data/reciters';
+import { DEFAULT_RECITER, RECITERS, groupRecordings, reciterPickerLabel, type Reciter } from '../data/reciters';
+import { recordingChips, reciterSearchBox } from './recordings';
 import { h, haptic } from './dom';
 import { icon } from './icons';
 import { markTourSeen, reelReciter, setReelReciter } from './prefs';
@@ -36,22 +37,26 @@ export function showWelcome(done?: () => void) {
     },
   }, h('span', { class: 'welcome-name' }, l.name), l.id === lang() ? icon('check', 20) : null)));
 
+  // The same full list as the player's reciter picker: one row per reciter, his recordings as chips
+  // under the name, a search box on top.
   const reciterStep = () => {
-    const chosen = reelReciter(DEFAULT_RECITER);
+    let chosen = reelReciter(DEFAULT_RECITER);
     const list = h('div', { class: 'welcome-list scroll' });
-    const rows = TIMED_RECITERS.filter((r) => !r.note).map((r) => {
-      const row = h('button', {
-        class: `welcome-option${r.id === chosen ? ' on' : ''}`, 'aria-pressed': String(r.id === chosen),
-        onclick: () => {
-          haptic();
-          setReelReciter(r.id); // the mushaf player and new reels
-          for (const el of list.children) { el.classList.toggle('on', el === row); el.setAttribute('aria-pressed', String(el === row)); }
-        },
-      }, h('span', { class: 'welcome-name' }, reciterPickerLabel(r)), sampleButton(r));
-      return row;
-    });
-    list.append(...rows);
-    return list;
+    const paint = () => list.replaceChildren(...groupRecordings(RECITERS).map((g) => {
+      const r = g.find((x) => x.id === chosen) ?? g[0];
+      const on = g.some((x) => x.id === chosen);
+      const pick = (x: Reciter) => { haptic(); chosen = x.id; setReelReciter(x.id); paint(); }; // the mushaf player and new reels
+      return h('div', { class: 'rec-group' },
+        h('button', { class: `welcome-option${on ? ' on' : ''}`, 'aria-pressed': String(on), onclick: () => pick(r) },
+          h('span', { class: 'welcome-name' }, g.length > 1 ? r.name : reciterPickerLabel(r)), sampleButton(r)),
+        recordingChips(g, chosen, pick));
+    }));
+    paint();
+    const search = reciterSearchBox(list, t('ed.reciter-search'));
+    search.classList.add('welcome-search');
+    // Rows are rebuilt on a pick: keep the search's filter on them.
+    new MutationObserver(() => search.dispatchEvent(new Event('input'))).observe(list, { childList: true });
+    return h('div', { class: 'welcome-reciters' }, search, list);
   };
 
   function draw() {

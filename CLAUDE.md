@@ -1163,6 +1163,8 @@ tafsir only from published, credited editions; UI strings only are translated by
       "downloading {surah} · n MB left · about n min left" (`downloadProgress()`), **Download now on mobile data**
       (`favAnyNet`), and they carry on when the app is left (the export's foreground service with Pause; guards counted).
       The ★ sheets moved to `src/ui/favourite.ts` (lazy; `favStar.ts`). First-load budget 141 KB
+      **Onboarding reciters** (owner request 2026-11-12): the first-launch welcome (`src/ui/welcome.ts`) lists every reciter
+      like the player's picker — one row per reciter with his recordings as chips, ▶ preview, a search box
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
