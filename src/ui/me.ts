@@ -2,6 +2,7 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { levelLabel, levelOf, myXp } from '../data/xp';
 import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
@@ -14,17 +15,21 @@ import { reciterById } from '../data/reciters';
 import { dayKey, readLog } from '../data/readLog';
 import { addMemorised, addDays, PAGE_TIMES, pageSeconds, setPageSeconds, stats, streak, weekOf, type Period, type Stats } from '../data/journey';
 import { CUSTOM_MAX, CUSTOM_TIMES, DHIKR, DHIKR_GOALS, MEMO_GOALS, PACES, PAGE_GOALS, REEL_GOALS, acceptTip, choosePace, dismissTip, goalTip, goals, needsPace, setGoals, todayGoals, type CustomGoal, type DhikrId, type GoalProgress, type GoalTip, type Pace } from '../data/goals';
-import { badgeStates, type BadgeDef, type BadgeState } from '../data/badges';
+import { badgeDone, badgeStates, type BadgeDef, type BadgeGroup, type BadgeState } from '../data/badges';
+import { badgeGoal, badgeName, bt, tierName, type BadgeKey } from '../i18n/badges';
+import { iconCard, newIconCard } from './appIcons';
 import { badgeMoment } from '../data/claims';
-import { addCustom, badgeClaimed, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
+import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
-import { loadMeta, reference, type SurahMeta } from '../data/quran';
-import { LANGS, lang, locale, setLang, surahName, t, type Key } from '../i18n';
+import { loadMeta, type SurahMeta } from '../data/quran';
+import { LANGS, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
+import { isFireDay } from '../data/fireDays';
+const hasFigure = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
 import { badgeArt } from './badge';
@@ -41,10 +46,13 @@ import { isNative } from '../native';
 import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
 import { account } from '../cloud/auth';
+import { firstSyncPending, onSyncStatus, syncNow, syncStatus } from '../cloud/sync';
+import { tick as tickNum } from './juice';
 import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
 import { todayCard } from './todayCard';
+import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { chest } from './chest';
 import { mpt } from '../i18n/mePages';
@@ -60,7 +68,15 @@ const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); retur
 
 let period: Period = 'week';
 /** Which goals the goals card shows: today's or this week's (remembered on this device). */
-let goalTab: 'day' | 'week' = (() => { try { return localStorage.getItem('meGoalTab') === 'week' ? 'week' : 'day'; } catch { return 'day'; } })();
+type GoalTab = 'day' | 'week' | 'ch';
+let goalTab: GoalTab = (() => { try { const v = localStorage.getItem('meGoalTab'); return v === 'week' || v === 'ch' ? v : 'day'; } catch { return 'day'; } })();
+/** A friend challenge waits for an answer or a chest, from the Ranks answers kept on this device (no network). */
+const challengeWaiting = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null')?.v?.challenges as { incoming?: boolean; over?: boolean; claimed?: boolean; start?: string | null }[] | undefined;
+    return !!v?.some((c) => c.incoming || (c.over && !c.claimed && c.start));
+  } catch { return false; }
+};
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
 export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
 export type MePage = (typeof ME_PAGES)[number];
@@ -84,11 +100,11 @@ export function openBadge(b: BadgeState, fresh = false) {
   dialog(fresh ? t('bd.new') : t('bd.title'),
     h('div', { class: `bd-detail${fresh ? ' fresh' : ''}` },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 148),
-      h('h3', {}, t(b.def.name as Key, { n })),
-      h('p', { class: 'muted' }, t(b.def.goal as Key, { n })),
+      h('h3', {}, badgeName(b.def)),
+      h('p', { class: 'muted' }, badgeGoal(b.def)),
       b.earned
         ? h('p', { class: 'bd-when' }, t('bd.earned', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(parse(b.earned)) }))
-        : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, `${b.have} / ${n}`))));
+        : h('div', { class: 'bd-progress' }, h('span', { style: `width:${Math.round((100 * b.have) / n)}%` }), h('b', {}, b.def.fam === 'league' ? `${b.have} / ${n}` : `${b.have.toLocaleString()} / ${n.toLocaleString()}`))));
 }
 
 // What the goal rings and the Light lantern showed last (this session), so they fill on from there.
@@ -112,6 +128,8 @@ let lanternWas: number | undefined;
 
 export async function showMe(root: HTMLElement, at?: string): Promise<() => void> {
   const page = (ME_PAGES as readonly string[]).includes(at ?? '') ? at as MePage : undefined;
+  // Sent here to a tab (the inbox's friend challenges): open on it.
+  try { const v = sessionStorage.getItem('meGoalTab'); if (v === 'ch' || v === 'week' || v === 'day') { goalTab = v; sessionStorage.removeItem('meGoalTab'); } } catch { /* ignore */ }
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
@@ -147,7 +165,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       const bar = h('div', { class: 'rm-full-bar' },
         h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
         h('h1', {}, mpt('mp.room')),
-        lightChip(() => openLight()));
+        lightChip());
       const c = m.roomScreen(dressUp, bar);
       roomSlot.replaceChildren(c ?? '');
     });
@@ -206,6 +224,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
   let heroSig = '';
+  // Sync, as the user sees it: "Bringing your progress…" on a new phone, a quiet status line, and
+  // progress from another phone counting up with a note (cloud/sync.ts).
+  let shownDays = -1, arriving = false;
   let catchNext = false;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // The streak moment: once a day, the first time Me is open with today's flame lit — and only
@@ -221,7 +242,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     try { localStorage.setItem('flameSeen', dayKey()); } catch { /* ignore */ }
     streakPlaying = true;
     const week = s.week.map((w) => ({ ...w, label: dayFmt.format(parse(w.day)) }));
-    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).finally(() => {
+    void import('./streakMoment').then((m) => m.streakMoment(s.days, week, dayKey())).then(async () => {
+      // Every week of the streak (and the other fire days, data/fireDays.ts) the character then goes up in flames.
+      if (!isFireDay(s.days) || !hasFigure() || document.hidden) return;
+      const key = `fireSeen:${dayKey()}`;
+      try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { return; }
+      await (await import('./powerUp')).powerUp(s.days);
+    }).finally(() => {
       streakPlaying = false;
       catchNext = true;
       heroSig = '';
@@ -277,6 +304,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       meActor = m.actor(`me-actor day-${look.mode}`, look.code);
       if (!meActor || !hero.isConnected) return;
       const a = meActor;
+      // The character's level (all-time XP from Ranks) shows on it as gathered light.
+      const xp = myXp();
+      if (xp > 0) void import('./levelLook').then((l) => l.withLevel(a.el, levelOf(xp)));
       a.el.setAttribute('role', 'button');
       a.el.setAttribute('aria-hidden', 'true');
       if (look.mode === 'asleep') {
@@ -293,17 +323,24 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintHero = () => {
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig()]);
+    const loading = firstSyncPending();
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp(), loading]);
     if (sig === heroSig) return;
     heroSig = sig;
-    const tier = flameTier(s.days, s.litToday);
+    const fromOther = arriving && !loading && shownDays >= 0;
+    const countFrom = fromOther && s.days > shownDays ? shownDays : -1;
+    arriving = false;
+    shownDays = loading ? -1 : s.days;
+    const lost = loading ? undefined : s.lost; // the other phones' days are on their way: nothing is lost
+    const tier = loading ? flameTier(1, true) : flameTier(s.days, s.litToday); // a new phone: a small flame, never an ember
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
       dayMark(w.state),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
     // After the streak moment, the card's flame catches (flares up, sparks, the count ticks on).
     const catchNow = catchNext && s.litToday && !reduced;
     catchNext = false;
-    const num = h('b', {}, String(catchNow ? s.days - 1 : s.days));
+    const num = h('b', {}, loading ? '…' : String(catchNow ? s.days - 1 : s.days));
+    hero.classList.toggle('loading', loading);
     const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
@@ -311,20 +348,27 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         flameBox,
         h('div', { class: 'me-top-txt' },
           h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
-          h('p', { class: 'me-status' }, s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
-      s.lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: s.lost.n })) : '',
-      s.lost && s.lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
+          h('p', { class: 'me-status' }, loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
+      lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: lost.n })) : '',
+      lost && lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
         if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
         void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
       } }, `🔥  ${t('rl.askFriend')}`) : '',
-      s.lost ? keptFreezeButton(s.lost.days) : '',
+      lost ? keptFreezeButton(lost.days) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
         h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
         h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
         h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
-        h('span', { class: 'me-chip' }, t('me.best', { n: s.best }))));
+        h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
+        myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
+    if (fromOther) {
+      if (countFrom >= 0) tickNum(num, s.days, { from: countFrom, ms: 900 });
+      const note = h('span', { class: 'me-arrived', role: 'status' }, mpt('mp.fromOther'));
+      hero.append(note);
+      setTimeout(() => note.remove(), 3600);
+    }
     if (catchNow) {
       const canvas = h('canvas', { class: 'me-sparks', 'aria-hidden': 'true' });
       hero.append(canvas);
@@ -470,18 +514,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
       h('div', { class: 'goals' }, ...list.map(goalRow)));
   };
-  // "Resets in 5 h 12 m": kept current by the screen's 30 s tick.
+  // "Resets in 05:12:09" (owner 2026-11-12: "include the seconds, so it gets more urgency"): ticks every second
+  // while Me is on screen; the week shows its days first ("6 d 05:12:09").
   const leftText = (ms: number) => {
-    const m = Math.max(1, Math.ceil(ms / 60_000));
-    const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
-    return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+    const clock = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    return d ? `${t('wkg.days', { d })} ${clock}` : clock;
   };
-  // The time left sits as a small clock pill at the top right of the goals card (owner request 2026-11-10).
+  // The time left sits as a small clock pill under the Today / This week / Challenges switch.
   const resetText = (el: HTMLElement) => {
-    const full = t('wkg.resets', { left: leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now()) });
-    el.title = full;
-    el.setAttribute('aria-label', full);
-    el.lastChild!.textContent = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+    const left = leftText(resetsAt()[el.dataset.reset as 'day' | 'week'].getTime() - Date.now());
+    el.lastChild!.textContent = left;
+    // The spoken label changes once a minute, not every second.
+    const full = t('wkg.resets', { left: left.slice(0, -3) });
+    if (el.title !== full) { el.title = full; el.setAttribute('aria-label', full); }
   };
   const resetLabel = (which: 'day' | 'week') => {
     const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
@@ -551,18 +598,26 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const dayReady = list.some((g) => g.done >= g.target && !goalClaimed(g.id)) || (all && list.length > 1 && !goalClaimed('all'));
     const wkAll = wk.length > 0 && wk.every((g) => g.done >= g.target);
     const weekReady = wk.some((g) => g.done >= g.target && !weekClaimed(g.id)) || (wkAll && wk.length > 1 && !weekClaimed(weekAllId()));
-    const tab = wk.length ? goalTab : 'day';
-    const pick = (v: 'day' | 'week') => {
+    // Challenges (owner 2026-11-12): friend challenges beside Today and This week, for people signed in.
+    const withCh = !!account();
+    const tab: GoalTab = goalTab === 'ch' ? (withCh ? 'ch' : 'day') : wk.length ? goalTab : 'day';
+    const pick = (v: GoalTab) => {
       if (goalTab === v) return;
       goalTab = v;
       try { localStorage.setItem('meGoalTab', v); } catch { /* ignore */ }
       haptic(6);
       paintGoals();
     };
-    const seg = (v: 'day' | 'week', label: string, dot: boolean) => h('button', {
+    const seg = (v: GoalTab, label: string, dot: boolean) => h('button', {
       class: `goal-seg-b${tab === v ? ' on' : ''}`, role: 'tab', 'aria-selected': String(tab === v), onclick: () => pick(v),
     }, label, dot && tab !== v ? h('i', { class: 'goal-seg-dot', 'aria-label': mpt('mp.weekReady') }) : '');
-    const body = tab === 'week'
+    const chBox = h('div', { class: 'goal-ch' });
+    if (tab === 'ch') {
+      const fill = (fresh: boolean) => void import('./challenges').then((m) => m.challengesPanel(() => fill(true), fresh)).then((el) => chBox.replaceChildren(el)).catch(() => {});
+      fill(false);
+      setTimeout(() => { if (chBox.isConnected) fill(true); }, 400);
+    }
+    const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
       : [tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
@@ -570,11 +625,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         list.length ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },
-        wk.length
-          ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady), seg('week', mpt('mp.week'), weekReady))
+        wk.length || withCh
+          ? h('div', { class: 'goal-seg', role: 'tablist', 'aria-label': t('goal.title') }, seg('day', mpt('mp.today'), dayReady),
+            wk.length ? seg('week', mpt('mp.week'), weekReady) : '', withCh ? seg('ch', mpt('mp.challenges'), challengeWaiting()) : '')
           : h('h2', { class: 'me-h' }, t('goal.title')),
-        tab === 'week' || list.length ? resetLabel(tab) : '',
         h('button', { class: 'chip goal-edit', onclick: openGoalEditor, 'aria-label': t('goal.edit'), title: t('goal.edit') }, editIcon())),
+      // The countdown sits on its own line under the switch (owner 2026-11-12: with Challenges the head was too full).
+      tab === 'week' || (tab === 'day' && list.length) ? h('div', { class: 'goal-reset-row' }, resetLabel(tab)) : '',
       harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },
@@ -703,25 +760,49 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintBadges = () => {
     const all = badgeStates();
     const got = all.filter((b) => b.earned).length;
-    const tile = (b: BadgeState) => h('button', { class: `bd-tile${b.earned ? ' earned' : ''}`, onclick: (e: Event) => (b.earned && !badgeClaimed(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b)) },
+    const tap = (b: BadgeState) => (e: Event) => (b.earned && !badgeDone(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b));
+    const tile = (b: BadgeState) => h('button', { class: `bd-tile t-${b.def.tier}${b.earned ? ' earned' : ''}`, onclick: tap(b) },
       badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
-      h('span', { class: 'bd-name' }, t(b.def.name as Key, { n: b.def.need })),
+      h('span', { class: 'bd-name' }, badgeName(b.def)),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
-    // Earned first (newest first), then the ones closest to being earned.
-    const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
-    const next = all.filter((b) => !b.earned).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
-    const order = [...earned, ...next];
-    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, h('div', { class: 'bd-grid' }, ...order.map(tile))));
-    const waiting = earned.filter((b) => !badgeClaimed(b.def.id));
+    // One row per family: its five tiers, and a bar towards the next one.
+    const fams = new Map<string, BadgeState[]>();
+    for (const b of all) fams.set(b.def.fam, [...(fams.get(b.def.fam) ?? []), b]);
+    const famRow = (list: BadgeState[]) => {
+      const next = list.find((b) => !b.earned);
+      const d = list[0].def;
+      return h('div', { class: 'bdf' },
+        h('div', { class: 'bdf-head' }, h('b', {}, bt(`f.${d.fam}` as BadgeKey)),
+          h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
+        h('div', { class: 'bdf-tiers' }, ...list.map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
+          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
+          b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
+        next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
+          h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
+    };
+    const groups: BadgeGroup[] = ['read', 'listen', 'learn', 'dua', 'goals', 'ranks', 'create'];
+    const byFamily = () => groups.flatMap((g) => {
+      const rows = [...fams.values()].filter((l) => l[0].def.group === g);
+      return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
+    });
+    // On Me: the newest earned first, then the next tier of each family, closest first.
+    const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : b.earned! < a.earned! ? -1 : b.def.step - a.def.step));
+    const next = [...fams.values()].map((l) => l.find((b) => !b.earned)).filter((b): b is BadgeState => !!b).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
+    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, ...byFamily()));
+    const waiting = earned.filter((b) => !badgeDone(b.def.id)).sort((a, b) => b.def.step - a.def.step);
+    const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
     claimSlot.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...waiting.map((b) => h('button', { class: 'claim-badge', onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
+      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
-        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, t(b.def.name as Key, { n: b.def.need }))),
-        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`)))) : '');
+        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def))),
+        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`))),
+        waiting.length > shown.length ? h('a', { class: 'chip claim-more', href: '#/me/stats' }, `+${waiting.length - shown.length}`) : '') : '',
+      page ? '' : newIconCard() ?? '');
     badgeBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
         h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
-      page === 'stats' ? h('div', { class: 'bd-grid' }, ...order.map(tile)) : h('div', { class: 'bd-row' }, ...order.slice(0, 4).map(tile)));
+      page === 'stats' ? h('div', { class: 'bdf-list' }, ...byFamily()) : h('div', { class: 'bd-row' }, ...[...earned, ...next].slice(0, 4).map(tile)));
+    if (page === 'stats') badgeBox.append(iconCard());
   };
 
   // --- the doors: each opens its own full screen, so Me stays short ---
@@ -747,7 +828,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const paintLibrary = () => {
     const bms = bookmarks();
     const recent = recentPages().slice(0, 3);
-    const ref = (s: number, a: number) => reference(meta[s - 1] as SurahMeta, a, a);
+    const ref = (s: number, a: number) => uiRef(meta[s - 1] as SurahMeta, a, a);
     libBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('lib.title')),
       h('div', { class: 'menu' },
@@ -799,12 +880,53 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); paintResets(); void paintSky(); } }, 30_000);
+  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
+  const secTick = window.setInterval(() => { if (!document.hidden) paintResets(); }, 1000);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();
   const asrTimer = toAsr > 0 && toAsr < 86_400_000 ? window.setTimeout(refresh, toAsr + 1000) : 0;
   const onPrayer = () => void paintPrayer();
+  // The sync line under the streak card (signed in only): tap it, or pull the page down, to sync now.
+  const syncLine = h('button', { class: 'me-sync', type: 'button', 'aria-label': mpt('mp.syncNow'), onclick: () => void syncNow() });
+  const agoText = (at: number) => {
+    const sec = (Date.now() - at) / 1000;
+    return sec < 60 ? mpt('mp.justNow') : sec < 3600 ? mpt('mp.minAgo', { n: Math.round(sec / 60) }) : mpt('mp.hAgo', { n: Math.round(sec / 3600) });
+  };
+  let pulling = false;
+  const paintSync = () => {
+    const st = syncStatus();
+    syncLine.hidden = !account() || st.state === 'off' && !st.at;
+    syncLine.classList.toggle('busy', st.state === 'syncing');
+    syncLine.textContent = pulling ? mpt('mp.pull')
+      : st.state === 'syncing' ? mpt('mp.syncing')
+        : st.state === 'offline' ? mpt('mp.savedOffline')
+          : st.state === 'error' ? mpt('mp.savedRetry')
+            : st.at ? mpt('mp.synced', { ago: agoText(st.at) }) : '';
+  };
+  let wasLoading = firstSyncPending();
+  const offSync = onSyncStatus(() => {
+    paintSync();
+    const loading = firstSyncPending();
+    if (loading !== wasLoading) { wasLoading = loading; refresh(); }
+  });
+  const syncTick = setInterval(paintSync, 30e3);
+  // Progress merged in from another phone while Me is open: the streak counts up with a note.
+  const onArrive = () => { if (syncStatus().state === 'syncing' && !firstSyncPending()) arriving = true; };
+  window.addEventListener('journey-changed', onArrive);
+  // Pull to refresh (at the top of Me).
+  let y0 = -1;
+  const onDown = (e: TouchEvent) => { y0 = !page && scrollY <= 0 && account() ? e.touches[0].clientY : -1; };
+  const onMove = (e: TouchEvent) => {
+    if (y0 < 0) return;
+    const p = e.touches[0].clientY - y0 > 80;
+    if (p !== pulling) { pulling = p; paintSync(); }
+  };
+  const onUp = () => { if (pulling) { pulling = false; void syncNow(); paintSync(); } y0 = -1; };
+  root.addEventListener('touchstart', onDown, { passive: true });
+  root.addEventListener('touchmove', onMove, { passive: true });
+  root.addEventListener('touchend', onUp);
+
   if (page === 'room') {
     root.classList.add('me-room-screen');
     root.append(roomSlot);
@@ -816,7 +938,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('header', { class: 'topbar' },
         h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
         h('div', { class: 'brand' }, h('h1', {}, title)),
-        lightChip(() => openLight())),
+        lightChip()),
       h('div', { class: `me-page me-page-${page}` }, ...content),
       tabBar('me'));
   } else {
@@ -824,10 +946,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     root.append(
       h('header', { class: 'topbar' },
         h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
-        lightChip(() => openLight()),
+        lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(),
+      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
       tabBar('me'));
     void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
@@ -879,7 +1001,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       try { sessionStorage.setItem('meScroll', String(Math.round(leaveY()))); } catch { /* ignore */ }
     }
     document.removeEventListener('close', onClose, true);
+    offSync();
+    clearInterval(syncTick);
+    window.removeEventListener('journey-changed', onArrive);
     clearInterval(tick);
+    clearInterval(secTick);
     clearTimeout(asrTimer);
     cancelAnimationFrame(queued);
     window.removeEventListener('prayer-changed', onPrayer);

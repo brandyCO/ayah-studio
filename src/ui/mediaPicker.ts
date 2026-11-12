@@ -8,6 +8,8 @@ import {
   type StockHit, type StockSource, type StockSources,
 } from '../data/stock';
 import { h, toast } from './dom';
+import { errMsg } from '../i18n';
+import { mdt } from '../i18n/media';
 import { icon } from './icons';
 
 type Tab = 'presets' | 'mine' | 'stock';
@@ -44,9 +46,9 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
 
   // The search box is created once and never replaced, so the phone keyboard stays open while
   // results arrive and the panel redraws around it.
-  const searchInput = h('input', { class: 'search-input', type: 'search', placeholder: 'Search calm scenes…', enterKeyHint: 'search' });
+  const searchInput = h('input', { class: 'search-input', type: 'search', placeholder: mdt('media.searchHint'), enterKeyHint: 'search' });
   searchInput.addEventListener('input', () => { query = searchInput.value; });
-  const searchBtn = h('button', { class: 'chip on', type: 'submit' }, 'Search');
+  const searchBtn = h('button', { class: 'chip on', type: 'submit' }, mdt('media.search'));
   const form = h('form', {
     class: 'search-row',
     onsubmit: (e: Event) => { e.preventDefault(); searchInput.blur(); if (query.trim()) { collection = null; void search(); } },
@@ -76,11 +78,11 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
     working = true;
     const ids: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      setStatus(files.length > 1 ? `Adding ${i + 1} of ${files.length}…` : 'Adding…');
+      setStatus(files.length > 1 ? mdt('media.addingN', { i: i + 1, n: files.length }) : mdt('media.adding'));
       try {
         ids.push((await importFile(files[i])).id);
       } catch (e) {
-        toast(e instanceof Error ? e.message : String(e));
+        toast(errMsg(e));
       }
     }
     working = false;
@@ -93,11 +95,11 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
 
   async function remove(b: Background) {
     if (o.busy() || working) return;
-    if (!confirm(`Remove “${b.label}” from this device? Scenes using it show a plain colour instead.`)) return;
+    if (!confirm(mdt('media.removeAsk', { name: b.label }))) return;
     try {
       await deleteMedia(b.id);
     } catch (e) {
-      toast(`Could not remove it: ${e instanceof Error ? e.message : e}`);
+      toast(`${mdt('media.removeFailed')}: ${errMsg(e)}`);
     }
     o.libraryChanged();
     void refreshUsage();
@@ -124,7 +126,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       total = r.total;
       page = want;
     } catch (e) {
-      searchError = e instanceof Error ? e.message : String(e);
+      searchError = errMsg(e);
     }
     searching = false;
     draw();
@@ -146,7 +148,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
     if (o.busy() || !opts) return;
     const id = stockId(hit);
     if (downloads.has(id)) return;
-    if (downloads.size >= MAX_DOWNLOADS) return toast(`Up to ${MAX_DOWNLOADS} downloads at a time — wait for one to finish`);
+    if (downloads.size >= MAX_DOWNLOADS) return toast(mdt('media.maxDownloads', { n: MAX_DOWNLOADS }));
     const job = { id, target: opts, state: 'busy' as 'busy' | 'done' | 'failed' };
     jobs.push(job);
     downloads.set(id, null);
@@ -161,7 +163,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       void refreshUsage();
     } catch (e) {
       job.state = 'failed';
-      toast(e instanceof Error ? e.message : String(e));
+      toast(errMsg(e));
     }
     downloads.delete(id);
     settle();
@@ -198,20 +200,20 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       h('div', { class: 'bg-grid' },
         h('div', { class: 'bg-cell' },
           h('button', { class: 'bg-thumb bg-add', disabled: working, onclick: () => fileInput.click() },
-            icon('plus', 26), h('span', {}, 'From device'))),
+            icon('plus', 26), h('span', {}, mdt('media.fromDevice')))),
         ...items.map((b) => tile(b, h('div', { class: 'bg-tags' },
           (b.kind === 'image' || b.kind === 'video') && b.credit ? h('span', { class: 'bg-badge' }, b.credit.source) : null,
-          h('button', { class: 'bg-del', 'aria-label': `Remove ${b.label}`, title: 'Remove from this device', onclick: () => void remove(b) }, '✕'))))),
-      items.length ? null : note('Add your own photos and videos (calm scenes, no faces). They stay on this device and are never uploaded.'),
-      note(`Videos play without their own sound: the recitation is the only audio. Videos up to ${MAX_VIDEO_MB} MB.${used ? ` Using ${used < 1e6 ? 'under 1' : (used / 1e6).toFixed(0)} MB on this device.` : ''}`),
+          h('button', { class: 'bg-del', 'aria-label': mdt('media.remove', { name: b.label }), title: mdt('media.removeTitle'), onclick: () => void remove(b) }, '✕'))))),
+      items.length ? null : note(mdt('media.mineEmpty')),
+      note(mdt('media.mineNote', { mb: MAX_VIDEO_MB }) + (used ? ` ${used < 1e6 ? mdt('media.usingUnder') : mdt('media.using', { mb: (used / 1e6).toFixed(0) })}` : '')),
     ].filter(Boolean) as Node[];
   }
 
   function stock(): Node[] {
     if (!stockEnabled()) {
-      return [note('The free library is not set up in this build yet: it needs the small search proxy described in proxy/README.md.')];
+      return [note(mdt('media.notSetUp'))];
     }
-    if (!avail) return [note('Loading…')];
+    if (!avail) return [note(mdt('media.loading'))];
     const both = avail.pixabay && avail.pexels;
     const other: StockSource = source === 'pixabay' ? 'pexels' : 'pixabay';
     const switchTo = (v: StockSource) => { source = v; hits = []; page = 0; void search(); };
@@ -220,7 +222,7 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       ...(both ? (['pixabay', 'pexels'] as const).map((v) =>
         h('button', { class: `chip${source === v ? ' on' : ''}`, onclick: () => { if (source !== v) switchTo(v); } }, SOURCE_NAME[v])) : []),
       both ? h('span', { class: 'chip-gap' }) : null,
-      ...([['video', 'Videos'], ['image', 'Photos']] as const).map(([v, l]) =>
+      ...([['video', mdt('media.videos')], ['image', mdt('media.photos')]] as const).map(([v, l]) =>
         h('button', { class: `chip${type === v ? ' on' : ''}`, onclick: () => { if (type !== v) { type = v; void search(); } } }, l)));
     if (document.activeElement !== searchInput) searchInput.value = query;
     searchBtn.disabled = searching;
@@ -236,30 +238,30 @@ export function createMediaPicker(o: { busy: () => boolean; libraryChanged: () =
       return h('div', { class: `bg-cell${dl ? ' loading' : ''}` },
         h('button', {
           class: `bg-thumb${opts?.current === id ? ' on' : ''}`, style: `background-image:url("${x.thumb}")`,
-          title: `${x.tags} · by ${x.user} on ${name}`, onclick: () => void pickHit(x),
+          title: mdt('media.by', { tags: x.tags, user: x.user, site: name }), onclick: () => void pickHit(x),
         }, h('span', {}, x.type === 'video' ? `▶ ${Math.round(x.duration ?? 0)} s` : x.user)),
         // Download progress on the card itself.
         dl ? h('div', { class: 'bg-progress', role: 'progressbar', 'aria-valuenow': String(dl.pct ?? 0) },
-          h('span', { class: 'spinner' }), h('b', {}, dl.pct === null ? 'Saving…' : `${dl.pct}%`),
+          h('span', { class: 'spinner' }), h('b', {}, dl.pct === null ? mdt('media.saving') : `${dl.pct}%`),
           h('i', { style: `width:${dl.pct ?? 0}%` })) : null,
-        !dl && owned.has(id) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, 'Saved')) : null);
+        !dl && owned.has(id) ? h('div', { class: 'bg-tags' }, h('span', { class: 'bg-badge' }, mdt('media.saved'))) : null);
     })) : null;
     return [
       choices, form, ideas,
       searchError ? note(searchError) : null,
-      searchError && both ? h('button', { class: 'chip more', onclick: () => switchTo(other) }, `Try ${SOURCE_NAME[other]}`) : null,
-      searching && !hits.length ? note('Searching…') : null,
-      !searching && page > 0 && !hits.length && !searchError ? note('Nothing found — try another word.') : null,
+      searchError && both ? h('button', { class: 'chip more', onclick: () => switchTo(other) }, mdt('media.try', { name: SOURCE_NAME[other] })) : null,
+      searching && !hits.length ? note(mdt('media.searching')) : null,
+      !searching && page > 0 && !hits.length && !searchError ? note(mdt('media.nothing')) : null,
       grid,
-      hits.length && hits.length < total ? h('button', { class: 'chip more', disabled: searching, onclick: () => void search(true) }, searching ? 'Loading…' : 'More') : null,
-      h('p', { class: 'muted small' }, `${type === 'video' ? 'Videos' : 'Photos'} provided by `, h('a', { href: SOURCE_SITE[source], target: '_blank', rel: 'noopener' }, name),
-        ' (free to use). A picked item is saved to My media; its creator is credited on the export page. Choose calm scenes without people.'),
+      hits.length && hits.length < total ? h('button', { class: 'chip more', disabled: searching, onclick: () => void search(true) }, searching ? mdt('media.loading') : mdt('media.more')) : null,
+      h('p', { class: 'muted small' }, `${type === 'video' ? mdt('media.videosBy') : mdt('media.photosBy')} `, h('a', { href: SOURCE_SITE[source], target: '_blank', rel: 'noopener' }, name),
+        ` ${mdt('media.credit')}`),
     ].filter(Boolean) as Node[];
   }
 
   function draw() {
     if (!opts) return;
-    const tabs: [Tab, string][] = [['presets', 'Presets'], ['mine', 'My media'], ['stock', 'Free library']];
+    const tabs: [Tab, string][] = [['presets', mdt('media.tabPresets')], ['mine', mdt('media.tabMine')], ['stock', mdt('media.tabStock')]];
     const nodes = [
       note(opts.intro),
       h('div', { class: 'tabs' }, ...tabs.map(([v, l]) =>

@@ -295,7 +295,8 @@ export function createPlayer(o: PlayerHooks) {
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
       if (call !== calls) return; // a newer request owns the bar now
-      toast(navigator.onLine ? `Could not play the recitation: ${e instanceof Error ? e.message : e}` : 'Listening needs an internet connection');
+      toast(navigator.onLine ? t('pl.playFailed') : t('pl.needsNet'));
+      console.warn('Recitation not played', e);
     }
     loading = false;
     paint();
@@ -367,7 +368,7 @@ export function createPlayer(o: PlayerHooks) {
     ahead = prev;
     playing = aheadFor;
     aheadFor = 0;
-    void audio.play().catch(() => toast('Could not play the recitation'));
+    void audio.play().catch(() => toast(t('pl.playFailed')));
     // The previous file plays out its last moment; then it takes the ayah after this one.
     prev.addEventListener('ended', () => preload(playing + 1), { once: true });
     return true;
@@ -395,7 +396,7 @@ export function createPlayer(o: PlayerHooks) {
       return;
     }
     if (!surah) return;
-    if (audio.paused) void audio.play().catch(() => toast('Could not play the recitation'));
+    if (audio.paused) void audio.play().catch(() => toast(t('pl.playFailed')));
     else audio.pause();
   }
 

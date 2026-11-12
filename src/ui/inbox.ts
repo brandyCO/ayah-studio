@@ -10,6 +10,7 @@ import { earnedPieces } from '../data/wardrobe';
 import { account } from '../cloud/auth';
 import { t, type Key } from '../i18n';
 import { mpt } from '../i18n/mePages';
+import { badgeName } from '../i18n/badges';
 import { goalLabel } from './goalName';
 import { h, haptic } from './dom';
 
@@ -21,6 +22,8 @@ const toMe = () => {
   else location.hash = '#/me';
 };
 const toRanks = () => { location.hash = '#/ranks'; };
+// Friend challenges (an answer to give, a chest) wait on Me → goals → Challenges.
+const toChallenges = () => { try { sessionStorage.setItem('meGoalTab', 'ch'); } catch { /* ignore */ } location.hash = '#/me'; };
 
 /** Prizes and challenge chests from what Ranks kept on this device (no network). */
 function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
@@ -28,7 +31,7 @@ function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
     const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null');
     if (!v || v.who !== account()?.id) return { prizes: [], challenges: 0 };
     const prizes = (Array.isArray(v.v?.prizes) ? v.v.prizes : []).filter((p: { claimed?: boolean }) => !p.claimed);
-    const challenges = (Array.isArray(v.v?.challenges) ? v.v.challenges : []).filter((c: { over?: boolean; claimed?: boolean }) => c.over && !c.claimed).length;
+    const challenges = (Array.isArray(v.v?.challenges) ? v.v.challenges : []).filter((c: { over?: boolean; claimed?: boolean; incoming?: boolean; start?: string | null }) => c.incoming || (c.over && !c.claimed && c.start)).length;
     return { prizes, challenges };
   } catch { return { prizes: [], challenges: 0 }; }
 }
@@ -37,7 +40,7 @@ const rewardItem = (p: Pending): Item => {
   if (p.kind === 'goal') return { icon: '🎁', title: p.goal.week ? mpt('mp.inWeek') : mpt('mp.inGoal'), sub: goalLabel(p.goal), go: toMe };
   if (p.kind === 'all') return { icon: '🎁', title: mpt('mp.inAll'), sub: mpt('mp.inChest'), go: toMe };
   if (p.kind === 'weekAll') return { icon: '🎁', title: mpt('mp.inWeekAll'), sub: mpt('mp.inChest'), go: toMe };
-  return { icon: '🏅', title: mpt('mp.inBadge'), sub: t(p.badge.name as Key, { n: p.badge.need }), go: toMe };
+  return { icon: '🏅', title: mpt('mp.inBadge'), sub: badgeName({ fam: p.id.slice(0, -2), step: +p.id.slice(-1) }), go: toMe };
 };
 
 function localItems(): Item[] {
@@ -46,7 +49,7 @@ function localItems(): Item[] {
   if (account()) {
     const r = rankWaiting();
     for (const p of r.prizes) out.push({ icon: '🏆', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
-    for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toRanks });
+    for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toChallenges });
   }
   return out;
 }
@@ -70,7 +73,9 @@ export function inboxBell(): HTMLElement {
   const evs = ['journey-changed', 'garden-changed', 'rank-cache', 'hashchange'];
   const off = () => evs.forEach((e) => window.removeEventListener(e, paint));
   evs.forEach((e) => window.addEventListener(e, paint));
-  requestAnimationFrame(paint);
+  // Counted when the browser is idle, not in the frame that first draws the screen (the count's first run
+  // sets up date formats and took part in opening Learn).
+  if ('requestIdleCallback' in window) requestIdleCallback(paint, { timeout: 600 }); else setTimeout(paint, 50);
   return el;
 }
 

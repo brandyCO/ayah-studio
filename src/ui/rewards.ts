@@ -2,7 +2,6 @@
 // when one goal is met (once the app was opened today, so not from the Kids space), mark a day when
 // every goal is met and earn the badges whose goal is reached. Nothing pops up (reading is never
 // interrupted): rewards wait on the Me screen for their Claim tap, and the Me tab shows a dot.
-import { checkBadges } from '../data/badges';
 import { anyGoalMet, checkGoals } from '../data/goals';
 import { pendingRewards } from '../data/claims';
 import { lightFlame, todayRec } from '../data/journey';
@@ -22,7 +21,8 @@ function check() {
     const d = todayRec();
     if (d.o && !d.f && anyGoalMet()) lightFlame();
     checkGoals();
-    checkBadges();
+    // Badges load on their own (src/data/badges.ts stays out of the first load).
+    void import('../data/badges').then((m) => { if (m.checkBadges().length) paintRewardDots(); });
     paintRewardDots();
     checkNudges();
   } finally {
@@ -43,6 +43,8 @@ const soon = () => {
 export function watchRewards() {
   window.addEventListener('journey-changed', soon);
   window.addEventListener('readlog-changed', soon);
+  // Badges also count Learn trees, page memory and Ranks weeks (src/data/badges.ts).
+  for (const e of ['garden-changed', 'pages-changed', 'rank-cache']) window.addEventListener(e, soon);
   check();
   // The morning after the bedtime du'a: the waking dawn (src/ui/dawn.ts).
   const dawn = () => void import('../data/duas').then((m) => { if (m.dawnDue()) void import('./dawn').then((d) => d.showDawn()); });

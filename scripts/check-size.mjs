@@ -9,7 +9,11 @@ import { gzipSync } from 'node:zlib';
 // the Pages deploy had stopped on it since #134).
 // 2026-11-11: raised to 141 for the Listen player's repeat / juz playback and its background service (140.1 KB;
 // the favourite sheets were moved out of first load to keep it there).
-const BUDGET_KB = 141;
+// 2026-11-11: raised to 142 for Arabic in every notification and message (141.2 KB: error messages in Arabic,
+// localised references, channel names; the media picker strings and the server-message table load lazily).
+// 2026-11-12: raised to 143 for friend challenges + weekly rivals (142.2 KB: challenge / duel calls and the Challenges tab
+// on Me; their screens, strings and styles load on first use).
+const BUDGET_KB = 143;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

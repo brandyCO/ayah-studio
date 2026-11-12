@@ -35,6 +35,7 @@ public class ExportService extends Service {
     private PowerManager.WakeLock wake;
     private String title = "";
     private String cancelLabel = "Cancel";
+    private String channelName = "";
 
     static Intent intent(Context c, String action) {
         return new Intent(c, ExportService.class).setAction(action);
@@ -53,6 +54,7 @@ public class ExportService extends Service {
             if (intent != null) {
                 title = orEmpty(intent.getStringExtra("title"));
                 cancelLabel = orDefault(intent.getStringExtra("cancel"), "Cancel");
+                channelName = orEmpty(intent.getStringExtra("channel"));
             }
             channel();
             Notification n = build(0);
@@ -97,8 +99,16 @@ public class ExportService extends Service {
     private void channel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm.getNotificationChannel(CHANNEL) != null) return;
-        NotificationChannel ch = new NotificationChannel(CHANNEL, "Exporting reels", NotificationManager.IMPORTANCE_LOW);
+        NotificationChannel had = nm.getNotificationChannel(CHANNEL);
+        if (had != null) {
+            // The name follows the app's language (shown in the phone's notification settings).
+            if (!channelName.isEmpty() && !channelName.contentEquals(had.getName())) {
+                had.setName(channelName);
+                nm.createNotificationChannel(had);
+            }
+            return;
+        }
+        NotificationChannel ch = new NotificationChannel(CHANNEL, orDefault(channelName, "Exporting reels"), NotificationManager.IMPORTANCE_LOW);
         ch.setSound(null, null);
         ch.enableVibration(false);
         nm.createNotificationChannel(ch);

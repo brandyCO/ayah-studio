@@ -16,9 +16,9 @@ import { due, level, recordPage, strength } from '../data/pageMemory';
 import { GATE_LIGHT, markPageRecited } from '../data/learnPath';
 import { grantJuzGate } from '../data/garden';
 import { addLesson, claimGoal } from '../data/journey';
-import { loadMeta, loadWordMap, reference, surahText, type SurahMeta } from '../data/quran';
+import { loadMeta, loadWordMap, surahText, type SurahMeta } from '../data/quran';
 import { displayWords, parseSpans } from '../engine/words';
-import { surahName } from '../i18n';
+import { surahName, uiRef } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
@@ -184,7 +184,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   const lastGlyph = [...lastLine].reverse().find((g) => g.i >= 0)!;
   const ref = (() => {
     const a = firstGlyph, b = lastGlyph;
-    return a.s === b.s ? reference(meta[a.s - 1], a.a, b.a) : `${reference(meta[a.s - 1], a.a)} – ${reference(meta[b.s - 1], b.a)}`;
+    return a.s === b.s ? uiRef(meta[a.s - 1], a.a, b.a) : `${uiRef(meta[a.s - 1], a.a)} – ${uiRef(meta[b.s - 1], b.a)}`;
   })();
 
   // state
@@ -532,7 +532,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     // Where does ayah X start? Tap its line on the page.
     const starts: [number, number, number][] = []; // s, a, line
     textLines.forEach((li) => data.lines[li]!.forEach((g) => { if (g.i === 0) starts.push([g.s, g.a, li]); }));
-    for (const [s, a, li] of shuffle(starts).slice(0, 2)) cards.push({ k: 'tap', q: lt('learn.pmQWhere', { ref: reference(meta[s - 1], a) }), sub: run(s, a, 0, 3), line: li });
+    for (const [s, a, li] of shuffle(starts).slice(0, 2)) cards.push({ k: 'tap', q: lt('learn.pmQWhere', { ref: uiRef(meta[s - 1], a) }), sub: run(s, a, 0, 3), line: li });
 
     const dir = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr';
     const ar = (text: string) => h('span', { class: 'lk-ar', lang: 'ar', dir: 'rtl' }, text);

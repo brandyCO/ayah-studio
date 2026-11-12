@@ -20,11 +20,11 @@ import {
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
 import { addLesson, addMemorised, claimGoal } from '../data/journey';
 import { dayKey } from '../data/readLog';
-import { loadMeta, loadWordMap, reference, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
-import { surahName, t, } from '../i18n';
+import { surahName, t, uiRef } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
 import { celebrate } from './celebrate';
 import { drills, meaningCards, type KindCtx } from './lessonKinds';
@@ -198,7 +198,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     meaningBtn.setAttribute('aria-pressed', String(showMeaning()));
   }
   function paintHead() {
-    ref.textContent = reference(m, range[0], range[1]);
+    ref.textContent = uiRef(m, range[0], range[1]);
     const tr = tree(s)!;
     art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
     const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
@@ -774,7 +774,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
   const kindCtx = (): KindCtx => ({
     s, range, words, trans, tr: { lang: tInfo.lang, dir: tInfo.dir, name: tInfo.translator }, meaningOf, sayWord,
-    refOf: (a, b) => reference(m, a, b ?? a),
+    refOf: (a, b) => uiRef(m, a, b ?? a),
   });
 
   let peekTimer = 0;
@@ -814,7 +814,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const before = tree(s)!;
     const stage0 = stageOf(before, m.ayahs);
     const today = dayKey(new Date());
-    const ref0 = reference(m, range[0], range[1]);
+    const ref0 = uiRef(m, range[0], range[1]);
     let moment: Promise<void> | null = null;
     if (step === 'new') {
       const n = range[1] - before.learned;

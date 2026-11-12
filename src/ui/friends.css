@@ -1,0 +1,94 @@
+/* Friends on Ranks (friends.ts): profiles, friend cards, the invite. Characters stand side by side; on fire together
+   (powerUp.css .pu-mini) while both earned points today. */
+.fr-sheet .sheet-head h2 { font-weight: 900; }
+.fr-prof { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 8px; text-align: center; }
+.fr-pair { position: relative; display: grid; place-items: end center; height: 210px; width: 100%;
+  background: radial-gradient(60% 50% at 50% 92%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%); border-radius: 18px; }
+.fr-pair .pu-mini { height: 100%; }
+.fr-pair .pu-body { left: 14%; width: 72%; }
+.fr-pair.discs { display: flex; gap: 18px; align-items: center; justify-content: center; height: 120px; }
+.fr-pair.discs.on > * { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rw-n3) 70%, transparent)); }
+.fr-solo { height: 180px; aspect-ratio: 200 / 262; position: relative; }
+.fr-solo .fg-actor { position: relative; width: 100%; }
+.fr-who { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fr-who h3 { margin: 0; font-size: 22px; font-weight: 900; }
+.fr-streak { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 16px; text-align: start;
+  background: color-mix(in srgb, var(--rw-n2) 10%, var(--card, transparent)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rw-n2) 30%, transparent); }
+.fr-streak.on { background: color-mix(in srgb, var(--rw-n2) 22%, var(--card, transparent)); }
+.fr-streak b { display: block; font-weight: 900; }
+.fr-streak small { color: var(--muted); }
+.fr-flame, .fr-mini-flame { display: inline-grid; place-items: center; flex: none; }
+.fr-mini-flame { vertical-align: -3px; margin-inline-end: 4px; }
+.fr-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.fr-stat { display: flex; flex-direction: column; align-items: center; min-width: 84px; padding: 8px 10px; border-radius: 14px; background: var(--chip, color-mix(in srgb, var(--fg, #000) 5%, transparent)); }
+.fr-stat b { display: inline-flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 900; }
+.fr-stat b .rk-pts-ic { width: 18px; height: 18px; }
+.fr-stat small { color: var(--muted); font-size: var(--fs-xs); }
+.fr-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.fr-add { min-width: 190px; }
+.fr-badge { padding: 8px 14px; border-radius: var(--r-pill); font-weight: 900; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.fr-remove { color: var(--muted); }
+.fr-mine { width: 100%; }
+.fr-mine .chips { justify-content: center; }
+.fr-help { margin: 0; max-width: 340px; }
+
+/* The Friends tab. */
+.fr-tab { display: flex; flex-direction: column; gap: 12px; }
+.fr-tab h3 { margin: 0 0 6px; font-size: var(--fs-s); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.fr-ask { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--card); margin-bottom: 6px; }
+.fr-ask-name { flex: 1; font-weight: 700; }
+.fr-cards { display: flex; flex-direction: column; gap: 10px; }
+.fr-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px 8px 8px; border: 0; border-radius: 18px; font: inherit; color: inherit; text-align: start;
+  background: var(--card); box-shadow: 0 3px 0 color-mix(in srgb, var(--fg, #000) 10%, transparent); cursor: pointer; }
+.fr-card.on { background: color-mix(in srgb, var(--rw-n2) 14%, var(--card)); box-shadow: 0 3px 0 color-mix(in srgb, var(--rw-n1) 45%, transparent); }
+.fr-card:active { translate: 0 2px; box-shadow: 0 1px 0 color-mix(in srgb, var(--fg, #000) 10%, transparent); }
+.fr-card-pair { flex: none; width: 128px; height: 96px; }
+.fr-card-pair .fr-pair { height: 96px; border-radius: 14px; }
+.fr-card-pair .fr-pair.discs { gap: 4px; }
+.fr-card-pair .fr-pair.discs .rk-av { width: 44px !important; height: 44px !important; }
+.fr-card-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fr-card-txt b { font-size: 17px; font-weight: 900; }
+.fr-card-streak { font-weight: 800; color: var(--rw-n1); }
+.fr-card-txt small { color: var(--muted); }
+.fr-invite { display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 18px;
+  background: transparent; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.fr-invite-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-size: 22px; font-weight: 900; color: #fff; background: var(--accent); flex: none; }
+.fr-invite b { display: block; font-weight: 900; }
+.fr-invite small { color: var(--muted); }
+.fr-empty { text-align: center; }
+.fr-inv-fig { position: relative; width: 120px; aspect-ratio: 200 / 262; margin: 0 auto; }
+.fr-inv-fig .fg-actor { position: relative; width: 100%; }
+.fr-level { display: flex; align-items: center; gap: 8px; width: min(100%, 320px); }
+.fr-level-bar { flex: 1; height: 10px; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--rk, #6c5ce7) 16%, transparent); }
+.fr-level-bar i { display: block; height: 100%; border-radius: inherit; background: var(--rk, #6c5ce7); }
+.fr-level small { white-space: nowrap; font-size: var(--fs-xs); }
+
+/* The profile as a full page (owner 2026-11-11): both characters large on a soft sky, details below. */
+dialog.fr-page { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  color: var(--fg); background: var(--bg); display: flex; flex-direction: column; overflow: hidden; animation: fr-in var(--dur-2, .22s) var(--ease-spring, ease-out); }
+dialog.fr-page::backdrop { background: transparent; }
+@keyframes fr-in { from { opacity: 0; translate: 0 18px; } }
+.fr-page-top { display: flex; align-items: center; gap: 6px; padding: max(8px, env(safe-area-inset-top)) 12px 6px; }
+.fr-page-top h2 { margin: 0; font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-back { font-size: 30px; line-height: 1; width: 44px; height: 44px; }
+:root[dir="rtl"] .fr-back { scale: -1 1; }
+.fr-page-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.fr-stage { width: 100%; max-width: 520px; display: grid; place-items: center;
+  background: radial-gradient(70% 60% at 50% 88%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 72%), linear-gradient(to bottom, color-mix(in srgb, #6c5ce7 10%, transparent), transparent);
+  border-radius: 24px; padding: 8px 0; }
+.fr-stage .fr-pair { height: min(44vh, 380px, calc((min(100vw, 520px) - 32px) * .74)); background: none; }
+.fr-stage .fr-pair.discs { height: 200px; gap: 28px; }
+.fr-stage .fr-solo { height: min(36vh, 300px); }
+.fr-info { width: 100%; max-width: 520px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.fr-info .fr-who h3 { font-size: 26px; }
+.fr-mine h3 { margin: 6px 0 2px; font-size: var(--fs-s); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.fr-stat.off { opacity: .35; }
+.fr-acts-wait { display: block; height: 44px; }
+.fr-ask { transition: opacity .2s, translate .2s; }
+.fr-ask.gone { opacity: 0; translate: 0 -6px; pointer-events: none; height: 0; padding-block: 0; margin: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { dialog.fr-page { animation: none; } }
+/* Challenge a friend from their card (src/ui/challenges.ts). */
+.fr-card-wrap { position: relative; }
+.fr-card-wrap .fr-card { padding-bottom: 52px; }
+.fr-ch-btn { position: absolute; z-index: 1; bottom: 12px; inset-inline-end: 12px; white-space: nowrap; min-height: 34px; padding: 4px 14px; font-size: 14px; }
+.fr-ch { display: inline-flex; align-items: center; gap: 6px; }

@@ -681,6 +681,25 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       135 KB (122 KB now); `watchVitals()` in `src/perf.ts` records LCP and the slowest tap response (INP) when the
       page is hidden, shown in Device check. Measured (Chromium, 4× CPU): a year of journey data is 38 KB and
       streak + stats take ~10 ms, so it stays in localStorage; Me opens in ~350 ms (dev server)
+- [x] Main pages speed check (owner request 2026-11-11, "optimize every main page, front and back"; report: Claude Doc
+      "Ayah Studio: speed check of every main page"; production build, 4× CPU, 4G, 150 ms server). Fixed here: the
+      character's head sway is a `transform` keyframe (`fg-sway-l`) and a hop scales the shadow with `scale` only
+      (`actor.ts`): WAAPI on the same properties as a running CSS loop knocked that loop onto the main thread for good
+      (Me and Learn 20 % busy while still → 0); a rare frame's glint is an HTML layer turned by CSS (`.rk-glint`,
+      `glintLayer()` in `rankAvatars.ts`; the SVG `animateTransform` kept Ranks ~70 % busy) and the hero rays a
+      `transform` (Ranks 85 % → 0). Ranks: the list no longer waits for the Friends strings; polling asks only for what
+      is on screen (`refreshCached(live)`), every 8 s, slowing to 15 / 30 s while nothing changes; the same answer asked
+      twice at once goes out once; the league's profiles come in one call (`rank_profiles`, kept 10 min). Server
+      (migration `20261111500000_rank_speed.sql`, pgTAP `rank_speed.test.sql` 13): `rank_count()` keeps "of N players"
+      for a minute (table `rank_counts`), `rank_global` by a measure keeps the week's top 100 a minute
+      (`rank_measure_top`), `rank_board` by a measure adds up only its members. Left to their threads: Read (next page
+      built during the slide), Learn (0.4 s block building the path); Studio was fixed in its thread (next item)
+- [x] Studio opens faster (owner question 2026-11-11, "optimise every main page"): the encoder check
+      (`capabilities()`, ~1 s of blocked page at 4× CPU) no longer runs when the studio opens — only at Export, and
+      only until the first H.264 + AAC path is found (the Device check still asks everything, `capabilities(true)`);
+      the path is remembered per browser version (localStorage `exportPath`, `knownPath()`). `voiceOnset()` measures
+      only the 4.5 s it looks at; Cinematic's breath is measured once the studio is idle (`knownBreath()`, and before
+      an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
       `SENTRY_DSN`; then mention it on the privacy page
 
@@ -940,6 +959,20 @@ cloud. Build in this order:
       Suhoor ends at …** with a countdown from the prayer times (only with a location, never guessed; also in the
       Ramadan sheet); **taraweeh**: after Isha a Today line marks tonight, the sheet has a toggle, the recap counts
       the nights (`RamadanData.taraweeh`, `setTaraweeh()`)
+      **Ramadan season** (owner request 2026-11-11): `#/season` (`src/ui/season.ts` + `season.css`, lazy; data
+      `src/data/season.ts`; strings `src/i18n/season.ts`, `snt()`). Before Ramadan: night sky, swaying fanous garland,
+      crescent, a live countdown (days / hours / minutes / seconds to 1 Ramadan 00:00 local, Umm al-Qura + the ±1 shift,
+      `nextRamadan()`), and what unlocks, each locked: **four new characters** (`CAST`: Abu Salim the Musaharati, Noura with
+      the fanous, Teta Huda the iftar host, Yusuf seeking the Night of Qadr; faces off), each bringing a wardrobe piece —
+      new `hold:10` suhoor drum (epic), `hold:11` iftar dates (cute), `bg:12` Night of Qadr (legendary, how `qadr` = the
+      last ten nights) plus the existing fanous `hold:9`; the **Khatm tracker** (30 juz arcs on one ring, filled from
+      `ramadanData().read`; the plan can be picked early); the Ramadan room sky, the Ramadan streak card (a garland on Me's
+      streak card all month, `html.season-ramadan`) and four **seasonal badges** shown on the screen (first night, ten
+      days, Ramadan Khatm, 5 of the last ten nights). In Ramadan the screen is the season's home (day, live ring, today's
+      portion, Dress up); on Eid the recap. Me: a card "Ramadan in N days" (`src/ui/seasonCard.ts`). Android: "Remind me"
+      → notifications 3 days before and on the eve (ids 7600–7601, tap → `#/season`). **First-day teaser**: once, to a
+      new user (only one day opened) right after their account's first successful sync (`initSeason()`; localStorage
+      `seasonTeaser`, synced). No Khatm circle (circles were removed 2026-10-28)
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
@@ -1033,6 +1066,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       `rf.*`, `dr.*`; module-level date formats built on use so they follow the language). Still
       English in the Arabic UI: the media picker and device check, and the small labels the reel
       engine draws on note/closing cards ("Word meanings: Quran.com", "a dua in X's own words"))
+      **Every notification in Arabic** (owner report 2026-11-11, "a lot of notifications are only in English"):
+      server error messages (Supabase functions raise them in English), proxy and data-layer errors are put into
+      Arabic by `src/i18n/arMessages.ts` (loaded with the Arabic strings): `toast()` and `errMsg(e)` never show an
+      English sentence in the Arabic UI (unknown ones → "تعذّر إتمام ذلك الآن، حاول مرة أخرى"; links kept), the
+      `rpc()` wrappers translate with `localMsg()`; the remaining hard-coded toasts and the media picker (`src/i18n/media.ts`,
+      lazy) are translated; references in the interface use `uiRef()` (Arabic surah name; reels keep `reference()`);
+      the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
+      start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
+      "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
 - [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
       (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,
@@ -1326,6 +1368,26 @@ duas/reflections section in Me.
       freeze), an extra freeze counts only where a day still needed it, a waiting push is sent when the app
       is hidden (timers stop there), another account's devices are dropped on an account switch, and the
       journey plan + page reading time are synced prefs (`journeyPlan`, `pageSeconds`).
+      **Everything syncs** (owner report 2026-11-11, "every piece of data"): `src/cloud/kv.ts` mirrors every other
+      localStorage key as a `user_docs` row `state/kv:{key}` = `{v, at}` (Learn path, page memory, weak words, adhkar /
+      du'a progress, room, character, styles, Ramadan, history, settings…); new keys sync by themselves unless listed as
+      device-only (`DEVICE`: caches, downloads, install id; prefixes `sb-`, `flag:`, `kids`, `debug`). Data from before
+      linking is merged, never replaced (objects key by key, lists joined, numbers the larger, dated records the newer);
+      progress keys (`UNION`) always merge; after that the newer change wins (deletions too). Locations are stripped
+      (`STRIP`) and kept on the device; values > 300 KB stay local. A pulled row that cannot be merged is skipped, a
+      refused batch is retried row by row and the refused keys show in the sync status, so one bad item never stops
+      the rest. A change saved while the app stays open is looked for once a minute. Server-side progress (Ranks points, XP, challenges, friends, pacts) is already the account's. Tested with two browsers against a fake Supabase (streak, Light, trees, path, styles, theme, app icon, settings match). Sync pass (2026-11-11, measured at 4× CPU on 4G with a year of data): each device's journey is sent in parts
+      (`src/cloud/syncDocs.ts`): `journey:{device}` holds this month's days and everything but the page times (`from` = its first
+      day; older app versions sent the whole year here, still read), `jm:{device}:{YYYY-MM}` each earlier month, `jm:{device}:pages`
+      the page times, a month no longer kept goes as deleted — a tasbih tap sent ~96 KB, now ~3 KB; `syncMeta` keeps fingerprints,
+      not whole documents (~100 KB → 3 KB rewritten each round); the minute check reads only keys written since the last look
+      (`Storage.prototype` setItem/removeItem marked in kv.ts, other tabs by the `storage` event; a round still looks at all);
+      the merging (`syncDocs.ts`) loads with the first round, out of the first load. A quiet round = 1 small read, nothing sent. **Sync you can trust** (owner question 2026-11-11, "users must not think their data is lost"): an open app pulls every 2 min
+      and when Me / Learn / Ranks open (`freshen()`, unless a round ran < 30 s ago); a new phone shows "Bringing your progress…"
+      on the streak card (a small flame, no lost-streak line) until its first pull (`firstSyncPending()`, `syncMeta.synced`); a
+      status line under the card (Syncing… / Synced · n min ago / Saved on this phone · syncs when online), tap it or pull Me down
+      to sync now; progress merged from another phone while Me is open counts up with a "From your other phone" note
+      (`sync-arrived` event too). Supabase Realtime is not used: the free plan allows 200 connections
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
@@ -1736,6 +1798,102 @@ duas/reflections section in Me.
       phone's width (opens at the window, glides to the character and shelves; swipe sideways), the floor runs on into
       a dock — a button per place showing what stands there (Plant, Corner, Rug, Curtains, Lantern), Shop, Dress up,
       Share; decorating opens as a low panel and the room rises above it (`openRoomShop(…, { slot, inRoom })`)
+- [x] M17 Badges in five tiers + app icons to win (owner request 2026-11-11, "for everything that could be accomplished",
+      each tier "waaaay more beautiful" in the 2.5D style): `src/data/badges.ts` — 23 families (streak, pages, surahs, juz,
+      Al-Kahf Fridays, listening hours, Learn lessons, ayat memorised, trees grown, trees watered, strong pages, dhikr, adhkar
+      sessions, du'a lanterns, peaceful nights, days full of light, goal days, weeks of goals, leagues climbed, top 3 weeks,
+      #1 weeks, reels, shares) × Bronze / Silver / Gold / Platinum / Diamond; ids `{family}-{0..4}`, old ids renamed on load
+      (`renameBadges()` in `journey.ts`). Counted from the synced journey (lifetime counts survive the 400-day pruning in
+      `State.past`; `DayRec.sh` = shares: reel shared or ayat copied) plus the garden, page strength and the Ranks cache, so it
+      follows the account. Art `src/ui/badge.ts` (flat two-tone, each tier a richer object: coin → khatam star with studs →
+      amber sunburst with laurels and ribbons → violet rosette with crown → sapphire sunburst with a cut stone, crown and glints);
+      Light 25 / 50 / 100 / 200 / 400; Platinum and Diamond claims burst twice. Me shows the 3 newest claims (+n) and 4 tiles;
+      Stats & badges lists every family with its five tiers and the bar to the next. Strings lazy in `src/i18n/badges.ts`.
+      **App icons to win** (`src/ui/appIcons.ts`): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
+      #1 week), Mythic Celestial (5 Diamonds or #1 in the Sun league); unlocked ones can be worn from Stats (localStorage
+      `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
+      `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`
+- [x] M18 Character power-up (owner request 2026-11-11, "like Duolingo's streak where the character is on fire, a Dragon Ball
+      scene"): `src/ui/powerUp.ts` + `powerUp.css` (lazy). On a level-up and at friend-streak milestones (owner 2026-11-11:
+      no tap on the Me flame, not after the streak moment), the user's character crouches and trembles while light streams into it, then an aura of flat two-tone
+      flame-light erupts round it (two outlines per layer taking turns, tongues rising, a shockwave), it floats up and the
+      streak number slams in over speed lines. Five levels by streak (`LEVELS` 1 / 7 / 30 / 100 / 365: Glowing, Burning,
+      Blazing with lightning and rising stones, Radiant in gold with rays, Like the dawn in gold and rose); "New level!" on
+      the day one starts, "n more days to …" otherwise. Only with a character; tap skips, reduced motion → end picture
+      **Redo like Duolingo's streak** (owner, 2026-11-11, approved from a preview): one smooth flame drawn on canvas in the
+      theme's colours (`src/ui/flatFire.ts`: `flamePath()` one soft teardrop with a single tip, `drawFire()` outer gradient
+      flame + deeper inner flame + white drop, no outline, `themeFire()` from `rewardPalette()`). **Streak moment**
+      (`streakMoment.ts` + `.css`, rewritten): grey flame → melts into a puddle → leaps with swirling ribbons → splash +
+      shockwave → the number rolls → the flame springs back tall → the week row fills (lit days joined into a bar); white
+      background. **Power-up**: the character stands *inside* one big flame (`FlatFire`), lit in its colours by an
+      SVG gradient map (dark → deep, light → the flame's pale core, blended 80 %), feet sunk in the flame's base; swirls
+      spiral up on the leap. The streak moment no longer chains into the power-up, and a tap on the Me flame no longer plays it
+      **Friends in the same flame** (owner 2026-11-12, "the same flame … the character inside the flame"): the daily friend
+      streak moment is the power-up itself with both characters inside the smooth flame (the longest streak kept today; the
+      card stays only without a character); friend cards and profiles show the two inside the streak flame at rest
+      (`blazingPair()` → `flame()` behind, its base over the feet, the character lit by the flame's gradient map); the old
+      two-tone aura (`blaze()`) is gone. Me's goals card: the reset countdown sits on its own line under Today | This week |
+      Challenges
+      **On fire every week** (owner 2026-11-12, "make it every single week", counted from each person's own first day): on a fire
+      day (`src/data/fireDays.ts`: 3, every 7th, 30, 50, 100, 365, every 100th after) the daily streak moment leads into the
+      power-up when Me opens (once a day, `fireSeen:{day}`, only with a character); friend streaks use the same days plus day 1
+      **One flame everywhere** (owner 2026-11-12, "put the new streak flame in the streak card, stop using the old flame"): `flame()`
+      (`src/ui/flame.ts`: Me streak card, friends, widgets page, relight, season, streak badges) draws the same teardrop with
+      `drawFire()` once on two canvases (outer; inner + drop, `part`) and keeps the CSS sway / flicker / glow / embers; out = the
+      flame in grey with a curl of smoke. The Android streak widget (`WidgetArt.fire()`) and the shortcut icon `ic_flame` use it too
+      **60 fps pass** (owner 2026-11-11): the power-up's big flame is drawn once per character (full sharpness) and moved
+      only by transforms (`staticFlame()`; drops as CSS); the flying bits (`flatFireCore.ts` `FireBits`) draw in a worker on
+      OffscreenCanvases (`flatFireWorker.ts`, page fallback) and leave the canvases alone while nothing flies; streak canvas
+      2×; a friend profile is built before it slides in. 4× CPU throttle: power-up 26 → 57 fps, streak 54 → 58, profile 59
+- [x] M19 Friends on Ranks (owner request 2026-11-11): a tap on a player in the **league** (not Global) opens their
+      profile (`src/ui/friends.ts`, strings `src/i18n/friends.ts`): both characters side by side (on fire together while
+      both earned XP today, `blazingPair()` in `powerUp.ts`), the name, tier, level, the friend streak and only the stats
+      that player chose to show (this week's XP, flame streak, trophies, pages, listening; bits in `rank_players.show`, your
+      own profile has the switches, `sendProfile()`); Add friend / Take back / Accept / Not now / Remove, Visit room. Ranks
+      tab **Friends**: asks, friend cards (the pair, the streak, today's state), invite link `#/rf/{code}` (whoever opens it
+      becomes your friend). **Friend streak**: days in a row you both earned XP (from `rank_days`, today counts once both
+      have); at 1 / 3 / 7 / 30 / 100 / 365 both characters power up together (once each, `frMs:`; `FRIEND_MILESTONES`).
+      Fix 2026-11-12 (owner: "we got a one-day friend streak and it didn't play"): day 1 and 3 added, and `friendMoments()`
+      (`together/ranks.ts`) checks on app open, on return, after today's points go out and when Ranks opens — not only on the
+      Friends tab; a friend without a character joins as a solo moment. Migration
+      `20261111400000_rank_friends.sql` (public `pid` per player, `rank_friends`, `rank_friend_asks` without table access;
+      `rank_profile`, `rank_set_profile`, `rank_friend_ask` / `_answer` / `_remove` / `_invite` / `_invite_preview` /
+      `_join`, `rank_my_friends`; ≤ 100 friends, 30 asks waiting, 20 a day); pgTAP `rank_friends.test.sql` (20)
+      No loading anywhere (owner, same day): the profile is a **full page** (`dialog.fr-page`, ‹ / Android back via a
+      history entry) shown at once from the profile kept on the device (`peekProfile()`, localStorage `rankProfiles`, per
+      account, newest 60) or from the board row, then updated in place; while the league shows, its players' profiles (top 3
+      first, `preloadProfiles()`) and the Friends tab are fetched ahead (`warmFriends()`); Add / Accept / Remove show their
+      result at once and the server's answer follows quietly
+      **Challenges + weekly rivals** (owner request 2026-11-12; migration `20261112000000_challenges_duels.sql`, pgTAP
+      `challenges_duels.test.sql` 22): a friend challenge has a kind — Pages, Dhikr (tasbih), Adhkar (sessions said in full),
+      Listening, Learn lessons, or Read & listen — picked from ⚔ Challenge on a friend card or profile (`openChallengePicker`,
+      `src/ui/challenges.ts`, strings `src/i18n/challenges.ts`); the friend accepts / declines, 7 days from yes, chests as
+      before. `rank_report` now also takes the day's adhkar sessions and dhikr (never scored in XP; dhikr ≤ 3000 a day and
+      no faster than it can be said, adhkar ≤ 12). Me's goals card has **Today | This week | Challenges** (signed in).
+      **Weekly rival** (opt-in): tap the league card on Ranks → a full-screen duel (both characters walk in and face off,
+      then the score, today's and the duel's countdowns with seconds, two daily duel quests +30 each that open where they
+      are done); pairing in the same tier by the closest 14-day average (`rank_my_duel`); score = the week's XP + dhikr
+      (1 a 33, ≤ 10 a day) + adhkar (10 a session, ≤ 4 a day) + quests; last week's chest 100 / 60 / 30. **Rivals for everyone** (owner 2026-11-12; migration `20261112100000_duels_for_all.sql`, pgTAP 23): no opt-in and no
+      way to stop mid-week (unfair to the other person); anyone who reported in the last 14 days can be paired, the closest
+      league first, then the closest 14-day average (it used to need both to opt in within the same tier, so nobody was found);
+      until someone is free the duel shows only the search (no quests or score) and looks again every 12 s **Daily friend
+      moment**: the first time both kept a friend streak today, a small card with both characters on fire (`frDay:`).
+      The goals reset pill counts down with seconds
+      **The shop, full screen** (owner request 2026-11-12, "a shop-like feeling … every single item"): every Light chip (Me,
+      Learn, the studio) and Ranks' ✦ open `src/ui/shop.ts` (+ `shop.css`, strings `src/i18n/shop.ts`, lazy): a lantern-lit stall
+      with the Light to spend and the character at the counter, sticky categories (Featured · Power-ups · Character · Room ·
+      Avatars & frames · Only to win · Seasonal · App icons), rarity-coloured tiles; Featured = this week's three prizes and the
+      next season (days until Ramadan). Everything is listed: Light parts (`PRICE`), room pieces, avatars / frames, the freeze;
+      locked ones say how (streak progress, Ranks weeks, badges) and when they come back (weekly prizes in n weeks, seasonal
+      pieces in n days by the Umm al-Qura calendar). A tap opens the piece large: Get / Wear it / Put it in my room / Use it.
+      Me's lantern strip still opens "Your Light"
+- [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
+      (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
+      (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =
+      ⌊√(xp/100)⌋ + 1). The level shows mainly on the character (`withLevel()`, `src/ui/levelLook.ts`): a glow on the
+      ground from 5, a halo from 10, two circling lights from 20, a rim of light from 30, slow rays from 40, all gold at 50;
+      plus a small "Lv n" pill on board rows, a bar to the next level on profiles and a Level chip on Me. A new level
+      plays the power-up with "Level up!" (`src/ui/levelUp.ts`, `rankLevelSeen`; the first look only records)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
@@ -1916,6 +2074,12 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
 - [x] Lessons counted (2026-11-10): every passed lesson / tasmi' (and a page recited with slips or cleanly) adds to
       `DayRec.ls` (`addLesson()` in `journey.ts`, summed across devices); new ayat keep feeding the memorise goal
       (`addMemorised`). Ranks, quests and a Learn daily goal reading `ls` belong to the Ranks / goals work
+- [x] **Faster Learn tab** (speed check 2026-11-11: ~0.4 s freeze on opening): the 114 trees' combinations are a table
+      in `magicTrees.ts` (the search ran on every start, ~0.57 s at 4× CPU slowdown; `scripts/make-tree-plan.mjs` re-checks
+      it); path tree / gate pictures draw as they come near the screen, one a task (`vignette(…, lazy)`); the path builds up
+      to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
+      number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
+      ~200 ms); screenshots identical
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

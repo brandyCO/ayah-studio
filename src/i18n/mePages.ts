@@ -5,6 +5,7 @@ import { lang } from './index';
 const en = {
   'mp.today': 'Today',
   'mp.week': 'This week',
+  'mp.challenges': 'Challenges',
   'mp.weekReady': 'A weekly chest is ready',
   'mp.room': 'Your room',
   'mp.roomBtn': 'Room',
@@ -43,12 +44,25 @@ const en = {
   'mp.askYes': 'Yes, remind me',
   'mp.askNo': 'Not now',
   'mp.askDone': 'You will be reminded after each adhan and salah.',
+  'mp.bringing': 'Bringing your progress…',
+  'mp.bringOffline': 'Your progress will arrive once you are online',
+  'mp.syncing': 'Syncing…',
+  'mp.synced': 'Synced · {ago}',
+  'mp.justNow': 'just now',
+  'mp.minAgo': '{n} min ago',
+  'mp.hAgo': '{n} h ago',
+  'mp.savedOffline': 'Saved on this phone · syncs when you are online',
+  'mp.savedRetry': 'Saved on this phone · syncing again shortly',
+  'mp.pull': 'Release to sync',
+  'mp.fromOther': 'From your other phone',
+  'mp.syncNow': 'Sync now',
 };
 export type MePageKey = keyof typeof en;
 
 const ar: Partial<Record<MePageKey, string>> = {
   'mp.today': 'اليوم',
   'mp.week': 'هذا الأسبوع',
+  'mp.challenges': 'التحديات',
   'mp.weekReady': 'صندوق الأسبوع جاهز',
   'mp.room': 'غرفتك',
   'mp.roomBtn': 'الغرفة',
@@ -86,6 +100,18 @@ const ar: Partial<Record<MePageKey, string>> = {
   'mp.askYes': 'نعم، ذكّرني',
   'mp.askNo': 'ليس الآن',
   'mp.askDone': 'سنذكّرك بعد كل أذان وصلاة.',
+  'mp.bringing': 'جارٍ جلب تقدّمك…',
+  'mp.bringOffline': 'سيصل تقدّمك عند الاتصال بالإنترنت',
+  'mp.syncing': 'جارٍ المزامنة…',
+  'mp.synced': 'تمت المزامنة · {ago}',
+  'mp.justNow': 'الآن',
+  'mp.minAgo': 'قبل {n} دقيقة',
+  'mp.hAgo': 'قبل {n} ساعة',
+  'mp.savedOffline': 'محفوظ على هذا الهاتف · تتم المزامنة عند الاتصال',
+  'mp.savedRetry': 'محفوظ على هذا الهاتف · ستتم المزامنة بعد قليل',
+  'mp.pull': 'اترك للمزامنة',
+  'mp.fromOther': 'من هاتفك الآخر',
+  'mp.syncNow': 'زامن الآن',
 };
 
 /** A Me string, with {name} placeholders filled from `vars`. */

@@ -194,6 +194,48 @@ export const sfx = {
     breath(c, t + d * 0.35, d * 0.75, 3000, 11000, 4, 0.14, d * 0.6);
     for (let i = 0; i < 3; i++) thud(c, t + i * d * 0.3, 0.35 + i * 0.12, 110, 50, 0.16);
   },
+  /** A crouch before a leap: a low rising rumble that tightens (`ms` long). */
+  gather(ms = 500) {
+    const d = ms / 1000;
+    buzz([6, 60, 8, 50, 10, 40, 14]);
+    const c = ready(); if (!c) return;
+    const t = c.currentTime;
+    breath(c, t, d, 120, 520, 1.2, 0.42, d * 0.8);
+    for (let i = 0; i < 4; i++) breath(c, t + i * d * 0.22, 0.04, 2200 * vary(), 1800, 2, 0.08 + i * 0.03, 0.003);
+  },
+  /** A leap: a short rushing whoosh upwards. */
+  leap() {
+    buzz(16);
+    const c = ready(); if (!c) return;
+    const v = vary();
+    breath(c, c.currentTime, 0.34, 500 * v, 3200 * v, 1.1, 0.4, 0.03);
+  },
+  /** Fire catching all at once: a deep whump, a roar that opens up, and crackles (`level` 1–5 bigger). */
+  ignite(level = 1) {
+    buzz([50, 40, 30, 40, 20, 40, 12]);
+    const c = ready(); if (!c) return;
+    const t = c.currentTime, v = vary(), k = 0.8 + level * 0.08;
+    thud(c, t, 1, 110 * v, 34, 0.42);
+    breath(c, t, 0.9, 160 * v, 900 * v, 0.7, 0.75 * k, 0.025);
+    breath(c, t + 0.03, 0.7, 1800 * v, 5200, 0.9, 0.22 * k, 0.04);
+    for (let i = 0; i < 10 + level * 3; i++) breath(c, t + 0.05 + Math.random() * 0.9, 0.012 + Math.random() * 0.02, 1500 + Math.random() * 3500, 1200, 1.5, 0.12 + Math.random() * 0.14, 0.002);
+  },
+  /** Fire burning steadily for `ms`: a soft low roar with crackles (quietly, under everything else). */
+  burn(ms = 2000, level = 1) {
+    const c = ready(); if (!c) return;
+    const t = c.currentTime, d = ms / 1000;
+    breath(c, t, d, 260, 380, 0.8, 0.22 + level * 0.02, 0.3);
+    const n = Math.round(d * (7 + level));
+    for (let i = 0; i < n; i++) breath(c, t + Math.random() * d, 0.01 + Math.random() * 0.02, 1400 + Math.random() * 3800, 1100, 1.5, 0.05 + Math.random() * 0.1, 0.002);
+  },
+  /** A heavy landing with a flare of fire round the feet. */
+  slam() {
+    buzz([38, 30, 14]);
+    const c = ready(); if (!c) return;
+    const t = c.currentTime, v = vary();
+    thud(c, t, 1, 140 * v, 38, 0.3);
+    breath(c, t, 0.45, 220 * v, 1400 * v, 0.9, 0.45, 0.01);
+  },
   /** A soft landing (a character landing after a hop). */
   land() {
     buzz(9);

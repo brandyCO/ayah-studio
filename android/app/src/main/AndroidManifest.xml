@@ -191,6 +191,49 @@
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
+        <!-- Unlockable launcher icons (won with badges and in Ranks; src/ui/appIcons.ts) -->
+        <activity-alias
+            android:name=".IconSapphire"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_sapphire"
+            android:roundIcon="@mipmap/ic_launcher_sapphire_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconLegend"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_legend"
+            android:roundIcon="@mipmap/ic_launcher_legend_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconCelestial"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_celestial"
+            android:roundIcon="@mipmap/ic_launcher_celestial_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
         <!-- /theme icons -->
 
         <!-- Home-screen widget: ayah of the day (docs/grow.md, G2) -->

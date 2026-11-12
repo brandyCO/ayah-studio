@@ -3,9 +3,9 @@
 // text by scripts/make-similar.mjs, shown side by side with the words that differ marked (colour only,
 // the text never changed, rule 1).
 import { tx } from '../data/db';
-import { loadMeta, reference, surahText } from '../data/quran';
+import { loadMeta, surahText } from '../data/quran';
 import { displayWords } from '../engine/words';
-import { surahName, t } from '../i18n';
+import { surahName, t, uiRef } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h } from './dom';
 import { askMic } from './follow';
@@ -119,7 +119,7 @@ export async function similarSheet(s: number, a: number, b: number, opts?: { don
       const [s2, a2] = o.split(':').map(Number);
       const ws2 = displayWords((await surahText(s2))[a2 - 1]);
       group.append(h('div', { class: 'ts-pair' },
-        h('div', { class: 'ts-side here' }, h('span', { class: 'ts-ref' }, reference(meta[s - 1], x)), marked(ws, shared(ws, ws2))),
+        h('div', { class: 'ts-side here' }, h('span', { class: 'ts-ref' }, uiRef(meta[s - 1], x)), marked(ws, shared(ws, ws2))),
         h('div', { class: 'ts-side' }, h('span', { class: 'ts-ref' }, `${surahName(meta[s2 - 1])} · ${o}`), marked(ws2, shared(ws2, ws)))));
     }
     body.append(group);

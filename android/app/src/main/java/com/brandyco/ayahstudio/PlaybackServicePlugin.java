@@ -38,6 +38,7 @@ public class PlaybackServicePlugin extends Plugin {
             ContextCompat.startForegroundService(getContext(), PlaybackService.intent(getContext(), PlaybackService.ACTION_SHOW)
                 .putExtra("title", call.getString("title", ""))
                 .putExtra("text", call.getString("text", ""))
+                .putExtra("channel", call.getString("channel", ""))
                 .putExtra("playing", Boolean.TRUE.equals(call.getBoolean("playing", false)))
                 .putExtra("labels", labels));
         } catch (RuntimeException e) {

@@ -158,7 +158,9 @@ html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: p
 .fg-lay.kid .fg-hd { transform-origin: 50% 64.89%; }
 /* Individual rotate / translate properties: Chrome re-layers the page every frame for an animated rotate() in
    `transform`, not for the `rotate` property (measured). */
-@keyframes fg-sway-l { 0%, 100% { rotate: 0deg; translate: 0 0; } 30% { rotate: 2.2deg; translate: 0 0; } 62% { rotate: -1.6deg; translate: 0 .19%; } }
+/* `transform`, not the `rotate` / `translate` properties: Chromium ran those on the main thread here (~20 % of a
+   mid-range phone's time while a screen with a character sat still); as a transform the graphics chip moves it. */
+@keyframes fg-sway-l { 0%, 100% { transform: none; } 30% { transform: rotate(2.2deg); } 62% { transform: translate(0, .19%) rotate(-1.6deg); } }
 .fg-lay .fg-wa { display: none; transform-origin: 67% 61.07%; }
 .fg-lay.kid .fg-wa { transform-origin: 64.62% 67.79%; }
 .fg-lay.waving .fg-wa { display: block; animation: fg-wave-l .5s ease-in-out infinite alternate; }

@@ -4,7 +4,7 @@
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { draftHash, listDrafts } from '../data/drafts';
 import { addRecentPage } from '../data/history';
-import { loadMeta, reference, surahTranslation } from '../data/quran';
+import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
@@ -12,7 +12,7 @@ import { keepWholeMushaf } from '../data/mushafDownload';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { icon } from './icons';
 import { h, toast } from './dom';
-import { locale, surahName, t } from '../i18n';
+import { locale, surahName, t, uiRef } from '../i18n';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
@@ -52,7 +52,7 @@ registerToday(async () => {
   const tr = await surahTranslation(d.s, info.id).catch(() => null);
   const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: '✧', text: t('today.ayah', { ref: reference(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
+    icon: '✧', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
     sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
     actions: [
       { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
@@ -66,7 +66,7 @@ registerToday(async () => {
   const a = p.ayat[0];
   if (!a) return [];
   return [{
-    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: reference(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
+    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
     actions: [{ label: t('today.popularReel'), href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
   }];
 });
@@ -74,7 +74,7 @@ registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
   return b && Date.now() - b.at < 7 * DAY
-    ? [{ icon: '🔖', text: t('today.bookmark', { ref: reference(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
+    ? [{ icon: '🔖', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
     : [];
 });
 registerToday(async () => {
@@ -82,7 +82,7 @@ registerToday(async () => {
   const d = drafts[0];
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
-  return [{ icon: '🎬', text: t('today.draft', { ref: reference(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
+  return [{ icon: '🎬', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
 });
 
 // Ramadan (T7): today's portion, tonight's ayah, Eid.
@@ -191,6 +191,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       el.classList.add('play-ayah');
       if (playing.w !== null && Number(el.dataset.p) === playing.w) el.classList.add('play-word');
     }
+    // A page that scrolls (phone on its side): keep the line being recited in view.
+    if (following && document.body.classList.contains('mushaf-wide')) {
+      const cur = strip.querySelector<HTMLElement>(`.mushaf-page[data-page="${page}"]`);
+      const w = cur?.querySelector<HTMLElement>('.play-word') ?? cur?.querySelector<HTMLElement>('.play-ayah');
+      if (cur && w) {
+        const top = w.offsetTop, bottom = top + w.offsetHeight;
+        if (top < cur.scrollTop || bottom > cur.scrollTop + cur.clientHeight) cur.scrollTo({ top: top - cur.clientHeight / 3, behavior: 'smooth' });
+      }
+    }
   }
 
   const playHere = (s: number, a: number) => { following = true; firstPosition = false; void player.playFrom(s, a); };
@@ -216,7 +225,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       noteAyah(s.surah, s.lo);
       sel.clear();
       const on = toggleBookmark(s.surah, s.lo);
-      toast(on ? t('mushaf.bookmarked', { ref: reference(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
+      toast(on ? t('mushaf.bookmarked', { ref: uiRef(meta[s.surah - 1], s.lo, s.lo) }) : t('mushaf.bookmarkRemoved'));
     },
     onReflect: (s) => { sel.clear(); noteAyah(s.surah, s.lo); void openReflection(meta, s.surah, s.lo); },
     onPan: (phase, dx, vx) => pan(phase, dx, vx),
@@ -348,10 +357,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     return h('div', { class: 'mp-line text' }, ...words);
   };
 
-  /** Font size so the widest line spans the page width; lines spread over the full height. */
+  /** Font size so the widest line spans the page width; lines spread over the full height.
+   *  Wide and low (a phone on its side): the page keeps a mushaf page's shape at the full width
+   *  and scrolls up and down, so the words keep their size instead of shrinking into wide gaps. */
   function fit(el: HTMLElement) {
     const lines = el.querySelectorAll<HTMLElement>('.mp-line');
-    const lh = Math.floor((el.clientHeight - 10) / 15); // inside the page's 5 px top/bottom padding
+    const tall = document.body.classList.contains('mushaf-wide');
+    const lh = tall ? Math.floor((el.clientWidth * 1.45) / 15) : Math.floor((el.clientHeight - 10) / 15); // inside the page's 5 px top/bottom padding
     el.style.setProperty('--lh', `${lh}px`);
     const base = 30;
     el.style.setProperty('--f', `${base}px`);
@@ -367,7 +379,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     el.dataset.fit = '1';
     paintMarks(el); // positions depend on the line heights just set
   }
-  const refitAll = () => strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit);
+  const setWide = () => document.body.classList.toggle('mushaf-wide', innerWidth > innerHeight && innerHeight < 640);
+  setWide();
+  const refitAll = () => { setWide(); strip.querySelectorAll<HTMLElement>('.mushaf-page').forEach(fit); };
 
   // --- pages: built once (font loaded), kept while near the current page ---
   const built = new Map<number, HTMLElement>();
@@ -393,7 +407,13 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const W = () => view.clientWidth + 16; // a page width plus a small gap between the sheets
   function place() {
-    for (const el of strip.children as HTMLCollectionOf<HTMLElement>) el.style.transform = `translateX(${(page - Number(el.dataset.page)) * W()}px)`;
+    const wide = document.body.classList.contains('mushaf-wide'); // only then do pages scroll
+    for (const el of strip.children as HTMLCollectionOf<HTMLElement>) {
+      const p = Number(el.dataset.page);
+      el.style.transform = `translateX(${(page - p) * W()}px)`;
+      el.classList.toggle('far', Math.abs(p - page) > 1); // pages two away wait unseen, already laid out
+      if (wide && p !== page && el.scrollTop) el.scrollTop = 0; // a page turned to starts at its top
+    }
   }
 
   let recentTimer = 0;
@@ -448,7 +468,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const attach = () => {
       if (id !== renderId) return;
       const els = want.map((p) => built.get(p) ?? placeholder(p));
-      if (els.length !== strip.childElementCount || els.some((el, i) => strip.children[i] !== el)) strip.replaceChildren(...els);
+      // Pages two away stay in the strip once prepared (hidden, already fitted), so a page that
+      // becomes a neighbour after a flip needs no layout work then. Nothing already in place moves.
+      const keep = new Set<Element>(els);
+      for (const p of [page - 2, page + 2]) { const el = built.get(p); if (el?.isConnected && el.parentNode === strip) keep.add(el); }
+      for (const el of [...strip.children]) if (!keep.has(el)) el.remove();
+      for (const el of els) if (el.parentNode !== strip) strip.append(el);
       for (const el of els) if (!el.dataset.fit && !el.classList.contains('loading')) fit(el);
       place();
       sel.repaint();
@@ -461,8 +486,25 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
     for (const p of [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10])
       if (valid(p)) void loadPageFont(p).catch(() => {});
-    // Build the pages two away while idle (their words, not yet fitted), so the next flip only fits.
-    idle(() => { if (id === renderId) for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p); });
+    // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
+    // at a time, so the flip after next lands without any layout work (it used to fit the new
+    // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).
+    const prepare = (p: number) => {
+      if (id !== renderId || !valid(p) || Math.abs(p - page) !== 2 || panning || animating) return;
+      // Someone flipping quickly: leave it for a quieter moment (the flip itself fits what it needs).
+      const quiet = performance.now() - lastPan;
+      if (quiet < 800) { window.setTimeout(() => idle(() => prepare(p)), 800 - quiet); return; }
+      const el = built.get(p);
+      if (!el || el.parentNode === strip) return;
+      el.classList.add('far');
+      strip.append(el);
+      place();
+      if (!el.dataset.fit) fit(el);
+    };
+    idle(() => {
+      if (id !== renderId) return;
+      for (const p of [page + 2, page - 2]) if (valid(p)) void buildPage(p).then(() => idle(() => prepare(p)));
+    });
     for (const p of built.keys()) if (Math.abs(p - page) > 3) { built.delete(p); building.delete(p); }
     releasePageFonts((p) => Math.abs(p - page) <= 12); // pages far away give their font's memory back
     for (const p of placeholders.keys()) if (Math.abs(p - page) > 1) placeholders.delete(p);
@@ -478,7 +520,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   let panRaf = 0;
   let panX = 0;
+  let lastPan = 0; // when the finger last moved a page
   function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
+    lastPan = performance.now();
     // Swiping again while a page is still sliding: let it land at once and follow the new swipe.
     if (animating) finishNow?.();
     flushLayout();
@@ -567,7 +611,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       const tf = tafsirToggle(s.surah, a);
       if (tf) items.push(tf);
     }
-    const d: HTMLDialogElement = sheet(sheetHead(reference(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(uiRef(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
   }
 
@@ -584,7 +628,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const rows = list.map((b) => {
       const row = h('div', { class: 'bm-row' },
         h('button', { class: 'menu-item bm-go', onclick: () => { d.close(); toggleBar(false); go(mushaf.pageOf(b.s, b.a)); } },
-          h('span', {}, reference(meta[b.s - 1], b.a, b.a)),
+          h('span', {}, uiRef(meta[b.s - 1], b.a, b.a)),
           h('span', { class: 'muted small' }, t('bm.pageDate', { page: mushaf.pageOf(b.s, b.a), date: dateFmt.format(b.at) }))),
         h('button', { class: 'icon-btn', 'aria-label': t('bm.remove'), onclick: () => { removeBookmark(b.s, b.a); row.remove(); } }, '✕'));
       return row;
@@ -595,7 +639,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   function openBookmark(s: number, a: number) {
     const b = bookmarks().find((x) => x.s === s && x.a === a);
-    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${reference(meta[s - 1], a, a)}`, () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${uiRef(meta[s - 1], a, a)}`, () => d.close()),
       b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
         h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, `🎧  ${t('bm.listenHere')}`),
@@ -674,7 +718,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     clearTimeout(resizeTimer);
     sel.destroy();
     detachPlayer(); // the recitation carries on (the bar moves above the tab bar)
-    if (mount === mounts) document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up');
+    if (mount === mounts) document.body.classList.remove('mushaf-mode', 'listening', 'tabs-up', 'mushaf-wide');
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
   };

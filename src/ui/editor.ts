@@ -7,13 +7,13 @@ import { starButton } from './favStar';
 import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
 import { addAmbience, AMBIENCES, type Ambience, type AmbienceId } from '../data/ambience';
-import { loadWordMap, reference, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
+import { loadWordMap, surahMeta, surahTajweed, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { covers, DEFAULT_RECITER, groupRecordings, hasAlignedWords, RECITERS, reciterById, reciterCredit, reciterFor, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { mp3quranRange, mp3quranSurah, UncheckedRange } from '../data/mp3quran';
 import { draftHash, getDraft, newDraftId, saveDraft } from '../data/drafts';
 import { loadLibrary, smallImage } from '../data/library';
 import { BACKGROUNDS, backgroundById, isBackground, libraryBackgrounds, disposeMedia, loadBackground, type BackgroundMedia, type Credit } from '../engine/backgrounds';
-import { capabilities, describePath } from '../engine/capabilities';
+import { capabilities, describePath, knownPath } from '../engine/capabilities';
 import { TEXT_EFFECTS } from '../engine/effects';
 import { exportVideo } from '../engine/export';
 import { STATUS_LIMIT, statusParts } from '../engine/status';
@@ -32,12 +32,12 @@ import { markPanel, saveMark, savedMark } from './markPanel';
 import { bloom, bokeh, caustics, leak, MAX_TOUCHES, mist, motes, rain, ripple, snow, TOUCHES, type Touch } from '../engine/touches';
 import { markKeyAt, markPlaced } from '../engine/mark';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
-import { breathOf } from '../engine/cinema';
+import { breathOf, knownBreath } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
 import { recordReel, popularReciters } from '../data/popular';
-import { reelMade } from '../data/journey';
+import { addShare, reelMade } from '../data/journey';
 import {
   CLIP_FITS, clipIn, MAX_SCENES, MIN_RATE, MIN_SCENE, prepareScenes, sceneSpans, SLOWMO, TRANSITIONS, videoTime,
   type Clip, type ClipFit, type SceneMode, type Transition,
@@ -60,7 +60,7 @@ import { exportQuality, reelLook, reelReciter, setExportQuality, setReelLook, se
 import { loadReel, type Reel } from './reelSource';
 import { createSpine, type Selection } from './spine';
 import { currentTranslation, setTranslation, translationInfo } from '../data/translations';
-import { t as ui, tOr } from '../i18n';
+import { errMsg, t as ui, tOr, uiRef } from '../i18n';
 import { translationList } from './translationPicker';
 import { recordingChips, reciterSearchBox } from './recordings';
 
@@ -168,6 +168,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let startCtx = 0;
   let startT = 0;
   let dirty = true;
+  /** Work that can wait until the studio has opened and is idle. */
+  const idle = (f: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(f, { timeout: 1500 }); else setTimeout(f, 300); };
   // The user's logo is decoded now, so the preview shows it from the first frame (not only once the
   // watermark panel or an export has loaded it).
   void loadLogo(project.mark?.logo).then(() => (dirty = true));
@@ -346,7 +348,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     project.sceneMode = project.scenes.length > 1 ? 'custom' : 'single';
   }
   function addScene(id: string) {
-    if (project.scenes.length >= MAX_SCENES && project.sceneMode !== 'single') return toast(`Up to ${MAX_SCENES} scenes`);
+    if (project.scenes.length >= MAX_SCENES && project.sceneMode !== 'single') return toast(ui('ed.maxScenes', { n: MAX_SCENES }));
     toCustom();
     const lens = project.sceneMode === 'custom' ? project.sceneLengths : [tl?.duration ?? 1];
     const sum = lens.reduce((a, b) => a + b, 0);
@@ -389,7 +391,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (!tl) return;
     const sc = tl.scenes[i];
     if (!sc || t - sc.start < MIN_SCENE || sc.end - t < MIN_SCENE) return toast(ui('ed.splitWhere', { s: MIN_SCENE }));
-    if (project.scenes.length >= MAX_SCENES) return toast(`Up to ${MAX_SCENES} scenes`);
+    if (project.scenes.length >= MAX_SCENES) return toast(ui('ed.maxScenes', { n: MAX_SCENES }));
     // The second part continues the video from the frame at the playhead.
     const v = media[sc.entry]?.video;
     const clip = fitClips()[sc.entry];
@@ -1026,7 +1028,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const r = await searchStock({ source: src.pixabay ? 'pixabay' : 'pexels', type: 'video', q: f.q, page: 1 });
       if (quick.pref === pref) quick.hits = r.hits.filter((x) => (x.duration ?? 0) >= 5).slice(0, 6);
     } catch (e) {
-      quick.error = e instanceof Error ? e.message : String(e);
+      quick.error = errMsg(e);
     }
     quick.searching = false;
     quickRefresh();
@@ -1050,7 +1052,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       scenesChanged();
       changed();
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e));
+      toast(errMsg(e));
     }
     quick.loading = null;
     quickRefresh();
@@ -2066,13 +2068,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
   refreshUI();
 
-  capabilities().then(({ path }) => {
-    exportPathLabel.textContent = path ? describePath(path) : '';
-    if (!path) {
-      exportBtn.disabled = true;
-      exportBtn.title = ui('ed.noExport');
-    }
-  });
+  // The encoder check can hold the page for a second on a phone, so it runs only at Export; a device
+  // already known to have no export path shows it at once.
+  if (knownPath() === null) {
+    exportBtn.disabled = true;
+    exportBtn.title = ui('ed.noExport');
+  }
 
   // --- preview sizing ---
   // One canvas pixel per screen pixel (phones are often 2.6–3.5×), so the text is as sharp as the
@@ -2142,7 +2143,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       meanings, mode: mode(), wordsPerStep: project.wordsPerStep, translationMode: project.translationMode,
       style: frameStyle(project), sceneMode: project.sceneMode, sceneCount: project.scenes.length, sceneLengths: project.sceneLengths,
     });
-    if (voice ?? audio) tl.breath = breathOf((voice ?? audio)!);
+    const src = voice ?? audio;
+    if (src) {
+      // Only Cinematic uses the breath; a new recitation is measured once the studio is idle, not while it opens.
+      const known = knownBreath(src);
+      if (known) tl.breath = known;
+      else if (project.cinema) idle(() => { if (!alive || (voice ?? audio) !== src) return; const b = breathOf(src); if (tl) tl.breath = b; dirty = true; });
+    }
     if (project.tajweed) {
       if (tajweedData) tl.ayat.forEach((a, i) => { a.tajweed = tajweedData![i]; });
       else ensureTajweed();
@@ -2227,7 +2234,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         return loadAudio();
       }
       setStatus(navigator.onLine
-        ? ui('ed.audioFailed', { msg: e instanceof Error ? e.message : String(e) })
+        ? ui('ed.audioFailed', { msg: errMsg(e) })
         // Reels opened before keep their recitation on the device; this one was not downloaded yet.
         : ui('ed.offlineAudio'));
     }
@@ -2515,7 +2522,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
       if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
-      await LocalNotifications.schedule({ notifications: [{ id: 7300, title: ui('ed.ready-title'), body: reference(s, from, to), smallIcon: 'ic_stat_crescent' }] });
+      await LocalNotifications.schedule({ notifications: [{ id: 7300, title: ui('ed.ready-title'), body: uiRef(s, from, to), smallIcon: 'ic_stat_crescent' }] });
     } catch { /* fine */ }
   }
   /** Save / Share in the Android app: the file is written once, then shared by its URI. */
@@ -2535,7 +2542,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       });
       return saving;
     };
-    const fail = (what: string) => (e: unknown) => toast(`${what}: ${e instanceof Error ? e.message : e}`);
+    const fail = (what: string) => (e: unknown) => toast(`${what}: ${errMsg(e)}`);
     saveBtn.onclick = () => void save().catch(fail(ui('ed.saveFailed')));
     return h('div', { class: 'export-actions' }, saveBtn,
       h('button', {
@@ -2544,6 +2551,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
           // The caption goes along (WhatsApp, YouTube keep it) and onto the clipboard for apps that drop it.
           const text = captionEl?.value ?? captionText();
           void navigator.clipboard?.writeText(text).then(() => toast(ui('ed.caption-shared')), () => {});
+          addShare();
           return shareFile(r.uri, ui('ed.shareTitle'), text).catch((e) => {
             if (!/cancel/i.test(String((e as Error)?.message ?? e))) fail(ui('ed.shareFailed'))(e);
           });
@@ -2558,6 +2566,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     pause();
     commit();
+    exportPathLabel.textContent = describePath(path);
+    if (project.cinema && (voice ?? audio)) tl.breath = breathOf((voice ?? audio)!); // in case the idle measure has not run yet
     await loadLogo(project.mark?.logo); // the user's logo is decoded before the first frame
     exporting = new AbortController();
     overlay.hidden = false;
@@ -2606,7 +2616,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         creditsBlock() ?? '',
         isNative() ? nativeActions(blob, name) : h('div', { class: 'export-actions' },
           h('a', { class: 'primary', href: resultUrl, download: name }, icon('save', 18), ui('ed.save')),
-          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
+          canShare && h('button', { class: 'primary alt', onclick: () => navigator.share({ files: [file] }).then(() => addShare()).catch(() => {}) }, icon('share', 18), ui('ed.share'))),
         statusBlock(name),
         coverJpeg ? coverButton(coverJpeg, name.replace(/\.\w+$/, '-cover.jpg')) : '',
         makeAnother(),
@@ -2642,11 +2652,12 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       if (isNative()) {
         const saved: string[] = [];
         for (const m of made!) saved.push((await saveVideo(m.blob, m.name)).uri);
+        addShare();
         await shareFiles(saved, ui('st.title'), text);
         return;
       }
       const files = made!.map((m) => new File([m.blob], m.name, { type: m.blob.type }));
-      if (navigator.canShare?.({ files })) { await navigator.share({ files, text }).catch(() => {}); return; }
+      if (navigator.canShare?.({ files })) { await navigator.share({ files, text }).then(() => addShare()).catch(() => {}); return; }
       links.replaceChildren(...made!.map((m, i) => {
         const url = URL.createObjectURL(m.blob);
         coverUrls.push(url);

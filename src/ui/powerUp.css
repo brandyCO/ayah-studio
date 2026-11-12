@@ -1,0 +1,17 @@
+/* Friends inside the flame at rest (powerUp.ts blazingPair: Ranks cards and profiles). The flame is the streak
+   flame (flame.ts), swaying by itself; its base is drawn again in front of the feet so the character stands in it. */
+.pu-fig { position: absolute; inset: 0; display: block; }
+.duo > .pu-fig { inset: 0 auto 0 0; width: 50%; }
+.duo > .pu-fig + .pu-fig { left: 50%; }
+.pu-mini { position: relative; display: block; aspect-ratio: 2 / 3; height: 100%; }
+.pu-mini.duo { aspect-ratio: 4 / 3; }
+.pu-body { position: absolute; left: 19%; width: 62%; bottom: 4%; display: block; transform-origin: 50% 100%; z-index: 1; }
+.pu-body .fg-actor { position: relative; width: 100%; display: block; }
+.pu-mini.lit .pu-body { bottom: 8%; animation: pu-float 2.6s ease-in-out infinite alternate; }
+@keyframes pu-float { from { transform: translateY(0); } to { transform: translateY(-3%); } }
+.pu-flame { position: absolute; left: 50%; bottom: -2%; height: 104%; aspect-ratio: 100 / 140; translate: -50% 0; pointer-events: none; }
+.pu-flame .flame { display: block; width: 100%; height: 100% !important; }
+.pu-flame-front { z-index: 2; opacity: .9;
+  -webkit-mask: linear-gradient(to top, #000 0 7%, transparent 17%); mask: linear-gradient(to top, #000 0 7%, transparent 17%); }
+.pu-flame-front .fl-glow, .pu-flame-front .fl-embers { display: none; }
+@media (prefers-reduced-motion: reduce) { .pu-mini * { animation: none !important; } }

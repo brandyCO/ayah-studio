@@ -10,10 +10,13 @@ const loadWallet = () => import('../data/garden').then((g) => { wallet = g.walle
 import { locale, t } from '../i18n';
 import { h } from './dom';
 
-export function lightChip(onclick?: () => void): HTMLElement {
+/** Tapping it opens the shop (owner request 2026-11-12), unless the screen gives its own action. */
+export function lightChip(onclick: () => void = () => void import('./shop').then((m) => m.openShop())): HTMLElement {
   const n = h('b', {});
-  const fmt = new Intl.NumberFormat(locale());
-  const el = h(onclick ? 'button' : 'span', { class: 'lt-chip', ...(onclick ? { onclick, type: 'button' } : {}) },
+  // Made on first paint (after the wallet loads), so its first-time set-up is not part of opening a screen.
+  let nf: Intl.NumberFormat | null = null;
+  const fmt = { format: (x: number) => (nf ??= new Intl.NumberFormat(locale())).format(x) };
+  const el = h('button', { class: 'lt-chip', onclick, type: 'button' },
     star(), n);
   let shown = -1;
   let raf = 0;

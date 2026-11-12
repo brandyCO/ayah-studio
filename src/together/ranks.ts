@@ -5,14 +5,17 @@
 // allows, and works out the score. Signed in with Google only; nothing is sent signed out.
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
-import { addDays, allDays, claimGoal } from '../data/journey';
+import { localMsg } from '../i18n';
+import { addDays, allDays, claimGoal, streak } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
+import { setMyXp } from '../data/xp';
+import { isFriendFireDay } from '../data/fireDays';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
   const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(localMsg(error.message));
   return data as T;
 }
 
@@ -25,7 +28,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -49,7 +52,11 @@ const GAP = 5_200;
 let lastAt = 0;
 function totals(k: string) {
   const d = allDays()[k];
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0 };
+  // Adhkar sessions said in full (morning, evening, the du'a moments) and dhikr counted: kept for friend challenges and
+  // duels, never in the league score; the server limits how fast they may grow.
+  const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
+  const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, adhkar, dhikr };
 }
 let timer = 0;
 let busy = false;
@@ -69,11 +76,12 @@ export async function report(): Promise<void> {
     const today = dayKey();
     for (const k of [addDays(today, -1), today]) {
       const v = totals(k);
-      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}`;
-      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons)) continue;
+      const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.adhkar}:${v.dhikr}`;
+      if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons && !v.adhkar && !v.dhikr)) continue;
       lastAt = Date.now();
-      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons });
+      await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons, adhkar: v.adhkar, dhikr: v.dhikr });
       sent[k] = sig;
+      if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
     for (const k of Object.keys(sent)) if (k < addDays(today, -3)) delete sent[k];
     try { localStorage.setItem('rankSent', JSON.stringify(sent)); } catch { /* ignore */ }
@@ -88,12 +96,18 @@ export function watchRanks() {
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
   window.addEventListener('readlog-changed', soon);
-  document.addEventListener('visibilitychange', () => { if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); }
+    if (!document.hidden) setTimeout(() => void friendMoments(), 2500);
+  });
   onAccount((a) => {
     kept = null;
     cache.clear();
+    profs.clear();
+    profsLoaded = false;
     if (!a) return;
     reportSoon(3000);
+    setTimeout(() => void friendMoments(), 4000);
     // A board invite opened before signing in: Ranks joins it.
     try { if ((sessionStorage.getItem('pendingBoard') || sessionStorage.getItem('pendingChallenge')) && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
     void scheduleLeagueNote();
@@ -142,16 +156,23 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
     if (key in k) return k[key] as T;
     throw new StaleMiss();
   }
-  const v = await load();
-  cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
-  keep(key, v);
-  return v;
+  // The same answer asked for twice at once (the league by the list and by the moments) goes to the server once.
+  const running = loading.get(key);
+  if (running) return running as Promise<T>;
+  const p = load().then((v) => {
+    cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
+    keep(key, v);
+    return v;
+  }).finally(() => loading.delete(key));
+  loading.set(key, p);
+  return p;
 }
+const loading = new Map<string, Promise<unknown>>();
 export const dropCache = () => { for (const c of cache.values()) c.at = 0; };
-/** Asks again for every answer used in the last 2 minutes; true when any of them changed. */
-export async function refreshCached(): Promise<boolean> {
+/** Asks again for the kept answers `live` picks (what is on screen now); true when any of them changed. */
+export async function refreshCached(live: (key: string) => boolean): Promise<boolean> {
   let changed = false;
-  await Promise.all([...cache.entries()].filter(([, c]) => Date.now() - c.at < 120_000 || c.at === 0).map(async ([key, c]) => {
+  await Promise.all([...cache.entries()].filter(([key]) => live(key)).map(async ([key, c]) => {
     try {
       const v = await c.load();
       const json = JSON.stringify(v) ?? '';
@@ -165,7 +186,7 @@ export async function refreshCached(): Promise<boolean> {
 
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: dayKey() });
-  if (s) { s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); }
+  if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }
   return s;
 }, fresh);
 // The character from the builder (src/ui/figure.ts): kept on this device too, so the status needs no change on the server.
@@ -249,15 +270,19 @@ export async function leaveBoard(id: string) {
 export const boardPreview = (code: string) => rpc<{ name: string; members: number; joined: boolean } | null>('rank_board_preview', { board_code: code.toLowerCase() });
 export const boardLink = (code: string) => shareableLink(`#/rb/${code}`);
 
-// --- friend challenge: one friend, the 7 days from the day they accept, pages + listening ---
+// --- friend challenge: one friend, the 7 days from the day they accept, in one kind of good deed ---
+/** read = pages 10 + minutes 2 (the first kind); the others count their own unit. */
+export type ChallengeKind = 'read' | 'pages' | 'listen' | 'lessons' | 'adhkar' | 'dhikr';
+export const CHALLENGE_KINDS: ChallengeKind[] = ['pages', 'dhikr', 'adhkar', 'listen', 'lessons', 'read'];
 export interface Challenge {
   id: string; code: string | null; start: string | null; end: string | null; waiting: boolean; expired: boolean;
   day: number | null; over: boolean; claimed: boolean; me: number | null; them: number | null; friend: Row | null;
+  kind?: ChallengeKind; asked?: boolean; incoming?: boolean;
 }
 export const myChallenges = (fresh = false) => cached('challenges', () => rpc<Challenge[]>('rank_my_challenges', { d: dayKey() }), fresh);
-export async function createChallenge(): Promise<{ id: string; code: string }> {
+export async function createChallenge(kind: ChallengeKind = 'read'): Promise<{ id: string; code: string }> {
   await report();
-  const r = await rpc<{ id: string; code: string }>('rank_challenge_create');
+  const r = await rpc<{ id: string; code: string }>('rank_challenge_create', { k: kind });
   dropCache();
   return r;
 }
@@ -266,6 +291,19 @@ export async function acceptChallenge(code: string): Promise<string> {
   const id = await rpc<string>('rank_challenge_accept', { ch_code: code.trim().toLowerCase(), d: dayKey() });
   dropCache();
   return id;
+}
+/** Challenges a friend straight away (no link); it waits for their yes. */
+export async function challengeFriend(pid: string, kind: ChallengeKind): Promise<string> {
+  await report();
+  const id = await rpc<string>('rank_challenge_friend', { who: pid, k: kind });
+  dropCache();
+  return id;
+}
+/** The friend's answer: yes starts the 7 days today, no removes it. */
+export async function answerChallenge(id: string, yes: boolean) {
+  if (yes) await report();
+  await rpc('rank_challenge_answer', { ch: id, yes, d: dayKey() });
+  dropCache();
 }
 export async function cancelChallenge(id: string) {
   await rpc('rank_challenge_cancel', { ch: id });
@@ -288,6 +326,19 @@ export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 't
   const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });
   dropCache();
   if (r) claimGoal(`ch:${c.id}`, r.light);
+  return r;
+}
+
+// --- weekly duel (everyone, no way out: owner 2026-11-12): this week's closest rival (league, then pace), the week's XP + dhikr / adhkar points + quests ---
+export interface DuelQuest { kind: 'pages' | 'listen' | 'lessons' | 'adhkar' | 'dhikr'; target: number; done: boolean }
+export interface Duel { id: string; week: string; end: string; day: number; me: number; them: number; rival: Row }
+export interface DuelState { on: boolean; duel: Duel | null; quests: DuelQuest[] | null; last: { id: string; week: string; me: number; them: number; rival: Row } | null }
+export const myDuel = (fresh = false) => cached('duel', () => rpc<DuelState>('rank_my_duel', { d: dayKey() }), fresh);
+/** Opens last week's duel chest once (won 100, tie 60, otherwise 30). */
+export async function claimDuel(id: string): Promise<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null> {
+  const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number; me: number; them: number } | null>('rank_duel_claim', { duel: id });
+  dropCache();
+  if (r) claimGoal(`du:${id}`, r.light);
   return r;
 }
 
@@ -398,4 +449,155 @@ export function lastWeekLocal(weekStart: string) {
     pages += p; listen += l; if (p || l) active++;
   }
   return { pages, listen, active };
+}
+
+// --- friends (owner request 2026-11-11; supabase/migrations/20261111400000_rank_friends.sql) ---
+/** What a profile shows (bits, as on the server): this week's points, the flame streak, trophies, pages, listening. */
+export const SHOW = { week: 1, streak: 2, trophies: 4, pages: 8, listen: 16 } as const;
+export type ShowKey = keyof typeof SHOW;
+/** Two friends' streak: the days in a row both earned points, and whether each has today. */
+export interface FriendStreak { streak: number; meToday: boolean; themToday: boolean }
+export interface Profile extends Omit<Row, 'score'> {
+  relation: 'me' | 'friend' | 'sent' | 'asked' | 'none'; show: number; bestTier: number;
+  week?: number; streak?: number; trophies?: number; pages?: number; listen?: number; friend?: FriendStreak;
+}
+export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
+export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
+
+/** A friend streak that reached a milestone and was not shown on this device yet (`frMs:{pid}:{n}`). */
+export function friendMilestoneDue(list: Friend[]): Friend | null {
+  for (const f of list) {
+    if (!f.pid || !isFriendFireDay(f.streak)) continue;
+    try { if (localStorage.getItem(`frMs:${f.pid}:${f.streak}`)) continue; } catch { continue; }
+    return f;
+  }
+  return null;
+}
+let momentAt = 0;
+/** Checks the friend streaks (app open, return, after today's points went out, Ranks) and plays a milestone reached:
+ *  both characters on fire together. Not over the studio, the Kids space or another moment; at most every 20 s. */
+export async function friendMoments(): Promise<void> {
+  if (!account() || document.hidden || Date.now() - momentAt < 20_000) return;
+  try { if (!localStorage.getItem('rankFigure')) return; } catch { return; }
+  momentAt = Date.now();
+  let data: Friends;
+  try { data = await myFriends(true); } catch { return; }
+  if (friendMilestoneDue(data.friends)) {
+    const m = await import('../ui/friends');
+    await m.friendMilestone(data.friends);
+    return;
+  }
+  // Every other day the streak goes on: one small card for all the friends kept today (owner 2026-11-12).
+  const today = dayKey();
+  const kept = data.friends.filter((f) => {
+    if (!f.pid || !f.meToday || !f.themToday || f.streak < 1) return false;
+    try { return !localStorage.getItem(`frDay:${today}:${f.pid}`); } catch { return false; }
+  });
+  if (!kept.length) return;
+  const m = await import('../ui/friends');
+  await m.friendDayMoment(kept);
+}
+// Profiles open at once (owner, 2026-11-11: "no loading, ever"): each one is kept on this device (per account, newest 60)
+// and the league's players are fetched ahead while Ranks is open, the top 3 first. A profile shown from the kept copy is
+// refreshed quietly and updated in place.
+const PROF_STORE = 'rankProfiles';
+const profs = new Map<string, { at: number; v: Profile | null }>();
+let profsLoaded = false;
+const loadProfs = () => {
+  if (profsLoaded) return;
+  profsLoaded = true;
+  try {
+    const v = JSON.parse(localStorage.getItem(PROF_STORE) ?? 'null');
+    if (v && v.who === account()?.id && v.p && typeof v.p === 'object') for (const [k, p] of Object.entries(v.p)) profs.set(k, { at: 0, v: p as Profile });
+  } catch { /* ignore */ }
+};
+let profTimer = 0;
+const keepProfs = () => {
+  clearTimeout(profTimer);
+  profTimer = window.setTimeout(() => {
+    const p: Record<string, Profile | null> = {};
+    for (const [k, e] of [...profs.entries()].slice(-60)) p[k] = e.v;
+    try { localStorage.setItem(PROF_STORE, JSON.stringify({ who: account()?.id, p })); } catch { /* full */ }
+  }, 600);
+};
+/** The profile kept on this device (undefined when never seen). */
+export function peekProfile(pid: string): Profile | null | undefined {
+  loadProfs();
+  return profs.get(pid)?.v;
+}
+/** Sets the kept profile (after an action, so a reopened profile shows the new state at once). */
+export function putProfile(pid: string, v: Profile | null) {
+  loadProfs();
+  profs.delete(pid);
+  profs.set(pid, { at: Date.now(), v });
+  keepProfs();
+}
+const inflight = new Map<string, Promise<Profile | null>>();
+/** A player's profile: kept for 2 minutes unless `fresh`. */
+export function rankProfile(pid: string, fresh = false): Promise<Profile | null> {
+  loadProfs();
+  const c = profs.get(pid);
+  if (!fresh && c && Date.now() - c.at < 120_000) return Promise.resolve(c.v);
+  const running = inflight.get(pid);
+  if (running) return running;
+  const p = rpc<Profile | null>('rank_profile', { who: pid, d: dayKey() }).then((v) => { putProfile(pid, v); return v; }).finally(() => inflight.delete(pid));
+  inflight.set(pid, p);
+  return p;
+}
+/** Fetches ahead the profiles a tap may open (top 3 first): in one call (`rank_profiles`), kept 10 minutes. A tap
+ *  shows the kept one at once and asks again (`rankProfile`). */
+let batchOk = true;
+export async function preloadProfiles(pids: (string | null | undefined)[]) {
+  if (!account()) return;
+  loadProfs();
+  const todo = [...new Set(pids.filter((x): x is string => !!x))].filter((pid) => { const c = profs.get(pid); return !c || Date.now() - c.at > 600_000; });
+  if (!todo.length) return;
+  if (batchOk) {
+    try {
+      for (let i = 0; i < todo.length; i += 40) {
+        const part = todo.slice(i, i + 40);
+        const got = await rpc<Record<string, Profile | null>>('rank_profiles', { whos: part, d: dayKey() });
+        for (const pid of part) putProfile(pid, got?.[pid] ?? null);
+      }
+      return;
+    } catch (e) {
+      // A server without it yet: one by one, as before.
+      if (!navigator.onLine) return;
+      if (/rank_profiles|PGRST202|function/i.test(String((e as Error)?.message ?? e))) batchOk = false;
+    }
+  }
+  const next = async (): Promise<void> => {
+    const pid = todo.shift();
+    if (!pid) return;
+    try { await rankProfile(pid); } catch { /* offline: tried again next time */ }
+    return next();
+  };
+  await Promise.all([next(), next()]);
+}
+export const myFriends = (fresh = false) => cached('friends', () => rpc<Friends>('rank_my_friends', { d: dayKey() }), fresh);
+export async function askFriend(pid: string): Promise<'sent' | 'friend'> {
+  const r = await rpc<'sent' | 'friend'>('rank_friend_ask', { who: pid });
+  dropCache();
+  return r;
+}
+export async function answerFriend(pid: string, ok: boolean) { await rpc('rank_friend_answer', { who: pid, ok }); dropCache(); }
+export async function removeFriend(pid: string) { await rpc('rank_friend_remove', { who: pid }); dropCache(); }
+export const friendInvite = () => rpc<string>('rank_friend_invite');
+export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
+export const friendInvitePreview = (code: string) =>
+  rpc<{ name: string; avatar: number; frame: number; figure: string | null; tier: number; mine: boolean; friend: boolean } | null>('rank_friend_invite_preview', { code: code.toLowerCase() });
+export async function joinFriend(code: string) { const r = await rpc<Row>('rank_friend_join', { code: code.toLowerCase() }); dropCache(); return r; }
+/** What your profile shows (kept on this device too) and your flame streak, sent when either changed. */
+const SHOWN = 'rankShow';
+export const myShow = (): number => { try { const v = Number(localStorage.getItem(SHOWN)); return Number.isInteger(v) && v >= 0 && v <= 31 && localStorage.getItem(SHOWN) !== null ? v : 7; } catch { return 7; } };
+export async function sendProfile(show = myShow(), force = false) {
+  if (!account()) return;
+  try {
+    const days = streak().days;
+    const sig = `${show}:${days}`;
+    if (!force && localStorage.getItem('rankShowSent') === sig) return;
+    await rpc('rank_set_profile', { show_bits: show, my_streak: days });
+    localStorage.setItem(SHOWN, String(show));
+    localStorage.setItem('rankShowSent', sig);
+  } catch { /* not playing yet, or offline: next time */ }
 }

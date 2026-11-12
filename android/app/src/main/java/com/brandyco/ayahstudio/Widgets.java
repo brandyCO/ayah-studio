@@ -76,7 +76,15 @@ final class Widgets {
             nm.cancel(NOTE_ID);
             return;
         }
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
+        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) != null) {
+            // The name follows the app's language (shown in the phone's notification settings).
+            NotificationChannel had = nm.getNotificationChannel(CHANNEL);
+            String want = WidgetStore.str(data, "prayerChannel", "Next prayer");
+            if (!want.contentEquals(had.getName())) {
+                had.setName(want);
+                nm.createNotificationChannel(had);
+            }
+        } else if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(CHANNEL, WidgetStore.str(data, "prayerChannel", "Next prayer"), NotificationManager.IMPORTANCE_LOW);
             ch.setShowBadge(false);
             ch.setSound(null, null);

@@ -11,18 +11,17 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Board, type Challenge, type Metric, type Row, type Status,
-  StaleMiss, staleFirst, refreshCached,
+  StaleMiss, staleFirst, refreshCached, dropCache,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
 import { star } from './lightChip';
 import { pageSeconds } from '../data/journey';
-import { FREEZE_MAX, bankedFreezes, FREEZE_PRICE, ITEMS, buy, buyFreeze, lightLeft, owns, weekPrize, weeksUntil, won, type Item, type Win, type Wins } from '../data/shop';
+import { lightLeft, owns, weekPrize, won, type Wins } from '../data/shop';
 import { AVATARS, FRAMES, avatar, trophy } from './rankAvatars';
 import { builderCard, openBuilder } from './figureBuilder';
 import { actor, hop as hopFig, type Actor } from './actor';
 import { gestureRow } from './cheers';
-import { freezeArt } from './flat';
 import { pieceArt } from './wardrobeCard';
 import { grantPiece } from '../data/wardrobe';
 import { WARDROBE, weekPiece } from './figure';
@@ -31,19 +30,21 @@ import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
 import { h, haptic, toast } from './dom';
 import { goMushaf, tabBar } from './tabs';
+import { levelLabel, levelOf } from '../data/xp';
+import { withLevel } from './levelLook';
 import './ranks.css';
 
-type View = 'league' | 'global' | 'boards';
+type View = 'league' | 'friends' | 'global' | 'boards';
 const PENDING = 'pendingBoard';
 const PENDING_CH = 'pendingChallenge';
 
 const TIER_ICON: Record<string, string> = { lantern: '🏮', star: '⭐', moon: '🌙', dawn: '🌅', sun: '☀️' };
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
-const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
+export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
 const num = (n: number) => n.toLocaleString();
 
 /** The share sheet (app or browser), else the link copied. */
-async function share(title: string, text: string, url: string) {
+export async function share(title: string, text: string, url: string) {
   try {
     if (isNative()) {
       const { Share } = await import('@capacitor/share');
@@ -55,7 +56,7 @@ async function share(title: string, text: string, url: string) {
   try { await navigator.clipboard.writeText(`${text}\n${url}`); toast(rt('rk.copied')); } catch { toast(url); }
 }
 
-function sheet(title: string, ...body: (Node | string)[]) {
+export function sheet(title: string, ...body: (Node | string)[]) {
   const close = () => d.close();
   const d = h('dialog', { class: 'sheet bottom' },
     h('div', { class: 'sheet-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
@@ -91,6 +92,9 @@ const pts = (n: number, unit = true) => h('span', { class: 'rk-pts' }, ptsIcon()
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
+/** The character's level (from all-time XP) beside a name. */
+export const lvPill = (xp?: number | null) => xp == null ? '' : h('span', { class: `lv-pill${levelOf(xp) >= 40 ? ' gold' : ''}` }, levelLabel(levelOf(xp), true));
+
 /** The top 3 on a podium (owner pick 2026-11-10): gold in the middle, silver left, bronze right, each player
  *  standing as their own character (or their avatar disc on a stand). The steps rise and the players drop
  *  onto them the first time a day; #1 cheers, the rest bob; a tap makes a player hop (yours waves). */
@@ -104,6 +108,7 @@ export function podium(rows: Row[]): HTMLElement | '' {
   const spot = (r: Row, place: number) => {
     const code = r.private ? null : r.figure ?? null;
     const a = code ? actor('rk-pod-fig', code) : null;
+    if (a && r.xp != null) withLevel(a.el, levelOf(r.xp));
     const who = a ? a.el : h('span', { class: 'rk-pod-disc' }, avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, place === 1 ? 64 : 54, r.frame ?? 0));
     const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.name ?? rt('rk.private')} · ${num(r.score)}`,
       onclick: () => { if (a) (r.me ? a.wave() : a.hop(0.6)); else hopFig(el, 12, 480, false); haptic(8); } },
@@ -128,15 +133,15 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
 
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
-    // Round 5: another player's room can be visited (view only) from their row.
-    const visit = !r.me && !r.private && !!r.figure;
+    // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
+    const visit = !!r.pid && (r.me || !r.private);
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${visit ? ' visit' : ''}`,
-      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': rt('room.visit', { name: r.name ?? '' }),
-        onclick: () => void import('./room').then((m) => m.openVisit({ name: r.name, figure: r.figure ?? null, room: r.room ?? null })),
+      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.name ?? rt('rk.private'),
+        onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
@@ -146,6 +151,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): 
 }
 
 export async function showRanks(root: HTMLElement): Promise<() => void> {
+  setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
   let view: View = (() => { try { return (sessionStorage.getItem('rankView') as View) || 'league'; } catch { return 'league'; } })();
   let allTime = false;
   let metric: Metric = 'all';
@@ -246,16 +252,32 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, star(), num(lightLeft())),
       h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame, s.figure)));
     head.replaceChildren(view === 'league' ? h('div', { class: 'rk-headbox' },
-      h('div', { class: `rk-hero t${s.tier}` },
+      heroTap(h('div', { class: `rk-hero t${s.tier} duel-tap`, role: 'button', tabindex: '0', 'aria-label': `${rt('rk.leagueTitle', { tier: tierName(s.tier) })} · ${duelLabel}` },
         ladder(s.tier),
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
         h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
-          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
+          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')))),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);
     void moments(s);
+  }
+  const kindNames: Record<string, string> = {};
+  void import('../i18n/challenges').then((m) => { for (const k of ['pages', 'listen', 'lessons', 'adhkar', 'dhikr'] as const) kindNames[k] = m.clt(`cl.k.${k}`); });
+  // The league card opens the weekly rival full screen (owner 2026-11-12); a "VS" badge with the rival's face says so.
+  let duelLabel = '';
+  void import('../i18n/challenges').then((m) => { duelLabel = m.clt('du.title'); });
+  function heroTap(el: HTMLElement): HTMLElement {
+    const open = (e: Event) => {
+      if ((e.target as Element).closest('.rk-hero-pts')) return;
+      haptic(10);
+      void import('./challenges').then((m) => m.openDuel(() => void paint(true)));
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
+    void import('./challenges').then((m) => m.duelBadge()).then((b) => { if (el.isConnected || !el.querySelector('.du-badge')) el.append(b); });
+    return el;
   }
   /** The five tiers in a row, yours lit and larger, the ones above still to reach. */
   const ladder = (tier: number) => h('div', { class: 'rk-ladder', role: 'img', 'aria-label': rt('rk.leagueTitle', { tier: tierName(tier) }) },
@@ -404,58 +426,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   }
 
   const winsOf = (s: Status): Wins => ({ bestTier: s.bestTier ?? s.tier, bestPlace: s.bestPlace ?? null, wins: s.wins ?? 0, items: wonItems });
-  let shopWeek = '';
-  const winText = (w: Win, it?: Item) => {
-    if (w !== 'week' || !it) return rt(`rk.win.${w}` as RankKey);
-    const n = weeksUntil(it.id, shopWeek);
-    const who = it.kind === 'avatar' ? '#1' : '#2 · #3';
-    return n === 0 ? rt('rk.win.weekNow', { who }) : rt('rk.win.weekIn', { who, n });
-  };
-  /** The shop: freezes kept for later, avatars and frames for Light; what can only be won, and how. */
-  function openShop(s: Status, prizes = false) {
-    const x = winsOf(s);
-    shopWeek = s.weekStart;
-    const left = h('b', {});
-    const freezeRow = h('div', { class: 'rk-shop-freeze me-card' });
-    const grid = (items: Item[]) => h('div', { class: 'rk-shop-grid' }, ...items.map((it) => {
-      const own = owns(it.kind as 'avatar' | 'frame', it.ref as number, x);
-      const art = it.kind === 'avatar' ? avatar(it.ref as number, s.tier, 46) : avatar(s.private ? 0 : s.avatar, s.tier, 46, it.ref as number, s.figure);
-      const wk = it.win === 'week' ? ` wk${weeksUntil(it.id, shopWeek) === 0 ? ' now' : ''}` : '';
-      return h('button', { class: `rk-shop-item${own ? ' own' : ''}${it.win && !own ? ` locked${wk}` : ''}`, onclick: () => {
-        if (own) { d.close(); openLook(s); return; }
-        if (it.win) { toast(winText(it.win, it)); return; }
-        if (!confirm(rt('rk.buyQ', { n: it.price ?? 0 }))) return;
-        if (buy(it)) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
-      } }, art, h('span', { class: 'small' }, own ? rt('rk.owned') : it.win ? `🔒 ${winText(it.win, it)}` : `✦ ${it.price}`));
-    }));
-    const body = h('div', { class: 'sheet-scroll rk-shop' });
-    const repaint = () => {
-      left.textContent = num(lightLeft());
-      const kept = bankedFreezes();
-      freezeRow.replaceChildren(
-        h('span', { class: 'rk-shop-fz' }, freezeArt(44) as unknown as Node),
-        h('div', {}, h('b', {}, rt('rk.freezeTitle')), h('p', { class: 'muted small' }, rt('rk.freezeSub', { n: kept, max: FREEZE_MAX }))),
-        h('button', { class: 'primary brand-btn', disabled: kept >= FREEZE_MAX, onclick: () => {
-          if (!confirm(rt('rk.buyQ', { n: FREEZE_PRICE }))) return;
-          if (buyFreeze()) { haptic(20); toast(rt('rk.bought')); repaint(); } else toast(rt('rk.notEnough'));
-        } }, `✦ ${FREEZE_PRICE}`));
-      body.replaceChildren(
-        h('p', { class: 'rk-shop-left' }, rt('rk.lightLeft'), ' ', left),
-        freezeRow,
-        h('h3', { class: 'me-h2' }, rt('rk.shopAvatars')), grid(ITEMS.filter((i) => i.kind === 'avatar' && i.price)),
-        h('h3', { class: 'me-h2' }, rt('rk.shopFrames')), grid(ITEMS.filter((i) => i.kind === 'frame' && i.price)),
-        h('h3', { class: 'me-h2' }, rt('rk.shopWin')), h('p', { class: 'muted small' }, rt('rk.shopWinSub')),
-        grid(ITEMS.filter((i) => i.win && i.win !== 'week' && i.kind !== 'icon')),
-        weekHead,
-        h('p', { class: 'muted small' }, rt('rk.weekPrizesSub')),
-        // This week's first, then in the order they come round.
-        grid(ITEMS.filter((i) => i.win === 'week').sort((a, b) => weeksUntil(a.id, shopWeek) - weeksUntil(b.id, shopWeek))),
-        h('p', { class: 'muted small' }, rt('rk.shopNote')));
-    };
-    const weekHead = h('h3', { class: 'me-h2' }, rt('rk.shopWeek'));
-    repaint();
-    const d = sheet(rt('rk.shop'), body);
-    if (prizes) requestAnimationFrame(() => weekHead.scrollIntoView({ block: 'start' }));
+  /** The shop, full screen (src/ui/shop.ts); `prizes` opens it on this week's prizes. */
+  function openShop(_s: Status, prizes = false) {
+    void import('./shop').then((m) => m.openShop({ focus: prizes ? 'featured' : undefined, onChange: () => void paint(true) }));
   }
 
   function openLook(s: Status) {
@@ -540,6 +513,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         podium(lg.players),
         list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
+      // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
+      void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
+    } else if (view === 'friends') {
+      const m = await import('./friends');
+      body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
     } else if (view === 'global') {
       const rows = await rankGlobal(metric === 'all' && allTime, metric, fresh);
       const sw = (on: boolean, label: string) => h('button', { class: `chip${allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; void paint(); } }, label);
@@ -655,6 +633,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     return { el, a, b };
   }
   function challengeBox(list: Challenge[]): HTMLElement {
+    // Challenges sent straight to a friend wait for their answer on Me → Challenges; here the running ones show.
+    list = list.filter((c) => !c.asked && !c.incoming);
     const live = list.filter((c) => !c.expired && !(c.over && c.claimed));
     const done = list.filter((c) => c.over && c.claimed).slice(0, 3);
     const card = (c: Challenge) => {
@@ -680,7 +660,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       claim?.addEventListener('click', () => void openChallenge(c, claim));
       const cast = duo(me, them, c.friend);
       return h('div', { class: `rk-ch me-card${c.over ? ' over' : ''}` },
-        h('div', { class: 'me-row' }, h('b', {}, rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
+        h('div', { class: 'me-row' }, h('b', {}, kindNames[c.kind ?? 'read'] ?? rt('rk.chTitle')), h('span', { class: 'muted small' }, c.over ? rt('rk.chOver') : rt('rk.chDay', { d: c.day ?? 1 }))),
         cast?.el ?? '',
         bar(me, true, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 30, status?.frame ?? 0, status?.figure), rt('rk.you')),
         bar(them, false, avatar(c.friend?.private ? null : c.friend?.avatar ?? 0, c.friend?.tier ?? 0, 30, c.friend?.frame ?? 0, c.friend?.figure), who),
@@ -731,15 +711,17 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (pill) bump(pill, 0.14);
     haptic(8);
   }
+  const paintTabs = () => tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
   async function paint(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
-    tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
+    paintTabs();
     ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) });
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
       if (fresh) await report();
       await paintHead(fresh);
+      if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);
       showGain();
     } catch (e) {
@@ -764,6 +746,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
     try { await joinBoard(pending); view = 'boards'; toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
   }
+  // Its strings load beside the league (not before it): the tab is named as soon as they arrive.
+  let friendsLabel = '';
+  void import('../i18n/friends').then((m) => { friendsLabel = m.ft('fr.tab'); if (tabs.childElementCount) paintTabs(); });
+  const pendingFr = (() => { try { return sessionStorage.getItem('pendingFriend'); } catch { return null; } })();
+  if (pendingFr && account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) view = 'friends'; });
   const pendingCh = (() => { try { return sessionStorage.getItem(PENDING_CH); } catch { return null; } })();
   if (pendingCh && account()) {
     try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
@@ -772,14 +759,28 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   void open();
   const off = onAccount(() => void paint(true));
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
-  // Live while open: others' points, names and characters show within seconds, not after a minute.
-  let polling = false;
-  const live = window.setInterval(async () => {
-    if (document.hidden || polling || !account() || document.querySelector('dialog[open], .cel')) return;
-    polling = true;
-    try { await report(); if (await refreshCached()) await paint(false); } finally { polling = false; }
-  }, 8_000);
-  return () => { off(); clearInterval(tick); clearInterval(live); };
+  // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
+  // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
+  const onScreen = (k: string) => k === 'status' || (view === 'league' ? k === 'league'
+    : view === 'friends' ? k === 'friends'
+      : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
+        : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
+  let quiet = 0, stopped = false, live = 0;
+  const poll = async () => {
+    if (stopped) return;
+    if (!document.hidden && account() && !document.querySelector('dialog[open], .cel')) {
+      try {
+        await report();
+        if (await refreshCached(onScreen)) { quiet = 0; await paint(false); } else quiet++;
+      } catch { /* offline: try again later */ }
+    }
+    if (!stopped) live = window.setTimeout(poll, quiet < 3 ? 8_000 : quiet < 6 ? 15_000 : 30_000);
+  };
+  live = window.setTimeout(poll, 8_000);
+  // Back from another app or a sheet, or a tab switched: look again soon.
+  const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
+  document.addEventListener('visibilitychange', wake);
+  return () => { stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */
@@ -830,4 +831,5 @@ export async function showChallengeInvite(root: HTMLElement, code: string): Prom
 /** #/ranks, #/rb/{code} (a board invite) and #/rc/{code} (a friend challenge). */
 export const ranksRoute = (root: HTMLElement, view: string, code?: string) =>
   view === 'rb' ? showBoardInvite(root, code!) : view === 'rc' ? showChallengeInvite(root, code!)
+    : view === 'rf' ? import('./friends').then((m) => m.showFriendInvite(root, code!))
     : view === 'bp' ? import('./pact').then((m) => m.showPactInvite(root, code!)) : showRanks(root);

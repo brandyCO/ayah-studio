@@ -1,11 +1,11 @@
 // Drafts list: reels saved while being edited, newest first. Tap to keep editing; ✕ deletes.
 import './screens.css';
 import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
-import { loadMeta, reference } from '../data/quran';
+import { loadMeta } from '../data/quran';
 import { reciterById } from '../data/reciters';
 import { h, toast } from './dom';
 import { tabBar } from './tabs';
-import { locale, t } from '../i18n';
+import { locale, t, uiRef } from '../i18n';
 
 function ago(at: number) {
   const s = (Date.now() - at) / 1000;
@@ -28,7 +28,7 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
     const el = h('div', { class: 'draft' },
       h('a', { class: 'draft-open', href: draftHash(d.project, d.id) },
         h('span', { class: 'draft-thumb', style: thumb ? `background-image:url("${thumb}")` : '' }),
-        h('strong', {}, s ? reference(s, d.project.from, d.project.to) : `${d.project.surah}:${d.project.from}`,
+        h('strong', {}, s ? uiRef(s, d.project.from, d.project.to) : `${d.project.surah}:${d.project.from}`,
           d.project.series ? h('span', { class: 'muted small' }, ` · ${t('ed.series-part', { k: d.project.series.part, n: d.project.series.of })}`) : null),
         h('span', { class: 'muted small' }, `${reciterById(d.project.reciterId).short} · ${ago(d.updated)}`)),
       h('button', {

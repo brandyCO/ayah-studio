@@ -12,6 +12,8 @@ export const LANGS: { id: Lang; name: string; dir: 'ltr' | 'rtl' }[] = [
 
 let current: Lang = 'en';
 let dict: Partial<Record<Key, string>> = {};
+let arMsg: ((m: string) => string | null) | null = null;
+let generic = '';
 
 /** The interface string for `key`, with {name} placeholders filled from `vars`. */
 export function t(key: Key, vars?: Record<string, string | number>): string {
@@ -44,12 +46,37 @@ function stored(): Lang | null {
 /** A surah's name for the interface: its Arabic name in the Arabic interface, else the English one. */
 export const surahName = (m: { en: string; ar: string }) => (current === 'ar' ? m.ar : m.en);
 
+const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
+const isLink = (s: string) => /^\s*(https?:\/\/|[\w.-]+\.\w{2,}\/)\S*\s*$/.test(s);
+
+/** A message from outside our strings (the server, the network, a thrown error) in the interface
+ *  language: in Arabic, its Arabic when we know it, else the message unchanged. */
+export function localMsg(msg: string): string {
+  if (current !== 'ar' || !arMsg || !msg || hasArabic(msg) || isLink(msg)) return msg;
+  return arMsg(msg) ?? msg;
+}
+
+/** The text to show for an error (or a toast with an unknown English message): in Arabic it is
+ *  never left in English — an unknown one becomes a plain "could not do that, try again". */
+export function errMsg(e: unknown): string {
+  const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e ?? '');
+  if (current !== 'ar' || !arMsg || hasArabic(msg) || isLink(msg)) return msg;
+  return arMsg(msg) ?? (/[A-Za-z]{2,}/.test(msg) ? generic : msg);
+}
+
+/** A reference for the interface ("Al-Baqarah · 2:255", "البقرة · 2:255"). Reels keep `reference()`. */
+export const uiRef = (m: { en: string; ar: string; n: number }, from: number, to = from) =>
+  `${surahName(m)} · ${m.n}:${from}${to > from ? `–${to}` : ''}`;
+
 /** Picks the language (the user's choice, else the device's if we have it) and loads its strings. */
 export async function initI18n() {
   const want = stored() ?? (navigator.language?.toLowerCase().startsWith('ar') ? 'ar' : 'en');
   if (want === 'ar') {
     try {
-      dict = (await import('./ar')).default;
+      const [d, m] = await Promise.all([import('./ar'), import('./arMessages')]);
+      dict = d.default;
+      arMsg = m.arMessage;
+      generic = m.AR_GENERIC;
       current = 'ar';
     } catch {
       /* offline before the strings were cached: English */

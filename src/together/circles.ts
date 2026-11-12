@@ -4,6 +4,7 @@
 // circles on the device. (Khatm circles were removed from the app by the owner on 2026-10-28.)
 import { account } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
+import { errMsg } from '../i18n';
 import { shareableLink } from '../native';
 
 export interface Circle {
@@ -40,8 +41,8 @@ export interface CircleState {
 }
 
 /** A readable message from a Supabase/Postgres error. */
-export const errorText = (e: unknown) =>
-  e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e);
+/** An error's message for the user (in Arabic when the interface is Arabic). */
+export const errorText = (e: unknown) => errMsg(e);
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const sb = await supabase();

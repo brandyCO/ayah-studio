@@ -12,6 +12,7 @@
 //   #/me/room, #/me/prayer, #/me/stats, #/me/library   Me's doors: full screens
 //   #/join/CODE        an invitation to a Khatm circle
 //   #/ramadan          today's Ramadan portion (from a reminder)
+//   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { h, skeleton } from './ui/dom';
@@ -84,6 +85,8 @@ async function route() {
       const { ramadanTarget } = await import('./ui/ramadan');
       history.replaceState(null, '', await ramadanTarget());
       return void route();
+    } else if (view === 'season') {
+      c = await (await import('./ui/season')).showSeason(screen);
     } else if (view === 'kids') {
       if (Number(a)) {
         const { showKidsSurah } = await import('./ui/kidsListen');
@@ -101,7 +104,7 @@ async function route() {
       else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen, a);
     } else if (view === 'learn') {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
-    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp') && a)) {
+    } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp' || view === 'rf') && a)) {
       c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
     } else if (view === 'drafts') {
       const { showDrafts } = await import('./ui/drafts');
@@ -164,6 +167,8 @@ void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
 void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
+// The Ramadan season: its reminders, and the teaser for a new user once their account has synced (first day only).
+setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
 void import('./together/ranks').then((m) => m.watchRanks());
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.

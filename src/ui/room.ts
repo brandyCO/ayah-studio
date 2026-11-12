@@ -113,7 +113,7 @@ function buildScene(visit?: Visit): Built | null {
   const wins = visit ? (theirs?.cups ?? []).map((place) => ({ place, week: '' })) : prizeWins().slice(0, 5);
   const top = h('div', { class: 'rm-shelf top' }, ...wins.map((w) => h('span', { class: `rm-cup p${w.place}`, title: w.week ? `#${w.place} · ${w.week}` : `#${w.place}` }, trophy(w.place, 30))));
   if (!wins.length && !visit) top.append(h('span', { class: 'rm-empty' }, rt('room.emptyCups')));
-  const order = { emerald: 0, gold: 1, silver: 2, bronze: 3 } as const;
+  const order = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 } as const;
   const got = visit ? [] : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
   const low = h('div', { class: 'rm-shelf low' }, ...got.map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
   // The character on its cushion: reading by day, its lantern at night.

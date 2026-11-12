@@ -105,32 +105,49 @@ final class WidgetArt {
         return b;
     }
 
-    // The app's flame (src/ui/flame.ts), in a 100 × 140 box.
-    private static Path outer() {
+    // The app's flame (src/ui/flame.ts → flatFireCore.ts drawFire): one soft teardrop with no outline, a light
+    // outer flame, a deeper inner flame and a white drop, standing on (50, 135) in a 100 × 140 box.
+    private static Path tear(float x, float y, float w, float hh, float lean, float bump) {
+        float R = w, H = Math.max(hh, R * 1.05f), cy = y - R, rise = H - R;
+        float tx = x + R * 0.12f + lean, ty = y - H, sh = Math.min(R * 0.22f, bump * 0.18f);
         Path o = new Path();
-        o.moveTo(62, 6);
-        o.cubicTo(70, 26, 92, 46, 92, 88);
-        o.cubicTo(92, 116, 73, 134, 50, 134);
-        o.cubicTo(27, 134, 8, 116, 8, 90);
-        o.cubicTo(8, 72, 14, 58, 22, 46);
-        o.cubicTo(25, 54, 29, 59, 35, 61);
-        o.cubicTo(36, 42, 44, 22, 62, 6);
+        o.moveTo(x + R, cy);
+        o.cubicTo(x + R, cy - rise * 0.55f, tx + R * 0.32f, ty + rise * 0.28f, tx, ty);
+        o.cubicTo(tx - R * 0.42f, ty + rise * 0.3f, x - R - sh, cy - rise * 0.42f, x - R, cy);
+        o.arcTo(new RectF(x - R, cy - R, x + R, cy + R), 180, -180);
         o.close();
         return o;
     }
 
-    private static Path mid() {
-        Path m = new Path();
-        m.moveTo(51, 66);
-        m.cubicTo(57, 80, 72, 92, 72, 108);
-        m.cubicTo(72, 121, 62, 129, 50, 129);
-        m.cubicTo(38, 129, 28, 121, 28, 108);
-        m.cubicTo(28, 92, 44, 80, 51, 66);
-        m.close();
-        return m;
+    private static void fire(Canvas cv, Paint paint, int top, int bottom, int inTop, int inBottom, int core, float drop, int alpha) {
+        float x = 50, y = 135, w = 40, hh = 104, lean = 5.5f, bump = 31;
+        float soft = Math.min(w * 0.22f, Math.max(hh, w) * 0.2f), base = y - soft * 0.5f;
+        paint.setStyle(Paint.Style.FILL_AND_STROKE);
+        paint.setStrokeJoin(Paint.Join.ROUND);
+        paint.setStrokeWidth(soft);
+        paint.setShader(new LinearGradient(0, base - hh, 0, base, top, bottom, Shader.TileMode.CLAMP));
+        paint.setAlpha(alpha);
+        cv.drawPath(tear(x, base, w, hh, lean, bump), paint);
+        float iw = w * 0.7f, ih = Math.max(w * 0.75f, hh * 0.68f), ib = base - w * 0.08f;
+        paint.setStrokeWidth(soft * 0.75f);
+        paint.setShader(new LinearGradient(0, ib - ih, 0, ib, inTop, inBottom, Shader.TileMode.CLAMP));
+        paint.setAlpha(alpha);
+        cv.drawPath(tear(x, ib, iw, ih, lean * 0.55f, bump * 0.5f), paint);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(core);
+        paint.setAlpha(alpha);
+        float r = w * 0.3f * drop, cx = x + lean * 0.1f, cy = base - w * 0.62f;
+        Path d = new Path();
+        d.moveTo(cx, cy - r * 1.75f);
+        d.cubicTo(cx + r * 0.35f, cy - r * 1.25f, cx + r, cy - r * 0.7f, cx + r, cy);
+        d.arcTo(new RectF(cx - r, cy - r, cx + r, cy + r), 0, 180);
+        d.cubicTo(cx - r, cy - r * 0.7f, cx - r * 0.35f, cy - r * 1.25f, cx, cy - r * 1.75f);
+        d.close();
+        cv.drawPath(d, paint);
     }
 
-    /** tier 0 = out (an ember), 1–3 as in the app; `dim` = lit before but not yet today. */
+    /** tier 0 = out (the flame in grey with a curl of smoke), 1–3 as in the app; `dim` = lit before but not yet today. */
     static Bitmap flame(Pal p, int tier, boolean dim, int hPx) {
         float s = hPx / 140f;
         int wPx = Math.round(100 * s);
@@ -144,20 +161,15 @@ final class WidgetArt {
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setColor(Color.argb(90, 255, 255, 255));
             Path smoke = new Path();
-            smoke.moveTo(50, 118);
-            smoke.cubicTo(44, 104, 58, 96, 50, 82);
-            smoke.cubicTo(44, 70, 56, 62, 50, 48);
+            smoke.moveTo(51, 30);
+            smoke.cubicTo(45, 22, 57, 15, 50, 7);
+            smoke.cubicTo(46, 2, 53, -3, 50, -8);
             cv.drawPath(smoke, paint);
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.parseColor("#3a302b"));
-            cv.drawOval(new RectF(30, 121, 70, 135), paint);
-            paint.setShader(new RadialGradient(50, 125, 12, new int[] { alpha(p.n1, 0.9f), alpha(p.deep, 0) }, null, Shader.TileMode.CLAMP));
-            cv.drawOval(new RectF(38, 120, 62, 130), paint);
+            fire(cv, paint, Color.parseColor("#5b6461"), Color.parseColor("#4a524f"), Color.parseColor("#737c79"),
+                Color.parseColor("#646d6a"), Color.parseColor("#8b9491"), 0.85f, 255);
             return b;
         }
         int glow = tier == 3 ? p.n3 : p.n1;
-        int o1 = tier == 1 ? p.deep2 : p.n1, o2 = tier == 1 ? p.n1 : tier == 2 ? p.n2 : p.n3;
-        int m1 = tier == 1 ? p.n2 : tier == 2 ? p.n3 : p.hi, m2 = tier == 1 ? p.n3 : tier == 2 ? p.hi : p.core;
         if (!dim) {
             RadialGradient g = new RadialGradient(0, 0, 1, new int[] { alpha(glow, 0.55f), alpha(glow, 0.2f), alpha(glow, 0) },
                 new float[] { 0, 0.45f, 1 }, Shader.TileMode.CLAMP);
@@ -168,12 +180,7 @@ final class WidgetArt {
             paint.setShader(g);
             cv.drawOval(new RectF(-12, 36, 112, 152), paint);
         }
-        paint.setShader(new LinearGradient(0, 134, 0, 6, o1, o2, Shader.TileMode.CLAMP));
-        if (dim) paint.setAlpha(140);
-        cv.drawPath(outer(), paint);
-        paint.setShader(new LinearGradient(0, 129, 0, 66, m1, m2, Shader.TileMode.CLAMP));
-        if (dim) paint.setAlpha(140);
-        cv.drawPath(mid(), paint);
+        fire(cv, paint, p.n2, p.n3, p.n1, p.n2, Color.WHITE, tier == 3 ? 1.18f : 1f, dim ? 140 : 255);
         return b;
     }
 
