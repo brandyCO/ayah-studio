@@ -92,8 +92,13 @@
 .du-quest.done .du-quest-t { opacity: .75; }
 .du-quest-go { font-size: 24px; opacity: .6; }
 .du-how { margin: 0; text-align: center; }
-.du-stop { justify-self: center; background: transparent; color: #c9c1ff; border-color: rgba(201,193,255,.35); }
-.du-go { justify-self: center; }
+.du-search { position: relative; justify-self: center; width: 64px; height: 64px; margin-top: 4px; }
+.du-search i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #c9c1ff; opacity: 0; animation: du-ping 2.4s cubic-bezier(.2, .7, .3, 1) infinite; }
+.du-search i:nth-child(2) { animation-delay: .8s; } .du-search i:nth-child(3) { animation-delay: 1.6s; }
+@keyframes du-ping { from { scale: .2; opacity: .9; } to { scale: 1.4; opacity: 0; } }
+.du-hero.empty .du-q-mark { animation: du-q 1.6s ease-in-out infinite alternate; }
+@keyframes du-q { to { scale: 1.12; opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .du-search i, .du-hero.empty .du-q-mark { animation: none; opacity: .6; } }
 @media (prefers-reduced-motion: reduce) { .du-page * { animation: none !important; } }
 
 /* The daily friend streak moment: both characters side by side, one card for every friend kept today. */

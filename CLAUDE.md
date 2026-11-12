@@ -1873,7 +1873,10 @@ duas/reflections section in Me.
       **Weekly rival** (opt-in): tap the league card on Ranks → a full-screen duel (both characters walk in and face off,
       then the score, today's and the duel's countdowns with seconds, two daily duel quests +30 each that open where they
       are done); pairing in the same tier by the closest 14-day average (`rank_my_duel`); score = the week's XP + dhikr
-      (1 a 33, ≤ 10 a day) + adhkar (10 a session, ≤ 4 a day) + quests; last week's chest 100 / 60 / 30. **Daily friend
+      (1 a 33, ≤ 10 a day) + adhkar (10 a session, ≤ 4 a day) + quests; last week's chest 100 / 60 / 30. **Rivals for everyone** (owner 2026-11-12; migration `20261112100000_duels_for_all.sql`, pgTAP 23): no opt-in and no
+      way to stop mid-week (unfair to the other person); anyone who reported in the last 14 days can be paired, the closest
+      league first, then the closest 14-day average (it used to need both to opt in within the same tier, so nobody was found);
+      until someone is free the duel shows only the search (no quests or score) and looks again every 12 s **Daily friend
       moment**: the first time both kept a friend streak today, a small card with both characters on fire (`frDay:`).
       The goals reset pill counts down with seconds
       **The shop, full screen** (owner request 2026-11-12, "a shop-like feeling … every single item"): every Light chip (Me,
