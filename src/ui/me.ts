@@ -165,7 +165,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       const bar = h('div', { class: 'rm-full-bar' },
         h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
         h('h1', {}, mpt('mp.room')),
-        lightChip(() => openLight()));
+        lightChip());
       const c = m.roomScreen(dressUp, bar);
       roomSlot.replaceChildren(c ?? '');
     });
@@ -937,7 +937,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('header', { class: 'topbar' },
         h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
         h('div', { class: 'brand' }, h('h1', {}, title)),
-        lightChip(() => openLight())),
+        lightChip()),
       h('div', { class: `me-page me-page-${page}` }, ...content),
       tabBar('me'));
   } else {
@@ -945,7 +945,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     root.append(
       h('header', { class: 'topbar' },
         h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
-        lightChip(() => openLight()),
+        lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
       prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
