@@ -1957,6 +1957,18 @@ duas/reflections section in Me.
       week follow the ranked week. **Leagues named after the Sahaba's journey** (owner pick 2026-11-12): Dar al-Arqam, Hijrah, Badr,
       Al-Khandaq, Fath Makkah, in the order they happened (no Companion is ranked), each with its own emblem (`tierEmblem()`) and
       colours. Migration `20261112300000_maghrib_week.sql`, pgTAP `maghrib_week.test.sql` (25)
+- [x] M24 Light seen by others + lamp wall + week card (owner "yes", 2026-11-12): the **lamp of Light** (`src/ui/lampPill.ts`)
+      now also shows on profiles ("Gold lamp of Light"), the rival card, friend cards, the friend streak moments (beside the
+      name in the power-up) and under both heroes in the weekly rival face-off. **Lamp wall** (`src/ui/lampWall.ts` + `.css`,
+      strings `src/i18n/lampWall.ts`, data `src/together/lampWall.ts`; from the shop's Featured row and Me → Your Light): one
+      wall every signed-in player sees, of lamps lit with Light (50 / 100 / 250, a purchase `lw:{id}`, so it counts towards the
+      lamp of Light) for someone who passed away: a first name (≤ 24, no numbers or links), him / her and one of four du'as
+      in the wording of Sahih Muslim 963 / 920 (never free text); the giver hidden unless they choose to show their name; others
+      say **Ameen** under a lamp (counted once each); ≤ 3 lamps a day; the giver can take it down; three reports hide it.
+      Migration `20261112400000_lamp_wall.sql` (`rank_lamps`, `rank_lamp_ameens`, `rank_lamp_reports`, no table access;
+      `rank_lamp_light` / `_wall` / `_ameen` / `_remove` / `_report`), pgTAP `lamp_wall.test.sql` (18). The **week card**
+      (`rankRecap.ts`, shown from the player's Friday Maghrib) now has the character cheering beside the league's emblem, the
+      lamp of Light and the streak
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

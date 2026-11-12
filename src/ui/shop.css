@@ -167,3 +167,9 @@
 .sh-giftbar { position: sticky; top: 0; z-index: 3; padding: 8px 14px; text-align: center; font-weight: 800; color: #2b1a00; background: linear-gradient(90deg, #ffd36b, #ffb347); }
 .sh-gift-btn { margin-top: 6px; }
 .sh-lampline { display: block; margin: 2px 0 0; color: #ffe7b8; line-height: 1.35; text-wrap: balance; }
+
+/* The door to the lamp wall (src/ui/lampWall.ts). */
+.sh-feat.lamps { cursor: pointer; background: radial-gradient(90% 120% at 100% 0%, #6a3c7a 0%, #241a52 55%, #0d0f2c 100%); border-bottom: 4px solid #070820; }
+.sh-lw-row { display: flex; align-items: center; gap: 12px; }
+.sh-lw-ic { font-size: 34px; filter: drop-shadow(0 0 10px #ffb648aa); }
+.sh-lw-row span.small { color: #e5d6ff; }

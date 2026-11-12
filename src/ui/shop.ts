@@ -20,6 +20,7 @@ import { ROOM_ITEMS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem } f
 import { tileArt } from './roomShop';
 import { APP_ICONS, pickedIcon, unlockedIcons, type AppIconId } from './appIcons';
 import { lampNext, lampOf } from '../data/shop';
+import { lwt } from '../i18n/lampWall';
 import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, limitedIn, limitedNow, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
 import { shopAdd, shopHas, wallet } from '../data/garden';
 import { ownsPiece, hijri, seasonNow, streakNeed } from '../data/wardrobe';
@@ -375,7 +376,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       h('div', { class: 'sh-lim-row' }, h('span', { class: 'sh-art big' }, lim.art()),
         h('span', { class: 'sh-lim-txt' }, h('b', {}, lim.name), h('span', { class: 'small' }, lim.state() === 'own' ? `✓ ${sht('sh.owned')}` : sht('sh.limSub')),
           lim.state() === 'own' ? '' : h('span', { class: 'sh-foot price' }, star(), num(lim.price ?? 0))))) : '';
-    const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, limCard, stallCard, weekCard, sCard);
+    // The lamp wall: Light spent on a du'a for someone who passed away.
+    const lwCard = h('button', { class: 'sh-feat lamps', type: 'button', onclick: () => void import('./lampWall').then((m) => m.openLampWall({ onChange: paintPurse })) },
+      h('div', { class: 'sh-lw-row' }, h('span', { class: 'sh-lw-ic', 'aria-hidden': 'true' }, '🪔'),
+        h('span', { class: 'sh-lim-txt' }, h('b', {}, lwt('lw.door')), h('span', { class: 'small' }, lwt('lw.doorSub')))));
+    const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, limCard, stallCard, weekCard, lwCard, sCard);
     sections.set('featured', s);
     return s;
   };

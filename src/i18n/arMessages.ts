@@ -85,6 +85,12 @@ const exact: Record<string, string> = {
   'A note is 1 to 140 characters': 'الرسالة من حرف واحد إلى 140 حرفًا',
   'Up to 3 notes a day — thank you for your kindness': 'ثلاث رسائل في اليوم على الأكثر، جزاك الله خيرًا على لطفك',
 
+  // the lamp wall
+  'Write only a first name': 'اكتب الاسم الأول فقط',
+  'You have lit 3 lamps today. Try again tomorrow.': 'أضأت 3 قناديل اليوم، حاول غدًا',
+  'That lamp cannot be lit': 'تعذّر إضاءة هذا القنديل',
+  'You have sent 3 gifts today. Try again tomorrow.': 'أرسلت 3 هدايا اليوم، حاول غدًا',
+  'You can only send gifts to friends': 'يمكنك إرسال الهدايا إلى أصدقائك فقط',
   // gifts and walls (older links)
   'Not your gift': 'هذه الهدية ليست لك',
   'The gift you are replying to is not there any more': 'الهدية التي ترد عليها لم تعد موجودة',
