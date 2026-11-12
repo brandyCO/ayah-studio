@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The streak flame (same shapes as src/ui/flame.ts): the bold streak icon, lit. -->
+<!-- The streak flame (same shape as src/ui/flame.ts / flatFireCore.ts drawFire): one soft teardrop, inner flame, white drop. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="50dp" android:height="70dp" android:viewportWidth="100" android:viewportHeight="140">
-    <path android:fillColor="#FF7A1F" android:pathData="M62 6C70 26 92 46 92 88C92 116 73 134 50 134C27 134 8 116 8 90C8 72 14 58 22 46C25 54 29 59 35 61C36 42 44 22 62 6Z" />
-    <path android:fillColor="#FFC23A" android:pathData="M51 66C57 80 72 92 72 108C72 121 62 129 50 129C38 129 28 121 28 108C28 92 44 80 51 66Z" />
+    <path android:fillColor="#5EEAD4" android:strokeColor="#5EEAD4" android:strokeWidth="8.8" android:strokeLineJoin="round" android:pathData="M90 90.6C90 55.4 73.1 44.52 60.3 26.6C43.5 45.8 4.42 63.72 10 90.6A40 40 0 0 0 90 90.6Z" />
+    <path android:fillColor="#22B3A0" android:strokeColor="#22B3A0" android:strokeWidth="6.6" android:strokeLineJoin="round" android:pathData="M78 99.4C78 75.9 65.34 68.64 56.38 56.68C44.63 69.5 19.21 81.46 22 99.4A28 28 0 0 0 78 99.4Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M50.55 84.8C54.75 90.8 62.55 97.4 62.55 105.8A12 12 0 0 1 38.55 105.8C38.55 97.4 46.35 90.8 50.55 84.8Z" />
 </vector>

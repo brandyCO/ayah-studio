@@ -7,7 +7,7 @@ import { account } from '../cloud/auth';
 import { ft } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  SHOW, answerFriend, friendMilestoneDue, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   type Friend, type Friends, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
@@ -25,7 +25,6 @@ import './friends.css';
 
 const num = (n: number) => n.toLocaleString();
 const PENDING = 'pendingFriend';
-const MILESTONES = [7, 30, 100, 365];
 
 /** Two people side by side: characters (on fire together when `on`), else their avatar discs. */
 function pair(me: string | null, them: Row | Profile | Friend, on: boolean, streak: number, disc = 72): HTMLElement {
@@ -180,19 +179,18 @@ function pairSolo(p: Profile) {
   return a ? withLevel(a.el, levelOf(p.xp ?? myXp())) : avatar(p.avatar ?? 0, p.tier ?? 0, 116, p.frame ?? 0, p.figure);
 }
 
-/** A friend streak milestone reached today (both earned points), each shown once: both characters power up together. */
+/** A friend streak milestone reached (the server counts the days you both earned XP, through today once both have):
+ *  both characters power up together, each milestone once per device. */
 let playing = false;
-async function milestone(list: Friend[]) {
-  if (playing || document.querySelector('dialog[open], .cel')) return;
-  for (const f of list) {
-    if (!f.pid || !f.meToday || !f.themToday || !MILESTONES.includes(f.streak)) continue;
-    const key = `frMs:${f.pid}:${f.streak}`;
-    try { if (localStorage.getItem(key)) continue; localStorage.setItem(key, '1'); } catch { continue; }
-    if (!myFigureCode() || !f.figure) continue;
-    playing = true;
-    try { await powerUp(f.streak, { friend: { code: f.figure, name: f.name ?? '' } }); } finally { playing = false; }
-    return;
-  }
+export async function friendMilestone(list: Friend[]) {
+  const route = location.hash;
+  if (playing || document.hidden || document.querySelector('dialog[open], .cel') || /^#\/(reel|kids|t\/)/.test(route)) return;
+  if (!myFigureCode()) return;
+  const f = friendMilestoneDue(list);
+  if (!f) return;
+  try { localStorage.setItem(`frMs:${f.pid}:${f.streak}`, '1'); } catch { return; }
+  playing = true;
+  try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '' } }); } finally { playing = false; }
 }
 
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
@@ -230,7 +228,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither'))));
   });
-  setTimeout(() => void milestone(data.friends), 900);
+  setTimeout(() => void friendMilestone(data.friends), 900);
   return h('div', { class: 'fr-tab' }, asks,
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
     invite,
