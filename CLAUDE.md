@@ -1925,7 +1925,7 @@ duas/reflections section in Me.
       (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
       **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
       profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112200000_light_value.sql` (`rank_gifts`,
-      `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (23; other rank tests pin the
+      `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
       multiplier to 1). **Learning time** in celebrations: `learnClock()` counts visible lesson / page-memory time into
       `DayRec.lm`; lantern / star / chest moments show "n min this lesson · n min learning today"
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
