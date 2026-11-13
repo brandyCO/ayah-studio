@@ -48,7 +48,8 @@ select throws_ok($$ select * from rank_duel_wait $$, '42501', null, 'the waiting
 reset role;
 
 -- 2. The job: one pass, every active player paired with the closest average, the odd one left.
-select is(rank_pair_duels(), 2, 'five active players make two pairs');
+-- The job also pairs next week when tomorrow starts one (Friday), so count this week's duels only.
+select ok(rank_pair_duels() >= 2, 'five active players make two pairs');
 select is((select count(*)::int from rank_duels where week = rank_week(current_date)), 2, 'two duels this week');
 select ok(exists (select 1 from rank_duels where week = rank_week(current_date)
   and 'aaaaaaaa-0000-0000-0000-000000000071' in (a, b) and 'cccccccc-0000-0000-0000-000000000073' in (a, b)), 'the two busy players face each other');
