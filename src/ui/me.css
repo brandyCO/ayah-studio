@@ -420,3 +420,5 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .bdf-more > summary { cursor: pointer; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); font-weight: 800; text-align: center; list-style: none; }
 .bdf-more > summary::-webkit-details-marker { display: none; }
 .bdf-more[open] > summary { margin-bottom: 8px; }
+/* "More goals (n)" under the first three. */
+.goals-more { display: block; margin: 4px auto 0; }

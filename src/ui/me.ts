@@ -73,6 +73,8 @@ const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); retur
 let period: Period = 'week';
 /** Which goals the goals card shows: today's or this week's (remembered on this device). */
 type GoalTab = 'day' | 'week' | 'ch';
+/** Goals lists opened past their first three this session (owner 2026-11-13: all at once was too much). */
+const goalsOpen = new Set<string>();
 let goalTab: GoalTab = (() => { try { const v = localStorage.getItem('meGoalTab'); return v === 'week' || v === 'ch' ? v : 'day'; } catch { return 'day'; } })();
 /** A friend challenge waits for an answer or a chest, from the Ranks answers kept on this device (no network). */
 const challengeWaiting = () => {
@@ -569,6 +571,28 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     return h('button', { class: 'goal-harvest', onclick: harvestAll },
       h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
   };
+  // Three goals at a time: chests waiting first, then the goals still to do (closest to done first), then the ones
+  // done; the rest behind "More".
+  const SHOWN = 3;
+  const goalsList = (list: GoalProgress[], key: string) => {
+    const rank = (g: GoalProgress) => {
+      const met = g.done >= g.target;
+      const claimed = g.id.startsWith('w:') ? weekClaimed(g.id) : goalClaimed(g.id);
+      return met ? (claimed ? 2 : 0) : 1;
+    };
+    const sorted = list.map((g, i) => ({ g, i, r: rank(g), p: Math.min(1, g.done / g.target) }))
+      .sort((a, b) => a.r - b.r || (a.r === 1 ? b.p - a.p : 0) || a.i - b.i).map((x) => x.g);
+    const open = goalsOpen.has(key) || sorted.length <= SHOWN + 1;
+    const box = h('div', { class: 'goals' }, ...(open ? sorted : sorted.slice(0, SHOWN)).map(goalRow));
+    if (sorted.length > SHOWN + 1) {
+      box.append(h('button', { class: 'chip goals-more', 'aria-expanded': String(open), onclick: () => {
+        haptic(6);
+        if (open) goalsOpen.delete(key); else goalsOpen.add(key);
+        paintGoals();
+      } }, open ? t('goal.fewer') : t('goal.moreN', { n: sorted.length - SHOWN })));
+    }
+    return box;
+  };
   // This week's goals (reset at Friday Maghrib, like Ranks): their own rows and chest for all of them.
   const claimWeekAll = (from?: Element) => openChest(weekAllId(), WEEK_ALL_LIGHT, { title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from);
   const weekBox = () => {
@@ -583,7 +607,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           bar(weekAllId(), n / list.length),
           h('span', { class: 'muted small' }, `${n} / ${list.length}`)),
         goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
-      h('div', { class: 'goals' }, ...list.map(goalRow)));
+      goalsList(list, 'week'));
   };
   // Friday (owner request 2026-11-12): double XP all day, and Al-Kahf as a quest with its own chest.
   const fridayBox = () => {
@@ -708,7 +732,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       ? [weekBox()]
       : [fridayBox(), tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
-        list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
+        list.length ? goalsList(list, 'day') : h('p', { class: 'muted' }, t('goal.none')),
         list.length && stats('all').light > 0 ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },

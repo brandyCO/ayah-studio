@@ -1318,6 +1318,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'goal.count': 'عدّ',
   'goal.less': 'واحدة أقل',
   'goal.more': 'واحدة أكثر',
+  'goal.moreN': 'أهداف أخرى ({n})',
+  'goal.fewer': 'عرض أقل',
   'goal.markDone': 'تم',
   'goal.doneMark': '✓ تمّت',
   'goal.read': 'اقرأ',
