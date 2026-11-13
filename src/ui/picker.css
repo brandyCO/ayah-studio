@@ -1,0 +1,9 @@
+/* Choose ayat (F16) and the city search for prayer times; loaded with them. */
+.ap-form { display: grid; gap: 12px; }
+.ap-row { display: grid; gap: 4px; }
+.ap-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ap-note { margin: 0; }
+.ap-go { width: 100%; padding-block: 14px; font-size: 1.02rem; }
+.ap-mushaf { margin: 12px auto 0; display: block; }
+.city-search { display: grid; gap: 6px; margin-top: 12px; }
+.city-list:empty { display: none; }

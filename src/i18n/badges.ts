@@ -48,7 +48,7 @@ const en = {
   'ic.use': 'Use', 'ic.inUse': 'In use', 'ic.locked': 'Locked', 'ic.set': 'Your new icon shows when you leave the app',
   'ic.web': 'Shows as this tab’s icon here, and on your home screen in the Android app',
   'ic.new': 'New app icon', 'ic.newSub': '{name} is yours. Wear it on your home screen',
-  'step': 'Next: {tier}', 'all': 'Every tier earned',
+  'step': 'Next: {tier}', 'all': 'Every tier earned', 'more': '{n} more to discover',
 };
 export type BadgeKey = keyof typeof en;
 const ar: Partial<Record<BadgeKey, string>> = {
@@ -96,7 +96,7 @@ const ar: Partial<Record<BadgeKey, string>> = {
   'ic.use': 'استخدمها', 'ic.inUse': 'مستخدمة', 'ic.locked': 'مقفلة', 'ic.set': 'تظهر أيقونتك الجديدة عند خروجك من التطبيق',
   'ic.web': 'تظهر هنا كأيقونة هذه الصفحة، وعلى شاشتك الرئيسية في تطبيق أندرويد',
   'ic.new': 'أيقونة جديدة للتطبيق', 'ic.newSub': '{name} لك الآن. ضعها على شاشتك الرئيسية',
-  'step': 'التالي: {tier}', 'all': 'حصلت على كل المستويات',
+  'step': 'التالي: {tier}', 'all': 'حصلت على كل المستويات', 'more': '{n} أوسمة أخرى تنتظر اكتشافها',
 };
 
 export function bt(k: BadgeKey, vars?: Record<string, string | number>): string {

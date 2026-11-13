@@ -1,4 +1,5 @@
 import { icon } from './icons';
+import { todaysAyah } from '../data/daily';
 // Drafts list: reels saved while being edited, newest first. Tap to keep editing; ✕ deletes.
 import './screens.css';
 import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
@@ -43,7 +44,12 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
       }, '✕'));
     return el;
   };
-  const empty = () => h('p', { class: 'muted empty empty-glow' }, t('dr.empty'));
+  // F16: an empty list offers the next tap, not only a sentence about it.
+  const empty = () => h('div', { class: 'empty empty-glow dr-empty' },
+    h('p', { class: 'muted' }, t('dr.empty')),
+    h('button', { class: 'primary brand-btn', onclick: () => void todaysAyah().then((d) => { location.hash = d ? `#/reel/${d.s}/${d.from}-${d.to}` : '#/'; }) },
+      icon('sparkle', 18), t('dr.make')),
+    h('button', { class: 'chip', onclick: () => void import('./ayahPicker').then((m) => m.openAyahPicker()) }, t('dr.choose')));
 
   grid.append(...drafts.map(card));
   root.append(

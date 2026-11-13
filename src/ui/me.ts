@@ -861,17 +861,23 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       return h('div', { class: 'bdf' },
         h('div', { class: 'bdf-head' }, h('b', {}, bt(`f.${d.fam}` as BadgeKey)),
           h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
-        h('div', { class: 'bdf-tiers' }, ...list.map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
+        // F42: what is earned and the next medal only, not five grey ones.
+        h('div', { class: 'bdf-tiers' }, ...list.filter((b) => b.earned || b === next).map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
           badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
           b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
         next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
           h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
     };
     const groups: BadgeGroup[] = ['read', 'listen', 'learn', 'dua', 'goals', 'ranks', 'create'];
-    const byFamily = () => groups.flatMap((g) => {
-      const rows = [...fams.values()].filter((l) => l[0].def.group === g);
-      return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
-    });
+    // F42: families with nothing yet fold into "n more to discover" at the end.
+    const begun = (l: BadgeState[]) => l.some((b) => b.earned || b.have > 0);
+    const byFamily = () => {
+      const quiet = [...fams.values()].filter((l) => !begun(l));
+      return [...groups.flatMap((g) => {
+        const rows = [...fams.values()].filter((l) => l[0].def.group === g && begun(l));
+        return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
+      }), quiet.length ? h('details', { class: 'bdf-more' }, h('summary', {}, bt('more', { n: quiet.length })), ...quiet.map(famRow)) : ''];
+    };
     // On Me: the newest earned first, then the next tier of each family, closest first.
     const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : b.earned! < a.earned! ? -1 : b.def.step - a.def.step));
     const next = [...fams.values()].map((l) => l.find((b) => !b.earned)).filter((b): b is BadgeState => !!b).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
@@ -915,22 +921,41 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       door('library', 'library', mpt('mp.lib'), mpt('mp.libSub')));
   };
 
+  // F21: Library as cards: reel thumbnails, the last pages read as paper cards, bookmarks grouped by surah
+  // (hidden until there is one).
+  let libUrls: string[] = [];
   const paintLibrary = () => {
     const bms = bookmarks();
-    const recent = recentPages().slice(0, 3);
+    const recent = recentPages().slice(0, 6);
     const ref = (s: number, a: number) => uiRef(meta[s - 1] as SurahMeta, a, a);
+    const reels = h('div', { class: 'lib-row lib-reels' });
+    void import('../data/drafts').then(async (dr) => {
+      const list = (await dr.listDrafts().catch(() => [])).slice(0, 8);
+      libUrls.forEach((u) => URL.revokeObjectURL(u));
+      libUrls = [];
+      reels.replaceChildren(...(list.length ? list.map((d) => {
+        const url = d.thumb ? URL.createObjectURL(d.thumb) : '';
+        if (url) libUrls.push(url);
+        return h('a', { class: 'lib-reel', href: dr.draftHash(d.project, d.id) },
+          h('span', { class: 'lib-reel-pic', style: url ? `background-image:url("${url}")` : '' }),
+          h('span', { class: 'lib-cap' }, uiRef(meta[d.project.surah - 1] as SurahMeta, d.project.from, d.project.to)));
+      }) : [h('button', { class: 'lib-reel lib-new', onclick: () => void import('./ayahPicker').then((m) => m.openAyahPicker()) },
+        h('span', { class: 'lib-reel-pic' }, icon('plus', 28)), h('span', { class: 'lib-cap' }, t('dr.choose')))]));
+    });
+    const bySurah = new Map<number, typeof bms>();
+    for (const b of bms) bySurah.set(b.s, [...(bySurah.get(b.s) ?? []), b]);
     libBox.replaceChildren(
-      h('h2', { class: 'me-h' }, t('lib.title')),
-      h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => openBookmarks() }, icon('bookmark', 18), t('lib.bookmarks', { n: bms.length })),
-        h('a', { class: 'menu-item', href: '#/drafts' }, icon('film', 18), t('lib.reels')),
-        ...recent.map((r) => h('a', { class: 'menu-item', href: `#/s/${r.s}/${r.a}` },
-          h('span', {}, icon('book', 18), ref(r.s, r.a)), h('span', { class: 'muted small' }, ` · ${t('common.page', { n: r.page })}`)))));
-    function openBookmarks() {
-      dialog(t('menu.bookmarks'), bms.length
-        ? h('div', { class: 'sheet-scroll menu' }, ...bms.map((b) => h('a', { class: 'menu-item', href: `#/s/${b.s}/${b.a}` }, ref(b.s, b.a))))
-        : h('p', { class: 'muted' }, t('bm.empty')));
-    }
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, icon('film', 20), t('lib.reels')), h('a', { class: 'chip', href: '#/drafts' }, t('lib.all'))),
+      reels,
+      recent.length ? h('h2', { class: 'me-h' }, icon('book', 20), t('lib.lastRead')) : '',
+      recent.length ? h('div', { class: 'lib-row' }, ...recent.map((r) => h('a', { class: 'lib-page', href: `#/s/${r.s}/${r.a}` },
+        h('span', { class: 'lib-page-n' }, String(r.page)),
+        h('span', { class: 'lib-page-ar', lang: 'ar' }, (meta[r.s - 1] as SurahMeta).ar),
+        h('span', { class: 'lib-cap' }, ref(r.s, r.a))))) : '',
+      bms.length ? h('h2', { class: 'me-h' }, icon('bookmark', 20), t('menu.bookmarks')) : '',
+      ...[...bySurah].map(([s, list]) => h('div', { class: 'lib-bm' },
+        h('b', {}, surahName(meta[s - 1] as SurahMeta)),
+        h('div', { class: 'chips' }, ...list.map((b) => h('a', { class: 'chip', href: `#/s/${b.s}/${b.a}` }, `${b.s}:${b.a}`))))));
   };
 
   const paintPrayer = async () => {
@@ -941,7 +966,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
     } }, ps.lat === null ? t('pr.setLocation') : t('pr.update'));
     if (ps.lat === null) {
-      prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate);
+      // F16: an empty Prayer times page offers a city search too (for when location is off or refused).
+      const city = h('div', {});
+      void import('./citySearch').then((m) => city.replaceChildren(m.citySearch()));
+      prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate, city);
       if (prayerLine) { prayerLine = ''; paintDoors(); }
       return;
     }
@@ -1152,6 +1180,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           toast(t('pr.finding'));
           const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
         } }, ps.lat === null ? t('pr.setLocation') : t('pr.update')),
+        ps.lat === null ? cityBox : '',
         h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
         h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
           ...[false, true].map((hanafi) => h('button', {
@@ -1211,6 +1240,8 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
   const subTitle: Record<SetPage, () => string> = {
     reading: () => t('set.reading'), prayer: () => t('set.rowPrayer'), notes: () => t('set.rowNotes'), quran: () => t('menu.gYours'), app: () => t('set.app'),
   };
+  const cityBox = h('div', {});
+  void import('./citySearch').then((m) => cityBox.replaceChildren(m.citySearch()));
   const pageInput = h('input', { type: 'number', class: 'search', min: '1', max: '604', placeholder: t('menu.pagePlaceholder', { n: 604 }), inputmode: 'numeric' }) as HTMLInputElement;
   const openTranslations = async () => {
     const { translationList } = await import('./translationPicker');

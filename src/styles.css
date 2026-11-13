@@ -1906,6 +1906,8 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .lt-chip.lt-empty { opacity: 0; pointer-events: none; }
 
 /* F3: one line-icon set. An icon before a label sits on the text's line with a small gap (the studio keeps its own). */
-body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary) > svg:first-child:not(:only-child) {
+/* Label icons are drawn at 14–20 px; bigger ones stand alone (icon buttons, tiles), so they get no gap. */
+body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary) > svg:first-child:is([width="14"], [width="16"], [width="18"], [width="20"]) {
   flex: none; vertical-align: -0.22em; margin-inline-end: 0.45em; }
-body .menu-item > svg:first-child:not(:only-child) { margin-inline-end: 0; opacity: .8; }
+body .menu-item > svg:first-child:is([width="16"], [width="18"], [width="20"]) { margin-inline-end: 0; opacity: .8; }
+

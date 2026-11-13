@@ -81,7 +81,7 @@ export async function openCreate() {
       h('button', {
         class: 'menu-item create-item c-pick', onclick: () => {
           close();
-          goMushaf('pick');
+          void import('./ayahPicker').then((m) => m.openAyahPicker());
         },
       }, h('span', { class: 'create-ic brand' }, icon('plus', 22)),
       h('span', { class: 'create-txt' }, h('b', {}, t('create.pick')), h('span', { class: 'muted small' }, t('create.pickSub')))),

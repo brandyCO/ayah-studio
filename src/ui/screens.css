@@ -22,3 +22,6 @@
   .surah-num, .nav-group-title, .hit-ref { color: #3dd1ad; }
   .nav-tabs .tab.on { background: #0e8c7d; }
 }
+
+/* F16: an empty Drafts list offers the next tap */
+.dr-empty { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 40px 20px; }
