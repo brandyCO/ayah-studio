@@ -279,17 +279,18 @@
 .aic-lock { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 22px; }
 .aic-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .aic-txt b { font-weight: 800; }
-.aic-opt.r-sapphire:not(.locked) .aic-img { box-shadow: 0 0 0 2px #4a86c8, 0 6px 18px -4px #2f6ee0; }
-.aic-opt.r-legend:not(.locked) .aic-img { box-shadow: 0 0 0 2px #ffcf55, 0 6px 20px -4px #f0a020; }
-.aic-opt.r-celestial:not(.locked) .aic-img { box-shadow: 0 0 0 2px #c4a2ff, 0 6px 24px -4px #8a6af0; animation: aic-glow 3s ease-in-out infinite; }
+.aic-opt.r-tier:not(.locked) .aic-img { box-shadow: 0 0 0 2px var(--aic), 0 6px 20px -4px var(--aic); }
+.aic-opt.r-myth:not(.locked) .aic-img { animation: aic-glow 3s ease-in-out infinite; }
+.aic-bar { display: block; height: 5px; margin-top: 4px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--line) 80%, transparent); }
+.aic-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--aic, var(--accent)); }
 .aic-opt.fresh { animation: aic-fresh 1.2s var(--ease-out, ease) 2; }
-@keyframes aic-glow { 50% { box-shadow: 0 0 0 2px #e3cdff, 0 6px 30px 0 #8a6af0; } }
+@keyframes aic-glow { 50% { box-shadow: 0 0 0 2px #fff, 0 6px 30px 0 var(--aic); } }
 @keyframes aic-fresh { 40% { scale: 1.03; } }
 .aic-new { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; margin-bottom: 10px; border-radius: 16px; color: inherit; text-decoration: none;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent) inset; }
+  background: linear-gradient(120deg, color-mix(in srgb, var(--aic, var(--accent)) 22%, transparent), transparent); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--aic, var(--accent)) 55%, transparent) inset; }
 .aic-new .aic-img { width: 48px; height: 48px; border-radius: 12px; }
 .aic-go { font-size: 22px; opacity: .6; }
-@media (prefers-reduced-motion: reduce) { .aic-opt.r-celestial .aic-img, .aic-opt.fresh { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .aic-opt.r-myth .aic-img, .aic-opt.fresh { animation: none; } }
 .me-chip.me-level { text-decoration: none; font-weight: 900; color: #fff; background: color-mix(in srgb, #6c5ce7 70%, transparent); }
 
 /* Sync, as the user sees it (cloud/sync.ts): a new phone's streak while the account's data arrives, the

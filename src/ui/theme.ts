@@ -5,6 +5,7 @@
 // Picked per device and synced with the account (pref `brandTheme`).
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { touchPref } from './prefs';
+import { pickedTier } from '../data/iconTiers';
 
 export interface BrandTheme {
   id: string;
@@ -156,22 +157,8 @@ function rewardCss(x: BrandTheme): string {
 // leaves the screen — AppIcons.java; icons by scripts/make-icons.py --themes).
 const AppIcon = registerPlugin<{ set(o: { id: string }): Promise<void> }>('AppIcon');
 
-/** The web tab / bookmark icon in the theme's colours: public/icon.svg (light in the ayah marker) on the
- *  theme's night tile, with the colours scripts/make-icons.py `theme_colors` uses for the app icons. */
-export function themeIconUrl(x = themeById(themeId())): string {
-  if (x.id === DEFAULT_THEME) return `${import.meta.env.BASE_URL}icon.svg`;
-  const h = x.hue, line = x.accentDark, ring = x.fill[x.fill.length - 1];
-  const glow = (id: string, r: number, stops: string) => `<radialGradient id="${id}" cx="256" cy="256" r="${r}" gradientUnits="userSpaceOnUse">${stops}</radialGradient>`;
-  const sq = `<rect x="138" y="138" width="236" height="236" rx="16.52" fill="none" stroke="${line}" stroke-width="12.98" stroke-linejoin="round"`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="tg" cx="50%" cy="46%" r="75%">`
-    + `<stop offset="0" stop-color="${hslHex(h, 49, 8.4)}"/><stop offset="1" stop-color="${hslHex(h, 50, 3.1)}"/></radialGradient>`
-    + glow('lg', 146.32, `<stop offset="0" stop-color="${line}" stop-opacity=".95"/><stop offset=".22" stop-color="${line}" stop-opacity=".55"/><stop offset=".6" stop-color="${line}" stop-opacity=".12"/><stop offset="1" stop-color="${line}" stop-opacity="0"/>`)
-    + glow('lc', 25.96, '<stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>')
-    + `</defs><rect width="512" height="512" rx="115" fill="url(#tg)"/><circle cx="256" cy="256" r="146.32" fill="url(#lg)"/>`
-    + `${sq}/>${sq} transform="rotate(45 256 256)"/>`
-    + `<circle cx="256" cy="256" r="77.88" fill="none" stroke="${ring}" stroke-width="7.14" opacity=".8"/><circle cx="256" cy="256" r="25.96" fill="url(#lc)"/></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
+/** The web tab / bookmark icon: the theme's character icon (public/icons/theme-{id}.webp, scripts/make-character-icons.py). */
+export const themeIconUrl = (x = themeById(themeId())): string => `${import.meta.env.BASE_URL}icons/theme-${x.id}.webp`;
 
 function setFavicon(x: BrandTheme) {
   const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
@@ -180,9 +167,8 @@ function setFavicon(x: BrandTheme) {
 
 let iconFor = '';
 /** An unlockable icon the user wears instead of the theme's (src/ui/appIcons.ts; synced as account data). */
-const pickedIcon = () => { try { const v = localStorage.getItem('appIconPick'); return v && /^(sapphire|legend|celestial)$/.test(v) ? v : ''; } catch { return ''; } };
 function setAppIcon(x: BrandTheme) {
-  const pick = pickedIcon();
+  const pick = pickedTier();
   const id = pick || x.id;
   if (iconFor === id) return;
   iconFor = id;
