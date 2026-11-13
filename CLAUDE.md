@@ -2036,6 +2036,12 @@ duas/reflections section in Me.
       beside the streak flame, up to four tiles: pages, minutes, adhkar, surahs / lessons / dhikr, never a 0; the seven days lit;
       "Read with me on Ayah Studio"; inside the story safe area y 250–1650), shared with the app link; Me shows "Your week is
       ready" from Friday Maghrib through Sunday once a week (`weekStorySeen`), Stats has Share my week any time (this week so far)
+      **Invite a friend, both get Light** (owner decision 2026-11-13, marketing plan): a player new to Ranks (≤ 7 days) who
+      joins through a friend's link (`rank_friend_join`) is recorded once in `rank_invites` (migration
+      `20261114000000_invite_rewards.sql`, pgTAP `invite_rewards.test.sql`); after the invitee's 3rd day with points each side
+      claims 50 Light once (`rank_my_invites()`, `rank_claim_invite(pid | null)` → `claimGoal('iv:…')`; an inviter is
+      rewarded for ≤ 20 friends). Friends tab: "Light for inviting" rows (n of 3 days, Claim). The week story card shares the
+      signed-in player's invite link (`storyLink()`), else the app link
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

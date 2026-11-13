@@ -141,13 +141,25 @@ export async function storyCanvas(now = new Date()): Promise<HTMLCanvasElement> 
   return c;
 }
 
+/** Signed in: your friend invite link (a new friend joining with it gives you both Light), else the app's link. */
+async function storyLink(): Promise<string> {
+  try {
+    const { account } = await import('../cloud/auth');
+    if (account()) {
+      const { friendInvite, friendInviteLink } = await import('../together/ranks');
+      return friendInviteLink(await friendInvite());
+    }
+  } catch { /* not in Ranks yet, or offline */ }
+  return shareableLink('#/');
+}
+
 /** Shares the card (Android share sheet, Web Share with files, else a download and the text copied). */
 export async function shareStory() {
   try {
     const c = await storyCanvas();
     const blob = await new Promise<Blob>((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('no image'))), 'image/png'));
     const name = `ayah-studio-my-week-${storyWeek().week}.png`;
-    const text = `${fe('ws.text')} ${shareableLink('#/')}`;
+    const text = `${fe('ws.text')} ${await storyLink()}`;
     storySeen();
     if (isNative()) {
       const { Filesystem, Directory } = await import('@capacitor/filesystem');

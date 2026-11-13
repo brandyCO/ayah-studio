@@ -597,6 +597,18 @@ export const friendInvite = () => rpc<string>('rank_friend_invite');
 export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
 export const friendInvitePreview = (code: string) =>
   rpc<{ name: string; avatar: number; frame: number; figure: string | null; tier: number; mine: boolean; friend: boolean } | null>('rank_friend_invite_preview', { code: code.toLowerCase() });
+// --- invite rewards (marketing plan 2026-11-13): a new player joining with your link; after their 3rd day with points you both claim 50 Light once ---
+export interface InviteRow { name: string | null; days: number; claimed: boolean }
+export interface Invites { light: number; days: number; cap: number; rewarded: number; invitedBy: InviteRow | null; friends: (InviteRow & { pid: string })[] }
+export const myInvites = (fresh = false) => cached('invites', () => rpc<Invites>('rank_my_invites'), fresh);
+/** Claims once: pid = the friend you invited, null = your own reward for being invited. */
+export async function claimInvite(pid: string | null): Promise<number> {
+  const r = await rpc<{ light: number; id: string } | null>('rank_claim_invite', { who: pid });
+  dropCache();
+  if (!r) return 0;
+  claimGoal(`iv:${r.id}`, r.light);
+  return r.light;
+}
 export async function joinFriend(code: string) { const r = await rpc<Row>('rank_friend_join', { code: code.toLowerCase() }); dropCache(); return r; }
 /** What your profile shows (kept on this device too) and your flame streak, sent when either changed. */
 const SHOWN = 'rankShow';
