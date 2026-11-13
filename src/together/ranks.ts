@@ -193,6 +193,8 @@ export async function refreshCached(live: (key: string) => boolean): Promise<boo
   return changed;
 }
 
+/** One short fingerprint of everything the league screen shows (null on an older server: then everything is asked). */
+export const rankPulse = () => rpc<string | null>('rank_pulse', { d: rankDay() }).catch(() => null);
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: rankDay() });
   if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }

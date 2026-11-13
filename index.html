@@ -25,7 +25,6 @@
     <style>
       /* Fonts live in public/fonts (see LICENSES.md); relative URLs work on Pages, Capacitor and Tauri. */
       @font-face { font-family: 'UthmanicHafs'; src: url('./fonts/UthmanicHafs.woff2') format('woff2'); font-display: block; }
-      @font-face { font-family: 'SuraNames'; src: url('./fonts/SuraNames.woff2') format('woff2'); font-display: block; }
       @font-face { font-family: 'AmiriQuran'; src: url('./fonts/AmiriQuran.woff2') format('woff2'); font-display: swap; }
       /* Arabic the system font cannot draw (Quranic marks in surah names, Arabic interface): only loaded when needed */
       @font-face { font-family: 'QuranMarks'; src: url('./fonts/AmiriQuran.woff2') format('woff2'); font-display: swap; unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
@@ -33,6 +32,7 @@
       @font-face { font-family: 'Nunito'; src: url('./fonts/Nunito-latin.woff2') format('woff2'); font-weight: 200 1000; font-display: swap; unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       @font-face { font-family: 'Nunito'; src: url('./fonts/Nunito-latin-ext.woff2') format('woff2'); font-weight: 200 1000; font-display: swap; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
     </style>
+    <link rel="preload" href="./fonts/Nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
     <script>
       // Opening on the mushaf (the usual launch): start the page layout download right away, in parallel
       // with the app's code, instead of after it (saves a round trip and the script time on a first visit).
@@ -43,6 +43,17 @@
           l.rel = 'preload'; l.as = 'fetch'; l.crossOrigin = 'anonymous';
           l.href = './data/mushaf.json?v=%DATA_VERSION%';
           document.head.appendChild(l);
+          // And the page's own font (the page left last time, or Al-Fatiha's page on a first open), so the words
+          // can be drawn as soon as the layout is in, instead of only then starting their download.
+          var lp = JSON.parse(localStorage.getItem('lastPage') || 'null');
+          var home = !h || h === '#' || h === '#/', m = /^#\/s\/(\d+)$/.exec(h);
+          var pg = lp && (home || h === lp[0]) ? lp[1] : m ? %SURAH_PAGES%[m[1] - 1] : home ? 1 : 0;
+          if (pg >= 1 && pg <= 604) {
+            var f = document.createElement('link');
+            f.rel = 'preload'; f.as = 'font'; f.type = 'font/woff2'; f.crossOrigin = 'anonymous';
+            f.href = './fonts/qcf-v2/p' + pg + '.woff2';
+            document.head.appendChild(f);
+          }
         }
       } catch (e) { /* storage blocked */ }
     </script>

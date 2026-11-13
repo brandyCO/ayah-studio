@@ -413,7 +413,7 @@
 .tv-top .icon-btn { color: #eef4f0; background: rgba(255,255,255,.1); }
 .tv-title { text-align: center; display: grid; }
 .tv-title h1 { margin: 0; font-size: 20px; font-family: var(--ui-round, inherit); font-weight: 900; }
-.tv-title span { font-family: 'SuraNames', 'AmiriQuran', serif; opacity: .8; }
+.tv-title span { font-family: 'AmiriQuran', serif; opacity: .8; }
 .tv-card { position: absolute; inset: auto 12px calc(12px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; display: grid; gap: 8px; padding: 14px; border-radius: 20px; background: rgba(12,20,17,.72); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
 .tv-note { margin: 0; font-weight: 700; text-align: center; }
 .tv-row { display: flex; gap: 8px; }

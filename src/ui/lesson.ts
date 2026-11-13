@@ -13,6 +13,7 @@
 // The text is the bundled Quran text, split only at its spaces and never changed (rule 1); hidden words
 // keep their place. The reference is always on screen (rule 2). Words are lit only from the reciter's
 // word timings (rule 8). Tap a word: its Quran.com meaning and, where timed, its sound.
+import { suraName } from './suraName';
 import './learn.css';
 import {
   LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
@@ -291,7 +292,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         if (l[0] === 'h') {
           headSurah = Number(l[1]);
           el.append(h('div', { class: `mp-line mp-surah${headSurah === s && range[0] === 1 ? '' : ' dim'}` },
-            h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0')))));
+            h('div', { class: 'surah-frame' }, suraName(Number(l[1])))));
           continue;
         }
         if (l[0] === 'b') {

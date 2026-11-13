@@ -364,7 +364,7 @@ body.mushaf-wide .mushaf-page > * { flex-shrink: 0; }
   outline: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2.5px;
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
-.surah-name { font-family: 'SuraNames'; font-size: calc(var(--lh) * 0.62); line-height: 1; color: var(--ink); }
+.surah-name { font-size: calc(var(--lh) * 0.62); line-height: 1; color: var(--ink); }
 .mp-basmala svg { height: calc(var(--lh) * 0.8); width: auto; color: var(--ink); }
 .mp-num { flex: none; font-size: var(--fs-xs); color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
  /* While a page moves, the sheets cast a soft edge shadow (a page-like feel). */

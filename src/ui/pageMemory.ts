@@ -10,6 +10,7 @@
 // The page is drawn with its QCF page font from the bundled glyph codes; choices are the bundled text
 // split at its spaces, never altered (rule 1; the printed ayah number is left off choices so it gives
 // nothing away). Every screen shows the page and its surah reference (rule 2).
+import { suraName } from './suraName';
 import './learn.css';
 import './learnPath.css';
 import { due, level, recordPage, strength } from '../data/pageMemory';
@@ -92,7 +93,7 @@ function pageEl(mushaf: Mushaf, mod: Mod, p: number, data: PageData, onWord: (li
   el.style.fontFamily = `qcf-p${p}`;
   const basmala = fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()).catch(() => '');
   mushaf.pages[p - 1].lines.forEach((l, li) => {
-    if (l[0] === 'h') { el.append(h('div', { class: 'mp-line mp-surah' }, h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0'))))); return; }
+    if (l[0] === 'h') { el.append(h('div', { class: 'mp-line mp-surah' }, h('div', { class: 'surah-frame' }, suraName(Number(l[1]))))); return; }
     if (l[0] === 'b') { const b = h('div', { class: 'mp-line mp-basmala' }); void basmala.then((x) => { b.innerHTML = x; }); el.append(b); return; }
     const line = h('div', { class: 'mp-line text', 'data-line': String(li) });
     line.addEventListener('click', (e) => { if (e.target === line) onLine(li); });
