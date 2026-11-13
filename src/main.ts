@@ -15,7 +15,8 @@
 //   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
-import { h, skeleton } from './ui/dom';
+import { closeSheetsOnRoute } from './ui/backCloses';
+import { h, skeleton, sweepListeners } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
@@ -40,6 +41,7 @@ let routeId = 0;
 
 async function route() {
   const id = ++routeId;
+  closeSheetsOnRoute();
   cleanup?.();
   cleanup = null;
   const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
@@ -53,6 +55,7 @@ async function route() {
   if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
+  sweepListeners(); // listeners of the screen just left
   document.body.dataset.view = view || 'home';
   window.scrollTo(0, 0);
   // A screen that takes a moment (data, fonts) shows a skeleton of itself instead of a blank page,
@@ -68,6 +71,7 @@ async function route() {
       c = await show(screen, Number(a), Number(b) || undefined);
     } else if (view === 'reel' && Number(a) && b) {
       const [from, to] = b.split('-').map(Number);
+      try { localStorage.setItem('studioUsed', '1'); } catch { /* private window */ } // the web warm-up may now keep the studio offline
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
@@ -101,7 +105,7 @@ async function route() {
     } else if (view === 'me') {
       const { showMe, showMeSettings } = await import('./ui/me');
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
-      else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen, a);
+      else c = a === 'settings' ? showMeSettings(screen, b) : await showMe(screen, a);
     } else if (view === 'learn') {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
     } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp' || view === 'rf') && a)) {
@@ -142,7 +146,20 @@ else if (launch) history.replaceState(null, '', lastRead());
 if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
-void initI18n().then(route);
+// Everything below the first screen waits until that screen is up (and the phone has a quiet moment),
+// so a first open downloads and runs only what page 1 needs. Each part is idempotent and listens for
+// later changes itself, so starting it a moment later loses nothing.
+let afterFirst: (() => void)[] | null = [];
+const later = (f: () => void) => { if (afterFirst) afterFirst.push(f); else f(); };
+const runLater = () => {
+  const list = afterFirst;
+  afterFirst = null;
+  for (const f of list ?? []) try { f(); } catch (e) { console.error(e); }
+};
+void initI18n().then(route).finally(() => {
+  if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
+  else setTimeout(runLater, 300);
+});
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
 setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
@@ -150,26 +167,39 @@ const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
-void import('./ui/rewards').then((m) => m.watchRewards());
+later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
 watchVitals(); // real-use speed (this device only, Device check)
-if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
-if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
+if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
+if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
 setupOffline();
 // Problem reports made offline go out now (src/ui/report.ts).
 setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();
-if (isNative()) void import('./ui/morning').then((m) => m.initDailyNative()); // widget + morning ayah (Android)
+if (isNative()) later(() => void import('./ui/morning').then((m) => m.initDailyNative())); // widget + morning ayah (Android)
 void initAuth();
-void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
-void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's relight opened before signing in
+later(() => void import('./ui/circles').then((m) => m.resumePendingJoin())); // an invitation opened before signing in
+later(() => void import('./ui/relight').then((m) => m.resumePendingRelight())); // a friend's relight opened before signing in
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
-void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
+later(() => void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); })));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !afterFirst) void import('./together/relight').then((m) => m.takeRelights()); });
 // The Ramadan season: its reminders, and the teaser for a new user once their account has synced (first day only).
 setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
-void import('./together/ranks').then((m) => m.watchRanks());
+later(() => void import('./together/ranks').then((m) => m.watchRanks()));
+// Web: ask the browser to keep this site's storage (streak, Light, goals) instead of clearing it
+// when space runs low or, on iPhone Safari, after 7 days away. Asked once the user has earned
+// something, so Firefox's question never comes before there is anything to keep.
+if (!isNative()) later(() => {
+  const s = navigator.storage;
+  if (!s?.persist || !s.persisted) return;
+  void s.persisted().then((yes) => {
+    if (yes) return;
+    const ask = () => { window.removeEventListener('journey-changed', ask); void s.persist().catch(() => {}); };
+    if (localStorage.getItem('journey')) ask();
+    else window.addEventListener('journey-changed', ask);
+  }, () => {});
+});
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

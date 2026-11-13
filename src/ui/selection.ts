@@ -4,6 +4,7 @@
 // the reel's estimated length for the last-used reciter. Selectable elements carry data-s (surah)
 // and data-a (ayah).
 import { qdcSurah } from '../data/qdc';
+import { icon } from './icons';
 import { type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, reciterFor } from '../data/reciters';
 import { mp3quranSurah } from '../data/mp3quran';
@@ -11,7 +12,6 @@ import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
 import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
 import { h, toast } from './dom';
 import { openCopy } from './copyAyat';
-import { icon } from './icons';
 import { t, uiRef } from '../i18n';
 import { reelLook, reelReciter } from './prefs';
 
@@ -58,14 +58,14 @@ export function selectionController(o: SelectionOptions) {
     h('button', { class: 'icon-btn', 'aria-label': t('sel.clear'), onclick: () => set(0, null, null) }, '✕'),
     label,
     o.onListen && h('button', { class: 'icon-btn', 'aria-label': t('sel.listen'), title: t('sel.listenTitle'), onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
-    o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': t('sel.bookmark'), title: t('sel.bookmarkTitle'), onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, '🔖'),
+    o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': t('sel.bookmark'), title: t('sel.bookmarkTitle'), onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, icon('bookmark', 22)),
     h('button', { class: 'icon-btn', 'aria-label': t('sel.copy'), title: t('sel.copyTitle'), onclick: () => { const sel = current(); if (sel) openCopy(o.meta[sel.surah - 1], sel.lo, sel.hi); } }, icon('copy', 20)),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, t('sel.translation')),
-    o.onReflect && h('button', { class: 'chip', title: t('sel.reflectTitle'), onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, t('sel.reflect')),
+    o.onReflect && h('button', { class: 'chip', title: t('sel.reflectTitle'), onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, icon('pen', 18), t('sel.reflect')),
     h('button', { class: 'primary brand-btn', onclick: () => {
       const sel = current();
       if (sel) location.hash = `#/reel/${sel.surah}/${sel.lo}-${sel.hi}`;
-    } }, t('sel.reel')));
+    } }, icon('film', 18), t('sel.reel')));
 
   function set(s: number, a: number | null, f: number | null) {
     if (a !== null && f !== null && Math.abs(f - a) + 1 > MAX_AYAT) {

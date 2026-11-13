@@ -10,11 +10,11 @@ import { surahName } from '../i18n';
 import { lt } from '../i18n/learn';
 import { h, toast } from './dom';
 import { icon } from './icons';
+import { clipPcm } from '../cloud/clipFiles';
 
-interface Clip { id: number; surah: number; ayah: number; words: string[]; target: number; score: number | null; flagged: boolean; learner: string; audio: string }
+interface Clip { id: number; surah: number; ayah: number; words: string[]; target: number; score: number | null; flagged: boolean; learner: string; audio: string | null; path?: string | null }
 
-function wavUrl(b64: string): string {
-  const pcm = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+function wavUrl(pcm: Uint8Array<ArrayBuffer>): string {
   const head = new DataView(new ArrayBuffer(44));
   const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) head.setUint8(o + i, s.charCodeAt(i)); };
   str(0, 'RIFF'); head.setUint32(4, 36 + pcm.length, true); str(8, 'WAVE'); str(12, 'fmt ');
@@ -30,7 +30,7 @@ export async function showHarakatReview(root: HTMLElement): Promise<() => void> 
   const counts = h('p', { class: 'muted small hk-counts' });
   root.append(
     h('header', { class: 'lp-top' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('h1', { class: 'lp-title' }, lt('learn.hkTitle')),
       h('span', { class: 'lp-gap' })),
     counts, body);
@@ -58,9 +58,9 @@ export async function showHarakatReview(root: HTMLElement): Promise<() => void> 
     const c = queue.shift();
     if (!c) { say(lt('learn.hkNone')); return; }
     if (url) URL.revokeObjectURL(url);
-    url = wavUrl(c.audio);
-    audio.src = url;
-    void audio.play().catch(() => {});
+    url = '';
+    const pcm = await clipPcm(sb, c);
+    if (pcm) { url = wavUrl(pcm); audio.src = url; void audio.play().catch(() => {}); }
     const note = h('input', { class: 'search', type: 'text', maxlength: '200', placeholder: lt('learn.hkNote') }) as HTMLInputElement;
     const label = async (l: 'right' | 'wrong' | 'unclear') => {
       const { error } = await sb.rpc('harakat_label', { p_id: c.id, p_label: l, p_note: note.value.trim() || null });

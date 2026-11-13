@@ -722,6 +722,25 @@ Pro and a load test come later, when the owner decides to pay).
 - [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
 - [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
 
+### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
+- [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
+      (`src/i18n/enStudio.ts`) and reflections lazy, sw.js network wait 0.8 s, warm-up of the studio only on Wi-Fi
+      or once used (`studioUsed`), web manifest (#234)
+- [x] Journey writes batched (1 s, flushed on hide); `listenWhile()`/`sweepListeners()` stop listeners piling up;
+      back closes the top sheet (`src/ui/backCloses.ts`); player resumes after a stall; export keeps the screen
+      awake and streams to an OPFS file (`fastStart: 'reserve'`) (#236)
+- [x] `tidy_db()` nightly via pg_cron (`20261113000000_nightly_tidy.sql`, pgTAP `tidy.test.sql`);
+      `navigator.storage.persist()` once there is progress; translation default from the phone's languages;
+      og: preview (`public/og.jpg`); reader text size (`readerText`); Learn row at 320 px (#237)
+- [x] PR checks (`.github/workflows/checks.yml`): `scripts/check-quran.mjs` (6236 ayat, 604 pages, pinned sha256 in
+      `scripts/quran-checksums.json`; `--write` after a reviewed text update) and `scripts/smoke.mjs` (main screens,
+      English + Arabic, no page errors / raw keys / sideways scroll)
+- [ ] Owner: release build (AAB, minified, fonts as asset pack, update check) for Play Store; `SENTRY_DSN`
+- [x] Harakat clip audio out of the database into Storage: new clips are files `{user}/{random}.pcm` in the private
+      bucket `harakat-clips` (`src/cloud/clipFiles.ts`, `harakat_clip_add_file`; own folder only, teachers read all;
+      files removed with Forget my clips and account deletion); older clips keep their `audio` and still play
+      (migration `20261113100000_harakat_clips_storage.sql`, pgTAP 29)
+
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
 save to gallery / share sheet; offline audio cache; settings.
@@ -770,6 +789,14 @@ save to gallery / share sheet; offline audio cache; settings.
       gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
       goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
       shine plays once; the streak keeps a softer glow
+      **Character app icon** (owner decision 2026-11-13, "B"): the launcher icon is the builder character cheering inside
+      the white ayah marker with the Light star, on a sunset gradient (default theme); every theme has the same icon on its
+      own gradient; `scripts/make-character-icons.py` (figures from `src/ui/figure.ts`, WebP adaptive layers, one
+      monochrome, `public/icons/theme-{id}.webp` = the web tab icon) replaces the theme part of `make-icons.py`, which now
+      makes only the logo and splash. **Ten unlockable tiers** (Crystal, Molten gold, Emerald garden, Ocean pearl, Aurora,
+      Nebula, Liquid starlight, Prism, Cosmic gate, Pure light; ids in `src/data/iconTiers.ts`) won by XP level 5…50 or
+      sooner by badges / Ranks weeks (`RULES` in `src/ui/appIcons.ts`), replacing Sapphire / Gold / Celestial (old picks
+      move to garden / borealis / prism; their aliases stay in the manifest showing those tiers)
       **App icon follows the theme** (owner request 2026-11-02): one launcher icon per theme (the same light in the
       ayah marker: night tile tinted to the theme's hue, marker + glow in its night accent, inner ring its deep colour; `scripts/make-icons.py --themes` reads `theme.ts` and writes the vector
       backgrounds `drawable/ic_bg_{id}.xml`, adaptive `ic_launcher_{id}` + `_round`, 192 px PNGs for Android 7 and
@@ -973,6 +1000,13 @@ cloud. Build in this order:
       → notifications 3 days before and on the eve (ids 7600–7601, tap → `#/season`). **First-day teaser**: once, to a
       new user (only one day opened) right after their account's first successful sync (`initSeason()`; localStorage
       `seasonTeaser`, synced). No Khatm circle (circles were removed 2026-10-28)
+      **Last ten nights** (owner request 2026-11-12): the season screen's "The last ten nights" — ten lanterns (odd nights gold with a
+      star; kept ones lit; tonight's sways) and tonight's quest from what the app counts (`NIGHT_QUESTS` in `data/season.ts`: pages
+      counted, minutes listened, tasbih dhikr, evening adhkar; odd nights ask a little more, the 27th most), each part with a Go;
+      night N = Ramadan day N (local, with the shift). A kept night opens a chest (20 Light, odd 40, the 27th 60; claim
+      `qn:{year}:{n}`). Keeping 5 gives the Night of Qadr piece (`bg:12`, `nightsKept()` in `earnedPieces`, checked on Eid too).
+      Ranks XP on those days is raised by the server (`rank_xp_mult`: ×1.5, odd ×2, front-end thread); the quest card says so.
+      Me's season card shows tonight's quest state
 - [ ] T9 Your year with the Quran (story cards, recap reel)
 - [ ] T10 Custom domain: App Links, link previews, Tauri sign-in
 
@@ -1390,6 +1424,17 @@ duas/reflections section in Me.
       status line under the card (Syncing… / Synced · n min ago / Saved on this phone · syncs when online), tap it or pull Me down
       to sync now; progress merged from another phone while Me is open counts up with a "From your other phone" note
       (`sync-arrived` event too). Supabase Realtime is not used: the free plan allows 200 connections
+      **Never emptier** (owner report 2026-11-12, "it says synced and the streak, Light and goals went back to zero"): a phone
+      whose storage came back older or empty but kept its install id (an Android backup restored, data cleared) never pulled
+      its own rows (the pull skips this device's writes) and then pushed its emptier journey over them, deleting months too.
+      Now: journeys only ever grow (`src/data/journeyMerge.ts`, lazy: days, flags, claims and Light joined, counts the larger;
+      `m` stays the device's own); once a session — and whenever the journey holds far fewer days than it last sent
+      (`syncMeta.ownDays`) — the round fetches this device's own rows newer than it knows (`syncMeta.own`, the server's
+      `updated_at` returned by the upsert) and joins them in before anything is sent (`mergeOwnJourney`, `mergeOwnLog`;
+      kv, garden, goals, drafts through their usual merges); a month part is sent as deleted only when older than the days
+      kept (`keptFrom()`); a device holding a fuller copy of another device's journey than what arrived sends it back joined
+      (`syncMeta.heal`), and that device takes it in. Tested: restored backup, wiped storage (same id), only the journey
+      lost, fresh install, server already emptied (healed from the other device)
       **Theme colours** (owner request 2026-10-28): the flame (tiers 1–3; the out ember too), completed goal
       rings, Claim buttons, the tab dot, the relight page and every reward moment (art, seed, sparks, rays)
       follow the chosen Theme colours gradient: `rewardPalette()` / `rewardCss()` in `theme.ts` (`--rw-*`);
@@ -1548,6 +1593,15 @@ duas/reflections section in Me.
       swell), a double burst with a gold wash (`.epic`) and the rare card lands with a ring and a "Rare" ribbon. Characters
       (`figure.ts`): head sway, breathing shadow, and in the builder a hop with crouch / stretch / squash on each change (a nod for
       head parts), a glance or fidget every 4–7 s, Surprise me shuffles through looks, Wear it cheers with sparkles
+      **Shop items redrawn** (owner request 2026-11-13, "make each and every item in the shop desirable"): avatars are
+      medallions by kind (`medallion()` in `rankAvatars.ts`): free ones enamel with a raised white emblem, shop ones night
+      enamel with a gold khatam, gold beads, stars and a raised gold emblem, Sun-tier ones a sunburst, champions emerald and
+      gold, jewels a cut stone (table + 16 facets, sparkles); the 12 line symbols became solid two-tone emblems (`GLYPHS`:
+      a lit lantern, crescent and star, khatam, palm with dates, dunes under a sun, waves, snowy peaks, dome, mihrab, rahl with
+      a mushaf, sun, drop). Names for avatars 24–51 and frames 1–13, English and Arabic (`lookName(kind, n, ar)`). Room: rugs
+      shown from above in the tiles (`rugTop()`), carved arches with lamps, cedar panels with stars under a brass rail, veined
+      marble, an embroidered pouf; the kurta's vest edged in gold with paisleys, the embroidered abaya with a vine of flowers,
+      a jewelled collar and a band of diamonds; the freeze a cut crystal
       **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
       `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
       hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when
@@ -1637,6 +1691,14 @@ duas/reflections section in Me.
       after dark) and clouds by day, as background layers; pills on dark glass; the flame sits on a soft white pool on the light skies and a faint light pool on the dark ones so it
       always pops. From the prayer times, else by the hour
       (`paintSky()` in me.ts, `.me-hero.sky-*`, checked every 30 s)
+      **Badge moments by tier** (owner 2026-11-12: "lags and a mix of old and new… each animation unique to its tier, 60fps"):
+      the old gradient rosette / rays (petals drawn inside the SVG) are gone; `badgeStage()` in `celebrate.ts` gives each tier its own
+      moment in its metal (`TIER_C`, CSS `--b0…--b3`, `bm-*` in `cel.css`): Bronze tossed like a coin (flips, squash, dust ring),
+      Silver two squares lock into the khatam star + studs + ripple, Gold a sunburst unfolds and turns, laurels sweep up, the badge
+      rises, Platinum two petal rings bloom, a pillar of light, the badge drops in, rings pulse, Diamond beams wheel in, light
+      condenses into the badge, diamonds orbit, glints twinkle; Khatm adds a breathing halo + outer petals. Sparks, sounds, vibration
+      and the wash (lavender / ice) per tier. Every moving part an HTML layer (transform / opacity only); the title no longer blurs
+      in. 6× CPU throttle: 29–43 → 52–60 fps
 - [x] M10 Weekly goals (owner request 2026-11-09): `Goals.weekly` {pages 0–100, listen minutes 0–300, surahs 0–5,
       reels 0–7} (paces set them too), `weekGoals()` counts Monday → Sunday from the reading log and the journey
       (`DayRec.l`, `s`, `r`); ids `w:{monday}:{kind}`, so each week's chests are new (`weekClaimed()`), plus a chest for
@@ -1811,7 +1873,7 @@ duas/reflections section in Me.
       amber sunburst with laurels and ribbons → violet rosette with crown → sapphire sunburst with a cut stone, crown and glints);
       Light 25 / 50 / 100 / 200 / 400; Platinum and Diamond claims burst twice. Me shows the 3 newest claims (+n) and 4 tiles;
       Stats & badges lists every family with its five tiers and the bar to the next. Strings lazy in `src/i18n/badges.ts`.
-      **App icons to win** (`src/ui/appIcons.ts`): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
+      **App icons to win** (`src/ui/appIcons.ts`; since 2026-11-13 the ten character tiers, see Theme colours): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
       #1 week), Mythic Celestial (5 Diamonds or #1 in the Sun league); unlocked ones can be worn from Stats (localStorage
       `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
       `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`
@@ -1889,6 +1951,13 @@ duas/reflections section in Me.
       locked ones say how (streak progress, Ranks weeks, badges) and when they come back (weekly prizes in n weeks, seasonal
       pieces in n days by the Umm al-Qura calendar). A tap opens the piece large: Get / Wear it / Put it in my room / Use it.
       Me's lantern strip still opens "Your Light"
+      **Every piece desirable** (owner request 2026-11-13): every avatar and frame has its name (`lookName()`), the two sold
+      backgrounds too (Midnight blue, Golden glow); a piece's card shows it where it will live — a character part on the
+      user's whole character (alive, hops on open, cheers once bought; a round close-up for small pieces: watch, glasses, what
+      is held), a room piece standing in their own room as it is now (`backSvg`), an avatar or frame large and on their own
+      board row — with one true line on what having it does (`sh.why.*`). Rarity staging: a glow under the art from Rare,
+      a passing shine from Epic, a gold rim (Legendary) or an iridescent one (Mythic) with twinkles, gold / iridescent card
+      skies; locked pieces keep their colour. No fake scarcity, nothing random
 - [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
       (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
       (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =
@@ -1896,6 +1965,53 @@ duas/reflections section in Me.
       ground from 5, a halo from 10, two circling lights from 20, a rim of light from 30, slow rays from 40, all gold at 50;
       plus a small "Lv n" pill on board rows, a bar to the next level on profiles and a Level chip on Me. A new level
       plays the power-up with "Level up!" (`src/ui/levelUp.ts`, `rankLevelSeen`; the first look only records)
+- [x] M21 Light worth more (owner "yes yes yes and yes", 2026-11-12): **Friday double XP** — `rank_xp_mult(d)` (Friday ×2;
+      table `rank_xp_days` for Ramadan's last ten nights 1448–1452: odd nights ×2, even ×1.5; the larger wins) scales
+      `rank_report`'s score; Ranks hero pill. **Friday Al-Kahf** on Me (`src/data/friday.ts`, pages 293–304 read today, 60 Light
+      chest `kahf`). **Surprise chests**: 1 in 6 goal chests holds double Light (`surprise(id)`, seeded by day + id, never
+      random to the user after the fact). **Streak repair**: a flame out ≤ 7 days can be relit with Light (150 + 15 a day,
+      ≤ 1500; `shopAdd('rp:…')` → `revive()`). **Limited pieces** (`src/data/limited.ts`): frames 14–19 (600–1500) and six
+      legendary room pieces (madinah view, chandelier, fountain, silk rug, medallion wall, brocade; 1000–2500) on a 12-week
+      rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
+      (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
+      **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
+      `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
+      multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
+- [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on
+      every page turn (`sfx.page()`, from `slideTo()`), a wooden bead click on each tasbih count and a deeper click + shimmer when
+      the round is full (`sfx.bead()`); right answers already pop (lessons, page quiz). All silent while reciting, in the Kids
+      space and with Me → ⚙ → App → Sounds off (the setting is now "Sounds"). The free freezes sit **on the flame** (`freezeBadge()`:
+      an ice badge with how many are ready, tap → what they do and when the next comes back; the two freeze chips are gone).
+      **Honest progress**: when a page counts, a second pill says "4 pages to finish Al-Baqarah" (`surahLeft()` in
+      `pageMoments.ts`: pages from here to the end of the surah the page carries on into). Opening measured (production build,
+      Chromium, 390 px): mushaf lines on screen 0.51 s cold / 0.28 s reopen; at 4× CPU 0.99 s / 0.74 s
+- [x] M23 The week ends at each person's Friday Maghrib (owner decision 2026-11-12, "Friday is the last day and the end is not
+      midnight but Maghrib … each at their time zone"): ranks count by the Islamic day (`src/data/rankDay.ts`: local day K-1 after
+      its Maghrib + local K up to its Maghrib, what a day held at its Maghrib kept in `rankSnap`; Maghrib from the prayer settings,
+      else 18:00, cached in `maghribAt`); the ranked week runs Saturday → Friday (bridge week Mon 9 → Fri 13 Nov 2026) and ends at
+      the player's own Friday Maghrib (`rank_weeks.ends_at`, sent with each report and clamped by the server). Leagues and rivals are
+      made of people on clocks within 2 hours (`rank_players.utc_off`, `rank_leagues.off`); a league's results come once the last
+      member's Maghrib has passed — until then Ranks shows last week's league with "Waiting for the others' Maghrib" and a
+      countdown, and what is done meanwhile counts for the new week. Friday double XP runs Thursday's Maghrib → Friday's. Last 3 days
+      in the bottom 3: a red danger box and row; the last 3 hours box and the Android note (3 h before Maghrib); the rival as a
+      person (character, gap, "Bilal today: 5 pages, 12 min listening · 22 min ago", `rank_act`); Global → **Hall of fame**
+      (`rank_hall`: every week's #1 per league, most weeks won); the recap card on Saturday and Sunday; limited pieces and the shop's
+      week follow the ranked week. **Leagues named after the Sahaba's journey** (owner pick 2026-11-12): Dar al-Arqam, Hijrah, Badr,
+      Al-Khandaq, Fath Makkah, in the order they happened (no Companion is ranked), each with its own emblem (`tierEmblem()`) and
+      colours. Migration `20261112300000_maghrib_week.sql`, pgTAP `maghrib_week.test.sql` (25)
+- [x] M24 Light seen by others + lamp wall + week card (owner "yes", 2026-11-12): the **lamp of Light** (`src/ui/lampPill.ts`)
+      now also shows on profiles ("Gold lamp of Light"), the rival card, friend cards, the friend streak moments (beside the
+      name in the power-up) and under both heroes in the weekly rival face-off. **Lamp wall** (`src/ui/lampWall.ts` + `.css`,
+      strings `src/i18n/lampWall.ts`, data `src/together/lampWall.ts`; from the shop's Featured row and Me → Your Light): one
+      wall every signed-in player sees, of lamps lit with Light (50 / 100 / 250, a purchase `lw:{id}`, so it counts towards the
+      lamp of Light) for someone who passed away: a first name (≤ 24, no numbers or links), him / her and one of four du'as
+      in the wording of Sahih Muslim 963 / 920 (never free text); the giver hidden unless they choose to show their name; others
+      say **Ameen** under a lamp (counted once each); ≤ 3 lamps a day; the giver can take it down; three reports hide it.
+      Migration `20261112400000_lamp_wall.sql` (`rank_lamps`, `rank_lamp_ameens`, `rank_lamp_reports`, no table access;
+      `rank_lamp_light` / `_wall` / `_ameen` / `_remove` / `_report`), pgTAP `lamp_wall.test.sql` (18). The **week card**
+      (`rankRecap.ts`, shown from the player's Friday Maghrib) now has the character cheering beside the league's emblem, the
+      lamp of Light and the streak
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
@@ -2040,7 +2156,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       once at a check with an orange word, Me → ⚙ → App): `ClipJar` (`src/ui/harakatClips.ts`) keeps ≤ 3 s clips of
       flagged words (+ one unflagged, 25 %) cut by the server's word times (`at`), shared after the check with the
       learner's answer (untapped orange word = "I said it right"). Migration `20261111000000_harakat_clips.sql`
-      (`harakat_clips` bytea PCM, 40 a day, no table access; `harakat_clip_add`, `harakat_my_clips`,
+      (`harakat_clips`, 40 a day, no table access; since 2026-11-13 the sound is a file in Storage, see the optimisation review; `harakat_clip_add`, `harakat_my_clips`,
       `harakat_forget_mine`; teachers in `harakat_reviewers`: `harakat_review_queue` (never who), `harakat_label`;
       pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
       (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
@@ -2082,6 +2198,20 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       to the step to do now and two units after it, the rest a few pieces a task after the screen shows; the Light chip's
       number format and the inbox count wait a moment. Cold open at 4×: longest task 522 → ~130 ms (Juz 'Amma done: 486 →
       ~200 ms); screenshots identical
+- [x] **Lamps for mistakes** (owner decision 2026-11-12): five lamps a day (`src/data/learnLamps.ts`, localStorage
+      `learnLamps`, synced, newest wins). A wrong answer in a new lesson's exercises dims one (the lamp row beside the bar
+      dims it with a wisp of smoke); with none lit the exercises rest and a new lesson does not start (`lampsOut()` in
+      `src/ui/learnLamps.ts`): a lamp comes back every 30 min and all five each new day, +1 for each review / tasmi' /
+      watering / page recited from memory (`earnLamp()`; "Review {surah}" in place, `#/learn/{s}/review` = what was learned
+      from memory, also the path's "Practise again"), or all five for 50 Light (`refillLamps()`, a shop `s:lr:…` entry).
+      Memorisation tests never use a lamp and are never held back (the resting panel offers "Recite these ayat from
+      memory"). Path top bar: a lamps chip → sheet. **Kindness**: a wrong answer shows the right word's meaning and plays
+      it; before reciting, **Look again** lists the words missed (meaning, tap to hear). **Flawless**: a new lesson with no
+      wrong answer and no slip in its tasmi' → a gold star on its path step (`learnFlawless`, merged) and 10 extra XP
+      (`DayRec.lf` → `rank_flawless()`, migration `20261112200000_rank_flawless.sql`, ≤ the day's lessons, added to the
+      week and the total like the quest bonus; pgTAP `rank_flawless.test.sql`); its celebration is the star with "Flawless".
+      **Time spent**: every lesson's celebration shows "Learning · 4 min 12 s" / "Memorising · …" (visible time only;
+      `MomentStat` lines in `celebrate()`)
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

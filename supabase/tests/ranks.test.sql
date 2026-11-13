@@ -5,6 +5,8 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
+-- Scores here are for an ordinary day (Friday counts twice: light_value.test.sql).
+create or replace function public.rank_xp_mult(d date) returns numeric language sql stable as 'select 1::numeric';
 
 select plan(81);
 

@@ -4,29 +4,28 @@
 import { Capacitor } from '@capacitor/core';
 import { allowMushafDownload, countMushafKept, mushafKept, mushafProgress, MUSHAF_MB } from '../data/mushafDownload';
 import { t } from '../i18n';
-import { h } from './dom';
+import { h, listenWhile } from './dom';
 
 const ASKED = 'mushafAsked';
 
-/** On the mushaf, once: a small sheet offering the download. */
+/** On the mushaf, once (F25): never a sheet over a tap. After the reader has stayed on a few pages
+ *  this visit, a quiet card above the tab bar offers the download; it leaves by itself after 14 s. */
+let pagesSeen = 0;
 export function offerMushafDownload() {
   if (Capacitor.isNativePlatform() || mushafKept() || mushafProgress().allowed) return;
   try { if (localStorage.getItem(ASKED)) return; } catch { return; }
-  window.setTimeout(() => {
-    if (document.querySelector('dialog[open]') || !document.querySelector('.mushaf-view')) return;
-    try { localStorage.setItem(ASKED, '1'); } catch { /* ignore */ }
-    const d = h('dialog', { class: 'sheet bottom fav-sheet' },
-      h('div', { class: 'sheet-head' }, h('h2', {}, t('mo.title')),
-        h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
-      h('p', { class: 'muted' }, t('mo.offer', { size: MUSHAF_MB })),
-      h('div', { class: 'menu' },
-        h('button', { class: 'primary brand-btn', onclick: () => { allowMushafDownload(); d.close(); } }, t('mo.download', { size: MUSHAF_MB })),
-        h('button', { class: 'chip', onclick: () => d.close() }, t('mo.later'))));
-    d.addEventListener('close', () => d.remove());
-    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
-    document.body.append(d);
-    d.showModal();
-  }, 6000);
+  if (++pagesSeen < 4 || document.querySelector('dialog[open], .mo-card') || !document.querySelector('.mushaf-view')) return;
+  try { localStorage.setItem(ASKED, '1'); } catch { /* ignore */ }
+  let gone = 0;
+  const close = () => { clearTimeout(gone); card.classList.remove('show'); setTimeout(() => card.remove(), 320); };
+  const card = h('div', { class: 'mo-card', role: 'status' },
+    h('div', { class: 'mo-text' }, h('b', {}, t('mo.title')), h('span', { class: 'muted small' }, t('mo.short', { size: MUSHAF_MB }))),
+    h('button', { class: 'chip primary brand-btn', onclick: () => { allowMushafDownload(); close(); } }, t('mo.get')),
+    h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
+  document.body.append(card);
+  requestAnimationFrame(() => card.classList.add('show'));
+  gone = window.setTimeout(close, 14000);
+  window.addEventListener('hashchange', close, { once: true });
 }
 
 /** Me → Settings → Reading: the whole mushaf on this device, with a live progress bar. */
@@ -48,7 +47,7 @@ export function mushafOfflineRow(): Node | false {
       ...(!p.done && !p.allowed ? [h('button', { class: 'chip', onclick: () => allowMushafDownload() }, t('mo.download', { size: MUSHAF_MB }))] : []));
   };
   paint();
-  window.addEventListener('mushaf-download', paint);
+  listenWhile(box, window, 'mushaf-download', paint);
   void countMushafKept();
   return box;
 }

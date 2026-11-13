@@ -1,0 +1,36 @@
+name: Checks
+
+# Runs on every pull request before it is merged: type check + build, the first-load size budget,
+# the Quran text guard (every ayah present, reviewed copies unchanged) and the robot smoke test
+# (main screens open in English and Arabic with no errors, raw keys or sideways scrolling).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-quran.mjs
+      - run: npm run build
+      - run: node scripts/check-size.mjs
+      - name: Robot smoke test
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+          node scripts/smoke.mjs

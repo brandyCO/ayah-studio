@@ -22,7 +22,7 @@
         <!-- The launcher entries: one per theme colour, so the icon follows the theme (AppIcons.java).
              ".MainActivity" (Emerald) keeps the name of the old launcher activity, so home-screen icons
              from earlier versions keep working. -->
-        <!-- theme icons (scripts/make-icons.py, themes mode) -->
+        <!-- theme icons (scripts/make-character-icons.py) -->
         <activity-alias
             android:name=".MainActivity"
             android:targetActivity=".AppActivity"
@@ -191,12 +191,153 @@
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
-        <!-- Unlockable launcher icons (won with badges and in Ranks; src/ui/appIcons.ts) -->
+        <!-- Unlockable tiers (levels, badges, Ranks weeks; src/data/iconTiers.ts) -->
+        <activity-alias
+            android:name=".IconCrystal"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_crystal"
+            android:roundIcon="@mipmap/ic_launcher_crystal_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMolten"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_molten"
+            android:roundIcon="@mipmap/ic_launcher_molten_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGarden"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_garden"
+            android:roundIcon="@mipmap/ic_launcher_garden_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconPearl"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_pearl"
+            android:roundIcon="@mipmap/ic_launcher_pearl_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconBorealis"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_borealis"
+            android:roundIcon="@mipmap/ic_launcher_borealis_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGalaxy"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_galaxy"
+            android:roundIcon="@mipmap/ic_launcher_galaxy_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconStarlight"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_starlight"
+            android:roundIcon="@mipmap/ic_launcher_starlight_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconPrism"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_prism"
+            android:roundIcon="@mipmap/ic_launcher_prism_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGate"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_gate"
+            android:roundIcon="@mipmap/ic_launcher_gate_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconLight"
+            android:targetActivity=".AppActivity"
+            android:icon="@mipmap/ic_launcher_light"
+            android:roundIcon="@mipmap/ic_launcher_light_round"
+            android:label="@string/title_activity_main"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <!-- Old unlockable icons (Sapphire, Gold, Celestial), kept so their home-screen entries survive -->
         <activity-alias
             android:name=".IconSapphire"
             android:targetActivity=".AppActivity"
-            android:icon="@mipmap/ic_launcher_sapphire"
-            android:roundIcon="@mipmap/ic_launcher_sapphire_round"
+            android:icon="@mipmap/ic_launcher_garden"
+            android:roundIcon="@mipmap/ic_launcher_garden_round"
             android:label="@string/title_activity_main"
             android:enabled="false"
             android:exported="true">
@@ -209,8 +350,8 @@
         <activity-alias
             android:name=".IconLegend"
             android:targetActivity=".AppActivity"
-            android:icon="@mipmap/ic_launcher_legend"
-            android:roundIcon="@mipmap/ic_launcher_legend_round"
+            android:icon="@mipmap/ic_launcher_borealis"
+            android:roundIcon="@mipmap/ic_launcher_borealis_round"
             android:label="@string/title_activity_main"
             android:enabled="false"
             android:exported="true">
@@ -223,8 +364,8 @@
         <activity-alias
             android:name=".IconCelestial"
             android:targetActivity=".AppActivity"
-            android:icon="@mipmap/ic_launcher_celestial"
-            android:roundIcon="@mipmap/ic_launcher_celestial_round"
+            android:icon="@mipmap/ic_launcher_prism"
+            android:roundIcon="@mipmap/ic_launcher_prism_round"
             android:label="@string/title_activity_main"
             android:enabled="false"
             android:exported="true">

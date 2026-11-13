@@ -1,7 +1,16 @@
 // Interface strings (docs/grow.md, G1). English is the source (en.ts, typed keys); other languages
 // are lazy-loaded dictionaries, and a missing key falls back to English. Only interface words are
 // translated here — Quran text, translations of the meaning and surah names come from the bundled data.
-import en, { type Key } from './en';
+import enCore, { type Key } from './en';
+
+// English: the first-load strings, joined by the studio's own when the editor opens (loadStudioStrings()).
+const en = enCore as Record<Key, string>;
+let studioStrings: Promise<void> | null = null;
+/** Loads the reel studio's English strings (call before drawing the editor). */
+export function loadStudioStrings(): Promise<void> {
+  studioStrings ??= import('./enStudio').then((m) => { Object.assign(en, m.default); }, (e) => { studioStrings = null; throw e; });
+  return studioStrings;
+}
 
 export type { Key };
 export type Lang = 'en' | 'ar';
@@ -17,7 +26,7 @@ let generic = '';
 
 /** The interface string for `key`, with {name} placeholders filled from `vars`. */
 export function t(key: Key, vars?: Record<string, string | number>): string {
-  const s = dict[key] ?? en[key];
+  const s = dict[key] ?? en[key] ?? key; // a studio key before its strings loaded shows the key, never "undefined"
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? fmtNum(vars[k]) : m)) : s;
 }
 
@@ -44,6 +53,23 @@ function stored(): Lang | null {
 }
 
 /** A surah's name for the interface: its Arabic name in the Arabic interface, else the English one. */
+/** Time left, one way everywhere: "2 d 5 h", "10 h 4 m", "12 min"; in Arabic whole words
+ *  ("يومان و5 ساعات", "10 ساعات و4 دقائق"). Never a 0 d. */
+export function timeLeft(ms: number): string {
+  const m = Math.max(1, Math.ceil(ms / 60_000));
+  const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+  if (current === 'ar') {
+    const u = (n: number, unit: string) => new Intl.NumberFormat('ar-u-nu-latn', { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+    const [a, b] = d ? [u(d, 'day'), hh ? u(hh, 'hour') : ''] : hh ? [u(hh, 'hour'), mm ? u(mm, 'minute') : ''] : [u(mm, 'minute'), ''];
+    return b ? `${a} و${b}` : a;
+  }
+  return d ? (hh ? t('wkg.leftD', { d, h: hh }) : t('wkg.days', { d })) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+}
+
+/** "6 d" / "6 أيام". */
+export const daysText = (d: number) => current === 'ar'
+  ? new Intl.NumberFormat('ar-u-nu-latn', { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(d) : t('wkg.days', { d });
+
 export const surahName = (m: { en: string; ar: string }) => (current === 'ar' ? m.ar : m.en);
 
 const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);

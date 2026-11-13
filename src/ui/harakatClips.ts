@@ -9,6 +9,7 @@ import { h, toast } from './dom';
 import { t } from '../i18n';
 import { account } from '../cloud/auth';
 import { lt } from '../i18n/learn';
+import { CLIP_BUCKET, removeMyClipFiles, uploadClip } from '../cloud/clipFiles';
 
 const KEY = 'harakatHelp';
 export const helpChoice = (): 'on' | 'off' | null => {
@@ -65,11 +66,14 @@ export class ClipJar {
     void (async () => {
       const sb = await supabase();
       for (const c of list) {
-        const { error } = await sb.rpc('harakat_clip_add', {
+        // the sound goes to file storage, the row keeps its details and the file's path
+        const path = await uploadClip(sb, c.pcm);
+        if (!path) return; // daily limit, signed out or offline: the rest are dropped, nothing is kept
+        const { error } = await sb.rpc('harakat_clip_add_file', {
           p_surah: c.s, p_ayah: c.a, p_words: c.words, p_target: c.target, p_score: c.score, p_flagged: c.flagged,
-          p_learner: c.flagged ? (missed.has(c.key) ? 'wrong' : 'right') : 'none', p_audio: b64(c.pcm),
+          p_learner: c.flagged ? (missed.has(c.key) ? 'wrong' : 'right') : 'none', p_path: path,
         });
-        if (error) return; // daily limit, signed out or offline: the rest are dropped, nothing is kept
+        if (error) { await sb.storage.from(CLIP_BUCKET).remove([path]).catch(() => {}); return; }
       }
     })().catch(() => {});
   }
@@ -78,16 +82,11 @@ export class ClipJar {
   get size() { return this.list.length; }
 }
 
-function b64(pcm: Int16Array): string {
-  const u = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength);
-  let s = '';
-  for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000));
-  return btoa(s);
-}
-
 /** Deletes every clip this account shared. */
 export async function forgetMyClips(): Promise<number> {
-  const { data, error } = await (await supabase()).rpc('harakat_forget_mine');
+  const sb = await supabase();
+  await removeMyClipFiles(sb);
+  const { data, error } = await sb.rpc('harakat_forget_mine');
   if (error) throw error;
   return (data as number) ?? 0;
 }

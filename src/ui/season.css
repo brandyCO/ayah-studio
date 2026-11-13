@@ -9,8 +9,7 @@ body[data-view='season'] { background: #0f0a2c; }
 }
 .sn-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 0 6px;
   background: linear-gradient(#160f45 70%, transparent); font-weight: 800; font-size: var(--fs-l); }
-.sn-back { width: 40px; height: 40px; border-radius: 14px; border: 0; background: #ffffff14; color: #fff; font: 900 26px/1 var(--ui-round); cursor: pointer; }
-html[dir='rtl'] .sn-back { transform: scaleX(-1); }
+.sn-back { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #ffffff1f; display: grid; place-items: center; color: #fff; font: 900 26px/1 var(--ui-round); cursor: pointer; }
 
 /* hero */
 .sn-hero { position: relative; overflow: hidden; margin: 6px 0 16px; padding: 108px 16px 20px; border-radius: 28px; text-align: center;
@@ -155,3 +154,55 @@ html[dir='rtl'] .sn-cd { direction: rtl; }
   .sn-fan, .sn-glow, .sn-moon, .sn-stars, .sn-cd-t b.tick, .sn-k-fill, .sn-tease[open] { animation: none; }
 }
 html.lite .sn-stars, html.lite .sn-glow { animation: none; }
+
+/* The last ten nights: ten lanterns (odd nights gold with a star), tonight's quest with its chest. */
+.sn-nights { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 6px; margin: 4px 0 14px; }
+.sn-ln { display: flex; justify-content: center; }
+.sn-ln svg { width: 100%; max-width: 46px; height: auto; overflow: visible; }
+.sn-ln .ln-cord { stroke: #8f84c4; stroke-width: 1.4; fill: none; }
+.sn-ln .ln-cap { fill: #4a4180; }
+.sn-ln .ln-body { fill: #2c2468; stroke: #5d53a0; stroke-width: 1.2; }
+.sn-ln .ln-glass { fill: #1a1446; }
+.sn-ln .ln-star, .sn-ln .ln-flame { fill: #5d53a0; }
+.sn-ln .ln-n { font: 900 9px var(--ui-round); fill: var(--sn-mute); text-anchor: middle; }
+.sn-ln.odd .ln-cap { fill: #8a6a26; }
+.sn-ln.odd .ln-body { stroke: #b88a2c; }
+.sn-ln.odd .ln-n { fill: var(--sn-gold); }
+.sn-ln.kept .ln-cap { fill: #e0a33a; }
+.sn-ln.kept .ln-body { fill: #ff8a3d; stroke: #ffd25e; }
+.sn-ln.kept.odd .ln-body { fill: #ffb627; }
+.sn-ln.kept .ln-glass { fill: #fff3c4; }
+.sn-ln.kept .ln-star, .sn-ln.kept .ln-flame { fill: #ff8a00; }
+.sn-ln.kept svg { filter: drop-shadow(0 0 10px #ffd25e99); }
+.sn-ln.kept .ln-n { fill: #fff; }
+.sn-ln.now .ln-body { stroke: #fff; stroke-width: 2; }
+.sn-ln.now .ln-glass { fill: #ffe7a34d; }
+.sn-ln.now svg { transform-origin: 50% 0; animation: sn-sway 2.8s ease-in-out infinite alternate; }
+.sn-ln.now .ln-n { fill: #fff; }
+.sn-ln.gone { opacity: .45; }
+.sn-ten.soon .sn-nights { opacity: .7; }
+
+.sn-quest { margin: 0 0 6px; padding: 14px; border-radius: 20px; background: #ffffff0d; box-shadow: inset 0 0 0 1.5px #ffffff1a; }
+.sn-quest.odd { background: linear-gradient(160deg, #ffd25e1f, #ffffff08 60%); box-shadow: inset 0 0 0 1.5px #ffd25e55; }
+.sn-quest-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.sn-quest-h > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.sn-qk { flex-basis: 100%; }
+.sn-quest-h .sn-kicker { margin: 0; }
+.sn-quest-h b { font: 900 var(--fs-h3) var(--ui-round); color: #fff; }
+.sn-odd { padding: 3px 9px; border-radius: 99px; background: #ffd25e; color: #4a2a00; font: 900 var(--fs-xs) var(--ui-round); }
+.sn-xp { flex-basis: 100%; color: #b9a8ff; font: 800 var(--fs-s) var(--ui-round); }
+.sn-quest .chest { flex: none; }
+.sn-parts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.sn-parts li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px 10px; }
+.sn-pt { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font: 800 var(--fs-m) var(--ui-round); color: #fff; }
+.sn-parts li:not(:has(.sn-bar)) .sn-pt { grid-column: 1; }
+.sn-pt i { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #ffffff14; font-style: normal; font-size: 13px; color: #1b1440; }
+.sn-parts li.met .sn-pt i { background: #3cc98a; }
+.sn-parts li.met .sn-pt { color: var(--sn-mute); }
+.sn-bar { height: 10px; border-radius: 99px; background: #ffffff14; overflow: hidden; }
+.sn-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffb627, #ffd25e); }
+.sn-parts li.met .sn-bar span { background: #3cc98a; }
+.sn-parts small { color: var(--sn-mute); font: 800 var(--fs-xs) var(--ui-round); font-variant-numeric: tabular-nums; }
+.sn-go { padding: 6px 14px; border: 0; border-radius: 12px; background: var(--sn-gold); color: #3a2200; font: 900 var(--fs-s) var(--ui-round); box-shadow: 0 3px 0 #b37400; cursor: pointer; }
+.sn-go:active { transform: translateY(2px); box-shadow: 0 1px 0 #b37400; }
+@media (prefers-reduced-motion: reduce) { .sn-ln.now svg { animation: none; } }

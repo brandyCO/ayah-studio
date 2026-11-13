@@ -1,7 +1,7 @@
-// First launch: three short screens to make the app yours — the language, the reciter (hear each one
-// before choosing) and the theme colours (shown live). Every step has a sensible default already
-// picked, so Next / Skip always works. Shown once instead of the tour (☰ → Tour still shows that).
-// Picking another language reloads the app; the welcome then continues at the reciter step.
+// First launch (front-end review F1, 2026-11-13): no questions before the first ayah. The language comes
+// from the phone (Me → Settings → Language changes it) and the colours wait in Me → Settings. The reciter is
+// asked the first time something is played (`askReciterFirst()`): the full list, hear each one, then Listen.
+// `showWelcome()` (the old three steps) stays for Me → Settings → Tour.
 import { LANGS, lang, setLang, t } from '../i18n';
 import { DEFAULT_RECITER, RECITERS, groupRecordings, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { recordingChips, reciterSearchBox } from './recordings';
@@ -14,6 +14,8 @@ import { sampleButton, stopSample } from './voiceSample';
 const RESUME = 'welcomeStep';
 
 export function showWelcome(done?: () => void) {
+  // Already showing (the reader was left and opened again before answering): never stack a second one.
+  if (document.querySelector('.tour.welcome:not(.out)')) return;
   let i = 0;
   try { i = Number(sessionStorage.getItem(RESUME)) || 0; sessionStorage.removeItem(RESUME); } catch { /* ignore */ }
   const card = h('div', { class: 'tour-card welcome-card', role: 'group' });
@@ -77,4 +79,44 @@ export function showWelcome(done?: () => void) {
   }
   document.body.append(overlay);
   draw();
+}
+
+/** The first time anything is played: pick a voice (the default is already picked), then it plays.
+ *  Asked once per device; someone who already chose a reciter (or synced one) is never asked. */
+export function askReciterFirst(play: () => void) {
+  let asked = false;
+  try { asked = !!localStorage.getItem('reciterAsked') || !!localStorage.getItem('reelReciter'); } catch { asked = true; }
+  if (asked) return play();
+  try { localStorage.setItem('reciterAsked', '1'); } catch { /* ignore */ }
+  let chosen = reelReciter(DEFAULT_RECITER);
+  const list = h('div', { class: 'welcome-list scroll' });
+  const paint = () => list.replaceChildren(...groupRecordings(RECITERS).map((g) => {
+    const r = g.find((x) => x.id === chosen) ?? g[0];
+    const on = g.some((x) => x.id === chosen);
+    const pick = (x: Reciter) => { haptic(); chosen = x.id; paint(); };
+    return h('div', { class: 'rec-group' },
+      h('button', { class: `welcome-option${on ? ' on' : ''}`, 'aria-pressed': String(on), onclick: () => pick(r) },
+        h('span', { class: 'welcome-name' }, g.length > 1 ? r.name : reciterPickerLabel(r)), sampleButton(r)),
+      recordingChips(g, chosen, pick));
+  }));
+  paint();
+  const search = reciterSearchBox(list, t('ed.reciter-search'));
+  search.classList.add('welcome-search');
+  new MutationObserver(() => search.dispatchEvent(new Event('input'))).observe(list, { childList: true });
+  const card = h('div', { class: 'tour-card welcome-card', role: 'group' });
+  const overlay = h('div', { class: 'tour welcome', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('welcome.reciter') }, card);
+  const finish = (go: boolean) => {
+    stopSample();
+    setReelReciter(chosen); // the mushaf player and new reels
+    overlay.classList.add('out');
+    window.setTimeout(() => overlay.remove(), 400);
+    if (go) play();
+  };
+  card.append(
+    h('div', { class: 'tour-step welcome-step' }, h('h2', {}, t('welcome.reciter')), h('p', {}, t('welcome.reciterText')),
+      h('div', { class: 'welcome-reciters' }, search, list)),
+    h('div', { class: 'tour-buttons' },
+      h('button', { class: 'chip', onclick: () => finish(false) }, t('common.close')),
+      h('button', { class: 'primary brand-btn', onclick: () => finish(true) }, icon('play', 18), ' ', t('welcome.listen'))));
+  document.body.append(overlay);
 }

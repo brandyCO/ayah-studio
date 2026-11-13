@@ -4,6 +4,7 @@
 // both have earned points today their characters stand on fire together, and on 7 / 30 / 100 / 365 days they power up
 // together full screen (powerUp.ts). Simple on purpose: no explaining needed beyond one line.
 import { account } from '../cloud/auth';
+import { icon } from './icons';
 import { ft } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
@@ -14,6 +15,7 @@ import { myFigureCode, actor } from './actor';
 import { avatar } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, tierBadge } from './ranks';
+import { lampLine, lampPill } from './lampPill';
 import { t } from '../i18n';
 import { openAccount } from './account';
 import { flame } from './flame';
@@ -67,7 +69,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   let prof: Profile | null = kept === undefined ? fromRow(row) : kept;
   let known = kept !== undefined;
   const title = h('h2', {}, row.me ? ft('fr.mine') : row.name ?? rt('rk.private'));
-  const back = h('button', { class: 'icon-btn fr-back', 'aria-label': t('common.close') }, '‹');
+  const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
   const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title), h('div', { class: 'fr-page-body' }, stage, info));
@@ -97,7 +99,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const sig = JSON.stringify([p.relation === 'me', p.figure, myFigureCode(), on, f?.streak ?? 0, p.xp ?? null]);
     if (sig !== pairSig) {
       pairSig = sig;
-      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, on, f?.streak ?? 0, 116));
+      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, false, f?.streak ?? 0, 116));
     }
     title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
@@ -105,7 +107,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const stats = h('div', { class: 'fr-stats' },
       stat('week', ft('fr.week'), p.week, ptsIcon()),
       stat('streak', ft('fr.flame'), p.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
-      stat('trophies', ft('fr.trophies'), p.trophies, '🏆 '),
+      stat('trophies', ft('fr.trophies'), p.trophies, icon('trophy', 16)),
       stat('pages', ft('fr.pages'), p.pages),
       stat('listen', ft('fr.listen'), p.listen));
     // Each action shows its result at once; the server's answer follows quietly.
@@ -122,7 +124,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
             h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
             : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`),
-              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, `⚔ ${chLabel}`)] : [];
+              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, icon('swords', 18), chLabel),
+              h('button', { class: 'chip fr-gift', onclick: () => void import('./giftSend').then((m) => m.openGiftSheet(pid, name)) }, icon('gift', 18), ft('fr.gift'))] : [];
     const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
       known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
       known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');
@@ -147,6 +150,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     info.replaceChildren(
       h('div', { class: 'fr-who' }, h('h3', {}, p.relation === 'me' ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
       p.xp != null ? levelLine(p.xp) : '',
+      p.private ? '' : lampLine(p.lamp),
       f ? streakLine(f, name) : '',
       stats.childElementCount ? stats : '',
       actions, mine,
@@ -192,7 +196,7 @@ export async function friendMilestone(list: Friend[]) {
   if (!f) return;
   try { localStorage.setItem(`frMs:${f.pid}:${f.streak}`, '1'); } catch { return; }
   playing = true;
-  try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '' } }); } finally { playing = false; }
+  try { await powerUp(f.streak, { friend: { code: f.private ? null : f.figure ?? null, name: f.name ?? '', lamp: f.private ? '' : lampPill(f.lamp, true) } }); } finally { playing = false; }
 }
 
 /** The daily friend streak moment (owner 2026-11-12: "the same flame … animated, the character inside the flame"):
@@ -202,13 +206,13 @@ export async function friendDayMoment(list: Friend[]) {
   const route = location.hash;
   if (playing || document.hidden || document.querySelector('dialog[open], .cel, .fd-moment') || /^#\/(reel|kids|t\/)/.test(route)) return;
   const today = dayKey();
-  try { for (const f of list) localStorage.setItem(`frDay:${today}:${f.pid}`, '1'); } catch { return; }
+  try { for (const f of list) localStorage.setItem(`frUp:${today}:${f.pid}`, '1'); } catch { return; }
   const me = myFigureCode();
   if (me) {
     const top = [...list].sort((x, y) => y.streak - x.streak)[0];
     playing = true;
     try {
-      const p = powerUp(Math.max(1, top.streak), { friend: { code: top.private ? null : top.figure ?? null, name: top.private ? rt('rk.private') : top.name ?? '' } });
+      const p = powerUp(Math.max(1, top.streak), { friend: { code: top.private ? null : top.figure ?? null, name: top.private ? rt('rk.private') : top.name ?? '', lamp: top.private ? '' : lampPill(top.lamp, true) } });
       if (p) { await p; return; }
     } finally { playing = false; }
   }
@@ -217,7 +221,7 @@ export async function friendDayMoment(list: Friend[]) {
     const name = f.private ? rt('rk.private') : f.name ?? rt('rk.private');
     return h('div', { class: 'fd-row' },
       h('span', { class: 'fd-pair' }, avatar(0, 0, 40, 0, me), avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.private ? null : f.figure)),
-      h('b', {}, name),
+      h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
       h('span', { class: 'fd-n' }, flame(2, 22, true), String(f.streak)));
   });
   const ok = h('button', { class: 'primary brand-btn' }, ft('fr.keepGoing'));
@@ -272,10 +276,10 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
   const cards = data.friends.map((f) => {
     const on = f.meToday && f.themToday;
     const name = f.name ?? rt('rk.private');
-    const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, `⚔ ${chLabel}`);
+    const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, icon('swords', 18), chLabel);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
-      h('span', { class: 'fr-card-txt' }, h('b', {}, name),
+      h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });

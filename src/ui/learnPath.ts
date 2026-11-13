@@ -21,6 +21,8 @@ import { h, haptic, toast } from './dom';
 import { drawDeco, drawTree, stageHeight, vignette } from './gardenArt';
 import { icon } from './icons';
 import { lightChip } from './lightChip';
+import { isFlawless } from '../data/learnLamps';
+import { lampChip } from './learnLamps';
 import { inboxBell } from './inbox';
 import { noorLine } from './noor';
 import { tabBar } from './tabs';
@@ -89,13 +91,10 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const units = (k: number, ord: number[], pos: number) => unitsOf(meta[ord[k] - 1], mushaf, k <= pos, ctx);
 
   function paintTop() {
-    const st = streak();
     top.replaceChildren(
-      h('button', { class: 'lp-pill', type: 'button', onclick: () => void openStart(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), h('span', { class: 'lp-pill-t' }, lt('learn.choose'))),
+      h('button', { class: 'lp-pill', type: 'button', onclick: () => openMenu(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), h('span', { class: 'lp-pill-t' }, lt('learn.choose'))),
       h('span', { class: 'lp-gap' }),
-      h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
-      h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
-      h('span', { class: 'lp-streak', 'aria-label': lt('learn.streakAria', { n: st.days }) }, svg(G.flame, 22), String(st.days)),
+      lampChip(),
       lightChip(),
       inboxBell());
   }
@@ -127,7 +126,11 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       wrap.classList.add('is-current');
       wrap.append(h('div', { class: 'lp-start', 'aria-hidden': 'true' }, lt('learn.start')));
     }
-    wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn));
+    // A lesson passed with no mistake keeps a gold star on its step.
+    const flaw = st.kind === 'new' && st.state === 'done' && isFlawless(st.s, st.range[1]);
+    if (flaw) btn.setAttribute('aria-label', `${btn.getAttribute('aria-label')} · ${lt('learn.flawlessMark')}`);
+    wrap.append(h('div', { class: 'lp-nodewrap' }, lead ? h('span', { class: `lp-ring hue-${hue}`, 'aria-hidden': 'true' }) : '', btn,
+      flaw ? h('span', { class: 'lp-flaw', 'aria-hidden': 'true' }, svg(G.star, 14)) : ''));
     if (st.kind !== 'new') wrap.append(h('span', { class: 'lp-cap' }, label));
     return wrap;
   }
@@ -190,7 +193,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       const el = list.querySelector('.lp-chest.current .chest');
       el?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
       void openChest(st, meta[st.s - 1], el ?? from ?? cont);
-    } else location.hash = `#/learn/${st.s}`;
+    } else location.hash = st.state === 'done' && (st.kind === 'new' || st.kind === 'whole') ? `#/learn/${st.s}/review` : `#/learn/${st.s}`;
   }
 
   /** The surahs starting in each juz, and where in path order the last of them stands. */
@@ -428,6 +431,15 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       out.push(...pt.make());
       if (after < 0) { if (leadDone && !grew) after = 0; } else if (pt.big && ++after >= 2) break;
     }
+    if (!trees().some(started)) {
+      const st = pathStart();
+      const where = st.kind === 'amma' ? lt('learn.startAmma') : st.kind === 'surah' ? surahName(meta[st.s - 1]) : lt('learn.juzN', { n: st.j });
+      out.unshift(h('div', { class: 'lp-intro' },
+        h('span', {}, lt('learn.introAt', { where })),
+        h('span', { class: 'lp-intro-links' },
+          h('button', { type: 'button', onclick: () => void openStart() }, lt('learn.introChange')),
+          h('button', { type: 'button', onclick: () => void openStart() }, lt('learn.knowTitle')))));
+    }
     list.replaceChildren(...out);
     paintCont();
     paintDay();
@@ -492,7 +504,19 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
         h('a', { class: 'primary brand-btn learn-go', href: `#/learn/${m.n}` }, lt(tr?.full ? (thirsty(tr) ? 'learn.goWater' : 'learn.goRecite') : 'learn.continue'))));
   }
 
+  /** F4: the path's menu (where to start, page memory, your garden), so the top bar keeps only lamps, Light and the bell. */
+  function openMenu() {
+    const item = (ic: string, label: string, go: () => void) => h('button', { class: 'menu-item lp-menu-item', type: 'button', onclick: () => { d.close(); go(); } },
+      svg(ic, 20), h('span', {}, label));
+    const d = sheet('lp-menu', lt('learn.choose'),
+      h('div', { class: 'menu' },
+        item(G.book, lt('learn.startTitle'), () => void openStart()),
+        item(G.page, lt('learn.pmOpen'), () => { location.hash = '#/learn/pages'; }),
+        item(G.tree, lt('learn.gardenTitle'), () => { location.hash = '#/learn/garden'; })));
+  }
+
   async function openStart(first = false) {
+    if (document.querySelector('.lp-startsheet[open]')) return; // already open: never a second one
     const ord0 = order();
     let start: Start = pathStart();
     let chunk: ChunkSize = pathChunk();
@@ -557,7 +581,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const cur = list.querySelector('.lp-step.is-current') ?? list.querySelector('.lp-tree.grew');
     cur?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
   });
-  if (!pathSet()) void openStart(true);
+  // F8: no sheet on the first visit: Juz 'Amma, one ayah at a time, and the path at once.
+  if (!pathSet()) setPath({ kind: 'amma' }, 1);
 
   const onClick = (e: MouseEvent) => { if (pop && !(e.target as Element).closest('.lp-pop, .lp-node, .lp-gate-btn, .lp-chest-hit')) closePop(); };
   const onChange = () => paint();
@@ -567,6 +592,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   return () => {
     closePop();
     paintGen++;
+    document.querySelector<HTMLDialogElement>('.lp-startsheet[open]')?.close(); // leaving Learn: its start sheet goes too
     document.removeEventListener('click', onClick);
     window.removeEventListener('garden-changed', onChange);
     window.removeEventListener('journey-changed', onChange);
@@ -595,7 +621,7 @@ export async function showYourGarden(root: HTMLElement): Promise<() => void> {
   const gates = juzGates();
   root.append(
     h('header', { class: 'lp-top' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('h1', { class: 'lp-title' }, lt('learn.gardenTitle')),
       h('span', { class: 'lp-gap' }),
       lightChip()),

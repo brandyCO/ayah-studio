@@ -6,6 +6,9 @@ import type { Project } from '../engine/project';
 import { addLogo, listLogos, loadLogo, removeLogo } from '../data/logos';
 import { t as ui } from '../i18n';
 import { h, toast } from './dom';
+import { loadStudioStrings } from '../i18n';
+// The studio's own English strings (src/i18n/enStudio.ts) are in place before anything here draws.
+await loadStudioStrings();
 
 const PREF = 'myMark';
 

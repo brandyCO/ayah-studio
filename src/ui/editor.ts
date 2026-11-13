@@ -50,7 +50,6 @@ import { liteMode } from '../lite';
 import { perfRecord, perfStart } from '../perf';
 import { exportGuard, isNative, saveVideo, shareableLink, shareFile, shareFiles, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
-import { lightChip } from './lightChip';
 import { h, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
@@ -63,6 +62,9 @@ import { currentTranslation, setTranslation, translationInfo } from '../data/tra
 import { errMsg, t as ui, tOr, uiRef } from '../i18n';
 import { translationList } from './translationPicker';
 import { recordingChips, reciterSearchBox } from './recordings';
+import { loadStudioStrings } from '../i18n';
+// The studio's own English strings (src/i18n/enStudio.ts) are in place before anything here draws.
+await loadStudioStrings();
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: ui('ed.ayah') },
@@ -2028,7 +2030,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const studio = h('div', { class: 'studio' },
     h('header', { class: 'studio-top' },
       h('a', { class: 'ctl', href: `#/s/${n}/${from}`, 'aria-label': ui('ed.close') }, icon('close')),
-      h('div', { class: 'top-right' }, lightChip(), qualityBtn, exportBtn, qualityMenu)),
+      h('div', { class: 'top-right' }, qualityBtn, exportBtn, qualityMenu)),
     h('div', { class: 'studio-stage' }, stage),
     h('div', { class: 'transport' }, timeLabel, h('div', { class: 'play-group' }, restartBtn, playBtn), h('div', { class: 'ctl-group' }, undoBtn, redoBtn, fullBtn)),
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),

@@ -41,6 +41,12 @@ jobs:
             | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
           PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['SUPABASE_DB_PASSWORD'].strip(), safe=''))")
           echo "::add-mask::$PW"
+          # clips shared since 2026-11-13 are files in Storage: the service key downloads them (masked, never kept)
+          SERVICE_KEY=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true" \
+            | python3 -c "import json,sys; k=json.load(sys.stdin); print(next((x.get('api_key') or '' for x in k if x.get('name') == 'service_role' or x.get('type') == 'secret'), ''))" || true)
+          [ -n "$SERVICE_KEY" ] && echo "::add-mask::$SERVICE_KEY" || echo "::warning::No service key: clips shared as files are skipped."
+          export SERVICE_KEY SUPABASE_URL="https://$PROJECT_REF.supabase.co"
           for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
             if DB_URL="postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres" python3 scripts/harakat-clips.py "$RUNNER_TEMP/clips"; then exit 0; fi
           done

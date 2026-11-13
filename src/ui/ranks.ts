@@ -3,14 +3,16 @@
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
 import { account, onAccount } from '../cloud/auth';
-import { t, type Key } from '../i18n';
+import { icon } from './icons';
+const iconOf = icon;
+import { t, timeLeft, type Key } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
 import { isNative, shareableLink } from '../native';
 import {
   LEAGUE, METRICS, POINTS, boardGoal, boardLink, boardPreview, boardRanks, createBoard, joinBoard, leaveBoard, myBoards, rankGlobal,
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
-  myChallenges, createChallenge, standing, lastHours, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
-  type Board, type Challenge, type Metric, type Row, type Status,
+  myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
+  type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
   StaleMiss, staleFirst, refreshCached, dropCache,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
@@ -32,15 +34,15 @@ import { h, haptic, toast } from './dom';
 import { goMushaf, tabBar } from './tabs';
 import { levelLabel, levelOf } from '../data/xp';
 import { withLevel } from './levelLook';
+import { isRankFriday, rankDay } from '../data/rankDay';
 import './ranks.css';
 
 type View = 'league' | 'friends' | 'global' | 'boards';
 const PENDING = 'pendingBoard';
 const PENDING_CH = 'pendingChallenge';
 
-const TIER_ICON: Record<string, string> = { lantern: '🏮', star: '⭐', moon: '🌙', dawn: '🌅', sun: '☀️' };
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
-export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
+export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, tierName(n));
 const num = (n: number) => n.toLocaleString();
 
 /** The share sheet (app or browser), else the link copied. */
@@ -69,11 +71,7 @@ export function sheet(title: string, ...body: (Node | string)[]) {
   return d;
 }
 
-const left = (ms: number) => {
-  const m = Math.max(1, Math.ceil(ms / 60_000));
-  const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
-  return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
-};
+const left = timeLeft;
 
 /** Ranks points have their own mark (a violet badge with a rising chevron), so they never look like Light's star. */
 export function ptsIcon(cls = ''): SVGSVGElement {
@@ -92,6 +90,9 @@ const pts = (n: number, unit = true) => h('span', { class: 'rk-pts' }, ptsIcon()
 const moved = (n = 0) => n ? h('span', { class: `rk-move ${n > 0 ? 'up' : 'down'}`, 'aria-label': rt(n > 0 ? 'rk.movedUp' : 'rk.movedDown', { n: Math.abs(n) }) },
   `${n > 0 ? '▲' : '▼'}${Math.abs(n)}`) : '';
 
+/** The lamp of Light by a name (owner request 2026-11-12): bronze, silver, gold or diamond, by the Light spent. */
+export { lampPill } from './lampPill';
+import { lampPill } from './lampPill';
 /** The character's level (from all-time XP) beside a name. */
 export const lvPill = (xp?: number | null) => xp == null ? '' : h('span', { class: `lv-pill${levelOf(xp) >= 40 ? ' gold' : ''}` }, levelLabel(levelOf(xp), true));
 
@@ -125,27 +126,31 @@ export function podium(rows: Row[]): HTMLElement | '' {
 }
 
 /** One list of players, best first; zones mark who moves up or down in a league. */
-function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = ''): HTMLElement {
+function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', waiting = false): HTMLElement {
   const n = rows.length;
+  const danger3 = zones && !waiting && lastDays(); // the last 3 days: the bottom zone glows red
   const items: Node[] = [];
   rows.forEach((r, i) => {
     const up = zones && i < LEAGUE.up && r.score > 0;
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
+    const danger = down && r.me && danger3;
 
+    // Zone labels head the rows they describe (F34): moving up · safe · moving down.
+    if (zones && i === 0 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
+    if (zones && i === LEAGUE.up && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone safe' }, rt('rk.zoneSafe')));
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
     // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
     const visit = !!r.pid && (r.me || !r.private);
-    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${visit ? ' visit' : ''}`,
+    items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${danger ? ' danger' : ''}${visit ? ' visit' : ''}`,
       ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.name ?? rt('rk.private'),
         onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
-    if (zones && i === LEAGUE.up - 1 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
   });
   return h('ol', { class: 'rk-list' }, ...items);
 }
@@ -154,6 +159,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
   let view: View = (() => { try { return (sessionStorage.getItem('rankView') as View) || 'league'; } catch { return 'league'; } })();
   let allTime = false;
+  let hall = false;
   let metric: Metric = 'all';
   const metricChips = () => h('div', { class: 'chips rk-metrics', role: 'group', 'aria-label': rt('rk.measure') },
     ...METRICS.map((m) => h('button', { class: `chip${metric === m ? ' on' : ''}`, 'aria-pressed': String(metric === m),
@@ -182,7 +188,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     head.replaceChildren();
     tabs.replaceChildren();
     body.replaceChildren(h('div', { class: 'rk-signin me-card' },
-      h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, '🏆'),
+      h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, icon('trophy', 22)),
       h('h2', {}, rt('rk.outTitle')),
       h('p', { class: 'muted' }, rt('rk.outSub')),
       h('button', { class: 'primary brand-btn', onclick: () => openAccount() }, rt('rk.signIn')),
@@ -194,7 +200,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const secs = pageSeconds();
     const rt2 = secs % 60 ? `${Math.floor(secs / 60)}½` : String(secs / 60);
     const earn = (icon: string, label: string, sub: string, n: number | string) => h('li', { class: 'rk-earn' },
-      h('span', { class: 'rk-earn-ic', 'aria-hidden': 'true' }, icon),
+      h('span', { class: 'rk-earn-ic', 'aria-hidden': 'true' }, iconOf(icon, 20)),
       h('span', { class: 'rk-earn-txt' }, h('b', {}, label), sub ? h('small', { class: 'muted' }, sub) : ''),
       h('span', { class: 'rk-earn-n' }, `+${n}`));
     const card = (cls: string, icon: Node, title: string, ...body: (Node | string)[]) => h('section', { class: `rk-info ${cls}` },
@@ -205,13 +211,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('p', {}, rt('rk.iPtsBody')),
         h('p', { class: 'rk-info-sub' }, rt('rk.iEarn')),
         h('ul', { class: 'rk-earns' },
-          earn('📖', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
-          earn('🎧', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
-          earn('🌿', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
-          earn('✅', rt('rk.eaSurah'), '', POINTS.surah),
-          earn('🎬', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
-          earn('📅', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
-          earn('🎯', rt('rk.eaQuest'), rt('rk.eaQuestSub'), 50))),
+          earn('book', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
+          earn('listen', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
+          earn('sprout', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
+          earn('sparkle', rt('rk.eaFlawless'), rt('rk.eaFlawlessSub'), POINTS.flawless),
+          earn('check', rt('rk.eaSurah'), '', POINTS.surah),
+          earn('film', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
+          earn('calendar', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
+          earn('target', rt('rk.eaQuest'), rt('rk.eaQuestSub'), 50))),
       card('light', big(star()), rt('rk.iLightTitle'), h('p', {}, rt('rk.iLightBody'))),
       card('league', tierEmblem(0) as unknown as Node, rt('rk.iLeagueTitle'),
         h('p', {}, rt('rk.iLeagueBody', { size: LEAGUE.size, up: LEAGUE.up, down: LEAGUE.down }))),
@@ -257,7 +264,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
         h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
         h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
-          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')))),
+          pts(s.week, false), h('span', {}, rt('rk.ptsWeek')), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i')),
+        isRankFriday() ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
       strip(s)) : '');
     if (fromKept) return;
     void paintPrizes(s, fresh);
@@ -314,7 +322,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'menu' },
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLook(s); } }, `◐  ${rt('rk.look')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, `🏆  ${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, icon('trophy', 18), `${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
         s.last ? h('button', { class: 'menu-item', onclick: () => { d.close(); void recap(s); } }, `↗  ${rt('rk.recapShare')}`) : '',
         h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `ⓘ  ${rt('rk.info')}`)),
       isNative() ? h('label', { class: 'rk-note-toggle small' },
@@ -455,7 +463,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('p', { class: 'muted small' }, rt('rk.lookSub')), grid,
       h('h3', { class: 'me-h2' }, rt('rk.frames')), frames,
       h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openShop(s); } }, `✦ ${rt('rk.moreInShop')}`),
-      h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openName(); } }, `✎ ${rt('rk.name')}`),
+      h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openName(); } }, icon('pen', 18), rt('rk.name')),
       h('label', { class: 'rk-private' }, sw, h('span', {}, h('b', {}, rt('rk.privateTitle')), h('span', { class: 'muted small' }, rt('rk.privateSub')))),
       h('div', { class: 'chips', style: 'margin-top:12px' }, h('button', { class: 'primary brand-btn', onclick: async () => {
         try {
@@ -466,7 +474,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       } }, rt('rk.save')))));
   }
 
-  /** Sunday evening: the hours left and the one number that matters now. */
+  /** Friday's last hours before Maghrib: the hours left and the one number that matters now. */
   function hoursBox(players: Row[]) {
     const st = standing(players);
     const line = st.kind === 'up' ? rt('rk.noteUp', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) })
@@ -478,14 +486,73 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('p', { class: 'small' }, line),
       h('button', { class: 'chip', onclick: () => goMushaf() }, rt('rk.hoursRead')));
   }
-  /** Monday and Tuesday: last week's result as a card to share (until closed). */
+  /** Every week's #1 of each league, newest first, and who has won most often. */
+  function hallView(hf: Hall) {
+    if (!hf.recent.length) return h('p', { class: 'muted' }, rt('rk.hallEmpty'));
+    const face = (r: Row, sub: string, i?: number) => h('li', { class: `rk-row rk-hall-row${r.me ? ' me' : ''}` },
+      i !== undefined ? h('span', { class: `rk-place p${i + 1}` }, String(i + 1)) : h('span', { class: 'rk-hall-cup', 'aria-hidden': 'true' }, trophy(1) as unknown as Node),
+      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', h('small', { class: 'rk-note muted' }, sub)));
+    const day = (w: string) => new Date(`${w}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return h('div', { class: 'rk-hall' },
+      h('h3', { class: 'me-h' }, rt('rk.hallMost')),
+      h('ol', { class: 'rk-list' }, ...hf.most.slice(0, 10).map((r, i) => face(r, rt('rk.hallWins', { n: r.wins }), i))),
+      h('h3', { class: 'me-h' }, rt('rk.hallRecent')),
+      h('ul', { class: 'rk-list' }, ...hf.recent.map((r) => face(r, rt('rk.hallWeek', { d: day(r.week), tier: tierName(r.tier) })))));
+  }
+  /** My week ended at my Maghrib; the league's ends at its last member's. */
+  function waitBox(lg: { players: Row[]; until?: string | null }) {
+    const until = lg.until ? Date.parse(lg.until) : 0;
+    const me = lg.players.findIndex((x) => x.me);
+    const line = h('span', {}, until > Date.now() ? rt('rk.waitIn', { left: left(until - Date.now()) }) : rt('rk.waitSoon'));
+    const tick = window.setInterval(() => {
+      if (!line.isConnected) { clearInterval(tick); return; }
+      if (until > Date.now()) line.textContent = rt('rk.waitIn', { left: left(until - Date.now()) });
+      else { clearInterval(tick); void paint(true); }
+    }, 30_000);
+    return h('div', { class: 'rk-wait me-card', role: 'status' },
+      h('span', { class: 'rk-wait-moon', 'aria-hidden': 'true' }),
+      h('div', {},
+        h('b', {}, rt('rk.wait')),
+        h('p', { class: 'small' }, line, me >= 0 ? ` · ${rt('rk.waitPlace', { place: me + 1, n: lg.players.length })}` : ''),
+        h('p', { class: 'muted small' }, rt('rk.waitSub'))));
+  }
+  /** The last 3 days in the bottom zone: how far to safety. */
+  function dangerBox(players: Row[]) {
+    const st = standing(players);
+    return h('div', { class: 'rk-danger me-card', role: 'status' },
+      h('b', {}, `▼ ${rt('rk.dangerTitle', { left: left(weekEnds().getTime() - Date.now()) })}`),
+      h('p', { class: 'small' }, st.kind === 'safe' ? rt('rk.noteSafe', { n: num(st.n), pages: Math.ceil(st.n / POINTS.page) }) : rt('rk.dangerSub')),
+      h('button', { class: 'chip', onclick: () => goMushaf() }, rt('rk.hoursRead')));
+  }
+  /** The rival as a person: their character, the gap, and what they did today. */
+  function rivalCard(r: Row & { gap: number; act?: Act | null }) {
+    const name = r.name ?? rt('rk.private');
+    return h('div', { class: 'rk-rival me-card' },
+      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 48, r.frame ?? 0, r.figure),
+      h('div', { class: 'rk-rival-txt' },
+        h('span', { class: 'rk-rival-k small' }, rt('rk.rivalK'), r.private ? '' : lampPill(r.lamp)),
+        h('b', {}, r.gap > 0 ? rt('rk.rivalShort', { name, n: num(r.gap), pages: Math.max(1, Math.ceil((r.gap + 1) / POINTS.page)) }) : rt('rk.rivalTie', { name })),
+        h('span', { class: 'muted small' }, actLine(name, r.act))));
+  }
+  function actLine(name: string, a?: Act | null): string {
+    const parts: string[] = [];
+    if (a?.pages) parts.push(rt(a.pages === 1 ? 'rk.actPage' : 'rk.actPages', { n: num(a.pages) }));
+    if (a?.listen) parts.push(rt('rk.actListen', { n: num(a.listen) }));
+    if (a?.lessons) parts.push(rt(a.lessons === 1 ? 'rk.actLesson' : 'rk.actLessons', { n: num(a.lessons) }));
+    if (!a || !parts.length) return rt('rk.actNone', { name });
+    const ago = Math.max(0, Date.now() - Date.parse(a.at));
+    const when = ago < 5 * 60_000 ? rt('rk.agoNow') : ago < 36e5 ? rt('rk.agoMin', { n: Math.round(ago / 60_000) }) : rt('rk.agoH', { n: Math.round(ago / 36e5) });
+    return `${rt('rk.act', { name, what: parts.join(', ') })} · ${when}`;
+  }
+  /** Saturday and Sunday (the week's first two days): last week's result as a card to share (until closed). */
   function recapCard() {
     const s = status;
     if (!s?.last) return '';
-    const dow = new Date().getDay();
+    const dow = new Date(`${rankDay()}T12:00`).getDay();
     let seen = '';
     try { seen = localStorage.getItem('rankRecapSeen') ?? ''; } catch { /* ignore */ }
-    if ((dow !== 1 && dow !== 2) || seen === s.weekStart) return '';
+    if ((dow !== 6 && dow !== 0) || seen === s.weekStart) return '';
     const el: HTMLElement = h('div', { class: `rk-recap me-card t${s.last.tier}` },
       h('span', { class: 'rk-recap-em' }, tierEmblem(s.last.tier) as unknown as Node),
       h('div', { class: 'rk-recap-txt' },
@@ -504,14 +571,18 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (view === 'league') {
       const lg = await rankLeague(fresh);
       if (!lg) { body.replaceChildren(h('p', { class: 'muted' }, rt('rk.notYet'))); return; }
-      void scheduleLeagueNote(lg.players);
+      if (!lg.waiting) void scheduleLeagueNote(lg.players);
+      const meRow = lg.players.find((x) => x.me);
+      const meAt = meRow ? lg.players.indexOf(meRow) : -1;
+      const inDanger = !lg.waiting && lastDays() && lg.players.length >= LEAGUE.downFrom && meAt >= lg.players.length - LEAGUE.down;
       body.replaceChildren(
-        lastHours() ? hoursBox(lg.players) : '',
+        lg.waiting ? waitBox(lg) : lastHours() ? hoursBox(lg.players) : inDanger ? dangerBox(lg.players) : '',
+        !lg.waiting && status?.rival ? rivalCard(status.rival) : '',
         recapCard(),
         // The character is everyone's avatar by default (owner decision 2026-11-10): until one is made, ask here.
         status && !status.figure && !status.private ? builderCard(status, () => openBuilder(status!, () => void paint(true))) : '',
         podium(lg.players),
-        list(lg.players, true, 'all', status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : ''),
+        list(lg.players, true, 'all', !lg.waiting && status?.rival && status.rival.gap > 0 ? rt('rk.rivalShort', { name: status.rival.name ?? rt('rk.private'), n: num(status.rival.gap), pages: Math.max(1, Math.ceil((status.rival.gap + 1) / POINTS.page)) }) : '', !!lg.waiting),
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
       // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
       void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
@@ -519,13 +590,21 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       const m = await import('./friends');
       body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
     } else if (view === 'global') {
+      const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; void paint(); } }, label);
+      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, icon('trophy', 18), rt('rk.hall'));
+      if (hall) {
+        const hf = await rankHall(fresh);
+        body.replaceChildren(
+          h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()),
+          hallView(hf));
+        return;
+      }
       const rows = await rankGlobal(metric === 'all' && allTime, metric, fresh);
-      const sw = (on: boolean, label: string) => h('button', { class: `chip${allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; void paint(); } }, label);
       const s = await rankStatus();
       const meIn = rows.some((r) => r.me);
       body.replaceChildren(
         metricChips(),
-        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab'))) : '',
+        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()) : '',
         rows.length ? list(rows, false, metric) : h('p', { class: 'muted' }, rt('rk.empty')),
         !meIn && s && metric === 'all' ? h('p', { class: 'rk-mine' }, allTime ? rt('rk.youAll', { place: num(s.allPlace), n: num(s.total) })
           : s.weekPlace ? rt('rk.youWeek', { place: num(s.weekPlace), n: num(s.week) }) : '') : '');
@@ -554,7 +633,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         challengeBox(chs),
         h('h2', { class: 'me-h' }, rt('rk.boards')),
         boards.length ? h('div', { class: 'menu rk-boards' }, ...boards.map((b) => h('button', { class: 'menu-item', onclick: () => { openBoard = b; metric = 'all'; void paint(); } },
-          h('span', {}, `👥  ${b.name}`), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
+          h('span', {}, icon('users', 18), b.name), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
           : h('p', { class: 'muted' }, rt('rk.noBoards')),
         h('div', { class: 'chips rk-board-acts' }, h('button', { class: 'primary brand-btn', onclick: newBoard }, `＋ ${rt('rk.create')}`)),
         h('div', { class: 'rk-join' }, code, h('button', { class: 'chip', onclick: async () => {
@@ -795,7 +874,7 @@ export async function showBoardInvite(root: HTMLElement, code: string): Promise<
     location.hash = '#/ranks';
   };
   box.replaceChildren(
-    h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, '👥'),
+    h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, icon('users', 22)),
     h('h2', {}, p.name),
     h('p', { class: 'muted' }, rt('rk.inviteSub', { n: p.members })),
     p.joined ? h('a', { class: 'primary brand-btn', href: '#/ranks' }, rt('rk.open'))

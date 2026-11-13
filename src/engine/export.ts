@@ -6,6 +6,7 @@ import {
   CanvasSource,
   Mp4OutputFormat,
   Output,
+  StreamTarget,
   WebMOutputFormat,
   canEncodeAudio,
 } from 'mediabunny';
@@ -37,6 +38,53 @@ export interface ExportOptions {
 
 let aacRegistered = false;
 
+/** Where the finished video goes. A file on the phone's disk when the browser can (OPFS), so a long
+ *  reel never has to fit in memory at once; else memory, as before. */
+interface Sink { target: BufferTarget | StreamTarget; done(): Promise<Blob>; drop(): Promise<void> }
+
+export async function diskSink(mime: string): Promise<Sink | null> {
+  try {
+    const root = await navigator.storage?.getDirectory?.();
+    if (!root) return null;
+    // Earlier exports' files: kept a few hours (their result page may still share them), then removed.
+    for await (const [name, handle] of (root as unknown as { entries(): AsyncIterable<[string, FileSystemHandle]> }).entries()) {
+      if (!name.startsWith('export-') || handle.kind !== 'file') continue;
+      const f = await (handle as FileSystemFileHandle).getFile().catch(() => null);
+      if (f && Date.now() - f.lastModified > 6 * 3600_000) await root.removeEntry(name).catch(() => {});
+    }
+    const name = `export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const fh = await root.getFileHandle(name, { create: true });
+    if (typeof fh.createWritable !== 'function') { await root.removeEntry(name).catch(() => {}); return null; }
+    const w = await fh.createWritable();
+    const stream = new WritableStream<{ type: 'write'; data: Uint8Array; position: number }>({
+      write: (c) => w.write({ type: 'write', position: c.position, data: c.data as Uint8Array<ArrayBuffer> }),
+      close: () => w.close(),
+      abort: () => w.abort(),
+    });
+    return {
+      target: new StreamTarget(stream, { chunked: true, chunkSize: 4 * 1024 * 1024 }),
+      done: async () => { const f = await fh.getFile(); return new Blob([f], { type: mime }); },
+      drop: async () => { await w.abort().catch(() => {}); await root.removeEntry(name).catch(() => {}); },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps the screen on while the video is made (the phone sleeping would pause it). */
+function keepAwake(): () => void {
+  type Lock = { release(): Promise<void> };
+  const wl = (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<Lock> } }).wakeLock;
+  if (!wl) return () => {};
+  let lock: Lock | null = null;
+  let on = true;
+  const take = () => { if (on && !document.hidden) void wl.request('screen').then((l) => { if (on) lock = l; else void l.release(); }, () => {}); };
+  const onVis = () => { if (!document.hidden && !lock) take(); if (document.hidden) lock = null; };
+  document.addEventListener('visibilitychange', onVis);
+  take();
+  return () => { on = false; document.removeEventListener('visibilitychange', onVis); void lock?.release().catch(() => {}); lock = null; };
+}
+
 export async function exportVideo(o: ExportOptions): Promise<Blob> {
   const { path } = o;
   if (path.audioCodec === 'aac' && !aacRegistered && !(await canEncodeAudio('aac'))) {
@@ -54,9 +102,19 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
   const ctx = canvas.getContext('2d', { alpha: false })!;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
+  const mime = path.container === 'mp4' ? 'video/mp4' : 'video/webm';
+  const t0 = o.range?.from ?? 0;
+  const t1 = o.range?.to ?? o.timeline.duration;
+  const first = Math.round(t0 * FPS);
+  const frames = Math.ceil(t1 * FPS) - first;
+  const disk = await diskSink(mime);
+  const target = disk?.target ?? new BufferTarget();
+  // On disk the MP4's index is written into space kept at the start (still Fast Start, no full copy
+  // in memory); its size comes from the packet counts, with a third more as a margin.
+  const reserve = !!disk && path.container === 'mp4';
   const output = new Output({
-    format: path.container === 'mp4' ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat(),
-    target: new BufferTarget(),
+    format: path.container === 'mp4' ? new Mp4OutputFormat({ fastStart: reserve ? 'reserve' : 'in-memory' }) : new WebMOutputFormat(),
+    target,
   });
   const video = new CanvasSource(canvas, {
     codec: path.videoCodec,
@@ -66,8 +124,9 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     hardwareAcceleration: path.hardware ? 'prefer-hardware' : 'no-preference',
   });
   const audio = new AudioBufferSource({ codec: path.audioCodec, bitrate: 128_000 });
-  output.addVideoTrack(video, { frameRate: FPS });
-  output.addAudioTrack(audio);
+  const audioPackets = Math.ceil(((t1 - t0) * o.audio.sampleRate) / 1024);
+  output.addVideoTrack(video, { frameRate: FPS, ...(reserve ? { maximumPacketCount: Math.ceil(frames * 1.34) + 8 } : {}) });
+  output.addAudioTrack(audio, reserve ? { maximumPacketCount: Math.ceil(audioPackets * 1.34) + 8 } : {});
 
   // The cover frame: drawn first, embedded as cover art, handed back as an image.
   const cover = o.range ? undefined : o.project.cover;
@@ -84,15 +143,12 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
 
   const abort = () => void output.cancel();
   o.signal.addEventListener('abort', abort);
+  const release = keepAwake();
   try {
     await output.start();
-    const t0 = o.range?.from ?? 0;
-    const t1 = o.range?.to ?? o.timeline.duration;
     await audio.add(o.range ? sliceAudio(o.audio, t0, t1) : o.audio);
     audio.close();
 
-    const first = Math.round(t0 * FPS);
-    const frames = Math.ceil(t1 * FPS) - first;
     const spans = sceneSpans(o.timeline.scenes, o.project.transition);
     // Pipelined: while frame i is being encoded, the background video is already decoding frame i + 1
     // (`video.add` copies the canvas at once, so the next frame can be prepared straight away).
@@ -112,12 +168,14 @@ export async function exportVideo(o: ExportOptions): Promise<Blob> {
     video.close();
     await output.finalize();
     o.onProgress(1);
-    const mime = path.container === 'mp4' ? 'video/mp4' : 'video/webm';
-    return new Blob([output.target.buffer!], { type: mime });
+    if (disk) return await disk.done();
+    return new Blob([(target as BufferTarget).buffer!], { type: mime });
   } catch (e) {
     if (output.state !== 'canceled' && output.state !== 'finalized') await output.cancel().catch(() => {});
+    await disk?.drop();
     throw e;
   } finally {
+    release();
     o.signal.removeEventListener('abort', abort);
   }
 }

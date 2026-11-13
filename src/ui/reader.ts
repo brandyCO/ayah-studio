@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Translation reading view: one card per ayah with Arabic + English. Same selection gestures as
 // the mushaf view (long-press, drag, tap to extend).
 import { loadMeta, surahText, surahTranslation } from '../data/quran';
@@ -5,7 +6,8 @@ import { currentTranslation, translationInfo } from '../data/translations';
 import { surahName, t } from '../i18n';
 import { h } from './dom';
 import { setReaderMode } from './prefs';
-import { openReflection } from './reflections';
+// The reflections sheet loads on first use (out of the first load).
+const openReflection = (...a: Parameters<typeof import('./reflections').openReflection>) => import('./reflections').then((m) => m.openReflection(...a));
 import { selectionController } from './selection';
 import { tafsirToggle } from './tafsir';
 
@@ -36,8 +38,9 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
 
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+      h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
       h('div', { class: 'brand' }, h('h1', {}, t('common.surahTitle', { n: s.n, name: surahName(s) })), h('p', { class: 'muted' }, t('list.surahInfo', { tr: s.tr, n: s.ayahs }))),
+      sizeBtn(),
       h('button', { class: 'chip', onclick: () => { setReaderMode('mushaf'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, t('reader.mushaf'))),
     h('p', { class: 'hint muted' }, t('reader.hint')),
     listEl,
@@ -49,4 +52,22 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
   }
 
   return () => sel.destroy();
+}
+
+/** Reader text size (Arabic and translation together): each tap goes one step bigger, then back to
+ *  the smallest. Kept on this device. */
+const SIZES = [1, 1.15, 1.3, 1.5, 0.9];
+const readSize = () => { try { const v = Number(localStorage.getItem('readerText')); return SIZES.includes(v) ? v : 1; } catch { return 1; } };
+function sizeBtn(): HTMLElement {
+  const label = t('reader.textSize');
+  const apply = (v: number) => document.documentElement.style.setProperty('--reader-scale', String(v));
+  apply(readSize());
+  return h('button', {
+    class: 'chip', 'aria-label': label, title: label,
+    onclick: () => {
+      const v = SIZES[(SIZES.indexOf(readSize()) + 1) % SIZES.length];
+      try { localStorage.setItem('readerText', String(v)); } catch { /* ignore */ }
+      apply(v);
+    },
+  }, h('span', { 'aria-hidden': 'true', style: 'font-size: 13px' }, 'A'), h('span', { 'aria-hidden': 'true', style: 'font-size: 18px; font-weight: 800' }, 'A'));
 }

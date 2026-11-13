@@ -1,0 +1,103 @@
+/* The lamp wall (src/ui/lampWall.ts): a night sky with lamps hanging from one beam, each in its own warm light. */
+.lw-page { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0;
+  border: 0; overflow-y: auto; overscroll-behavior: contain; color: #fff6e6;
+  background: linear-gradient(180deg, #070b24 0%, #141040 42%, #2a1840 78%, #3a1d32 100%); }
+.lw-page::backdrop { background: #070b24; }
+.lw-sky { position: fixed; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff9 50%, #0000 51%), radial-gradient(1px 1px at 28% 8%, #fff8 50%, #0000 51%),
+    radial-gradient(1.5px 1.5px at 44% 26%, #fffa 50%, #0000 51%), radial-gradient(1px 1px at 63% 12%, #fff7 50%, #0000 51%),
+    radial-gradient(2px 2px at 81% 22%, #fff9 50%, #0000 51%), radial-gradient(1px 1px at 92% 6%, #fff8 50%, #0000 51%),
+    radial-gradient(1px 1px at 7% 40%, #fff6 50%, #0000 51%), radial-gradient(1.5px 1.5px at 71% 38%, #fff7 50%, #0000 51%),
+    radial-gradient(60% 40% at 50% 100%, #ff9a5a22, #0000 70%); }
+.lw-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  background: linear-gradient(#070b24f2 60%, #070b2400); }
+.lw-top h1 { flex: 1; margin: 0; text-align: center; font: 1000 22px var(--ui-round, inherit); letter-spacing: .2px; }
+.lw-page .lw-back { color: #fff6e6; background: #ffffff1a; border: 1px solid #ffffff33; box-shadow: none; font-size: 28px; }
+.lw-gap { width: 40px; }
+.lw-head { position: relative; padding: 0 20px 6px; text-align: center; }
+.lw-sub { margin: 0 auto 6px; max-width: 34ch; color: #e9dcff; line-height: 1.45; }
+.lw-counts { margin: 0; color: #ffd98a; font-weight: 800; }
+.lw-wall { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 4px 6px;
+  padding: 18px 12px 150px; min-height: 40vh; }
+.lw-rail { position: absolute; inset: 14px 8px auto; height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, #6b4a24, #b8863f 20%, #e2b866 50%, #b8863f 80%, #6b4a24); box-shadow: 0 2px 0 #0006; }
+.lw-empty { margin: 40px auto; text-align: center; color: #e9dcff; display: grid; gap: 12px; justify-items: center; }
+
+/* A lamp: chain, cap, glass with a flame, base; the name under it. */
+.lw-lamp { --w: 46px; --gl: #ffcf6b; --gl2: #ff9a3c; position: relative; display: flex; flex-direction: column; align-items: center;
+  width: calc(var(--w) + 30px); padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  transform-origin: 50% 0; animation: lw-sway 7s ease-in-out var(--dl, 0s) infinite alternate; -webkit-tap-highlight-color: transparent; }
+.lw-lamp.z-m { --w: 58px; }
+.lw-lamp.z-l { --w: 74px; }
+.lw-lamp:nth-child(3n) { --gl: #ffb48a; --gl2: #ff7a4c; }
+.lw-lamp:nth-child(5n+1) { --gl: #ffe6a3; --gl2: #ffb648; }
+.lw-chain { width: 2px; height: var(--drop, 20px); background: repeating-linear-gradient(#d6a95a 0 4px, #8a6430 4px 6px); }
+.lw-body { position: relative; width: var(--w); height: calc(var(--w) * 1.42); display: block; }
+.lw-glow { position: absolute; inset: -60% -70%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--gl) 55%, transparent), color-mix(in srgb, var(--gl2) 18%, transparent) 55%, transparent);
+  animation: lw-flick var(--fl, 3s) ease-in-out var(--dl, 0s) infinite alternate; }
+.lw-cap { position: absolute; inset: 0 12% auto; height: 22%; background: linear-gradient(#e8c06a, #9a6a2a);
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%); }
+.lw-cap::before { content: ''; position: absolute; left: 50%; top: -6px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+  border: 2px solid #d6a95a; box-sizing: border-box; }
+.lw-glass { position: absolute; inset: 21% 6% 14%; border-radius: 40% 40% 32% 32% / 30% 30% 22% 22%; overflow: hidden;
+  background: radial-gradient(60% 55% at 50% 58%, #fffdf0 0%, var(--gl) 38%, var(--gl2) 78%, #8a3d12 100%);
+  box-shadow: inset 0 0 0 2px #c9963f, inset 0 -6px 10px #0003; }
+.lw-glass::before { content: ''; position: absolute; inset: 0; background:
+  linear-gradient(90deg, transparent 31%, #9a6a2a88 31% 35%, transparent 35% 65%, #9a6a2a88 65% 69%, transparent 69%); }
+.lw-flame { position: absolute; left: 50%; bottom: 22%; width: 26%; height: 38%; margin-left: -13%;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(50% 60% at 50% 70%, #fff 0%, #fff4c2 45%, #ffb13c 100%);
+  transform-origin: 50% 100%; animation: lw-flame calc(var(--fl, 3s) / 3) ease-in-out var(--dl, 0s) infinite alternate; }
+.lw-base { position: absolute; inset: auto 16% 2%; height: 14%; border-radius: 0 0 40% 40%; background: linear-gradient(#c9963f, #7a5020); }
+.lw-name { margin-top: 6px; max-width: calc(var(--w) + 28px); font: 800 13px var(--ui-round, inherit); line-height: 1.15;
+  overflow-wrap: anywhere; text-shadow: 0 1px 6px #000a; }
+.lw-amn { font-size: 11px; color: #ffd98a; opacity: .9; }
+.lw-lamp.me .lw-name { color: #ffe39a; }
+.lw-lamp.said .lw-amn { color: #b6f5a3; }
+.lw-lamp:active .lw-body { scale: .95; }
+.lw-lamp.new { animation: lw-drop 1.2s cubic-bezier(.2, 1.3, .4, 1) both, lw-sway 7s ease-in-out 1.2s infinite alternate; }
+.lw-lamp.new .lw-glow { animation: lw-bloom 1.8s ease-out both, lw-flick var(--fl, 3s) ease-in-out 1.8s infinite alternate; }
+@keyframes lw-sway { from { rotate: -1.6deg; } to { rotate: 1.6deg; } }
+@keyframes lw-flick { 0% { opacity: .78; } 40% { opacity: 1; } 70% { opacity: .86; } 100% { opacity: .96; } }
+@keyframes lw-flame { from { scale: 1 1; } to { scale: .9 1.08; } }
+@keyframes lw-drop { from { translate: 0 -120px; opacity: 0; } 60% { opacity: 1; } to { translate: 0 0; } }
+@keyframes lw-bloom { 0% { opacity: 0; scale: .4; } 40% { opacity: 1; scale: 1.6; } 100% { opacity: .9; scale: 1; } }
+.lw-page.still .lw-lamp, .lw-page.still .lw-glow, .lw-page.still .lw-flame { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .lw-lamp, .lw-glow, .lw-flame { animation: none !important; } }
+
+.lw-foot { position: fixed; inset: auto 0 0; z-index: 2; display: grid; justify-items: center; gap: 6px;
+  padding: 26px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(#3a1d3200, #2a1428 40%); }
+.lw-go { min-width: min(320px, 100%); font-size: 17px; }
+.lw-note { margin: 0; max-width: 40ch; text-align: center; color: #d9c9ef; }
+
+/* The lamp's sheet and the lighting form. */
+.lw-sheet { text-align: center; }
+.lw-big { display: grid; place-items: center; height: 150px; overflow: hidden; margin: -6px 0 4px; }
+.lw-big .lw-lamp { --w: 64px; animation: none; pointer-events: none; }
+.lw-big .lw-name { display: none; }
+.lw-sheet .lw-dua-ar { margin: 6px 0 4px; font: 30px/1.7 AmiriQuran, 'Amiri', serif; }
+.lw-sheet .lw-dua-en { margin: 0 0 6px; font-style: italic; }
+.lw-amen { width: 100%; margin-top: 8px; font-size: 18px; }
+.lw-amen.done { opacity: .85; }
+.lw-rm, .lw-rep { margin-top: 4px; }
+.lw-form { text-align: start; }
+.lw-form-body { display: grid; gap: 10px; }
+.lw-lab { font: 900 14px var(--ui-round, inherit); margin-top: 4px; }
+.lw-in { font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line, #ccc); background: var(--card, #fff); color: inherit; }
+.lw-duas { display: grid; gap: 8px; }
+.lw-dua { display: grid; gap: 2px; padding: 10px 12px; border-radius: 16px; border: 2px solid var(--line, #ddd); border-bottom-width: 4px;
+  background: var(--card, #fff); color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.lw-dua .lw-dua-ar { font: 21px/1.6 AmiriQuran, 'Amiri', serif; text-align: right; }
+.lw-dua.on { border-color: #e2a93b; background: color-mix(in srgb, #ffcf6b 18%, var(--card, #fff)); }
+.lw-sizes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.lw-size { display: grid; justify-items: center; gap: 2px; padding: 6px 4px 10px; border-radius: 16px; border: 2px solid var(--line, #ddd);
+  border-bottom-width: 4px; background: #191337; color: #fff6e6; font: inherit; cursor: pointer; }
+.lw-size.on { border-color: #e2a93b; box-shadow: 0 0 0 3px #ffcf6b55; }
+.lw-mini { height: 96px; display: grid; place-items: end center; overflow: hidden; pointer-events: none; }
+.lw-mini .lw-lamp { --w: 26px; animation: none; }
+.lw-mini .lw-lamp.z-m { --w: 34px; }
+.lw-mini .lw-lamp.z-l { --w: 44px; }
+.lw-mini .lw-name, .lw-mini .lw-chain { display: none; }
+.lw-light { width: 100%; margin-top: 6px; font-size: 18px; }
+

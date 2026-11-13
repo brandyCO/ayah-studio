@@ -71,7 +71,7 @@ export function blazingPair(level: number, a: HTMLElement, b: HTMLElement | null
 
 /** Plays the power-up for a streak of `days`; resolves when it is closed. Null when there is no character. */
 export interface PowerUpOpts {
-  friend?: { code: string | null; name: string };
+  friend?: { code: string | null; name: string; /** The friend's lamp of Light (lampPill), shown by the name. */ lamp?: Node | '' };
   /** A custom moment (a level up): its own kicker, label beside the number and line under it, and the aura level. */
   custom?: { kicker: string; label: string; sub: string; aura: number };
 }
@@ -169,7 +169,7 @@ export function powerUp(days: number, o: PowerUpOpts = {}): Promise<void> | null
     ok);
   const label = o.custom ? `${o.custom.kicker} · ${o.custom.label} ${days}` : `${mt('pu.level', { n: level, name })} · ${days} ${t(days === 1 ? 'me.day' : 'me.days')}`;
   const shake = h('div', { class: 'sf-shake' },
-    h('p', { class: 'sf-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker')),
+    h('p', { class: 'sf-kick' }, o.custom ? o.custom.kicker : o.friend ? mt('pu.friend', { name: o.friend.name }) : newLevel ? mt('pu.up') : mt('pu.kicker'), o.friend?.lamp || ''),
     stage, text);
   // Inside the flame (owner: "his colour becomes as if he is inside the flame"): the character is lit by the fire
   // itself, not seen through it. A gradient map recolours him in the flame's own tones (dark → deep, light → the

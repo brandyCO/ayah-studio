@@ -113,3 +113,6 @@
 .fd-n { display: inline-flex; align-items: center; gap: 4px; font: 1000 20px var(--ui-round, inherit); color: #e86a00; }
 .fd-pair { display: inline-flex; }
 .fd-pair > * + * { margin-inline-start: -10px; }
+
+/* The lamp of Light under a hero in the face-off. */
+.du-hero .du-lamp { position: absolute; inset: auto 0 -4px; display: flex; justify-content: center; pointer-events: none; }

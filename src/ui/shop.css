@@ -87,7 +87,8 @@
 .sh-foot.own { color: #2f9e44; }
 .sh-foot.lock { display: grid; justify-items: center; gap: 4px; width: 100%; color: var(--muted, #888); font-size: 11px; font-weight: 800; }
 .sh-lock-t { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
-.s-locked .sh-art { filter: saturate(.35) brightness(.92); opacity: .78; }
+/* Locked pieces keep their full colour: what you could win should look worth winning. */
+.s-locked .sh-art { filter: saturate(.9); }
 .s-own { border-color: color-mix(in srgb, #2f9e44 55%, transparent); }
 .sh-prog { width: 80%; height: 6px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; }
 .sh-prog i { display: block; height: 100%; width: calc(var(--p) * 100%); border-radius: inherit; background: #ff9a3c; }
@@ -126,7 +127,7 @@
 .sh-card-x { position: absolute; top: 12px; inset-inline-end: 12px; }
 .sh-rar.big { position: static; font-size: 12px; padding: 3px 12px; }
 .sh-card-art { position: relative; display: grid; place-items: center; width: 180px; height: 180px; }
-.sh-card-art > :not(.sh-rays) { position: relative; width: 160px; height: 160px; display: grid; place-items: center; }
+.sh-card-art > :not(.sh-rays):not(.sh-spark) { position: relative; width: 160px; height: 160px; display: grid; place-items: center; }
 .sh-card-art .sh-icon { width: 128px; height: 128px; border-radius: 32px; }
 .sh-card-art .rk-av, .sh-card-art > span > .rk-av { transform: scale(1.7); }
 .sh-rays { position: absolute; inset: -20px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--r) 30%, transparent) 0 10deg, transparent 10deg 24deg);
@@ -142,3 +143,107 @@
 .sh-owned { margin: 0; color: #2f9e44; font-weight: 900; }
 @media (prefers-reduced-motion: reduce) { .sh-page *, .sh-sheet * { animation: none !important; } }
 @media (min-width: 640px) { .sh-sheet { margin: auto; } .sh-card { border-radius: 26px; } }
+/* Today's stall and this week's limited piece (owner request 2026-11-12). */
+.sh-feat.stall { background: radial-gradient(120% 90% at 100% 0%, #ff8a4c 0%, #c2410c 55%, #7c2d12 100%); }
+.sh-feat.limited { background: radial-gradient(120% 100% at 50% 0%, #2a2f7a 0%, #141842 60%, #0b0d26 100%); box-shadow: inset 0 0 0 2px #ffd36b55, 0 10px 30px #ffc85a22; cursor: pointer; }
+.sh-tag.deal { padding: 2px 8px; border-radius: 999px; background: #fff3; color: #fff; }
+.sh-prize.own { opacity: .7; }
+.sh-lim-row { display: flex; align-items: center; gap: 14px; }
+.sh-lim-row .sh-art.big { width: 104px; height: 104px; flex: none; display: grid; place-items: center; filter: drop-shadow(0 0 18px #ffd36b66); }
+.sh-lim-row .sh-art.big > * { width: 100%; height: 100%; }
+.sh-lim-txt { display: grid; gap: 4px; }
+.sh-lim-txt b { font: 1000 1.15rem var(--ui-round, inherit); }
+.sh-was { opacity: .6; margin-inline-end: 4px; font-weight: 600; }
+.sh-page:not(.still) .sh-feat.limited::after { content: ''; position: absolute; inset: -40% -10%; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, #ffffff22 50%, transparent 60%); animation: sh-lim-sweep 4.5s ease-in-out infinite; }
+@keyframes sh-lim-sweep { 0% { translate: -60% 0; } 60%, 100% { translate: 60% 0; } }
+/* Gifts to a friend (owner request 2026-11-12). */
+.gs-light { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.gs-amt { display: grid; gap: 4px; place-items: center; padding: 12px 4px; border-radius: 16px; border: 0; font: inherit; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 12%, var(--card, #fff)); color: inherit; box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 30%, transparent); }
+.gs-amt:active { translate: 0 2px; box-shadow: none; }
+.gs-amt.short { opacity: .45; }
+.gs-gift { font-size: 1.6rem; }
+.gs-piece { width: 100%; justify-content: center; }
+.sh-giftbar { position: sticky; top: 0; z-index: 3; padding: 8px 14px; text-align: center; font-weight: 800; color: #2b1a00; background: linear-gradient(90deg, #ffd36b, #ffb347); }
+.sh-gift-btn { margin-top: 6px; }
+.sh-lampline { display: block; margin: 2px 0 0; color: #ffe7b8; line-height: 1.35; text-wrap: balance; }
+
+/* The door to the lamp wall (src/ui/lampWall.ts). */
+.sh-feat.lamps { cursor: pointer; background: radial-gradient(90% 120% at 100% 0%, #6a3c7a 0%, #241a52 55%, #0d0f2c 100%); border-bottom: 4px solid #070820; }
+.sh-lw-row { display: flex; align-items: center; gap: 12px; }
+.sh-lw-ic { font-size: 34px; filter: drop-shadow(0 0 10px #ffb648aa); }
+.sh-lw-row span.small { color: #e5d6ff; }
+
+/* Every piece at its best (owner request 2026-11-13, "each and every item … desirable"): a glow under the art in the
+   piece's rarity, a passing shine from Epic up, a gold or iridescent rim with twinkles on the finest, and the large
+   card shows the piece where it will live — on you, in your room, on your row of the board. */
+.sh-tile { overflow: hidden; isolation: isolate; }
+.sh-art { position: relative; }
+.sh-tile:not(.r-common) .sh-art::before, .sh-prize .sh-art::before { content: ''; position: absolute; inset: -14px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--r) 42%, transparent) 0%, color-mix(in srgb, var(--r) 14%, transparent) 45%, transparent 70%); }
+.sh-tile:not(.r-common) .sh-art > * { filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--r) 35%, transparent)); }
+.sh-tile.r-epic, .sh-tile.r-legendary, .sh-tile.r-mythic, .sh-tile.r-prize { box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--r) 60%, transparent); }
+.sh-tile.r-legendary, .sh-tile.r-prize { border-color: #f0b400;
+  background: linear-gradient(180deg, var(--r2) 0 62%, var(--card) 62%) padding-box, linear-gradient(160deg, #fff1b0, #f0b400 40%, #b67a00 70%, #ffe28a) border-box; }
+.sh-tile.r-mythic { border-color: transparent;
+  background: linear-gradient(180deg, var(--r2) 0 62%, var(--card) 62%) padding-box, conic-gradient(from 200deg, #ff7eb6, #ffd36b, #7ee0ff, #b48cff, #ff7eb6) border-box; }
+.sh-tile.r-mythic .sh-rar { background: linear-gradient(90deg, #ff5ea8, #b16cff, #4cc3ff); }
+.sh-tile.r-legendary .sh-rar, .sh-tile.r-prize .sh-rar { background: linear-gradient(90deg, #f0a800, #ffcf3f); color: #4a2f00; }
+.sh-tile.r-legendary .sh-name, .sh-tile.r-mythic .sh-name { font-weight: 1000; }
+/* The passing shine: one band crossing the tile now and then, each tile at its own moment. */
+.sh-tile.r-epic::after, .sh-tile.r-legendary::after, .sh-tile.r-mythic::after, .sh-tile.r-prize::after { content: ''; position: absolute; inset: -20% -60%; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%); translate: -70% 0; opacity: 0; }
+html:not(.lite) .sh-page:not(.still) .sh-tile.r-epic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.r-legendary::after,
+html:not(.lite) .sh-page:not(.still) .sh-tile.r-mythic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.r-prize::after {
+  animation: sh-tile-shine 6.5s ease-in-out infinite; }
+.sh-tile:nth-child(3n+1)::after { animation-delay: .4s !important; } .sh-tile:nth-child(3n+2)::after { animation-delay: 2.6s !important; } .sh-tile:nth-child(3n)::after { animation-delay: 4.5s !important; }
+.sh-tile.r-legendary::after, .sh-tile.r-mythic::after { animation-duration: 4.8s !important; }
+@keyframes sh-tile-shine { 0% { translate: -70% 0; opacity: 0; } 4% { opacity: 1; } 22% { translate: 70% 0; opacity: 1; } 26%, 100% { translate: 70% 0; opacity: 0; } }
+.s-locked.sh-tile::after { display: none; }
+/* Twinkles: four-pointed stars that breathe in and out round the finest pieces. */
+.sh-spark { position: absolute; z-index: 3; width: 10px; height: 10px; pointer-events: none; opacity: 0; scale: .3;
+  background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 3px #ffd36b);
+  top: calc(10% + (var(--i) * 37 % 55) * 1%); left: calc(8% + (var(--i) * 53 % 84) * 1%); }
+.r-mythic .sh-spark { filter: drop-shadow(0 0 3px #b48cff); }
+html:not(.lite) .sh-page:not(.still) .sh-spark, html:not(.lite) .sh-sheet .sh-spark { animation: sh-twinkle 2.8s calc(var(--i) * -.83s) ease-in-out infinite; }
+@keyframes sh-twinkle { 0%, 55%, 100% { opacity: 0; scale: .3; rotate: 0deg; } 70% { opacity: 1; scale: 1; rotate: 45deg; } 85% { opacity: .2; scale: .5; rotate: 90deg; } }
+.s-locked .sh-spark { display: none; }
+
+/* The large card: the piece where it will live. */
+.sh-card-art.wide { width: 100%; height: auto; min-height: 220px; }
+.sh-card-art.wide > :not(.sh-rays):not(.sh-spark) { width: 100%; height: auto; }
+.sh-card-art .sh-spark { width: 14px; height: 14px; top: calc(6% + (var(--i) * 37 % 80) * 1%); left: calc(4% + (var(--i) * 53 % 92) * 1%); }
+.sh-big.fig { position: relative; display: grid; place-items: end center; height: 230px; }
+.sh-big.fig .sh-actor { position: relative; width: 160px; height: 220px; }
+.sh-big.fig .sh-bgdisc { position: absolute; left: 50%; top: 6px; width: 200px; height: 200px; translate: -50% 0; box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--r) 70%, transparent); }
+.sh-big.fig::after { content: ''; position: absolute; bottom: 2px; left: 50%; width: 130px; height: 16px; translate: -50% 0; border-radius: 50%; z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--r) 55%, transparent), transparent); }
+.sh-big.room { display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--r) 55%, transparent), 0 12px 30px -10px color-mix(in srgb, var(--r) 70%, transparent); }
+.sh-big.room > svg { display: block; width: 100%; height: 100%; }
+.sh-big.look { display: grid; justify-items: center; gap: 14px; padding: 8px 0 2px; }
+.sh-big-av { display: grid; place-items: center; width: 150px; height: 150px; }
+.sh-card-art .sh-big .rk-av { transform: none; }
+.sh-row { display: flex; align-items: center; gap: 10px; width: min(100%, 320px); padding: 8px 14px 8px 10px; border-radius: 16px; text-align: start;
+  background: var(--card); border: 2px solid color-mix(in srgb, var(--r) 45%, transparent); border-bottom-width: 4px; box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--r) 60%, transparent); }
+.sh-row-n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #ffc542; color: #5a3b00; font: 1000 13px var(--ui-round, inherit); }
+.sh-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 900 15px var(--ui-round, inherit); }
+.sh-row-xp { color: var(--muted, #888); font: 800 12px var(--ui-round, inherit); }
+.sh-why { margin: 0 6px; font: 800 15px/1.35 var(--ui-round, inherit); text-wrap: balance; }
+/* The finest pieces' cards: a gold or iridescent sky, doubled rays. */
+.sh-card.r-legendary, .sh-card.r-prize { background: radial-gradient(90% 55% at 50% 22%, #fff4c2 0%, transparent 70%), linear-gradient(180deg, #ffe7a0 0 44%, var(--card) 44%); }
+.sh-card.r-mythic { background: radial-gradient(70% 40% at 30% 12%, #ffd6ec 0%, transparent 70%), radial-gradient(70% 40% at 75% 22%, #d9ccff 0%, transparent 70%), linear-gradient(180deg, #e9f6ff 0 44%, var(--card) 44%); }
+.sh-card.r-mythic .sh-rays { background: repeating-conic-gradient(from 0deg, #ff7eb655 0 8deg, transparent 8deg 16deg, #7ee0ff55 16deg 24deg, transparent 24deg 32deg, #ffd36b55 32deg 40deg, transparent 40deg 48deg); }
+.sh-card.r-legendary .sh-rays, .sh-card.r-prize .sh-rays { background: repeating-conic-gradient(from 0deg, #ffc54266 0 9deg, transparent 9deg 20deg); }
+.sh-card.r-mythic .sh-rar.big { background: linear-gradient(90deg, #ff5ea8, #b16cff, #4cc3ff); }
+.sh-card.r-legendary .sh-rar.big, .sh-card.r-prize .sh-rar.big { background: linear-gradient(90deg, #f0a800, #ffcf3f); color: #4a2f00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sh-card.r-legendary, :root:not([data-theme="light"]) .sh-card.r-prize { background: radial-gradient(90% 55% at 50% 22%, #6b4d0a 0%, transparent 70%), linear-gradient(180deg, #3b2c0a 0 44%, var(--card) 44%); }
+  :root:not([data-theme="light"]) .sh-card.r-mythic { background: radial-gradient(70% 40% at 30% 12%, #5b2246 0%, transparent 70%), radial-gradient(70% 40% at 75% 22%, #2f2a6b 0%, transparent 70%), linear-gradient(180deg, #1c1f3d 0 44%, var(--card) 44%); } }
+:root[data-theme="dark"] .sh-card.r-legendary, :root[data-theme="dark"] .sh-card.r-prize { background: radial-gradient(90% 55% at 50% 22%, #6b4d0a 0%, transparent 70%), linear-gradient(180deg, #3b2c0a 0 44%, var(--card) 44%); }
+:root[data-theme="dark"] .sh-card.r-mythic { background: radial-gradient(70% 40% at 30% 12%, #5b2246 0%, transparent 70%), radial-gradient(70% 40% at 75% 22%, #2f2a6b 0%, transparent 70%), linear-gradient(180deg, #1c1f3d 0 44%, var(--card) 44%); }
+/* A small piece (a watch, glasses, what is held) also gets a round close-up beside the character. */
+.sh-zoom { position: absolute; z-index: 2; top: 10px; inset-inline-end: 8px; width: 92px; height: 92px; border-radius: 50%; overflow: hidden;
+  background: var(--card); box-shadow: 0 0 0 3px color-mix(in srgb, var(--r) 70%, #fff), 0 8px 20px -6px rgba(0,0,0,.35); }
+.sh-zoom > svg { width: 100%; height: 100%; }

@@ -5,27 +5,31 @@
 // Light), and what can only be won (streaks, Ranks weeks, badges, seasons, app icons), locked with how and when
 // it comes back. Tap a piece: a card with it large, and Get / Wear / Put in my room / Use. Never money, nothing random.
 import './shop.css';
+import { icon } from './icons';
 import { sht, type ShopKey } from '../i18n/shop';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
-import { t } from '../i18n';
+import { lang, t, timeLeft } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 import { reduced, popIn, squash, tick } from './juice';
 import { star } from './lightChip';
 import { freezeArt } from './flat';
-import { avatar } from './rankAvatars';
+import { avatar, lookName } from './rankAvatars';
 import { DEFAULT, PIECES, bustMarkup, PRICE, PRIZE, WARDROBE, encode, figureSvg, options, parse, weekPiece, wearing, type Fig, type How, type Slot as FigSlot } from './figure';
 import { ROOM_ITEMS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem } from '../data/roomItems';
 import { tileArt } from './roomShop';
-import { APP_ICONS, pickedIcon, unlockedIcons, type AppIconId } from './appIcons';
-import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
+import { backSvg, specialNow } from './room';
+import { APP_ICONS, levelNeed, pickedIcon, tierRarity, unlockedIcons, type AppIconId } from './appIcons';
+import { lampNext, lampOf } from '../data/shop';
+import { lwt } from '../i18n/lampWall';
+import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, limitedIn, limitedNow, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
 import { shopAdd, shopHas, wallet } from '../data/garden';
 import { ownsPiece, hijri, seasonNow, streakNeed } from '../data/wardrobe';
 import { lightOn, stats, streak } from '../data/journey';
 import { dayKey } from '../data/readLog';
-import { resetsAt } from '../data/goals';
-import { myFigureCode } from './actor';
+import { rankWeek, weekEndAt } from '../data/rankDay';
+import { actor, myFigureCode } from './actor';
 import type { Status } from '../together/ranks';
 
 type Rar = 'common' | 'cute' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'prize';
@@ -33,7 +37,17 @@ type Sec = 'power' | 'char' | 'room' | 'look' | 'won' | 'season' | 'icons';
 type State = 'own' | 'buy' | 'locked';
 interface Ware {
   id: string; sec: Sec; name: string; rar: Rar; price?: number; for: ShopKey;
+  /** Sold one week at a time (never on the stall). */
+  lim?: boolean;
+  /** On Today's stall: the price before the discount. */
+  was?: number;
+  /** Bought under this id (a stall price records it at the price paid). */
+  store?: string;
   art: () => Node; state: () => State;
+  /** The piece where it will live, for the large card: on you, in your room, on your board row. */
+  big?: (got: boolean) => Node;
+  /** One true line on what having it does. */
+  why?: ShopKey;
   /** Why it is locked, and a small line (when it comes back, progress). */
   how?: string; when?: () => string; progress?: () => [number, number] | null;
   doBuy?: () => boolean;
@@ -41,8 +55,22 @@ interface Ware {
   use?: { label: ShopKey; done: ShopKey; active: () => boolean; run: () => Promise<void> | void };
 }
 
+/** Today's three stall pieces: a fixed shuffle of every piece for Light, three a day, walked through in order so a
+ *  piece comes round again only after all the others. */
+function stallPick<T extends { id: string }>(pool: T[], now = new Date()): T[] {
+  if (pool.length < 3) return [];
+  const sorted = [...pool].sort((a, b) => (a.id < b.id ? -1 : 1));
+  let x = 7;
+  for (let i = sorted.length - 1; i > 0; i--) { x = (x * 1103515245 + 12345) & 0x7fffffff; const j = x % (i + 1); [sorted[i], sorted[j]] = [sorted[j], sorted[i]]; }
+  const day = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12).getTime() - Date.UTC(2026, 10, 12, 12)) / 864e5);
+  const start = (((day * 3) % sorted.length) + sorted.length) % sorted.length;
+  return [0, 1, 2].map((k) => sorted[(start + k) % sorted.length]);
+}
 const nf = () => new Intl.NumberFormat(document.documentElement.lang || undefined);
 const num = (n: number) => nf().format(n);
+/** Twinkles round the finest pieces (legendary and up; mythic a few more). */
+const sparks = (rar: Rar, n: number): Node[] => (rar === 'legendary' || rar === 'mythic' || rar === 'prize'
+  ? Array.from({ length: rar === 'mythic' ? n + 2 : n }, (_, i) => h('i', { class: 'sh-spark', 'aria-hidden': 'true', style: `--i:${i}` })) : []);
 const svgBox = (markup: string, cls = 'sh-svg') => { const s = h('span', { class: cls }); s.innerHTML = markup; return s; };
 
 /** Days until a season comes round again (0 = on now), from the Umm al-Qura calendar; −1 when unknown. */
@@ -71,12 +99,6 @@ function pieceWeeks(id: string, week: string): number {
   }
   return -1;
 }
-function mondayKey(): string {
-  const w = resetsAt().week;
-  const m = new Date(w.getFullYear(), w.getMonth(), w.getDate() - 7);
-  return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}-${String(m.getDate()).padStart(2, '0')}`;
-}
-
 /** The character to show a part on: the user's own when it can wear it, else the default look that can. */
 function figFor(piece: string): Fig | null {
   const [slot, v] = piece.split(':');
@@ -91,6 +113,8 @@ const wearingNow = (piece: string) => { const [slot, v] = piece.split(':'); cons
 /** A part shown where it is worn: a headpiece or glasses close on the head, a held thing at the hands, a background
  *  as the disc behind the bust, clothes on the whole character. */
 const CROP: Partial<Record<string, string>> = { head: '38 0 124 124', glasses: '50 20 100 100', wrap: '38 0 124 124', hold: '40 140 120 116' };
+/** Close-ups for the card: the small pieces, drawn again large in a round window. */
+const ZOOM: Partial<Record<string, string>> = { glasses: '55 30 90 90', hold: '30 140 140 110', acc: '38 170 70 70' };
 const figArt = (piece: string) => () => {
   const f = figFor(piece);
   if (!f) return svgBox('', 'sh-svg fig');
@@ -101,11 +125,38 @@ const figArt = (piece: string) => () => {
   return svgBox(crop ? svg.replace('viewBox="0 0 200 262"', `viewBox="${crop}"`) : svg, `sh-svg fig${crop ? ' crop' : ''}`);
 };
 /** A part's name as the builder shows it (the plain backgrounds are just "Background"). */
-const partName = (piece: string) => { const [slot, v] = piece.split(':'); return slot === 'bg' && Number(v) < 8 ? rt('fb.tab.bg') : rt(`fb.${slot}.${v}` as RankKey); };
+const partName = (piece: string) => {
+  const [slot, v] = piece.split(':');
+  if (slot === 'bg' && Number(v) < 8) return v === '6' || v === '7' ? sht(`sh.bg.${v}` as ShopKey) : rt('fb.tab.bg');
+  return rt(`fb.${slot}.${v}` as RankKey);
+};
+/** A part large: on the user's whole character (a background as the big disc behind them), alive — it cheers once
+ *  it is theirs. */
+const figBig = (piece: string) => (got: boolean) => {
+  const f = figFor(piece);
+  if (!f) return figArt(piece)();
+  const a = actor('sh-actor', encode(f));
+  if (!a) return figArt(piece)();
+  const slot = piece.split(':')[0];
+  const box = h('span', { class: `sh-big fig${slot === 'bg' ? ' on-bg' : ''}` });
+  if (slot === 'bg') box.append(svgBox(`<svg viewBox="2 2 36 36">${bustMarkup(f, 18).replace(/<g clip-path[^]*$/, '')}</svg>`, 'sh-svg fig disc sh-bgdisc'));
+  box.append(a.el);
+  const zoom = ZOOM[slot];
+  if (zoom) box.append(svgBox(figureSvg(f, { still: true }).replace('viewBox="0 0 200 262"', `viewBox="${zoom}"`), 'sh-zoom'));
+  if (!reduced()) setTimeout(() => (got ? a.cheer(1800) : a.hop(0.5)), got ? 120 : 420);
+  return box;
+};
+const skyNow = (): 'dawn' | 'day' | 'dusk' | 'night' => { const hr = new Date().getHours(); return hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr < 16 ? 'day' : hr >= 16 && hr < 19 ? 'dusk' : 'night'; };
+/** A room piece standing in the user's own room, as it is now. */
+const roomBig = (it: RoomItem) => () => {
+  const best = Math.max(streak().best, streak().days);
+  const look = { ...roomLook(), [it.slot]: it.id };
+  return svgBox(backSvg(skyNow(), best, false, look, seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
+};
 const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
 const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary' };
 
-export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void }
+export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void; /** Choosing a piece to give a friend. */ giftTo?: { pid: string; name: string } }
 
 /** Opens the shop full screen (Android back / ‹ close it). */
 export async function openShop(o: ShopOpts = {}): Promise<void> {
@@ -114,22 +165,22 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const signedIn = async () => !!(await import('../cloud/auth')).account();
   const wins = (): Wins => ({ bestTier: status?.bestTier ?? status?.tier ?? 0, bestPlace: status?.bestPlace ?? null, wins: status?.wins ?? 0, items: wonItems });
   const tier = () => status?.tier ?? 0;
-  const week = () => status?.weekStart ?? mondayKey();
+  const week = () => status?.weekStart ?? rankWeek();
 
   // --- every piece the app has ---
   const wares = (): Ware[] => {
     const out: Ware[] = [];
     out.push({
       id: 'freeze', sec: 'power', name: rt('rk.freezeTitle'), rar: 'rare', price: FREEZE_PRICE, for: 'sh.forStreak',
-      art: () => freezeArt(84) as unknown as Node,
+      art: () => freezeArt(84) as unknown as Node, why: 'sh.why.freeze',
       state: () => (bankedFreezes() >= FREEZE_MAX ? 'own' : 'buy'),
       when: () => sht('sh.kept', { n: bankedFreezes(), m: FREEZE_MAX }),
       doBuy: buyFreeze,
     });
     for (const [piece, price] of Object.entries(PRICE)) {
       out.push({
-        id: `fg:${piece}`, sec: 'char', name: partName(piece), rar: partRar(price), price, for: 'sh.forChar',
-        art: figArt(piece), state: () => (shopHas(`fg:${piece}`) ? 'own' : 'buy'),
+        id: `fg:${piece}`, sec: 'char', name: partName(piece), rar: partRar(price), price, for: 'sh.forChar', store: `fg:${piece}`,
+        art: figArt(piece), big: figBig(piece), why: 'sh.why.char', state: () => (shopHas(`fg:${piece}`) ? 'own' : 'buy'),
         doBuy: () => wallet() >= price && shopAdd(`fg:${piece}`, price),
         use: { label: 'sh.wear', done: 'sh.worn', active: () => wearingNow(piece), run: () => wear(piece) },
       });
@@ -137,9 +188,12 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     for (const it of ROOM_ITEMS) {
       const win = !!it.win;
       out.push({
-        id: `rm:${it.id}`, sec: win ? 'won' : 'room', name: rt(`rs.i.${it.id}` as RankKey), rar: win ? (it.win === 1 ? 'legendary' : 'epic') : it.r as Rar,
-        price: it.price, for: 'sh.forRoom', art: () => svgBox(tileArt(it.slot, it.id), 'sh-svg room'),
-        state: () => (ownsRoom(it) ? 'own' : win ? 'locked' : 'buy'), how: win ? rt(`rs.win${it.win}` as RankKey) : undefined,
+        id: `rm:${it.id}`, sec: win ? 'won' : 'room', name: rt(`rs.i.${it.id}` as RankKey), rar: win ? (it.win === 1 ? 'legendary' : 'epic') : it.r === 'legendary' ? (it.price! >= 2000 ? 'mythic' : 'legendary') : it.r as Rar,
+        price: it.price, for: 'sh.forRoom', art: () => svgBox(tileArt(it.slot, it.id), 'sh-svg room'), big: roomBig(it), why: 'sh.why.room', store: win ? undefined : `rm:${it.id}`,
+        lim: !!it.limited,
+        state: () => (ownsRoom(it) ? 'own' : win || (it.limited && limitedNow(week()) !== `rm:${it.id}`) ? 'locked' : 'buy'),
+        how: win ? rt(`rs.win${it.win}` as RankKey) : it.limited ? sht('sh.limHow') : undefined,
+        when: it.limited ? () => { if (ownsRoom(it)) return ''; const n = limitedIn(`rm:${it.id}`, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); } : undefined,
         doBuy: () => buyRoom(it),
         use: { label: 'sh.place', done: 'sh.placed', active: () => roomLook()[it.slot] === it.id, run: () => placeRoom(it) },
       });
@@ -151,15 +205,31 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     });
     const lookArt = (it: Item) => () => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), 84)
       : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), 84, it.ref as number, status?.figure ?? myFigureCode()));
+    // Large: the piece big, then the user's own row on a board wearing it, as their league will see it.
+    const lookBig = (it: Item) => () => {
+      const av = (size: number) => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), size, status?.frame ?? 0)
+        : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, it.ref as number, status?.figure ?? myFigureCode()));
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+        h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34),
+          h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
+    };
     for (const it of ITEMS) {
       if (it.kind === 'icon') continue;
-      const name = it.kind === 'avatar' ? rt('rk.avatarN', { n: (it.ref as number) + 1 }) : rt('rk.frameN', { n: it.ref as number });
-      if (it.price) {
-        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it),
+      const name = lookName(it.kind as 'avatar' | 'frame', it.ref as number, lang() === 'ar')
+        ?? (it.kind === 'avatar' ? rt('rk.avatarN', { n: (it.ref as number) + 1 }) : rt('rk.frameN', { n: it.ref as number }));
+      if (it.limited) {
+        const name2 = sht(`sh.lim.${it.ref}` as ShopKey);
+        out.push({ id: it.id, sec: 'look', name: name2, rar: (it.price ?? 0) >= 1000 ? 'mythic' : 'legendary', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.look',
+          state: () => (shopHas(it.id) ? 'own' : limitedNow(week()) === it.id ? 'buy' : 'locked'),
+          how: sht('sh.limHow'),
+          when: () => { if (shopHas(it.id)) return ''; const n = limitedIn(it.id, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); },
+          doBuy: () => buy(it, week()), use: lookUse(it) });
+      } else if (it.price) {
+        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.look', store: it.id,
           state: () => (owns(it.kind as 'avatar' | 'frame', it.ref as number, wins()) ? 'own' : 'buy'), doBuy: () => buy(it), use: lookUse(it) });
       } else if (it.win) {
         const w = it.win;
-        out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it),
+        out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.won',
           state: () => (w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
           how: w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
           when: w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
@@ -168,7 +238,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     }
     // The champion's outfit, the weekly prize pieces, streak and season pieces: earned, never sold.
     const best = () => Math.max(streak().best, streak().days);
-    out.push({ id: `fg:${PRIZE}`, sec: 'won', name: rt(`fb.${PRIZE.replace(':', '.')}` as RankKey), rar: 'legendary', for: 'sh.forChar', art: figArt(PRIZE),
+    out.push({ id: `fg:${PRIZE}`, sec: 'won', name: rt(`fb.${PRIZE.replace(':', '.')}` as RankKey), rar: 'legendary', for: 'sh.forChar', art: figArt(PRIZE), big: figBig(PRIZE), why: 'sh.why.won',
       state: () => ((status?.wins ?? 0) > 0 ? 'own' : 'locked'), how: rt('rk.win.w1'),
       use: { label: 'sh.wear', done: 'sh.worn', active: () => wearingNow(PRIZE), run: () => wear(PRIZE) } });
     for (const [piece, p] of Object.entries(WARDROBE)) {
@@ -176,7 +246,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       const season = isSeason(p.how);
       const need = streakNeed(p.how);
       out.push({
-        id: `fg:${piece}`, sec: season ? 'season' : 'won', name: partName(piece), rar: p.r, for: 'sh.forChar', art: figArt(piece),
+        id: `fg:${piece}`, sec: season ? 'season' : 'won', name: partName(piece), rar: p.r, for: 'sh.forChar', art: figArt(piece), big: figBig(piece), why: season ? 'sh.why.season' : 'sh.why.won',
         state: () => (ownsPiece(piece) ? 'own' : 'locked'),
         how: p.how === 'week' ? `${sht('sh.top3')} · ${rt('fb.how.week')}` : rt(`fb.how.${p.how}` as RankKey),
         when: season ? () => { const n = daysUntilSeason(p.how); return n === 0 ? sht('sh.onNow') : n > 0 ? sht('sh.backIn', { n }) : ''; }
@@ -185,11 +255,18 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         use: { label: 'sh.wear', done: 'sh.worn', active: () => wearingNow(piece), run: () => wear(piece) },
       });
     }
+    // Today's stall (owner request 2026-11-12): three pieces a day at 30 % off, the same for everyone that day.
+    const pool = out.filter((w) => w.store && w.price && !w.lim && (w.sec === 'char' || w.sec === 'room' || w.sec === 'look'));
+    for (const w of stallPick(pool)) {
+      const p = Math.round((w.price! * 0.7) / 5) * 5, id = w.store!, after = w.sec === 'room' ? ROOM_ITEMS.find((r) => `rm:${r.id}` === id) : null;
+      w.was = w.price; w.price = p;
+      w.doBuy = () => { if (wallet() < p || !shopAdd(id, p)) return false; if (after) setRoomLook(after.slot, after.id); return true; };
+    }
     for (const id of APP_ICONS) {
       out.push({
-        id: `ic:${id}`, sec: 'icons', name: bt(`ic.${id}` as BadgeKey), rar: id === 'sapphire' ? 'rare' : id === 'legend' ? 'legendary' : 'mythic', for: 'sh.forHome',
+        id: `ic:${id}`, sec: 'icons', name: bt(`ic.${id}` as BadgeKey), rar: tierRarity(id), for: 'sh.forHome', why: 'sh.why.icon',
         art: () => h('img', { class: 'sh-icon', src: `${import.meta.env.BASE_URL}icons/app-${id}.webp`, alt: '', width: 84, height: 84, loading: 'lazy' }),
-        state: () => (unlockedIcons().has(id) ? 'own' : 'locked'), how: bt(`ic.${id}How` as BadgeKey),
+        state: () => (unlockedIcons().has(id) ? 'own' : 'locked'), how: bt(`ic.${id}How` as BadgeKey), progress: () => levelNeed(id),
         use: { label: 'sh.use', done: 'sh.inUse', active: () => pickedIcon() === id, run: () => useIcon(id) },
       });
     }
@@ -229,17 +306,19 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const purseN = h('b', { class: 'sh-purse-n' });
   const purse = h('button', { class: 'sh-purse', type: 'button', 'aria-label': sht('sh.purse') }, star(), purseN);
   const earnLine = h('p', { class: 'sh-earn small' });
+  const lampLine = h('p', { class: 'sh-lampline small' });
   const counter = h('div', { class: 'sh-counter', 'aria-hidden': 'true' });
   const cats = h('nav', { class: 'sh-cats', role: 'tablist' });
   const body = h('div', { class: 'sh-body' });
-  const back = h('button', { class: 'icon-btn sh-back', 'aria-label': t('common.close') }, '‹');
+  const back = h('button', { class: 'icon-btn sh-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const lanterns = h('div', { class: 'sh-lanterns', 'aria-hidden': 'true' }, ...[0, 1, 2, 3, 4].map((i) => h('i', { style: `--i:${i}` })));
   const stall = h('header', { class: 'sh-stall' }, lanterns,
     h('div', { class: 'sh-top' }, back, h('h1', {}, sht('sh.title')), h('span', { class: 'sh-gap' })),
     h('div', { class: 'sh-hero' }, counter,
-      h('div', { class: 'sh-wallet' }, h('span', { class: 'sh-wallet-k small' }, sht('sh.purse')), purse, earnLine)),
+      h('div', { class: 'sh-wallet' }, h('span', { class: 'sh-wallet-k small' }, sht('sh.purse')), purse, earnLine, lampLine)),
     h('div', { class: 'sh-awning', 'aria-hidden': 'true' }));
-  const d: HTMLDialogElement = h('dialog', { class: `sh-page${reduced() ? ' still' : ''}`, 'aria-label': sht('sh.title') }, stall, cats, body);
+  const giftBar = o.giftTo ? h('div', { class: 'sh-giftbar' }, icon('gift', 18), sht('sh.giftMode', { name: o.giftTo.name })) : '';
+  const d: HTMLDialogElement = h('dialog', { class: `sh-page${reduced() ? ' still' : ''}`, 'aria-label': sht('sh.title') }, giftBar, stall, cats, body);
 
   let pushed = false;
   try { history.pushState({ shop: 1 }, ''); pushed = true; } catch { /* ignore */ }
@@ -258,6 +337,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     else purseN.textContent = num(n);
     shown = n;
     earnLine.textContent = sht('sh.earned', { d: num(lightOn(dayKey())), w: num(stats('week').light), a: num(stats('all').light) });
+    const lamp = lampOf(), next = lampNext();
+    // Only the lamp itself up here (F22); how far the next one is shows with the totals (tap the purse).
+    lampLine.hidden = !lamp;
+    lampLine.replaceChildren(lamp ? rt(`rk.lamp${lamp}` as RankKey) : '');
+    earnLine.append(h('span', { class: 'sh-lampnext' }, ' · ', next === null ? sht('sh.lampTop') : sht('sh.lampNext', { n: num(next) })));
   };
   purse.onclick = () => { earnLine.classList.toggle('open'); haptic(); };
 
@@ -282,6 +366,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const left = wallet();
     const el = h('button', { class: `sh-tile r-${w.rar} s-${st}${st === 'buy' && (w.price ?? 0) > left ? ' short' : ''}`, type: 'button', onclick: () => openWare(w) },
       h('span', { class: 'sh-rar' }, sht(`sh.r.${w.rar}` as ShopKey)),
+      ...sparks(w.rar, 3),
       h('span', { class: 'sh-art' }, w.art()),
       h('span', { class: 'sh-name' }, w.name),
       foot(w, st));
@@ -290,12 +375,12 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   };
   const foot = (w: Ware, st: State) => {
     if (st === 'own') return h('span', { class: 'sh-foot own' }, w.use?.active() ? `✓ ${sht(w.use.done)}` : `✓ ${sht('sh.owned')}`);
-    if (st === 'buy') return h('span', { class: 'sh-foot price' }, star(), num(w.price ?? 0));
+    if (st === 'buy') return h('span', { class: 'sh-foot price' }, w.was ? h('s', { class: 'sh-was' }, num(w.was)) : '', star(), num(w.price ?? 0));
     const when = w.when?.() ?? '';
     const pr = w.progress?.();
     return h('span', { class: 'sh-foot lock' },
       pr ? h('span', { class: 'sh-prog', style: `--p:${pr[0] / pr[1]}` }, h('i', {})) : '',
-      h('span', { class: 'sh-lock-t' }, '🔒 ', when || (pr ? sht('sh.days', { n: pr[0], m: pr[1] }) : w.how ?? sht('sh.locked'))));
+      h('span', { class: 'sh-lock-t' }, icon('lock', 14), when || (pr ? sht('sh.days', { n: pr[0], m: pr[1] }) : w.how ?? sht('sh.locked'))));
   };
 
   const section = (c: Sec, sub: ShopKey, list: Ware[]) => {
@@ -311,10 +396,9 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const ids = [weekPrize(wk, 1), weekPrize(wk, 2), `fg:${weekPiece(wk)}`];
     const tags = [sht('sh.first'), sht('sh.top23'), sht('sh.top3')];
     const prizes = ids.map((id) => all.find((w) => w.id === id)).filter((w): w is Ware => !!w);
-    const left = resetsAt().week.getTime() - Date.now();
-    const dd = Math.floor(left / 864e5), hh = Math.floor((left % 864e5) / 36e5);
+    const left = weekEndAt().getTime() - Date.now();
     const weekCard = h('div', { class: 'sh-feat week' },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏆 ${sht('sh.weekTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: sht('sh.dh', { d: dd, h: hh }) }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, icon('trophy', 18), sht('sh.weekTitle')), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
       h('div', { class: 'sh-feat-row' }, ...prizes.map((w, i) => h('button', { class: `sh-prize r-${w.rar}`, type: 'button', onclick: () => openWare(w) },
         h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag' }, tags[i])))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.weekSub')));
@@ -327,7 +411,25 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       h('div', { class: 'sh-feat-head' }, h('b', {}, on ? sht('sh.seasonNow') : sht('sh.seasonTitle')),
         Number.isFinite(next) && !on ? h('span', { class: 'sh-pill gold' }, sht('sh.seasonIn', { n: next })) : ''),
       h('div', { class: 'sh-feat-row' }, ...seasonal.slice(0, 4).map((w) => h('span', { class: `sh-prize sm r-${w.rar}` }, h('span', { class: 'sh-art' }, w.art())))));
-    const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, weekCard, sCard);
+    const deals = all.filter((w) => w.was);
+    const nextDay = new Date(); nextDay.setHours(24, 0, 0, 0);
+    const ml = nextDay.getTime() - Date.now();
+    const stallCard = deals.length ? h('div', { class: 'sh-feat stall' },
+      h('div', { class: 'sh-feat-head' }, h('b', {}, icon('lamp', 18), sht('sh.stallTitle')), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: timeLeft(ml) }))),
+      h('div', { class: 'sh-feat-row' }, ...deals.map((w) => h('button', { class: `sh-prize r-${w.rar}${w.state() === 'own' ? ' own' : ''}`, type: 'button', onclick: () => openWare(w) },
+        h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag deal' }, w.state() === 'own' ? `✓ ${sht('sh.owned')}` : '−30%')))),
+      h('p', { class: 'small sh-feat-sub' }, sht('sh.stallSub'))) : '';
+    const lim = all.find((w) => w.id === limitedNow(week()));
+    const limCard = lim ? h('button', { class: `sh-feat limited r-${lim.rar}`, type: 'button', onclick: () => openWare(lim) },
+      h('div', { class: 'sh-feat-head' }, h('b', {}, `✦ ${sht('sh.limTitle')}`), h('span', { class: 'sh-pill gold' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
+      h('div', { class: 'sh-lim-row' }, h('span', { class: 'sh-art big' }, lim.art()),
+        h('span', { class: 'sh-lim-txt' }, h('b', {}, lim.name), h('span', { class: 'small' }, lim.state() === 'own' ? `✓ ${sht('sh.owned')}` : sht('sh.limSub')),
+          lim.state() === 'own' ? '' : h('span', { class: 'sh-foot price' }, star(), num(lim.price ?? 0))))) : '';
+    // The lamp wall: Light spent on a du'a for someone who passed away.
+    const lwCard = h('button', { class: 'sh-feat lamps', type: 'button', onclick: () => void import('./lampWall').then((m) => m.openLampWall({ onChange: paintPurse })) },
+      h('div', { class: 'sh-lw-row' }, h('span', { class: 'sh-lw-ic', 'aria-hidden': 'true' }, icon('lamp', 22)),
+        h('span', { class: 'sh-lim-txt' }, h('b', {}, lwt('lw.door')), h('span', { class: 'small' }, lwt('lw.doorSub')))));
+    const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, limCard, stallCard, weekCard, lwCard, sCard);
     sections.set('featured', s);
     return s;
   };
@@ -395,7 +497,9 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const paintCard = (justGot = false) => {
       const st = w.state();
       const left = wallet();
-      const art = h('div', { class: 'sh-card-art' }, h('i', { class: 'sh-rays', 'aria-hidden': 'true' }), w.art());
+      const big = w.big?.(justGot);
+      const art = h('div', { class: `sh-card-art${big ? ' wide' : ''}` }, h('i', { class: 'sh-rays', 'aria-hidden': 'true' }),
+        ...sparks(w.rar, 8), big ?? w.art());
       const acts: Node[] = [];
       if (st === 'buy') {
         const price = w.price ?? 0;
@@ -421,9 +525,24 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           paintCard(); refresh(w.id); o.onChange?.();
         } }, on ? `✓ ${sht(u.done)}` : sht(u.label)));
       } else if (st === 'own') acts.push(h('p', { class: 'sh-owned' }, `✓ ${w.id === 'freeze' ? sht('sh.full') : sht('sh.owned')}`));
+      const gift = o.giftTo;
+      if (gift && w.store && w.price && st !== 'locked') {
+        const price = w.price;
+        acts.push(h('button', { class: `${st === 'own' ? 'primary brand-btn' : 'chip'} sh-gift-btn`, type: 'button', disabled: wallet() < price, onclick: async (e: Event) => {
+          const b = e.currentTarget as HTMLButtonElement;
+          b.disabled = true;
+          try {
+            const { giftPiece } = await import('../together/lightGifts');
+            await giftPiece(gift.pid, w.store!, price);
+            sfx.pop(0, true); sfx.shimmer(); haptic(20);
+            toast(sht('sh.giftSent', { name: gift.name }));
+            shut(); close();
+          } catch (err) { toast((err as Error).message === 'need' ? sht('sh.need', { n: price - wallet() }) : (err as Error).message); b.disabled = false; }
+        } }, icon('gift', 18), `${sht('sh.giftThis', { name: gift.name })} · `, star(), num(price)));
+      }
       if (st === 'locked') {
         const pr = w.progress?.();
-        acts.push(h('p', { class: 'sh-how' }, `🔒 ${w.how ?? sht('sh.locked')}`));
+        acts.push(h('p', { class: 'sh-how' }, icon('lock', 18), w.how ?? sht('sh.locked')));
         if (pr) acts.push(h('div', { class: 'sh-prog big', style: `--p:${pr[0] / pr[1]}` }, h('i', {})), h('p', { class: 'small muted' }, sht('sh.days', { n: pr[0], m: pr[1] })));
         const when = w.when?.();
         if (when) acts.push(h('span', { class: 'sh-pill gold' }, when));
@@ -434,10 +553,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         art,
         h('h2', {}, w.name),
         h('p', { class: 'muted small sh-for' }, sht(w.for), w.when && st !== 'locked' ? ` · ${w.when()}` : ''),
+        w.why ? h('p', { class: 'sh-why' }, sht(w.why)) : '',
         ...acts);
       if (justGot && !reduced()) {
         art.classList.add('got');
-        popIn(art.lastElementChild as Element);
+        if (!big) popIn(art.lastElementChild as Element);
         void import('./actor').then((m) => m.sparkle(art, 18, 0.5));
       }
     };

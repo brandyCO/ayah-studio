@@ -45,6 +45,8 @@ interface DayRec {
   m?: number;
   /** Learn: lessons and tasmi' passed (a new chunk, a link, a whole surah, watering, a page). */
   ls?: number;
+  /** Learn: new lessons passed without a wrong answer or a slip (extra XP in Ranks). */
+  lf?: number;
   /** Morning adhkar all said in the app's adhkar session. */
   ad?: 1;
   /** Evening adhkar all said. */
@@ -127,14 +129,30 @@ function load(): State {
 }
 /** Bumped on every change: lets streak() and stats('all') reuse their last answer. */
 let ver = 0;
-function save() {
-  ver++;
-  const s = load();
+// Writing the whole journey (a year is ~40 KB) on every tasbih tap made fast counting heavy on a cheap
+// phone: the copy in memory is the truth, and the phone's storage gets it at most once a second and
+// whenever the app is hidden or closed.
+let writeTimer = 0;
+function write() {
+  clearTimeout(writeTimer);
+  writeTimer = 0;
+  if (!cache) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem(KEY, JSON.stringify(cache));
   } catch {
     /* ignore */
   }
+}
+/** Puts a waiting change into storage now (sync reads the stored copy; also on hide / close). */
+export function flushJourney() { if (writeTimer) write(); }
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushJourney(); });
+  window.addEventListener('pagehide', flushJourney);
+}
+function save() {
+  ver++;
+  load();
+  if (!writeTimer) writeTimer = window.setTimeout(write, 1000);
   window.dispatchEvent(new Event('journey-changed'));
 }
 const today = (now = new Date()) => load().days[dayKey(now)] ??= {};
@@ -402,6 +420,12 @@ export function addLesson(now = new Date()) {
   d.ls = (d.ls ?? 0) + 1;
   save();
 }
+/** A new lesson passed without a wrong answer or a slip (Ranks gives it extra XP). */
+export function addFlawless(now = new Date()) {
+  const d = today(now);
+  d.lf = (d.lf ?? 0) + 1;
+  save();
+}
 
 /** One of the user's own goals: `n` more (or fewer) times today. */
 export function addCustom(id: string, n: number, max: number, now = new Date()) {
@@ -604,7 +628,7 @@ function cleanOther(v: unknown): Other | null {
     const d = d0 as Record<string, unknown>;
     const o: DayRec = {};
     for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (d[f]) o[f] = 1;
-    for (const f of ['ay', 'l', 'r', 'm', 'ls', 'sh'] as const) if (num(d[f])) o[f] = num(d[f]);
+    for (const f of ['ay', 'l', 'r', 'm', 'ls', 'lf', 'sh'] as const) if (num(d[f])) o[f] = num(d[f]);
     if (Array.isArray(d.s)) o.s = ints(d.s);
     if (Array.isArray(d.j)) o.j = ints(d.j);
     if (Array.isArray(d.cl)) o.cl = strs(d.cl);
@@ -644,20 +668,18 @@ function loadOthers(): Record<string, Other> {
   return others;
 }
 
-/** Another device's journey arrived from the cloud; true when it changed anything here. */
-export function mergeJourney(remote: unknown, device: string): boolean {
-  const o = cleanOther(remote);
-  if (!o || !device) return false;
-  const prev = loadOthers()[device];
-  const from = (remote as { from?: unknown }).from;
-  if (isDay(from) && prev) {
-    // A head (cloud/syncDocs.ts): earlier months and the page times come in their own documents.
-    for (const [k, d] of Object.entries(prev.days)) if (k < from) o.days[k] ??= d;
-    for (const [k, p] of Object.entries(prev.log)) if (k < from) o.log[k] ??= p;
-    o.pageLast = prev.pageLast;
-  }
-  return putOther(device, o);
-}
+// Journeys only ever grow (data/journeyMerge.ts, loaded with the sync): the hooks it needs.
+/** The first day still kept (older days were folded into `past`). */
+export const keptFrom = () => addDays(dayKey(), -KEEP_DAYS);
+export const journeyHooks = {
+  clean: (v: unknown) => cleanOther(v),
+  others: () => loadOthers(),
+  putOther: (device: string, o: Other) => putOther(device, o),
+  own: (): State => load(),
+  /** The own journey was joined with what the cloud held: counted again, settled again, saved. */
+  ownChanged: () => { ver++; const s = load(); resettle(); if (!s.settled) save(); },
+};
+export type { DayRec, State, Other };
 
 /** Another device's journey as kept here (cloud/syncDocs.ts adds a part to it). */
 export const otherJourney = (device: string): Other | undefined => loadOthers()[device];
@@ -736,7 +758,7 @@ function view(): State {
     for (const [k, b] of Object.entries(o.days)) {
       const a = (v.days[k] ??= {});
       for (const f of ['o', 'f', 'g', 'ad', 'am'] as const) if (b[f]) a[f] = 1;
-      for (const f of ['ay', 'l', 'r', 'm', 'ls', 'sh'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
+      for (const f of ['ay', 'l', 'r', 'm', 'ls', 'lf', 'sh'] as const) if (b[f]) a[f] = (a[f] ?? 0) + b[f]!;
       if (b.s) a.s = union(a.s, b.s);
       if (b.j) a.j = union(a.j, b.j);
       if (b.cl) a.cl = union(a.cl, b.cl);

@@ -8,6 +8,7 @@
 //   Eid: "Your Ramadan" — days read, Khatms, the ayah returned to most (in the reciter's voice), as a
 //   reel with a closing card. Calm: no streaks, no guilt — a missed day just spreads the pages out.
 import { ayahAudio } from '../data/audio';
+import { icon } from './icons';
 import { draftHash, newDraftId, saveDraft } from '../data/drafts';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { loadMeta, surahText } from '../data/quran';
@@ -74,13 +75,13 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
   const items: { icon: string; text: string; onClick?(): void }[] = [];
   if (now.day && d.plan && d.plan !== 'company') {
     const l = await portionLabel();
-    if (l) items.push({ icon: '☾', text: tr('ram.todaysPortion', { text: l.text }), onClick: () => (l.page ? ctx.goToPage(l.page) : openRamadan(ctx)) });
+    if (l) items.push({ icon: 'crescent', text: tr('ram.todaysPortion', { text: l.text }), onClick: () => (l.page ? ctx.goToPage(l.page) : openRamadan(ctx)) });
   }
-  if (now.day && !d.plan) items.push({ icon: '☾', text: tr('ram.choose'), onClick: () => openRamadan(ctx) });
+  if (now.day && !d.plan) items.push({ icon: 'crescent', text: tr('ram.choose'), onClick: () => openRamadan(ctx) });
   // Before Ramadan (the last 30 days): a countdown and a plan made early.
   if (!now.day && !now.eid) {
     const n = daysToRamadan();
-    if (n && n <= 30) items.push({ icon: '☾', text: d.plan ? tr('ram.soonPlanned', { n }) : tr('ram.soon', { n }), onClick: () => openRamadan(ctx) });
+    if (n && n <= 30) items.push({ icon: 'crescent', text: d.plan ? tr('ram.soonPlanned', { n }) : tr('ram.soon', { n }), onClick: () => openRamadan(ctx) });
   }
   // Iftar and suhoor from today's prayer times (only with a location; never guessed).
   if (now.day) {
@@ -90,15 +91,15 @@ export async function ramadanToday(ctx: RamadanContext): Promise<{ icon: string;
     const isha = await prayerTime('isha');
     if (isha && Date.now() >= isha.getTime()) {
       const done = (d.taraweeh ?? []).includes(now.day);
-      items.push({ icon: done ? '✓' : '☾', text: done ? tr('ram.taraweehDone') : tr('ram.taraweehAsk'), onClick: () => { setTaraweeh(now.day!, !done); window.dispatchEvent(new Event('journey-changed')); toast(done ? tr('ram.taraweehUndo') : tr('ram.taraweehMarked')); } });
+      items.push({ icon: done ? 'check' : 'crescent', text: done ? tr('ram.taraweehDone') : tr('ram.taraweehAsk'), onClick: () => { setTaraweeh(now.day!, !done); window.dispatchEvent(new Event('journey-changed')); toast(done ? tr('ram.taraweehUndo') : tr('ram.taraweehMarked')); } });
     }
   }
   if (now.day && new Date().getHours() >= 16) {
     const t = await tonightsAyah();
     const meta = await loadMeta();
-    items.push({ icon: '✧', text: tr('ram.tonight', { ref: uiRef(meta[t.s - 1], t.a, t.a) }), onClick: () => void tonightsReel() });
+    items.push({ icon: 'sparkle', text: tr('ram.tonight', { ref: uiRef(meta[t.s - 1], t.a, t.a) }), onClick: () => void tonightsReel() });
   }
-  if (now.eid && (d.days.length || d.khatms)) items.push({ icon: '☾', text: tr('ram.eidYours'), onClick: () => void openRecap() });
+  if (now.eid && (d.days.length || d.khatms)) items.push({ icon: 'crescent', text: tr('ram.eidYours'), onClick: () => void openRecap() });
   return items;
 }
 
@@ -228,7 +229,7 @@ export async function openRecap() {
           const lines = [days ? tr(days === 1 ? 'ram.reelDays1' : 'ram.reelDays', { n: days }) : '', d.khatms ? (d.khatms === 1 ? tr('ram.one') : tr('ram.khatms', { n: d.khatms })) : ''].filter(Boolean);
           p.closing = { title: tr('ram.reelTitle', { year: now.year }).slice(0, 80), names: lines };
         });
-      } }, tr('ram.makeReel')) : '',
+      } }, icon('film', 18), tr('ram.makeReel')) : '',
       h('button', { class: 'chip', onclick: () => dlg.close() }, tr('common.close'))));
   dlg.addEventListener('close', () => { if (audio) { audio.src.stop(); void audio.ctx.close(); } });
 }
@@ -237,7 +238,7 @@ export async function openRecap() {
 export function openRamadan(ctx: RamadanContext) {
   const body = h('div', { class: 'ramadan' });
   const d = h('dialog', { class: 'sheet bottom ramadan-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, `☾ ${tr('ram.ramadan')}`), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: () => d.close() }, '✕')), body);
+    h('div', { class: 'sheet-head' }, h('h2', {}, icon('crescent', 18), tr('ram.ramadan')), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: () => d.close() }, '✕')), body);
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   document.body.append(d);
 
@@ -317,7 +318,7 @@ export function openRamadan(ctx: RamadanContext) {
           void draw();
         } }, ...[['off', tr('ram.pvOff')], ['1', tr('ram.pvNight', { n: 1 })], ['10', tr('ram.pvDay', { n: 10 })], ['27', tr('ram.pvNight', { n: 27 })], ['eid', tr('ram.pvEid')]].map(([v, l]) =>
           h('option', { value: v, selected: String(st.preview ?? 'off') === v }, l)))));
-    if (now.eid) nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); void openRecap(); } }, `☾ ${tr('ram.yours')}`));
+    if (now.eid) nodes.push(h('button', { class: 'chip', onclick: () => { d.close(); void openRecap(); } }, icon('crescent', 18), tr('ram.yours')));
     body.replaceChildren(...nodes);
   }
   const onChange = () => void draw();

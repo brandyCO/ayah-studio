@@ -2,15 +2,16 @@
 // exactly as printed). Swipe to turn pages. Tap the page to drop down the title bar with the menu;
 // long-press / drag to select ayat for a reel.
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
+import { icon } from './icons';
 import { draftHash, listDrafts } from '../data/drafts';
 import { addRecentPage } from '../data/history';
 import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
-import { keepWholeMushaf } from '../data/mushafDownload';
+import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
+import { isNative } from '../native';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
-import { icon } from './icons';
 import { h, toast } from './dom';
 import { locale, surahName, t, uiRef } from '../i18n';
 import { currentTranslation, translationInfo } from '../data/translations';
@@ -21,7 +22,10 @@ import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMar
 import { attachPlayer, replayPosition, sharedPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
-import { openReflection, openReflections, wroteHere } from './reflections';
+import { wroteHere } from './wroteHere';
+// The reflections sheet loads on first use (out of the first load).
+const openReflection = (...a: Parameters<typeof import('./reflections').openReflection>) => import('./reflections').then((m) => m.openReflection(...a));
+const openReflections = (...a: Parameters<typeof import('./reflections').openReflections>) => import('./reflections').then((m) => m.openReflections(...a));
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
 import { countPage, pageSeconds, todayRec } from '../data/journey';
@@ -52,7 +56,7 @@ registerToday(async () => {
   const tr = await surahTranslation(d.s, info.id).catch(() => null);
   const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: '✧', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
+    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
     sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
     actions: [
       { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
@@ -74,7 +78,7 @@ registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
   return b && Date.now() - b.at < 7 * DAY
-    ? [{ icon: '🔖', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
+    ? [{ icon: 'bookmark', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
     : [];
 });
 registerToday(async () => {
@@ -82,7 +86,7 @@ registerToday(async () => {
   const d = drafts[0];
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
-  return [{ icon: '🎬', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
+  return [{ icon: 'film', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
 });
 
 // Ramadan (T7): today's portion, tonight's ayah, Eid.
@@ -133,7 +137,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const sub = h('p', { class: 'muted' });
   const today = h('nav', { class: 'today', 'aria-label': t('mushaf.today'), hidden: true });
   const bar = h('header', { class: 'mushaf-bar' },
-    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
     h('div', { class: 'brand' }, title, sub),
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('mushaf.listen'), title: t('mushaf.listen'), onclick: () => listenNow() }, icon('listen', 20)),
     h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),
@@ -202,7 +206,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
   }
 
-  const playHere = (s: number, a: number) => { following = true; firstPosition = false; void player.playFrom(s, a); };
+  const playHere = (s: number, a: number) => void import('./welcome').then((w) => w.askReciterFirst(() => {
+    following = true; firstPosition = false; void player.playFrom(s, a);
+  }));
   listenHere = (s, a) => { noteAyah(s, a); playHere(s, a); };
   const sel = selectionController({
     meta,
@@ -265,7 +271,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
           const surahs = (now.s ?? []).slice(s0).map((n) => meta[n - 1]).filter(Boolean);
           const juz = (now.j ?? []).slice(j0);
           void import('./pageMoments').then((m) => {
-            m.pageCounted(area);
+            m.pageCounted(area, m.surahLeft(mushaf, meta, p));
             // While listening, "surah finished" waits until the recitation has finished it too.
             const last = surahs[surahs.length - 1];
             if (last && playing && playing.s <= last.n) doneLater = () => m.finished(surahs, juz);
@@ -322,7 +328,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     if (!first) return;
     const { s, a, at } = first;
-    hint.textContent = `✎ ${wroteHere(at)}`;
+    hint.replaceChildren(icon('pen', 16), wroteHere(at));
     hint.onclick = () => { hint.hidden = true; void openReflection(meta, s, a); };
     hint.hidden = false;
     hint.classList.remove('show');
@@ -428,6 +434,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
     rememberPage(`#/s/${s}/${a}`, page);
     startReadTimer();
+    if (tourSeen()) void import('./mushafOffline').then((m) => m.offerMushafDownload()); // F25: after a few pages
     // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
     clearTimeout(recentTimer);
     const p = page;
@@ -483,9 +490,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     attach();
     header();
     for (const p of want) if (!built.has(p)) void buildPage(p).then(attach);
-    // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
-    for (const p of [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10])
-      if (valid(p)) void loadPageFont(p).catch(() => {});
+    // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading: after
+    // this page's own font (it comes first), and on mobile data in the browser only the next few
+    // (~150 KB each; the Android app has them all already).
+    const ahead = [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10];
+    const far = isNative() || unmetered() ? ahead : ahead.slice(0, 4);
+    void loadPageFont(page).catch(() => {}).finally(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); });
     // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
     // at a time, so the flip after next lands without any layout work (it used to fit the new
     // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).
@@ -550,6 +560,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   function slideTo(target: number, from = 0, speed = 0) {
     if (animating) finishNow?.();
     flushLayout();
+    void import('./sfx').then((m) => m.sfx.page()); // a soft paper swish + a light tap (silent while reciting)
     const dir = target > page ? 1 : -1;
     if (!strip.querySelector(`[data-page="${target}"]`)) {
       page = target;
@@ -599,8 +610,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     dialog.showModal();
     return dialog;
   }
-  const sheetHead = (text: string, close: () => void) =>
-    h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
+  const sheetHead = (text: string, close: () => void, ic?: string) =>
+    h('div', { class: 'sheet-head' }, h('h2', {}, ic ? icon(ic, 20) : '', text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
 
   async function showTranslation(s: Sel) {
     const info = translationInfo(currentTranslation());
@@ -639,11 +650,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   function openBookmark(s: number, a: number) {
     const b = bookmarks().find((x) => x.s === s && x.a === a);
-    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${uiRef(meta[s - 1], a, a)}`, () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(uiRef(meta[s - 1], a, a), () => d.close(), 'bookmark'),
       b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, `🎧  ${t('bm.listenHere')}`),
-        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, `🎬  ${t('bm.reel')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, icon('listen', 18), t('bm.listenHere')),
+        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, icon('film', 18), t('bm.reel')),
         h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast(t('mushaf.bookmarkRemoved')); } }, `✕  ${t('bm.remove')}`)));
   }
 
@@ -663,21 +674,24 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   keepWholeMushaf(() => page);
-  if (tourSeen()) void import('./mushafOffline').then((m) => m.offerMushafDownload());
+  let hadHint = false;
+  try { hadHint = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {
     let returning = false;
     try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
-    if (returning) markTourSeen();
-    else { touring = true; void import('./welcome').then((m) => m.showWelcome(firstVisitHint)); } // language, reciter, theme
+    // F1: no questions before the first ayah. The reciter is asked at the first Listen (welcome.ts).
+    markTourSeen();
+    if (!returning) touring = true;
+    firstVisitHint();
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
   // Listening moved from the tab bar into the reading view (2026-11-02): say where it is, once.
   if (!touring && !intent) {
     try {
-      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (localStorage.getItem('mushafHint')) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
+      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (hadHint) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
     } catch { /* ignore */ }
   }
   if (intent === 'listen') listenNow();

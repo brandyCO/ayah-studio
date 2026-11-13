@@ -180,6 +180,7 @@
   background: color-mix(in srgb, #f59f00 16%, var(--card)); color: #b06a00; font: 900 var(--fs-xs) var(--ui-round); font-variant-numeric: tabular-nums; }
 .goal-head .goal-seg { flex: 1 1 auto; min-width: 0; max-width: none; }
 .goal-head > .chip { flex: none; }
+.goal-reset-lbl { font-weight: 700; opacity: .8; }
 .goal-reset-ic { width: 14px; height: 14px; display: inline-flex; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .goal-reset-row .goal-reset { color: #ffc154; } }
 :root[data-theme="dark"] .goal-reset-row .goal-reset { color: #ffc154; }
@@ -279,17 +280,18 @@
 .aic-lock { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 22px; }
 .aic-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .aic-txt b { font-weight: 800; }
-.aic-opt.r-sapphire:not(.locked) .aic-img { box-shadow: 0 0 0 2px #4a86c8, 0 6px 18px -4px #2f6ee0; }
-.aic-opt.r-legend:not(.locked) .aic-img { box-shadow: 0 0 0 2px #ffcf55, 0 6px 20px -4px #f0a020; }
-.aic-opt.r-celestial:not(.locked) .aic-img { box-shadow: 0 0 0 2px #c4a2ff, 0 6px 24px -4px #8a6af0; animation: aic-glow 3s ease-in-out infinite; }
+.aic-opt.r-tier:not(.locked) .aic-img { box-shadow: 0 0 0 2px var(--aic), 0 6px 20px -4px var(--aic); }
+.aic-opt.r-myth:not(.locked) .aic-img { animation: aic-glow 3s ease-in-out infinite; }
+.aic-bar { display: block; height: 5px; margin-top: 4px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--line) 80%, transparent); }
+.aic-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--aic, var(--accent)); }
 .aic-opt.fresh { animation: aic-fresh 1.2s var(--ease-out, ease) 2; }
-@keyframes aic-glow { 50% { box-shadow: 0 0 0 2px #e3cdff, 0 6px 30px 0 #8a6af0; } }
+@keyframes aic-glow { 50% { box-shadow: 0 0 0 2px #fff, 0 6px 30px 0 var(--aic); } }
 @keyframes aic-fresh { 40% { scale: 1.03; } }
 .aic-new { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; margin-bottom: 10px; border-radius: 16px; color: inherit; text-decoration: none;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent) inset; }
+  background: linear-gradient(120deg, color-mix(in srgb, var(--aic, var(--accent)) 22%, transparent), transparent); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--aic, var(--accent)) 55%, transparent) inset; }
 .aic-new .aic-img { width: 48px; height: 48px; border-radius: 12px; }
 .aic-go { font-size: 22px; opacity: .6; }
-@media (prefers-reduced-motion: reduce) { .aic-opt.r-celestial .aic-img, .aic-opt.fresh { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .aic-opt.r-myth .aic-img, .aic-opt.fresh { animation: none; } }
 .me-chip.me-level { text-decoration: none; font-weight: 900; color: #fff; background: color-mix(in srgb, #6c5ce7 70%, transparent); }
 
 /* Sync, as the user sees it (cloud/sync.ts): a new phone's streak while the account's data arrives, the
@@ -317,3 +319,91 @@
 [dir='rtl'] .me-arrived { translate: 50% 0; }
 @keyframes me-arrive { 0% { opacity: 0; transform: translateY(-6px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .me-hero.loading .me-count b, .me-sync.busy::before, .me-arrived { animation: none; } }
+/* Friday (owner request 2026-11-12): double XP all day and the Al-Kahf quest. */
+.fri-box { margin: 0 0 12px; padding: 12px; border-radius: 18px; background: linear-gradient(160deg, #0f2a3a, #173a2c); color: #eaf6ef; }
+.fri-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.fri-head b { font-family: var(--font-display, inherit); font-size: 1.05rem; }
+.fri-xp { padding: 4px 10px; border-radius: 999px; font-size: var(--fs-s); font-weight: 800; color: #2b1a00;
+  background: linear-gradient(90deg, #ffd36b, #ffb347); box-shadow: 0 0 14px #ffc85a66; }
+.fri-box .goal { background: #ffffff12; }
+.fri-box .muted { color: #cfe3d8; }
+.me-relight.me-repair { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-inline: auto;
+  background: linear-gradient(180deg, #ffd66b, #ffb43d); color: #3a2300; border: 0; font-weight: 800; box-shadow: 0 4px 0 #c97f12; opacity: 1; }
+.me-relight.me-repair:active { translate: 0 3px; box-shadow: 0 1px 0 #c97f12; }
+.me-repair-p { display: inline-flex; align-items: center; gap: 3px; padding: 3px 10px; border-radius: 999px; background: #fff8; color: #3a2300; }
+.me-repair.short { opacity: .75; }
+/* Gifts from friends (owner request 2026-11-12). */
+.me-gifts:empty { display: none; }
+.me-gifts { display: grid; gap: 8px; margin: 0 0 12px; }
+.me-gift { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, #ff6b8a 18%, var(--card, #fff)), color-mix(in srgb, #ffd36b 22%, var(--card, #fff))); }
+.me-gift-ic { font-size: 1.6rem; }
+.me-gift .goal-txt { flex: 1; display: grid; gap: 2px; }
+/* Free freezes on the flame (owner request 2026-11-12). */
+.me-flame { position: relative; }
+.me-freeze { position: absolute; left: calc(50% + 24px); bottom: -4px; z-index: 2; display: inline-flex; align-items: center; gap: 1px;
+  min-width: 34px; height: 34px; padding: 0 7px; border-radius: 999px; border: 2px solid #fff; cursor: pointer; font: inherit;
+  background: linear-gradient(180deg, #9be7ff, #3fb5f0); color: #fff; box-shadow: 0 3px 0 #1f86c4, 0 0 14px #9be7ffaa; }
+.me-freeze span { font-size: 17px; line-height: 1; }
+.me-freeze b { font-size: 14px; font-weight: 900; }
+.me-freeze.none { background: #ffffff55; box-shadow: none; opacity: .75; }
+.me-freeze:active { translate: 0 2px; box-shadow: 0 1px 0 #1f86c4; }
+
+/* F36: a lost streak, one calm card (white glass on any sky) */
+.me-lost-card { display: grid; gap: 8px; margin: 4px 0 12px; padding: 12px; position: relative; z-index: 1;
+  border-radius: 18px; background: #ffffffe6; color: #1f2328; box-shadow: 0 4px 16px #0002; text-align: center; }
+.me-lost-card .me-lost { margin: 0; font-weight: 800; color: #1f2328; }
+.me-lost-card .me-relight { margin: 0; width: 100%; color: #1f2328; background: #f3f0ea; border-color: #e2ddd2; }
+.me-lost-card .me-relight.primary-way { font-size: 1rem; padding-block: 12px; color: #fff; background: #0b6f63; border-color: #0b6f63;
+  box-shadow: 0 3px 0 #064a42; }
+.me-lost-card .me-repair.primary-way { background: #f59f00; border-color: #f59f00; box-shadow: 0 3px 0 #c97f12; }
+.me-lost-more summary { cursor: pointer; font-size: .85rem; color: #5b6168; list-style: none; padding: 2px; }
+.me-lost-more summary::-webkit-details-marker { display: none; }
+.me-lost-more[open] { display: grid; gap: 8px; }
+/* F37: prizes waiting fold into one row */
+.me-folded .claim-badges, .me-folded .claim-more, .me-folded .me-gift, .me-folded .wd-card { display: none; }
+.me-wait { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; margin-block: 10px;
+  border-radius: 18px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: start; }
+.me-wait > b { flex: 1; font-size: 1rem; }
+.me-wait .chest { pointer-events: none; width: 52px; flex: none; }
+/* F5: with no journey, Today is one quiet line */
+.today-card.tc-slim { padding: 0; background: none; border: 0; box-shadow: none; }
+.tc-slim .tc-start { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0;
+  padding: 12px 16px; border-radius: 16px; border: 1px dashed var(--line); background: transparent; color: var(--text); }
+.tc-slim .tc-start > span { opacity: .6; font-size: 1.3rem; }
+
+/* F7: Settings is five rows, each opening its own page */
+.set-rows { display: grid; gap: 2px; padding: 8px; }
+.set-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 14px; color: var(--text); text-decoration: none; }
+.set-row:active { background: var(--sel); }
+.set-row-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.set-row-txt b { font-size: 1.02rem; }
+.set-row > svg:last-child { opacity: .45; flex: none; }
+[dir="rtl"] .set-row > svg:last-child { transform: scaleX(-1); }
+.set-row-ic { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: #fff; }
+.set-row-ic.s-reading { background: #12a594; }
+.set-row-ic.s-prayer { background: #4caf2a; }
+.set-row-ic.s-notes { background: #f59f00; }
+.set-row-ic.s-quran { background: #6c5ce7; }
+.set-row-ic.s-app { background: #667085; }
+
+/* F21: Library as cards */
+.lib-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
+.lib-reel, .lib-page { flex: none; scroll-snap-align: start; display: grid; gap: 6px; text-decoration: none; color: var(--text); }
+.lib-reel { width: 96px; }
+.lib-reel-pic { display: grid; place-items: center; width: 96px; aspect-ratio: 9 / 16; border-radius: 14px; background: #1d2a26 center / cover no-repeat;
+  box-shadow: 0 3px 0 #0002; color: #fff; }
+.lib-new { border: 0; background: none; padding: 0; text-align: start; }
+.lib-new .lib-reel-pic { background: color-mix(in srgb, #ff6b4a 16%, var(--card)); color: #ff6b4a; border: 2px dashed #ff6b4a77; }
+.lib-cap { font-size: .78rem; font-weight: 700; line-height: 1.25; }
+.lib-page { width: 104px; padding: 10px; border-radius: 12px; background: var(--paper, #fbf6ea); color: #2b2418;
+  box-shadow: inset 0 0 0 1px #0000000f, 0 3px 0 #00000014; justify-items: center; text-align: center; }
+.lib-page-n { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.lib-page-ar { font-family: var(--font-quran-ui, 'AmiriQuran', serif); font-size: 1.05rem; }
+.lib-bm { display: grid; gap: 6px; padding: 6px 0 10px; }
+.lib-bm .chips { flex-wrap: wrap; }
+/* F42: badge families fold until begun */
+.bdf-more { margin-top: 12px; }
+.bdf-more > summary { cursor: pointer; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); font-weight: 800; text-align: center; list-style: none; }
+.bdf-more > summary::-webkit-details-marker { display: none; }
+.bdf-more[open] > summary { margin-bottom: 8px; }

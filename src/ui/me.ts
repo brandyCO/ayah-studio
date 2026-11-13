@@ -3,6 +3,8 @@
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
 import { levelLabel, levelOf, myXp } from '../data/xp';
+import { icon } from './icons';
+const iconOf = icon;
 import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
@@ -20,11 +22,13 @@ import { badgeGoal, badgeName, bt, tierName, type BadgeKey } from '../i18n/badge
 import { iconCard, newIconCard } from './appIcons';
 import { badgeMoment } from '../data/claims';
 import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
+import { KAHF_LIGHT, KAHF_PAGES, isFriday, surprise } from '../data/friday';
+import { allDays, pageReadSince } from '../data/journey';
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, type SurahMeta } from '../data/quran';
-import { LANGS, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
+import { LANGS, daysText, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
@@ -133,6 +137,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // F2 (front-end review): day one shows the flame, one next step and today's goals; the rest comes over
+  // the first days (du'a lanterns and the character from day 2, reminders from day 3), and rows still at zero hide.
+  const opened = Object.values(allDays()).filter((r) => r.o).length;
+  const dayOne = opened <= 1;
   // The streak card's sky follows the user's day in the same seven times as the du'a lanterns (owner request
   // 2026-11-11): before dawn, Fajr, Dhuhr, Asr, Maghrib, Isha, and the night's sleep, each its own sky. From the prayer
   // times when a location is set, else by the hour.
@@ -163,7 +171,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     // The room is the whole screen: its own floating top bar, no tab bar.
     if (has) void import('./room').then((m) => {
       const bar = h('div', { class: 'rm-full-bar' },
-        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
         h('h1', {}, mpt('mp.room')),
         lightChip());
       const c = m.roomScreen(dressUp, bar);
@@ -181,9 +189,31 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     if (c) wardrobeSlot.replaceChildren(c);
   });
   const goalsBox = h('section', { class: 'me-card' });
+  // Gifts from friends (owner request 2026-11-12): each waits as a chest with who sent it.
+  const giftSlot = h('div', { class: 'me-gifts' });
+  const paintGifts = () => {
+    if (!account()) return;
+    void import('../together/lightGifts').then(async (g) => {
+      const list = await g.myGifts().catch(() => []);
+      if (!giftSlot.isConnected && giftSlot.parentNode) return;
+      giftSlot.replaceChildren(...list.map((x) => {
+        const who = (x.from.private ? null : x.from.name) ?? mpt('mp.gift.someone');
+        return h('div', { class: 'me-gift' },
+          h('span', { class: 'me-gift-ic', 'aria-hidden': 'true' }, icon('gift', 22)),
+          h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.gift.from', { name: who })), h('span', { class: 'muted small' }, x.item ? mpt('mp.gift.piece') : mpt('mp.gift.light', { n: x.light }))),
+          chest(Math.max(10, x.light), 'ready', t('chest.open', { n: x.light }), (el) => void play(async () => {
+            if (!(await g.openGift(x))) return;
+            const c = await import('./celebrate');
+            const loot = x.item ? [{ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, icon('gift', 22)), label: mpt('mp.gift.piece'), rare: true }] : undefined;
+            await c.celebrate({ kind: 'chest', title: mpt('mp.gift.from', { name: who }), sub: mpt('mp.gift.sub'), kicker: mpt('mp.gift.kicker'), loot }, el, x.light);
+          }, paintGifts)));
+      }));
+    });
+  };
+  paintGifts();
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
-  const duaBox = h('section', { class: 'me-card dl-card' });
-  const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
+  const duaBox = h('section', { class: 'me-card dl-card', hidden: dayOne });
+  const paintDuas = () => { if (!dayOne) void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox)); };
   const noorEl = noorLine('me');
   // Asked once, right under the lanterns: reminders after each adhan and salah (owner request 2026-11-10).
   const duaAsk = h('div', { class: 'me-ask-slot' });
@@ -191,10 +221,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     let asked = true;
     try { asked = !!localStorage.getItem('duaNotesAsked'); } catch { /* ignore */ }
     const a = prayerAlerts();
-    if (asked || a.duas || a.salah || page) { duaAsk.replaceChildren(); return; }
+    if (asked || a.duas || a.salah || page || opened < 3) { duaAsk.replaceChildren(); return; }
     const done = () => { try { localStorage.setItem('duaNotesAsked', '1'); } catch { /* ignore */ } duaAsk.replaceChildren(); };
     duaAsk.replaceChildren(h('section', { class: 'me-card me-ask' },
-      h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, '🔔'),
+      h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, icon('bell', 22)),
       h('div', { class: 'me-ask-txt' }, h('b', {}, mpt('mp.askTitle')), h('p', { class: 'muted small' }, mpt('mp.askBody')),
         h('div', { class: 'chips' },
           h('button', { class: 'chip on', onclick: async () => {
@@ -216,6 +246,44 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const prayerBox = h('section', { class: 'me-card' });
   // Badges waiting for their Claim stay on Me itself; the rest of the badges live behind a door.
   const claimSlot = h('div', { class: 'me-claims' });
+  // F37: two or more prizes waiting (badges, new pieces, gifts) fold into one row that opens them one after another.
+  const waitRow = h('div', { class: 'me-wait-slot' });
+  let opening = false;
+  const waiting = () => [
+    ...claimSlot.querySelectorAll<HTMLElement>('.claim-badge'),
+    ...giftSlot.querySelectorAll<HTMLElement>('.me-gift .chest'),
+    ...wardrobeSlot.querySelectorAll<HTMLElement>('.wd-card .chest'),
+  ];
+  const paintWait = () => {
+    if (opening) return;
+    const n = waiting().length + Math.max(0, Number(claimSlot.dataset.more ?? 0));
+    const fold = n >= 2 && !page;
+    for (const el of [claimSlot, giftSlot, wardrobeSlot]) el.classList.toggle('me-folded', fold);
+    waitRow.replaceChildren(fold ? h('button', { class: 'me-wait', onclick: () => void openAllWaiting() },
+      chest(60, 'ready', mpt('mp.wait.open')),
+      h('b', {}, mpt('mp.wait.n', { n })),
+      h('span', { class: 'chip primary brand-btn' }, mpt('mp.wait.open'))) : '');
+  };
+  const openAllWaiting = async () => {
+    opening = true;
+    haptic(10);
+    try {
+      for (let i = 0; i < 40; i++) {
+        const next = waiting()[0];
+        if (!next) break;
+        next.click();
+        // Wait for its moment to start, then to end.
+        for (let w = 0; w < 20 && !document.querySelector('.cel'); w++) await new Promise((r) => setTimeout(r, 100));
+        while (document.querySelector('.cel')) await new Promise((r) => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 350));
+        if (!root.isConnected) return;
+      }
+    } finally {
+      opening = false;
+      paintWait();
+    }
+  };
+  for (const el of [claimSlot, giftSlot, wardrobeSlot]) new MutationObserver(() => paintWait()).observe(el, { childList: true, subtree: true });
   const doors = h('nav', { class: 'me-doors', 'aria-label': t('me.title') });
   const prayerStrip = h('a', { class: 'me-pr-strip', href: '#/me/prayer' });
   let prayerLine = '';
@@ -260,6 +328,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
   // owner decision 2026-11-10).
   const showGhost = () => {
+    if (dayOne) return;
     void import('../i18n/ranks').then(({ rt }) => {
       if (!hero.isConnected) return;
       const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
@@ -341,7 +410,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     catchNext = false;
     const num = h('b', {}, loading ? '…' : String(catchNow ? s.days - 1 : s.days));
     hero.classList.toggle('loading', loading);
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced), freezeBadge(s));
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
@@ -349,18 +418,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('div', { class: 'me-top-txt' },
           h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
           h('p', { class: 'me-status' }, loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
-      lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: lost.n })) : '',
-      lost && lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
-        if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
-        void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
-      } }, `🔥  ${t('rl.askFriend')}`) : '',
-      lost ? keptFreezeButton(lost.days) : '',
+      lost ? lostCard(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
-        h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
-        h('span', { class: 'me-chip', title: t('me.freezeHelp') }, s.freeze.free ? t('me.freezeReady') : t('me.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) })),
-        h('span', { class: 'me-chip', title: t('me.extraHelp') }, s.extra.free ? t('me.extraReady') : t('me.extraNext', { day: longDay.format(parse(s.extra.next!)) })),
-        h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
+        s.weeks ? h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })) : '',
+        s.best > s.days ? h('span', { class: 'me-chip' }, t('me.best', { n: s.best })) : '',
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
     if (fromOther) {
@@ -400,12 +462,18 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
   };
   const openAdhkarSession = (p: 's' | 'm') => { haptic(); void import('./adhkar').then((m) => m.openAdhkar(p)); };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: goalLabel(g), sub: t('cel.goalSub') }, from, lightFor(g))),
-    () => claimGoal(g.id, lightFor(g)));
-  const claimAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from, ALL_LIGHT)),
-    () => claimGoal('all', ALL_LIGHT));
+  // A chest: its Light, and now and then a surprise inside (double the Light), shown as a prize of its own.
+  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element) => {
+    const x = surprise(id);
+    const n = base * x;
+    return play(
+      () => import('./celebrate').then((c) => c.celebrate({ kind: 'chest', ...m,
+        loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
+      () => claimGoal(id, n));
+  };
+  const claimGoalRow = (g: GoalProgress, from?: Element) => openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
+  const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
       const k = badgeMoment(b);
@@ -480,6 +548,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = todayGoals(), wk = weekGoals();
     for (const g of list) if (g.done >= g.target && !goalClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
     if (list.length > 1 && list.every((g) => g.done >= g.target) && !goalClaimed('all')) out.push({ id: 'all', label: t('chest.day'), light: ALL_LIGHT });
+    if (isFriday() && !goalClaimed('kahf')) {
+      const since = new Date(); since.setHours(0, 0, 0, 0);
+      if (KAHF_PAGES.every((p) => pageReadSince(p, since.getTime()))) out.push({ id: 'kahf', label: mpt('mp.fri.kahf'), light: KAHF_LIGHT });
+    }
     for (const g of wk) if (g.done >= g.target && !weekClaimed(g.id)) out.push({ id: g.id, label: goalLabel(g), light: lightFor(g) });
     if (wk.length > 1 && wk.every((g) => g.done >= g.target) && !weekClaimed(weekAllId())) out.push({ id: weekAllId(), label: t('wkg.chest'), light: WEEK_ALL_LIGHT });
     return out;
@@ -488,6 +560,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = waitingChests();
     if (list.length < 2) return;
     haptic();
+    for (const c of list) c.light *= surprise(c.id);
     void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
   };
   const harvestBtn = () => {
@@ -497,9 +570,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
   };
   // This week's goals (reset every Monday): their own rows and chest for all of them.
-  const claimWeekAll = (from?: Element) => play(
-    () => import('./celebrate').then((m) => m.celebrate({ kind: 'chest', title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from, WEEK_ALL_LIGHT)),
-    () => claimGoal(weekAllId(), WEEK_ALL_LIGHT));
+  const claimWeekAll = (from?: Element) => openChest(weekAllId(), WEEK_ALL_LIGHT, { title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from);
   const weekBox = () => {
     const list = weekGoals();
     if (!list.length) return '';
@@ -514,13 +585,28 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         goalChest(weekAllId(), WEEK_ALL_LIGHT, all, (el) => void claimWeekAll(el), true)) : '',
       h('div', { class: 'goals' }, ...list.map(goalRow)));
   };
+  // Friday (owner request 2026-11-12): double XP all day, and Al-Kahf as a quest with its own chest.
+  const fridayBox = () => {
+    if (!isFriday()) return '';
+    const since = new Date(); since.setHours(0, 0, 0, 0);
+    const read = KAHF_PAGES.filter((p) => pageReadSince(p, since.getTime()));
+    const met = read.length >= KAHF_PAGES.length;
+    const next = KAHF_PAGES.find((p) => !read.includes(p));
+    return h('div', { class: 'fri-box' },
+      h('div', { class: 'fri-head' }, h('b', {}, icon('crescent', 18), mpt('mp.fri.title')), h('span', { class: 'fri-xp' }, mpt('mp.fri.xp'))),
+      h('div', { class: `goal k-kahf${met ? ' met' : ''}` },
+        h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.fri.kahf')), bar('kahf', read.length / KAHF_PAGES.length),
+          h('span', { class: 'muted small' }, mpt('mp.fri.pages', { n: read.length, of: KAHF_PAGES.length }))),
+        met ? '' : h('button', { class: 'chip', onclick: () => goMushaf(`page:${next ?? KAHF_PAGES[0]}`) }, t('goal.read')),
+        goalChest('kahf', KAHF_LIGHT, met, (el) => void claimKahf(el))));
+  };
   // "Resets in 05:12:09" (owner 2026-11-12: "include the seconds, so it gets more urgency"): ticks every second
   // while Me is on screen; the week shows its days first ("6 d 05:12:09").
   const leftText = (ms: number) => {
     const s = Math.max(0, Math.floor(ms / 1000));
     const d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
     const clock = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-    return d ? `${t('wkg.days', { d })} ${clock}` : clock;
+    return d ? `${daysText(d)} ${clock}` : clock;
   };
   // The time left sits as a small clock pill under the Today / This week / Challenges switch.
   const resetText = (el: HTMLElement) => {
@@ -531,7 +617,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     if (el.title !== full) { el.title = full; el.setAttribute('aria-label', full); }
   };
   const resetLabel = (which: 'day' | 'week') => {
-    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
+    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('span', { class: 'goal-reset-lbl' }, t('wkg.resetsLbl')), h('b', {}));
     resetText(el);
     return el;
   };
@@ -564,6 +650,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('div', { class: 'me-tile lt-left' }, h('span', { class: 'me-tile-n' }, star(), h('b', {}, String(wallet()))), h('span', {}, mpt('mp.toSpend'))),
           ...([['lt.tToday', lightOn(dayKey())], ['lt.tWeek', stats('week').light], ['lt.tMonth', stats('month').light], ['lt.tAll', all]] as [Key, number][])
             .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, k === 'lt.tAll' ? mpt('mp.earnedAll') : t(k))))),
+        h('button', { class: 'chip lt-lamps', onclick: (e: Event) => { (e.currentTarget as HTMLElement).closest('dialog')?.close(); void import('./lampWall').then((m) => m.openLampWall()); } }, icon('lamp', 18), mpt('mp.lampWall')),
         h('p', { class: 'muted small' }, t('lt.help'))));
   };
   // A first pace (once), then the goals; at most one gentle suggestion a week.
@@ -619,10 +706,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
     const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
-      : [tip ? tipCard(tip) : '',
+      : [fridayBox(), tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
         list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-        list.length ? lightStrip() : ''];
+        list.length && stats('all').light > 0 ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },
         wk.length || withCh
@@ -635,10 +722,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },
-        h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
+        h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, icon('beads', 18), t('tb.title')),
         // The adhkar keep a way in here only when they are not a goal row already.
-        list.some((g) => g.kind === 'adhkar' && (g.period ?? 's') === 's') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('s') }, `☀ ${t('goal.adhkar')}`),
-        list.some((g) => g.kind === 'adhkar' && g.period === 'm') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('m') }, `☾ ${t('goal.adhkarM')}`),
+        list.some((g) => g.kind === 'adhkar' && (g.period ?? 's') === 's') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('s') }, icon('sun', 18), t('goal.adhkar')),
+        list.some((g) => g.kind === 'adhkar' && g.period === 'm') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('m') }, icon('crescent', 18), t('goal.adhkarM')),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'chip', onclick: () => openCustom() }, `＋ ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
@@ -774,23 +861,30 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       return h('div', { class: 'bdf' },
         h('div', { class: 'bdf-head' }, h('b', {}, bt(`f.${d.fam}` as BadgeKey)),
           h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
-        h('div', { class: 'bdf-tiers' }, ...list.map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
+        // F42: what is earned and the next medal only, not five grey ones.
+        h('div', { class: 'bdf-tiers' }, ...list.filter((b) => b.earned || b === next).map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
           badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
           b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
         next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
           h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
     };
     const groups: BadgeGroup[] = ['read', 'listen', 'learn', 'dua', 'goals', 'ranks', 'create'];
-    const byFamily = () => groups.flatMap((g) => {
-      const rows = [...fams.values()].filter((l) => l[0].def.group === g);
-      return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
-    });
+    // F42: families with nothing yet fold into "n more to discover" at the end.
+    const begun = (l: BadgeState[]) => l.some((b) => b.earned || b.have > 0);
+    const byFamily = () => {
+      const quiet = [...fams.values()].filter((l) => !begun(l));
+      return [...groups.flatMap((g) => {
+        const rows = [...fams.values()].filter((l) => l[0].def.group === g && begun(l));
+        return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
+      }), quiet.length ? h('details', { class: 'bdf-more' }, h('summary', {}, bt('more', { n: quiet.length })), ...quiet.map(famRow)) : ''];
+    };
     // On Me: the newest earned first, then the next tier of each family, closest first.
     const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : b.earned! < a.earned! ? -1 : b.def.step - a.def.step));
     const next = [...fams.values()].map((l) => l.find((b) => !b.earned)).filter((b): b is BadgeState => !!b).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
     const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, ...byFamily()));
     const waiting = earned.filter((b) => !badgeDone(b.def.id)).sort((a, b) => b.def.step - a.def.step);
     const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
+    claimSlot.dataset.more = String(waiting.length - shown.length);
     claimSlot.replaceChildren(
       waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
@@ -813,34 +907,55 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const earned = badgeStates().filter((b) => b.earned).length;
     const door = (id: MePage, icon: string, title: string, sub: string, dot = false, tap?: () => void) =>
       h('a', { class: `me-door d-${id}`, href: `#/me/${id}`, onclick: tap ? (e: Event) => { e.preventDefault(); tap(); } : null },
-        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon),
+        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, iconOf(icon, 24)),
         h('span', { class: 'me-door-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
         dot ? h('i', { class: 'me-door-dot', 'aria-hidden': 'true' }) : '');
     void hasFigure;
     // The room is on the streak card and prayer times on the line at the top; these two are used less often.
-    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, '🕌'),
+    prayerStrip.hidden = dayOne && !prayerLine;
+    doors.hidden = dayOne;
+    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, icon('mosque', 22)),
       h('span', { class: 'me-pr-txt' }, prayerLine || mpt('mp.prayerSet')), h('span', { class: 'me-pr-go', 'aria-hidden': 'true' }, '›'));
     doors.replaceChildren(
-      door('stats', '🏅', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
-      door('library', '📚', mpt('mp.lib'), mpt('mp.libSub')));
+      door('stats', 'medal', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
+      door('library', 'library', mpt('mp.lib'), mpt('mp.libSub')));
   };
 
+  // F21: Library as cards: reel thumbnails, the last pages read as paper cards, bookmarks grouped by surah
+  // (hidden until there is one).
+  let libUrls: string[] = [];
   const paintLibrary = () => {
     const bms = bookmarks();
-    const recent = recentPages().slice(0, 3);
+    const recent = recentPages().slice(0, 6);
     const ref = (s: number, a: number) => uiRef(meta[s - 1] as SurahMeta, a, a);
+    const reels = h('div', { class: 'lib-row lib-reels' });
+    void import('../data/drafts').then(async (dr) => {
+      const list = (await dr.listDrafts().catch(() => [])).slice(0, 8);
+      libUrls.forEach((u) => URL.revokeObjectURL(u));
+      libUrls = [];
+      reels.replaceChildren(...(list.length ? list.map((d) => {
+        const url = d.thumb ? URL.createObjectURL(d.thumb) : '';
+        if (url) libUrls.push(url);
+        return h('a', { class: 'lib-reel', href: dr.draftHash(d.project, d.id) },
+          h('span', { class: 'lib-reel-pic', style: url ? `background-image:url("${url}")` : '' }),
+          h('span', { class: 'lib-cap' }, uiRef(meta[d.project.surah - 1] as SurahMeta, d.project.from, d.project.to)));
+      }) : [h('button', { class: 'lib-reel lib-new', onclick: () => void import('./ayahPicker').then((m) => m.openAyahPicker()) },
+        h('span', { class: 'lib-reel-pic' }, icon('plus', 28)), h('span', { class: 'lib-cap' }, t('dr.choose')))]));
+    });
+    const bySurah = new Map<number, typeof bms>();
+    for (const b of bms) bySurah.set(b.s, [...(bySurah.get(b.s) ?? []), b]);
     libBox.replaceChildren(
-      h('h2', { class: 'me-h' }, t('lib.title')),
-      h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => openBookmarks() }, `🔖  ${t('lib.bookmarks', { n: bms.length })}`),
-        h('a', { class: 'menu-item', href: '#/drafts' }, `🎬  ${t('lib.reels')}`),
-        ...recent.map((r) => h('a', { class: 'menu-item', href: `#/s/${r.s}/${r.a}` },
-          h('span', {}, `📖  ${ref(r.s, r.a)}`), h('span', { class: 'muted small' }, ` · ${t('common.page', { n: r.page })}`)))));
-    function openBookmarks() {
-      dialog(t('menu.bookmarks'), bms.length
-        ? h('div', { class: 'sheet-scroll menu' }, ...bms.map((b) => h('a', { class: 'menu-item', href: `#/s/${b.s}/${b.a}` }, ref(b.s, b.a))))
-        : h('p', { class: 'muted' }, t('bm.empty')));
-    }
+      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, icon('film', 20), t('lib.reels')), h('a', { class: 'chip', href: '#/drafts' }, t('lib.all'))),
+      reels,
+      recent.length ? h('h2', { class: 'me-h' }, icon('book', 20), t('lib.lastRead')) : '',
+      recent.length ? h('div', { class: 'lib-row' }, ...recent.map((r) => h('a', { class: 'lib-page', href: `#/s/${r.s}/${r.a}` },
+        h('span', { class: 'lib-page-n' }, String(r.page)),
+        h('span', { class: 'lib-page-ar', lang: 'ar' }, (meta[r.s - 1] as SurahMeta).ar),
+        h('span', { class: 'lib-cap' }, ref(r.s, r.a))))) : '',
+      bms.length ? h('h2', { class: 'me-h' }, icon('bookmark', 20), t('menu.bookmarks')) : '',
+      ...[...bySurah].map(([s, list]) => h('div', { class: 'lib-bm' },
+        h('b', {}, surahName(meta[s - 1] as SurahMeta)),
+        h('div', { class: 'chips' }, ...list.map((b) => h('a', { class: 'chip', href: `#/s/${b.s}/${b.a}` }, `${b.s}:${b.a}`))))));
   };
 
   const paintPrayer = async () => {
@@ -851,7 +966,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
     } }, ps.lat === null ? t('pr.setLocation') : t('pr.update'));
     if (ps.lat === null) {
-      prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate);
+      // F16: an empty Prayer times page offers a city search too (for when location is off or refused).
+      const city = h('div', {});
+      void import('./citySearch').then((m) => city.replaceChildren(m.citySearch()));
+      prayerBox.replaceChildren(head, h('p', { class: 'muted small' }, t('pr.locHelp')), locate, city);
       if (prayerLine) { prayerLine = ''; paintDoors(); }
       return;
     }
@@ -865,7 +983,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const line = t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) });
     if (line !== prayerLine) { prayerLine = line; paintDoors(); }
     prayerBox.replaceChildren(
-      h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, `🔔 ${t(anyAlert() ? 'pa.on' : 'pa.short')}`)),
+      h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, icon('bell', 18), t(anyAlert() ? 'pa.on' : 'pa.short'))),
       h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
       h('div', { class: 'pr-list' }, ...times.map((x, i) => h('div', { class: `pr-row${i === next && !tomorrow ? ' next' : ''}${i === 1 ? ' sun' : ''}` },
         h('span', {}, t(`pr.${PRAYERS[i]}` as Key)), h('b', {}, timeFmt.format(x))))),
@@ -936,7 +1054,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
-        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
         h('div', { class: 'brand' }, h('h1', {}, title)),
         lightChip()),
       h('div', { class: `me-page me-page-${page}` }, ...content),
@@ -948,10 +1066,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
         lightChip(),
         inboxBell(),
-        h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
+        h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
+      prayerStrip, hero, syncLine, noorEl, dayCard() ?? (dayOne ? '' : todayCard()), waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
-    void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
+    if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
   paintRoom();
 
@@ -1015,7 +1133,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
 }
 
 /** #/me/settings: the Me tab's own settings, then the way on to the app's menu. */
-export function showMeSettings(root: HTMLElement): () => void {
+/** Me → ⚙ (F7): five rows, each opening its own page: Reading, Prayer & reminders, Notifications, Your Quran, App. */
+export type SetPage = 'reading' | 'prayer' | 'notes' | 'quran' | 'app';
+const SET_PAGES: readonly SetPage[] = ['reading', 'prayer', 'notes', 'quran', 'app'];
+export function showMeSettings(root: HTMLElement, at?: string): () => void {
+  const sub: SetPage | null = at === 'pa' ? 'prayer' : SET_PAGES.includes(at as SetPage) ? at as SetPage : null;
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const body = h('div', {});
   const section = (title: string, ...kids: (Node | string | false)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
@@ -1031,31 +1153,34 @@ export function showMeSettings(root: HTMLElement): () => void {
     const sel = h('select', { class: 'search pr-method', 'aria-label': t('pr.method'), onchange: (e: Event) =>
       setPrayerSettings({ ...prayerSettings(), method: (e.target as HTMLSelectElement).value as Method }) },
     ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
-    body.replaceChildren(
-      section(t('set.reading'),
+    const groups: Record<SetPage, () => (Node | string)[]> = {
+      reading: () => [section(t('set.reading'),
         h('div', { class: 'menu' },
-          h('a', { class: 'menu-item', href: '#/' }, `📖  ${t('menu.allSurahs')}`),
+          h('a', { class: 'menu-item', href: '#/' }, icon('book', 18), t('menu.allSurahs')),
           h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
             e.preventDefault();
             const p = Math.round(Number(pageInput.value));
             if (p >= 1 && p <= 604) goMushaf(`page:${p}`);
           } }, pageInput, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
-          h('button', { class: 'menu-item', onclick: () => { setReaderMode('translation'); location.hash = lastRead(); } }, `🔤  ${t('menu.translationView')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('bookmarks') }, `🔖  ${t('menu.bookmarks')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('reflections') }, `✎  ${t('menu.reflections')}`),
-          h('button', { class: 'menu-item', onclick: openTranslations }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+          h('button', { class: 'menu-item', onclick: () => { setReaderMode('translation'); location.hash = lastRead(); } }, icon('letters', 18), t('menu.translationView')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('bookmarks') }, icon('bookmark', 18), t('menu.bookmarks')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('reflections') }, icon('pen', 18), t('menu.reflections')),
+          h('button', { class: 'menu-item', onclick: openTranslations }, icon('globe', 18), t('menu.translation', { name: translationInfo(currentTranslation()).translator })),
           h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => { setTimeTint(!timeTintOn()); paint(); } },
-            `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`)),
+            icon('clock', 18), t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') }))),
         h('b', { class: 'set-label' }, t('me.pageTime')),
         h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
         chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x)),
         mushafOfflineRow()),
-      section(t('pr.title'),
+      section(t('fav.section'),
+        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp')))],
+      prayer: () => [section(t('pr.title'),
         h('p', { class: 'muted small' }, t('pr.locHelp')),
         h('button', { class: 'chip', onclick: async () => {
           toast(t('pr.finding'));
           const r = await locatePrayer(); if (!r.ok) toast(t(`pr.fail.${r.why}` as Key));
         } }, ps.lat === null ? t('pr.setLocation') : t('pr.update')),
+        ps.lat === null ? cityBox : '',
         h('label', { class: 'pr-set' }, h('span', { class: 'muted small' }, t('pr.method')), sel),
         h('div', { class: 'chips pr-asr' }, h('span', { class: 'muted small' }, t('pr.asr')),
           ...[false, true].map((hanafi) => h('button', {
@@ -1069,15 +1194,11 @@ export function showMeSettings(root: HTMLElement): () => void {
             if (on && !(await allowNotifications())) return toast(t('rem.denied'));
             setPrayerSettings({ ...prayerSettings(), lockScreen: on });
           },
-        }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
+        }, icon('lock', 18), t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
-      alertsSection(),
-      section(t('fav.section'),
-        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp'))),
-      section(t('wg.title'),
+      alertsSection()],
+      notes: () => [nudgeSection(),
         h('p', { class: 'muted small' }, t('wg.setHelp')),
-        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.open')}`))),
-      nudgeSection(),
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
@@ -1085,22 +1206,42 @@ export function showMeSettings(root: HTMLElement): () => void {
             if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
           })) : '',
       isNative() ? h('section', { class: 'me-card menu' },
-        h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, `✧  ${t('morning.title')}`)) : '',
-      section(t('menu.gYours'),
+        h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, icon('sparkle', 18), t('morning.title'))) : '',
+      section(t('wg.title'),
+        h('p', { class: 'muted small' }, t('wg.setHelp')),
+        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, icon('widget', 18), t('wg.open'))))],
+      quran: () => [section(t('menu.gYours'),
         h('div', { class: 'menu' },
-          h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, `☾  ${t('menu.ramadan')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./circles').then((m) => m.openCircles()) }, `◯  ${t('menu.circles')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, `🌙  ${t('menu.kids')}`))),
-      section(t('set.app'),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, icon('crescent', 18), t('menu.ramadan')),
+          h('button', { class: 'menu-item', onclick: () => void import('./circles').then((m) => m.openCircles()) }, icon('users', 18), t('menu.circles')),
+          h('button', { class: 'menu-item', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, icon('moon', 18), t('menu.kids'))))],
+      app: () => [section(t('set.app'),
         h('div', { class: 'menu' },
-          h('button', { class: 'menu-item', onclick: () => openAccount() }, accountLabel()),
-          h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
-          h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
-          h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, `${soundsOn() ? '🔔' : '🔕'}  ${t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, `🎙  ${t('set.harakatHelp')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, `⚑  ${t('set.report')}`))));
+          h('button', { class: 'menu-item', onclick: () => openAccount() }, ...accountLabel()),
+          h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, icon('colours', 18), t('theme.menu')),
+          h('button', { class: 'menu-item', onclick: openLanguage }, icon('voice', 18), t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })),
+          h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, icon(soundsOn() ? 'bell' : 'bellOff', 18), t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')),
+          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
+          h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
+    };
+    if (sub) { body.replaceChildren(...groups[sub]()); return; }
+    const row = (id: SetPage, ic: string, title: string, line: string) => h('a', { class: 'set-row', href: `#/me/settings/${id}` },
+      h('span', { class: `set-row-ic s-${id}`, 'aria-hidden': 'true' }, icon(ic, 22)),
+      h('span', { class: 'set-row-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, line)),
+      icon('right', 18));
+    body.replaceChildren(h('section', { class: 'me-card set-rows' },
+      row('reading', 'book', t('set.reading'), t('set.rowReading')),
+      row('prayer', 'mosque', t('set.rowPrayer'), t('set.rowPrayerSub')),
+      row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
+      row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
+      row('app', 'gear', t('set.app'), t('set.rowApp'))));
   };
+  const subTitle: Record<SetPage, () => string> = {
+    reading: () => t('set.reading'), prayer: () => t('set.rowPrayer'), notes: () => t('set.rowNotes'), quran: () => t('menu.gYours'), app: () => t('set.app'),
+  };
+  const cityBox = h('div', {});
+  void import('./citySearch').then((m) => cityBox.replaceChildren(m.citySearch()));
   const pageInput = h('input', { type: 'number', class: 'search', min: '1', max: '604', placeholder: t('menu.pagePlaceholder', { n: 604 }), inputmode: 'numeric' }) as HTMLInputElement;
   const openTranslations = async () => {
     const { translationList } = await import('./translationPicker');
@@ -1132,17 +1273,17 @@ export function showMeSettings(root: HTMLElement): () => void {
       h('div', { class: 'chips pa-prayers' }, ...ALERT_PRAYERS.map((p) => h('button', {
         class: `chip${a.on[p] ? ' on' : ''}`, 'aria-pressed': String(a.on[p]),
         onclick: () => save((c) => ({ ...c, on: { ...c.on, [p]: !c.on[p] } })),
-      }, `${a.on[p] ? '🔔' : '🔕'} ${t(`pr.${p}` as Key)}${times ? ` · ${timeFmt.format(times[PRAYERS.indexOf(p)])}` : ''}`))),
+      }, icon(a.on[p] ? 'bell' : 'bellOff', 16), `${t(`pr.${p}` as Key)}${times ? ` · ${timeFmt.format(times[PRAYERS.indexOf(p)])}` : ''}`))),
       h('b', { class: 'set-label' }, t('pa.when')),
       chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
       h('b', { class: 'set-label' }, t('pa.sound')),
       chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => { previewSound(x); save((c) => ({ ...c, sound: x })); }),
       h('b', { class: 'set-label' }, akt('du.notes')),
       h('p', { class: 'muted small' }, akt('du.notesHelp')),
-      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, a.duas ? akt('du.notesOn') : akt('du.notesOff')),
+      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, icon(a.duas ? 'bell' : 'bellOff', 16), a.duas ? akt('du.notesOn') : akt('du.notesOff')),
       h('b', { class: 'set-label' }, akt('du.salahNotes')),
       h('p', { class: 'muted small' }, akt('du.salahHelp')),
-      h('button', { class: `chip${a.salah ? ' on' : ''}`, 'aria-pressed': String(a.salah), onclick: () => save((c) => ({ ...c, salah: !c.salah })) }, a.salah ? akt('du.notesOn') : akt('du.notesOff')),
+      h('button', { class: `chip${a.salah ? ' on' : ''}`, 'aria-pressed': String(a.salah), onclick: () => save((c) => ({ ...c, salah: !c.salah })) }, icon(a.salah ? 'bell' : 'bellOff', 16), a.salah ? akt('du.notesOn') : akt('du.notesOff')),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),
@@ -1162,7 +1303,7 @@ export function showMeSettings(root: HTMLElement): () => void {
         haptic();
         paint();
       },
-    }, `${n[k] ? '🔔' : '🔕'}  ${label}`);
+    }, icon(n[k] ? 'bell' : 'bellOff', 18), label);
     return section(t('nudge.section'),
       h('p', { class: 'muted small' }, t(isNative() ? 'nudge.help' : 'nudge.helpWeb')),
       h('div', { class: 'menu' },
@@ -1187,8 +1328,8 @@ export function showMeSettings(root: HTMLElement): () => void {
   })();
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn', href: '#/me', 'aria-label': t('me.title') }, '‹'),
-      h('div', { class: 'brand' }, h('h1', {}, t('me.settings')))),
+      h('a', { class: 'icon-btn back-btn', href: sub ? '#/me/settings' : '#/me', 'aria-label': sub ? t('me.settings') : t('me.title') }, icon('back', 22)),
+      h('div', { class: 'brand' }, h('h1', {}, sub ? subTitle[sub]() : t('me.settings')))),
     body, tabBar('me'));
   const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
   window.addEventListener('prayer-changed', onPrayer);
@@ -1196,13 +1337,61 @@ export function showMeSettings(root: HTMLElement): () => void {
 }
 
 /** A flame that went out can be relit with streak freezes kept from the Ranks shop or prizes. */
-function keptFreezeButton(days: string[]): HTMLElement {
-  const box = h('div', {});
+/** Streak repair (owner request 2026-11-12, "make Light way more valuable"): a flame that went out can be bought back
+ *  with Light while it is still warm; the longer the streak, the more it costs. */
+export const repairPrice = (n: number) => Math.min(1500, 150 + 15 * n);
+/** The free freezes, shown right on the flame (owner request 2026-11-12, "a streak that forgives"): a small ice
+ *  shield with how many are ready; a tap says what it does and when one was last used. */
+function freezeBadge(s: ReturnType<typeof streak>): HTMLElement | string {
+  const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
+  const n = (s.freeze.free ? 1 : 0) + (s.extra.free ? 1 : 0);
+  if (!s.days && !s.lost) return ''; // F2: nothing to protect yet
+  const lines = [mpt('mp.freezeHelp'),
+    s.freeze.free ? mpt('mp.freezeReady') : mpt('mp.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) }),
+    s.extra.free ? mpt('mp.extraReady') : mpt('mp.extraNext', { day: longDay.format(parse(s.extra.next!)) })];
+  return h('button', { class: `me-freeze${n ? '' : ' none'}`, type: 'button', 'aria-label': lines.join('. '), onclick: (e: Event) => {
+    e.stopPropagation(); haptic(6); toast(lines.join(' · '));
+  } }, h('span', { 'aria-hidden': 'true' }, icon('snow', 22)), n ? h('b', {}, String(n)) : '');
+}
+
+function repairButton(lost: { n: number; days: string[] }): HTMLElement {
+  const price = repairPrice(lost.n);
+  const left = wallet();
+  return h('button', { class: `me-relight me-repair${left < price ? ' short' : ''}`, onclick: () => {
+    if (wallet() < price) { toast(mpt('mp.rep.need', { n: price - wallet() })); return; }
+    void Promise.all([import('../data/garden'), import('../data/journey')]).then(([g, j]) => {
+      if (!g.shopAdd(`rp:${lost.days[0]}`, price)) return;
+      j.revive(lost.days);
+      haptic(24);
+      toast(mpt('mp.rep.done', { n: lost.n }));
+      void import('./powerUp').then((m) => m.powerUp(lost.n)).catch(() => {});
+    });
+  } }, h('span', {}, mpt('mp.rep.btn', { n: lost.n })), h('b', { class: 'me-repair-p' }, star(), ` ${price}`));
+}
+/** F36: a lost streak is one calm card with the best way back as its one button (a kept freeze first, then
+ *  a friend, then Light); the others wait under "Other ways". */
+function lostCard(lost: { n: number; days: string[] }): HTMLElement {
+  const friend = () => h('button', { class: 'me-relight', onclick: () => {
+    if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
+    void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
+  } }, t('rl.askFriend'));
+  const box = h('div', { class: 'me-lost-card' });
+  const paint = (freeze: HTMLElement | null) => {
+    const ways = [freeze, lost.days.length <= 3 ? friend() : null, lost.days.length <= 7 ? repairButton(lost) : null]
+      .filter((x): x is HTMLElement => !!x);
+    const [first, ...rest] = ways;
+    first?.classList.add('primary-way');
+    box.replaceChildren(
+      h('p', { class: 'me-lost' }, mpt('mp.lost.title', { n: lost.n })),
+      first ?? '',
+      rest.length ? h('details', { class: 'me-lost-more' }, h('summary', {}, mpt('mp.lost.other')), ...rest) : '');
+  };
+  paint(null);
   void Promise.all([import('../data/shop'), import('../i18n/ranks')]).then(([shop, { rt }]) => {
-    if (shop.bankedFreezes() < days.length) return;
-    box.replaceChildren(h('button', { class: 'me-relight', onclick: () => {
-      if (shop.useFreezes(days)) { toast(rt('rk.freezeUsed')); haptic(); }
-    } }, `❄  ${rt('rk.useFreeze', { n: days.length })}`));
+    if (shop.bankedFreezes() < lost.days.length) return;
+    paint(h('button', { class: 'me-relight', onclick: () => {
+      if (shop.useFreezes(lost.days)) { toast(rt('rk.freezeUsed')); haptic(); }
+    } }, rt('rk.useFreeze', { n: lost.days.length })));
   }).catch(() => { /* offline chunk: nothing */ });
   return box;
 }

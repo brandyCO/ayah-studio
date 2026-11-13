@@ -18,7 +18,8 @@ import {
   LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
-import { addLesson, addMemorised, claimGoal } from '../data/journey';
+import { addFlawless, addLesson, addMemorised, claimGoal } from '../data/journey';
+import { dimLamp, earnLamp, lamps, markFlawless } from '../data/learnLamps';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
 import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
@@ -26,8 +27,9 @@ import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { surahName, t, uiRef } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
-import { celebrate } from './celebrate';
-import { drills, meaningCards, type KindCtx } from './lessonKinds';
+import { celebrate, type MomentStat } from './celebrate';
+import { drills, meaningCards, type DrillLamps, type KindCtx } from './lessonKinds';
+import { lampRow, lampsOut, spentLabel } from './learnLamps';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
@@ -57,10 +59,14 @@ const learnReciter = () => {
   return timedReciterById(reelReciter(DEFAULT_RECITER)).id;
 };
 
-/** `mode` 'tasmi': the whole surah from memory straight away ("Already know some?" on the path). */
+/**
+ * `mode` 'tasmi': the whole surah from memory straight away ("Already know some?" on the path);
+ * 'review': what was learned so far from memory ("Practise again", and the way to earn a lamp back).
+ */
 export async function showLesson(root: HTMLElement, s: number, mode?: string): Promise<() => void> {
   ensureTree(s, pathChunk());
   const quick = mode === 'tasmi';
+  let reviewOnly = mode === 'review';
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
     loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
     surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
@@ -77,12 +83,14 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   let step: Step = 'new';
   let range: [number, number] = [1, 1];
   let reviewFirst = false; // a growing tree was thirsty: Link first, then on to New
+  let practising = false; // reciting what was learned again: passing it lights a lamp
   async function plan(after?: Step): Promise<void> {
     const tr = tree(s)!;
     if (quick && !after && !tr.full) { step = 'whole'; range = [1, m.ayahs]; return; }
+    if (reviewOnly && !after && tr.learned > 0) { reviewOnly = false; practising = true; if (tr.full) { step = 'water'; range = [1, m.ayahs]; } else { step = 'link'; range = [1, tr.learned]; } return; }
     if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
     if (tr.full) { step = 'water'; range = [1, m.ayahs]; return; }
-    if (!after && thirsty(tr) && tr.learned > 0) { step = 'link'; range = [1, tr.learned]; reviewFirst = true; return; }
+    if (!after && thirsty(tr) && tr.learned > 0) { step = 'link'; range = [1, tr.learned]; reviewFirst = true; practising = true; return; }
     const next = nextChunk(tr.learned, m.ayahs, tr.chunk, typeof tr.chunk === 'number' ? [] : await places());
     if (next) { step = 'new'; range = next; return; }
     step = 'whole';
@@ -116,7 +124,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
   root.append(
     h('header', { class: 'ls-head' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
       noorBtn, focusBtn, art),
     stepsEl, phaseEl,
@@ -552,7 +560,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     phase = p;
     pop.hidden = true;
     peeked.clear();
-    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), () => go('memory')) : null;
+    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), (n) => { drillMissed = n; go('memory'); }, drillLamps()) : null;
     if (root.classList.contains('ls-focus') && !reduced()) textEl.animate([{ opacity: 0.25, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 420, easing: 'ease-out' });
     textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
@@ -564,8 +572,39 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (p !== 'memory') memExtras.replaceChildren();
   }
 
+  // Lamps (src/data/learnLamps.ts): a wrong answer in a new lesson's exercises dims one. With none lit, a new
+  // lesson rests; reciting from memory, reviews and watering never need one.
+  let drillMissed = -1; // the exercises' wrong answers (-1: skipped), for a flawless lesson
+  function drillLamps(): DrillLamps {
+    return { row: lampRow('ls-lamps'), wrong: dimLamp, rest: (resume) => lampsOut({ surah: s, resume, recite: () => go('memory'), review: reviewHere }) };
+  }
+  /** Earning a lamp back on this very surah: what was learned, from memory (then on to the new ayat again). */
+  function reviewHere(x: number) {
+    if (x !== s) { location.hash = `#/learn/${x}/review`; return; }
+    const tr = tree(s)!;
+    step = tr.full ? 'water' : 'link';
+    range = tr.full ? [1, m.ayahs] : [1, tr.learned];
+    reviewFirst = !tr.full;
+    practising = true;
+    startStep();
+  }
+  function rest() {
+    stopAll();
+    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    status.textContent = '';
+    doneEl.hidden = false;
+    paintHead();
+    doneEl.replaceChildren(lampsOut({ surah: s, resume: startStep, review: reviewHere, back: true }));
+  }
+  // Time spent on this step (shown when it is passed); time with the app hidden is left out.
+  let t0 = performance.now(), away = 0, hidAt = 0;
+  const spent = () => performance.now() - t0 - away - (hidAt ? performance.now() - hidAt : 0);
+
   function startStep() {
+    if (step === 'new' && lamps().n === 0) { rest(); return; }
     doneEl.hidden = true;
+    t0 = performance.now(); away = 0; hidAt = document.hidden ? t0 : 0;
+    drillMissed = -1;
     for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
     level = 0;
     simCount = 0;
@@ -816,30 +855,37 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const today = dayKey(new Date());
     const ref0 = uiRef(m, range[0], range[1]);
     let moment: Promise<void> | null = null;
+    // Shown in the celebration: the time this step took, a flawless lesson, a lamp earned back.
+    const flawless = step === 'new' && drillMissed === 0 && smooth && helped.size === 0 && missed.size === 0;
+    const earned = (practising || step === 'water' || (step === 'whole' && !!before.full)) && earnLamp();
+    practising = false;
+    const stats: MomentStat[] = [{ text: lt(step === 'new' ? 'learn.timeLearn' : 'learn.timeMemo', { t: spentLabel(spent()) }), icon: 'time' }];
+    if (flawless) { markFlawless(s, range[1]); addFlawless(); stats.push({ text: lt('learn.flawless', { n: 10 }), icon: 'flawless' }); }
+    if (earned) stats.push({ text: lt('learn.lampEarned'), icon: 'lamp' });
     if (step === 'new') {
       const n = range[1] - before.learned;
       learnTo(s, range[1]);
       if (n > 0) addMemorised(n);
       claimGoal(`gl:n:${s}:${range[1]}`, LIGHT.new);
-      moment = celebrate({ kind: 'lantern', kicker: lt('learn.celNew'), title: ref0, sub: lt('learn.celNewSub') }, from, LIGHT.new);
+      moment = celebrate({ kind: flawless ? 'star' : 'lantern', kicker: lt(flawless ? 'learn.flawlessKicker' : 'learn.celNew'), title: ref0, sub: lt('learn.celNewSub'), stats }, from, LIGHT.new);
     } else if (step === 'link') {
       const wasDry = thirsty(before);
       const fresh = range[1] > before.linked;
       linkTo(s, range[1]);
       const light = fresh ? LIGHT.link : wasDry ? LIGHT.water : 0;
       if (light) claimGoal(fresh ? `gl:l:${s}:${range[1]}` : `gl:wa:${s}:${today}`, light);
-      moment = celebrate({ kind: 'lantern', kicker: lt(wasDry && !fresh ? 'learn.celWater' : 'learn.celLink'), title: ref0, sub: lt('learn.celLinkSub') }, from, light);
+      moment = celebrate({ kind: 'lantern', kicker: lt(wasDry && !fresh ? 'learn.celWater' : 'learn.celLink'), title: ref0, sub: lt('learn.celLinkSub'), stats }, from, light);
     } else {
       const first = !before.full;
       const wasDry = thirsty(before);
       reciteWhole(s, m.ayahs, smooth);
       if (first) {
         claimGoal(`gl:w:${s}`, LIGHT.whole);
-        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub') }, from, LIGHT.whole);
+        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub'), stats }, from, LIGHT.whole);
       } else {
         const light = wasDry ? LIGHT.water : 0;
         if (light) claimGoal(`gl:wa:${s}:${today}`, light);
-        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips') }, from, light);
+        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips'), stats }, from, light);
       }
     }
     addLesson();
@@ -889,7 +935,9 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (e.key === 'Escape') pop.hidden = true;
   };
   document.addEventListener('keydown', onKey);
-  const onHide = () => { if (document.hidden) stopAll(); };
+  const onHide = () => {
+    if (document.hidden) { stopAll(); if (!hidAt) hidAt = performance.now(); } else if (hidAt) { away += performance.now() - hidAt; hidAt = 0; }
+  };
   document.addEventListener('visibilitychange', onHide);
   paintChips();
   paintPlay();

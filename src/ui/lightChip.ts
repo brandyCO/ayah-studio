@@ -8,7 +8,7 @@ import { stats } from '../data/journey';
 let wallet: (() => number) | null = null;
 const loadWallet = () => import('../data/garden').then((g) => { wallet = g.wallet; });
 import { locale, t } from '../i18n';
-import { h } from './dom';
+import { h, listenWhile } from './dom';
 
 /** Tapping it opens the shop (owner request 2026-11-12), unless the screen gives its own action. */
 export function lightChip(onclick: () => void = () => void import('./shop').then((m) => m.openShop())): HTMLElement {
@@ -22,6 +22,8 @@ export function lightChip(onclick: () => void = () => void import('./shop').then
   let raf = 0;
   const paint = () => {
     const all = wallet ? wallet() : stats('all').light;
+    // F2: no Light earned yet, nothing to show (it fades in with the first chest, which flies here).
+    el.classList.toggle('lt-empty', all === 0 && stats('all').light === 0);
     // More Light than shown (a reward just claimed): count up to it while the flying light lands.
     if (shown >= 0 && all > shown && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const from = shown, t0 = performance.now() + 450;
@@ -43,8 +45,8 @@ export function lightChip(onclick: () => void = () => void import('./shop').then
     window.removeEventListener('journey-changed', on);
     window.removeEventListener('garden-changed', on);
   };
-  window.addEventListener('journey-changed', on);
-  window.addEventListener('garden-changed', on);
+  listenWhile(el, window, 'journey-changed', on);
+  listenWhile(el, window, 'garden-changed', on);
   return el;
 }
 

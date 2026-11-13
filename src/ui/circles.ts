@@ -3,6 +3,7 @@
 // removed by the owner on 2026-10-28; a Khatm circle that is still in the database is not shown.)
 // Names are user text: shown in the UI font, never like the ayah.
 import { account, onAccount } from '../cloud/auth';
+import { icon } from './icons';
 import { errorText, joinCircle, loadCircles, previewCircle, type CircleState } from '../together/circles';
 import { openAccount } from './account';
 import { h, toast } from './dom';
@@ -55,7 +56,7 @@ export function openCircles() {
     body.replaceChildren(
       ...list.map((st) =>
         h('button', { class: 'menu-item circle-row', onclick: () => { d.close(); void import('./family').then((m) => m.openFamily(st.circle.id)); } },
-          h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, '🏮'),
+          h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, icon('lamp', 22)),
           h('span', { class: 'circle-row-text' },
             h('b', {}, st.circle.name),
             h('span', { class: 'muted small' }, t('fam.rowSub', { n: st.members.length }))))),
@@ -115,7 +116,7 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
   code = code.toUpperCase();
   const body = h('div', { class: 'join' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('circ.home') }, '‹'),
+    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('circ.home') }, icon('back', 22)),
     h('div', { class: 'brand' }, h('h1', {}, t('circ.one')), h('p', { class: 'muted' }, t('circ.invitation')))), body);
 
   async function draw() {

@@ -14,6 +14,7 @@ const en = {
   'fr.decline': 'Not now',
   'fr.friends': 'Friends',
   'fr.remove': 'Remove friend',
+  'fr.gift': 'Send a gift',
   'fr.removeAsk': 'Stop being friends with {name}? Your friend streak ends.',
   'fr.asked': '{name} wants to be friends',
   'fr.asks': 'Waiting for you',
@@ -62,6 +63,7 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.decline': 'ليس الآن',
   'fr.friends': 'أصدقاء',
   'fr.remove': 'إزالة الصديق',
+  'fr.gift': 'أرسل هدية',
   'fr.removeAsk': 'إنهاء الصداقة مع {name}؟ ستنتهي سلسلة الصحبة.',
   'fr.asked': '{name} يريد أن تكونا صديقين',
   'fr.asks': 'بانتظارك',
@@ -77,7 +79,7 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.neither': 'اكسبا خبرة اليوم كلاكما لتشتعل',
   'fr.help': 'يُحسب اليوم حين تكسبان الخبرة كلاكما. وإن فات يوم تبدأ من جديد.',
   'fr.visit': 'زيارة الغرفة',
-  'fr.week': 'XP هذا الأسبوع',
+  'fr.week': 'خبرة هذا الأسبوع',
   'fr.flame': 'سلسلة الشعلة',
   'fr.trophies': 'الكؤوس',
   'fr.pages': 'صفحات هذا الأسبوع',
@@ -95,7 +97,7 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.already': 'أنتما صديقان بالفعل',
   'fr.yours': 'هذا رابطك أنت. شاركه مع صديق.',
   'fr.open': 'افتح الأصدقاء',
-  'fr.levelNext': '{n} XP للمستوى التالي',
+  'fr.levelNext': '{n} خبرة للمستوى التالي',
 };
 
 export function ft(key: FriendKey, vars?: Record<string, string | number>): string {
