@@ -770,6 +770,14 @@ save to gallery / share sheet; offline audio cache; settings.
       gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
       goal Claim pills, ticks and the tip button tonal (accent tint + accent text, no glow); the Claim
       shine plays once; the streak keeps a softer glow
+      **Character app icon** (owner decision 2026-11-13, "B"): the launcher icon is the builder character cheering inside
+      the white ayah marker with the Light star, on a sunset gradient (default theme); every theme has the same icon on its
+      own gradient; `scripts/make-character-icons.py` (figures from `src/ui/figure.ts`, WebP adaptive layers, one
+      monochrome, `public/icons/theme-{id}.webp` = the web tab icon) replaces the theme part of `make-icons.py`, which now
+      makes only the logo and splash. **Ten unlockable tiers** (Crystal, Molten gold, Emerald garden, Ocean pearl, Aurora,
+      Nebula, Liquid starlight, Prism, Cosmic gate, Pure light; ids in `src/data/iconTiers.ts`) won by XP level 5…50 or
+      sooner by badges / Ranks weeks (`RULES` in `src/ui/appIcons.ts`), replacing Sapphire / Gold / Celestial (old picks
+      move to garden / borealis / prism; their aliases stay in the manifest showing those tiers)
       **App icon follows the theme** (owner request 2026-11-02): one launcher icon per theme (the same light in the
       ayah marker: night tile tinted to the theme's hue, marker + glow in its night accent, inner ring its deep colour; `scripts/make-icons.py --themes` reads `theme.ts` and writes the vector
       backgrounds `drawable/ic_bg_{id}.xml`, adaptive `ic_launcher_{id}` + `_round`, 192 px PNGs for Android 7 and
@@ -1837,7 +1845,7 @@ duas/reflections section in Me.
       amber sunburst with laurels and ribbons → violet rosette with crown → sapphire sunburst with a cut stone, crown and glints);
       Light 25 / 50 / 100 / 200 / 400; Platinum and Diamond claims burst twice. Me shows the 3 newest claims (+n) and 4 tiles;
       Stats & badges lists every family with its five tiers and the bar to the next. Strings lazy in `src/i18n/badges.ts`.
-      **App icons to win** (`src/ui/appIcons.ts`): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
+      **App icons to win** (`src/ui/appIcons.ts`; since 2026-11-13 the ten character tiers, see Theme colours): Rare Sapphire (any Platinum or a top-3 week), Legendary Gold (any Diamond or a
       #1 week), Mythic Celestial (5 Diamonds or #1 in the Sun league); unlocked ones can be worn from Stats (localStorage
       `appIconPick`, synced) — Android aliases `.IconSapphire` / `.IconLegend` / `.IconCelestial` (PNG adaptive layers by
       `scripts/make-unlock-mipmaps.py` from `resources/unlock-icons/`), web favicon `public/icons/app-{id}.webp`

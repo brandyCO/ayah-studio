@@ -18,7 +18,7 @@ import { avatar } from './rankAvatars';
 import { DEFAULT, PIECES, bustMarkup, PRICE, PRIZE, WARDROBE, encode, figureSvg, options, parse, weekPiece, wearing, type Fig, type How, type Slot as FigSlot } from './figure';
 import { ROOM_ITEMS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem } from '../data/roomItems';
 import { tileArt } from './roomShop';
-import { APP_ICONS, pickedIcon, unlockedIcons, type AppIconId } from './appIcons';
+import { APP_ICONS, levelNeed, pickedIcon, tierRarity, unlockedIcons, type AppIconId } from './appIcons';
 import { lampNext, lampOf } from '../data/shop';
 import { lwt } from '../i18n/lampWall';
 import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, limitedIn, limitedNow, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
@@ -217,9 +217,9 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     }
     for (const id of APP_ICONS) {
       out.push({
-        id: `ic:${id}`, sec: 'icons', name: bt(`ic.${id}` as BadgeKey), rar: id === 'sapphire' ? 'rare' : id === 'legend' ? 'legendary' : 'mythic', for: 'sh.forHome',
+        id: `ic:${id}`, sec: 'icons', name: bt(`ic.${id}` as BadgeKey), rar: tierRarity(id), for: 'sh.forHome',
         art: () => h('img', { class: 'sh-icon', src: `${import.meta.env.BASE_URL}icons/app-${id}.webp`, alt: '', width: 84, height: 84, loading: 'lazy' }),
-        state: () => (unlockedIcons().has(id) ? 'own' : 'locked'), how: bt(`ic.${id}How` as BadgeKey),
+        state: () => (unlockedIcons().has(id) ? 'own' : 'locked'), how: bt(`ic.${id}How` as BadgeKey), progress: () => levelNeed(id),
         use: { label: 'sh.use', done: 'sh.inUse', active: () => pickedIcon() === id, run: () => useIcon(id) },
       });
     }
