@@ -1,0 +1,57 @@
+# Uptime alerts (owner request 2026-11-13): every 10 minutes the web app, the database and the edge proxy are
+# checked from GitHub. When one is down three times in a row (30 s apart) an issue "Down: …" is opened and
+# assigned to the owner, which GitHub sends as an e-mail and a phone notification; when everything answers
+# again, the issue is closed with the time it came back. Nothing to sign up for.
+name: Uptime
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency: uptime
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        id: check
+        env:
+          PROXY: ${{ vars.PIXABAY_PROXY }}
+        run: |
+          set -u
+          SB=https://jposubjybzstfmnngews.supabase.co
+          KEY=sb_publishable_Su6KSbkC7LHqqLwoKbrj6w_aevj2aY9
+          probe() { # name, command
+            for i in 1 2 3; do
+              if eval "$2" > /dev/null 2>&1; then echo "$1: up"; return 0; fi
+              sleep 30
+            done
+            echo "$1: DOWN"; echo "$1" >> down.txt
+          }
+          : > down.txt
+          probe "Web app (GitHub Pages)" "curl -sf --max-time 20 https://brandyco.github.io/ayah-studio/ | grep -q 'Ayah Studio'"
+          probe "Sign-in (Supabase Auth)" "curl -sf --max-time 20 -H 'apikey: $KEY' $SB/auth/v1/health"
+          probe "Database (Supabase)" "curl -sf --max-time 20 -X POST -H 'apikey: $KEY' -H 'content-type: application/json' -d '{\"code\":\"uptimecheck\"}' $SB/rest/v1/rpc/relight_preview"
+          if [ -n "$PROXY" ]; then probe "Edge proxy (Cloudflare)" "curl -sf --max-time 20 ${PROXY%/}/config"; fi
+          echo "down=$(paste -sd ', ' down.txt)" >> "$GITHUB_OUTPUT"
+      - name: Open or close the alert
+        uses: actions/github-script@v7
+        env:
+          DOWN: ${{ steps.check.outputs.down }}
+        with:
+          script: |
+            const down = process.env.DOWN;
+            const { data } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'uptime' });
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const now = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+            if (down && !data.length) {
+              await github.rest.issues.create({ ...context.repo, title: `Down: ${down}`, labels: ['uptime'], assignees: [context.repo.owner],
+                body: `Not answering since ${now}: ${down}.\n\nChecked three times, 30 s apart: ${run}\n\nThis issue closes itself when everything answers again.` });
+            } else if (!down && data.length) {
+              for (const i of data) {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: `Back up at ${now}.` });
+                await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+              }
+            }

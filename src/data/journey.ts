@@ -17,6 +17,7 @@ import { noteFlameTime } from './usualTime';
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
 import type { Mushaf } from './mushaf';
 import { touchPref } from '../ui/prefs';
+import { mark } from '../usage';
 
 const KEY = 'journey';
 const KEEP_DAYS = 400;
@@ -181,6 +182,7 @@ export const badgeClaimed = (id: string) => !!view().claimed[id];
 export function claimGoal(id: string, light = 0, now = new Date()) {
   const d = today(now);
   if (d.cl?.includes(id)) return;
+  mark('ev:claim');
   d.cl = [...(d.cl ?? []), id];
   if (light > 0) d.n = { ...d.n, [id]: Math.round(light) };
   save();
@@ -370,6 +372,7 @@ function surahPages(m: Mushaf) {
 
 /** A page was read (open for the reading time). Call after logging it in the reading log. */
 export function countPage(m: Mushaf, page: number, now = new Date()) {
+  mark('ev:page');
   const s = load();
   const { pages, onPage, juz } = surahPages(m);
   const [ay, ...surahs] = onPage.get(page) ?? [0];
@@ -418,6 +421,7 @@ export function addMemorised(n: number, now = new Date()) {
 
 /** A Learn lesson or tasmi' was passed today (counted for goals, quests and Ranks). */
 export function addLesson(now = new Date()) {
+  mark('ev:lesson');
   const d = today(now);
   d.ls = (d.ls ?? 0) + 1;
   save();
@@ -463,6 +467,7 @@ export function markGoalsMet(now = new Date()) {
 
 /** Seconds of recitation listened to. */
 export function addListen(sec: number, now = new Date()) {
+  if (sec > 0) mark('ev:listen');
   if (!(sec > 0)) return;
   const d = today(now);
   d.l = Math.round(((d.l ?? 0) + sec) * 10) / 10;
@@ -518,6 +523,7 @@ export function lifetime(): Readonly<Record<string, number>> {
 
 /** A reel was exported. */
 export function reelMade(now = new Date()) {
+  mark('ev:export');
   const d = today(now);
   d.r = (d.r ?? 0) + 1;
   load().totals.reels++;

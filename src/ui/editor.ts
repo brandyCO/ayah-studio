@@ -3,6 +3,7 @@
 // tool's panel slides up in place (the preview never changes size). A tool opens its options, an
 // option opens a panel, and a block selected in the timeline shows its own actions. Every edit is
 // live in the preview, even while playing, and can be undone.
+import { mark } from '../usage';
 import { starButton } from './favStar';
 import { favouritesFirst } from '../data/reciterDownload';
 import { addEcho, arrangeAudio, ECHO_PRESETS, polishAudio, type Echo } from '../data/audio';
@@ -2593,6 +2594,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     };
     setProgress(0);
     const started = performance.now();
+    mark('ev:export-start');
     try {
       const signal = exporting.signal;
       let coverJpeg: Blob | null = null;

@@ -29,6 +29,7 @@ import { initI18n, t } from './i18n';
 import { applyTheme } from './ui/theme';
 import { applyLite, liteMode } from './lite';
 import { initErrors } from './errors';
+import { initUsage, markRoute } from './usage';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
@@ -51,6 +52,7 @@ async function route() {
     return void route();
   }
   if (view === 'kids') clearPass();
+  markRoute(location.hash); // anonymous screen counts (src/usage.ts)
   // Listening carries on across screens, but not into the studio (its own sound) or the Kids space.
   if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
@@ -168,6 +170,7 @@ markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
+later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
