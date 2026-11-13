@@ -16,8 +16,7 @@ import { locale, surahName, t as tr, uiRef } from '../i18n';
 const dateFmt = { format: (d: number) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(d) };
 const shortDate = { format: (d: number) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(d) };
 const sameDay = (t: number, d = new Date()) => new Date(t).toDateString() === d.toDateString();
-/** "You wrote here today" / "You wrote here on 12 Oct". */
-export const wroteHere = (t: number) => (sameDay(t) ? tr('rf.wroteToday') : tr('rf.wroteOn', { date: shortDate.format(t) }));
+export { wroteHere } from './wroteHere';
 
 function sheet(cls: string, ...content: (Node | string | false)[]) {
   const d = h('dialog', { class: `sheet bottom ${cls}` }, ...content);

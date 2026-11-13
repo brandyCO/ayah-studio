@@ -5,7 +5,8 @@ import { currentTranslation, translationInfo } from '../data/translations';
 import { surahName, t } from '../i18n';
 import { h } from './dom';
 import { setReaderMode } from './prefs';
-import { openReflection } from './reflections';
+// The reflections sheet loads on first use (out of the first load).
+const openReflection = (...a: Parameters<typeof import('./reflections').openReflection>) => import('./reflections').then((m) => m.openReflection(...a));
 import { selectionController } from './selection';
 import { tafsirToggle } from './tafsir';
 

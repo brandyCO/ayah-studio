@@ -63,6 +63,9 @@ import { currentTranslation, setTranslation, translationInfo } from '../data/tra
 import { errMsg, t as ui, tOr, uiRef } from '../i18n';
 import { translationList } from './translationPicker';
 import { recordingChips, reciterSearchBox } from './recordings';
+import { loadStudioStrings } from '../i18n';
+// The studio's own English strings (src/i18n/enStudio.ts) are in place before anything here draws.
+await loadStudioStrings();
 
 const MODES: { value: TextMode; label: string }[] = [
   { value: 'ayah', label: ui('ed.ayah') },
