@@ -1590,6 +1590,15 @@ duas/reflections section in Me.
       swell), a double burst with a gold wash (`.epic`) and the rare card lands with a ring and a "Rare" ribbon. Characters
       (`figure.ts`): head sway, breathing shadow, and in the builder a hop with crouch / stretch / squash on each change (a nod for
       head parts), a glance or fidget every 4–7 s, Surprise me shuffles through looks, Wear it cheers with sparkles
+      **Shop items redrawn** (owner request 2026-11-13, "make each and every item in the shop desirable"): avatars are
+      medallions by kind (`medallion()` in `rankAvatars.ts`): free ones enamel with a raised white emblem, shop ones night
+      enamel with a gold khatam, gold beads, stars and a raised gold emblem, Sun-tier ones a sunburst, champions emerald and
+      gold, jewels a cut stone (table + 16 facets, sparkles); the 12 line symbols became solid two-tone emblems (`GLYPHS`:
+      a lit lantern, crescent and star, khatam, palm with dates, dunes under a sun, waves, snowy peaks, dome, mihrab, rahl with
+      a mushaf, sun, drop). Names for avatars 24–51 and frames 1–13, English and Arabic (`lookName(kind, n, ar)`). Room: rugs
+      shown from above in the tiles (`rugTop()`), carved arches with lamps, cedar panels with stars under a brass rail, veined
+      marble, an embroidered pouf; the kurta's vest edged in gold with paisleys, the embroidered abaya with a vine of flowers,
+      a jewelled collar and a band of diamonds; the freeze a cut crystal
       **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
       `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
       hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when

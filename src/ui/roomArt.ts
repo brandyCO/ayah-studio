@@ -7,7 +7,7 @@ import { circlePath, edge, mix, shine, starPath, two } from './flat';
 /** The part of the room each place takes, for the shop's tiles (x, y, w, h). */
 export const SLOT_BOX: Record<Slot, [number, number, number, number]> = {
   plant: [-4, 96, 50, 96], side: [226, 108, 94, 86], rug: [36, 150, 188, 38], curtain: [8, 10, 112, 100], hang: [99, 0, 24, 44],
-  wall: [150, 60, 120, 90], floor: [60, 146, 140, 54], view: [26, 26, 76, 78], seat: [34, 118, 70, 76], pet: [188, 146, 46, 46],
+  wall: [146, 12, 100, 138], floor: [60, 146, 140, 54], view: [26, 26, 76, 78], seat: [34, 118, 70, 76], pet: [188, 146, 46, 46],
 };
 /** Living pieces read the day (round 5): the sprout grows with the streak. */
 let growDays = 0;
@@ -184,6 +184,46 @@ export function rugArt(id: string | undefined, night: boolean): string {
   return `${edge(shape, ed, 3)}${two(shape, c1, c2)}<path d="${inner}" fill="none" stroke="${trim}" stroke-width="2" stroke-dasharray="5 4" opacity=".9"/>${pat}${glow}`;
 }
 
+/** The rug seen from above, for the shop's tiles (viewBox 0 0 100 100): the whole design, border, field and medallion,
+ *  with its fringe, laid a little turned on the floor. */
+export function rugTop(id: string | undefined): string {
+  const P: Record<string, [string, string, string, string, string]> = {
+    // field, field shade, border, trim, accent
+    kilim: ['#e9c48a', '#d4a866', '#8a5232', '#b23d55', '#5a3a8a'], prayer: ['#2f8a5a', '#1f6b45', '#13442c', '#f3d27a', '#c0473a'],
+    persian: ['#2f55a8', '#24448a', '#f0e2c0', '#b23d55', '#f3d27a'], royal: ['#f6ead0', '#e6d2a8', '#b8862e', '#d4a22a', '#1f6b45'],
+    silk: ['#f6d97a', '#e2b84a', '#1f3a8a', '#b23d55', '#fffbe6'],
+  };
+  const [f1, f2, bd, tr, ac] = (id && P[id]) || ['#d9566a', '#b23d55', '#7a2f3f', '#ffd27a', '#2f4f9a'];
+  const R = 'M14 22H86V78H14Z', field = 'M21 29H79V71H21Z';
+  const fringe = [14, 86].map((x) => Array.from({ length: 13 }, (_, i) => `<path d="M${x} ${24 + i * 4.3}h${x < 50 ? -4 : 4}" stroke="${mix(tr, -.25)}" stroke-width="1.1" stroke-linecap="round"/>`).join('')).join('');
+  let pat = '';
+  if (id === 'kilim') {
+    for (const y of [36, 50, 64]) pat += Array.from({ length: 7 }, (_, i) => { const x = 26 + i * 8; return `<path d="M${x} ${y - 4}L${x + 4} ${y}L${x} ${y + 4}L${x - 4} ${y}Z" fill="${i % 2 ? tr : ac}"/><path d="M${x} ${y - 1.6}L${x + 1.6} ${y}L${x} ${y + 1.6}L${x - 1.6} ${y}Z" fill="${f1}"/>`; }).join('');
+    pat += `<path d="M21 43H79M21 57H79" stroke="${bd}" stroke-width="1.2" stroke-dasharray="2 2"/>`;
+  } else if (id === 'prayer') {
+    const arch = 'M30 71V44Q30 33 50 30Q70 33 70 44V71Z', in2 = 'M35 71V46Q35 37 50 35Q65 37 65 46V71Z';
+    pat = `<path d="${arch}" fill="${tr}"/><path d="${in2}" fill="${f2}"/><path d="M50 36V42" stroke="${tr}" stroke-width=".9"/>
+      ${two('M47 42H53L52.4 48H47.6Z', '#fff2c4', '#f3c873', -.4, -.4)}<path d="M50 43.4c.8 1 .9 1.6 0 2.6c-.9-1-.8-1.6 0-2.6z" fill="#ff9a2e"/>
+      ${[[40, 62], [50, 64], [60, 62]].map(([x, y]) => `<path d="${starPath(x, y, 3, 1.3, 8)}" fill="${tr}"/>`).join('')}<path d="M24 32h3M73 32h3" stroke="${tr}" stroke-width="1.4"/>`;
+  } else if (id === 'persian') {
+    const med = 'M50 36L66 50L50 64L34 50Z';
+    pat = `${two(med, f1 === '#2f55a8' ? '#f0e2c0' : tr, '#d9c8a0', -.6, -.6)}<path d="M50 41L60 50L50 59L40 50Z" fill="${tr}"/><path d="${starPath(50, 50, 4.4, 2, 8)}" fill="${ac}"/>
+      ${[[21, 29], [79, 29], [21, 71], [79, 71]].map(([x, y]) => `${`<path d="${circlePath(x as number, y as number, 7)}" fill="#f0e2c0" clip-path="url(#rugf)"/><path d="${circlePath(x as number, y as number, 4)}" fill="${tr}" clip-path="url(#rugf)"/>`}`).join('')}
+      ${[[30, 40], [70, 40], [30, 60], [70, 60], [42, 33], [58, 67]].map(([x, y]) => `<path d="${starPath(x, y, 2.2, 1, 6)}" fill="${ac}"/>`).join('')}`;
+  } else if (id === 'royal' || id === 'silk') {
+    const big = starPath(50, 50, 15, 9, 8);
+    pat = `${edge(big, mix(bd, .2), .8)}${two(big, id === 'silk' ? '#2a4fb0' : tr, id === 'silk' ? '#1f3a8a' : mix(tr, .2), -.6, -.6)}<path d="${starPath(50, 50, 8, 4.4, 8)}" fill="${id === 'silk' ? '#f6d97a' : '#fff6dc'}"/><path d="${starPath(50, 50, 3.4, 1.6, 8)}" fill="${id === 'silk' ? tr : ac}"/>
+      ${[[27, 35], [73, 35], [27, 65], [73, 65]].map(([x, y]) => `<path d="${starPath(x, y, 4, 2, 8)}" fill="${id === 'silk' ? '#1f3a8a' : tr}"/>`).join('')}
+      ${id === 'silk' ? '<path d="M24 74L76 26" stroke="#fffbe6" stroke-width="7" opacity=".28"/><path d="M34 74L80 32" stroke="#fffbe6" stroke-width="2" opacity=".35"/>' : ''}`;
+  } else {
+    pat = `<path d="M50 34L68 50L50 66L32 50Z" fill="${tr}"/><path d="${starPath(50, 50, 8, 3.6, 8)}" fill="${ac}"/><path d="${circlePath(50, 50, 2.2)}" fill="#fff6dc"/>`;
+  }
+  const dash = `<path d="M17.5 25.5H82.5V74.5H17.5Z" fill="none" stroke="${tr}" stroke-width="1.1" stroke-dasharray="3 2"/>`;
+  return `<defs><clipPath id="rugf"><path d="${field}"/></clipPath></defs><ellipse cx="50" cy="82" rx="42" ry="5" fill="#000" opacity=".14"/>
+    <g transform="rotate(-5 50 50)">${fringe}${edge(R, mix(bd, .35), 2.4)}${two(R, bd, mix(bd, .18), -1, -1)}${dash}${two(field, f1, f2, -1.4, -1.4)}${pat}
+    <path d="M18 24H60" stroke="#fff" stroke-width="1.6" opacity=".25" stroke-linecap="round"/></g>`;
+}
+
 function curtain(id: string): string {
   if (id === 'brocade') {
     // Legendary (2026-11-12): midnight brocade with gold stars, a gold valance and tassels.
@@ -306,10 +346,14 @@ export function seasonArt(season: string | null, night: boolean, still: boolean)
 export function wallArt(id: string | undefined, night: boolean): string {
   const wall = night ? '#3b3466' : '#f3e2c7', wallSh = night ? '#2e2852' : '#e6cfac';
   if (id === 'panels') {
-    const w1 = night ? '#5a4470' : '#b98a5a', w2 = night ? '#46365c' : '#9a6e44';
-    let g = `<rect y="78" width="320" height="68" fill="${w2}"/><rect y="76" width="320" height="5" fill="${mix(w2, -0.25)}"/>`;
-    for (let x = 4; x < 320; x += 40) g += `${two(`M${x} 86H${x + 32}V140H${x}Z`, w1, w2, -1.5, -1.5)}${shine(`M${x + 4} 90V134`, 1.2, .25)}`;
-    return g + [24, 104, 184, 264].map((x) => `<path d="M${x} 0V76" stroke="${wallSh}" stroke-width="2" opacity=".6"/>`).join('');
+    // Cedar panels under a brass rail, each with a carved star and a bevelled inner frame.
+    const w1 = night ? '#5a4470' : '#b98a5a', w2 = night ? '#46365c' : '#9a6e44', w3 = mix(w2, -0.25);
+    let g = `<rect y="78" width="320" height="68" fill="${w2}"/><rect y="74" width="320" height="6" fill="#c8962e"/><rect y="74" width="320" height="2" fill="#ffe08a" opacity=".7"/>`;
+    for (let x = 4; x < 320; x += 40) {
+      g += `${two(`M${x} 86H${x + 32}V140H${x}Z`, w1, w3, -1.5, -1.5)}<path d="M${x + 4} 90H${x + 28}V136H${x + 4}Z" fill="none" stroke="${w3}" stroke-width="1.4"/>
+        <path d="${starPath(x + 16, 113, 7, 3.6, 8)}" fill="${w3}"/><path d="${starPath(x + 16, 112.4, 5.4, 2.8, 8)}" fill="${mix(w1, -0.12)}"/>${shine(`M${x + 6} 92V132`, 1.2, .3)}`;
+    }
+    return g + [24, 104, 184, 264].map((x) => `<path d="M${x} 0V74" stroke="${wallSh}" stroke-width="2" opacity=".6"/>`).join('');
   }
   if (id === 'zellige') {
     const cols = night ? ['#2f6f8a', '#3a8a6a', '#d9d2ff', '#26507a'] : ['#2f8ab0', '#2fa37a', '#ffffff', '#1f5f9a'];
@@ -321,12 +365,19 @@ export function wallArt(id: string | undefined, night: boolean): string {
     return g + `<rect y="88" width="320" height="5" fill="${cols[3]}"/><rect y="90" width="320" height="1.4" fill="#fff" opacity=".5"/>`;
   }
   if (id === 'arches') {
+    // Carved plaster arches (epic): each a pointed mihrab with a deep niche, a gold-lined frame, a muqarnas band and a
+    // small lit lamp hanging in it.
+    const deep = night ? '#262046' : '#d9bc92', frame = night ? '#4f4580' : '#fbf1de', gold = '#d4a22a';
     let g = '';
     for (const x of [116, 196, 276]) {
-      const d = `M${x - 30} 140V64Q${x - 30} 30 ${x} 24Q${x + 30} 30 ${x + 30} 64V140Z`;
-      g += `<path d="${d}" fill="${wallSh}" opacity=".7"/><path d="${d}" fill="none" stroke="${mix(wall, 0.3)}" stroke-width="2"/><path d="M${x - 24} 66Q${x - 24} 38 ${x} 32Q${x + 24} 38 ${x + 24} 66" fill="none" stroke="${mix(wallSh, -0.1)}" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+      const outer = `M${x - 32} 140V62Q${x - 32} 28 ${x} 20Q${x + 32} 28 ${x + 32} 62V140Z`, d = `M${x - 25} 140V64Q${x - 25} 36 ${x} 28Q${x + 25} 36 ${x + 25} 64V140Z`;
+      g += `${edge(outer, mix(wallSh, .15), 2)}<path d="${outer}" fill="${frame}"/><path d="${d}" fill="${deep}"/><path d="${d}" fill="none" stroke="${gold}" stroke-width="1.4"/>
+        <path d="M${x - 25} 64Q${x - 25} 36 ${x} 28Q${x + 25} 36 ${x + 25} 64" fill="none" stroke="${frame}" stroke-width="3" stroke-dasharray="4 3" opacity=".7"/>
+        ${[-14, -5, 5, 14].map((dx) => `<path d="M${x + dx - 4} 70Q${x + dx} 63 ${x + dx + 4} 70" fill="none" stroke="${mix(deep, .2)}" stroke-width="1.6"/>`).join('')}
+        <path d="${starPath(x, 22, 3.4, 1.5, 8)}" fill="${gold}"/><path d="M${x} 28V44" stroke="${gold}" stroke-width=".9"/>
+        ${night ? `<circle cx="${x}" cy="50" r="12" fill="url(#rmglow)"/>` : ''}${two(`M${x - 3} 44H${x + 3}L${x + 2.4} 52H${x - 2.4}Z`, '#fff2c4', '#f3c873', -.4, -.4)}<path d="M${x} 46c.7.9.8 1.4 0 2.2c-.8-.8-.7-1.3 0-2.2z" fill="#ff9a2e"/>`;
     }
-    return `<rect width="320" height="146" fill="${wall}"/>${g}<rect y="136" width="320" height="10" fill="${mix(wallSh, -0.08)}"/>`;
+    return `<rect width="320" height="146" fill="${wall}"/>${g}<rect y="134" width="320" height="12" fill="${mix(wallSh, -0.08)}"/><path d="M0 134H320" stroke="${gold}" stroke-width="1.4" opacity=".8"/>`;
   }
   if (id === 'medallion') {
     // Legendary (2026-11-12): a deep emerald wall with gold eight-pointed medallions and a carved gold band.
@@ -352,7 +403,9 @@ export function floorArt(id: string | undefined, night: boolean): string {
     let g = `<rect y="146" width="320" height="54" fill="${dim('#efeae2')}"/>`;
     for (let x = 0; x < 320; x += 40) g += `<path d="M${x} 146V200" stroke="${dim('#d6cfc3')}" stroke-width="1.2"/>`;
     g += `<path d="M0 172H320" stroke="${dim('#d6cfc3')}" stroke-width="1.2"/>`;
-    g += [[10, 150, 60, 168], [90, 176, 150, 196], [200, 152, 250, 166], [260, 178, 316, 194]].map(([a, b, c, d]) => `<path d="M${a} ${b}Q${(a + c) / 2} ${b + 10} ${c} ${d}" stroke="${dim('#c4bcb0')}" stroke-width="1" fill="none" opacity=".8"/>`).join('');
+    g += [[10, 150, 60, 168], [90, 176, 150, 196], [200, 152, 250, 166], [260, 178, 316, 194], [40, 182, 96, 192], [150, 150, 196, 170], [118, 158, 140, 150]].map(([a, b, c, d], i) => `<path d="M${a} ${b}Q${(a + c) / 2} ${b + (i % 2 ? -8 : 10)} ${c} ${d}" stroke="${dim(i % 3 ? '#c4bcb0' : '#b8a98a')}" stroke-width="${i % 3 ? 1 : 1.6}" fill="none" opacity=".8"/>`).join('');
+    g += [[0, 160], [120, 150], [240, 160]].map(([x, y]) => `<path d="M${x + 6} ${y + 30}L${x + 34} ${y}" stroke="#fff" stroke-width="5" opacity="${night ? .08 : .45}"/>`).join('');
+    g += `<path d="M0 146H320" stroke="${dim('#c8962e')}" stroke-width="2"/>`;
     return g;
   }
   if (id === 'mosaic') {
@@ -400,7 +453,11 @@ export function viewArt(id: string | undefined, sky: string): string {
 function seat(id: string): string {
   if (id === 'pouf') {
     const d = 'M46 184Q44 166 68 164Q92 166 90 184Q68 192 46 184Z';
-    return `${edge(d, '#6a3a1a', 2)}${two(d, '#c98a4a', '#a0662e')}<path d="M50 172Q68 166 86 172M68 165V190" stroke="#f3d6a8" stroke-width="1.4" fill="none" stroke-dasharray="2 2"/>${shine('M52 172Q58 167 66 167', 1.6, .45)}`;
+    // A Moroccan leather pouf: tan leather in panels, gold stitching and an embroidered star on the top.
+    return `<ellipse cx="68" cy="189" rx="24" ry="3.4" fill="#000" opacity=".18"/>${edge(d, '#6a3a1a', 2)}${two(d, '#c98a4a', '#a0662e')}
+      <path d="M50 172Q68 166 86 172M58 167Q56 178 58 189M78 167Q80 178 78 189M68 165V190" stroke="#f3d6a8" stroke-width="1.2" fill="none" stroke-dasharray="2 2"/>
+      <ellipse cx="68" cy="169" rx="12" ry="3.2" fill="#a0662e"/><path d="${starPath(68, 169, 6, 3, 8)}" fill="#f2c94c" transform="matrix(1 0 0 .32 0 114.9)"/>
+      <path d="M50 180Q68 186 86 180" stroke="#2f8a5a" stroke-width="2" fill="none"/><path d="M50 182Q68 188 86 182" stroke="#b23d55" stroke-width="1" fill="none" stroke-dasharray="1.5 1.5"/>${shine('M52 172Q58 167 66 167', 1.6, .45)}`;
   }
   if (id === 'majlis') {
     const back = 'M34 124H104V160H34Z', base = 'M30 156H108V176H30Z';

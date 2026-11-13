@@ -58,8 +58,15 @@ export function freezeArt(size?: number): SVGSVGElement {
     const P = (r: number, w: number) => `${(24 + c * r - s * w).toFixed(2)} ${(24 + s * r + c * w).toFixed(2)}`;
     return `M24 24L${P(11, 0)}M${P(5.5, -3.4)}L${P(8.5, 0)}L${P(5.5, 3.4)}`;
   }).join('');
-  return svgOf('0 0 48 48', `${edge(hex, '#1f5f93', 3)}${two(hex, '#bfeaff', '#62b6e6', -3, -3)}
-    ${two('M24 4L41 14L24 24L7 14Z', '#e4f7ff', '#a6dcf5', -1.5, -1.5)}
-    ${raisedLine(flake, '#fff', 2.4, 'rgba(31,95,147,.45)')}
-    ${shine('M11 17V30', 2.2, .55)}<circle cx="35" cy="12" r="1.6" fill="#fff" opacity=".9"/>`, size);
+  // A cut crystal (2026-11-13 richer): a cold halo, facets on the lower half, the flake raised in the middle, glints.
+  const f = (d: string, c: string, o = 1) => `<path d="${d}" fill="${c}" opacity="${o}"/>`;
+  return svgOf('0 0 48 48', `<circle cx="24" cy="25" r="23" fill="#bfeaff" opacity=".28"/><circle cx="24" cy="25" r="19.5" fill="#e4f7ff" opacity=".3"/>
+    ${edge(hex, '#1f5f93', 3)}${two(hex, '#bfeaff', '#62b6e6', -3, -3)}
+    ${f('M7 14L24 24V44L7 34Z', '#8fd0f2', .55)}${f('M41 14L24 24V44L41 34Z', '#5aaee0', .45)}${f('M24 24L7 34L24 44Z', '#4f9fd6', .35)}
+    ${two('M24 4L41 14L24 24L7 14Z', '#e4f7ff', '#a6dcf5', -1.5, -1.5)}${f('M24 4L33 9.3L24 14.6L15 9.3Z', '#ffffff', .55)}
+    <path d="M24 24V44M7 14L24 24L41 14" stroke="#ffffff" stroke-width=".8" opacity=".55" fill="none"/>
+    <circle cx="24" cy="24" r="9.5" fill="#e4f7ff" opacity=".45"/>
+    ${raisedLine(flake, '#fff', 2.4, 'rgba(31,95,147,.45)')}<circle cx="24" cy="24" r="2.2" fill="#fff"/>
+    ${starPath(35, 11.5, 3.2, .9, 4).replace(/^/, '<path d="').concat('" fill="#fff"/>')}${starPath(10.5, 36, 2, .6, 4).replace(/^/, '<path d="').concat('" fill="#fff" opacity=".85"/>')}
+    ${shine('M11 17V30', 2.2, .55)}`, size);
 }
