@@ -89,11 +89,16 @@ export function iconCard(): HTMLElement {
       open ? h('button', { class: `chip${pick === id ? ' on' : ''}`, disabled: pick === id, onclick: () => { wear(id); paint(); } }, pick === id ? bt('ic.inUse') : bt('ic.use'))
         : h('span', { class: 'aic-state muted small' }, bt('ic.locked')));
     const themePic = h('img', { class: 'aic-img', src: themeIconUrl(), alt: '', width: 72, height: 72 });
-    box.replaceChildren(
-      h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, bt('icons'))),
+    // Folded until tapped (owner, 2026-11-13: eleven icons spread under the badges); opened when one was just won.
+    const wasOpen = box.querySelector('details')?.open;
+    const now = pick ? img(pick) : h('img', { class: 'aic-img', src: themeIconUrl(), alt: '', width: 72, height: 72 });
+    box.replaceChildren(h('details', { class: 'aic-fold', open: wasOpen ?? fresh.length > 0 },
+      h('summary', {}, h('span', { class: 'aic-now' }, now),
+        h('span', { class: 'aic-txt' }, h('b', { class: 'aic-title' }, bt('icons')), h('span', { class: 'muted small' }, `${won.size + 1} / ${APP_ICONS.length + 1}`)),
+        h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, icon('down', 18))),
       h('p', { class: 'muted small' }, bt('iconsSub')),
       opt('', themePic, bt('ic.theme'), bt('ic.themeSub'), true),
-      ...APP_ICONS.map((id) => opt(id, img(id), bt(`ic.${id}` as BadgeKey), bt(`ic.${id}How` as BadgeKey), won.has(id))));
+      ...APP_ICONS.map((id) => opt(id, img(id), bt(`ic.${id}` as BadgeKey), bt(`ic.${id}How` as BadgeKey), won.has(id)))));
     markSeen();
   };
   paint();

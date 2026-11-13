@@ -271,7 +271,20 @@
 
 /* Unlockable app icons (src/ui/appIcons.ts). */
 .aic { margin-top: 18px; }
-.aic > p { margin: 0 2px 10px; }
+.aic-fold > p { margin: 10px 2px; }
+/* Folded sections on Stats & badges: a row with a peek and a chevron that turns when open. */
+:is(.bdf-fold, .aic-fold) > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; padding: 12px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--card, var(--bg)) 70%, var(--line)); }
+:is(.bdf-fold, .aic-fold) > summary::-webkit-details-marker { display: none; }
+:is(.bdf-fold, .aic-fold)[open] > summary { margin-bottom: 8px; }
+.bdf-fold { margin-bottom: 8px; }
+.bdf-fold > summary .bdf-group { margin: 0; flex: 1; min-width: 0; }
+.bdf-peek { display: inline-flex; }
+.bdf-peek > * + * { margin-inline-start: -6px; }
+.fold-chev { display: inline-grid; color: var(--muted); transition: rotate var(--dur-2, .2s); }
+details[open] > summary .fold-chev { rotate: 180deg; }
+.aic-now .aic-img { width: 40px; height: 40px; border-radius: 10px; }
+.aic-title { font-size: var(--fs-m, 16px); font-weight: 900; }
 .aic-opt { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; margin-bottom: 8px; background: color-mix(in srgb, var(--card, var(--bg)) 70%, var(--line)); }
 .aic-opt.on { box-shadow: 0 0 0 2px var(--accent) inset; }
 .aic-pic { position: relative; flex: none; width: 60px; height: 60px; }
@@ -407,3 +420,5 @@
 .bdf-more > summary { cursor: pointer; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); font-weight: 800; text-align: center; list-style: none; }
 .bdf-more > summary::-webkit-details-marker { display: none; }
 .bdf-more[open] > summary { margin-bottom: 8px; }
+/* "More goals (n)" under the first three. */
+.goals-more { display: block; margin: 4px auto 0; }

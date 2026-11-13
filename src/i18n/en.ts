@@ -871,6 +871,8 @@ const en = {
   'goal.count': 'Count',
   'goal.less': 'One less',
   'goal.more': 'One more',
+  'goal.moreN': 'More goals ({n})',
+  'goal.fewer': 'Show fewer',
   'goal.markDone': 'Mark done',
   'goal.doneMark': '✓ Done',
   'goal.read': 'Read',
