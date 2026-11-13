@@ -350,6 +350,7 @@ const en = {
   'rp.k.text': 'Quran text or translation',
   'rp.k.reel': 'Reel or export',
   'rp.k.app': 'The app (slow, stuck, crash)',
+  'rp.k.follow': 'Follow my voice heard me wrong',
   'rp.k.other': 'Something else',
   'rp.note': 'Anything else? (optional)',
   'rp.send': 'Send',

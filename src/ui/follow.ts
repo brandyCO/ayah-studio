@@ -91,6 +91,11 @@ export interface FollowHandlers {
 }
 type Why = 'denied' | 'failed' | 'quiet' | 'stopped' | 'limit';
 export interface Follower { stop(): void }
+/** What listening was like since resetFollowUse() (beta stats, src/ui/followBeta.ts): no audio, no text. */
+export interface FollowUse { engine: string; way: string; ms: number; parts: number; runs: number; ended: string; code: number }
+let use: FollowUse | null = null;
+export const followUse = (): FollowUse | null => use;
+export function resetFollowUse() { use = null; }
 /** Nothing heard for this long: the microphone stops by itself. */
 const QUIET_MS = 20_000;
 
@@ -100,18 +105,23 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
   let stopNow = () => {};
   lastCode = 0;
   let token: string | null = null;
+  const runAt = Date.now();
+  const u = (use ??= { engine: '', way: '', ms: 0, parts: 0, runs: 0, ended: '', code: 0 });
+  u.runs++;
   const finish = (why: Why) => {
     if (!alive) return;
     stopNow(); alive = false; clearInterval(quiet);
+    u.ms += Date.now() - runAt; u.ended = why; u.code = lastCode;
     // the phone's recogniser cannot do it: hide the button on this phone (not when it was the server)
     if (why === 'failed' && !heardAny && !token) { markBroken(true); avail = Promise.resolve(false); }
     on.ended(why);
   };
   const quiet = window.setInterval(() => { if (Date.now() - lastHeard > QUIET_MS) finish('quiet'); }, 2000);
   let heardAny = false;
-  const got = (text: string, final: boolean) => { if (text.trim()) { lastHeard = Date.now(); if (!heardAny) { heardAny = true; markBroken(false); } } on.heard(text, final); };
+  const got = (text: string, final: boolean) => { if (final && text.trim()) u.parts++; if (text.trim()) { lastHeard = Date.now(); if (!heardAny) { heardAny = true; markBroken(false); } } on.heard(text, final); };
   token = on.ahead ? await serverToken() : null;
   if (token) {
+    u.engine = 'server';
     const r = await recordParts(token, on, got, finish, () => alive);
     if (!r) { alive = false; clearInterval(quiet); return null; }
     stopNow = r;
@@ -121,7 +131,10 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
     const subs: PluginListenerHandle[] = [];
     const again = async () => {
       if (!alive) return;
-      try { await Speech.start({ lang: 'ar-SA', hints: on.hints?.() ?? [] }); }
+      try {
+        const r = await Speech.start({ lang: 'ar-SA', hints: on.hints?.() ?? [] });
+        u.engine = r.onDevice ? 'android-device' : 'android'; u.way = String(r.way ?? '').slice(0, 80);
+      }
       catch (e) { lastCode = lastCode || -1; finish(String((e as { code?: string })?.code ?? e).includes('denied') ? 'denied' : 'failed'); }
     };
     subs.push(await Speech.addListener('partial', (d) => { if (alive && d.text) { fails = 0; got(d.text, false); } }));
@@ -142,6 +155,7 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
   }
   const Ctor = WebCtor();
   if (!Ctor) { alive = false; clearInterval(quiet); return null; }
+  u.engine = 'web';
   let r: WebRec;
   const open = () => {
     r = new Ctor();

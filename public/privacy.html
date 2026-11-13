@@ -128,7 +128,12 @@
       recogniser is not used: each part you recite (a few seconds, cut at a pause) is sent to our own server on
       Google Cloud with the words of the passage. The server follows the words and checks the harakat in memory,
       answers, and forgets it: no audio or text is stored or logged. It is limited to one hour of recitation a
-      day per account.</li>
+      day per account.
+      While Follow my voice is in beta, each recitation you check sends one row of counts to our database: which
+      recogniser was used, the Android version and phone model (or the browser), how many words it heard, marked
+      as passed over or unclear, and how many you corrected. No audio, no recognised text and no account id, only
+      the app's random install id; kept 180 days. "Voice heard me wrong? Tell us" sends a problem report with the
+      same counts and the positions of the words involved.</li>
     <li><b>Help improve the harakat check</b> (off unless you turn it on; never in the Kids space): when it is on,
       a short clip (up to 3 seconds: a word the check flagged, or now and then one it did not, with the words
       next to it) and your answer at the check are kept with your account so that the teachers who review them
