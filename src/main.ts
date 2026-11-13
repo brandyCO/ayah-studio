@@ -15,7 +15,8 @@
 //   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
-import { h, skeleton } from './ui/dom';
+import './ui/backCloses';
+import { h, skeleton, sweepListeners } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
@@ -53,6 +54,7 @@ async function route() {
   if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   app.replaceChildren(screen);
+  sweepListeners(); // listeners of the screen just left
   document.body.dataset.view = view || 'home';
   window.scrollTo(0, 0);
   // A screen that takes a moment (data, fonts) shows a skeleton of itself instead of a blank page,

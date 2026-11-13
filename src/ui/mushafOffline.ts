@@ -4,7 +4,7 @@
 import { Capacitor } from '@capacitor/core';
 import { allowMushafDownload, countMushafKept, mushafKept, mushafProgress, MUSHAF_MB } from '../data/mushafDownload';
 import { t } from '../i18n';
-import { h } from './dom';
+import { h, listenWhile } from './dom';
 
 const ASKED = 'mushafAsked';
 
@@ -48,7 +48,7 @@ export function mushafOfflineRow(): Node | false {
       ...(!p.done && !p.allowed ? [h('button', { class: 'chip', onclick: () => allowMushafDownload() }, t('mo.download', { size: MUSHAF_MB }))] : []));
   };
   paint();
-  window.addEventListener('mushaf-download', paint);
+  listenWhile(box, window, 'mushaf-download', paint);
   void countMushafKept();
   return box;
 }

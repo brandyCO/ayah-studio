@@ -485,6 +485,34 @@ export function createPlayer(o: PlayerHooks) {
   on('pause', () => { cancelAnimationFrame(raf); loading = false; paint(); });
   on('waiting', () => { loading = true; paint(); }); // buffering
   on('playing', () => { loading = false; paint(); });
+  // A dropped connection mid-surah: after a stall of 8 s (or a network error mid-file) the
+  // same file loads again from where it stopped and goes on; at most 3 tries in a row, and
+  // straight away when the phone comes back online.
+  let stallTimer = 0;
+  let tries = 0;
+  const resume = () => {
+    clearTimeout(stallTimer);
+    stallTimer = 0;
+    const el = audio;
+    const mine = req;
+    if (!surah || !el.src || tries >= 3 || !(el.currentTime > 0)) return;
+    tries++;
+    const at = el.currentTime;
+    el.src = el.src;
+    el.addEventListener('loadedmetadata', () => {
+      if (el !== audio || mine !== req) return;
+      el.currentTime = at;
+      void el.play().catch(() => {});
+    }, { once: true });
+  };
+  on('waiting', () => {
+    clearTimeout(stallTimer);
+    stallTimer = window.setTimeout(() => { if (navigator.onLine !== false) resume(); }, 8000);
+  });
+  on('playing', () => { clearTimeout(stallTimer); stallTimer = 0; tries = 0; });
+  on('pause', () => { clearTimeout(stallTimer); stallTimer = 0; });
+  on('error', () => { if (audio.currentTime > 0 && !audio.paused) resume(); });
+  window.addEventListener('online', () => { if (loading && stallTimer) resume(); });
   on('ended', () => {
     cancelAnimationFrame(raf);
     if (!surah) { stop(); return; }

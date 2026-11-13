@@ -58,3 +58,16 @@ export function skeleton(kind: 'page' | 'list'): HTMLElement {
 export const skeletonRows = (n = 4) =>
   h('div', { class: 'skel skel-rows', 'aria-busy': 'true' }, ...Array.from({ length: n }, () => h('span', { class: 'skel-row' },
     h('span', { class: 'skel-lines' }, h('span', { class: 'skel-bar' }), h('span', { class: 'skel-bar short' })))));
+
+// Listeners that belong to a piece of a screen: removed once that piece has left the page (checked at
+// every screen change by main.ts), so going back and forth between tabs never piles them up.
+const bound = new Set<{ el: Element; target: EventTarget; type: string; fn: EventListener }>();
+/** `target.addEventListener(type, fn)` for as long as `el` is on the page. */
+export function listenWhile(el: Element, target: EventTarget, type: string, fn: EventListener) {
+  target.addEventListener(type, fn);
+  bound.add({ el, target, type, fn });
+}
+/** Drops the listeners of pieces no longer on the page (main.ts, on each screen change). */
+export function sweepListeners() {
+  for (const b of bound) if (!b.el.isConnected) { b.target.removeEventListener(b.type, b.fn); bound.delete(b); }
+}

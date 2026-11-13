@@ -4,7 +4,7 @@
 import { currentPlan, journeyState, JOURNEYS, kahfToday, startJourney, type JourneyId } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { t, type Key } from '../i18n';
-import { h, haptic, toast } from './dom';
+import { h, haptic, listenWhile, toast } from './dom';
 import { goMushaf } from './tabs';
 
 export function todayCard(): HTMLElement {
@@ -41,7 +41,7 @@ export function todayCard(): HTMLElement {
     box.replaceChildren(h('h2', { class: 'me-h' }, t('jr.title')), ...rows);
   };
   void loadMushaf().then((x) => { m = x; paint(); });
-  window.addEventListener('journey-changed', paint);
+  listenWhile(box, window, 'journey-changed', paint);
   return box;
 }
 

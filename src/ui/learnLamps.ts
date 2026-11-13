@@ -34,12 +34,15 @@ export function lampArt(size = 26): SVGSVGElement {
 // seconds while one is coming back (the countdown, and the lamp that comes back by itself).
 const live = new Set<() => void>();
 let tick = 0;
+const onStorage = (e: StorageEvent) => { if (e.key === 'learnLamps') runAll(); };
 function watch(paint: () => void, el: Element) {
   const f = () => { if (!el.isConnected) { live.delete(f); return; } paint(); };
   live.add(f);
   if (live.size === 1) {
+    window.removeEventListener('lamps-changed', runAll);
     window.addEventListener('lamps-changed', runAll);
-    window.addEventListener('storage', (e) => { if (e.key === 'learnLamps') runAll(); });
+    window.removeEventListener('storage', onStorage);
+    window.addEventListener('storage', onStorage);
   }
   if (!tick) tick = window.setInterval(() => { if (!live.size) { clearInterval(tick); tick = 0; return; } if (!document.hidden) runAll(); }, 5000);
   queueMicrotask(f);
