@@ -1,4 +1,3 @@
-import { icon } from './icons';
 // The Light shop (owner request 2026-11-12, "a shop-like feeling … every single item, seasonal items that are not
 // buyable at the moment"): one full-screen shop, opened from every Light chip and from Ranks. A lantern-lit stall on
 // top with the Light to spend and the character at the counter; this week's prizes and the next season up front;
@@ -6,6 +5,7 @@ import { icon } from './icons';
 // Light), and what can only be won (streaks, Ranks weeks, badges, seasons, app icons), locked with how and when
 // it comes back. Tap a piece: a card with it large, and Get / Wear / Put in my room / Use. Never money, nothing random.
 import './shop.css';
+import { icon } from './icons';
 import { sht, type ShopKey } from '../i18n/shop';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
@@ -271,7 +271,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     h('div', { class: 'sh-hero' }, counter,
       h('div', { class: 'sh-wallet' }, h('span', { class: 'sh-wallet-k small' }, sht('sh.purse')), purse, earnLine, lampLine)),
     h('div', { class: 'sh-awning', 'aria-hidden': 'true' }));
-  const giftBar = o.giftTo ? h('div', { class: 'sh-giftbar' }, `🎁 ${sht('sh.giftMode', { name: o.giftTo.name })}`) : '';
+  const giftBar = o.giftTo ? h('div', { class: 'sh-giftbar' }, icon('gift', 18), sht('sh.giftMode', { name: o.giftTo.name })) : '';
   const d: HTMLDialogElement = h('dialog', { class: `sh-page${reduced() ? ' still' : ''}`, 'aria-label': sht('sh.title') }, giftBar, stall, cats, body);
 
   let pushed = false;
@@ -333,7 +333,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const pr = w.progress?.();
     return h('span', { class: 'sh-foot lock' },
       pr ? h('span', { class: 'sh-prog', style: `--p:${pr[0] / pr[1]}` }, h('i', {})) : '',
-      h('span', { class: 'sh-lock-t' }, '🔒 ', when || (pr ? sht('sh.days', { n: pr[0], m: pr[1] }) : w.how ?? sht('sh.locked'))));
+      h('span', { class: 'sh-lock-t' }, icon('lock', 14), when || (pr ? sht('sh.days', { n: pr[0], m: pr[1] }) : w.how ?? sht('sh.locked'))));
   };
 
   const section = (c: Sec, sub: ShopKey, list: Ware[]) => {
@@ -351,7 +351,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const prizes = ids.map((id) => all.find((w) => w.id === id)).filter((w): w is Ware => !!w);
     const left = weekEndAt().getTime() - Date.now();
     const weekCard = h('div', { class: 'sh-feat week' },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏆 ${sht('sh.weekTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, icon('trophy', 18), sht('sh.weekTitle')), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
       h('div', { class: 'sh-feat-row' }, ...prizes.map((w, i) => h('button', { class: `sh-prize r-${w.rar}`, type: 'button', onclick: () => openWare(w) },
         h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag' }, tags[i])))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.weekSub')));
@@ -368,7 +368,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const nextDay = new Date(); nextDay.setHours(24, 0, 0, 0);
     const ml = nextDay.getTime() - Date.now();
     const stallCard = deals.length ? h('div', { class: 'sh-feat stall' },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏮 ${sht('sh.stallTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: timeLeft(ml) }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, icon('lamp', 18), sht('sh.stallTitle')), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: timeLeft(ml) }))),
       h('div', { class: 'sh-feat-row' }, ...deals.map((w) => h('button', { class: `sh-prize r-${w.rar}${w.state() === 'own' ? ' own' : ''}`, type: 'button', onclick: () => openWare(w) },
         h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag deal' }, w.state() === 'own' ? `✓ ${sht('sh.owned')}` : '−30%')))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.stallSub'))) : '';
@@ -380,7 +380,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           lim.state() === 'own' ? '' : h('span', { class: 'sh-foot price' }, star(), num(lim.price ?? 0))))) : '';
     // The lamp wall: Light spent on a du'a for someone who passed away.
     const lwCard = h('button', { class: 'sh-feat lamps', type: 'button', onclick: () => void import('./lampWall').then((m) => m.openLampWall({ onChange: paintPurse })) },
-      h('div', { class: 'sh-lw-row' }, h('span', { class: 'sh-lw-ic', 'aria-hidden': 'true' }, '🪔'),
+      h('div', { class: 'sh-lw-row' }, h('span', { class: 'sh-lw-ic', 'aria-hidden': 'true' }, icon('lamp', 22)),
         h('span', { class: 'sh-lim-txt' }, h('b', {}, lwt('lw.door')), h('span', { class: 'small' }, lwt('lw.doorSub')))));
     const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, limCard, stallCard, weekCard, lwCard, sCard);
     sections.set('featured', s);
@@ -489,11 +489,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
             toast(sht('sh.giftSent', { name: gift.name }));
             shut(); close();
           } catch (err) { toast((err as Error).message === 'need' ? sht('sh.need', { n: price - wallet() }) : (err as Error).message); b.disabled = false; }
-        } }, `🎁 ${sht('sh.giftThis', { name: gift.name })} · `, star(), num(price)));
+        } }, icon('gift', 18), `${sht('sh.giftThis', { name: gift.name })} · `, star(), num(price)));
       }
       if (st === 'locked') {
         const pr = w.progress?.();
-        acts.push(h('p', { class: 'sh-how' }, `🔒 ${w.how ?? sht('sh.locked')}`));
+        acts.push(h('p', { class: 'sh-how' }, icon('lock', 18), w.how ?? sht('sh.locked')));
         if (pr) acts.push(h('div', { class: 'sh-prog big', style: `--p:${pr[0] / pr[1]}` }, h('i', {})), h('p', { class: 'small muted' }, sht('sh.days', { n: pr[0], m: pr[1] })));
         const when = w.when?.();
         if (when) acts.push(h('span', { class: 'sh-pill gold' }, when));

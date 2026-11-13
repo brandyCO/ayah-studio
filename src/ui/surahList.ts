@@ -1,6 +1,7 @@
 // The surah list (#/) and search (#/search): browse by surah, juz or hizb quarter, or type to find a
 // surah, a reference ("2:255", "juz 5", "hizb 3", "page 50") or words in the Arabic or the translation.
 import { loadMeta, surahText, surahTranslation, type SurahMeta } from '../data/quran';
+import { icon } from './icons';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import {
   divisionOf, isArabic, loadDivisions, matchSurahs, MIN_QUERY, parseJump, searchArabic, searchTranslation,
@@ -280,7 +281,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, t('list.tagline'))),
-      h('a', { class: 'icon-btn', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
+      h('a', { class: 'icon-btn', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
     form,
     recent,
     tabs,

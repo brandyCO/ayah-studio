@@ -1,9 +1,10 @@
-import { icon } from './icons';
 // Me (#/me): a compact streak card (flame, count, this week), today's goals (pages, memorising, reels,
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
 import { levelLabel, levelOf, myXp } from '../data/xp';
+import { icon } from './icons';
+const iconOf = icon;
 import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
 import { noorLine, noorText } from './noor';
@@ -198,12 +199,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       giftSlot.replaceChildren(...list.map((x) => {
         const who = (x.from.private ? null : x.from.name) ?? mpt('mp.gift.someone');
         return h('div', { class: 'me-gift' },
-          h('span', { class: 'me-gift-ic', 'aria-hidden': 'true' }, '🎁'),
+          h('span', { class: 'me-gift-ic', 'aria-hidden': 'true' }, icon('gift', 22)),
           h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.gift.from', { name: who })), h('span', { class: 'muted small' }, x.item ? mpt('mp.gift.piece') : mpt('mp.gift.light', { n: x.light }))),
           chest(Math.max(10, x.light), 'ready', t('chest.open', { n: x.light }), (el) => void play(async () => {
             if (!(await g.openGift(x))) return;
             const c = await import('./celebrate');
-            const loot = x.item ? [{ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, '🎁'), label: mpt('mp.gift.piece'), rare: true }] : undefined;
+            const loot = x.item ? [{ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, icon('gift', 22)), label: mpt('mp.gift.piece'), rare: true }] : undefined;
             await c.celebrate({ kind: 'chest', title: mpt('mp.gift.from', { name: who }), sub: mpt('mp.gift.sub'), kicker: mpt('mp.gift.kicker'), loot }, el, x.light);
           }, paintGifts)));
       }));
@@ -223,7 +224,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     if (asked || a.duas || a.salah || page || opened < 3) { duaAsk.replaceChildren(); return; }
     const done = () => { try { localStorage.setItem('duaNotesAsked', '1'); } catch { /* ignore */ } duaAsk.replaceChildren(); };
     duaAsk.replaceChildren(h('section', { class: 'me-card me-ask' },
-      h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, '🔔'),
+      h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, icon('bell', 22)),
       h('div', { class: 'me-ask-txt' }, h('b', {}, mpt('mp.askTitle')), h('p', { class: 'muted small' }, mpt('mp.askBody')),
         h('div', { class: 'chips' },
           h('button', { class: 'chip on', onclick: async () => {
@@ -592,7 +593,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const met = read.length >= KAHF_PAGES.length;
     const next = KAHF_PAGES.find((p) => !read.includes(p));
     return h('div', { class: 'fri-box' },
-      h('div', { class: 'fri-head' }, h('b', {}, `☾ ${mpt('mp.fri.title')}`), h('span', { class: 'fri-xp' }, mpt('mp.fri.xp'))),
+      h('div', { class: 'fri-head' }, h('b', {}, icon('crescent', 18), mpt('mp.fri.title')), h('span', { class: 'fri-xp' }, mpt('mp.fri.xp'))),
       h('div', { class: `goal k-kahf${met ? ' met' : ''}` },
         h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.fri.kahf')), bar('kahf', read.length / KAHF_PAGES.length),
           h('span', { class: 'muted small' }, mpt('mp.fri.pages', { n: read.length, of: KAHF_PAGES.length }))),
@@ -649,7 +650,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('div', { class: 'me-tile lt-left' }, h('span', { class: 'me-tile-n' }, star(), h('b', {}, String(wallet()))), h('span', {}, mpt('mp.toSpend'))),
           ...([['lt.tToday', lightOn(dayKey())], ['lt.tWeek', stats('week').light], ['lt.tMonth', stats('month').light], ['lt.tAll', all]] as [Key, number][])
             .map(([k, n]) => h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, String(n))), h('span', {}, k === 'lt.tAll' ? mpt('mp.earnedAll') : t(k))))),
-        h('button', { class: 'chip lt-lamps', onclick: (e: Event) => { (e.currentTarget as HTMLElement).closest('dialog')?.close(); void import('./lampWall').then((m) => m.openLampWall()); } }, mpt('mp.lampWall')),
+        h('button', { class: 'chip lt-lamps', onclick: (e: Event) => { (e.currentTarget as HTMLElement).closest('dialog')?.close(); void import('./lampWall').then((m) => m.openLampWall()); } }, icon('lamp', 18), mpt('mp.lampWall')),
         h('p', { class: 'muted small' }, t('lt.help'))));
   };
   // A first pace (once), then the goals; at most one gentle suggestion a week.
@@ -721,10 +722,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       harvestBtn(),
       ...body,
       h('div', { class: 'goal-links chips' },
-        h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, `📿 ${t('tb.title')}`),
+        h('button', { class: 'chip tb-open', onclick: () => void import('./tasbih').then((m) => m.openTasbih()) }, icon('beads', 18), t('tb.title')),
         // The adhkar keep a way in here only when they are not a goal row already.
-        list.some((g) => g.kind === 'adhkar' && (g.period ?? 's') === 's') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('s') }, `☀ ${t('goal.adhkar')}`),
-        list.some((g) => g.kind === 'adhkar' && g.period === 'm') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('m') }, `☾ ${t('goal.adhkarM')}`),
+        list.some((g) => g.kind === 'adhkar' && (g.period ?? 's') === 's') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('s') }, icon('sun', 18), t('goal.adhkar')),
+        list.some((g) => g.kind === 'adhkar' && g.period === 'm') ? '' : h('button', { class: 'chip', onclick: () => openAdhkarSession('m') }, icon('crescent', 18), t('goal.adhkarM')),
         goals().custom.length < CUSTOM_MAX ? h('button', { class: 'chip', onclick: () => openCustom() }, `＋ ${t('cg.add')}`) : ''));
   };
   /** Add or change one of the user's own goals. */
@@ -900,18 +901,18 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const earned = badgeStates().filter((b) => b.earned).length;
     const door = (id: MePage, icon: string, title: string, sub: string, dot = false, tap?: () => void) =>
       h('a', { class: `me-door d-${id}`, href: `#/me/${id}`, onclick: tap ? (e: Event) => { e.preventDefault(); tap(); } : null },
-        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon),
+        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, iconOf(icon, 24)),
         h('span', { class: 'me-door-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)),
         dot ? h('i', { class: 'me-door-dot', 'aria-hidden': 'true' }) : '');
     void hasFigure;
     // The room is on the streak card and prayer times on the line at the top; these two are used less often.
     prayerStrip.hidden = dayOne && !prayerLine;
     doors.hidden = dayOne;
-    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, '🕌'),
+    prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, icon('mosque', 22)),
       h('span', { class: 'me-pr-txt' }, prayerLine || mpt('mp.prayerSet')), h('span', { class: 'me-pr-go', 'aria-hidden': 'true' }, '›'));
     doors.replaceChildren(
-      door('stats', '🏅', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
-      door('library', '📚', mpt('mp.lib'), mpt('mp.libSub')));
+      door('stats', 'medal', mpt('mp.stats'), mpt('mp.statsSub', { pages: stats('week').pages, n: earned })),
+      door('library', 'library', mpt('mp.lib'), mpt('mp.libSub')));
   };
 
   const paintLibrary = () => {
@@ -921,10 +922,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     libBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('lib.title')),
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => openBookmarks() }, `🔖  ${t('lib.bookmarks', { n: bms.length })}`),
-        h('a', { class: 'menu-item', href: '#/drafts' }, `🎬  ${t('lib.reels')}`),
+        h('button', { class: 'menu-item', onclick: () => openBookmarks() }, icon('bookmark', 18), t('lib.bookmarks', { n: bms.length })),
+        h('a', { class: 'menu-item', href: '#/drafts' }, icon('film', 18), t('lib.reels')),
         ...recent.map((r) => h('a', { class: 'menu-item', href: `#/s/${r.s}/${r.a}` },
-          h('span', {}, `📖  ${ref(r.s, r.a)}`), h('span', { class: 'muted small' }, ` · ${t('common.page', { n: r.page })}`)))));
+          h('span', {}, icon('book', 18), ref(r.s, r.a)), h('span', { class: 'muted small' }, ` · ${t('common.page', { n: r.page })}`)))));
     function openBookmarks() {
       dialog(t('menu.bookmarks'), bms.length
         ? h('div', { class: 'sheet-scroll menu' }, ...bms.map((b) => h('a', { class: 'menu-item', href: `#/s/${b.s}/${b.a}` }, ref(b.s, b.a))))
@@ -954,7 +955,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const line = t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) });
     if (line !== prayerLine) { prayerLine = line; paintDoors(); }
     prayerBox.replaceChildren(
-      h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, `🔔 ${t(anyAlert() ? 'pa.on' : 'pa.short')}`)),
+      h('div', { class: 'me-row' }, head, h('a', { class: `chip${anyAlert() ? ' on' : ''}`, href: '#/me/settings/pa' }, icon('bell', 18), t(anyAlert() ? 'pa.on' : 'pa.short'))),
       h('p', { class: 'pr-next' }, t('pr.next', { name: t(`pr.${PRAYERS[next]}` as Key), time: timeFmt.format(nextAt), left: minutes(mins * 60) })),
       h('div', { class: 'pr-list' }, ...times.map((x, i) => h('div', { class: `pr-row${i === next && !tomorrow ? ' next' : ''}${i === 1 ? ' sun' : ''}` },
         h('span', {}, t(`pr.${PRAYERS[i]}` as Key)), h('b', {}, timeFmt.format(x))))),
@@ -1037,7 +1038,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
         lightChip(),
         inboxBell(),
-        h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
+        h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
       prayerStrip, hero, syncLine, noorEl, dayCard() ?? (dayOne ? '' : todayCard()), waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
@@ -1104,7 +1105,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
 }
 
 /** #/me/settings: the Me tab's own settings, then the way on to the app's menu. */
-export function showMeSettings(root: HTMLElement): () => void {
+/** Me → ⚙ (F7): five rows, each opening its own page: Reading, Prayer & reminders, Notifications, Your Quran, App. */
+export type SetPage = 'reading' | 'prayer' | 'notes' | 'quran' | 'app';
+const SET_PAGES: readonly SetPage[] = ['reading', 'prayer', 'notes', 'quran', 'app'];
+export function showMeSettings(root: HTMLElement, at?: string): () => void {
+  const sub: SetPage | null = at === 'pa' ? 'prayer' : SET_PAGES.includes(at as SetPage) ? at as SetPage : null;
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
   const body = h('div', {});
   const section = (title: string, ...kids: (Node | string | false)[]) => h('section', { class: 'me-card' }, h('h2', { class: 'me-h' }, title), ...kids);
@@ -1120,26 +1125,28 @@ export function showMeSettings(root: HTMLElement): () => void {
     const sel = h('select', { class: 'search pr-method', 'aria-label': t('pr.method'), onchange: (e: Event) =>
       setPrayerSettings({ ...prayerSettings(), method: (e.target as HTMLSelectElement).value as Method }) },
     ...METHODS.map((m) => h('option', { value: m, selected: m === ps.method }, t(`pr.m.${m}` as Key))));
-    body.replaceChildren(
-      section(t('set.reading'),
+    const groups: Record<SetPage, () => (Node | string)[]> = {
+      reading: () => [section(t('set.reading'),
         h('div', { class: 'menu' },
-          h('a', { class: 'menu-item', href: '#/' }, `📖  ${t('menu.allSurahs')}`),
+          h('a', { class: 'menu-item', href: '#/' }, icon('book', 18), t('menu.allSurahs')),
           h('form', { class: 'menu-item go-page', onsubmit: (e: Event) => {
             e.preventDefault();
             const p = Math.round(Number(pageInput.value));
             if (p >= 1 && p <= 604) goMushaf(`page:${p}`);
           } }, pageInput, h('button', { class: 'chip', type: 'submit' }, t('menu.goToPage'))),
-          h('button', { class: 'menu-item', onclick: () => { setReaderMode('translation'); location.hash = lastRead(); } }, `🔤  ${t('menu.translationView')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('bookmarks') }, `🔖  ${t('menu.bookmarks')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('reflections') }, `✎  ${t('menu.reflections')}`),
-          h('button', { class: 'menu-item', onclick: openTranslations }, `🌐  ${t('menu.translation', { name: translationInfo(currentTranslation()).translator })}`),
+          h('button', { class: 'menu-item', onclick: () => { setReaderMode('translation'); location.hash = lastRead(); } }, icon('letters', 18), t('menu.translationView')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('bookmarks') }, icon('bookmark', 18), t('menu.bookmarks')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('reflections') }, icon('pen', 18), t('menu.reflections')),
+          h('button', { class: 'menu-item', onclick: openTranslations }, icon('globe', 18), t('menu.translation', { name: translationInfo(currentTranslation()).translator })),
           h('button', { class: 'menu-item', 'aria-pressed': String(timeTintOn()), onclick: () => { setTimeTint(!timeTintOn()); paint(); } },
-            `🕰  ${t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') })}`)),
+            icon('clock', 18), t('menu.timeTint', { state: t(timeTintOn() ? 'menu.on' : 'menu.off') }))),
         h('b', { class: 'set-label' }, t('me.pageTime')),
         h('p', { class: 'muted small' }, t('me.pageTimeHelp')),
         chips(PAGE_TIMES, (x) => x === pageSeconds(), timeLabel, (x) => setPageSeconds(x)),
         mushafOfflineRow()),
-      section(t('pr.title'),
+      section(t('fav.section'),
+        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp')))],
+      prayer: () => [section(t('pr.title'),
         h('p', { class: 'muted small' }, t('pr.locHelp')),
         h('button', { class: 'chip', onclick: async () => {
           toast(t('pr.finding'));
@@ -1158,15 +1165,11 @@ export function showMeSettings(root: HTMLElement): () => void {
             if (on && !(await allowNotifications())) return toast(t('rem.denied'));
             setPrayerSettings({ ...prayerSettings(), lockScreen: on });
           },
-        }, `🔒  ${t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })}`) : '',
+        }, icon('lock', 18), t('pr.lock', { state: t(ps.lockScreen ? 'menu.on' : 'menu.off') })) : '',
         h('p', { class: 'muted small' }, t('pr.privacy'))),
-      alertsSection(),
-      section(t('fav.section'),
-        favouriteIds().length ? favouritesSection(favouriteIds().map(reciterById), paint) : h('p', { class: 'muted small' }, t('fav.sectionHelp'))),
-      section(t('wg.title'),
+      alertsSection()],
+      notes: () => [nudgeSection(),
         h('p', { class: 'muted small' }, t('wg.setHelp')),
-        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, `🧩  ${t('wg.open')}`))),
-      nudgeSection(),
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
@@ -1174,21 +1177,39 @@ export function showMeSettings(root: HTMLElement): () => void {
             if (!(await setDhikrReminders(next))) toast(t('rem.denied'));
           })) : '',
       isNative() ? h('section', { class: 'me-card menu' },
-        h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, `✧  ${t('morning.title')}`)) : '',
-      section(t('menu.gYours'),
+        h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, icon('sparkle', 18), t('morning.title'))) : '',
+      section(t('wg.title'),
+        h('p', { class: 'muted small' }, t('wg.setHelp')),
+        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, icon('widget', 18), t('wg.open'))))],
+      quran: () => [section(t('menu.gYours'),
         h('div', { class: 'menu' },
-          h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, `☾  ${t('menu.ramadan')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./circles').then((m) => m.openCircles()) }, `◯  ${t('menu.circles')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, `🌙  ${t('menu.kids')}`))),
-      section(t('set.app'),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, icon('crescent', 18), t('menu.ramadan')),
+          h('button', { class: 'menu-item', onclick: () => void import('./circles').then((m) => m.openCircles()) }, icon('users', 18), t('menu.circles')),
+          h('button', { class: 'menu-item', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, icon('moon', 18), t('menu.kids'))))],
+      app: () => [section(t('set.app'),
         h('div', { class: 'menu' },
-          h('button', { class: 'menu-item', onclick: () => openAccount() }, accountLabel()),
-          h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, `◐  ${t('theme.menu')}`),
-          h('button', { class: 'menu-item', onclick: openLanguage }, `🗣  ${t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })}`),
-          h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, `${soundsOn() ? '🔔' : '🔕'}  ${t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, `🎙  ${t('set.harakatHelp')}`),
-          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, `✧  ${t('menu.tour')}`),
-          h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, `⚑  ${t('set.report')}`))));
+          h('button', { class: 'menu-item', onclick: () => openAccount() }, ...accountLabel()),
+          h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, icon('colours', 18), t('theme.menu')),
+          h('button', { class: 'menu-item', onclick: openLanguage }, icon('voice', 18), t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })),
+          h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, icon(soundsOn() ? 'bell' : 'bellOff', 18), t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')),
+          h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
+          h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
+          h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
+    };
+    if (sub) { body.replaceChildren(...groups[sub]()); return; }
+    const row = (id: SetPage, ic: string, title: string, line: string) => h('a', { class: 'set-row', href: `#/me/settings/${id}` },
+      h('span', { class: `set-row-ic s-${id}`, 'aria-hidden': 'true' }, icon(ic, 22)),
+      h('span', { class: 'set-row-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, line)),
+      icon('right', 18));
+    body.replaceChildren(h('section', { class: 'me-card set-rows' },
+      row('reading', 'book', t('set.reading'), t('set.rowReading')),
+      row('prayer', 'mosque', t('set.rowPrayer'), t('set.rowPrayerSub')),
+      row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
+      row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
+      row('app', 'gear', t('set.app'), t('set.rowApp'))));
+  };
+  const subTitle: Record<SetPage, () => string> = {
+    reading: () => t('set.reading'), prayer: () => t('set.rowPrayer'), notes: () => t('set.rowNotes'), quran: () => t('menu.gYours'), app: () => t('set.app'),
   };
   const pageInput = h('input', { type: 'number', class: 'search', min: '1', max: '604', placeholder: t('menu.pagePlaceholder', { n: 604 }), inputmode: 'numeric' }) as HTMLInputElement;
   const openTranslations = async () => {
@@ -1221,17 +1242,17 @@ export function showMeSettings(root: HTMLElement): () => void {
       h('div', { class: 'chips pa-prayers' }, ...ALERT_PRAYERS.map((p) => h('button', {
         class: `chip${a.on[p] ? ' on' : ''}`, 'aria-pressed': String(a.on[p]),
         onclick: () => save((c) => ({ ...c, on: { ...c.on, [p]: !c.on[p] } })),
-      }, `${a.on[p] ? '🔔' : '🔕'} ${t(`pr.${p}` as Key)}${times ? ` · ${timeFmt.format(times[PRAYERS.indexOf(p)])}` : ''}`))),
+      }, icon(a.on[p] ? 'bell' : 'bellOff', 16), `${t(`pr.${p}` as Key)}${times ? ` · ${timeFmt.format(times[PRAYERS.indexOf(p)])}` : ''}`))),
       h('b', { class: 'set-label' }, t('pa.when')),
       chips(BEFORE, (x) => x === a.before, (x) => (x ? t('pa.before', { n: x }) : t('pa.atTime')), (x) => save((c) => ({ ...c, before: x }))),
       h('b', { class: 'set-label' }, t('pa.sound')),
       chips(SOUNDS, (x) => x === a.sound, (x) => t(`pa.s.${x}` as Key), (x) => { previewSound(x); save((c) => ({ ...c, sound: x })); }),
       h('b', { class: 'set-label' }, akt('du.notes')),
       h('p', { class: 'muted small' }, akt('du.notesHelp')),
-      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, a.duas ? akt('du.notesOn') : akt('du.notesOff')),
+      h('button', { class: `chip${a.duas ? ' on' : ''}`, 'aria-pressed': String(a.duas), onclick: () => save((c) => ({ ...c, duas: !c.duas })) }, icon(a.duas ? 'bell' : 'bellOff', 16), a.duas ? akt('du.notesOn') : akt('du.notesOff')),
       h('b', { class: 'set-label' }, akt('du.salahNotes')),
       h('p', { class: 'muted small' }, akt('du.salahHelp')),
-      h('button', { class: `chip${a.salah ? ' on' : ''}`, 'aria-pressed': String(a.salah), onclick: () => save((c) => ({ ...c, salah: !c.salah })) }, a.salah ? akt('du.notesOn') : akt('du.notesOff')),
+      h('button', { class: `chip${a.salah ? ' on' : ''}`, 'aria-pressed': String(a.salah), onclick: () => save((c) => ({ ...c, salah: !c.salah })) }, icon(a.salah ? 'bell' : 'bellOff', 16), a.salah ? akt('du.notesOn') : akt('du.notesOff')),
       !isNative() ? h('p', { class: 'muted small' }, t('pa.web')) : '',
       isNative() && anyAlert(a) && !exact ? h('div', { class: 'pa-exact' },
         h('p', { class: 'muted small' }, t('pa.late')),
@@ -1251,7 +1272,7 @@ export function showMeSettings(root: HTMLElement): () => void {
         haptic();
         paint();
       },
-    }, `${n[k] ? '🔔' : '🔕'}  ${label}`);
+    }, icon(n[k] ? 'bell' : 'bellOff', 18), label);
     return section(t('nudge.section'),
       h('p', { class: 'muted small' }, t(isNative() ? 'nudge.help' : 'nudge.helpWeb')),
       h('div', { class: 'menu' },
@@ -1276,8 +1297,8 @@ export function showMeSettings(root: HTMLElement): () => void {
   })();
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': t('me.title') }, icon('back', 22)),
-      h('div', { class: 'brand' }, h('h1', {}, t('me.settings')))),
+      h('a', { class: 'icon-btn back-btn', href: sub ? '#/me/settings' : '#/me', 'aria-label': sub ? t('me.settings') : t('me.title') }, icon('back', 22)),
+      h('div', { class: 'brand' }, h('h1', {}, sub ? subTitle[sub]() : t('me.settings')))),
     body, tabBar('me'));
   const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
   window.addEventListener('prayer-changed', onPrayer);
@@ -1299,7 +1320,7 @@ function freezeBadge(s: ReturnType<typeof streak>): HTMLElement | string {
     s.extra.free ? mpt('mp.extraReady') : mpt('mp.extraNext', { day: longDay.format(parse(s.extra.next!)) })];
   return h('button', { class: `me-freeze${n ? '' : ' none'}`, type: 'button', 'aria-label': lines.join('. '), onclick: (e: Event) => {
     e.stopPropagation(); haptic(6); toast(lines.join(' · '));
-  } }, h('span', { 'aria-hidden': 'true' }, '❄'), n ? h('b', {}, String(n)) : '');
+  } }, h('span', { 'aria-hidden': 'true' }, icon('snow', 22)), n ? h('b', {}, String(n)) : '');
 }
 
 function repairButton(lost: { n: number; days: string[] }): HTMLElement {

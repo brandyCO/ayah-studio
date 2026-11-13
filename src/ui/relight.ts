@@ -1,6 +1,7 @@
 // #/relight/{code}: a friend's flame that went out. Signed in with Google (another account), one tap
 // relights it: the ember catches and the fire comes back. Signed out → sign in first, then back here.
 import { account, onAccount } from '../cloud/auth';
+import { icon } from './icons';
 import { giveRelight, relightPreview, type RelightPreview } from '../together/relight';
 import { errMsg, t } from '../i18n';
 import { h, haptic } from './dom';
@@ -64,7 +65,7 @@ export async function showRelight(root: HTMLElement, code: string): Promise<() =
         btn.disabled = false;
         sub.textContent = errMsg(e);
       }
-    } }, `🔥  ${t('rl.relight')}`);
+    } }, icon('flame', 18), t('rl.relight'));
     act.append(btn);
   };
 

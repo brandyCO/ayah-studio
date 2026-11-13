@@ -5,6 +5,7 @@
 //  - The weekly rival (opt-in) lives on Ranks: a player of your tier who does about as much as you, the week's XP +
 //    dhikr / adhkar points under a pace limit + two duel quests a day, the same for both. Never on Me (owner: Me is full).
 import { account } from '../cloud/auth';
+import { icon } from './icons';
 import { clt, type ChallengeKey } from '../i18n/challenges';
 import {
   CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, claimDuel, myChallenges, myDuel,
@@ -18,7 +19,7 @@ import { lampOf } from '../data/shop';
 import './challenges.css';
 
 const num = (n: number) => n.toLocaleString();
-const ICON: Record<ChallengeKind, string> = { read: '✨', pages: '📖', listen: '🎧', lessons: '🌱', adhkar: '☀', dhikr: '📿' };
+const ICON: Record<ChallengeKind, string> = { read: 'sparkle', pages: 'book', listen: 'listen', lessons: 'sprout', adhkar: 'sun', dhikr: 'beads' };
 const myFig = () => { try { return localStorage.getItem('rankFigure') || null; } catch { return null; } };
 const meDisc = (size: number) => avatar(0, 0, size, 0, myFig());
 const theirDisc = (r: Row | null, size: number) => avatar(r?.private ? null : r?.avatar ?? 0, r?.tier ?? 0, size, r?.frame ?? 0, r?.private ? null : r?.figure);
@@ -47,7 +48,7 @@ export function openChallengePicker(friend: { pid: string; name: string }, after
       toast(clt('cl.sent', { name: friend.name }));
       after?.();
     } catch (e) { toast((e as Error).message); }
-  } }, h('span', { class: 'cl-kind-ic', 'aria-hidden': 'true' }, ICON[k]),
+  } }, h('span', { class: 'cl-kind-ic', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
     h('b', {}, clt(`cl.k.${k}` as ChallengeKey)), h('small', {}, clt(`cl.d.${k}` as ChallengeKey))));
   const d = sheet(clt('cl.pickTitle', { name: friend.name }),
     h('div', { class: 'sheet-scroll' }, h('p', { class: 'muted small' }, clt('cl.pickSub')),
@@ -78,7 +79,7 @@ async function openChest(title: string, claim: () => Promise<{ result: 'won' | '
 function card(c: Challenge, repaint: () => void): HTMLElement | null {
   const k = kindOf(c);
   const who = c.friend?.private ? '…' : c.friend?.name ?? '…';
-  const head = h('div', { class: 'cl-head' }, h('span', { class: 'cl-kind-ic sm', 'aria-hidden': 'true' }, ICON[k]),
+  const head = h('div', { class: 'cl-head' }, h('span', { class: 'cl-kind-ic sm', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
     h('b', {}, clt(`cl.k.${k}` as ChallengeKey)),
     h('span', { class: 'muted small' }, c.over ? clt('cl.over') : c.start ? clt('cl.day', { d: c.day ?? 1 }) : ''));
   if (c.incoming) {
@@ -113,7 +114,7 @@ export async function challengesPanel(repaint: () => void, fresh = false): Promi
   const find = h('button', { class: 'chip cl-find', onclick: () => { try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ } location.hash = '#/ranks'; } }, `＋ ${clt('cl.find')}`);
   const d = duel?.duel;
   const pill = d ? h('button', { class: 'chip cl-duel-pill', onclick: () => { try { sessionStorage.setItem('rankView', 'league'); } catch { /* ignore */ } location.hash = '#/ranks'; } },
-    '⚔ ', clt('cl.duelPill', { name: d.rival.private ? '…' : d.rival.name ?? '…', me: num(d.me), them: num(d.them) })) : '';
+    icon('swords', 16), clt('cl.duelPill', { name: d.rival.private ? '…' : d.rival.name ?? '…', me: num(d.me), them: num(d.them) })) : '';
   return h('div', { class: 'cl-panel' }, pill,
     cards.length ? h('div', { class: 'cl-list' }, ...cards) : h('p', { class: 'muted small' }, clt('cl.none')), find);
 }
@@ -121,7 +122,7 @@ export async function challengesPanel(repaint: () => void, fresh = false): Promi
 export const challengesWaiting = (list: Challenge[]) => list.some((c) => c.incoming || (c.over && !c.claimed && c.start));
 
 const questText = (q: DuelQuest) => clt(q.kind === 'adhkar' && q.target > 1 ? 'du.q.adhkar2' : `du.q.${q.kind}` as ChallengeKey, { n: q.target });
-const QUEST_IC: Record<DuelQuest['kind'], string> = { pages: '📖', listen: '🎧', lessons: '🌱', adhkar: '☀', dhikr: '📿' };
+const QUEST_IC: Record<DuelQuest['kind'], string> = { pages: 'book', listen: 'listen', lessons: 'sprout', adhkar: 'sun', dhikr: 'beads' };
 
 /** Where each duel quest is done: the mushaf, listening, Learn, the adhkar of this time of day, the tasbih. */
 function goDo(kind: DuelQuest['kind']) {
@@ -141,7 +142,7 @@ const clock = (ms: number, days = false) => {
 /** The small "VS" badge on the league card: your rival's face once you have one, else crossed swords. */
 export async function duelBadge(): Promise<HTMLElement> {
   const label = h('span', { class: 'du-badge-t' }, clt('du.offTitle'));
-  const b = h('span', { class: 'du-badge', 'aria-hidden': 'true' }, h('span', { class: 'du-badge-ic' }, '⚔'), label);
+  const b = h('span', { class: 'du-badge', 'aria-hidden': 'true' }, h('span', { class: 'du-badge-ic' }, icon('swords', 22)), label);
   void myDuel().then((st) => {
     const d = st.duel;
     if (d) {
@@ -220,7 +221,7 @@ export async function openDuel(onChange?: () => void): Promise<void> {
     clearInterval(tick);
     tick = window.setInterval(() => { if (!document.hidden) void tickNow(); }, 1000);
     const quest = (q: DuelQuest) => h('button', { class: `du-quest${q.done ? ' done' : ''}`, onclick: () => { haptic(8); close(); goDo(q.kind); } },
-      h('span', { class: 'du-quest-ic', 'aria-hidden': 'true' }, q.done ? '✓' : QUEST_IC[q.kind]),
+      h('span', { class: 'du-quest-ic', 'aria-hidden': 'true' }, icon(q.done ? 'check' : QUEST_IC[q.kind], 20)),
       h('span', { class: 'du-quest-t' }, questText(q), h('small', {}, '+30')), h('span', { class: 'du-quest-go', 'aria-hidden': 'true' }, '›'));
     info.replaceChildren(
       d ? h('div', { class: 'du-score' }, h('b', { class: 'me' }, num(d.me)), h('span', {}, '–'), h('b', {}, num(d.them))) : '',

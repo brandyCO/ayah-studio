@@ -5,6 +5,7 @@
 // Counting is local only: rewards from the journey, and prizes / challenges from the answers Ranks
 // kept on this device (src/together/ranks.ts, `rankCache`); pacts are asked when the list opens.
 import './lightChip.css';
+import { icon } from './icons';
 import { pendingRewards, type Pending } from '../data/claims';
 import { earnedPieces } from '../data/wardrobe';
 import { account } from '../cloud/auth';
@@ -41,20 +42,20 @@ function giftsWaitingHere(): number {
   try { const v = JSON.parse(localStorage.getItem('giftsWaiting') ?? 'null'); return v && v.who === account()?.id ? Math.min(20, v.n | 0) : 0; } catch { return 0; }
 }
 const rewardItem = (p: Pending): Item => {
-  if (p.kind === 'goal') return { icon: '🎁', title: p.goal.week ? mpt('mp.inWeek') : mpt('mp.inGoal'), sub: goalLabel(p.goal), go: toMe };
-  if (p.kind === 'all') return { icon: '🎁', title: mpt('mp.inAll'), sub: mpt('mp.inChest'), go: toMe };
-  if (p.kind === 'weekAll') return { icon: '🎁', title: mpt('mp.inWeekAll'), sub: mpt('mp.inChest'), go: toMe };
-  return { icon: '🏅', title: mpt('mp.inBadge'), sub: badgeName({ fam: p.id.slice(0, -2), step: +p.id.slice(-1) }), go: toMe };
+  if (p.kind === 'goal') return { icon: 'gift', title: p.goal.week ? mpt('mp.inWeek') : mpt('mp.inGoal'), sub: goalLabel(p.goal), go: toMe };
+  if (p.kind === 'all') return { icon: 'gift', title: mpt('mp.inAll'), sub: mpt('mp.inChest'), go: toMe };
+  if (p.kind === 'weekAll') return { icon: 'gift', title: mpt('mp.inWeekAll'), sub: mpt('mp.inChest'), go: toMe };
+  return { icon: 'medal', title: mpt('mp.inBadge'), sub: badgeName({ fam: p.id.slice(0, -2), step: +p.id.slice(-1) }), go: toMe };
 };
 
 function localItems(): Item[] {
   const out = pendingRewards().map(rewardItem);
-  if (earnedPieces().length) out.push({ icon: '👕', title: mpt('mp.inPieces'), go: () => { location.hash = '#/me'; } });
+  if (earnedPieces().length) out.push({ icon: 'shirt', title: mpt('mp.inPieces'), go: () => { location.hash = '#/me'; } });
   if (account()) {
     const r = rankWaiting();
-    for (const p of r.prizes) out.push({ icon: '🏆', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
-    for (let i = 0; i < r.challenges; i++) out.push({ icon: '⚔', title: mpt('mp.inChallenge'), go: toChallenges });
-    for (let i = 0; i < giftsWaitingHere(); i++) out.push({ icon: '🎁', title: mpt('mp.gift.kicker'), go: () => { location.hash = '#/me'; } });
+    for (const p of r.prizes) out.push({ icon: 'trophy', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
+    for (let i = 0; i < r.challenges; i++) out.push({ icon: 'swords', title: mpt('mp.inChallenge'), go: toChallenges });
+    for (let i = 0; i < giftsWaitingHere(); i++) out.push({ icon: 'gift', title: mpt('mp.gift.kicker'), go: () => { location.hash = '#/me'; } });
   }
   return out;
 }
@@ -96,7 +97,7 @@ function bellSvg(): SVGSVGElement {
 export async function openInbox() {
   const list = h('div', { class: 'ib-list' });
   const row = (it: Item) => h('button', { class: 'ib-row', onclick: () => { d.close(); it.go(); } },
-    h('span', { class: 'ib-ic', 'aria-hidden': 'true' }, it.icon),
+    h('span', { class: 'ib-ic', 'aria-hidden': 'true' }, icon(it.icon, 22)),
     h('span', { class: 'ib-txt' }, h('b', {}, it.title), it.sub ? h('span', { class: 'muted small' }, it.sub) : ''),
     h('span', { class: 'ib-go' }, mpt('mp.open')));
   const paint = (items: Item[]) => list.replaceChildren(...(items.length ? items.map(row) : [h('p', { class: 'muted ib-empty' }, mpt('mp.inboxEmpty'))]));
@@ -114,7 +115,7 @@ export async function openInbox() {
     try {
       const { myPacts } = await import('../together/pacts');
       const pacts = (await myPacts()).filter((p) => p.over && !p.claimed);
-      if (pacts.length && d.isConnected) paint([...items, ...pacts.map(() => ({ icon: '🌙', title: mpt('mp.inPact'), go: () => { location.hash = '#/me'; } }))]);
+      if (pacts.length && d.isConnected) paint([...items, ...pacts.map(() => ({ icon: 'moon', title: mpt('mp.inPact'), go: () => { location.hash = '#/me'; } }))]);
     } catch { /* offline */ }
   }
 }

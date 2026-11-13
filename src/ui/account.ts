@@ -1,6 +1,7 @@
 // ☰ → Account: sign in with Google to sync bookmarks, settings and reel drafts between devices; see
 // the sync state; export or delete the account's data. Everything works without signing in.
 import { errMsg, locale, t } from '../i18n';
+import { icon } from './icons';
 import { account, deleteAccount, onAccount, signIn, signInAvailable, signOut } from '../cloud/auth';
 import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/sync';
 import { supabase } from '../cloud/supabase';
@@ -14,7 +15,7 @@ import { prefRecords } from './prefs';
 /** The menu line for the account ("Sign in to sync" or the user's name). */
 export const accountLabel = () => {
   const a = account();
-  return a ? `👤  ${t('acc.synced', { name: a.name })}` : `👤  ${t('acc.signInToSync')}`;
+  return [icon('user', 18), a ? t('acc.synced', { name: a.name }) : t('acc.signInToSync')] as const;
 };
 
 const ago = (at: number) => {
@@ -71,9 +72,9 @@ export function openAccount() {
         h('div', {}, h('b', {}, a.name), h('div', { class: 'muted small' }, a.email))),
       statusLine,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => void syncNow() }, `⟳  ${t('acc.syncNow')}`),
-        h('button', { class: 'menu-item', onclick: () => void exportData().catch((e) => toast(t('acc.exportFailed', { msg: e instanceof Error ? e.message : String(e) }))) }, `⇩  ${t('acc.export')}`),
-        h('button', { class: 'menu-item', onclick: () => void signOut().then(() => toast(t('acc.signedOut'))) }, `↩  ${t('acc.signOut')}`),
+        h('button', { class: 'menu-item', onclick: () => void syncNow() }, icon('sync', 18), t('acc.syncNow')),
+        h('button', { class: 'menu-item', onclick: () => void exportData().catch((e) => toast(t('acc.exportFailed', { msg: e instanceof Error ? e.message : String(e) }))) }, icon('download', 18), t('acc.export')),
+        h('button', { class: 'menu-item', onclick: () => void signOut().then(() => toast(t('acc.signedOut'))) }, icon('reply', 18), t('acc.signOut')),
         h('button', { class: 'menu-item danger', onclick: () => confirmDelete() }, `✕  ${t('acc.deleteMenu')}`)),
       h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, t('acc.privacy'))));
     statusLine.textContent = statusText(syncStatus());

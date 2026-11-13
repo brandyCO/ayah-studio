@@ -3,6 +3,7 @@
 // faces on or off (off by default), Surprise me, and Wear it. A few parts cost Light (bought on Wear it, kept
 // in the shop like the avatars); the champion's outfit is only for a week won at #1 (checked by the server).
 import { rt, type RankKey } from '../i18n/ranks';
+import { icon } from './icons';
 import { t } from '../i18n';
 import { shopAdd, shopHas, wallet } from '../data/garden';
 import { setFigure, type Status } from '../together/ranks';
@@ -144,7 +145,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     h('span', { class: 'fb-name small' }, name),
     locked && piece(slot, v) ? h('span', { class: 'fb-how' }, how) : '',
     price && !owned(slot, v) ? h('span', { class: 'fb-price' }, `✦ ${price}`) : '',
-    key(slot, v) === PRIZE ? h('span', { class: 'fb-price prize' }, '🏆 #1') : '');
+    key(slot, v) === PRIZE ? h('span', { class: 'fb-price prize' }, icon('trophy', 14), '#1') : '');
   };
   const swatches = (slot: 'skin' | 'hairC' | 'headC' | 'outC' | 'bg') => h('div', { class: 'fb-swatches', role: 'group', 'aria-label': rt('fb.colour') },
     ...options(slot, f).filter((v) => !piece(slot, v) || owned(slot, v)).map((v) => {
@@ -197,7 +198,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
       h('h2', {}, rt('fb.title')), light),
     stage, faceChips, tabs, panel,
     h('div', { class: 'fb-foot' },
-      h('button', { class: 'chip', onclick: surprise }, `🎲 ${rt('fb.random')}`),
+      h('button', { class: 'chip', onclick: surprise }, icon('dice', 18), rt('fb.random')),
       wear),
     s.figure ? h('button', { class: 'fb-classic small', onclick: async () => {
       try { await setFigure(null); close(); done(); } catch (e) { toast((e as Error).message); }

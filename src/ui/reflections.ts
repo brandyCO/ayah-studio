@@ -3,6 +3,7 @@
 // one being written, earlier ones can be tapped to edit. ☰ → Reflections lists and searches them.
 // The user's words are shown in the UI font, never styled like the ayah, and never put on a video.
 import { currentTranslation, translationInfo } from '../data/translations';
+import { icon } from './icons';
 import { account } from '../cloud/auth';
 import { surahTranslation, type SurahMeta } from '../data/quran';
 import {
@@ -26,8 +27,8 @@ function sheet(cls: string, ...content: (Node | string | false)[]) {
   d.showModal();
   return d;
 }
-const head = (text: string, close: () => void) =>
-  h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: close }, '✕'));
+const head = (text: string, close: () => void, ic?: string) =>
+  h('div', { class: 'sheet-head' }, h('h2', {}, ic ? icon(ic, 20) : '', text), h('button', { class: 'icon-btn', 'aria-label': tr('common.close'), onclick: close }, '✕'));
 
 /** A textarea that grows with its text and saves itself (debounced, and when the sheet closes). */
 function editor(value: string, placeholder: string, save: (text: string) => void) {
@@ -96,7 +97,7 @@ export async function openReflection(meta: SurahMeta[], s: number, a: number) {
   } }, tr('rf.delete'));
 
   const d = sheet('reflect-sheet',
-    head(`✎ ${ref}`, () => d.close()),
+    head(ref, () => d.close(), 'pen'),
     translation,
     h('div', { class: 'rf-body' },
       ...entries.filter((e) => e !== todays).map(paragraph),

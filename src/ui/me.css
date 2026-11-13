@@ -371,3 +371,18 @@
 .tc-slim .tc-start { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0;
   padding: 12px 16px; border-radius: 16px; border: 1px dashed var(--line); background: transparent; color: var(--text); }
 .tc-slim .tc-start > span { opacity: .6; font-size: 1.3rem; }
+
+/* F7: Settings is five rows, each opening its own page */
+.set-rows { display: grid; gap: 2px; padding: 8px; }
+.set-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 14px; color: var(--text); text-decoration: none; }
+.set-row:active { background: var(--sel); }
+.set-row-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.set-row-txt b { font-size: 1.02rem; }
+.set-row > svg:last-child { opacity: .45; flex: none; }
+[dir="rtl"] .set-row > svg:last-child { transform: scaleX(-1); }
+.set-row-ic { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: #fff; }
+.set-row-ic.s-reading { background: #12a594; }
+.set-row-ic.s-prayer { background: #4caf2a; }
+.set-row-ic.s-notes { background: #f59f00; }
+.set-row-ic.s-quran { background: #6c5ce7; }
+.set-row-ic.s-app { background: #667085; }

@@ -2,6 +2,7 @@
 // prayers, before sleeping. A lantern lights when that session is said in full today (progress from
 // src/data/adhkar.ts); the one whose time it is now breathes. A tap opens the session. Loaded with Me.
 import { finishedIds } from '../data/adhkar';
+import { icon } from './icons';
 import { todayRec } from '../data/journey';
 import { loadDuas, momentKey, momentList, prayerNow, type Dua, type Moment, type Prayer } from '../data/duas';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
@@ -66,7 +67,7 @@ export async function paintDayLanterns(slot: HTMLElement) {
         return b;
       })),
     h('div', { class: 'dl-acts' },
-      h('button', { class: 'chip dl-adhan', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas('adhan')); } }, `🕌  ${akt('du.title.adhan')}`),
+      h('button', { class: 'chip dl-adhan', onclick: () => { haptic(); void import('./adhkar').then((x) => x.openDuas('adhan')); } }, icon('mosque', 18), akt('du.title.adhan')),
       pactBox));
   slot.dataset.ready = '1';
   if (Date.now() - pactAt > 60_000) { pactAt = Date.now(); void import('./pact').then((m) => m.paintPacts(pactBox)); }

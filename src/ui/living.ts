@@ -2,6 +2,7 @@
 // of day, the Ramadan crescent and the "Today" card in the drop-down bar. Features add their marks and
 // Today lines through registerMarks() / registerToday(); everything here works without an account.
 import { ramadanNow } from '../data/ramadan';
+import { icon } from './icons';
 import { h } from './dom';
 import { t } from '../i18n';
 import { touchPref } from './prefs';
@@ -127,7 +128,7 @@ export async function fillToday(card: HTMLElement, onPick: () => void) {
     }
   }))).flat();
   card.replaceChildren(...items.map((it) => {
-    const content = [h('span', { class: 'today-icon', 'aria-hidden': 'true' }, it.icon),
+    const content = [h('span', { class: 'today-icon', 'aria-hidden': 'true' }, icon(it.icon, 18)),
       h('span', { class: 'today-text' }, it.text,
         it.sub ? h('span', { class: 'today-sub', lang: it.sub.lang, dir: it.sub.dir }, it.sub.text) : null)];
     const main = it.href
@@ -143,5 +144,5 @@ export async function fillToday(card: HTMLElement, onPick: () => void) {
 
 registerToday(() => {
   const now = ramadanNow();
-  return now.day ? [{ icon: '☾', text: t(now.lastTen ? 'today.ramadanLastTen' : 'today.ramadan', { day: now.day }) }] : [];
+  return now.day ? [{ icon: 'crescent', text: t(now.lastTen ? 'today.ramadanLastTen' : 'today.ramadan', { day: now.day }) }] : [];
 });

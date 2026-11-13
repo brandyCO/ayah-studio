@@ -2,6 +2,7 @@
 // exactly as printed). Swipe to turn pages. Tap the page to drop down the title bar with the menu;
 // long-press / drag to select ayat for a reel.
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
+import { icon } from './icons';
 import { draftHash, listDrafts } from '../data/drafts';
 import { addRecentPage } from '../data/history';
 import { loadMeta, surahTranslation } from '../data/quran';
@@ -11,7 +12,6 @@ import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine
 import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
 import { isNative } from '../native';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
-import { icon } from './icons';
 import { h, toast } from './dom';
 import { locale, surahName, t, uiRef } from '../i18n';
 import { currentTranslation, translationInfo } from '../data/translations';
@@ -56,7 +56,7 @@ registerToday(async () => {
   const tr = await surahTranslation(d.s, info.id).catch(() => null);
   const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: '✧', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
+    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
     sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
     actions: [
       { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
@@ -78,7 +78,7 @@ registerToday(async () => {
   const meta = await loadMeta();
   const b = bookmarks()[0];
   return b && Date.now() - b.at < 7 * DAY
-    ? [{ icon: '🔖', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
+    ? [{ icon: 'bookmark', text: t('today.bookmark', { ref: uiRef(meta[b.s - 1], b.a, b.a) }), href: `#/s/${b.s}/${b.a}` }]
     : [];
 });
 registerToday(async () => {
@@ -86,7 +86,7 @@ registerToday(async () => {
   const d = drafts[0];
   if (!d || Date.now() - d.updated > 3 * DAY) return [];
   const p = d.project;
-  return [{ icon: '🎬', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
+  return [{ icon: 'film', text: t('today.draft', { ref: uiRef(meta[p.surah - 1], p.from, p.to) }), href: draftHash(p, d.id) }];
 });
 
 // Ramadan (T7): today's portion, tonight's ayah, Eid.
@@ -328,7 +328,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     if (!first) return;
     const { s, a, at } = first;
-    hint.textContent = `✎ ${wroteHere(at)}`;
+    hint.replaceChildren(icon('pen', 16), wroteHere(at));
     hint.onclick = () => { hint.hidden = true; void openReflection(meta, s, a); };
     hint.hidden = false;
     hint.classList.remove('show');
@@ -610,8 +610,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     dialog.showModal();
     return dialog;
   }
-  const sheetHead = (text: string, close: () => void) =>
-    h('div', { class: 'sheet-head' }, h('h2', {}, text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
+  const sheetHead = (text: string, close: () => void, ic?: string) =>
+    h('div', { class: 'sheet-head' }, h('h2', {}, ic ? icon(ic, 20) : '', text), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕'));
 
   async function showTranslation(s: Sel) {
     const info = translationInfo(currentTranslation());
@@ -650,11 +650,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   function openBookmark(s: number, a: number) {
     const b = bookmarks().find((x) => x.s === s && x.a === a);
-    const d: HTMLDialogElement = sheet(sheetHead(`🔖 ${uiRef(meta[s - 1], a, a)}`, () => d.close()),
+    const d: HTMLDialogElement = sheet(sheetHead(uiRef(meta[s - 1], a, a), () => d.close(), 'bookmark'),
       b ? h('p', { class: 'muted small' }, t('bm.on', { date: dateFmt.format(b.at) })) : false,
       h('div', { class: 'menu' },
-        h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, `🎧  ${t('bm.listenHere')}`),
-        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, `🎬  ${t('bm.reel')}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); playHere(s, a); } }, icon('listen', 18), t('bm.listenHere')),
+        h('a', { class: 'menu-item', href: `#/reel/${s}/${a}-${a}`, onclick: () => d.close() }, icon('film', 18), t('bm.reel')),
         h('button', { class: 'menu-item', onclick: () => { d.close(); removeBookmark(s, a); toast(t('mushaf.bookmarkRemoved')); } }, `✕  ${t('bm.remove')}`)));
   }
 

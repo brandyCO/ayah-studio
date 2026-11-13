@@ -1,10 +1,10 @@
-import { icon } from './icons';
 // Friends on Ranks (owner request 2026-11-11): a tap on a player in the league opens a small profile — what they chose to
 // show and both characters standing side by side — where you can ask to be friends; an invite link (#/rf/{code}) makes
 // friends at once. Two friends keep a friend streak (the days in a row both earned points, counted by the server). While
 // both have earned points today their characters stand on fire together, and on 7 / 30 / 100 / 365 days they power up
 // together full screen (powerUp.ts). Simple on purpose: no explaining needed beyond one line.
 import { account } from '../cloud/auth';
+import { icon } from './icons';
 import { ft } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
@@ -107,7 +107,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const stats = h('div', { class: 'fr-stats' },
       stat('week', ft('fr.week'), p.week, ptsIcon()),
       stat('streak', ft('fr.flame'), p.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
-      stat('trophies', ft('fr.trophies'), p.trophies, '🏆 '),
+      stat('trophies', ft('fr.trophies'), p.trophies, icon('trophy', 16)),
       stat('pages', ft('fr.pages'), p.pages),
       stat('listen', ft('fr.listen'), p.listen));
     // Each action shows its result at once; the server's answer follows quietly.
@@ -124,8 +124,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
             h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
             : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`),
-              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, `⚔ ${chLabel}`),
-              h('button', { class: 'chip fr-gift', onclick: () => void import('./giftSend').then((m) => m.openGiftSheet(pid, name)) }, `🎁 ${ft('fr.gift')}`)] : [];
+              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, icon('swords', 18), chLabel),
+              h('button', { class: 'chip fr-gift', onclick: () => void import('./giftSend').then((m) => m.openGiftSheet(pid, name)) }, icon('gift', 18), ft('fr.gift'))] : [];
     const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
       known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
       known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');
@@ -276,7 +276,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
   const cards = data.friends.map((f) => {
     const on = f.meToday && f.themToday;
     const name = f.name ?? rt('rk.private');
-    const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, `⚔ ${chLabel}`);
+    const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, icon('swords', 18), chLabel);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),

@@ -2,6 +2,7 @@
 // of seven crescents, one lit for each night they said the bedtime du'a; nobody is ordered or scored.
 // Over → a chest, opened once each (src/together/pacts.ts).
 import { account } from '../cloud/auth';
+import { icon } from './icons';
 import { akt } from '../i18n/adhkar';
 import { rt } from '../i18n/ranks';
 import { isNative } from '../native';
@@ -40,7 +41,7 @@ function pactCard(p: Pact, repaint: () => void) {
     repaint();
   };
   return h('div', { class: 'bp-card' },
-    h('div', { class: 'me-row' }, h('b', {}, `🌙 ${akt('bp.title')}`),
+    h('div', { class: 'me-row' }, h('b', {}, icon('moon', 18), akt('bp.title')),
       h('span', { class: 'muted small' }, p.over ? akt('bp.over') : akt('bp.night', { n: Math.min(7, p.night) }))),
     h('div', { class: 'bp-members' }, ...p.members.map((m) => h('div', { class: 'bp-row' },
       avatar(m.face.private ? null : m.face.avatar ?? 0, m.face.tier ?? 0, 28, m.face.frame ?? 0, m.face.figure),
@@ -59,7 +60,7 @@ export async function paintPacts(slot: HTMLElement) {
     if (!account()) { openAccount(); return; }
     try { const r = await createPact(); await share(r.code); } catch (e) { toast((e as Error).message); }
     repaint();
-  } }, `🌙 ${akt('bp.start')}`);
+  } }, icon('moon', 18), akt('bp.start'));
   start.title = akt('bp.help');
   if (!account()) { slot.replaceChildren(start); return; }
   void flushPactMark();
