@@ -60,6 +60,7 @@ import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
+import { smartReminder } from '../data/usualTime';
 import { chest } from './chest';
 import { mpt } from '../i18n/mePages';
 import { inboxBell } from './inbox';
@@ -1425,8 +1426,14 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
         isNative() ? toggle('risk', t('nudge.setRisk')) : ''),
       isNative() && n.risk ? h('div', {},
         h('b', { class: 'set-label' }, t('nudge.riskWhen')),
-        chips(RISK_TIMES, (x) => x === n.riskAt, (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), 0)),
-          (x) => setNudgeSettings({ ...nudgeSettings(), riskAt: x }))) : '',
+        chips(RISK_TIMES, (x) => x === n.riskAt,
+          (tm) => tm === 'auto' ? t('nudge.usual') : timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), 0)),
+          (x) => setNudgeSettings({ ...nudgeSettings(), riskAt: x })),
+        n.riskAt === 'auto' ? (() => {
+          const r = smartReminder();
+          const at = timeFmt.format(new Date(2026, 0, 1, r.h, r.m));
+          return h('p', { class: 'muted small' }, r.learned ? t('nudge.usualAt', { at }) : t('nudge.usualLearning', { at }));
+        })() : '') : '',
       h('p', { class: 'muted small' }, t('nudge.calm')));
   };
   let times: Date[] | null = null;

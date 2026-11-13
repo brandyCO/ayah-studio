@@ -13,6 +13,7 @@
 // (one per week, Saturday first, used by itself), and one extra freeze every 30 days covers a
 // second missed day in a week (owner decision 2026-10-31). When the missed days cannot all be
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
+import { noteFlameTime } from './usualTime';
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
 import type { Mushaf } from './mushaf';
 import { touchPref } from '../ui/prefs';
@@ -271,6 +272,7 @@ export function lightFlame(now = new Date()): boolean {
   if (s.days[k]?.f) return false;
   settle(s, k);
   today(now).f = 1;
+  noteFlameTime(now);
   ver++;
   s.best = Math.max(s.best, streakOn(k, covered()));
   save();
