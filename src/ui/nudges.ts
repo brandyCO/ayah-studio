@@ -125,6 +125,7 @@ function tabTick() {
 
 /** The in-app note: slides down from the top, stays ~4 s, tap → Me. Never over a dialog. */
 export function banner(title: string, body: string) {
+  if (document.documentElement.classList.contains('calm')) return; // night calm: it waits on Me until morning
   document.querySelector('.nudge')?.remove();
   const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
     h('span', { class: 'nudge-spark', 'aria-hidden': 'true' }),

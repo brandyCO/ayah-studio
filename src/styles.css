@@ -1935,3 +1935,6 @@ body .menu-item > svg:first-child:is([width="16"], [width="18"], [width="20"]) {
 .kids-stop:not(.lit) .l-body { fill: var(--kids-lamp); fill-opacity: .1; }
 .kids-stop.next .l-flame { fill-opacity: .8; filter: drop-shadow(0 0 4px var(--kids-lamp-glow)); }
 .kids-stop.next .kids-lantern { background: radial-gradient(circle, color-mix(in srgb, var(--kids-lamp-glow) 55%, transparent) 0%, transparent 70%); }
+
+/* Night calm (src/data/nightCalm.ts): from Isha to Fajr the loud colours soften a little */
+html.calm .tabbar, html.calm .lp-dock, html.calm .lp-top { filter: saturate(.72) brightness(.94); }

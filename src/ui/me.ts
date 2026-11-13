@@ -32,6 +32,7 @@ import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
 import { isFireDay } from '../data/fireDays';
+import { isCalm } from '../data/nightCalm';
 const hasFigure = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
@@ -423,6 +424,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     return h('span', { class: 'me-chip me-fire', title: label },
       h('span', { class: 'me-fire-t' }, label), h('span', { class: 'me-fire-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round(p * 100)}%` })));
   };
+  const bedtimeTonight = () => { try { return localStorage.getItem('bedtimeDone') === dayKey(new Date(Date.now() - 12 * 3600e3)); } catch { return false; } };
   const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
   const paintHero = () => {
     const s = streak();
@@ -816,6 +818,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     else if (adhkar) step = { k: 'adhkar', ic: adhkar.period === 'm' ? 'crescent' : 'sun', title: fe(adhkar.period === 'm' ? 'nx.eve' : 'nx.morn'),
       sub: adhkar.done ? fe('nx.of', { n: adhkar.done, of: adhkar.target }) : fe('nx.adhkarSub'), btn: fe(adhkar.done ? 'nx.continue' : 'nx.begin'),
       go: () => openAdhkarSession(adhkar.period ?? 's'), p: adhkar.done / adhkar.target };
+    else if (isCalm() && !bedtimeTonight()) step = { k: 'sleep', ic: 'crescent', title: fe('nc.title'), sub: fe('nc.sub'), btn: fe('nx.begin'),
+      go: () => void import('./adhkar').then((m) => m.openDuas('sleep')) };
     else if (js && !js.done && js.today > 0 && js.next) step = { k: 'pages', ic: 'book', title: fe(js.today === 1 ? 'nx.portion1' : 'nx.portion', { n: js.today }),
       sub: fe('nx.of', { n: js.read, of: js.total }), btn: fe('nx.open'), go: pageGo, p: js.read / js.total };
     else {

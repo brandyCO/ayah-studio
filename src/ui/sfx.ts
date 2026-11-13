@@ -17,6 +17,7 @@ let noise: AudioBuffer | null = null;
 
 function ready(): AudioContext | null {
   if (!soundsOn() || document.hidden) return null;
+  if (document.documentElement.classList.contains('calm')) return null; // night calm: sounds rest after Isha
   if (navigator.mediaSession?.playbackState === 'playing') return null;
   try { if (localStorage.getItem('kidsOn') === 'true' || document.body.dataset.view === 'kids') return null; } catch { /* ignore */ }
   try {

@@ -168,6 +168,7 @@ markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
+later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
