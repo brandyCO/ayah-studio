@@ -875,7 +875,16 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       const quiet = [...fams.values()].filter((l) => !begun(l));
       return [...groups.flatMap((g) => {
         const rows = [...fams.values()].filter((l) => l[0].def.group === g && begun(l));
-        return rows.length ? [h('h3', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)), ...rows.map(famRow)] : [];
+        if (!rows.length) return [];
+        // Each group folds (owner, 2026-11-13: the page opened with everything spread out): its name, how many medals
+        // are earned and the newest few; a tap opens its families.
+        const got = rows.flat().filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
+        return [h('details', { class: 'bdf-fold' },
+          h('summary', {}, h('b', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)),
+            h('span', { class: 'bdf-peek', 'aria-hidden': 'true' }, ...got.slice(0, 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 26))),
+            h('span', { class: 'muted small' }, `${got.length} / ${rows.flat().length}`),
+            h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, icon('down', 18))),
+          ...rows.map(famRow))];
       }), quiet.length ? h('details', { class: 'bdf-more' }, h('summary', {}, bt('more', { n: quiet.length })), ...quiet.map(famRow)) : ''];
     };
     // On Me: the newest earned first, then the next tier of each family, closest first.

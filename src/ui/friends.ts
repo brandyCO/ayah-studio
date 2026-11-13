@@ -104,7 +104,9 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
       v === undefined ? '' : h('span', { class: `fr-stat s-${k}` }, h('b', {}, icon, num(v)), h('small', {}, label));
-    const stats = h('div', { class: 'fr-stats' },
+    // All-time XP first: it never resets (the level shows it anyway), so a new week's 0 never reads as XP lost.
+    const total = p.xp != null ? h('span', { class: 'fr-stat s-total' }, h('b', {}, ptsIcon(), num(p.xp)), h('small', {}, ft('fr.total'))) : '';
+    const stats = h('div', { class: 'fr-stats' }, total,
       stat('week', ft('fr.week'), p.week, ptsIcon()),
       stat('streak', ft('fr.flame'), p.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
       stat('trophies', ft('fr.trophies'), p.trophies, icon('trophy', 16)),
@@ -132,7 +134,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     // Your own profile: choose what it shows (the stats above follow each switch).
     const mine = p.relation === 'me' ? (() => {
       let bits = myShow();
-      const keys: [ShowKey, string][] = [['week', ft('fr.week')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
+      const keys: [ShowKey, string][] = [['week', ft('fr.weekXp')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
       return h('div', { class: 'fr-mine' }, h('h3', {}, ft('fr.mine')), h('p', { class: 'muted small' }, ft('fr.mineSub')),
         h('div', { class: 'chips' }, ...keys.map(([k, label]) => {
           const b: HTMLButtonElement = h('button', { class: `chip${bits & SHOW[k] ? ' on' : ''}`, 'aria-pressed': String(!!(bits & SHOW[k])), onclick: () => {
