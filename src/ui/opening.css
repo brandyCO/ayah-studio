@@ -1,0 +1,30 @@
+/* The opening show (src/ui/openingShow.ts). Every element is placed in stage units (the icon's 512) and moved only by
+   its own Web Animation (transform / opacity), so the compositor plays it while the app starts underneath. */
+.op-stage { position: absolute; left: 50%; top: 42%; width: min(92vw, 460px, 50vh); aspect-ratio: 1; translate: -50% -50%; }
+.op-stage > span, .op-stage > svg, .op-icon > span, .op-icon > svg, .op-pit > span, .op-pit > svg, .op-icon, .op-pit, .op-name { position: absolute; display: block; pointer-events: none; }
+.op-icon, .op-pit { inset: 0; }
+.op-icon { transform-origin: 50% 85.16%; }
+.op-marker, .op-lip { inset: 0; width: 100%; height: 100%; overflow: visible; }
+.op-marker { filter: drop-shadow(0 calc(var(--u, 1px) * 10) 18px rgba(0, 0, 0, .18)); }
+.op-faceglow { inset: 0; }
+.op-char { transform-origin: 50% 62.3%; }
+.op-char .op-actor { position: relative; display: block; width: 100%; }
+.op-char .fg-lay { position: relative; }
+.app-opening .fg-lay > .fg-sh { display: none; }
+.app-opening .fg-lay .fg-hd, .app-opening .fg-lay .fg-wa { animation: none; }
+.op-glow { border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--op-glow) 70%, #fff) 0%, color-mix(in srgb, var(--op-glow) 45%, transparent) 45%, transparent 100%); }
+.op-rays { border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .5) 0deg 6deg, transparent 6deg 22.5deg);
+  -webkit-mask: radial-gradient(closest-side, #000 14%, rgba(0, 0, 0, .5) 45%, transparent 100%); mask: radial-gradient(closest-side, #000 14%, rgba(0, 0, 0, .5) 45%, transparent 100%); }
+.op-mote { border-radius: 50%; background: #fff; box-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+.op-ring { border-radius: 50%; border: 5px solid #fff; }
+.op-ring2 { border-color: #fff6c4; border-width: 6px; }
+.op-flash { border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 252, 230, .95), rgba(255, 236, 160, .45) 38%, transparent 72%); }
+.op-star { filter: drop-shadow(0 0 10px rgba(255, 240, 170, .9)); }
+.op-ghost { opacity: 0; }
+.op-tw { filter: drop-shadow(0 0 6px #fff); }
+.op-dot { border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; }
+.op-dot.gold { background: #ffd65a; box-shadow: 0 0 6px #ffe48a; }
+.op-name { left: -30%; right: -30%; display: flex; justify-content: center; direction: ltr; font-family: var(--ui-round, system-ui); font-weight: 900; line-height: 1; letter-spacing: .01em; color: #fff; }
+.op-name span { position: relative; display: inline-block; white-space: pre; transform-origin: 50% 90%; opacity: 0;
+  text-shadow: 0 .075em 0 var(--op-edge, rgba(0, 0, 0, .25)), 0 .16em .3em rgba(0, 0, 0, .18); }

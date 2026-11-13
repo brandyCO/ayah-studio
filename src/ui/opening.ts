@@ -1,42 +1,50 @@
-// The opening (owner request 2026-11-02, "drawn as if someone's drawing it"): once per launch, on the
-// launch colour that continues the Android splash, the app's mark is drawn line by line in the chosen
-// theme's colours — the two squares of the end-of-ayah rosette traced one after the other with a bright
-// pen tip, then the inner ring, then the light at its centre is lit and blooms, the name rises in, and the
-// whole picture fades into the app (≈ 3.2 s). The drawing runs in a worker on an OffscreenCanvas
-// (src/ui/openingWorker.ts), so the app starting up underneath cannot make it stutter; the name and the
-// fade are transform/opacity CSS animations, which the compositor runs. It never delays the app; a tap
-// ends it; skipped with reduced motion and in old-phone mode (main.ts).
+// The opening (owner pick 2026-11-13, "the character arrives"): the app icon comes alive once per launch. This part
+// is in the first load and only puts up the launcher icon's gradient (out of the splash colour) at once; the show
+// itself — marker, character, the Light star, the name — is src/ui/openingShow.ts, its own chunk. It never delays
+// the app; a tap ends it; skipped with reduced motion and in old-phone mode (main.ts). If the show is not there
+// within 0.9 s the gradient just fades away.
 import { h } from './dom';
-import { themeById, themeId } from './theme';
-import { runOpening, type OpeningColours } from './openingArt';
+import { themeId } from './theme';
 
-const CSS_PX = 200; // the canvas (room for the glow)
-const MARK_PX = 132; // the mark's 512 units
+/** Top, bottom, glow, marker edge, marker face: the launcher icon's colours per theme (make-character-icons.py). */
+export const OP_COLOURS: Record<string, [string, string, string, string, string]> = {
+  emerald: ['#4b36b8', '#ff7f57', '#ffb38a', '#b54a3a', '#fff3ec'],
+  aurora: ['#2fe0c0', '#4b3bb8', '#b8fff0', '#2b2a8e', '#effffb'],
+  ultraviolet: ['#b06bff', '#5b0fc4', '#e6ccff', '#3e0a8a', '#f6efff'],
+  synthwave: ['#ff4fa8', '#5a1fc2', '#ffc2e6', '#3e1590', '#fff0f8'],
+  sunset: ['#ff3d77', '#ffb02e', '#ffd2a0', '#b3341f', '#fff4ea'],
+  ocean: ['#3ec8ff', '#0b4dd6', '#c8f2ff', '#08389c', '#eefaff'],
+  gold: ['#ffd45c', '#d9851a', '#fff2b0', '#8f5200', '#fffaf0'],
+  rose: ['#ff8fd0', '#a63bc8', '#ffe0f2', '#7a1f8f', '#fff2fa'],
+  cyber: ['#b6ff5c', '#00a67a', '#efffd0', '#06684c', '#f6fff0'],
+  nebula: ['#3a1fb8', '#ff8a3d', '#ffb3d9', '#5a1a7a', '#fff3f6'],
+  ice: ['#bff4ff', '#6a6cff', '#ffffff', '#3a3fae', '#f4f8ff'],
+  ember: ['#ff6a3d', '#b80f2e', '#ffc0a0', '#7a0a1a', '#fff2ee'],
+};
+
+/** The overlay in this theme's colours (also used by the preview renders). */
+export function openingBox(theme = themeId()) {
+  const [top, bottom, glow, edge, face] = OP_COLOURS[theme] ?? OP_COLOURS.emerald;
+  const box = h('div', { class: 'app-opening', 'aria-hidden': 'true', style: `--op-top:${top};--op-bottom:${bottom};--op-glow:${glow}` });
+  return { box, colours: { top, bottom, glow, edge, face } };
+}
 
 export function playOpening() {
   if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const x = themeById(themeId());
-  const colours: OpeningColours = { line: x.accentDark, ring: x.fill[x.fill.length - 1] };
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const canvas = h('canvas', { class: 'op-mark', width: Math.round(CSS_PX * dpr), height: Math.round(CSS_PX * dpr) }) as HTMLCanvasElement;
-  const name = h('div', { class: 'op-name' }, ...[...'ayah studio'].map((c, i) =>
-    h('span', { style: `--i:${i}` }, c === ' ' ? ' ' : c)));
-  name.style.setProperty('--op-name', `linear-gradient(90deg, ${x.neon.join(', ')})`);
-  const box = h('div', { class: 'app-opening', 'aria-hidden': 'true' }, h('div', { class: 'op-stage' }, canvas, name));
-  let worker: Worker | null = null;
-  const end = () => { box.remove(); worker?.terminate(); worker = null; };
+  const { box, colours } = openingBox();
+  let done = false;
+  const end = () => {
+    if (done) return;
+    done = true;
+    box.classList.add('gone');
+    setTimeout(() => box.remove(), 300);
+  };
   box.addEventListener('click', end);
-  box.addEventListener('animationend', (e) => { if (e.target === box) end(); });
   document.body.append(box);
-  const start = performance.timeOrigin + performance.now();
-  try {
-    if (!('transferControlToOffscreen' in canvas)) throw new Error('no OffscreenCanvas');
-    worker = new Worker(new URL('./openingWorker.ts', import.meta.url), { type: 'module' });
-    const off = canvas.transferControlToOffscreen();
-    worker.postMessage({ canvas: off, css: CSS_PX, mark: MARK_PX, dpr, colours, start }, [off]);
-  } catch {
-    worker = null;
-    runOpening(canvas, CSS_PX, MARK_PX, dpr, colours, start);
-  }
-  setTimeout(end, 3600); // whatever happens, never longer
+  const t0 = performance.now(), late = window.setTimeout(end, 900);
+  import('./openingShow').then((m) => {
+    if (done || performance.now() - t0 > 900) return;
+    clearTimeout(late);
+    m.show(box, colours, end);
+  }).catch(end);
 }

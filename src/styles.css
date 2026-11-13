@@ -248,7 +248,17 @@ button { font: inherit; color: inherit; }
 }
 .bg-progress b { font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .bg-progress i { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 3px; border-radius: 2px; background: var(--brand-bar); max-width: calc(100% - 16px); transition: width .2s; }
-.spinner { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; animation: spin .8s linear infinite; }
+/* Loading: the Light star turning and twinkling (owner pick 2026-11-13), in place of a ring. Four points, so a
+   quarter turn loops seamlessly. */
+.spinner {
+  display: inline-block; width: 22px; height: 22px; vertical-align: middle; border: 0 !important; border-radius: 0;
+  background: linear-gradient(#ffe680, #ffc22e 55%, #ff9f1a);
+  -webkit-mask: var(--star-mask) center / contain no-repeat; mask: var(--star-mask) center / contain no-repeat;
+  animation: star-load 1.1s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+:root { --star-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5c.9 5 2.6 7.6 9.5 10.5-6.9 2.9-8.6 5.5-9.5 10.5-.9-5-2.6-7.6-9.5-10.5C9.4 9.1 11.1 6.5 12 1.5z'/%3E%3C/svg%3E"); }
+@keyframes star-load { 0% { transform: rotate(0) scale(.78); opacity: .75; } 50% { transform: rotate(45deg) scale(1.08); opacity: 1; } 100% { transform: rotate(90deg) scale(.78); opacity: .75; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 @keyframes spin { to { rotate: 360deg; } }
 /* A rare frame's glint (rankAvatars.ts): its own layer over the frame, turned by the graphics chip. */
 .rk-av:has(> .rk-glint) { display: inline-grid; }
@@ -1084,24 +1094,16 @@ body[data-view="kids"] {
 .lantern-progress .lp-cap { fill: #c98b3e; }
 .lantern-progress .lp-string { stroke: rgba(255, 241, 214, .5); stroke-width: 1.5; }
 
-/* Opening: the mark drawn line by line in the theme's colours (src/ui/opening.ts). The drawing is a
-   worker's canvas; only transform/opacity animate here, so the compositor keeps them smooth. */
+/* Opening (src/ui/opening.ts): the overlay in the launcher icon's gradient shows at once, out of the splash colour;
+   the show itself (src/ui/openingShow.ts + opening.css) comes in its own chunk. */
 .app-opening {
-  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #07130f;
-  animation: op-out .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: opacity;
+  position: fixed; inset: 0; z-index: 100; overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--op-glow) 55%, transparent), transparent 62%),
+    linear-gradient(var(--op-top), var(--op-bottom));
 }
-@keyframes op-out { to { opacity: 0; visibility: hidden; } }
-.op-stage { display: grid; justify-items: center; gap: 0; animation: op-lift .55s cubic-bezier(.4, 0, .2, 1) 2.7s both; will-change: transform; }
-@keyframes op-lift { to { transform: scale(1.04); } }
-.op-mark { width: 200px; height: 200px; margin-bottom: -16px; }
-.op-name { display: flex; font: 700 22px/1 "Inter Display", Inter, system-ui, sans-serif; letter-spacing: -.01em; direction: ltr; }
-.op-name span {
-  white-space: pre; background: var(--op-name); background-size: 600% 100%; background-position: calc(var(--i) * 10%) 0;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  opacity: 0; transform: translateY(8px); will-change: transform, opacity;
-  animation: op-letter .55s cubic-bezier(.2, .7, .3, 1) calc(2.05s + var(--i) * 40ms) forwards;
-}
-@keyframes op-letter { to { opacity: 1; transform: none; } }
+.app-opening::before { content: ''; position: absolute; inset: 0; z-index: 2; background: #07130f; pointer-events: none; animation: op-fade .3s ease-out both; }
+@keyframes op-fade { to { opacity: 0; } }
+.app-opening.gone { opacity: 0; transition: opacity .28s ease-in; }
 
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */

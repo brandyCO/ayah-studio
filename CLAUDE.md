@@ -2026,6 +2026,16 @@ duas/reflections section in Me.
       laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
       `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
       Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
+      **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
+      the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
+      the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
+      in with a shockwave, shivers and gathers light, the character leaps out of it (stretch, wow face, head on a spring),
+      drops back in with a squash, waves over the rim, looks up as the Light star swoops in on an arc with a trail and
+      lands at the icon's place (flash, ring, burst of stars), cheers with star eyes and two hops, "ayah studio" pops in
+      letter by letter, then everything flies forward into the app (3.2 s). Every motion is a function of time sampled
+      into Web Animations keyframes (transform / opacity, compositor), faces / poses / sounds (`SOUNDS`, sfx) follow
+      the same clock, and `show(…, manual)` seeks any moment (frame-exact preview renders). Loading spinners are the
+      gold Light star turning and twinkling (`.spinner`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
