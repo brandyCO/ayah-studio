@@ -218,9 +218,19 @@ async function recordParts(token: string, on: FollowHandlers, got: (t: string, f
   };
   const cut = (from: number, to: number) => {
     const n = (to - from) * FRAME, out = new Int16Array(n);
+    // a soft voice is brought up to a steady level (≈ −20 dBFS speech, ≤ 8×, peaks kept under −1 dBFS),
+    // so quiet words reach the model as clearly as loud ones
+    let peak = 1e-6, e = 0, m = 0;
     for (let f = from; f < to; f++) {
       const fr = frames[f];
-      for (let i = 0; i < FRAME; i++) out[(f - from) * FRAME + i] = Math.max(-32768, Math.min(32767, Math.round(fr[i] * 32767)));
+      for (let i = 0; i < FRAME; i++) peak = Math.max(peak, Math.abs(fr[i]));
+      if (level[f] > floor + 12) { for (let i = 0; i < FRAME; i++) e += fr[i] * fr[i]; m += FRAME; }
+    }
+    const rms = m ? Math.sqrt(e / m) : peak / 4;
+    const gain = Math.max(1, Math.min(8, 0.1 / Math.max(rms, 1e-6), 0.89 / peak));
+    for (let f = from; f < to; f++) {
+      const fr = frames[f];
+      for (let i = 0; i < FRAME; i++) out[(f - from) * FRAME + i] = Math.max(-32768, Math.min(32767, Math.round(fr[i] * gain * 32767)));
     }
     queue.push(out);
     void send();

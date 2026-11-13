@@ -2165,6 +2165,17 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
       (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
       the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat.
+      **Repeats and quiet words** (owner report 2026-11-13, "it thinks I continued but I was repeating the words of the
+      ayah because I lost my breath"; "a word said in a low voice is marked wrong"): `follow()` sees a reciter going back
+      up to 12 words (`BACK`; said clearly: short words exactly, others ≥ 0.75) and keeps the place — nothing skipped or
+      counted, and words passed over before that are said again count as said (`again`); a tie with the text's own
+      repetition stays forward (Ar-Rahman's refrain, دكا دكا). Three outcomes: said; **wrong** only for a clearly
+      different word (≥ 3 letters, < 0.5 alike) in a word's place; **unclear** (dotted underline, never a slip or
+      pre-marked missed, a soft "say it a little louder" at most every 25 s) for a word heard partly or a single word
+      the phone did not catch between two it did; a run of words passed over stays skipped. A short word heard where
+      the look-ahead jumped counts as said. Recorded parts for the server are brought to ≈ −20 dBFS (≤ 8×). Simulated
+      breath repeats over 400 random ranges: words wrongly marked 836 → 0; 2115 clean ranges across the Quran followed
+      exactly; `server/harakat/follow.py` kept identical (1200 cases).
       **Harakat check on our server** (owner decision 2026-11-10, "only on the server"): `server/harakat` (Python,
       onnxruntime; Docker image with the 4-bit ONNX of the Quran CTC model `mostafanewir70/quran-recitation-ctc-onnx`,
       pinned + SHA-256, Apache-2.0). With the repo variable `HARAKAT_URL` set and the learner signed in, Follow my voice

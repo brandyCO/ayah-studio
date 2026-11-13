@@ -171,11 +171,11 @@ def check(model: Model, pcm16: bytes, words: list[str]) -> dict:
     r = follow([letter_forms(words[i]) for i in keep], 0, heard)
     said = [keep[i] for i in r['said']]
     # the audio is lined up with the words actually recited (said, or said differently), in order
-    run = sorted(said + [keep[i] for i in r['wrong']])
+    run = sorted(said + [keep[i] for i in r['wrong'] + r['unclear']])
     res = dict(zip(run, harakat_scores(lp, [words[i] for i in run]))) if run else {}
     return {
         'heard': heard,
-        'said': said, 'skipped': [keep[i] for i in r['skipped']], 'wrong': [keep[i] for i in r['wrong']],
+        'said': said, 'skipped': [keep[i] for i in r['skipped']], 'wrong': [keep[i] for i in r['wrong']], 'unclear': [keep[i] for i in r['unclear']],
         'flags': [i for i in said if res[i]['flag']],
         'scores': {str(i): round(res[i]['score'], 2) for i in said if res[i]['score'] is not None},
         'at': {str(i): res[i]['at'] for i in run if res[i]['at']},

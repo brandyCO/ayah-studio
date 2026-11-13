@@ -42,6 +42,7 @@ def likeness(forms: list[str], heard: str) -> float:
 
 
 LOOK = 5
+BACK = 12
 CLEAR = 0.75
 
 
@@ -49,11 +50,19 @@ def _need(off: int, n: int) -> float:
     return (0.5 if n <= 2 else 0.6) if off == 0 else (2 if n < 3 else 0.8)
 
 
+def _fits(w: list[str], h: str) -> bool:
+    return likeness(w, h) >= _need(0, len(w[0]))
+
+
+def _again(w: list[str], h: str) -> bool:
+    return likeness(w, h) >= (1 if len(w[0]) <= 2 else CLEAR)
+
+
 def follow(forms: list[list[str]], start: int, heard_text: str) -> dict:
     """forms: each word's letter forms (words without letters left out, as followWords does)."""
     heard = [x for x in (letter_forms(t)[0] for t in heard_text.split()) if x]
-    said, skipped, wrong = [], [], []
-    c, j, junk, near = start, 0, 0, False
+    said, skipped, wrong, unclear, again = [], [], [], [], []
+    c, j, junk, near = start, 0, [], False
     while j < len(heard) and c < len(forms):
         best = None
         for off in range(LOOK):
@@ -67,7 +76,7 @@ def follow(forms: list[list[str]], start: int, heard_text: str) -> dict:
                 sim = likeness(w, ''.join(heard[j:j + take]))
                 if off == 0 and sim >= _need(0, n):
                     near = True
-                if sim >= _need(off, n):
+                if sim >= _need(off, n) and (take == 1 or off == 0 or sim >= 0.9):
                     score = sim - off * 0.08 - (take - 1) * 0.03
                     if not best or score > best[3]:
                         best = (off, take, 1, score, sim)
@@ -78,16 +87,55 @@ def follow(forms: list[list[str]], start: int, heard_text: str) -> dict:
                     score = sim - off * 0.08 - 0.03
                     if not best or score > best[3]:
                         best = (off, 1, 2, score, sim)
+        back = None
+        for k in range(1, min(BACK, c) + 1):
+            m = 0
+            while m < k and j + m < len(heard) and _again(forms[c - k + m], heard[j + m]):
+                m += 1
+            cont = m == k and j + m < len(heard) and _again(forms[c], heard[j + m])
+            ok = m >= 2 or (m == 1 and (cont or (len(forms[c - k][0]) >= 3 and (k == 1 or j + 1 == len(heard)))))
+            if ok and (back is None or (100 if cont else 0) + m > (100 if back[2] else 0) + back[1]):
+                back = (k, m, cont)
+        if back:
+            mf = 0
+            if best:
+                mf = 1
+                while (j + best[1] + mf - 1 < len(heard) and c + best[0] + best[2] + mf - 1 < len(forms)
+                       and mf < BACK and _fits(forms[c + best[0] + best[2] + mf - 1], heard[j + best[1] + mf - 1])):
+                    mf += 1
+            if best is None:
+                wins = True
+            elif back[2]:
+                wins = not (best[0] == 0 and best[1] == 1 and mf > back[1] + 1)
+            else:
+                wins = back[1] > mf if best[0] == 0 else back[1] >= mf
+            if wins:
+                again.extend(c - back[0] + i for i in range(back[1]))
+                j += back[1]; junk = []; near = False
+                continue
         if not best:
-            j += 1; junk += 1
+            junk.append(heard[j]); j += 1
             continue
         off, take, span, _, sim = best
+        left, pool = [], list(junk)
         for k in range(off):
-            (wrong if k < junk or (k == 0 and near) else skipped).append(c + k)
-        bad = len(forms[c + off][0]) > 2 and sim < CLEAR
+            i = next((i for i, x in enumerate(pool) if _fits(forms[c + k], x)), -1)
+            if i >= 0:
+                said.append(c + k); pool.pop(i)
+            else:
+                left.append(k)
+        for n_, k in enumerate(left):
+            in_place = pool[len(pool) - min(len(pool), len(left)) + n_] if n_ < len(pool) else None
+            if in_place is not None:
+                (wrong if len(in_place) >= 3 and likeness(forms[c + k], in_place) < 0.5 else unclear).append(c + k)
+            elif (k == 0 and near) or (len(left) == 1 and not pool):
+                unclear.append(c + k)
+            else:
+                skipped.append(c + k)
+        part = len(forms[c + off][0]) > 2 and sim < CLEAR
         for k in range(span):
-            (wrong if bad else said).append(c + off + k)
-        junk, near = 0, False
+            (unclear if part else said).append(c + off + k)
+        junk, near = [], False
         c += off + span
         j += take
-    return {'cursor': c, 'said': said, 'skipped': skipped, 'wrong': wrong}
+    return {'cursor': c, 'said': said, 'skipped': skipped, 'wrong': wrong, 'unclear': unclear, 'again': again}

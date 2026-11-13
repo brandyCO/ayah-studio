@@ -201,6 +201,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   const where = new Map<string, [number, number]>(); // word key -> surah, ayah
   let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
+  // heard only partly or not caught (said quietly): shown, never counted as a slip
+  const unclearS = new Set<string>(); let unclearP = new Set<string>(); let louderAt = 0;
   const twins = new Map<string, string[]>(); // glyphs that show the same display word go together
   let harakatOn = false;
   void followChecksHarakat().then((x) => { harakatOn = x; });
@@ -224,6 +226,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       const bad = mode === 'recite' && !checking && (skip.has(k) || skipP.has(k)), wr = wrongS.has(k) || wrongP.has(k);
       el.classList.toggle('skipped', bad && !wr);
       el.classList.toggle('wrong', bad && wr);
+      el.classList.toggle('unclear', mode === 'recite' && !checking && !bad && (unclearS.has(k) || unclearP.has(k)));
       el.classList.toggle('harakah', mode === 'recite' && !checking && hkS.has(k));
     }
   }
@@ -366,23 +369,31 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     for (const k of sayP) said.add(k);
     for (const k of skipP) skip.add(k);
     for (const k of wrongP) wrongS.add(k);
-    sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    for (const k of unclearP) unclearS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
   }
   let lastSig = '';
   const withTwins = (keys: string[]) => new Set(keys.flatMap((k) => [k, ...(twins.get(k) ?? [])]));
   function heard(text: string, final: boolean) {
     if (!follower || mode !== 'recite' || checking) return;
     const r = follow(fw, fBase, text);
-    const touched = new Set([...sayP, ...skipP]);
-    sayP = withTwins(r.said.map((x) => fw[x].key));
+    const touched = new Set([...sayP, ...skipP, ...unclearP]);
+    unclearP = withTwins(r.unclear.map((x) => fw[x].key));
+    sayP = new Set([...withTwins(r.said.map((x) => fw[x].key)), ...unclearP]);
     wrongP = withTwins(r.wrong.map((x) => fw[x].key));
     skipP = new Set([...withTwins(r.skipped.map((x) => fw[x].key)), ...wrongP]);
+    // said again after a breath: a word passed over or heard unclearly before now counts as said
+    for (const k of withTwins(r.again.map((x) => fw[x].key))) {
+      if (skip.has(k) || wrongS.has(k) || unclearS.has(k)) { skip.delete(k); wrongS.delete(k); unclearS.delete(k); said.add(k); touched.add(k); }
+    }
     if (final) {
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
       for (const k of wrongP) wrongS.add(k);
+      if (unclearP.size && Date.now() - louderAt > 25_000) { louderAt = Date.now(); toast(lt('learn.followLouder')); }
+      for (const k of unclearP) unclearS.add(k);
       for (const k of withTwins(hkNext)) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
-      sayP = new Set(); skipP = new Set(); wrongP = new Set();
+      sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
       fBase = r.cursor;
     }
     hkNext = [];
@@ -408,7 +419,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   function setMode(m: Mode) {
     if (follower) stopFollow();
     jar.clear();
-    said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); unclearS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
     revealed.clear(); helped.clear(); shown.clear(); missed.clear(); checking = false;
