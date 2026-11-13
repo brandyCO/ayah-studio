@@ -640,3 +640,14 @@ html.lite .ls-noor i { animation: none; }
 .lk-fix .lk-continue { width: min(100%, 320px); margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .lamp .lf, .lamp.dimming::after, .lamp.dimming .lamp-art, .lk-fixw { animation: none !important; } }
 .lesson:has(.lk-drill .lamp-out) .ls-actions { display: none; }
+/* One slim bar for a new lesson's five parts (Meaning · Listen · Practise · Exercises · From memory). */
+.ls-phases { width: min(100%, 300px); gap: 5px; }
+.ls-phases span { flex: 1; height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--text) 12%, transparent); transition: background var(--dur-3); }
+.ls-phases span.past { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.ls-phases span.on { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent); }
+.ls-ph-now { color: var(--accent); font-weight: 800; }
+.ls-ph-now::before { content: ' · '; color: var(--muted); font-weight: 600; }
+.ls-more-btn { font-size: 22px; font-weight: 900; line-height: 1; }
+.ls-more .ls-steps { justify-content: flex-start; margin: 0 0 6px; }
+.ls-more .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ls-rec-row small { margin-inline-start: auto; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -22,7 +22,10 @@ import { addFlawless, addLesson, addMemorised, claimGoal } from '../data/journey
 import { dimLamp, earnLamp, lamps, markFlawless } from '../data/learnLamps';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
+import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, groupRecordings, reciterCredit, reciterPickerLabel, timedReciterById, type Reciter } from '../data/reciters';
+import { favouritesFirst } from '../data/reciterDownload';
+import { recordingChips, reciterSearchBox } from './recordings';
+import { sampleButton, stopSample } from './voiceSample';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { surahName, t, uiRef } from '../i18n';
@@ -114,10 +117,43 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const repBtn = h('button', { class: 'chip', onclick: () => { const v = pref('learnReps', ['1', '3', '5'], '3'); setPref('learnReps', v === '1' ? '3' : v === '3' ? '5' : '1'); paintChips(); } });
   const viewBtn = h('button', { class: 'chip', onclick: () => { setPref('lessonView', pageView() ? 'ayat' : 'page'); paintChips(); paintText(); } });
   const meaningBtn = h('button', { class: 'chip', onclick: () => { setPref('learnMeaning', showMeaning() ? 'off' : 'on'); paintChips(); paintText(); } });
-  const reciterSel = h('select', { class: 'ls-reciter', 'aria-label': lt('learn.reciter'), onchange: () => { setPref('learnReciter', reciterSel.value); audios = null; stopAll(); } },
-    ...TIMED_RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === learnReciter() }, reciterCredit(r))));
   const memExtras = h('div', { class: 'ls-memextra' });
-  const tools = h('div', { class: 'ls-tools' }, memExtras, playBtn, speedBtn, repBtn, viewBtn, meaningBtn, reciterSel);
+  const tools = h('div', { class: 'ls-tools' }, memExtras, playBtn, speedBtn, repBtn);
+  // ⋯: where this lesson sits in the surah (New → Link → Whole), the page / ayat view, meanings and the reciter.
+  const moreBtn = h('button', { class: 'icon-btn ls-more-btn', type: 'button', 'aria-label': lt('learn.lessonOpts'), onclick: () => openMore() }, '⋯');
+  function openMore() {
+    const tr = h('button', { class: 'menu-item ls-rec-row', type: 'button', onclick: () => { d.close(); pickLessonReciter(); } },
+      h('span', { class: 'mi-ic' }, icon('voice', 20)), h('span', {}, lt('learn.reciter')), h('small', { class: 'muted' }, reciterCredit(timedReciterById(learnReciter()))));
+    const d = h('dialog', { class: 'sheet bottom ls-more' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, lt('learn.lessonOpts')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('p', { class: 'pl-sec' }, lt('learn.stages')), stepsEl,
+      h('p', { class: 'pl-sec' }, lt('learn.showAs')), h('div', { class: 'chips' }, viewBtn, meaningBtn),
+      h('div', { class: 'menu' }, tr));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+  /** The app's own reciter picker: one row per reciter (recordings as chips), a voice sample, search; reciters with word timings only. */
+  function pickLessonReciter() {
+    const now = learnReciter();
+    const choose = (r: Reciter) => { d.close(); if (r.id === now) return; setPref('learnReciter', String(r.id)); audios = null; stopAll(); };
+    const list = h('div', { class: 'menu' }, ...groupRecordings(favouritesFirst(TIMED_RECITERS)).map((g) => {
+      const r = g.find((x) => x.id === now) ?? g[0];
+      return h('div', { class: 'rec-group' },
+        h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
+          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), sampleButton(r)),
+        recordingChips(g, now, choose));
+    }));
+    const search = reciterSearchBox(list, t('ed.reciter-search'));
+    const d = h('dialog', { class: 'sheet bottom reciter-sheet' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, lt('learn.reciter')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      search, list);
+    d.addEventListener('close', () => { stopSample(); d.remove(); });
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
   const art = h('span', { class: 'ls-tree' });
   // Focus page: the page fills the screen between two thin margins; the tools come up only when asked.
   const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
@@ -126,8 +162,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     h('header', { class: 'ls-head' },
       h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
-      noorBtn, focusBtn, art),
-    stepsEl, phaseEl,
+      noorBtn, focusBtn, moreBtn, art),
+    phaseEl,
     h('main', { class: 'ls-main' }, textEl, pop), trEl,
     h('div', { class: 'ls-turn' }, ring, status),
     actions, tools, doneEl);
@@ -206,7 +242,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     meaningBtn.setAttribute('aria-pressed', String(showMeaning()));
   }
   function paintHead() {
-    ref.textContent = uiRef(m, range[0], range[1]);
+    // The surah's name is the title just above, so the line under it names only the ayat.
+    ref.textContent = range[0] === range[1] ? `${s}:${range[0]}` : `${s}:${range[0]}–${range[1]}`;
     const tr = tree(s)!;
     art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
     const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
@@ -363,9 +400,13 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const n = range[1] - range[0] + 1;
     const phases: [Phase, LearnKey][] = step === 'new'
       ? [['meaning', 'learn.phMeaning'], ['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['drill', 'learn.phDrill'], ['memory', 'learn.phMemory']] : [];
+    // One slim bar for the five parts of a new lesson; the part now is named beside the goal.
+    const cur = phases.findIndex(([p]) => p === phase || (p === 'memory' && phase === 'check'));
     phaseEl.replaceChildren(
-      h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n })),
-      phases.length ? h('span', { class: 'ls-phases' }, ...phases.map(([p, k], i) => h('span', { class: p === phase || (p === 'memory' && phase === 'check') ? 'on' : '' }, `${i + 1} ${lt(k)}`))) : '');
+      h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n }),
+        cur >= 0 ? h('span', { class: 'ls-ph-now' }, lt(phases[cur][1])) : ''),
+      phases.length ? h('span', { class: 'ls-phases', role: 'progressbar', 'aria-valuemin': '1', 'aria-valuemax': String(phases.length), 'aria-valuenow': String(cur + 1), 'aria-valuetext': cur >= 0 ? lt(phases[cur][1]) : '' },
+        ...phases.map(([p, k], i) => h('span', { class: i === cur ? 'on' : i < cur ? 'past' : '', title: lt(k) }))) : '');
     if (phase === 'meaning') actions.replaceChildren(primary(lt('learn.toListen'), () => go('listen')));
     else if (phase === 'drill') actions.replaceChildren(b(lt('learn.skipDrill'), () => go('memory')));
     else if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
@@ -590,7 +631,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
   function rest() {
     stopAll();
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
     status.textContent = '';
     doneEl.hidden = false;
     paintHead();
@@ -605,7 +646,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     doneEl.hidden = true;
     t0 = performance.now(); away = 0; hidAt = document.hidden ? t0 : 0;
     drillMissed = -1;
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
     level = 0;
     simCount = 0;
     void similarIn(s, range[0], range[1]).then((l) => { simCount = l.length; if (phase === 'check') paintActions(); });
@@ -915,7 +956,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
 
   async function showDone(tr: Readonly<Tree>, was: Step) {
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
     status.textContent = '';
     doneEl.hidden = false;
     paintHead();

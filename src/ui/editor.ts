@@ -321,6 +321,14 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       }, it.label)));
   const row = (label: string, ...kids: Node[]) => h('div', { class: 'sub-row' }, h('span', { class: 'muted small' }, label), ...kids);
   const note = (text: string) => h('p', { class: 'muted small' }, text);
+  /** In place of options that need word timings (rule 8): one line and the way to a reciter who has them. */
+  const untimed = () => h('div', { class: 'untimed' }, h('p', { class: 'muted small' }, ui('ed.untimed')),
+    h('button', { class: 'chip', onclick: () => {
+      const audioTool = TOOLS.find((x) => x.id === 'audio')!;
+      tool = audioTool; selection = null; layerSel = null;
+      option = audioTool.options.find((o) => o.id === 'reciter') ?? null;
+      refreshUI();
+    } }, icon('mic', 16), ui('ed.pickTimed')));
   const tile = (o: { on: boolean; label: string; art: Node; onclick: () => void; title?: string }) =>
     h('button', { class: `tile${o.on ? ' on' : ''}`, title: o.title ?? o.label, onclick: () => { if (!exporting) o.onclick(); } },
       h('span', { class: 'tile-art' }, o.art), h('span', { class: 'tile-label' }, o.label));
@@ -724,7 +732,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (on) previewText();
   }
   const learning = () => !!project.learn && frameStyle(project).learn === true;
-  const learnRow = () => [
+  const learnRow = () => !wordTimed() ? [] : [
     row(ui('ed.learn'), chips<'on' | 'off'>([{ value: 'off', label: ui('ed.off') }, { value: 'on', label: ui('qr.on') }],
       () => (learning() ? 'on' : 'off'), (v) => { if (v === 'on') { own('text'); own('tr'); } setLearn(v === 'on'); }, (v) => v === 'off' || wordTimed())),
     note(ui(wordTimed() ? 'ed.learn-note' : 'ed.learn-needs-timings')),
@@ -1159,19 +1167,18 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       const timed = wordTimed();
       const tr = project.showTranslation ? project.translationMode : 'off';
       body = [
-        row(ui('qr.on-screen'), chips(MODES, mode, (v) => { own('text'); project.textMode = v; rebuild(); changed(); quickRefresh(); }, (v) => v === 'ayah' || timed)),
+        timed ? row(ui('qr.on-screen'), chips(MODES, mode, (v) => { own('text'); project.textMode = v; rebuild(); changed(); quickRefresh(); })) : untimed(),
         mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
           () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { own('text'); project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); changed(); })) : null,
-        timed ? null : note(ui('qr.modes-need-timings')),
-        row(ui('ed.translation'), chips<'words' | 'ayah' | 'off'>([{ value: 'words', label: ui('ed.synced-to-the-words') }, { value: 'ayah', label: ui('ed.whole-ayah') }, { value: 'off', label: ui('ed.off') }],
-          () => tr, (v) => {
+        row(ui('ed.translation'), chips<'words' | 'ayah' | 'off'>([...(timed ? [{ value: 'words' as const, label: ui('ed.synced-to-the-words') }] : []), { value: 'ayah', label: ui('ed.whole-ayah') }, { value: 'off', label: ui('ed.off') }],
+          () => (!timed && tr === 'words' ? 'ayah' : tr), (v) => {
             own('tr');
             project.showTranslation = v !== 'off';
             if (v !== 'off') project.translationMode = v;
             rebuild(); changed(); quickRefresh();
           })),
-        h('p', { class: 'muted small' }, ui('qr.recited-word')),
-        h('div', { class: 'colour-grid hl-grid' },
+        timed ? h('p', { class: 'muted small' }, ui('qr.recited-word')) : null,
+        !timed ? null : h('div', { class: 'colour-grid hl-grid' },
           h('button', {
             class: `swatch swatch-off${project.highlight ? '' : ' on'}`, 'aria-label': `${ui('qr.recited-word')}: ${ui('ed.off')}`,
             onclick: () => { own('hl'); project.highlight = false; changed(); quickRefresh(); },
@@ -1181,7 +1188,6 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
             'aria-label': `${ui('qr.recited-word')}: ${c}`,
             onclick: () => { if (exporting || !timed) return; own('hl'); project.colors.hl = c; project.highlight = true; changed(); quickRefresh(); previewText(); },
           }))),
-        timed ? null : note(ui('ed.highlight-needs-timings')),
         ...learnRow(),
         tajweedRow(),
         project.tajweed ? tajweedLegend() : null,
@@ -1412,7 +1418,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   }
 
   const HL_COLOURS = ['#f2c46b', '#e8c77a', '#f2c98a', '#f8e7b9', '#ffffff', '#a9d6bd', '#7fbf9d', '#a7bde0', '#e9c3c9', '#c7a6d6', '#d9a0ab', '#c9a24a'];
-  const highlightPanel = () => [
+  const highlightPanel = () => !wordTimed() ? [untimed()] : [
     chips<'on' | 'off'>([{ value: 'on', label: ui('ed.highlight-on') }, { value: 'off', label: ui('ed.off') }],
       () => (project.highlight ? 'on' : 'off'), (v) => { project.highlight = v === 'on'; if (project.highlight) previewText(); }, (v) => v === 'off' || wordTimed()),
     h('div', { class: 'colour-grid' }, ...HL_COLOURS.map((c) =>
@@ -1420,7 +1426,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         class: `swatch${project.colors.hl === c ? ' on' : ''}`, style: `background:${c}`, 'aria-label': `${ui('ed.highlight')}: ${c}`,
         onclick: () => { if (!exporting) { project.colors.hl = c; project.highlight = true; changed(); previewText(); } },
       }))),
-    note(wordTimed() ? ui('ed.highlight-note') : ui('ed.highlight-needs-timings')),
+    note(ui('ed.highlight-note')),
   ];
 
   const moodPanel = () => [
@@ -1516,8 +1522,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   };
 
   /** Text → Mode: how the text steps along, words per step and the learning reel. */
-  const modePanel = (): Node[] => [
-    chips(MODES, mode, (v) => { if (v !== 'words') project.learn = false; project.textMode = v; rebuild(); }, (v) => v === 'ayah' || wordTimed()),
+  const modePanel = (): Node[] => !wordTimed() ? [untimed()] : [
+    chips(MODES, mode, (v) => { if (v !== 'words') project.learn = false; project.textMode = v; rebuild(); }),
     mode() === 'words' ? row(ui('ed.per-step'), chips<'1' | '2' | '3'>([{ value: '1', label: ui('ed.1-word') }, { value: '2', label: ui('ed.2-words') }, { value: '3', label: ui('ed.3-words') }],
       () => String(project.wordsPerStep) as '1' | '2' | '3', (v) => { project.wordsPerStep = Number(v) as 1 | 2 | 3; rebuild(); })) : null,
     note(syncText),

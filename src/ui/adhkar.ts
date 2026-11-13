@@ -129,10 +129,11 @@ async function runSession(cfg: SessionCfg) {
     return d.prayers && d.prayers.length < PRAYER_LIST.length ? `${base} · ${akt('du.only', { list: d.prayers.map(prayerName).join(lang() === 'ar' ? ' و' : ' & ') })}` : base;
   };
 
-  const paintDots = () => dots.replaceChildren(...list.map((d, k) => h('button', {
+  // F30: a long list is one thin bar of segments (still tappable), next to "1 of 17" in the title.
+  const paintDots = () => (dots.classList.toggle('bar', list.length > 9), dots.replaceChildren(...list.map((d, k) => h('button', {
     class: `ak-dot${isDone(d) ? ' done' : ''}${k === i && !finished ? ' cur' : ''}`, role: 'tab', 'aria-selected': String(k === i && !finished),
     'aria-label': `${k + 1}`, onclick: () => go(k),
-  })));
+  }))));
 
   const paintCounter = () => {
     const d = list[i];
@@ -169,8 +170,10 @@ async function runSession(cfg: SessionCfg) {
       meaning && d.gloss?.length ? h('ul', { class: 'ak-gloss', lang: 'en', dir: 'ltr' }, ...d.gloss.map((g) => h('li', {}, g))) : '',
       d.read?.length ? h('div', { class: 'chips ak-read' }, ...d.read.map((s) => h('button', { class: 'chip', onclick: () => { dialog.close(); location.hash = `#/s/${s}`; } },
         akt('du.open', { name: names.get(s) ?? String(s) })))) : '',
-      note ? h('p', { class: 'ak-note' }, note,
-        d.note === 'lazy' && !isDone(d) ? h('button', { class: 'chip', onclick: () => { say(p, d, d.count, d.count); completed(d); } }, akt('ak.lazyBtn')) : '') : '',
+      // F30: the book's long notes (how and when it was said) stay word for word, folded behind one line.
+      note && note.length > 110 ? h('details', { class: 'ak-how' }, h('summary', {}, akt('ak.howSay')), h('p', {}, note))
+        : note ? h('p', { class: 'ak-note' }, note,
+          d.note === 'lazy' && !isDone(d) ? h('button', { class: 'chip', onclick: () => { say(p, d, d.count, d.count); completed(d); } }, akt('ak.lazyBtn')) : '') : '',
       h('p', { class: 'ak-ref muted small' }, akt('ak.source', { ref: lang() === 'ar' ? d.refAr : d.ref })),
       undo);
     body.scrollTop = 0;
