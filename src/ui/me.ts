@@ -405,6 +405,18 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       }, 2900);
     });
   };
+  /** The streak's next target: the next day the character goes up in flames, with the way there as a bar. */
+  const fireChip = (days: number, lit: boolean) => {
+    let to = days + 1;
+    while (!isFireDay(to)) to++;
+    let from = days;
+    while (from > 0 && !isFireDay(from)) from--;
+    const left = to - days;
+    const p = Math.max(0.06, Math.min(1, (days - from) / Math.max(1, to - from)));
+    const label = left === 1 ? fe(lit ? 'st.fire1' : 'st.fire0', { m: to }) : fe('st.fireN', { n: left, m: to });
+    return h('span', { class: 'me-chip me-fire', title: label },
+      h('span', { class: 'me-fire-t' }, label), h('span', { class: 'me-fire-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round(p * 100)}%` })));
+  };
   const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
   const paintHero = () => {
     const s = streak();
@@ -438,6 +450,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       lost ? lostCard(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
+        !loading && s.days > 0 ? fireChip(s.days, s.litToday) : '',
         s.weeks ? h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })) : '',
         s.best > s.days ? h('span', { class: 'me-chip' }, t('me.best', { n: s.best })) : '',
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));

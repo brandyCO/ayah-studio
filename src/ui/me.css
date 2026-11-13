@@ -463,3 +463,8 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 
 /* Quieter Me: the extra cards held back for another visit. */
 :is(.ws-card, .aic-new, .snc, .me-ask, .wg-hint)[hidden] { display: none !important; }
+
+/* The streak's next target: the next fire day, with the way there */
+.me-chip.me-fire { display: inline-grid; gap: 3px; padding-block: 5px 6px; font-weight: 800; }
+.me-fire-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+.me-fire-bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #ffb703, #ff6b2c); }
