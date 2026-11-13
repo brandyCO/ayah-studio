@@ -48,6 +48,8 @@ const G = {
   mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   page: '<rect x="5" y="3" width="14" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   twin: '<rect x="3" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><rect x="13" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M5.5 9.5h3M5.5 13h3M15.5 9.5h3M15.5 13h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  // A new lesson (F18): an open mushaf, so the path shows lessons, tasmi', pages and similar ayat apart.
+  lesson: '<path d="M2.5 6.2c3.3-1.6 6.4-1.3 8.7.7V20c-2.3-1.7-5.4-2-8.7-.6z" fill="currentColor"/><path d="M21.5 6.2c-3.3-1.6-6.4-1.3-8.7.7V20c2.3-1.7 5.4-2 8.7-.6z" fill="currentColor" opacity=".8"/>',
   book: '<path d="M4 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z M20 5h-4a2 2 0 0 0-2 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   dots: '<circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/>',
   tree: '<path d="M12 3c4 0 7 3 7 6.5 0 3-2.4 5.5-6 6V21h-2v-5.5c-3.6-.5-6-3-6-6C5 6 8 3 12 3z" fill="currentColor"/>',
@@ -112,10 +114,10 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const label = stepLabel(st);
     hue = st.kind === 'page' ? 'teal' : st.kind === 'similar' ? 'violet' : st.kind === 'chest' ? 'amber' : hue;
     if (lead) next = { what: `${surahName(m)} · ${label}`, hue, run: () => runStep(st),
-      glyph: st.kind === 'page' ? G.page : st.kind === 'whole' ? G.mic : st.kind === 'similar' ? G.twin : G.star };
+      glyph: st.kind === 'page' ? G.page : st.kind === 'whole' ? G.mic : st.kind === 'similar' ? G.twin : G.lesson };
     if (st.kind === 'chest') return chestNode(st, i, m, label);
     const kind = st.kind;
-    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : st.kind === 'page' ? G.page : st.kind === 'similar' ? G.twin : G.star;
+    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : st.kind === 'page' ? G.page : st.kind === 'similar' ? G.twin : G.lesson;
     const btn = h('button', {
       class: `lp-node ${st.state} ${kind} hue-${hue}`, type: 'button',
       'aria-label': `${label} · ${surahName(m)} · ${lt(st.state === 'done' ? 'learn.stateDone' : st.state === 'current' ? 'learn.stateCurrent' : 'learn.stateLocked')}`,

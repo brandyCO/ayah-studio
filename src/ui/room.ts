@@ -116,6 +116,7 @@ function buildScene(visit?: Visit): Built | null {
   const order = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 } as const;
   const got = visit ? [] : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
   const low = h('div', { class: 'rm-shelf low' }, ...got.map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
+  if (!got.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
   // The character on its cushion: reading by day, its lantern at night.
   const sit = encode(normalize({ ...f, pose: 1, hold: night ? 5 : f.hold === 0 || f.hold === 1 ? 2 : f.hold }));
   const cushion = h('span', { class: 'rm-cushion', 'aria-hidden': 'true' });

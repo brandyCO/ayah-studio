@@ -145,6 +145,17 @@ export async function duelBadge(): Promise<HTMLElement> {
   const b = h('span', { class: 'du-badge', 'aria-hidden': 'true' }, h('span', { class: 'du-badge-ic' }, icon('swords', 22)), label);
   void myDuel().then((st) => {
     const d = st.duel;
+    // F44: while nobody is free, a small "Finding your rival" line instead of a full screen; once paired, a toast says who.
+    let was = '';
+    try { was = localStorage.getItem('duSearching') ?? ''; } catch { /* ignore */ }
+    if (!d) {
+      b.classList.add('searching');
+      label.textContent = clt('du.finding');
+      try { localStorage.setItem('duSearching', '1'); } catch { /* ignore */ }
+    } else if (was) {
+      try { localStorage.removeItem('duSearching'); } catch { /* ignore */ }
+      if (!d.rival.private && d.rival.name) toast(clt('du.paired', { name: d.rival.name }));
+    }
     if (d) {
       b.firstElementChild?.replaceWith(theirDisc(d.rival, 26));
       label.textContent = '';

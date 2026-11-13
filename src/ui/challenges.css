@@ -116,3 +116,6 @@
 
 /* The lamp of Light under a hero in the face-off. */
 .du-hero .du-lamp { position: absolute; inset: auto 0 -4px; display: flex; justify-content: center; pointer-events: none; }
+.du-badge.searching .du-badge-ic { animation: du-seek 1.6s ease-in-out infinite; }
+@keyframes du-seek { 50% { opacity: .45; scale: .9; } }
+@media (prefers-reduced-motion: reduce) { .du-badge.searching .du-badge-ic { animation: none; } }
