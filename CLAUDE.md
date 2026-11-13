@@ -736,7 +736,10 @@ Pro and a load test come later, when the owner decides to pay).
       `scripts/quran-checksums.json`; `--write` after a reviewed text update) and `scripts/smoke.mjs` (main screens,
       English + Arabic, no page errors / raw keys / sideways scroll)
 - [ ] Owner: release build (AAB, minified, fonts as asset pack, update check) for Play Store; `SENTRY_DSN`
-- [ ] Harakat clip audio out of the database into Storage (Learn/harakat thread)
+- [x] Harakat clip audio out of the database into Storage: new clips are files `{user}/{random}.pcm` in the private
+      bucket `harakat-clips` (`src/cloud/clipFiles.ts`, `harakat_clip_add_file`; own folder only, teachers read all;
+      files removed with Forget my clips and account deletion); older clips keep their `audio` and still play
+      (migration `20261113100000_harakat_clips_storage.sql`, pgTAP 29)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
@@ -2137,7 +2140,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       once at a check with an orange word, Me → ⚙ → App): `ClipJar` (`src/ui/harakatClips.ts`) keeps ≤ 3 s clips of
       flagged words (+ one unflagged, 25 %) cut by the server's word times (`at`), shared after the check with the
       learner's answer (untapped orange word = "I said it right"). Migration `20261111000000_harakat_clips.sql`
-      (`harakat_clips` bytea PCM, 40 a day, no table access; `harakat_clip_add`, `harakat_my_clips`,
+      (`harakat_clips`, 40 a day, no table access; since 2026-11-13 the sound is a file in Storage, see the optimisation review; `harakat_clip_add`, `harakat_my_clips`,
       `harakat_forget_mine`; teachers in `harakat_reviewers`: `harakat_review_queue` (never who), `harakat_label`;
       pgTAP 16). Teachers: `#/learn/review`. Tuning: `scripts/harakat-tune.py` → `server/harakat/thresholds.json`
       (per haraka, workflow "Tune harakat check"); training: `scripts/harakat-finetune.py` (free GPU, 4-bit ONNX
