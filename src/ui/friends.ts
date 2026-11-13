@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Friends on Ranks (owner request 2026-11-11): a tap on a player in the league opens a small profile — what they chose to
 // show and both characters standing side by side — where you can ask to be friends; an invite link (#/rf/{code}) makes
 // friends at once. Two friends keep a friend streak (the days in a row both earned points, counted by the server). While
@@ -68,7 +69,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   let prof: Profile | null = kept === undefined ? fromRow(row) : kept;
   let known = kept !== undefined;
   const title = h('h2', {}, row.me ? ft('fr.mine') : row.name ?? rt('rk.private'));
-  const back = h('button', { class: 'icon-btn fr-back', 'aria-label': t('common.close') }, '‹');
+  const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
   const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title), h('div', { class: 'fr-page-body' }, stage, info));

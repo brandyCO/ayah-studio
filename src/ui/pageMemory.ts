@@ -151,7 +151,7 @@ export async function showPageMap(root: HTMLElement, juzArg?: string): Promise<(
   }
   root.append(
     h('header', { class: 'lp-top' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('h1', { class: 'lp-title' }, lt('learn.pmTitle')),
       h('span', { class: 'lp-gap' }), lightChip()),
     h('p', { class: 'pm-lead' }, lt('learn.pmLead')),
@@ -253,7 +253,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
 
   root.append(
     h('header', { class: 'ls-head pm-head' },
-      h('a', { class: 'icon-btn', href: `#/learn/pages/${mushaf.pages[p - 1].juz}`, 'aria-label': lt('learn.pmAll') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: `#/learn/pages/${mushaf.pages[p - 1].juz}`, 'aria-label': lt('learn.pmAll') }, icon('back', 22)),
       titleEl, badge, noorBtn, focusBtn),
     tabs, pageBox, quizBox, actions, nav, tabBar('learn'));
 

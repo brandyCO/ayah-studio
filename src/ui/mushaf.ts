@@ -137,7 +137,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const sub = h('p', { class: 'muted' });
   const today = h('nav', { class: 'today', 'aria-label': t('mushaf.today'), hidden: true });
   const bar = h('header', { class: 'mushaf-bar' },
-    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
     h('div', { class: 'brand' }, title, sub),
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('mushaf.listen'), title: t('mushaf.listen'), onclick: () => listenNow() }, icon('listen', 20)),
     h('a', { class: 'icon-btn', href: '#/search', 'aria-label': t('mushaf.search'), title: t('mushaf.search') }, icon('search', 20)),

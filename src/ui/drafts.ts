@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Drafts list: reels saved while being edited, newest first. Tap to keep editing; ✕ deletes.
 import './screens.css';
 import { deleteDraft, draftHash, listDrafts, type Draft } from '../data/drafts';
@@ -47,7 +48,7 @@ export async function showDrafts(root: HTMLElement): Promise<() => void> {
   grid.append(...drafts.map(card));
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+      h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
       h('div', { class: 'brand' }, h('h1', {}, t('list.drafts')), h('p', { class: 'muted' }, t('dr.sub')))),
     drafts.length ? grid : empty(),
     tabBar('create'),

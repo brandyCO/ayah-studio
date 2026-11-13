@@ -78,7 +78,7 @@ public class PrayerWidget extends AppWidgetProvider {
             if (next == null) {
                 v.setTextViewText(R.id.pw_label, "");
                 v.setTextViewText(R.id.pw_sun, "");
-                v.setTextViewText(R.id.pw_next, WidgetStore.str(data, "noLocation", "Open Me → Prayer times to set your location"));
+                v.setTextViewText(R.id.pw_next, WidgetStore.str(data, "noLocation", "Set your location in Me"));
                 v.setTextViewTextSize(R.id.pw_next, android.util.TypedValue.COMPLEX_UNIT_SP, 15);
                 v.setTextViewText(R.id.pw_time, "");
                 v.setViewVisibility(R.id.pw_left, View.GONE);

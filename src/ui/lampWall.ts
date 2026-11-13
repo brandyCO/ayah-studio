@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // The lamp wall (owner request 2026-11-12, "a sadaqa lamp wall"): one wall every player sees, of lamps lit with Light
 // for people who passed away — a first name, him / her and one of four du'as from Sahih Muslim (never free text).
 // A tap on a lamp shows its du'a; others say Ameen under it. Opened from the shop's Featured row and the Light sheet.
@@ -30,7 +31,7 @@ function lampEl(l: Lamp, i: number, onTap: (l: Lamp) => void, fresh = false): HT
 }
 
 export function openLampWall(o: { onChange?: () => void } = {}) {
-  const back = h('button', { class: 'icon-btn lw-back', 'aria-label': t('common.close') }, '‹');
+  const back = h('button', { class: 'icon-btn lw-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const counts = h('p', { class: 'lw-counts small' });
   const wallEl = h('div', { class: 'lw-wall' });
   const lightBtn = h('button', { class: 'primary brand-btn lw-go' }, `🪔 ${lwt('lw.light')}`);

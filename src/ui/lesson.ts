@@ -124,7 +124,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
   root.append(
     h('header', { class: 'ls-head' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
       noorBtn, focusBtn, art),
     stepsEl, phaseEl,

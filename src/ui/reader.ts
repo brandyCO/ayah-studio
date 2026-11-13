@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Translation reading view: one card per ayah with Arabic + English. Same selection gestures as
 // the mushaf view (long-press, drag, tap to extend).
 import { loadMeta, surahText, surahTranslation } from '../data/quran';
@@ -37,7 +38,7 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
 
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, '‹'),
+      h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
       h('div', { class: 'brand' }, h('h1', {}, t('common.surahTitle', { n: s.n, name: surahName(s) })), h('p', { class: 'muted' }, t('list.surahInfo', { tr: s.tr, n: s.ayahs }))),
       sizeBtn(),
       h('button', { class: 'chip', onclick: () => { setReaderMode('mushaf'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, t('reader.mushaf'))),

@@ -88,7 +88,7 @@ const ar: Partial<Record<MePageKey, string>> = {
   'mp.extraReady': '❄ التجميد الإضافي جاهز',
   'mp.extraNext': '❄ يعود التجميد الإضافي يوم {day}',
   'mp.fri.title': 'الجمعة',
-  'mp.fri.xp': 'نقاط خبرة مضاعفة طوال اليوم',
+  'mp.fri.xp': 'خبرة مضاعفة طوال اليوم',
   'mp.fri.kahf': 'اقرأ سورة الكهف',
   'mp.fri.kahfDone': 'نور الكهف لجمعتك',
   'mp.fri.pages': '{n} / {of} صفحات',

@@ -5,6 +5,19 @@ const SELF_MANAGED = ['sh-page', 'fr-page', 'lw-page'];
 const stack: { d: HTMLDialogElement; id: number }[] = [];
 let seq = 0;
 let ignorePops = 0;
+const openedAt = new WeakMap<HTMLDialogElement, number>();
+
+/** A new screen: close the sheets the last one left open (a sheet opened in the last moment
+ *  belongs to the new screen, e.g. one opened just before its address was set). */
+export function closeSheetsOnRoute() {
+  const now = performance.now();
+  for (const d of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
+    if (d.dataset.keep !== undefined) continue;
+    const at = openedAt.get(d);
+    if (at !== undefined && now - at < 400) continue;
+    d.close();
+  }
+}
 
 function prune() {
   for (let i = stack.length - 1; i >= 0; i--) {
@@ -21,6 +34,7 @@ function goBackQuietly() {
 const showModal = HTMLDialogElement.prototype.showModal;
 HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
   showModal.call(this);
+  openedAt.set(this, performance.now());
   if (SELF_MANAGED.some((c) => this.classList.contains(c))) return;
   if (stack.some((s) => s.d === this)) return;
   const id = ++seq;
@@ -60,4 +74,3 @@ window.addEventListener('popstate', (e) => {
   if (at && !stack.some((s) => s.id === at)) { e.stopImmediatePropagation(); goBackQuietly(); }
 });
 
-export {};

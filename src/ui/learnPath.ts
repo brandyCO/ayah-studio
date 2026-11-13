@@ -604,7 +604,7 @@ export async function showYourGarden(root: HTMLElement): Promise<() => void> {
   const gates = juzGates();
   root.append(
     h('header', { class: 'lp-top' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('h1', { class: 'lp-title' }, lt('learn.gardenTitle')),
       h('span', { class: 'lp-gap' }),
       lightChip()),

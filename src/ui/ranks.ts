@@ -3,7 +3,7 @@
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
 import { account, onAccount } from '../cloud/auth';
-import { t, type Key } from '../i18n';
+import { t, timeLeft, type Key } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
 import { isNative, shareableLink } from '../native';
 import {
@@ -70,11 +70,7 @@ export function sheet(title: string, ...body: (Node | string)[]) {
   return d;
 }
 
-const left = (ms: number) => {
-  const m = Math.max(1, Math.ceil(ms / 60_000));
-  const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
-  return d ? t('wkg.leftD', { d, h: hh }) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
-};
+const left = timeLeft;
 
 /** Ranks points have their own mark (a violet badge with a rising chevron), so they never look like Light's star. */
 export function ptsIcon(cls = ''): SVGSVGElement {
@@ -138,6 +134,9 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
     const down = zones && n >= LEAGUE.downFrom && i >= n - LEAGUE.down;
     const danger = down && r.me && danger3;
 
+    // Zone labels head the rows they describe (F34): moving up · safe · moving down.
+    if (zones && i === 0 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
+    if (zones && i === LEAGUE.up && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone safe' }, rt('rk.zoneSafe')));
     if (zones && n >= LEAGUE.downFrom && i === n - LEAGUE.down) items.push(h('li', { class: 'rk-zone down' }, `▼ ${rt('rk.zoneDown')}`));
     // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
     const visit = !!r.pid && (r.me || !r.private);
@@ -147,11 +146,10 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
-    if (zones && i === LEAGUE.up - 1 && n > LEAGUE.up) items.push(h('li', { class: 'rk-zone up' }, `▲ ${rt('rk.zoneUp')}`));
   });
   return h('ol', { class: 'rk-list' }, ...items);
 }

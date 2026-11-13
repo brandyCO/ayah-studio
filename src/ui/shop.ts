@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // The Light shop (owner request 2026-11-12, "a shop-like feeling … every single item, seasonal items that are not
 // buyable at the moment"): one full-screen shop, opened from every Light chip and from Ranks. A lantern-lit stall on
 // top with the Light to spend and the character at the counter; this week's prizes and the next season up front;
@@ -8,7 +9,7 @@ import './shop.css';
 import { sht, type ShopKey } from '../i18n/shop';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
-import { t } from '../i18n';
+import { t, timeLeft } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 import { reduced, popIn, squash, tick } from './juice';
@@ -263,7 +264,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const counter = h('div', { class: 'sh-counter', 'aria-hidden': 'true' });
   const cats = h('nav', { class: 'sh-cats', role: 'tablist' });
   const body = h('div', { class: 'sh-body' });
-  const back = h('button', { class: 'icon-btn sh-back', 'aria-label': t('common.close') }, '‹');
+  const back = h('button', { class: 'icon-btn sh-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const lanterns = h('div', { class: 'sh-lanterns', 'aria-hidden': 'true' }, ...[0, 1, 2, 3, 4].map((i) => h('i', { style: `--i:${i}` })));
   const stall = h('header', { class: 'sh-stall' }, lanterns,
     h('div', { class: 'sh-top' }, back, h('h1', {}, sht('sh.title')), h('span', { class: 'sh-gap' })),
@@ -291,8 +292,10 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     shown = n;
     earnLine.textContent = sht('sh.earned', { d: num(lightOn(dayKey())), w: num(stats('week').light), a: num(stats('all').light) });
     const lamp = lampOf(), next = lampNext();
-    lampLine.replaceChildren(h('b', {}, sht('sh.lamp')), ' · ', lamp ? rt(`rk.lamp${lamp}` as RankKey) : sht('sh.lamp0'), ' · ',
-      next === null ? sht('sh.lampTop') : sht('sh.lampNext', { n: num(next) }));
+    // Only the lamp itself up here (F22); how far the next one is shows with the totals (tap the purse).
+    lampLine.hidden = !lamp;
+    lampLine.replaceChildren(lamp ? rt(`rk.lamp${lamp}` as RankKey) : '');
+    earnLine.append(h('span', { class: 'sh-lampnext' }, ' · ', next === null ? sht('sh.lampTop') : sht('sh.lampNext', { n: num(next) })));
   };
   purse.onclick = () => { earnLine.classList.toggle('open'); haptic(); };
 
@@ -347,9 +350,8 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const tags = [sht('sh.first'), sht('sh.top23'), sht('sh.top3')];
     const prizes = ids.map((id) => all.find((w) => w.id === id)).filter((w): w is Ware => !!w);
     const left = weekEndAt().getTime() - Date.now();
-    const dd = Math.floor(left / 864e5), hh = Math.floor((left % 864e5) / 36e5);
     const weekCard = h('div', { class: 'sh-feat week' },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏆 ${sht('sh.weekTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: sht('sh.dh', { d: dd, h: hh }) }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏆 ${sht('sh.weekTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
       h('div', { class: 'sh-feat-row' }, ...prizes.map((w, i) => h('button', { class: `sh-prize r-${w.rar}`, type: 'button', onclick: () => openWare(w) },
         h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag' }, tags[i])))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.weekSub')));
@@ -366,13 +368,13 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const nextDay = new Date(); nextDay.setHours(24, 0, 0, 0);
     const ml = nextDay.getTime() - Date.now();
     const stallCard = deals.length ? h('div', { class: 'sh-feat stall' },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏮 ${sht('sh.stallTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: `${Math.floor(ml / 36e5)}h ${Math.floor((ml % 36e5) / 6e4)}m` }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, `🏮 ${sht('sh.stallTitle')}`), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: timeLeft(ml) }))),
       h('div', { class: 'sh-feat-row' }, ...deals.map((w) => h('button', { class: `sh-prize r-${w.rar}${w.state() === 'own' ? ' own' : ''}`, type: 'button', onclick: () => openWare(w) },
         h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag deal' }, w.state() === 'own' ? `✓ ${sht('sh.owned')}` : '−30%')))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.stallSub'))) : '';
     const lim = all.find((w) => w.id === limitedNow(week()));
     const limCard = lim ? h('button', { class: `sh-feat limited r-${lim.rar}`, type: 'button', onclick: () => openWare(lim) },
-      h('div', { class: 'sh-feat-head' }, h('b', {}, `✦ ${sht('sh.limTitle')}`), h('span', { class: 'sh-pill gold' }, sht('sh.weekEnds', { t: sht('sh.dh', { d: dd, h: hh }) }))),
+      h('div', { class: 'sh-feat-head' }, h('b', {}, `✦ ${sht('sh.limTitle')}`), h('span', { class: 'sh-pill gold' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
       h('div', { class: 'sh-lim-row' }, h('span', { class: 'sh-art big' }, lim.art()),
         h('span', { class: 'sh-lim-txt' }, h('b', {}, lim.name), h('span', { class: 'small' }, lim.state() === 'own' ? `✓ ${sht('sh.owned')}` : sht('sh.limSub')),
           lim.state() === 'own' ? '' : h('span', { class: 'sh-foot price' }, star(), num(lim.price ?? 0))))) : '';

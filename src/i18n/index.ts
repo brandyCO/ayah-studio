@@ -53,6 +53,23 @@ function stored(): Lang | null {
 }
 
 /** A surah's name for the interface: its Arabic name in the Arabic interface, else the English one. */
+/** Time left, one way everywhere: "2 d 5 h", "10 h 4 m", "12 min"; in Arabic whole words
+ *  ("يومان و5 ساعات", "10 ساعات و4 دقائق"). Never a 0 d. */
+export function timeLeft(ms: number): string {
+  const m = Math.max(1, Math.ceil(ms / 60_000));
+  const d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+  if (current === 'ar') {
+    const u = (n: number, unit: string) => new Intl.NumberFormat('ar-u-nu-latn', { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+    const [a, b] = d ? [u(d, 'day'), hh ? u(hh, 'hour') : ''] : hh ? [u(hh, 'hour'), mm ? u(mm, 'minute') : ''] : [u(mm, 'minute'), ''];
+    return b ? `${a} و${b}` : a;
+  }
+  return d ? (hh ? t('wkg.leftD', { d, h: hh }) : t('wkg.days', { d })) : hh ? t('wkg.leftH', { h: hh, m: mm }) : t('wkg.leftM', { m: mm });
+}
+
+/** "6 d" / "6 أيام". */
+export const daysText = (d: number) => current === 'ar'
+  ? new Intl.NumberFormat('ar-u-nu-latn', { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(d) : t('wkg.days', { d });
+
 export const surahName = (m: { en: string; ar: string }) => (current === 'ar' ? m.ar : m.en);
 
 const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);

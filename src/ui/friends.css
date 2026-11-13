@@ -71,7 +71,6 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-page-top { display: flex; align-items: center; gap: 6px; padding: max(8px, env(safe-area-inset-top)) 12px 6px; }
 .fr-page-top h2 { margin: 0; font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fr-back { font-size: 30px; line-height: 1; width: 44px; height: 44px; }
-:root[dir="rtl"] .fr-back { scale: -1 1; }
 .fr-page-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .fr-stage { width: 100%; max-width: 520px; display: grid; place-items: center;
   background: radial-gradient(70% 60% at 50% 88%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 72%), linear-gradient(to bottom, color-mix(in srgb, #6c5ce7 10%, transparent), transparent);

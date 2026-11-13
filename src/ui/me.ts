@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Me (#/me): a compact streak card (flame, count, this week), today's goals (pages, memorising, reels,
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
@@ -26,7 +27,7 @@ import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_L
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, type SurahMeta } from '../data/quran';
-import { LANGS, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
+import { LANGS, daysText, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
@@ -165,7 +166,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     // The room is the whole screen: its own floating top bar, no tab bar.
     if (has) void import('./room').then((m) => {
       const bar = h('div', { class: 'rm-full-bar' },
-        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
         h('h1', {}, mpt('mp.room')),
         lightChip());
       const c = m.roomScreen(dressUp, bar);
@@ -567,7 +568,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const s = Math.max(0, Math.floor(ms / 1000));
     const d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
     const clock = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-    return d ? `${t('wkg.days', { d })} ${clock}` : clock;
+    return d ? `${daysText(d)} ${clock}` : clock;
   };
   // The time left sits as a small clock pill under the Today / This week / Challenges switch.
   const resetText = (el: HTMLElement) => {
@@ -578,7 +579,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     if (el.title !== full) { el.title = full; el.setAttribute('aria-label', full); }
   };
   const resetLabel = (which: 'day' | 'week') => {
-    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('b', {}));
+    const el = h('span', { class: 'goal-reset', 'data-reset': which, role: 'timer' }, clockIcon(), h('span', { class: 'goal-reset-lbl' }, t('wkg.resetsLbl')), h('b', {}));
     resetText(el);
     return el;
   };
@@ -984,7 +985,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
-        h('a', { class: 'icon-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, '‹'),
+        h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
         h('div', { class: 'brand' }, h('h1', {}, title)),
         lightChip()),
       h('div', { class: `me-page me-page-${page}` }, ...content),
@@ -1235,7 +1236,7 @@ export function showMeSettings(root: HTMLElement): () => void {
   })();
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn', href: '#/me', 'aria-label': t('me.title') }, '‹'),
+      h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': t('me.title') }, icon('back', 22)),
       h('div', { class: 'brand' }, h('h1', {}, t('me.settings')))),
     body, tabBar('me'));
   const onPrayer = async () => { times = await prayerDay(new Date(), prayerSettings()); paint(); };
