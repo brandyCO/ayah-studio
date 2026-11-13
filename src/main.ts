@@ -187,5 +187,18 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && !a
 setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
 later(() => void import('./together/ranks').then((m) => m.watchRanks()));
+// Web: ask the browser to keep this site's storage (streak, Light, goals) instead of clearing it
+// when space runs low or, on iPhone Safari, after 7 days away. Asked once the user has earned
+// something, so Firefox's question never comes before there is anything to keep.
+if (!isNative()) later(() => {
+  const s = navigator.storage;
+  if (!s?.persist || !s.persisted) return;
+  void s.persisted().then((yes) => {
+    if (yes) return;
+    const ask = () => { window.removeEventListener('journey-changed', ask); void s.persist().catch(() => {}); };
+    if (localStorage.getItem('journey')) ask();
+    else window.addEventListener('journey-changed', ask);
+  }, () => {});
+});
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

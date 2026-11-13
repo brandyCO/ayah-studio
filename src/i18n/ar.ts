@@ -135,6 +135,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
 
   'reader.hint': 'اضغط مطولًا على آية لتحديدها. اسحب، أو المس آية أخرى، لتوسيع التحديد.',
   'reader.mushaf': 'المصحف',
+  'reader.textSize': 'حجم الخط',
 
   'tr.title': 'الترجمة',
   'tr.note': 'ترجمات منشورة لمعاني القرآن، منسوبة إلى مترجميها. معاني الكلمات تبقى بالإنجليزية.',
