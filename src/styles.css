@@ -60,7 +60,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif, 'QuranMarks'; /* marks the system font lacks (index.html) */
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, 'ArabicUI', sans-serif, 'QuranMarks'; /* marks the system font lacks (index.html) */
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
@@ -1844,7 +1844,7 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 /* Full of life (owner choice 2026-11-09): each place has its colour (Read teal, Learn green, Create
    coral, Ranks violet, Me amber), buttons are chunky with a solid edge that sinks on press, headings in
    bold Nunito. Never on the mushaf page, the Arabic text or the reel; the studio and Kids keep theirs. */
-:root { --ui-round: Nunito, system-ui, sans-serif; }
+:root { --ui-round: Nunito, 'ArabicUI', system-ui, sans-serif; }
 :where(h1, h2, h3, .brand h1, .tab-btn) { font-family: var(--ui-round); font-weight: 800; }
 .tabbar { background: var(--card); border-top: 2px solid var(--line); backdrop-filter: none; }
 .tab-btn { font-weight: 800; font-size: var(--fs-2xs); }

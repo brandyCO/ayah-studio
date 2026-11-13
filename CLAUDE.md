@@ -2053,6 +2053,11 @@ duas/reflections section in Me.
       never held back
       **Ranks opens on your place**: the first time the league shows on a visit, the list scrolls so your row sits mid-screen
       with the players around you, even when last (`openOnMe()` in ranks.ts)
+      **Arabic interface font** (F23): Android's Roboto has no Arabic, so the Quran-marks face (AmiriQuran over the whole
+      Arabic block) used to draw every Arabic interface word in calligraphy while bold headings fell to the system font.
+      Now `ArabicUI` = Noto Sans Arabic 400 / 700 (OFL, Arabic blocks only, ~70 KB each, `public/fonts/NotoSansArabic-*`,
+      fetched only when Arabic interface text shows) sits before it in the body stack and in `--ui-round`; iOS and Windows
+      keep their own Arabic system font. The Quran text keeps its own fonts
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
