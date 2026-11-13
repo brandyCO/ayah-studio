@@ -830,6 +830,24 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (pill) bump(pill, 0.14);
     haptic(8);
   }
+  // Ranks opens on your own place (front-end backlog), even at the bottom of the league: the first time the league
+  // shows on a visit, the list scrolls so your row sits in the middle with the players just above and below you.
+  let onMe = false;
+  function openOnMe() {
+    if (onMe || view !== 'league') return;
+    const row = body.querySelector<HTMLElement>('.rk-row.me');
+    if (!row) return;
+    onMe = true;
+    // The row is sticky, so its own box may show where it is pinned; the row before it shows where it really is.
+    const prev = row.previousElementSibling as HTMLElement | null;
+    const at = prev ? prev.getBoundingClientRect().bottom : row.getBoundingClientRect().top;
+    const want = innerHeight * 0.5;
+    if (at < innerHeight - 120 && at > 0) return; // already in view
+    let sc: HTMLElement | null = body.parentElement;
+    while (sc && !(sc.scrollHeight > sc.clientHeight + 4 && /(auto|scroll)/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
+    const by = at - want;
+    if (sc) sc.scrollBy({ top: by, behavior: 'auto' }); else window.scrollBy({ top: by, behavior: 'auto' });
+  }
   const paintTabs = () => tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
   async function paint(fresh = false) {
     const id = ++paintId;
@@ -843,6 +861,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);
       showGain();
+      openOnMe();
     } catch (e) {
       if (e instanceof StaleMiss) return;
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));

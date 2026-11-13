@@ -2051,6 +2051,8 @@ duas/reflections section in Me.
       **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
       ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
       never held back
+      **Ranks opens on your place**: the first time the league shows on a visit, the list scrolls so your row sits mid-screen
+      with the players around you, even when last (`openOnMe()` in ranks.ts)
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
