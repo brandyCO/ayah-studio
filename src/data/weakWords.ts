@@ -34,3 +34,10 @@ export function weakWords(s: number, from = 1, to = Infinity): [number, number][
     .filter(([x, a]) => x === s && a >= from && a <= to)
     .map(([, a, i]) => [a, i] as [number, number]);
 }
+
+/** How many weak words each surah holds. */
+export function weakCounts(): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const k of Object.keys(load())) { const s = Number(k.split(':')[0]); if (s) out.set(s, (out.get(s) ?? 0) + 1); }
+  return out;
+}

@@ -44,6 +44,18 @@ const en = {
   'ws.readySub': 'A card of your week to share on your story',
   'ws.share': 'Share my week',
   'ws.saved': 'Saved. The text is copied too.',
+  'pr.btn': 'Practice',
+  'pr.goal': 'Practice: the words that slip',
+  'pr.btnAria': 'Practise for three minutes: {what}',
+  'pr.words': '{n} words that slip in {name}',
+  'pr.page': 'Page {p} needs a revision',
+  'pr.done': 'Practice done',
+  'pr.doneSub': 'The words you missed come back next time',
+  'pr.doneClean': 'Every word right',
+  'pr.doneTitle': 'Well practised',
+  'pr.doneMore': 'A few minutes like this keeps what you learned strong.',
+  'pr.nextWords': 'Practise {name}',
+  'pr.nextPage': 'Recite page {p}',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -88,6 +100,18 @@ const ar: Partial<Record<FrontKey, string>> = {
   'ws.readySub': 'بطاقة لأسبوعك تشاركها في قصتك',
   'ws.share': 'شارك أسبوعي',
   'ws.saved': 'حُفظت، ونُسخ النص أيضًا.',
+  'pr.btn': 'تمرين',
+  'pr.goal': 'تمرين: الكلمات التي تفلت',
+  'pr.btnAria': 'تمرّن ثلاث دقائق: {what}',
+  'pr.words': '{n} كلمات تفلت في {name}',
+  'pr.page': 'الصفحة {p} تحتاج مراجعة',
+  'pr.done': 'انتهى التمرين',
+  'pr.doneSub': 'الكلمات التي أخطأتها ستعود في المرة القادمة',
+  'pr.doneClean': 'كل الكلمات صحيحة',
+  'pr.doneTitle': 'أحسنت التمرين',
+  'pr.doneMore': 'دقائق قليلة كهذه تحفظ ما تعلّمته قويًا.',
+  'pr.nextWords': 'تمرّن على {name}',
+  'pr.nextPage': 'سمّع الصفحة {p}',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

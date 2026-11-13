@@ -16,6 +16,8 @@ import { chest } from './chest';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { surahName, t } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
+import { fe } from '../i18n/front';
+import { practiceTarget } from '../data/practice';
 import { liteMode } from '../lite';
 import { h, haptic, toast } from './dom';
 import { drawDeco, drawTree, stageHeight, vignette } from './gardenArt';
@@ -87,7 +89,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const top = h('header', { class: 'lp-top' });
   const cont = h('button', { class: 'lp-cont', type: 'button' });
   const day = h('button', { class: 'lp-day', type: 'button', onclick: () => openDay() });
-  const dock = h('div', { class: 'lp-dock' }, day, cont);
+  const prac = h('a', { class: 'lp-prac', hidden: true });
+  const dock = h('div', { class: 'lp-dock' }, day, cont, prac);
   root.append(scenery(), top, list, dock, tabBar('learn'));
   let ctx: PathCtx = { rank: new Map(), similar };
   const units = (k: number, ord: number[], pos: number) => unitsOf(meta[ord[k] - 1], mushaf, k <= pos, ctx);
@@ -369,7 +372,21 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   }
 
   /** The bottom Continue button: always the next thing to do (a review first, then the current step). */
+  /** Practice: about three minutes on the words that slip most, or the page that most needs a revision. */
+  function paintPrac() {
+    const p = practiceTarget();
+    prac.hidden = !p;
+    if (!p) return;
+    const what = p.kind === 'page' ? fe('pr.page', { p: p.p }) : fe('pr.words', { n: p.n, name: surahName(meta[p.s - 1]) });
+    prac.setAttribute('href', p.href);
+    prac.setAttribute('aria-label', fe('pr.btnAria', { what }));
+    prac.title = what;
+    prac.replaceChildren(svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/>', 24), h('span', {}, fe('pr.btn')));
+    prac.onclick = () => haptic();
+  }
+
   function paintCont() {
+    paintPrac();
     dock.hidden = !next;
     if (!next) return;
     const { what, hue, glyph, run } = next;

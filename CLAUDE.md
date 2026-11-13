@@ -2064,6 +2064,11 @@ duas/reflections section in Me.
       Now `ArabicUI` = Noto Sans Arabic 400 / 700 (OFL, Arabic blocks only, ~70 KB each, `public/fonts/NotoSansArabic-*`,
       fetched only when Arabic interface text shows) sits before it in the body stack and in `--ui-round`; iOS and Windows
       keep their own Arabic system font. The Quran text keeps its own fonts
+      **Practice** (`src/data/practice.ts`): an orange ⚡ Practice button beside Continue on the Learn path, shown when
+      something slips: the surah with the most weak words (`learnWeak`, `weakCounts()`) among those started →
+      `#/learn/{s}/practice` = the lesson's exercises on the ≤ 4 ayat holding most of them (`practiceRange()`), no lamps,
+      no reciting; else the due page held least firmly → `#/learn/page/P`. The first practice of a day adds 10 Light
+      (`pr:{day}`) and every practice a lamp back; the end offers the next thing to practise. Strings `pr.*` in `front.ts`
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

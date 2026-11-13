@@ -19,7 +19,11 @@ import {
   LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
-import { addFlawless, addLesson, addMemorised, claimGoal } from '../data/journey';
+import { addFlawless, addLesson, addMemorised, claimGoal, goalClaimed } from '../data/journey';
+import { practiceRange, practiceTarget } from '../data/practice';
+import { fe } from '../i18n/front';
+
+const PRACTICE_LIGHT = 10; // the first practice of a day
 import { dimLamp, earnLamp, lamps, markFlawless } from '../data/learnLamps';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
@@ -72,6 +76,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   ensureTree(s, pathChunk());
   const quick = mode === 'tasmi';
   let reviewOnly = mode === 'review';
+  const practice = mode === 'practice'; // a few minutes on the weak words (Learn → Practice); free, no lamps
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
     loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
     surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
@@ -91,6 +96,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   let practising = false; // reciting what was learned again: passing it lights a lamp
   async function plan(after?: Step): Promise<void> {
     const tr = tree(s)!;
+    if (practice && !after) { step = 'link'; range = practiceRange(s, m.ayahs); return; }
     if (quick && !after && !tr.full) { step = 'whole'; range = [1, m.ayahs]; return; }
     if (reviewOnly && !after && tr.learned > 0) { reviewOnly = false; practising = true; if (tr.full) { step = 'water'; range = [1, m.ayahs]; } else { step = 'link'; range = [1, tr.learned]; } return; }
     if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
@@ -250,6 +256,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     ref.textContent = range[0] === range[1] ? `${s}:${range[0]}` : `${s}:${range[0]}–${range[1]}`;
     const tr = tree(s)!;
     art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
+    if (practice) { stepsEl.replaceChildren(h('li', { class: 'on', 'aria-current': 'step' }, fe('pr.btn'))); return; }
     const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
     stepsEl.replaceChildren(...list.map(([id, k]) => h('li', { class: id === step ? 'on' : '' , 'aria-current': id === step ? 'step' : false }, lt(k))));
   }
@@ -408,12 +415,12 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     // One slim bar for the five parts of a new lesson; the part now is named beside the goal.
     const cur = phases.findIndex(([p]) => p === phase || (p === 'memory' && phase === 'check'));
     phaseEl.replaceChildren(
-      h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n }),
+      h('span', { class: 'ls-goal' }, practice ? fe('pr.goal') : lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n }),
         cur >= 0 ? h('span', { class: 'ls-ph-now' }, lt(phases[cur][1])) : ''),
       phases.length ? h('span', { class: 'ls-phases', role: 'progressbar', 'aria-valuemin': '1', 'aria-valuemax': String(phases.length), 'aria-valuenow': String(cur + 1), 'aria-valuetext': cur >= 0 ? lt(phases[cur][1]) : '' },
         ...phases.map(([p, k], i) => h('span', { class: i === cur ? 'on' : i < cur ? 'past' : '', title: lt(k) }))) : '');
     if (phase === 'meaning') actions.replaceChildren(primary(lt('learn.toListen'), () => go('listen')));
-    else if (phase === 'drill') actions.replaceChildren(b(lt('learn.skipDrill'), () => go('memory')));
+    else if (phase === 'drill') actions.replaceChildren(practice ? '' : b(lt('learn.skipDrill'), () => go('memory')));
     else if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
     else if (phase === 'practice') actions.replaceChildren(
       b(lt(level === 0 ? 'learn.hideSome' : level === 1 ? 'learn.hideAll' : 'learn.showAll'), () => { level = (level + 1) % 3; peeked.clear(); refreshHidden(); paintActions(); }),
@@ -620,7 +627,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     phase = p;
     pop.hidden = true;
     peeked.clear();
-    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), (n) => { drillMissed = n; go('memory'); }, drillLamps()) : null;
+    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? (practice ? drills(kindCtx(), (n) => void practiceDone(n)) : drills(kindCtx(), (n) => { drillMissed = n; go('memory'); }, drillLamps())) : null;
     if (root.classList.contains('ls-focus') && !reduced()) textEl.animate([{ opacity: 0.25, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 420, easing: 'ease-out' });
     textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
@@ -670,7 +677,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     simCount = 0;
     void similarIn(s, range[0], range[1]).then((l) => { simCount = l.length; if (phase === 'check') paintActions(); });
     paintHead();
-    go(step === 'new' ? 'meaning' : 'memory');
+    go(practice ? 'drill' : step === 'new' ? 'meaning' : 'memory');
   }
 
   // --- recitation ---
@@ -972,6 +979,29 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       return;
     }
     void showDone(after, was);
+  }
+
+  /** Practice finished: a small chest once a day, a lamp back, then what to practise next. */
+  async function practiceDone(wrong: number) {
+    stopAll();
+    const today = dayKey(new Date());
+    const light = goalClaimed(`pr:${today}`) ? 0 : PRACTICE_LIGHT;
+    if (light) claimGoal(`pr:${today}`, light);
+    const earned = earnLamp();
+    const stats: MomentStat[] = [{ text: lt('learn.timeLearn', { t: spentLabel(spent()) }), icon: 'time' }];
+    if (earned) stats.push({ text: lt('learn.lampEarned'), icon: 'lamp' });
+    await celebrate({ kind: wrong ? 'lantern' : 'star', kicker: fe('pr.done'), title: uiRef(m, range[0], range[1]), sub: fe(wrong ? 'pr.doneSub' : 'pr.doneClean'), stats }, actions.firstElementChild, light);
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    status.textContent = '';
+    doneEl.hidden = false;
+    paintHead();
+    const nx = practiceTarget(s);
+    doneEl.replaceChildren(
+      h('h2', {}, fe('pr.doneTitle')),
+      h('p', { class: 'muted' }, fe('pr.doneMore')),
+      h('div', { class: 'ls-done-actions' },
+        h('a', { class: nx ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToPath')),
+        nx ? h('a', { class: 'primary brand-btn', href: nx.href }, fe(nx.kind === 'page' ? 'pr.nextPage' : 'pr.nextWords', nx.kind === 'page' ? { p: nx.p } : { name: surahName(meta[nx.s - 1]) })) : ''));
   }
 
   async function showDone(tr: Readonly<Tree>, was: Step) {
