@@ -2069,6 +2069,11 @@ duas/reflections section in Me.
       `#/learn/{s}/practice` = the lesson's exercises on the ≤ 4 ayat holding most of them (`practiceRange()`), no lamps,
       no reciting; else the due page held least firmly → `#/learn/page/P`. The first practice of a day adds 10 Light
       (`pr:{day}`) and every practice a lamp back; the end offers the next thing to practise. Strings `pr.*` in `front.ts`
+      **Streak target**: a chip on Me's streak card "On fire in n days · day m" with a bar from the last fire day to the next
+      (`fireChip()` in me.ts, `isFireDay()`). **Team quests** (migration `20261114100000_team_quests.sql`, pgTAP
+      `team_quests.test.sql` 10): the challenge picker has Race / Together; Together sends `rank_challenge_team(who, k, g)` with
+      a shared goal for the 7 days (`TEAM_GOAL`: 70 pages, 2000 dhikr, 14 adhkar, 210 min, 14 lessons, 1400 XP); one bar in
+      two shades (`teamCard()` in challenges.ts, also on Ranks); the chest gives each 100 Light when reached, else 30
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

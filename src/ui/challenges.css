@@ -119,3 +119,15 @@
 .du-badge.searching .du-badge-ic { animation: du-seek 1.6s ease-in-out infinite; }
 @keyframes du-seek { 50% { opacity: .45; scale: .9; } }
 @media (prefers-reduced-motion: reduce) { .du-badge.searching .du-badge-ic { animation: none; } }
+
+/* Team quests: one bar to a shared goal */
+.cl-mode { margin-bottom: 4px; }
+.cl-kind-ic.team, .cl-kind.team .cl-kind-ic { background: color-mix(in srgb, #12a594 18%, transparent); color: #0d8a7b; }
+.tq-bar { display: flex; height: 16px; border-radius: 999px; overflow: hidden; margin: 10px 0 8px; background: color-mix(in srgb, currentColor 10%, transparent); }
+.tq-bar span { display: block; height: 100%; transition: width .6s var(--ease-out, ease); }
+.tq-me { background: #12a594; }
+.tq-them { background: #6fd3c4; }
+.cl-card.team.reached .tq-bar { box-shadow: 0 0 0 2px #ffd166, 0 0 16px #ffd16688; }
+.tq-faces { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: var(--fs-s, 14px); font-weight: 700; }
+.tq-faces > span { display: inline-flex; align-items: center; gap: 6px; }
+.tq-goal { margin-inline-start: auto; font: 900 var(--fs-s, 14px) var(--ui-round, inherit); }
