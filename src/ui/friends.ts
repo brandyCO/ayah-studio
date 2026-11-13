@@ -8,8 +8,8 @@ import { icon } from './icons';
 import { ft } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, friendMilestoneDue, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
-  type Friend, type Friends, type Profile, type Row, type ShowKey,
+  SHOW, answerFriend, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
 import { avatar } from './rankAvatars';
@@ -251,7 +251,7 @@ function challenge(pid: string | null | undefined, name: string, after?: () => v
 
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
 export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
-  const data = await myFriends(fresh);
+  const [data, inv] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null)]);
   friendsKept = data;
   void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
@@ -288,8 +288,32 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
   setTimeout(() => void friendMilestone(data.friends), 900);
   return h('div', { class: 'fr-tab' }, asks,
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
+    inviteRewards(inv, onChange),
     invite,
     h('p', { class: 'muted small' }, ft('fr.help')));
+}
+
+/** Invite rewards waiting or on their way (each row once, until claimed). */
+function inviteRewards(inv: Invites | null, onChange: () => void): HTMLElement | string {
+  if (!inv) return '';
+  const row = (label: string, days: number, pid: string | null) => {
+    const ready = days >= inv.days;
+    const btn = ready ? h('button', { class: 'chip on', onclick: async (e: Event) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      try {
+        const n = await claimInvite(pid);
+        if (n) { haptic(20); toast(ft('fr.ivDone', { n })); }
+        onChange();
+      } catch (err) { b.disabled = false; toast((err as Error).message); }
+    } }, ft('fr.ivClaim', { n: inv.light })) : '';
+    return h('div', { class: 'fr-ask' }, h('span', { class: 'fr-ask-name' }, label), btn);
+  };
+  const rows: HTMLElement[] = [];
+  const by = inv.invitedBy;
+  if (by && !by.claimed) rows.push(row(ft('fr.ivBy', { name: by.name ?? ft('fr.ivSomeone'), n: by.days }), by.days, null));
+  if (inv.rewarded < inv.cap) for (const f of inv.friends) if (!f.claimed) rows.push(row(ft('fr.ivFriend', { name: f.name ?? ft('fr.ivSomeone'), n: f.days }), f.days, f.pid));
+  return rows.length ? h('section', { class: 'fr-asks' }, h('h3', {}, ft('fr.ivTitle')), ...rows) : '';
 }
 
 /** #/rf/{code}: a friend's invite. Signed in → become friends and open Friends; else who sent it and a sign-in. */
