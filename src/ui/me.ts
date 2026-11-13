@@ -7,7 +7,6 @@ import { icon } from './icons';
 const iconOf = icon;
 import { setSoundsOn, soundsOn } from './sfx';
 import './me.css';
-import { noorLine, noorText } from './noor';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
 import { akt } from '../i18n/adhkar';
 import { favouritesSection } from './favourite';
@@ -55,7 +54,10 @@ import { tick as tickNum } from './juice';
 import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
 import { dayCard } from './firstSteps';
-import { todayCard } from './todayCard';
+import { openPicker } from './todayCard';
+import { currentPlan, journeyState } from '../data/journeys';
+import { loadMushaf, type Mushaf } from '../data/mushaf';
+import { fe } from '../i18n/front';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { chest } from './chest';
@@ -216,7 +218,6 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
   const duaBox = h('section', { class: 'me-card dl-card', hidden: dayOne });
   const paintDuas = () => { if (!dayOne) void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox)); };
-  const noorEl = noorLine('me');
   // Asked once, right under the lanterns: reminders after each adhan and salah (owner request 2026-11-10).
   const duaAsk = h('div', { class: 'me-ask-slot' });
   const paintAsk = () => {
@@ -695,8 +696,85 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     h('div', { class: 'chips' },
       h('button', { class: 'chip on', onclick: () => { acceptTip(tip); haptic(); toast(t('tip.done')); } }, t('tip.yes')),
       h('button', { class: 'chip', onclick: () => dismissTip(tip) }, t('tip.no'))));
+  // One clear next step (front-end review, owner go-ahead 2026-11-13): the single most useful thing to do now, with
+  // one button: light today's flame, then the adhkar whose time it is, then today's journey portion, then the goal
+  // closest to done; when all is done, a quiet way to end the day. Replaces Noor's line and the journey card (the
+  // journey sits in the card's footer).
+  const nextBox = h('section', { class: 'me-card me-next', 'aria-live': 'polite' });
+  let jm: Mushaf | null = null;
+  void loadMushaf().then((m) => { jm = m; paintNext(); }).catch(() => {});
+  const goFor = (g: GoalProgress, pageGo: () => void): (() => void) | null => {
+    switch (g.kind) {
+      case 'pages': case 'surahs': return pageGo;
+      case 'listen': return () => goMushaf('listen');
+      case 'dhikr': return () => void import('./tasbih').then((m) => m.openTasbih(g.dhikr as DhikrId));
+      case 'adhkar': return () => openAdhkarSession(g.period ?? 's');
+      case 'duas': return () => void import('./dayLanterns').then((m) => m.openNextMoment());
+      case 'nights': return () => void import('./adhkar').then((m) => m.openDuas('sleep'));
+      case 'lessons': case 'memorise': return () => { location.hash = '#/learn'; };
+      case 'reels': return () => { location.hash = '#/drafts'; };
+      default: return null;
+    }
+  };
+  const KIND_IC: Record<string, string> = { pages: 'book', surahs: 'book', listen: 'listen', dhikr: 'beads', duas: 'lamp', nights: 'crescent', lessons: 'sprout', memorise: 'sprout', reels: 'film' };
+  // Friday Maghrib → Sunday: "Your week is ready", a story card to share (src/ui/weekStory.ts), once a week.
+  const storySlot = h('div', {});
+  if (!page) void import('./weekStory').then((m) => {
+    if (!m.storyDue()) return;
+    const close = () => { m.storySeen(); storySlot.replaceChildren(); };
+    storySlot.replaceChildren(h('section', { class: 'me-card ws-card' },
+      h('span', { class: 'ws-ic', 'aria-hidden': 'true' }, icon('star', 26)),
+      h('span', { class: 'ws-txt' }, h('b', {}, fe('ws.ready')), h('span', { class: 'muted small' }, fe('ws.readySub'))),
+      h('button', { class: 'primary brand-btn', onclick: () => { haptic(10); void m.shareStory().then(() => storySlot.replaceChildren()); } }, fe('ws.share')),
+      h('button', { class: 'icon-btn ws-x', 'aria-label': t('common.close'), onclick: close }, icon('close', 18))));
+  }).catch(() => {});
+  let nextSig = '';
+  const paintNext = () => {
+    if (page) return;
+    const list = needsPace() ? [] : todayGoals();
+    const lit = streak().litToday;
+    const js = jm ? journeyState(jm) : null;
+    const pageGo = () => goMushaf(js?.next ? `page:${js.next}` : undefined);
+    // The adhkar whose time it is: the evening ones once they show (from Asr), the morning ones until noon.
+    const hour = new Date().getHours();
+    const adhkar = list.find((g) => g.kind === 'adhkar' && g.done < g.target && (g.period === 'm' || hour < 12));
+    type Step = { k: string; ic: string; title: string; sub: string; btn: string; go: () => void; p?: number };
+    let step: Step | null = null;
+    if (!lit) step = { k: 'pages', ic: 'flame', title: fe('nx.flame'), sub: fe('nx.flameSub'), btn: fe('nx.read'), go: pageGo };
+    else if (adhkar) step = { k: 'adhkar', ic: adhkar.period === 'm' ? 'crescent' : 'sun', title: fe(adhkar.period === 'm' ? 'nx.eve' : 'nx.morn'),
+      sub: adhkar.done ? fe('nx.of', { n: adhkar.done, of: adhkar.target }) : fe('nx.adhkarSub'), btn: fe(adhkar.done ? 'nx.continue' : 'nx.begin'),
+      go: () => openAdhkarSession(adhkar.period ?? 's'), p: adhkar.done / adhkar.target };
+    else if (js && !js.done && js.today > 0 && js.next) step = { k: 'pages', ic: 'book', title: fe(js.today === 1 ? 'nx.portion1' : 'nx.portion', { n: js.today }),
+      sub: fe('nx.of', { n: js.read, of: js.total }), btn: fe('nx.open'), go: pageGo, p: js.read / js.total };
+    else {
+      const open = list.filter((g) => g.done < g.target && goFor(g, pageGo)).sort((a, b) => b.done / b.target - a.done / a.target)[0];
+      if (open) step = { k: open.kind, ic: KIND_IC[open.kind] ?? 'target', title: goalLabel(open), sub: fe('nx.of', { n: open.done, of: open.target }),
+        btn: fe(open.done ? 'nx.continue' : 'nx.begin'), go: goFor(open, pageGo)!, p: open.done / open.target };
+    }
+    // No goals yet (the pace card below is the next step) or none to show: no card.
+    if (!step && !list.length) { nextSig = ''; nextBox.hidden = true; nextBox.replaceChildren(); return; }
+    nextBox.hidden = false;
+    step ??= { k: 'done', ic: 'check', title: fe('nx.done'), sub: fe('nx.doneSub'), btn: fe('nx.listen'), go: () => goMushaf('listen') };
+    const plan = currentPlan();
+    const foot = js && !js.done ? `${t(`jr.${js.id}` as Key)} · ${t('jr.dayOf', { day: Math.min(js.day, js.days), n: js.days })}` : plan ? '' : t('jr.start');
+    const sig = JSON.stringify([step.k, step.title, step.sub, step.p, foot]);
+    if (sig === nextSig) return;
+    const fresh = nextSig !== '';
+    nextSig = sig;
+    nextBox.className = `me-card me-next nx-${step.k}`;
+    const go = step.go;
+    nextBox.replaceChildren(
+      h('p', { class: 'nx-kicker' }, fe('nx.kicker')),
+      h('div', { class: 'nx-row' },
+        h('span', { class: 'nx-ic', 'aria-hidden': 'true' }, icon(step.ic, 26)),
+        h('span', { class: 'nx-txt' }, h('b', {}, step.title), h('span', { class: 'muted small' }, step.sub),
+          step.p ? h('span', { class: 'nx-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round(Math.min(1, step.p) * 100)}%` })) : '')),
+      h('button', { class: `primary brand-btn nx-go${step.k === 'done' ? ' quiet' : ''}`, onclick: () => { haptic(10); go(); } }, step.btn),
+      foot ? h('button', { class: 'nx-foot muted small', onclick: openPicker }, foot, ' ›') : '');
+    if (fresh && !matchMedia('(prefers-reduced-motion: reduce)').matches) nextBox.animate([{ opacity: 0.4, translate: '0 6px' }, { opacity: 1, translate: '0 0' }], { duration: 320, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+  };
   const paintGoals = () => {
-    noorEl.querySelector('.noor-say')!.textContent = noorText('me');
+    paintNext();
     if (needsPace()) {
       goalsBox.replaceChildren(h('h2', { class: 'me-h' }, t('pace.title')), paceCard());
       return;
@@ -865,7 +943,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         tile(String(st.reels), t('me.reels'), vs('reels'))),
       h('p', { class: 'muted small' }, last
         ? (now.getDay() === 6 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
-        : t('me.honest', { time: timeLabel(pageSeconds()) })));
+        : t('me.honest', { time: timeLabel(pageSeconds()) })),
+      h('button', { class: 'chip ws-share', onclick: () => { haptic(8); void import('./weekStory').then((m) => m.shareStory()); } }, icon('share', 18), fe('ws.share')));
   };
 
   const paintBadges = () => {
@@ -1100,7 +1179,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, noorEl, dayCard() ?? (dayOne ? '' : todayCard()), waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
