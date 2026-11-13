@@ -105,7 +105,7 @@ async function route() {
     } else if (view === 'me') {
       const { showMe, showMeSettings } = await import('./ui/me');
       if (a === 'widgets') c = await (await import('./ui/widgetsPage')).showMeWidgets(screen);
-      else c = a === 'settings' ? showMeSettings(screen) : await showMe(screen, a);
+      else c = a === 'settings' ? showMeSettings(screen, b) : await showMe(screen, a);
     } else if (view === 'learn') {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
     } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp' || view === 'rf') && a)) {

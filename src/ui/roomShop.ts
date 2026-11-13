@@ -3,6 +3,7 @@
 // have to put it in, tap one you don't to get it for its Light (asked once), the prize lanterns show how they are
 // won. The room on Me follows at once (`onChange`).
 import { limitedIn, limitedNow, thisWeek } from '../data/limited';
+import { icon } from './icons';
 import { ROOM_ITEMS, SLOTS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem, type Slot } from '../data/roomItems';
 import { wallet } from '../data/garden';
 import { streak } from '../data/journey';
@@ -90,7 +91,7 @@ export function openRoomShop(onChange: () => void, sit: string | null = null, op
       h('span', { class: 'rs-rar' }, rt(`rs.r.${it.r}` as RankKey)),
       h('span', { class: 'rs-art' }),
       h('span', { class: 'rs-name' }, name(it.id)),
-      own ? '' : it.win ? h('span', { class: 'rs-how' }, rt(`rs.win${it.win}` as RankKey)) : away ? h('span', { class: 'rs-how' }, `🔒 ${back}`)
+      own ? '' : it.win ? h('span', { class: 'rs-how' }, rt(`rs.win${it.win}` as RankKey)) : away ? h('span', { class: 'rs-how' }, icon('lock', 18), back)
         : h('span', { class: 'rs-price' }, `✦ ${it.price}`, it.limited ? h('small', {}, ` · ${rt('rs.limNow')}`) : ''));
     el.querySelector('.rs-art')!.innerHTML = tileArt(it.slot, it.id);
     return el;

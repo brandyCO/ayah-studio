@@ -3,6 +3,8 @@
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
 import { account, onAccount } from '../cloud/auth';
+import { icon } from './icons';
+const iconOf = icon;
 import { t, timeLeft, type Key } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
 import { isNative, shareableLink } from '../native';
@@ -39,9 +41,8 @@ type View = 'league' | 'friends' | 'global' | 'boards';
 const PENDING = 'pendingBoard';
 const PENDING_CH = 'pendingChallenge';
 
-const TIER_ICON: Record<string, string> = { lantern: '🏮', star: '⭐', moon: '🌙', dawn: '🌅', sun: '☀️' };
 const tierName = (n: number) => rt(`rk.tier.${tierOf(n)}` as RankKey);
-export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, `${TIER_ICON[tierOf(n)]} ${tierName(n)}`);
+export const tierBadge = (n: number) => h('span', { class: `rk-tier t${n}` }, tierName(n));
 const num = (n: number) => n.toLocaleString();
 
 /** The share sheet (app or browser), else the link copied. */
@@ -187,7 +188,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     head.replaceChildren();
     tabs.replaceChildren();
     body.replaceChildren(h('div', { class: 'rk-signin me-card' },
-      h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, '🏆'),
+      h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, icon('trophy', 22)),
       h('h2', {}, rt('rk.outTitle')),
       h('p', { class: 'muted' }, rt('rk.outSub')),
       h('button', { class: 'primary brand-btn', onclick: () => openAccount() }, rt('rk.signIn')),
@@ -199,7 +200,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const secs = pageSeconds();
     const rt2 = secs % 60 ? `${Math.floor(secs / 60)}½` : String(secs / 60);
     const earn = (icon: string, label: string, sub: string, n: number | string) => h('li', { class: 'rk-earn' },
-      h('span', { class: 'rk-earn-ic', 'aria-hidden': 'true' }, icon),
+      h('span', { class: 'rk-earn-ic', 'aria-hidden': 'true' }, iconOf(icon, 20)),
       h('span', { class: 'rk-earn-txt' }, h('b', {}, label), sub ? h('small', { class: 'muted' }, sub) : ''),
       h('span', { class: 'rk-earn-n' }, `+${n}`));
     const card = (cls: string, icon: Node, title: string, ...body: (Node | string)[]) => h('section', { class: `rk-info ${cls}` },
@@ -210,14 +211,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('p', {}, rt('rk.iPtsBody')),
         h('p', { class: 'rk-info-sub' }, rt('rk.iEarn')),
         h('ul', { class: 'rk-earns' },
-          earn('📖', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
-          earn('🎧', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
-          earn('🌿', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
-          earn('✨', rt('rk.eaFlawless'), rt('rk.eaFlawlessSub'), POINTS.flawless),
-          earn('✅', rt('rk.eaSurah'), '', POINTS.surah),
-          earn('🎬', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
-          earn('📅', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
-          earn('🎯', rt('rk.eaQuest'), rt('rk.eaQuestSub'), 50))),
+          earn('book', rt('rk.eaPage'), rt('rk.eaPageSub', { t: rt2 }), POINTS.page),
+          earn('listen', rt('rk.eaMinute'), rt('rk.eaMinuteSub'), POINTS.minute),
+          earn('sprout', rt('rk.eaLesson'), rt('rk.eaLessonSub'), POINTS.lesson),
+          earn('sparkle', rt('rk.eaFlawless'), rt('rk.eaFlawlessSub'), POINTS.flawless),
+          earn('check', rt('rk.eaSurah'), '', POINTS.surah),
+          earn('film', rt('rk.eaReel'), rt('rk.eaReelSub'), POINTS.reel),
+          earn('calendar', rt('rk.eaDay'), rt('rk.eaDaySub'), POINTS.day),
+          earn('target', rt('rk.eaQuest'), rt('rk.eaQuestSub'), 50))),
       card('light', big(star()), rt('rk.iLightTitle'), h('p', {}, rt('rk.iLightBody'))),
       card('league', tierEmblem(0) as unknown as Node, rt('rk.iLeagueTitle'),
         h('p', {}, rt('rk.iLeagueBody', { size: LEAGUE.size, up: LEAGUE.up, down: LEAGUE.down }))),
@@ -321,7 +322,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'menu' },
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLook(s); } }, `◐  ${rt('rk.look')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
-        h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, `🏆  ${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
+        h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, icon('trophy', 18), `${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
         s.last ? h('button', { class: 'menu-item', onclick: () => { d.close(); void recap(s); } }, `↗  ${rt('rk.recapShare')}`) : '',
         h('button', { class: 'menu-item', onclick: () => { d.close(); openHow(); } }, `ⓘ  ${rt('rk.info')}`)),
       isNative() ? h('label', { class: 'rk-note-toggle small' },
@@ -462,7 +463,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       h('p', { class: 'muted small' }, rt('rk.lookSub')), grid,
       h('h3', { class: 'me-h2' }, rt('rk.frames')), frames,
       h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openShop(s); } }, `✦ ${rt('rk.moreInShop')}`),
-      h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openName(); } }, `✎ ${rt('rk.name')}`),
+      h('button', { class: 'chip', style: 'margin-top:10px', onclick: () => { d.close(); openName(); } }, icon('pen', 18), rt('rk.name')),
       h('label', { class: 'rk-private' }, sw, h('span', {}, h('b', {}, rt('rk.privateTitle')), h('span', { class: 'muted small' }, rt('rk.privateSub')))),
       h('div', { class: 'chips', style: 'margin-top:12px' }, h('button', { class: 'primary brand-btn', onclick: async () => {
         try {
@@ -590,7 +591,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
     } else if (view === 'global') {
       const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; void paint(); } }, label);
-      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, `🏆 ${rt('rk.hall')}`);
+      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, icon('trophy', 18), rt('rk.hall'));
       if (hall) {
         const hf = await rankHall(fresh);
         body.replaceChildren(
@@ -632,7 +633,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         challengeBox(chs),
         h('h2', { class: 'me-h' }, rt('rk.boards')),
         boards.length ? h('div', { class: 'menu rk-boards' }, ...boards.map((b) => h('button', { class: 'menu-item', onclick: () => { openBoard = b; metric = 'all'; void paint(); } },
-          h('span', {}, `👥  ${b.name}`), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
+          h('span', {}, icon('users', 18), b.name), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
           : h('p', { class: 'muted' }, rt('rk.noBoards')),
         h('div', { class: 'chips rk-board-acts' }, h('button', { class: 'primary brand-btn', onclick: newBoard }, `＋ ${rt('rk.create')}`)),
         h('div', { class: 'rk-join' }, code, h('button', { class: 'chip', onclick: async () => {
@@ -873,7 +874,7 @@ export async function showBoardInvite(root: HTMLElement, code: string): Promise<
     location.hash = '#/ranks';
   };
   box.replaceChildren(
-    h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, '👥'),
+    h('div', { class: 'rk-trophy', 'aria-hidden': 'true' }, icon('users', 22)),
     h('h2', {}, p.name),
     h('p', { class: 'muted' }, rt('rk.inviteSub', { n: p.members })),
     p.joined ? h('a', { class: 'primary brand-btn', href: '#/ranks' }, rt('rk.open'))

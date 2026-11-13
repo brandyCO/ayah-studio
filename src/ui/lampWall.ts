@@ -1,9 +1,9 @@
-import { icon } from './icons';
 // The lamp wall (owner request 2026-11-12, "a sadaqa lamp wall"): one wall every player sees, of lamps lit with Light
 // for people who passed away — a first name, him / her and one of four du'as from Sahih Muslim (never free text).
 // A tap on a lamp shows its du'a; others say Ameen under it. Opened from the shop's Featured row and the Light sheet.
 // A full page (like the shop), drawn at once from the copy kept on this device, then refreshed.
 import './lampWall.css';
+import { icon } from './icons';
 import { h, haptic, toast } from './dom';
 import { star } from './lightChip';
 import { reduced } from './juice';
@@ -27,14 +27,14 @@ function lampEl(l: Lamp, i: number, onTap: (l: Lamp) => void, fresh = false): HT
     h('span', { class: 'lw-body', 'aria-hidden': 'true' },
       h('span', { class: 'lw-glow' }), h('span', { class: 'lw-cap' }), h('span', { class: 'lw-glass' }, h('span', { class: 'lw-flame' })), h('span', { class: 'lw-base' })),
     h('span', { class: 'lw-name' }, l.for),
-    l.ameen ? h('span', { class: 'lw-amn' }, `🤲 ${num(l.ameen)}`) : '');
+    l.ameen ? h('span', { class: 'lw-amn' }, icon('hands', 18), num(l.ameen)) : '');
 }
 
 export function openLampWall(o: { onChange?: () => void } = {}) {
   const back = h('button', { class: 'icon-btn lw-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const counts = h('p', { class: 'lw-counts small' });
   const wallEl = h('div', { class: 'lw-wall' });
-  const lightBtn = h('button', { class: 'primary brand-btn lw-go' }, `🪔 ${lwt('lw.light')}`);
+  const lightBtn = h('button', { class: 'primary brand-btn lw-go' }, icon('lamp', 18), lwt('lw.light'));
   const top = h('header', { class: 'lw-top' }, back, h('h1', {}, lwt('lw.title')), h('span', { class: 'lw-gap' }));
   const d: HTMLDialogElement = h('dialog', { class: `lw-page${reduced() ? ' still' : ''}`, 'aria-label': lwt('lw.title') },
     h('div', { class: 'lw-sky', 'aria-hidden': 'true' }),
@@ -80,7 +80,7 @@ export function openLampWall(o: { onChange?: () => void } = {}) {
     const du = DUAS[l.dua] ?? DUAS[0];
     const g = l.he ? 0 : 1;
     const s: HTMLDialogElement = h('dialog', { class: 'sheet bottom lw-sheet' });
-    const amen = h('button', { class: `primary brand-btn lw-amen${l.said ? ' done' : ''}`, disabled: l.said || l.me }, l.said ? `✓ ${lwt('lw.said')}` : `🤲 ${lwt('lw.ameen')}`);
+    const amen = h('button', { class: `primary brand-btn lw-amen${l.said ? ' done' : ''}`, disabled: l.said || l.me }, ...(l.said ? [icon('check', 18), lwt('lw.said')] : [icon('hands', 18), lwt('lw.ameen')]));
     const amenN = h('p', { class: 'muted small' }, l.ameen ? lwt('lw.ameenN', { n: num(l.ameen) }) : '');
     amen.onclick = async () => {
       amen.disabled = true;
@@ -158,7 +158,7 @@ export function openLampWall(o: { onChange?: () => void } = {}) {
         void refresh();
       } catch (e) { toast((e as Error).message === 'need' ? lwt('lw.need', { n: num(size - wallet()) }) : (e as Error).message); go.disabled = false; }
     };
-    s.append(h('div', { class: 'sheet-head' }, h('h2', {}, `🪔 ${lwt('lw.light')}`), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => s.close() }, '✕')),
+    s.append(h('div', { class: 'sheet-head' }, h('h2', {}, icon('lamp', 18), lwt('lw.light')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => s.close() }, '✕')),
       h('p', { class: 'muted small' }, star(), ` ${num(wallet())}`), body);
     paintForm();
     s.addEventListener('close', () => s.remove());

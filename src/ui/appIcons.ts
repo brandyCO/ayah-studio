@@ -5,6 +5,7 @@
 // Celestial (an old pick moves to the tier won the same way). The choice is localStorage `appIconPick` (follows the
 // account). Art: scripts/make-character-icons.py.
 import { badgeStates } from '../data/badges';
+import { icon } from './icons';
 import { ICON_TIERS, pickedTier, type IconTier } from '../data/iconTiers';
 import { levelOf, myXp } from '../data/xp';
 import { bt, type BadgeKey } from '../i18n/badges';
@@ -81,7 +82,7 @@ export function iconCard(): HTMLElement {
   const paint = () => {
     const won = unlockedIcons(), pick = pickedIcon(), fresh = newIcons();
     const opt = (id: AppIconId | '', pic: Node, name: string, sub: string, open: boolean) => h('div', { class: `aic-opt${open ? '' : ' locked'}${pick === id ? ' on' : ''}${id && fresh.includes(id) ? ' fresh' : ''}${id ? ` r-tier${tierRarity(id) === 'mythic' ? ' r-myth' : ''}` : ''}`, style: id ? `--aic:${TIER_GLOW[id]}` : '' },
-      h('span', { class: 'aic-pic' }, pic, open ? '' : h('i', { class: 'aic-lock', 'aria-hidden': 'true' }, '🔒')),
+      h('span', { class: 'aic-pic' }, pic, open ? '' : h('i', { class: 'aic-lock', 'aria-hidden': 'true' }, icon('lock', 22))),
       h('span', { class: 'aic-txt' }, h('b', {}, name), h('span', { class: 'muted small' }, sub),
         id && !open ? h('span', { class: 'aic-bar', 'aria-label': bt('ic.level', { n: levelNeed(id)[0], m: levelNeed(id)[1] }) },
           h('i', { style: `width:${Math.round((levelNeed(id)[0] / levelNeed(id)[1]) * 100)}%` })) : ''),

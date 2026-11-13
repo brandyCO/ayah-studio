@@ -1904,3 +1904,8 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .mo-card .chip { flex: none; }
 .lt-chip { transition: opacity var(--dur-2); }
 .lt-chip.lt-empty { opacity: 0; pointer-events: none; }
+
+/* F3: one line-icon set. An icon before a label sits on the text's line with a small gap (the studio keeps its own). */
+body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary) > svg:first-child:not(:only-child) {
+  flex: none; vertical-align: -0.22em; margin-inline-end: 0.45em; }
+body .menu-item > svg:first-child:not(:only-child) { margin-inline-end: 0; opacity: .8; }

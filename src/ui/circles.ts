@@ -1,9 +1,9 @@
-import { icon } from './icons';
 // Family circles (docs/kids.md K6): ☰ → Family circles lists the family circles the user is in,
 // creates one, or joins one with a code. Invite links open #/join/{code}. (Khatm circles were
 // removed by the owner on 2026-10-28; a Khatm circle that is still in the database is not shown.)
 // Names are user text: shown in the UI font, never like the ayah.
 import { account, onAccount } from '../cloud/auth';
+import { icon } from './icons';
 import { errorText, joinCircle, loadCircles, previewCircle, type CircleState } from '../together/circles';
 import { openAccount } from './account';
 import { h, toast } from './dom';
@@ -56,7 +56,7 @@ export function openCircles() {
     body.replaceChildren(
       ...list.map((st) =>
         h('button', { class: 'menu-item circle-row', onclick: () => { d.close(); void import('./family').then((m) => m.openFamily(st.circle.id)); } },
-          h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, '🏮'),
+          h('span', { class: 'fam-row-icon', 'aria-hidden': 'true' }, icon('lamp', 22)),
           h('span', { class: 'circle-row-text' },
             h('b', {}, st.circle.name),
             h('span', { class: 'muted small' }, t('fam.rowSub', { n: st.members.length }))))),
