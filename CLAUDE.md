@@ -2026,6 +2026,12 @@ duas/reflections section in Me.
       laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
       `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
       Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
+      **Opening: the character arrives** (owner pick 2026-11-13): the launch animation is the app icon coming alive
+      (`src/ui/opening.ts`, CSS `.app-opening`): the theme's icon gradient out of the splash colour, the white marker pops
+      in, the user's character (or the icon's default with a face; `openingChar.ts`, its own chunk, left out if not loaded
+      by 0.9 s) drops in and waves, the Light star falls in at the icon's place with a burst and the character cheers,
+      "ayah studio" rises, then it glides into the app (≈ 2.6 s; was the rosette drawn line by line, `openingArt.ts` /
+      `openingWorker.ts` removed). Loading spinners are the gold Light star turning and twinkling (`.spinner`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
