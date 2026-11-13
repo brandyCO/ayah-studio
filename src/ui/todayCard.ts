@@ -1,7 +1,7 @@
-// Me → Today: one line saying what is next, with one button — the journey's portion for today (or
-// "Continue reading"), Al-Kahf on Fridays — and the journey picker (Khatm in 30 days, Juz 'Amma in 30
+// Me → Today: one line saying what is next, with one button — the journey's portion for today (or, with
+// no journey, one quiet "Start a journey" line) — and the journey picker (Khatm in 30 days, Juz 'Amma in 30
 // days, Khatm in 6 months). Fewer choices, more reading.
-import { currentPlan, journeyState, JOURNEYS, kahfToday, startJourney, type JourneyId } from '../data/journeys';
+import { currentPlan, journeyState, JOURNEYS, startJourney, type JourneyId } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { t, type Key } from '../i18n';
 import { h, haptic, listenWhile, toast } from './dom';
@@ -14,7 +14,6 @@ export function todayCard(): HTMLElement {
     if (!box.isConnected && m) { window.removeEventListener('journey-changed', paint); return; }
     if (!m) return;
     const s = journeyState(m);
-    const kahf = kahfToday(m);
     const rows: Node[] = [];
     if (s && !s.done) {
       rows.push(
@@ -31,12 +30,12 @@ export function todayCard(): HTMLElement {
         h('p', { class: 'muted small' }, t('jr.completeSub', { n: s.total })),
         h('button', { class: 'chip', onclick: openPicker }, t('jr.another'))));
     } else {
-      rows.push(h('div', { class: 'tc-row' },
-        h('span', {}, h('b', {}, t('jr.continue'))),
-        h('button', { class: 'primary brand-btn', onclick: () => goMushaf() }, t('jr.open'))),
-      h('button', { class: 'menu-item tc-start', onclick: openPicker }, `✦  ${t('jr.start')}`));
+      // F5: no journey: one quiet line (the Read tab already continues reading, Friday's Al-Kahf is in the goals).
+      box.classList.add('tc-slim');
+      box.replaceChildren(h('button', { class: 'tc-start', onclick: openPicker }, h('b', {}, t('jr.start')), h('span', { 'aria-hidden': 'true' }, '›')));
+      return;
     }
-    if (kahf) rows.push(h('button', { class: 'menu-item tc-kahf', onclick: () => goMushaf(`page:${kahf}`) }, `☾  ${t('jr.kahf')}`));
+    box.classList.remove('tc-slim');
     if (s && !s.done) rows.push(h('button', { class: 'tc-change muted small', onclick: openPicker }, t('jr.change')));
     box.replaceChildren(h('h2', { class: 'me-h' }, t('jr.title')), ...rows);
   };

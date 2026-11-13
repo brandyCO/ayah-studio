@@ -91,13 +91,9 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const units = (k: number, ord: number[], pos: number) => unitsOf(meta[ord[k] - 1], mushaf, k <= pos, ctx);
 
   function paintTop() {
-    const st = streak();
     top.replaceChildren(
-      h('button', { class: 'lp-pill', type: 'button', onclick: () => void openStart(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), h('span', { class: 'lp-pill-t' }, lt('learn.choose'))),
+      h('button', { class: 'lp-pill', type: 'button', onclick: () => openMenu(), 'aria-label': lt('learn.chooseStartAria') }, svg(G.book, 18), h('span', { class: 'lp-pill-t' }, lt('learn.choose'))),
       h('span', { class: 'lp-gap' }),
-      h('a', { class: 'lp-pill lp-pages-btn', href: '#/learn/pages', 'aria-label': lt('learn.pmOpen') }, svg(G.page, 18)),
-      h('a', { class: 'lp-pill lp-garden-btn', href: '#/learn/garden', 'aria-label': lt('learn.gardenTitle') }, svg(G.tree, 18)),
-      h('span', { class: 'lp-streak', 'aria-label': lt('learn.streakAria', { n: st.days }) }, svg(G.flame, 22), String(st.days)),
       lampChip(),
       lightChip(),
       inboxBell());
@@ -435,6 +431,15 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       out.push(...pt.make());
       if (after < 0) { if (leadDone && !grew) after = 0; } else if (pt.big && ++after >= 2) break;
     }
+    if (!trees().some(started)) {
+      const st = pathStart();
+      const where = st.kind === 'amma' ? lt('learn.startAmma') : st.kind === 'surah' ? surahName(meta[st.s - 1]) : lt('learn.juzN', { n: st.j });
+      out.unshift(h('div', { class: 'lp-intro' },
+        h('span', {}, lt('learn.introAt', { where })),
+        h('span', { class: 'lp-intro-links' },
+          h('button', { type: 'button', onclick: () => void openStart() }, lt('learn.introChange')),
+          h('button', { type: 'button', onclick: () => void openStart() }, lt('learn.knowTitle')))));
+    }
     list.replaceChildren(...out);
     paintCont();
     paintDay();
@@ -497,6 +502,17 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       h('div', { class: 'learn-tree-acts' },
         h('a', { class: 'chip', href: `#/learn/tree/${m.n}` }, lt('learn.tvLook')),
         h('a', { class: 'primary brand-btn learn-go', href: `#/learn/${m.n}` }, lt(tr?.full ? (thirsty(tr) ? 'learn.goWater' : 'learn.goRecite') : 'learn.continue'))));
+  }
+
+  /** F4: the path's menu (where to start, page memory, your garden), so the top bar keeps only lamps, Light and the bell. */
+  function openMenu() {
+    const item = (ic: string, label: string, go: () => void) => h('button', { class: 'menu-item lp-menu-item', type: 'button', onclick: () => { d.close(); go(); } },
+      svg(ic, 20), h('span', {}, label));
+    const d = sheet('lp-menu', lt('learn.choose'),
+      h('div', { class: 'menu' },
+        item(G.book, lt('learn.startTitle'), () => void openStart()),
+        item(G.page, lt('learn.pmOpen'), () => { location.hash = '#/learn/pages'; }),
+        item(G.tree, lt('learn.gardenTitle'), () => { location.hash = '#/learn/garden'; })));
   }
 
   async function openStart(first = false) {
@@ -565,7 +581,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const cur = list.querySelector('.lp-step.is-current') ?? list.querySelector('.lp-tree.grew');
     cur?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
   });
-  if (!pathSet()) void openStart(true);
+  // F8: no sheet on the first visit: Juz 'Amma, one ayah at a time, and the path at once.
+  if (!pathSet()) setPath({ kind: 'amma' }, 1);
 
   const onClick = (e: MouseEvent) => { if (pop && !(e.target as Element).closest('.lp-pop, .lp-node, .lp-gate-btn, .lp-chest-hit')) closePop(); };
   const onChange = () => paint();

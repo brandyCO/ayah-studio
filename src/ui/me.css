@@ -348,3 +348,26 @@
 .me-freeze b { font-size: 14px; font-weight: 900; }
 .me-freeze.none { background: #ffffff55; box-shadow: none; opacity: .75; }
 .me-freeze:active { translate: 0 2px; box-shadow: 0 1px 0 #1f86c4; }
+
+/* F36: a lost streak, one calm card (white glass on any sky) */
+.me-lost-card { display: grid; gap: 8px; margin: 4px 0 12px; padding: 12px; position: relative; z-index: 1;
+  border-radius: 18px; background: #ffffffe6; color: #1f2328; box-shadow: 0 4px 16px #0002; text-align: center; }
+.me-lost-card .me-lost { margin: 0; font-weight: 800; color: #1f2328; }
+.me-lost-card .me-relight { margin: 0; width: 100%; color: #1f2328; background: #f3f0ea; border-color: #e2ddd2; }
+.me-lost-card .me-relight.primary-way { font-size: 1rem; padding-block: 12px; color: #fff; background: #0b6f63; border-color: #0b6f63;
+  box-shadow: 0 3px 0 #064a42; }
+.me-lost-card .me-repair.primary-way { background: #f59f00; border-color: #f59f00; box-shadow: 0 3px 0 #c97f12; }
+.me-lost-more summary { cursor: pointer; font-size: .85rem; color: #5b6168; list-style: none; padding: 2px; }
+.me-lost-more summary::-webkit-details-marker { display: none; }
+.me-lost-more[open] { display: grid; gap: 8px; }
+/* F37: prizes waiting fold into one row */
+.me-folded .claim-badges, .me-folded .claim-more, .me-folded .me-gift, .me-folded .wd-card { display: none; }
+.me-wait { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; margin-block: 10px;
+  border-radius: 18px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: start; }
+.me-wait > b { flex: 1; font-size: 1rem; }
+.me-wait .chest { pointer-events: none; width: 52px; flex: none; }
+/* F5: with no journey, Today is one quiet line */
+.today-card.tc-slim { padding: 0; background: none; border: 0; box-shadow: none; }
+.tc-slim .tc-start { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0;
+  padding: 12px 16px; border-radius: 16px; border: 1px dashed var(--line); background: transparent; color: var(--text); }
+.tc-slim .tc-start > span { opacity: .6; font-size: 1.3rem; }
