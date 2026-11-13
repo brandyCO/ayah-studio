@@ -129,14 +129,30 @@ function load(): State {
 }
 /** Bumped on every change: lets streak() and stats('all') reuse their last answer. */
 let ver = 0;
-function save() {
-  ver++;
-  const s = load();
+// Writing the whole journey (a year is ~40 KB) on every tasbih tap made fast counting heavy on a cheap
+// phone: the copy in memory is the truth, and the phone's storage gets it at most once a second and
+// whenever the app is hidden or closed.
+let writeTimer = 0;
+function write() {
+  clearTimeout(writeTimer);
+  writeTimer = 0;
+  if (!cache) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem(KEY, JSON.stringify(cache));
   } catch {
     /* ignore */
   }
+}
+/** Puts a waiting change into storage now (sync reads the stored copy; also on hide / close). */
+export function flushJourney() { if (writeTimer) write(); }
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushJourney(); });
+  window.addEventListener('pagehide', flushJourney);
+}
+function save() {
+  ver++;
+  load();
+  if (!writeTimer) writeTimer = window.setTimeout(write, 1000);
   window.dispatchEvent(new Event('journey-changed'));
 }
 const today = (now = new Date()) => load().days[dayKey(now)] ??= {};

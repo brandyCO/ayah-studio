@@ -14,6 +14,8 @@ import { sampleButton, stopSample } from './voiceSample';
 const RESUME = 'welcomeStep';
 
 export function showWelcome(done?: () => void) {
+  // Already showing (the reader was left and opened again before answering): never stack a second one.
+  if (document.querySelector('.tour.welcome:not(.out)')) return;
   let i = 0;
   try { i = Number(sessionStorage.getItem(RESUME)) || 0; sessionStorage.removeItem(RESUME); } catch { /* ignore */ }
   const card = h('div', { class: 'tour-card welcome-card', role: 'group' });

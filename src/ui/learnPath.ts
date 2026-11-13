@@ -500,6 +500,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   }
 
   async function openStart(first = false) {
+    if (document.querySelector('.lp-startsheet[open]')) return; // already open: never a second one
     const ord0 = order();
     let start: Start = pathStart();
     let chunk: ChunkSize = pathChunk();
@@ -574,6 +575,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   return () => {
     closePop();
     paintGen++;
+    document.querySelector<HTMLDialogElement>('.lp-startsheet[open]')?.close(); // leaving Learn: its start sheet goes too
     document.removeEventListener('click', onClick);
     window.removeEventListener('garden-changed', onChange);
     window.removeEventListener('journey-changed', onChange);

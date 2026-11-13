@@ -8,7 +8,7 @@ import { stats } from '../data/journey';
 let wallet: (() => number) | null = null;
 const loadWallet = () => import('../data/garden').then((g) => { wallet = g.wallet; });
 import { locale, t } from '../i18n';
-import { h } from './dom';
+import { h, listenWhile } from './dom';
 
 /** Tapping it opens the shop (owner request 2026-11-12), unless the screen gives its own action. */
 export function lightChip(onclick: () => void = () => void import('./shop').then((m) => m.openShop())): HTMLElement {
@@ -43,8 +43,8 @@ export function lightChip(onclick: () => void = () => void import('./shop').then
     window.removeEventListener('journey-changed', on);
     window.removeEventListener('garden-changed', on);
   };
-  window.addEventListener('journey-changed', on);
-  window.addEventListener('garden-changed', on);
+  listenWhile(el, window, 'journey-changed', on);
+  listenWhile(el, window, 'garden-changed', on);
   return el;
 }
 
