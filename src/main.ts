@@ -15,7 +15,7 @@
 //   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
-import './ui/backCloses';
+import { closeSheetsOnRoute } from './ui/backCloses';
 import { h, skeleton, sweepListeners } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
@@ -41,6 +41,7 @@ let routeId = 0;
 
 async function route() {
   const id = ++routeId;
+  closeSheetsOnRoute();
   cleanup?.();
   cleanup = null;
   const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');

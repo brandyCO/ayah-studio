@@ -79,7 +79,7 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.neither': 'اكسبا خبرة اليوم كلاكما لتشتعل',
   'fr.help': 'يُحسب اليوم حين تكسبان الخبرة كلاكما. وإن فات يوم تبدأ من جديد.',
   'fr.visit': 'زيارة الغرفة',
-  'fr.week': 'XP هذا الأسبوع',
+  'fr.week': 'خبرة هذا الأسبوع',
   'fr.flame': 'سلسلة الشعلة',
   'fr.trophies': 'الكؤوس',
   'fr.pages': 'صفحات هذا الأسبوع',
@@ -97,7 +97,7 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.already': 'أنتما صديقان بالفعل',
   'fr.yours': 'هذا رابطك أنت. شاركه مع صديق.',
   'fr.open': 'افتح الأصدقاء',
-  'fr.levelNext': '{n} XP للمستوى التالي',
+  'fr.levelNext': '{n} خبرة للمستوى التالي',
 };
 
 export function ft(key: FriendKey, vars?: Record<string, string | number>): string {

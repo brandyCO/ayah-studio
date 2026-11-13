@@ -39,7 +39,7 @@ export async function showTreeView(root: HTMLElement, sArg: string): Promise<() 
   root.append(
     canvas,
     h('header', { class: 'tv-top' },
-      h('a', { class: 'icon-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
+      h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'tv-title' }, h('h1', {}, surahName(m)), h('span', { lang: 'ar', dir: 'rtl' }, m.ar)),
       h('button', { class: 'icon-btn', 'aria-label': lt('learn.fit'), onclick: () => { zoom = 1; px = py = 0; draw(); } }, '⤢')),
     h('div', { class: 'tv-card' }, note, h('div', { class: 'tv-row' }, preview, go), h('p', { class: 'tv-hint' }, lt('learn.tvHint'))));

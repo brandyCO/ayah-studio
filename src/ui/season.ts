@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // The Ramadan season screen `#/season` (owner request 2026-11-11, "the time remaining for Ramadan to start …
 // waiting to be unlocked"). Before Ramadan: a night sky with a fanous garland and a live countdown, then what the
 // season unlocks, each with a lock: four new characters (each bringing a wardrobe piece), the Khatm tracker (a
@@ -294,7 +295,7 @@ export async function showSeason(screen: HTMLElement): Promise<() => void> {
     }, remindOn() ? snt('sn.reminded') : snt('sn.remind')) : '';
     screen.replaceChildren(h('div', { class: 'sn' },
       h('header', { class: 'sn-top' },
-        h('button', { class: 'sn-back', 'aria-label': snt('sn.back'), onclick: () => { if (history.length > 1) history.back(); else location.hash = '#/me'; } }, '‹'),
+        h('button', { class: 'icon-btn sn-back back-btn', 'aria-label': snt('sn.back'), onclick: () => { if (history.length > 1) history.back(); else location.hash = '#/me'; } }, icon('back', 22)),
         h('span', {}, snt('sn.title'))),
       hero.node,
       remind,

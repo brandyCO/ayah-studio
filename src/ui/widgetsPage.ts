@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // #/me/widgets (Me → Settings → Widgets): the four home-screen widgets (streak, tasbih, prayer
 // times, today's ayah), each drawn small with the user's own numbers, with "Add to home screen"
 // (Android 8+: the launcher places it after its own confirmation) or the steps by hand where a
@@ -113,7 +114,7 @@ export async function showMeWidgets(root: HTMLElement): Promise<() => void> {
   const poll = native ? window.setInterval(() => void onVis(), 4000) : 0;
   root.append(
     h('header', { class: 'topbar' },
-      h('a', { class: 'icon-btn', href: '#/me/settings', 'aria-label': t('me.settings') }, '‹'),
+      h('a', { class: 'icon-btn back-btn', href: '#/me/settings', 'aria-label': t('me.settings') }, icon('back', 22)),
       h('div', { class: 'brand' }, h('h1', {}, t('wg.title')))),
     body, tabBar('me'));
   return () => {

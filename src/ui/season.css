@@ -9,8 +9,7 @@ body[data-view='season'] { background: #0f0a2c; }
 }
 .sn-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 0 6px;
   background: linear-gradient(#160f45 70%, transparent); font-weight: 800; font-size: var(--fs-l); }
-.sn-back { width: 40px; height: 40px; border-radius: 14px; border: 0; background: #ffffff14; color: #fff; font: 900 26px/1 var(--ui-round); cursor: pointer; }
-html[dir='rtl'] .sn-back { transform: scaleX(-1); }
+.sn-back { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #ffffff1f; display: grid; place-items: center; color: #fff; font: 900 26px/1 var(--ui-round); cursor: pointer; }
 
 /* hero */
 .sn-hero { position: relative; overflow: hidden; margin: 6px 0 16px; padding: 108px 16px 20px; border-radius: 28px; text-align: center;

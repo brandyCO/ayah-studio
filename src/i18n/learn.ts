@@ -816,7 +816,7 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.fixTitle': 'انظر مرة أخرى',
   'learn.fixSub': 'الكلمات التي فاتتك. اضغط على كلمة لتسمعها.',
   'learn.fixGo': 'فهمت',
-  'learn.flawless': 'بلا أخطاء · +{n} XP',
+  'learn.flawless': 'بلا أخطاء · +{n} خبرة',
   'learn.flawlessKicker': 'درس بلا أخطاء',
   'learn.flawlessMark': 'بلا أخطاء',
   'learn.timeLearn': 'وقت التعلّم · {t}',

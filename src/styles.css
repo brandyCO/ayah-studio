@@ -79,8 +79,7 @@ button { font: inherit; color: inherit; }
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 12px;
   margin: 0 calc(-1 * var(--sp-4)); padding: 10px var(--sp-4);
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--bg); /* solid: content scrolling under it never shows through (F31) */
   border-bottom: 1px solid var(--line);
 }
 .brand { flex: 1; min-width: 0; }
@@ -813,7 +812,7 @@ body.listening .rf-hint, body.has-selbar .rf-hint { bottom: calc(96px + env(safe
 .tr-item.busy .tr-tick::after { content: ''; display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 
 /* Arabic interface (G1): the layout runs right to left; the back chevron points the other way */
-[dir="rtl"] .back-btn { transform: scaleX(-1); }
+[dir="rtl"] .back-btn > svg { transform: scaleX(-1); }
 .selbar .chip { white-space: nowrap; }
 body[data-view="reel"] .menu-item:hover { background: rgba(255,255,255,.07); }
 /* Kids space (docs/kids.md; src/ui/kids*.ts): its own calm sky — soft dawn by day, a deep night sky
@@ -1236,16 +1235,17 @@ body[data-view="kids"] {
 .tab-btn.on { color: var(--accent); }
 .tab-btn:active { background: var(--sel); }
 .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
-.tabbar.auto { transform: translateY(110%); }
+.screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+/* Hidden far enough that the raised Create button goes too (it used to peek over the page number). */
+.tabbar.auto { transform: translateY(calc(100% + 48px)); }
 body.tabs-up .tabbar.auto { transform: none; }
-body.has-selbar .tabbar.auto { transform: translateY(110%); }
+body.has-selbar .tabbar.auto { transform: translateY(calc(100% + 48px)); }
 body.tabs-up .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
 /* Listening from another screen (Me, surah list…): the bar sits above the tab bar, with a way back to the page. */
 .pl-follow { display: none !important; }
 body.listening-away .pl-follow { display: inline-flex !important; color: var(--accent); }
 body.listening-away .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
-body.listening-away .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.listening-away .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
 body.listening-away:not(:has(.tabbar)) .player.show { bottom: max(10px, env(safe-area-inset-bottom)); }
 body.tabs-up .rf-hint { opacity: 0; }
 
@@ -1857,6 +1857,7 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 .mushaf-bar .brand h1 { font-weight: 900; }
 .mushaf-bar .icon-btn { background: #ffffff2e; border: 0; color: #fff; }
 .mushaf-bar .today-item { background: #ffffff26; color: #fff; }
+.mushaf-bar .today-actions .chip { background: #fff; color: #0b6f63; --edge: #0b6f6355; } /* white text on white chips made them blank */
 @media (prefers-color-scheme: dark) { .mushaf-bar { --tb: #0b6f63; } }
 
 /* Listen player ⋯: repeat chips and the juz picker */
@@ -1876,3 +1877,19 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
 @media (prefers-reduced-motion: reduce) { .badge-art .bd-glint { animation: none; opacity: .8; scale: .7; } }
 .badge-art.earned.t-diamond svg { filter: drop-shadow(0 3px 6px rgba(0, 40, 90, .3)) drop-shadow(0 0 8px rgba(150, 225, 255, .55)); }
 .badge-art.earned.t-platinum svg { filter: drop-shadow(0 3px 6px rgba(20, 20, 60, .3)) drop-shadow(0 0 5px rgba(200, 195, 255, .45)); }
+
+/* Rows that scroll sideways fade out at the far edge while more is hidden there (F27), so a cut-off
+   "Tajweed colou…" reads as "there is more". Scroll-driven: no fade when everything fits or at the end. */
+@property --edge-fade { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes edge-fade { from, 96% { --edge-fade: 34px; } to { --edge-fade: 0px; } }
+@supports (animation-timeline: scroll()) {
+  :is(.toolbar, .tabs, .nav-pages) {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--edge-fade)), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--edge-fade)), transparent);
+    animation: edge-fade linear both; animation-timeline: scroll(self inline);
+  }
+  [dir="rtl"] :is(.toolbar, .tabs, .nav-pages) {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--edge-fade)), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - var(--edge-fade)), transparent);
+  }
+}

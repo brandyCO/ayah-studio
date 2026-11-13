@@ -1,3 +1,4 @@
+import { icon } from './icons';
 // Family circles (docs/kids.md K6): ☰ → Family circles lists the family circles the user is in,
 // creates one, or joins one with a code. Invite links open #/join/{code}. (Khatm circles were
 // removed by the owner on 2026-10-28; a Khatm circle that is still in the database is not shown.)
@@ -115,7 +116,7 @@ export async function showJoin(root: HTMLElement, code: string): Promise<() => v
   code = code.toUpperCase();
   const body = h('div', { class: 'join' });
   root.append(h('header', { class: 'topbar' },
-    h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('circ.home') }, '‹'),
+    h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('circ.home') }, icon('back', 22)),
     h('div', { class: 'brand' }, h('h1', {}, t('circ.one')), h('p', { class: 'muted' }, t('circ.invitation')))), body);
 
   async function draw() {

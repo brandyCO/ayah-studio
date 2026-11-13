@@ -180,6 +180,7 @@
   background: color-mix(in srgb, #f59f00 16%, var(--card)); color: #b06a00; font: 900 var(--fs-xs) var(--ui-round); font-variant-numeric: tabular-nums; }
 .goal-head .goal-seg { flex: 1 1 auto; min-width: 0; max-width: none; }
 .goal-head > .chip { flex: none; }
+.goal-reset-lbl { font-weight: 700; opacity: .8; }
 .goal-reset-ic { width: 14px; height: 14px; display: inline-flex; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .goal-reset-row .goal-reset { color: #ffc154; } }
 :root[data-theme="dark"] .goal-reset-row .goal-reset { color: #ffc154; }
