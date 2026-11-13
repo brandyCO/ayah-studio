@@ -3,13 +3,10 @@
 // selection across consecutive ayat of one surah. A floating bar offers "Turn into reel" and shows
 // the reel's estimated length for the last-used reciter. Selectable elements carry data-s (surah)
 // and data-a (ayah).
-import { qdcSurah } from '../data/qdc';
 import { icon } from './icons';
 import { type SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, reciterFor } from '../data/reciters';
-import { mp3quranSurah } from '../data/mp3quran';
-import { applyLook, MAX_AYAT, newProject, pacing } from '../engine/project';
-import { clipBounds, pacingExtra, reelDuration } from '../engine/recitation';
+import { MAX_AYAT } from '../engine/limits';
 import { h, toast } from './dom';
 import { openCopy } from './copyAyat';
 import { t, uiRef } from '../i18n';
@@ -93,6 +90,9 @@ export function selectionController(o: SelectionOptions) {
     const r = reciterFor(reelReciter(DEFAULT_RECITER), sel.surah);
     if (r.qdc === false && !r.mp3quran) return; // no timings to estimate from
     try {
+      // The recitation and reel code loads only here (not with the app's first screen).
+      const [{ mp3quranSurah }, { qdcSurah }, { applyLook, newProject, pacing }, { clipBounds, pacingExtra, reelDuration }] = await Promise.all([
+        import('../data/mp3quran'), import('../data/qdc'), import('../engine/project'), import('../engine/recitation')]);
       const q = r.mp3quran ? await mp3quranSurah(r, sel.surah) : await qdcSurah(r.id, sel.surah);
       const clip = clipBounds(q.timings, sel.surah, sel.lo, sel.hi);
       // Same pacing as the editor will use (pause between ayat, cards: remembered from the last reel).

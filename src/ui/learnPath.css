@@ -41,7 +41,7 @@
 .lp-kicker { font: 900 12px var(--ui-round); letter-spacing: .08em; opacity: .88; }
 .lp-banner h2 { margin: 0; font-size: 21px; font-weight: 900; color: #fff; }
 .lp-banner-sub { font: 700 13px var(--ui-round); opacity: .92; }
-.lp-banner-ar { font-family: 'SuraNames', 'AmiriQuran', serif; font-size: 26px; line-height: 1.2; flex: none; }
+.lp-banner-ar { font-family: 'AmiriQuran', serif; font-size: 26px; line-height: 1.2; flex: none; }
 .lp-banner-btn {
   flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; border: 2px solid #ffffff59;
   background: transparent; color: #fff; cursor: pointer;

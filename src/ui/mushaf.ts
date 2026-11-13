@@ -1,6 +1,7 @@
 // Mushaf reading view: a full-screen Madinah mushaf page (King Fahd Complex QCF V2 fonts, 15 lines,
 // exactly as printed). Swipe to turn pages. Tap the page to drop down the title bar with the menu;
 // long-press / drag to select ayat for a reel.
+import { suraName } from './suraName';
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { icon } from './icons';
 import { draftHash, listDrafts } from '../data/drafts';
@@ -348,7 +349,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (l[0] === 'h') {
       lineSurah = Number(l[1]);
       return h('div', { class: 'mp-line mp-surah' },
-        h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0'))));
+        h('div', { class: 'surah-frame' }, suraName(Number(l[1]))));
     }
     if (l[0] === 'b') {
       const el = h('div', { class: 'mp-line mp-basmala', 'data-s': String(lineSurah) });
@@ -495,7 +496,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // (~150 KB each; the Android app has them all already).
     const ahead = [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10];
     const far = isNative() || unmetered() ? ahead : ahead.slice(0, 4);
-    void loadPageFont(page).catch(() => {}).finally(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); });
+    // The far ones wait a moment after this page's font, so the first page's header and interface fonts are not
+    // slowed by ten page fonts downloading at once.
+    void loadPageFont(page).catch(() => {}).finally(() => window.setTimeout(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); }, 700));
     // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
     // at a time, so the flip after next lands without any layout work (it used to fit the new
     // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).

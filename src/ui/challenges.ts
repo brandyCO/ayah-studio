@@ -210,14 +210,14 @@ export async function openDuel(onChange?: () => void): Promise<void> {
     })() : '';
     if (!d) {
       // No rival free yet (owner 2026-11-12): only the search, no quests or scores until someone is paired. The server
-      // pairs on each ask, so it looks again every 12 s while this is open.
+      // pairs everyone without a rival every 5 minutes and a waiter with the next one to wait, so 30 s is soon enough.
       info.replaceChildren(
         h('div', { class: 'du-search', 'aria-hidden': 'true' }, h('i', {}), h('i', {}), h('i', {})),
         h('p', { class: 'du-line' }, clt('du.waiting')),
         h('p', { class: 'small muted du-how' }, clt('du.waitSub')),
         lastBtn);
       clearInterval(tick);
-      tick = window.setInterval(() => { if (!document.hidden) void paint(true, false); }, 12_000);
+      tick = window.setInterval(() => { if (!document.hidden) void paint(true, false); }, 30_000);
       return;
     }
     const who = d ? (d.rival.private ? '…' : d.rival.name ?? '…') : '';

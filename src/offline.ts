@@ -7,7 +7,9 @@ import { unmetered } from './data/mushafDownload';
 
 const BASE = import.meta.env.BASE_URL;
 const DATA = ['meta.json', 'quran-uthmani.json', 'en-sahih.json', 'en-wbw.json', 'mushaf.json', 'word-map.json', 'divisions.json', 'adhkar.json', 'duas.json'];
-const FONTS = ['UthmanicHafs.woff2', 'SuraNames.woff2', 'AmiriQuran.woff2', 'bismillah.svg'];
+// The surah header names are one tiny font per surah (src/ui/suraName.ts), all 114 kept for offline reading.
+const FONTS = ['UthmanicHafs.woff2', 'AmiriQuran.woff2', 'bismillah.svg',
+  ...Array.from({ length: 114 }, (_, i) => `suras/s${String(i + 1).padStart(3, '0')}.woff2`)];
 
 export function setupOffline() {
   // Only for the built web app over http(s): not the dev server, and not the Android app (Capacitor),

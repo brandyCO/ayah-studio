@@ -13,7 +13,7 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
-  StaleMiss, staleFirst, refreshCached, dropCache,
+  StaleMiss, staleFirst, refreshCached, dropCache, rankPulse,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
@@ -884,13 +884,21 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     : view === 'friends' ? k === 'friends'
       : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
         : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
-  let quiet = 0, stopped = false, live = 0;
+  let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();
   const poll = async () => {
     if (stopped) return;
     if (!document.hidden && account() && !document.querySelector('dialog[open], .cel')) {
       try {
         await report();
-        if (await refreshCached(onScreen)) { quiet = 0; await paint(false); } else quiet++;
+        // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when
+        // it changed, or once a minute for the places among everyone; the other views ask again as before.
+        const p = view === 'league' ? await rankPulse() : null;
+        if (p && p === lastPulse && Date.now() - fullAt < 60_000) quiet++;
+        else {
+          lastPulse = p;
+          fullAt = Date.now();
+          if (await refreshCached(onScreen)) { quiet = 0; await paint(false); } else quiet++;
+        }
       } catch { /* offline: try again later */ }
     }
     if (!stopped) live = window.setTimeout(poll, quiet < 3 ? 8_000 : quiet < 6 ? 15_000 : 30_000);
