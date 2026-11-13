@@ -196,17 +196,40 @@ function robeBody(f: Fig): string {
   s += shine('M58 168Q60 156 72 152', 4, 0.18);
   if (outfit === 0) s += `<path d="M100 150v42" stroke="${c[1]}" stroke-width="3" stroke-linecap="round"/>${[160, 172, 184].map((y) => `<circle cx="100" cy="${y}" r="2.6" fill="${c[1]}"/>`).join('')}`;
   if (outfit === 1) {
-    // Kurta with a vest over it.
+    // Kurta with a vest over it (a Light part, 2026-11-13 richer): a placket of small buttons, the vest edged in gold
+    // embroidery with a paisley on each side and a little pocket square.
     const v: Pair = f.outC === 5 ? ['#efe2c6', '#c8b48c'] : ['#2a2d38', '#15171e'];
-    s += S(`M66 151Q52 160 52 182L50 ${hem - 30}H90L94 154Z`, v[0], v[1], -3, -3) + S(`M134 151Q148 160 148 182L150 ${hem - 30}H110L106 154Z`, v[0], v[1], -3, -3);
-    s += `<path d="M90 160V${hem - 34}M110 160V${hem - 34}" stroke="#f2c14e" stroke-width="2" opacity=".75"/>`;
+    const gold = '#f2c14e', goldD = '#a8740f';
+    s += `<path d="M100 152V${hem - 36}" stroke="${c[1]}" stroke-width="5" stroke-linecap="round"/>` + [162, 172, 182].map((y) => `<circle cx="100" cy="${y + .8}" r="2.4" fill="${goldD}"/><circle cx="100" cy="${y}" r="2" fill="${gold}"/>`).join('');
+    const L = `M66 151Q52 160 52 182L50 ${hem - 30}H90L94 154Z`, R = `M134 151Q148 160 148 182L150 ${hem - 30}H110L106 154Z`;
+    s += S(L, v[0], v[1], -3, -3) + S(R, v[0], v[1], -3, -3);
+    s += `<path d="M94 154L90 ${hem - 30}H50M106 154L110 ${hem - 30}H150" stroke="${goldD}" stroke-width="4" fill="none" stroke-linejoin="round" transform="translate(.5 1)"/>`
+      + `<path d="M94 154L90 ${hem - 30}H50M106 154L110 ${hem - 30}H150" stroke="${gold}" stroke-width="3" fill="none" stroke-linejoin="round"/>`
+      + `<path d="M93 158L89.6 ${hem - 33}M107 158L110.4 ${hem - 33}" stroke="#fff2b8" stroke-width="1" stroke-dasharray="2 2.4" opacity=".85"/>`;
+    // A paisley (boteh) on each side of the vest.
+    const boteh = (x: number, y: number, m: number) => `<path d="M${x} ${y + 8}c${-6 * m} 0 ${-8 * m} -8 ${-3 * m} -13c${3 * m} -3 ${6 * m} -2 ${7 * m} 1c${1 * m} 5 ${-1 * m} 10 ${-4 * m} 12z" fill="none" stroke="${gold}" stroke-width="1.8"/><circle cx="${x - 1.2 * m}" cy="${y - 1}" r="1.6" fill="${gold}"/>`;
+    s += boteh(72, 194, 1) + boteh(128, 194, -1);
+    s += S('M118 166h10l-1 6h-8z', '#d94a6a', '#a8304e', -1, -1);
   }
   if (outfit === 2) s += S('M76 186h48v16q0 8 -8 8h-32q-8 0 -8 -8z', c[1], c[1]) + `<path d="M90 152v20M110 152v20" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/><circle cx="90" cy="174" r="2.5" fill="#fff"/><circle cx="110" cy="174" r="2.5" fill="#fff"/>`;
   if (outfit === 3) s += `<path d="M100 156v${hem - 160}" stroke="${c[1]}" stroke-width="3" opacity=".9"/>`;
   if (outfit === 4) {
-    // Embroidered abaya: a gold line and stitched dots down the front and round the hem.
-    s += `<path d="M100 156v${hem - 160}M60 ${hem - 4}Q100 ${hem - 12} 140 ${hem - 4}" stroke="#c9a24a" stroke-width="3" fill="none" opacity=".95"/>`;
-    for (let y = 164; y < hem - 8; y += 9) s += `<circle cx="94" cy="${y}" r="1.6" fill="#f2c14e"/><circle cx="106" cy="${y}" r="1.6" fill="#f2c14e"/>`;
+    // Embroidered abaya (a Light part, 2026-11-13 richer): a front panel of gold vines with small flowers, a jewelled
+    // collar and a woven band of diamonds round the hem.
+    const gold = '#f2c14e', goldD = '#a8740f';
+    s += `<path d="M90 154L88 ${hem - 2}M110 154L112 ${hem - 2}" stroke="${goldD}" stroke-width="3.4" transform="translate(.5 1)"/><path d="M90 154L88 ${hem - 2}M110 154L112 ${hem - 2}" stroke="${gold}" stroke-width="2.6"/>`;
+    for (let y = 166, k = 0; y < hem - 22; y += 14, k++) {
+      const m = k % 2 ? 1 : -1;
+      s += `<path d="M100 ${y - 7}Q${100 + 7 * m} ${y - 3} 100 ${y + 7}" stroke="${gold}" stroke-width="1.6" fill="none"/>`
+        + `<path d="M${100 + 4 * m} ${y - 2}q${3 * m} -3 ${5 * m} -1q${-1 * m} 3 ${-5 * m} 1z" fill="#7fc79a"/>`
+        + [0, 1, 2, 3, 4].map((i) => { const a = (i / 5) * Math.PI * 2; return `<circle cx="${(100 - 4 * m + Math.cos(a) * 2.2).toFixed(1)}" cy="${(y + 1 + Math.sin(a) * 2.2).toFixed(1)}" r="1.5" fill="#fff4f7"/>`; }).join('')
+        + `<circle cx="${100 - 4 * m}" cy="${y + 1}" r="1.2" fill="${gold}"/>`;
+    }
+    s += `<path d="M82 151Q100 164 118 151" stroke="${goldD}" stroke-width="5" fill="none" stroke-linecap="round" transform="translate(0 1)"/><path d="M82 151Q100 164 118 151" stroke="${gold}" stroke-width="4" fill="none" stroke-linecap="round"/>`
+      + [[88, 156], [100, 159.5], [112, 156]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i === 1 ? 2.6 : 1.8}" fill="${i === 1 ? '#3dbfa0' : '#d94a6a'}"/><circle cx="${x - .6}" cy="${y - .6}" r=".7" fill="#fff"/>`).join('');
+    const band = `M44 ${hem - 16}Q100 ${hem - 28} 156 ${hem - 16}L158 ${hem - 4}Q100 ${hem - 16} 42 ${hem - 4}Z`;
+    s += clipped(robe, `<path d="${band}" fill="${goldD}" transform="translate(0 1)"/><path d="${band}" fill="${gold}"/>`
+      + Array.from({ length: 13 }, (_, i) => { const x = 48 + i * 8.6, y = hem - 10 - Math.sin(((x - 44) / 112) * Math.PI) * 6; return `<path d="M${x.toFixed(1)} ${(y - 3).toFixed(1)}l3 3l-3 3l-3 -3z" fill="${i % 2 ? '#3dbfa0' : '#d94a6a'}"/>`; }).join(''));
   }
   if (f.outfit === 6) {
     // The champion's bisht: a dark cloak with gold edges over the thobe.
