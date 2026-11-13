@@ -722,6 +722,22 @@ Pro and a load test come later, when the owner decides to pay).
 - [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
 - [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
 
+### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
+- [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
+      (`src/i18n/enStudio.ts`) and reflections lazy, sw.js network wait 0.8 s, warm-up of the studio only on Wi-Fi
+      or once used (`studioUsed`), web manifest (#234)
+- [x] Journey writes batched (1 s, flushed on hide); `listenWhile()`/`sweepListeners()` stop listeners piling up;
+      back closes the top sheet (`src/ui/backCloses.ts`); player resumes after a stall; export keeps the screen
+      awake and streams to an OPFS file (`fastStart: 'reserve'`) (#236)
+- [x] `tidy_db()` nightly via pg_cron (`20261113000000_nightly_tidy.sql`, pgTAP `tidy.test.sql`);
+      `navigator.storage.persist()` once there is progress; translation default from the phone's languages;
+      og: preview (`public/og.jpg`); reader text size (`readerText`); Learn row at 320 px (#237)
+- [x] PR checks (`.github/workflows/checks.yml`): `scripts/check-quran.mjs` (6236 ayat, 604 pages, pinned sha256 in
+      `scripts/quran-checksums.json`; `--write` after a reviewed text update) and `scripts/smoke.mjs` (main screens,
+      English + Arabic, no page errors / raw keys / sideways scroll)
+- [ ] Owner: release build (AAB, minified, fonts as asset pack, update check) for Play Store; `SENTRY_DSN`
+- [ ] Harakat clip audio out of the database into Storage (Learn/harakat thread)
+
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
 save to gallery / share sheet; offline audio cache; settings.

@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "check": "node scripts/check-text-modes.mjs",
-    "size": "node scripts/check-size.mjs"
+    "size": "node scripts/check-size.mjs",
+    "quran": "node scripts/check-quran.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
