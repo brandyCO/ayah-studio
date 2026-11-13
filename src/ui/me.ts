@@ -1235,6 +1235,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       prayerStrip, hero, syncLine, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
+    // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
+    // season ahead, the du'a-notes ask, the widget hint) only the most useful one shows at a time; the rest wait
+    // for another visit. Ramadan itself (a live season card) is never held back.
+    const EXTRAS = ['.ws-card', '.aic-new', '.snc:not(.live)', '.me-ask', '.wg-hint'];
+    let quietRaf = 0;
+    const quietExtras = () => {
+      quietRaf = 0;
+      let shown = false;
+      for (const sel of EXTRAS) for (const el of root.querySelectorAll<HTMLElement>(sel)) {
+        el.hidden = shown;
+        shown = true;
+      }
+    };
+    new MutationObserver(() => { if (!quietRaf) quietRaf = requestAnimationFrame(quietExtras); }).observe(root, { childList: true, subtree: true });
+    quietExtras();
   }
   paintRoom();
 

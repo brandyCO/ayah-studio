@@ -2048,6 +2048,9 @@ duas/reflections section in Me.
       lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
       mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
       and from 17:00 leans to look at a flame still waiting
+      **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
+      ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
+      never held back
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
