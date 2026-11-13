@@ -68,6 +68,7 @@ async function route() {
       c = await show(screen, Number(a), Number(b) || undefined);
     } else if (view === 'reel' && Number(a) && b) {
       const [from, to] = b.split('-').map(Number);
+      try { localStorage.setItem('studioUsed', '1'); } catch { /* private window */ } // the web warm-up may now keep the studio offline
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
@@ -142,7 +143,20 @@ else if (launch) history.replaceState(null, '', lastRead());
 if (launch && !liteMode()) playOpening();
 
 window.addEventListener('hashchange', route);
-void initI18n().then(route);
+// Everything below the first screen waits until that screen is up (and the phone has a quiet moment),
+// so a first open downloads and runs only what page 1 needs. Each part is idempotent and listens for
+// later changes itself, so starting it a moment later loses nothing.
+let afterFirst: (() => void)[] | null = [];
+const later = (f: () => void) => { if (afterFirst) afterFirst.push(f); else f(); };
+const runLater = () => {
+  const list = afterFirst;
+  afterFirst = null;
+  for (const f of list ?? []) try { f(); } catch (e) { console.error(e); }
+};
+void initI18n().then(route).finally(() => {
+  if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
+  else setTimeout(runLater, 300);
+});
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
 setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
@@ -150,26 +164,26 @@ const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
-void import('./ui/rewards').then((m) => m.watchRewards());
+later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
 watchVitals(); // real-use speed (this device only, Device check)
-if (isNative()) void import('./ui/widgets').then((m) => m.initWidgets()); // streak, tasbih, prayer widgets
-if (isNative()) void import('./ui/nudges').then((m) => m.initNudges()); // the evening flame reminder
+if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
+if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
 setupOffline();
 // Problem reports made offline go out now (src/ui/report.ts).
 setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
 startSync();
-if (isNative()) void import('./ui/morning').then((m) => m.initDailyNative()); // widget + morning ayah (Android)
+if (isNative()) later(() => void import('./ui/morning').then((m) => m.initDailyNative())); // widget + morning ayah (Android)
 void initAuth();
-void import('./ui/circles').then((m) => m.resumePendingJoin()); // an invitation opened before signing in
-void import('./ui/relight').then((m) => m.resumePendingRelight()); // a friend's relight opened before signing in
+later(() => void import('./ui/circles').then((m) => m.resumePendingJoin())); // an invitation opened before signing in
+later(() => void import('./ui/relight').then((m) => m.resumePendingRelight())); // a friend's relight opened before signing in
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
-void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); }));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void import('./together/relight').then((m) => m.takeRelights()); });
+later(() => void import('./cloud/auth').then(({ onAccount }) => onAccount((a) => { if (a) void import('./together/relight').then((m) => m.takeRelights()); })));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !afterFirst) void import('./together/relight').then((m) => m.takeRelights()); });
 // The Ramadan season: its reminders, and the teaser for a new user once their account has synced (first day only).
 setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
-void import('./together/ranks').then((m) => m.watchRanks());
+later(() => void import('./together/ranks').then((m) => m.watchRanks()));
 // The ayah wall was removed (owner, 2026-10-11): drop a guest entry left waiting from before.
 try { sessionStorage.removeItem('pendingWall'); } catch { /* ignore */ }

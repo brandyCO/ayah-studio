@@ -8,7 +8,8 @@ import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
-import { keepWholeMushaf } from '../data/mushafDownload';
+import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
+import { isNative } from '../native';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { icon } from './icons';
 import { h, toast } from './dom';
@@ -21,7 +22,10 @@ import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMar
 import { attachPlayer, replayPosition, sharedPlayer } from './player';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
-import { openReflection, openReflections, wroteHere } from './reflections';
+import { wroteHere } from './wroteHere';
+// The reflections sheet loads on first use (out of the first load).
+const openReflection = (...a: Parameters<typeof import('./reflections').openReflection>) => import('./reflections').then((m) => m.openReflection(...a));
+const openReflections = (...a: Parameters<typeof import('./reflections').openReflections>) => import('./reflections').then((m) => m.openReflections(...a));
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
 import { countPage, pageSeconds, todayRec } from '../data/journey';
@@ -483,9 +487,12 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     attach();
     header();
     for (const p of want) if (!built.has(p)) void buildPage(p).then(attach);
-    // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading.
-    for (const p of [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10])
-      if (valid(p)) void loadPageFont(p).catch(() => {});
+    // Fetch fonts further ahead (mostly forwards), so a swipe rarely meets a page still loading: after
+    // this page's own font (it comes first), and on mobile data in the browser only the next few
+    // (~150 KB each; the Android app has them all already).
+    const ahead = [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10];
+    const far = isNative() || unmetered() ? ahead : ahead.slice(0, 4);
+    void loadPageFont(page).catch(() => {}).finally(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); });
     // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
     // at a time, so the flip after next lands without any layout work (it used to fit the new
     // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).

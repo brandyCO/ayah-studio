@@ -1,6 +1,6 @@
 // Ayah Studio service worker: lets the app open and work offline.
 // - The app itself (HTML, JS, CSS): the page is fetched fresh when online (so updates arrive at
-//   once) and from the cache when offline; built files have content hashes, so cache-first.
+//   once) and from the cache when offline or when the network takes over 0.8 s; built files have content hashes, so cache-first.
 // - Bundled data (Quran text, translations, mushaf layout), fonts and default backgrounds:
 //   cache-first; data URLs carry a version (?v=…), and an older version is dropped when a new one is stored.
 // - Quran.com recitation timings: network-first, the last answer is kept for offline use.
@@ -55,7 +55,9 @@ self.addEventListener('fetch', (event) => {
 
   if (ours) {
     if (req.mode === 'navigate' || path === '' || path === 'index.html') {
-      return event.respondWith(networkFirst(APP, req, SCOPE.href, 4000));
+      // A good connection answers well within 0.8 s (and brings an update at once); a weak one no longer
+      // keeps the app waiting: the kept copy opens, and the fresh page is stored for the next open.
+      return event.respondWith(networkFirst(APP, req, SCOPE.href, 800));
     }
     if (path.startsWith('assets/')) return event.respondWith(cacheFirst(APP, req));
     if (path.startsWith('data/') || path.startsWith('fonts/') || path.startsWith('backgrounds/')) {

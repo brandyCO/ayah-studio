@@ -1,7 +1,16 @@
 // Interface strings (docs/grow.md, G1). English is the source (en.ts, typed keys); other languages
 // are lazy-loaded dictionaries, and a missing key falls back to English. Only interface words are
 // translated here — Quran text, translations of the meaning and surah names come from the bundled data.
-import en, { type Key } from './en';
+import enCore, { type Key } from './en';
+
+// English: the first-load strings, joined by the studio's own when the editor opens (loadStudioStrings()).
+const en = enCore as Record<Key, string>;
+let studioStrings: Promise<void> | null = null;
+/** Loads the reel studio's English strings (call before drawing the editor). */
+export function loadStudioStrings(): Promise<void> {
+  studioStrings ??= import('./enStudio').then((m) => { Object.assign(en, m.default); }, (e) => { studioStrings = null; throw e; });
+  return studioStrings;
+}
 
 export type { Key };
 export type Lang = 'en' | 'ar';
@@ -17,7 +26,7 @@ let generic = '';
 
 /** The interface string for `key`, with {name} placeholders filled from `vars`. */
 export function t(key: Key, vars?: Record<string, string | number>): string {
-  const s = dict[key] ?? en[key];
+  const s = dict[key] ?? en[key] ?? key; // a studio key before its strings loaded shows the key, never "undefined"
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? fmtNum(vars[k]) : m)) : s;
 }
 

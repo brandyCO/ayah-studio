@@ -17,7 +17,7 @@ import { SYNCED_PREFS } from '../ui/prefs';
 /** This device's own: caches, downloads, scheduling state, its install id, and the Kids space
  *  (nothing about a child leaves the device: docs/kids.md). */
 const DEVICE = new Set([
-  'deviceId', 'syncMeta', 'kvMeta', 'journeyOthers', 'remoteConfig', 'perfLog', 'fpsLog', 'liteMode', 'warmedUp',
+  'deviceId', 'syncMeta', 'kvMeta', 'journeyOthers', 'remoteConfig', 'perfLog', 'fpsLog', 'liteMode', 'warmedUp', 'studioUsed',
   'lastPage', 'listenKept', 'favKept', 'kidsKept', 'favAnyNet', 'stockPages', 'popular', 'rankCache', 'circles',
   'mushafKept', 'mushafOk', 'mushafAsked', 'qcfDropped', 'reportQueue', 'rankFigureSent', 'rankRoomSent', 'rankSent', 'rankShowSent', 'rankXp',
   'asrToday', 'prayerLocAt', 'exportQuality', 'pactMark', 'vitals', 'rankProfiles', 'lampWall',
