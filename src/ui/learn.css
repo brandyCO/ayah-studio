@@ -316,6 +316,11 @@
 .lk-foot.good { background: var(--good-bg); color: var(--good); }
 .lk-foot.bad { background: var(--bad-bg); color: var(--bad); }
 .lk-verdict { display: grid; gap: 2px; }
+/* The user's character beside the verdict, reacting to the answer. */
+.lk-foot.with-coach { flex-wrap: nowrap; }
+.lk-foot.with-coach .lk-verdict { flex: 1; min-width: 0; }
+.lk-coach-box { flex: none; position: relative; width: 58px; height: 74px; align-self: flex-end; margin-block: -18px -6px; }
+.lk-coach-box .lk-coach { position: absolute; inset: 0; width: 100%; height: 100%; }
 .lk-verdict strong { font-size: var(--fs-h3, 20px); }
 .lk-answer .lk-ar { font-size: 26px; }
 .lk-orderans { display: grid; gap: 2px; }

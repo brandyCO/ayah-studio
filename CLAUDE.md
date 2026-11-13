@@ -2044,6 +2044,10 @@ duas/reflections section in Me.
       flies to the counter; `quietChest()` in me.ts) and a goal met elsewhere gives the Me tab a small check (`tabTick()`,
       no banner or notification); full-screen moments stay for every goal met, the week's chests, a ×2 surprise, Al-Kahf,
       badges, the harvest, streak fire days and finished surahs. Next up shows the user's own bust (`bustMarkup`)
+      **The character reacts**: in Learn exercises the user's own character stands beside the verdict (`coachFor()` in
+      lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
+      mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
+      and from 17:00 leans to look at a flame still waiting
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

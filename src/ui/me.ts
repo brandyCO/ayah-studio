@@ -390,6 +390,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
+      // It reacts to how today is going (front-end backlog): proud once the flame is lit by reading, a look over at
+      // the flame in the evening while it still waits, and calm (never sad) when the flame went out.
+      setTimeout(() => {
+        if (!a.el.isConnected || look.mode === 'asleep') return;
+        const st = streak();
+        if (st.litToday) a.face(look.mode === 'reading' ? 'proud' : 'happy', 2600);
+        else if (st.lost) a.face('calm', 2600);
+        else if (new Date().getHours() >= 17 && st.days > 0) {
+          const fl = hero.querySelector('.flame, .me-flame');
+          const r = a.el.getBoundingClientRect(), f = fl?.getBoundingClientRect();
+          a.lean(f && f.left + f.width / 2 < r.left + r.width / 2 ? -1 : 1);
+        }
+      }, 2900);
     });
   };
   const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
