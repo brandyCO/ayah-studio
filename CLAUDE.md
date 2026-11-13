@@ -2108,6 +2108,10 @@ duas/reflections section in Me.
       once, friends only), and "Your news" with who said it; new ones come as one toast on open / return (`cheersArrived()`,
       `featCheersSeen`). No text anywhere. **Reading now**: once a minute while the mushaf is open or a recitation plays
       (`rank_live`, `rank_players.live_at` / `live_kind`), friends' cards show a live dot "Reading now" / "Listening now" for 3 min
+      **Ready offline marks** (`src/data/offlineMarks.ts`, reads `favKept` + `listenKept` directly): the surah list marks
+      (teal check) surahs whose recitation in the Listen voice (`reelReciter`) is on the phone, from a favourite's download or a
+      whole-surah file kept after listening (`keepListened(url, 'reciter:surah')` tags it); the player's reciter picker shows
+      "Offline" beside reciters whose recording of this surah is kept
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

@@ -15,6 +15,7 @@ import { basmalaBefore, openingOf, type Basmala } from '../data/basmala';
 import type { SurahMeta } from '../data/quran';
 import { DEFAULT_RECITER, RECITERS, covers, everyayahUrl, groupRecordings, reciterById, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { recordingChips, reciterSearchBox } from './recordings';
+import { offlineSurahs } from '../data/offlineMarks';
 import { h, toast } from './dom';
 import { icon } from './icons';
 import { reelReciter, setReelReciter } from './prefs';
@@ -46,9 +47,9 @@ const validSegs = (segs: unknown): [number, number, number][] => (Array.isArray(
 
 /** What an <audio> element should play: the copy on this device, else the stream, which is then kept
  *  in the background for next time (listenCache.ts). */
-async function local(url: string): Promise<string> {
+async function local(url: string, tag?: string): Promise<string> {
   const src = await playableUrl(url);
-  if (src === url) void import('../data/listenCache').then((m) => m.keepListened(url)).catch(() => {});
+  if (src === url) void import('../data/listenCache').then((m) => m.keepListened(url, tag)).catch(() => {});
   return src;
 }
 
@@ -237,7 +238,7 @@ export function createPlayer(o: PlayerHooks) {
         a: i + 1, from: 0, to: 0, words: SHIFTED.has(`${s}:${i + 1}`) ? [] : validSegs(words[i + 1]),
       }));
     }
-    const src = url ? await local(url) : ''; // a kept copy (favourite or listened before)
+    const src = url ? await local(url, `${r.id}:${s}`) : ''; // a kept copy (favourite or listened before)
     if (id !== req) return false;
     perAyah = !url;
     using = r;
@@ -561,7 +562,9 @@ export function createPlayer(o: PlayerHooks) {
       const r = g.find((x) => x.id === now) ?? g[0];
       return h('div', { class: 'rec-group' },
         h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
-          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
+          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)),
+          surah && g.some((x) => offlineSurahs(x.id).has(surah)) ? h('small', { class: 'off-pill', title: t('list.offline') }, icon('check', 12), t('list.offlineShort')) : '',
+          starButton(r, surah || null, () => { d.close(); pickReciter(); }), sampleButton(r)),
         recordingChips(g, now, choose));
     };
     // Reciters with no recording of this surah are still listed (below), so nobody seems missing:
