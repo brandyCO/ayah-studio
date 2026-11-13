@@ -206,7 +206,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
   }
 
-  const playHere = (s: number, a: number) => { following = true; firstPosition = false; void player.playFrom(s, a); };
+  const playHere = (s: number, a: number) => void import('./welcome').then((w) => w.askReciterFirst(() => {
+    following = true; firstPosition = false; void player.playFrom(s, a);
+  }));
   listenHere = (s, a) => { noteAyah(s, a); playHere(s, a); };
   const sel = selectionController({
     meta,
@@ -432,6 +434,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     setLastRead(`#/s/${s}/${a}`); // reopen on this page next time
     rememberPage(`#/s/${s}/${a}`, page);
     startReadTimer();
+    if (tourSeen()) void import('./mushafOffline').then((m) => m.offerMushafDownload()); // F25: after a few pages
     // "Recently read" on the search screen: pages stayed on for a few seconds, not ones swiped past.
     clearTimeout(recentTimer);
     const p = page;
@@ -671,21 +674,24 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});
   keepWholeMushaf(() => page);
-  if (tourSeen()) void import('./mushafOffline').then((m) => m.offerMushafDownload());
+  let hadHint = false;
+  try { hadHint = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
   // First run (G3): the tour, then the hint; people who used the app before the tour skip it.
   let touring = false;
   if (!tourSeen()) {
     let returning = false;
     try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
-    if (returning) markTourSeen();
-    else { touring = true; void import('./welcome').then((m) => m.showWelcome(firstVisitHint)); } // language, reciter, theme
+    // F1: no questions before the first ayah. The reciter is asked at the first Listen (welcome.ts).
+    markTourSeen();
+    if (!returning) touring = true;
+    firstVisitHint();
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
   // Listening moved from the tab bar into the reading view (2026-11-02): say where it is, once.
   if (!touring && !intent) {
     try {
-      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (localStorage.getItem('mushafHint')) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
+      if (!localStorage.getItem('listenMoved')) { localStorage.setItem('listenMoved', '1'); if (hadHint) setTimeout(() => toast(t('mushaf.listenMoved')), 1500); }
     } catch { /* ignore */ }
   }
   if (intent === 'listen') listenNow();

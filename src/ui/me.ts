@@ -22,7 +22,7 @@ import { iconCard, newIconCard } from './appIcons';
 import { badgeMoment } from '../data/claims';
 import { addCustom, claimBadge, claimGoal, goalClaimed, lightOn } from '../data/journey';
 import { KAHF_LIGHT, KAHF_PAGES, isFriday, surprise } from '../data/friday';
-import { pageReadSince } from '../data/journey';
+import { allDays, pageReadSince } from '../data/journey';
 import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_LISTEN, WEEK_NIGHTS, WEEK_PAGES, WEEK_REELS, WEEK_SURAHS, dayLightMax, lightFor, resetsAt, weekAllId, weekClaimed, weekGoals } from '../data/goals';
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
@@ -136,6 +136,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const meta = await loadMeta();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('lite');
   const hero = h('section', { class: 'me-hero' });
+  // F2 (front-end review): day one shows the flame, one next step and today's goals; the rest comes over
+  // the first days (du'a lanterns and the character from day 2, reminders from day 3), and rows still at zero hide.
+  const opened = Object.values(allDays()).filter((r) => r.o).length;
+  const dayOne = opened <= 1;
   // The streak card's sky follows the user's day in the same seven times as the du'a lanterns (owner request
   // 2026-11-11): before dawn, Fajr, Dhuhr, Asr, Maghrib, Isha, and the night's sleep, each its own sky. From the prayer
   // times when a location is set, else by the hour.
@@ -207,8 +211,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   };
   paintGifts();
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
-  const duaBox = h('section', { class: 'me-card dl-card' });
-  const paintDuas = () => void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox));
+  const duaBox = h('section', { class: 'me-card dl-card', hidden: dayOne });
+  const paintDuas = () => { if (!dayOne) void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox)); };
   const noorEl = noorLine('me');
   // Asked once, right under the lanterns: reminders after each adhan and salah (owner request 2026-11-10).
   const duaAsk = h('div', { class: 'me-ask-slot' });
@@ -216,7 +220,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     let asked = true;
     try { asked = !!localStorage.getItem('duaNotesAsked'); } catch { /* ignore */ }
     const a = prayerAlerts();
-    if (asked || a.duas || a.salah || page) { duaAsk.replaceChildren(); return; }
+    if (asked || a.duas || a.salah || page || opened < 3) { duaAsk.replaceChildren(); return; }
     const done = () => { try { localStorage.setItem('duaNotesAsked', '1'); } catch { /* ignore */ } duaAsk.replaceChildren(); };
     duaAsk.replaceChildren(h('section', { class: 'me-card me-ask' },
       h('span', { class: 'me-ask-ic', 'aria-hidden': 'true' }, '🔔'),
@@ -241,6 +245,44 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const prayerBox = h('section', { class: 'me-card' });
   // Badges waiting for their Claim stay on Me itself; the rest of the badges live behind a door.
   const claimSlot = h('div', { class: 'me-claims' });
+  // F37: two or more prizes waiting (badges, new pieces, gifts) fold into one row that opens them one after another.
+  const waitRow = h('div', { class: 'me-wait-slot' });
+  let opening = false;
+  const waiting = () => [
+    ...claimSlot.querySelectorAll<HTMLElement>('.claim-badge'),
+    ...giftSlot.querySelectorAll<HTMLElement>('.me-gift .chest'),
+    ...wardrobeSlot.querySelectorAll<HTMLElement>('.wd-card .chest'),
+  ];
+  const paintWait = () => {
+    if (opening) return;
+    const n = waiting().length + Math.max(0, Number(claimSlot.dataset.more ?? 0));
+    const fold = n >= 2 && !page;
+    for (const el of [claimSlot, giftSlot, wardrobeSlot]) el.classList.toggle('me-folded', fold);
+    waitRow.replaceChildren(fold ? h('button', { class: 'me-wait', onclick: () => void openAllWaiting() },
+      chest(60, 'ready', mpt('mp.wait.open')),
+      h('b', {}, mpt('mp.wait.n', { n })),
+      h('span', { class: 'chip primary brand-btn' }, mpt('mp.wait.open'))) : '');
+  };
+  const openAllWaiting = async () => {
+    opening = true;
+    haptic(10);
+    try {
+      for (let i = 0; i < 40; i++) {
+        const next = waiting()[0];
+        if (!next) break;
+        next.click();
+        // Wait for its moment to start, then to end.
+        for (let w = 0; w < 20 && !document.querySelector('.cel'); w++) await new Promise((r) => setTimeout(r, 100));
+        while (document.querySelector('.cel')) await new Promise((r) => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 350));
+        if (!root.isConnected) return;
+      }
+    } finally {
+      opening = false;
+      paintWait();
+    }
+  };
+  for (const el of [claimSlot, giftSlot, wardrobeSlot]) new MutationObserver(() => paintWait()).observe(el, { childList: true, subtree: true });
   const doors = h('nav', { class: 'me-doors', 'aria-label': t('me.title') });
   const prayerStrip = h('a', { class: 'me-pr-strip', href: '#/me/prayer' });
   let prayerLine = '';
@@ -285,6 +327,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // No character yet: a soft outline waits in its place, and a tap opens the builder (character by default,
   // owner decision 2026-11-10).
   const showGhost = () => {
+    if (dayOne) return;
     void import('../i18n/ranks').then(({ rt }) => {
       if (!hero.isConnected) return;
       const ghost = h('button', { class: 'me-actor me-ghost', type: 'button', 'aria-label': rt('fb.open'), onclick: () => {
@@ -374,17 +417,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         h('div', { class: 'me-top-txt' },
           h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
           h('p', { class: 'me-status' }, loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
-      lost ? h('p', { class: 'me-lost' }, t('me.lost', { n: lost.n })) : '',
-      lost && lost.days.length <= 3 ? h('button', { class: 'me-relight', onclick: () => {
-        if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
-        void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
-      } }, `🔥  ${t('rl.askFriend')}`) : '',
-      lost ? keptFreezeButton(lost.days) : '',
-      lost && lost.days.length <= 7 ? repairButton(lost) : '',
+      lost ? lostCard(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
-        h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })),
-        h('span', { class: 'me-chip' }, t('me.best', { n: s.best })),
+        s.weeks ? h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })) : '',
+        s.best > s.days ? h('span', { class: 'me-chip' }, t('me.best', { n: s.best })) : '',
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
     if (fromOther) {
@@ -671,7 +708,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       : [fridayBox(), tip ? tipCard(tip) : '',
         list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
         list.length ? h('div', { class: 'goals' }, ...list.map(goalRow)) : h('p', { class: 'muted' }, t('goal.none')),
-        list.length ? lightStrip() : ''];
+        list.length && stats('all').light > 0 ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },
         wk.length || withCh
@@ -840,6 +877,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, ...byFamily()));
     const waiting = earned.filter((b) => !badgeDone(b.def.id)).sort((a, b) => b.def.step - a.def.step);
     const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
+    claimSlot.dataset.more = String(waiting.length - shown.length);
     claimSlot.replaceChildren(
       waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
         badgeArt(b.def.tier, b.def.icon, true, 44),
@@ -867,6 +905,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         dot ? h('i', { class: 'me-door-dot', 'aria-hidden': 'true' }) : '');
     void hasFigure;
     // The room is on the streak card and prayer times on the line at the top; these two are used less often.
+    prayerStrip.hidden = dayOne && !prayerLine;
+    doors.hidden = dayOne;
     prayerStrip.replaceChildren(h('span', { class: 'me-pr-ic', 'aria-hidden': 'true' }, '🕌'),
       h('span', { class: 'me-pr-txt' }, prayerLine || mpt('mp.prayerSet')), h('span', { class: 'me-pr-go', 'aria-hidden': 'true' }, '›'));
     doors.replaceChildren(
@@ -998,9 +1038,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
-      prayerStrip, hero, syncLine, noorEl, dayCard() ?? '', wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, todayCard(), seasonCard() ?? '',
+      prayerStrip, hero, syncLine, noorEl, dayCard() ?? (dayOne ? '' : todayCard()), waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
-    void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
+    if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
   paintRoom();
 
@@ -1253,6 +1293,7 @@ export const repairPrice = (n: number) => Math.min(1500, 150 + 15 * n);
 function freezeBadge(s: ReturnType<typeof streak>): HTMLElement | string {
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
   const n = (s.freeze.free ? 1 : 0) + (s.extra.free ? 1 : 0);
+  if (!s.days && !s.lost) return ''; // F2: nothing to protect yet
   const lines = [mpt('mp.freezeHelp'),
     s.freeze.free ? mpt('mp.freezeReady') : mpt('mp.freezeUsed', { day: longDay.format(parse(s.freeze.day!)) }),
     s.extra.free ? mpt('mp.extraReady') : mpt('mp.extraNext', { day: longDay.format(parse(s.extra.next!)) })];
@@ -1275,13 +1316,30 @@ function repairButton(lost: { n: number; days: string[] }): HTMLElement {
     });
   } }, h('span', {}, mpt('mp.rep.btn', { n: lost.n })), h('b', { class: 'me-repair-p' }, star(), ` ${price}`));
 }
-function keptFreezeButton(days: string[]): HTMLElement {
-  const box = h('div', {});
+/** F36: a lost streak is one calm card with the best way back as its one button (a kept freeze first, then
+ *  a friend, then Light); the others wait under "Other ways". */
+function lostCard(lost: { n: number; days: string[] }): HTMLElement {
+  const friend = () => h('button', { class: 'me-relight', onclick: () => {
+    if (!account()) { toast(t('rl.signInFirst')); openAccount(); return; }
+    void import('../together/relight').then((m) => m.askRelight()).catch((e) => toast(e instanceof Error ? e.message : String(e)));
+  } }, t('rl.askFriend'));
+  const box = h('div', { class: 'me-lost-card' });
+  const paint = (freeze: HTMLElement | null) => {
+    const ways = [freeze, lost.days.length <= 3 ? friend() : null, lost.days.length <= 7 ? repairButton(lost) : null]
+      .filter((x): x is HTMLElement => !!x);
+    const [first, ...rest] = ways;
+    first?.classList.add('primary-way');
+    box.replaceChildren(
+      h('p', { class: 'me-lost' }, mpt('mp.lost.title', { n: lost.n })),
+      first ?? '',
+      rest.length ? h('details', { class: 'me-lost-more' }, h('summary', {}, mpt('mp.lost.other')), ...rest) : '');
+  };
+  paint(null);
   void Promise.all([import('../data/shop'), import('../i18n/ranks')]).then(([shop, { rt }]) => {
-    if (shop.bankedFreezes() < days.length) return;
-    box.replaceChildren(h('button', { class: 'me-relight', onclick: () => {
-      if (shop.useFreezes(days)) { toast(rt('rk.freezeUsed')); haptic(); }
-    } }, `❄  ${rt('rk.useFreeze', { n: days.length })}`));
+    if (shop.bankedFreezes() < lost.days.length) return;
+    paint(h('button', { class: 'me-relight', onclick: () => {
+      if (shop.useFreezes(lost.days)) { toast(rt('rk.freezeUsed')); haptic(); }
+    } }, rt('rk.useFreeze', { n: lost.days.length })));
   }).catch(() => { /* offline chunk: nothing */ });
   return box;
 }

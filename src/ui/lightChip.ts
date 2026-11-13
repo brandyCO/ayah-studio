@@ -22,6 +22,8 @@ export function lightChip(onclick: () => void = () => void import('./shop').then
   let raf = 0;
   const paint = () => {
     const all = wallet ? wallet() : stats('all').light;
+    // F2: no Light earned yet, nothing to show (it fades in with the first chest, which flies here).
+    el.classList.toggle('lt-empty', all === 0 && stats('all').light === 0);
     // More Light than shown (a reward just claimed): count up to it while the flying light lands.
     if (shown >= 0 && all > shown && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const from = shown, t0 = performance.now() + 450;

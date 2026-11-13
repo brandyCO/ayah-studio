@@ -1893,3 +1893,14 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
     mask-image: linear-gradient(to left, #000 calc(100% - var(--edge-fade)), transparent);
   }
 }
+
+/* F25: the mushaf download offer, a quiet card above the tab bar (never a sheet over a tap) */
+.mo-card { position: fixed; inset-inline: 12px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 40;
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 16px;
+  background: var(--card); color: var(--text); box-shadow: 0 6px 24px #0003; border: 1px solid var(--line);
+  opacity: 0; transform: translateY(16px); transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-spring); }
+.mo-card.show { opacity: 1; transform: none; }
+.mo-card .mo-text { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.mo-card .chip { flex: none; }
+.lt-chip { transition: opacity var(--dur-2); }
+.lt-chip.lt-empty { opacity: 0; pointer-events: none; }

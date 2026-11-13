@@ -280,7 +280,6 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
   root.append(
     h('header', { class: 'topbar' },
       h('div', { class: 'brand' }, h('h1', { class: 'brand-name' }, 'Ayah Studio'), h('p', { class: 'muted' }, t('list.tagline'))),
-      h('button', { class: 'chip', onclick: () => void import('./kids').then((m) => m.openKidsSpace()) }, t('list.kids')),
       h('a', { class: 'icon-btn', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, '⚙')),
     form,
     recent,
