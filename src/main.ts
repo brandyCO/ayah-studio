@@ -138,6 +138,7 @@ async function route() {
 const launch = !location.hash || location.hash === '#' || location.hash === '#/';
 applyTheme(); // the user's brand gradient, before the first screen
 applyLite(); // old-phone mode: heavy decorations off (src/lite.ts)
+try { document.documentElement.classList.toggle('easy', localStorage.getItem('easyMode') === 'on'); } catch { /* storage blocked */ } // easy mode: bigger text and buttons
 initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }

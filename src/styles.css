@@ -1938,3 +1938,14 @@ body .menu-item > svg:first-child:is([width="16"], [width="18"], [width="20"]) {
 
 /* Night calm (src/data/nightCalm.ts): from Isha to Fajr the loud colours soften a little */
 html.calm .tabbar, html.calm .lp-dock, html.calm .lp-top { filter: saturate(.72) brightness(.94); }
+
+/* Easy mode (Me → ⚙ → App): bigger text and touch targets on every screen; the mushaf page has its own size setting */
+html.easy {
+  --fs-2xs: 13px; --fs-xs: 14px; --fs-s: 16px; --fs-m: 17px; --fs-base: 18px; --fs-l: 19px; --fs-xl: 20px;
+  --fs-h3: 21px; --fs-h2: 24px; --fs-h1: 28px; --tap: 52px; --tap-s: 48px;
+}
+html.easy body { font-size: var(--fs-base); }
+html.easy :is(.chip, button.primary, a.primary, .menu-item, .set-row) { min-height: var(--tap-s); font-size: var(--fs-l); }
+html.easy .menu-item, html.easy .set-row { padding-block: 14px; }
+html.easy .tab-btn { font-size: var(--fs-xs); }
+html.easy .tab-btn svg { width: 28px; height: 28px; }

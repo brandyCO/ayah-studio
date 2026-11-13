@@ -703,6 +703,8 @@ const en = {
   'cel.ok': 'Alhamdulillah',
   'cel.combo': '{n} in a row',
   'set.soundsOn': 'Sounds: on',
+  'set.easyOn': 'Big text and buttons: on',
+  'set.easyOff': 'Big text and buttons: off',
   'set.harakatHelp': 'Help improve the harakat check',
   'set.soundsOff': 'Sounds: off',
   'cel.tapOpen': 'Tap the chest to open it',

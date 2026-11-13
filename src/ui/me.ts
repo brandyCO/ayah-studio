@@ -87,6 +87,13 @@ const challengeWaiting = () => {
     return !!v?.some((c) => c.incoming || (c.over && !c.claimed && c.start));
   } catch { return false; }
 };
+/** Easy mode: bigger text and buttons everywhere (`html.easy`, localStorage `easyMode`). */
+const easyOn = () => document.documentElement.classList.contains('easy');
+function setEasy(on: boolean) {
+  document.documentElement.classList.toggle('easy', on);
+  try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
+}
+
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
 export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
 export type MePage = (typeof ME_PAGES)[number];
@@ -1424,6 +1431,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, icon('colours', 18), t('theme.menu')),
           h('button', { class: 'menu-item', onclick: openLanguage }, icon('voice', 18), t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })),
           h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, icon(soundsOn() ? 'bell' : 'bellOff', 18), t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')),
+          h('button', { class: 'menu-item', 'aria-pressed': String(easyOn()), onclick: () => { setEasy(!easyOn()); paint(); } }, icon('book', 18), t(easyOn() ? 'set.easyOn' : 'set.easyOff')),
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
