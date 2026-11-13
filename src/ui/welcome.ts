@@ -2,6 +2,7 @@
 // from the phone (Me → Settings → Language changes it) and the colours wait in Me → Settings. The reciter is
 // asked the first time something is played (`askReciterFirst()`): the full list, hear each one, then Listen.
 // `showWelcome()` (the old three steps) stays for Me → Settings → Tour.
+import { mark } from '../usage';
 import { LANGS, lang, setLang, t } from '../i18n';
 import { DEFAULT_RECITER, RECITERS, groupRecordings, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { recordingChips, reciterSearchBox } from './recordings';
@@ -23,11 +24,12 @@ export function showWelcome(done?: () => void) {
   const close = () => {
     stopSample();
     markTourSeen();
+    mark('ev:welcome-done');
     overlay.classList.add('out');
     window.setTimeout(() => overlay.remove(), 400);
     done?.();
   };
-  const go = (k: number) => { stopSample(); i = Math.max(0, Math.min(2, k)); draw(); };
+  const go = (k: number) => { stopSample(); i = Math.max(0, Math.min(2, k)); mark(`ev:welcome-${i}`); draw(); };
 
   const languageStep = () => h('div', { class: 'welcome-list' }, ...LANGS.map((l) => h('button', {
     class: `welcome-option${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir, 'aria-pressed': String(l.id === lang()),
