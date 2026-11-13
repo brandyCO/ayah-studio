@@ -6,11 +6,11 @@
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import { localMsg } from '../i18n';
-import { addDays, allDays, claimGoal, streak } from '../data/journey';
+import { addDays, allDays, claimGoal, earnedBadges, streak, todayRec } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
-import { isFriendFireDay } from '../data/fireDays';
+import { isFireDay, isFriendFireDay } from '../data/fireDays';
 import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
@@ -104,10 +104,18 @@ export function watchRanks() {
   watchMaghrib(totals);
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
+  window.addEventListener('journey-changed', () => featsSoon());
+  // Reading now: once a minute while the mushaf is open or a recitation plays, so friends see a live dot.
+  setInterval(() => {
+    if (!account() || document.hidden) return;
+    const b = document.body.classList;
+    const k = b.contains('listening') || b.contains('listening-away') ? 'listen' : b.contains('mushaf-mode') ? 'read' : null;
+    if (k) void rpc('rank_live', { k }).catch(() => {});
+  }, 60_000);
   window.addEventListener('readlog-changed', soon);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); }
-    if (!document.hidden) setTimeout(() => void friendMoments(), 2500);
+    if (!document.hidden) { setTimeout(() => void friendMoments(), 2500); setTimeout(() => void cheersSoon(), 6000); }
   });
   onAccount((a) => {
     kept = null;
@@ -117,6 +125,8 @@ export function watchRanks() {
     if (!a) return;
     reportSoon(3000);
     setTimeout(() => void friendMoments(), 4000);
+    setTimeout(() => void cheersSoon(), 7000);
+    featsSoon();
     // A board invite opened before signing in: Ranks joins it.
     try { if ((sessionStorage.getItem('pendingBoard') || sessionStorage.getItem('pendingChallenge')) && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
     void scheduleLeagueNote();
@@ -484,7 +494,7 @@ export interface Profile extends Omit<Row, 'score'> {
   relation: 'me' | 'friend' | 'sent' | 'asked' | 'none'; show: number; bestTier: number;
   week?: number; streak?: number; trophies?: number; pages?: number; listen?: number; friend?: FriendStreak;
 }
-export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
+export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number; live?: 'read' | 'listen' | null }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
 
 /** A friend streak that reached a milestone and was not shown on this device yet (`frMs:{pid}:{n}`). */
@@ -635,4 +645,60 @@ export async function sendProfile(show = myShow(), force = false) {
     localStorage.setItem(SHOWN, String(show));
     localStorage.setItem('rankShowSent', sig);
   } catch { /* not playing yet, or offline: next time */ }
+}
+
+// --- friends' milestones (supabase/migrations/20261114200000_friend_feats.sql) ---
+// A streak fire day, a new level, a surah or juz finished, a Khatm: shared with friends the day it happens, so they
+// can say MashaAllah with one tap. Each is sent once (localStorage `featSent`, the day's keys); offline it waits.
+export type FeatKind = 'streak' | 'level' | 'surah' | 'juz' | 'khatm';
+export interface Feat { id: number; kind: FeatKind; n: number; at: string; cheers?: number; cheered?: boolean; by?: string[] }
+export type FriendFeat = Feat & Row;
+export interface Feats { friends: FriendFeat[]; mine: Feat[] }
+const FEAT_SENT = 'featSent';
+const sentKeys = (): { day: string; k: string[] } => {
+  try { const v = JSON.parse(localStorage.getItem(FEAT_SENT) ?? 'null'); if (v?.day === dayKey() && Array.isArray(v.k)) return v; } catch { /* ignore */ }
+  return { day: dayKey(), k: [] };
+};
+let featTimer = 0;
+const featsSoon = () => { if (!account() || featTimer) return; featTimer = window.setTimeout(() => { featTimer = 0; void sendFeats(); }, 4000); };
+let featBusy = false;
+/** The milestones reached today, from the journey (all devices) and this device's level. */
+function todaysFeats(): [FeatKind, number][] {
+  const out: [FeatKind, number][] = [];
+  const st = streak();
+  if (st.litToday && st.days >= 3 && isFireDay(st.days)) out.push(['streak', st.days]);
+  const r = todayRec();
+  for (const n of r.s ?? []) out.push(['surah', n]);
+  for (const n of r.j ?? []) out.push(['juz', n]);
+  if (earnedBadges()['pages-2'] === dayKey()) out.push(['khatm', 1]);
+  return out;
+}
+/** Shares one milestone now (a level up, levelUp.ts) or the day's from the journey. */
+export async function sendFeats(extra?: [FeatKind, number]) {
+  if (!account() || featBusy) return;
+  featBusy = true;
+  try {
+    const sent = sentKeys();
+    for (const [kind, n] of [...todaysFeats(), ...(extra ? [extra] : [])]) {
+      const k = `${kind}:${n}`;
+      if (sent.k.includes(k)) continue;
+      try { await rpc('rank_feat', { kind, n }); } catch { break; } // offline / not in the ranks yet: next change tries again
+      sent.k.push(k);
+      try { localStorage.setItem(FEAT_SENT, JSON.stringify(sent)); } catch { /* ignore */ }
+    }
+  } finally { featBusy = false; }
+}
+export const featsFeed = (fresh = false) => cached('feats', () => rpc<Feats>('rank_feats_feed'), fresh);
+export async function cheerFeat(id: number): Promise<number> {
+  const n = await rpc<number>('rank_feat_cheer', { id });
+  const c = cache.get('feats');
+  if (c) { const f = (c.v as Feats).friends.find((x) => x.id === id); if (f) { f.cheered = true; f.cheers = n; } }
+  return n;
+}
+let cheersAt = 0;
+/** Friends who said MashaAllah to my milestones since last time (one toast; at most every 2 min). */
+async function cheersSoon() {
+  if (!account() || document.hidden || Date.now() - cheersAt < 120_000) return;
+  cheersAt = Date.now();
+  await (await import('../ui/friends')).cheersArrived();
 }

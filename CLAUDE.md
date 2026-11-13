@@ -2093,6 +2093,25 @@ duas/reflections section in Me.
       reward sounds rest, goal banners wait, the tab bar and Learn dock soften, and Next up offers the bedtime du'a once the
       flame is lit. **Big text and buttons** (Me → ⚙ → App, `html.easy`, localStorage `easyMode`): larger `--fs-*` and
       `--tap` tokens, chips, buttons, menu rows and tab icons
+      **What brings you here?** (`openWhySheet()` in `src/ui/firstSteps.ts`, after the tour, once; localStorage `whyHere`,
+      synced): Read more / Memorise / Understand the meaning / Share ayat as reels / Remember Allah, any number; the pace sheet
+      then recommends Steady for memorising, and the chosen pace leans towards the picks (`tailor()`: memorise → 1 ayah + 1 lesson
+      a day, reels → 1 a week, dhikr → adhkar + 3 du'a lanterns); with every goal met, Next up offers the next lesson / reading
+      with the meaning / a reel / a round of tasbih instead of Listen. **You stopped here** (`src/data/stopped.ts`, localStorage
+      `stoppedAt`, synced): the ayah being recited when listening ended, or on a page read in silence its first ayah (20 s) or
+      last one (page counted); after a 20 min break the mushaf opening on that page glows the ayah twice and shows a pill
+      "You stopped here · ref" (+ Listen on after listening), once (`src/ui/stopGlow.ts` + `.css`, lazy)
+      **Friends' news + MashaAllah** (migration `20261114200000_friend_feats.sql`, pgTAP `friend_feats.test.sql` 15): the app
+      shares a milestone the day it happens (`sendFeats()` in `together/ranks.ts`, on journey changes and level ups, each once,
+      localStorage `featSent`): a streak fire day, a level, a surah or juz finished, a Khatm (`rank_feat`, ≤ 12 a day, none for
+      a private player). Ranks → Friends shows the week's (`rank_feats_feed`) with one **MashaAllah** each (`rank_feat_cheer`,
+      once, friends only), and "Your news" with who said it; new ones come as one toast on open / return (`cheersArrived()`,
+      `featCheersSeen`). No text anywhere. **Reading now**: once a minute while the mushaf is open or a recitation plays
+      (`rank_live`, `rank_players.live_at` / `live_kind`), friends' cards show a live dot "Reading now" / "Listening now" for 3 min
+      **Ready offline marks** (`src/data/offlineMarks.ts`, reads `favKept` + `listenKept` directly): the surah list marks
+      (teal check) surahs whose recitation in the Listen voice (`reelReciter`) is on the phone, from a favourite's download or a
+      whole-surah file kept after listening (`keepListened(url, 'reciter:surah')` tags it); the player's reciter picker shows
+      "Offline" beside reciters whose recording of this surah is kept
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

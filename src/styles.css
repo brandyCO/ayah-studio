@@ -1949,3 +1949,32 @@ html.easy :is(.chip, button.primary, a.primary, .menu-item, .set-row) { min-heig
 html.easy .menu-item, html.easy .set-row { padding-block: 14px; }
 html.easy .tab-btn { font-size: var(--fs-xs); }
 html.easy .tab-btn svg { width: 28px; height: 28px; }
+
+/* What brings you here? (first steps, after the tour) */
+.why-sheet { text-align: center; }
+.why-sheet h2 { margin: 6px 0 4px; }
+.why-list { display: grid; gap: 8px; margin: 14px 0; text-align: start; }
+.why-opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-m);
+  border: 2px solid var(--line); background: var(--card); color: inherit; font: inherit; cursor: pointer;
+  border-bottom-width: 4px; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
+.why-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.why-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #fff; }
+.why-ic.w-read { background: #12a594; }
+.why-ic.w-memorise { background: #4caf2a; }
+.why-ic.w-understand { background: #6c5ce7; }
+.why-ic.w-reels { background: #ff6b4a; }
+.why-ic.w-dhikr { background: #f59f00; }
+.why-txt { text-align: start; flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.why-tick { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); }
+.why-opt.on .why-tick { border-color: var(--accent); background: var(--accent)
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat;
+  animation: why-pop var(--dur-2) var(--ease-spring); }
+@keyframes why-pop { from { scale: .5; } }
+.why-go { width: 100%; }
+.why-skip { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .why-opt.on .why-tick { animation: none; } }
+/* Ready offline marks (surah list, reciter pickers) */
+.off-mark { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-inline-start: 6px; vertical-align: -2px;
+  border-radius: 50%; color: #fff; background: #12a594; }
+.off-pill { display: inline-flex; align-items: center; gap: 3px; margin-inline-start: auto; padding: 1px 7px; border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: 700; color: var(--accent); background: color-mix(in srgb, #12a594 14%, transparent); }

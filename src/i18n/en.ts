@@ -23,6 +23,8 @@ const en = {
   'list.tagline': 'Read · select · turn into a reel',
   'list.drafts': 'Drafts',
   'list.deviceCheck': 'Device check',
+  'list.offline': 'Recitation on this phone: plays without internet',
+  'list.offlineShort': 'Offline',
   'list.surahInfo': '{tr} · {n} ayat',
 
   // mushaf

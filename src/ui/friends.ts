@@ -5,10 +5,10 @@
 // together full screen (powerUp.ts). Simple on purpose: no explaining needed beyond one line.
 import { account } from '../cloud/auth';
 import { icon } from './icons';
-import { ft } from '../i18n/friends';
+import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  SHOW, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
@@ -16,7 +16,8 @@ import { avatar } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
-import { t } from '../i18n';
+import { surahName, t } from '../i18n';
+import { loadMeta, type SurahMeta } from '../data/quran';
 import { openAccount } from './account';
 import { flame } from './flame';
 import { h, haptic, toast } from './dom';
@@ -251,7 +252,7 @@ function challenge(pid: string | null | undefined, name: string, after?: () => v
 
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
 export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
-  const [data, inv] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null)]);
+  const [data, inv, feats, meta] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null), loadMeta().catch(() => null)]);
   friendsKept = data;
   void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
@@ -282,15 +283,77 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
+        f.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(f.live === 'listen' ? 'fn.listening' : 'fn.reading')) : '',
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });
   setTimeout(() => void friendMilestone(data.friends), 900);
-  return h('div', { class: 'fr-tab' }, asks,
+  return h('div', { class: 'fr-tab' }, asks, news(feats, meta),
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
     inviteRewards(inv, onChange),
     invite,
     h('p', { class: 'muted small' }, ft('fr.help')));
+}
+
+/** A milestone in a few words ("30-day streak", "Finished Al-Mulk"). */
+export function featLabel(f: Feat, meta: SurahMeta[] | null): string {
+  if (f.kind === 'surah') { const m = meta?.[f.n - 1]; return ft('fn.surah', { name: m ? surahName(m) : String(f.n) }); }
+  return ft(`fn.${f.kind}` as FriendKey, { n: f.n });
+}
+const FEAT_IC: Record<Feat['kind'], string> = { streak: 'flame', level: 'star', surah: 'book', juz: 'book', khatm: 'trophy' };
+function ago(at: string) {
+  const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
+  return s < 60 ? ft('fn.now') : s < 3600 ? ft('fn.min', { n: Math.floor(s / 60) }) : s < 86400 ? ft('fn.h', { n: Math.floor(s / 3600) }) : ft('fn.d', { n: Math.floor(s / 86400) });
+}
+/** Friends' milestones of the week, each with one MashaAllah; then mine that friends cheered. */
+function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | string {
+  if (!feats || (!feats.friends.length && !feats.mine.length)) return '';
+  const rows = feats.friends.slice(0, 8).map((f) => {
+    const btn = h('button', { class: `chip fn-cheer${f.cheered ? ' on' : ''}`, disabled: !!f.cheered, 'aria-pressed': String(!!f.cheered) },
+      f.cheered ? ft('fn.cheered', { n: f.cheers ?? 1 }) : ft('fn.cheer'));
+    btn.onclick = () => {
+      haptic(14);
+      btn.disabled = true;
+      btn.classList.add('on', 'pop');
+      btn.textContent = ft('fn.cheered', { n: (f.cheers ?? 0) + 1 });
+      void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
+      void cheerFeat(f.id).then((n) => { btn.textContent = ft('fn.cheered', { n }); },
+        (e) => { btn.disabled = false; btn.classList.remove('on', 'pop'); btn.textContent = ft('fn.cheer'); toast((e as Error).message); });
+    };
+    return h('div', { class: `fn-row k-${f.kind}` },
+      avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.figure),
+      h('span', { class: 'fn-txt' }, h('b', {}, f.name ?? rt('rk.private')),
+        h('span', { class: 'fn-what' }, h('span', { class: 'fn-ic', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 14)), featLabel(f, meta), h('small', {}, ` · ${ago(f.at)}`))),
+      btn);
+  });
+  const mine = feats.mine.slice(0, 3).map((f) => {
+    const by = (f.by ?? []).map((n) => n || ft('fn.someone'));
+    return h('div', { class: 'fn-row fn-mine' }, h('span', { class: 'fn-ic big', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 18)),
+      h('span', { class: 'fn-txt' }, h('b', {}, featLabel(f, meta)),
+        h('span', { class: 'fn-what' }, by.length > 1 ? ft('fn.by2', { name: by[by.length - 1], n: by.length - 1 }) : ft('fn.by1', { name: by[0] ?? ft('fn.someone') }))));
+  });
+  return h('section', { class: 'fn-news' },
+    rows.length ? h('h3', {}, ft('fn.title')) : '', ...rows,
+    mine.length ? h('h3', {}, ft('fn.mine')) : '', ...mine);
+}
+
+/** App open / return: friends who said MashaAllah since last time, as one toast. */
+export async function cheersArrived() {
+  let feats: Feats;
+  try { feats = await featsFeed(true); } catch { return; }
+  let seen: Record<string, number> = {};
+  let first = true;
+  try { const raw = localStorage.getItem('featCheersSeen'); first = raw === null; seen = JSON.parse(raw ?? '{}') ?? {}; } catch { /* ignore */ }
+  const fresh = feats.mine.filter((f) => (f.by?.length ?? 0) > (seen[f.id] ?? 0));
+  const next: Record<string, number> = {};
+  for (const f of feats.mine) next[f.id] = f.by?.length ?? 0;
+  try { localStorage.setItem('featCheersSeen', JSON.stringify(next)); } catch { /* ignore */ }
+  if (first || !fresh.length || document.querySelector('.cel, dialog[open]')) return;
+  const f = fresh[0];
+  const meta = await loadMeta().catch(() => null);
+  const by = (f.by ?? []).slice(seen[f.id] ?? 0).map((n) => n || ft('fn.someone'));
+  haptic(12);
+  toast(by.length > 1 ? ft('fn.toastN', { n: by.length, what: featLabel(f, meta) }) : ft('fn.toast1', { name: by[0] ?? ft('fn.someone'), what: featLabel(f, meta) }));
 }
 
 /** Invite rewards waiting or on their way (each row once, until claimed). */

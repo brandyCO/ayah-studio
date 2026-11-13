@@ -70,6 +70,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'list.tagline': 'اقرأ · اختر · اصنع مقطعًا',
   'list.drafts': 'المسودات',
   'list.deviceCheck': 'فحص الجهاز',
+  'list.offline': 'التلاوة على هاتفك: تعمل دون إنترنت',
+  'list.offlineShort': 'دون إنترنت',
   'list.surahInfo': 'الآيات: {n}',
 
   'mushaf.hint': 'المس الصفحة لفتح القائمة · اضغط مطولًا على آية لصنع مقطع',

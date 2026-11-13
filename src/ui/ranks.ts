@@ -906,7 +906,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
   // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
   const onScreen = (k: string) => k === 'status' || (view === 'league' ? k === 'league'
-    : view === 'friends' ? k === 'friends'
+    : view === 'friends' ? k === 'friends' || k === 'feats'
       : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
         : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
   let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();

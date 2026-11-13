@@ -30,6 +30,7 @@ const openReflections = (...a: Parameters<typeof import('./reflections').openRef
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
 import { countPage, pageSeconds, todayRec } from '../data/journey';
+import { noteStop, stopOn } from '../data/stopped';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 // The family circles screens load on first use.
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
@@ -170,6 +171,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const detachPlayer = attachPlayer({
     onPosition: (pos) => {
       if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
+      // Where listening stops is where to pick up next time (kept as the ayah changes).
+      if (pos && pos.a > 0 && (pos.s !== playing?.s || pos.a !== playing?.a)) noteStop(pos.s, pos.a, mushaf.pageOf(pos.s, pos.a), 'listen');
       playing = pos;
       if (pos && !panning && !animating) {
         const target = mushaf.wordPage(pos.s, Math.max(1, pos.a), pos.w ?? 1); // a = 0: the Bismillah before ayah 1
@@ -262,8 +265,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       if (document.hidden) return;
       seen++;
       if (seen === 20 && ramadan) markRamadanRead(p);
+      if (seen === 20 && !playing) { const f = firstAyahOnPage(); noteStop(f.s, f.a, p, 'read'); }
       if (seen >= need) {
         clearInterval(readTimer);
+        if (!playing) { const l = lastAyahOnPage(); noteStop(l.s, l.a, p, 'read'); }
         if (logPageRead(p)) {
           const was = todayRec();
           const [s0, j0] = [was.s?.length ?? 0, was.j?.length ?? 0];
@@ -487,6 +492,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       sel.repaint();
       paintPlaying();
       pulseNotes();
+      checkStop();
     };
     attach();
     header();
@@ -627,6 +633,26 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     const d: HTMLDialogElement = sheet(sheetHead(uiRef(meta[s.surah - 1], s.lo, s.hi), () => d.close()),
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
+  }
+
+  /** The last ayah that begins on the current page (or the one it continues). */
+  function lastAyahOnPage(): { s: number; a: number } {
+    const segs = mushaf.pages[page - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
+    const seg = [...segs].reverse().find((x) => mushaf.segStart.get(x) === 1) ?? segs[segs.length - 1];
+    return seg ? { s: seg[0], a: seg[1] } : { s: n, a: 1 };
+  }
+  // "You stopped here": once, on the first page shown, when it holds the place left after a break.
+  let stopChecked = false;
+  function checkStop() {
+    const el = built.get(page);
+    if (stopChecked || !el?.dataset.fit) return;
+    stopChecked = true;
+    const st = stopOn(page);
+    if (!st || player.active()) return;
+    window.setTimeout(() => {
+      if (mount !== mounts || !el.isConnected) return;
+      void import('./stopGlow').then((m) => m.showStop(area, el, meta, st, (s, a) => playHere(s, a))).catch(() => {});
+    }, 600);
   }
 
   /** The first ayah that begins on the current page (or the one continuing onto it). */
