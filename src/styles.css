@@ -1094,56 +1094,16 @@ body[data-view="kids"] {
 .lantern-progress .lp-cap { fill: #c98b3e; }
 .lantern-progress .lp-string { stroke: rgba(255, 241, 214, .5); stroke-width: 1.5; }
 
-/* Opening: the app icon comes alive (src/ui/opening.ts). Only transform / opacity animate, so the compositor keeps
-   it smooth while the app starts underneath. Timeline: gradient out of the splash colour 0–0.3 s, marker pops in
-   0.08 s, character drops in 0.38 s and waves, the Light star falls in 1.15 s (burst 1.5 s) and the character
-   cheers, the name rises 1.45 s, everything glides into the app 2.15–2.6 s. */
+/* Opening (src/ui/opening.ts): the overlay in the launcher icon's gradient shows at once, out of the splash colour;
+   the show itself (src/ui/openingShow.ts + opening.css) comes in its own chunk. */
 .app-opening {
-  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden;
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--op-glow) 60%, transparent), transparent 62%),
+  position: fixed; inset: 0; z-index: 100; overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--op-glow) 55%, transparent), transparent 62%),
     linear-gradient(var(--op-top), var(--op-bottom));
-  animation: op-out .45s cubic-bezier(.4, 0, .2, 1) 2.15s both; will-change: opacity;
 }
-.app-opening::before { content: ''; position: absolute; inset: 0; background: #07130f; animation: op-fade .32s ease-out both; }
+.app-opening::before { content: ''; position: absolute; inset: 0; z-index: 2; background: #07130f; pointer-events: none; animation: op-fade .3s ease-out both; }
 @keyframes op-fade { to { opacity: 0; } }
-@keyframes op-out { to { opacity: 0; visibility: hidden; } }
-.op-stage { position: relative; width: min(74vw, 340px); aspect-ratio: 1; margin-top: -18vh; animation: op-lift .45s cubic-bezier(.4, 0, .2, 1) 2.15s both; }
-@keyframes op-lift { to { transform: scale(1.06) translateY(-2%); } }
-.op-stage > * { position: absolute; display: block; }
-.op-marker { inset: 0; animation: op-pop .62s cubic-bezier(.3, .6, .3, 1) .08s both; }
-@keyframes op-pop {
-  0% { opacity: 0; transform: scale(.2) rotate(-28deg); }
-  55% { opacity: 1; transform: scale(1.1) rotate(5deg); }
-  78% { transform: scale(.96) rotate(-1deg); }
-  100% { transform: none; }
-}
-/* the character, at the icon's place: 200×262 units at scale 2.05 from (51, 78) of 512 */
-.op-char { left: 9.96%; top: 15.2%; width: 80.08%; aspect-ratio: 200 / 262; opacity: 0; transform-origin: 50% 100%; }
-.op-char.in { animation: op-drop .62s cubic-bezier(.3, .5, .3, 1) .38s both; }
-.op-char .op-actor { inset: 0; width: 100%; }
-@keyframes op-drop {
-  0% { opacity: 0; transform: translateY(-62%) scale(.9, 1.08); }
-  50% { opacity: 1; transform: translateY(0) scale(1.08, .9); }
-  72% { transform: translateY(-5%) scale(.97, 1.04); }
-  100% { opacity: 1; transform: none; }
-}
-/* the Light star at the icon's place (404, 92), r 32 */
-.op-star { left: 71.8%; top: 10.8%; width: 14.3%; aspect-ratio: 1; filter: drop-shadow(0 0 10px #fff6c8); animation: op-star .66s cubic-bezier(.3, .55, .3, 1) 1.15s both; }
-@keyframes op-star {
-  0% { opacity: 0; transform: translate(40%, -260%) rotate(-120deg) scale(.4); }
-  58% { opacity: 1; transform: translate(0, 8%) rotate(12deg) scale(1.18); }
-  80% { transform: rotate(-4deg) scale(.94); }
-  100% { opacity: 1; transform: none; }
-}
-.op-burst { left: 71.8%; top: 10.8%; width: 14.3%; aspect-ratio: 1; border-radius: 50%; border: 3px solid #fff6c8; opacity: 0; animation: op-burst .6s ease-out 1.5s forwards; }
-@keyframes op-burst { 0% { opacity: .95; transform: scale(.3); } 100% { opacity: 0; transform: scale(2.6); } }
-.op-tw { width: 6%; aspect-ratio: 1; opacity: 0; animation: op-tw 1.1s ease-in-out both; }
-.op-tw.a { left: 16.5%; top: 14%; animation-delay: .7s; }
-.op-tw.b { left: 82.5%; top: 56%; width: 4%; animation-delay: 1.55s; }
-@keyframes op-tw { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 45% { opacity: 1; transform: scale(1) rotate(45deg); } }
-.op-name { left: 0; right: 0; top: 128%; display: flex; justify-content: center; direction: ltr; font: 900 26px/1 var(--ui-round, system-ui); letter-spacing: .01em; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .14); }
-.op-name span { white-space: pre; opacity: 0; transform: translateY(10px); animation: op-letter .5s cubic-bezier(.2, .8, .3, 1.3) calc(1.45s + var(--i) * 35ms) forwards; }
-@keyframes op-letter { to { opacity: 1; transform: none; } }
+.app-opening.gone { opacity: 0; transition: opacity .28s ease-in; }
 
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */
