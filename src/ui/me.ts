@@ -245,6 +245,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('button', { class: 'chip', onclick: done }, mpt('mp.askNo'))))));
   };
   const statsBox = h('section', { class: 'me-card' });
+  /** The golden mushaf shelf (shelf.ts, loaded with the Stats page). */
+  const shelfSlot = () => {
+    const slot = h('div', { class: 'sh-slot' });
+    void import('./shelf').then((m) => slot.replaceChildren(m.shelf((p) => goMushaf(`page:${p}`)))).catch(() => {});
+    return slot;
+  };
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
   const prayerBox = h('section', { class: 'me-card' });
@@ -1229,7 +1235,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   } else if (page) {
     // A door's full screen: the same live sections, on their own.
     const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib') }[page];
-    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
+    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, shelfSlot(), badgeBox], library: [libBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
         h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
