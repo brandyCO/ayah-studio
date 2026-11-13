@@ -10,11 +10,31 @@ export const translationInfo = (id: string | undefined): TranslationInfo =>
   TRANSLATIONS.find((t) => t.id === id) ?? TRANSLATIONS[0];
 export const validTranslation = (id: unknown): id is string => typeof id === 'string' && TRANSLATIONS.some((t) => t.id === id);
 
-/** The translation chosen on this device (or synced from another), Saheeh International by default. */
+/** Before any choice: the first translation in the phone's own languages (its order of preference),
+ *  else Saheeh International. Not saved, so a choice made on another device still wins when it syncs. */
+let phoneDefault: string | undefined;
+function fromPhone(): string {
+  if (phoneDefault) return phoneDefault;
+  phoneDefault = DEFAULT_TRANSLATION;
+  try {
+    const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+    for (const l of langs) {
+      const code = (l || '').toLowerCase().split('-')[0];
+      if (code === 'en') break;
+      const t = TRANSLATIONS.find((x) => x.lang === code);
+      if (t) { phoneDefault = t.id; break; }
+    }
+  } catch {
+    /* Saheeh International */
+  }
+  return phoneDefault;
+}
+
+/** The translation chosen on this device (or synced from another), else the phone's language. */
 export function currentTranslation(): string {
   try {
     const v = localStorage.getItem('translation');
-    return validTranslation(v) ? v : DEFAULT_TRANSLATION;
+    return validTranslation(v) ? v : fromPhone();
   } catch {
     return DEFAULT_TRANSLATION;
   }

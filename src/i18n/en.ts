@@ -92,6 +92,7 @@ const en = {
   // reader (translation view)
   'reader.hint': 'Long-press an ayah to select it. Drag, or tap another ayah, to extend.',
   'reader.mushaf': 'Mushaf',
+  'reader.textSize': 'Text size',
 
   // translation picker
   'tr.title': 'Translation',

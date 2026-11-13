@@ -294,3 +294,8 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
   .lp-pill-t { display: none; }
   .lp-pill { padding: 0 9px; }
 }
+/* The smallest phones (320 px): the top row's eight buttons fit without the page scrolling sideways. */
+@media (max-width: 340px) {
+  .lp-top { gap: 3px; margin: 0 -12px; padding-inline: 12px; }
+  .lp-pill { padding: 0 6px; }
+}

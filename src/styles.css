@@ -132,10 +132,10 @@ button { font: inherit; color: inherit; }
 .ayah.sel:not(.sel-last) { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
 .ayah-ar {
   font-family: 'UthmanicHafs', 'AmiriQuran', serif;
-  font-size: clamp(26px, 6.6vw, 34px); line-height: 2.05;
+  font-size: calc(clamp(26px, 6.6vw, 34px) * var(--reader-scale, 1)); line-height: 2.05;
   text-align: right; direction: rtl;
 }
-.ayah-en { margin: 8px 0 0; font-size: var(--fs-base); line-height: 1.55; color: var(--text); opacity: .86; }
+.ayah-en { margin: 8px 0 0; font-size: calc(var(--fs-base) * var(--reader-scale, 1)); line-height: 1.55; color: var(--text); opacity: .86; }
 .ayah-num {
   display: inline-block; margin-inline-end: 8px; padding: 0 7px; border-radius: var(--r-xs);
   font-size: var(--fs-xs); font-weight: 600; color: var(--muted); border: 1px solid var(--line);
