@@ -13,7 +13,9 @@ import { gzipSync } from 'node:zlib';
 // localised references, channel names; the media picker strings and the server-message table load lazily).
 // 2026-11-12: raised to 143 for friend challenges + weekly rivals (142.2 KB: challenge / duel calls and the Challenges tab
 // on Me; their screens, strings and styles load on first use).
-const BUDGET_KB = 143;
+// 2026-11-13: raised to 145 for 59 more recordings (144.1 KB: their entries in the reciter list, which the player and
+// pickers need at once).
+const BUDGET_KB = 145;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;
