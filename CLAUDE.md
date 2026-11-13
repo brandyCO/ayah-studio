@@ -2032,6 +2032,10 @@ duas/reflections section in Me.
       badges, level), one button "Read one page" (lights today's flame); no days counted, no lost streak. **Next up** on Me: one
       card with the single most useful step (light today's flame → the adhkar whose time it is → today's journey portion → the
       goal closest to done → all met: Listen), one big button; replaces Noor's line and the journey card (journey in its footer)
+      **My week story card** (`src/ui/weekStory.ts`): a 9:16 PNG of the week that ended at Friday Maghrib (character cheering
+      beside the streak flame, up to four tiles: pages, minutes, adhkar, surahs / lessons / dhikr, never a 0; the seven days lit;
+      "Read with me on Ayah Studio"; inside the story safe area y 250–1650), shared with the app link; Me shows "Your week is
+      ready" from Friday Maghrib through Sunday once a week (`weekStorySeen`), Stats has Share my week any time (this week so far)
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

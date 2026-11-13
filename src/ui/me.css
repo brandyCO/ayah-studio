@@ -439,3 +439,13 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .nx-go { width: 100%; font-size: 17px; padding: 14px; }
 .nx-go.quiet { background: color-mix(in srgb, var(--nc) 16%, var(--card)); color: color-mix(in srgb, var(--nc) 70%, var(--text)); box-shadow: 0 3px 0 color-mix(in srgb, var(--nc) 30%, transparent); }
 .nx-foot { align-self: center; border: 0; background: none; padding: 2px 6px; cursor: pointer; font: inherit; font-size: var(--fs-s); }
+/* "Your week is ready" (Friday Maghrib → Sunday) and Stats' Share my week. */
+.ws-card { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px;
+  background: linear-gradient(135deg, #2b2472, #6c4fc6 60%, #e0819a); color: #fff; }
+.ws-card .muted { color: rgba(255, 255, 255, .8); }
+.ws-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255, 255, 255, .16); color: #ffd36b; }
+.ws-txt { display: flex; flex-direction: column; gap: 2px; padding-inline-end: 30px; }
+.ws-txt b { font-size: 18px; font-weight: 900; }
+.ws-card .primary { grid-column: 1 / -1; width: 100%; }
+.ws-x { position: absolute; top: 8px; inset-inline-end: 8px; width: 34px; height: 34px; background: rgba(255, 255, 255, .14); border: 0; color: #fff; }
+.ws-share { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }

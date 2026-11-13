@@ -29,6 +29,21 @@ const en = {
   'nx.done': 'Every goal met today',
   'nx.doneSub': 'MashaAllah. End the day with a recitation',
   'nx.listen': 'Listen',
+  'ws.brand': 'Ayah Studio',
+  'ws.title': 'My week with the Quran',
+  'ws.pages': 'pages read',
+  'ws.listen': 'minutes listened',
+  'ws.adhkar': 'adhkar said',
+  'ws.surahs': 'surahs finished',
+  'ws.lessons': 'lessons passed',
+  'ws.dhikr': 'dhikr',
+  'ws.streak': 'day streak',
+  'ws.cta': 'Read with me on Ayah Studio',
+  'ws.text': 'My week with the Quran on Ayah Studio.',
+  'ws.ready': 'Your week is ready',
+  'ws.readySub': 'A card of your week to share on your story',
+  'ws.share': 'Share my week',
+  'ws.saved': 'Saved. The text is copied too.',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -58,6 +73,21 @@ const ar: Partial<Record<FrontKey, string>> = {
   'nx.done': 'أتممت كل أهداف اليوم',
   'nx.doneSub': 'ما شاء الله. اختم يومك بتلاوة',
   'nx.listen': 'استمع',
+  'ws.brand': 'Ayah Studio',
+  'ws.title': 'أسبوعي مع القرآن',
+  'ws.pages': 'صفحات قرأتها',
+  'ws.listen': 'دقائق استماع',
+  'ws.adhkar': 'أذكار قلتها',
+  'ws.surahs': 'سور أتممتها',
+  'ws.lessons': 'دروس أتممتها',
+  'ws.dhikr': 'ذكر',
+  'ws.streak': 'أيام متتالية',
+  'ws.cta': 'اقرأ معي في Ayah Studio',
+  'ws.text': 'أسبوعي مع القرآن في Ayah Studio.',
+  'ws.ready': 'أسبوعك جاهز',
+  'ws.readySub': 'بطاقة لأسبوعك تشاركها في قصتك',
+  'ws.share': 'شارك أسبوعي',
+  'ws.saved': 'حُفظت، ونُسخ النص أيضًا.',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

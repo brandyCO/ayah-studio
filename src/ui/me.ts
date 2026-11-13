@@ -717,6 +717,17 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
   };
   const KIND_IC: Record<string, string> = { pages: 'book', surahs: 'book', listen: 'listen', dhikr: 'beads', duas: 'lamp', nights: 'crescent', lessons: 'sprout', memorise: 'sprout', reels: 'film' };
+  // Friday Maghrib → Sunday: "Your week is ready", a story card to share (src/ui/weekStory.ts), once a week.
+  const storySlot = h('div', {});
+  if (!page) void import('./weekStory').then((m) => {
+    if (!m.storyDue()) return;
+    const close = () => { m.storySeen(); storySlot.replaceChildren(); };
+    storySlot.replaceChildren(h('section', { class: 'me-card ws-card' },
+      h('span', { class: 'ws-ic', 'aria-hidden': 'true' }, icon('star', 26)),
+      h('span', { class: 'ws-txt' }, h('b', {}, fe('ws.ready')), h('span', { class: 'muted small' }, fe('ws.readySub'))),
+      h('button', { class: 'primary brand-btn', onclick: () => { haptic(10); void m.shareStory().then(() => storySlot.replaceChildren()); } }, fe('ws.share')),
+      h('button', { class: 'icon-btn ws-x', 'aria-label': t('common.close'), onclick: close }, icon('close', 18))));
+  }).catch(() => {});
   let nextSig = '';
   const paintNext = () => {
     if (page) return;
@@ -740,6 +751,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       if (open) step = { k: open.kind, ic: KIND_IC[open.kind] ?? 'target', title: goalLabel(open), sub: fe('nx.of', { n: open.done, of: open.target }),
         btn: fe(open.done ? 'nx.continue' : 'nx.begin'), go: goFor(open, pageGo)!, p: open.done / open.target };
     }
+    // No goals yet (the pace card below is the next step) or none to show: no card.
+    if (!step && !list.length) { nextSig = ''; nextBox.hidden = true; nextBox.replaceChildren(); return; }
+    nextBox.hidden = false;
     step ??= { k: 'done', ic: 'check', title: fe('nx.done'), sub: fe('nx.doneSub'), btn: fe('nx.listen'), go: () => goMushaf('listen') };
     const plan = currentPlan();
     const foot = js && !js.done ? `${t(`jr.${js.id}` as Key)} · ${t('jr.dayOf', { day: Math.min(js.day, js.days), n: js.days })}` : plan ? '' : t('jr.start');
@@ -929,7 +943,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         tile(String(st.reels), t('me.reels'), vs('reels'))),
       h('p', { class: 'muted small' }, last
         ? (now.getDay() === 6 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
-        : t('me.honest', { time: timeLabel(pageSeconds()) })));
+        : t('me.honest', { time: timeLabel(pageSeconds()) })),
+      h('button', { class: 'chip ws-share', onclick: () => { haptic(8); void import('./weekStory').then((m) => m.shareStory()); } }, icon('share', 18), fe('ws.share')));
   };
 
   const paintBadges = () => {
@@ -1164,7 +1179,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, dayCard() ?? nextBox, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
   }
