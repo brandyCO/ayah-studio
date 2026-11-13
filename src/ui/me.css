@@ -432,6 +432,10 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .nx-row { display: flex; align-items: center; gap: 12px; }
 .nx-ic { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff;
   background: var(--nc); box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); }
+.nx-me { width: 60px; height: 60px; border-radius: 50%; background: none; box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); position: relative; }
+.nx-me > svg { display: block; border-radius: 50%; }
+.nx-badge { position: absolute; inset-inline-end: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--nc); color: #fff; border: 2.5px solid var(--card); }
 .nx-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .nx-txt b { font-size: 18px; font-weight: 900; line-height: 1.25; }
 .nx-bar { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--nc) 16%, transparent); overflow: hidden; margin-top: 3px; }

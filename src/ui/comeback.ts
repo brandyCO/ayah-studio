@@ -48,6 +48,7 @@ export async function showComeback() {
     xp > 0 ? h('span', { class: 'cb-kept k-level' }, fe('cb.level', { n: levelOf(xp) })) : '',
   ].filter(Boolean);
   const who = actor('cb-actor');
+  if (who && xp > 0) { const { withLevel } = await import('./levelLook'); withLevel(who.el, levelOf(xp)); }
   const light2 = who ? null : noor('cb-noor');
   const stage = h('div', { class: 'cb-stage', 'aria-hidden': 'true' }, h('span', { class: 'cb-glow' }), who?.el ?? light2!.el, h('span', { class: 'cb-hill' }));
   const go = h('button', { class: 'primary brand-btn cb-go', onclick: () => {
