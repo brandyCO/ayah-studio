@@ -6,7 +6,8 @@
 // ≥ 3); goals never change by themselves. Progress comes from the journey (journey.ts) and the reading log; when every goal that
 // is on has been met, the day is marked (it counts toward goal badges and the weekly summary).
 import { ADHKAR_TOTAL, eveningOpen, finishedCount, type AdhkarPeriod } from './adhkar';
-import { addDays, allDays, markGoalsMet, todayRec, weekOf } from './journey';
+import { addDays, allDays, markGoalsMet, todayRec } from './journey';
+import { rankDay, rankWeek, weekEndAt, weekTotals } from './rankDay';
 import { dayKey, readLogAll } from './readLog';
 
 /** The dhikr on the tasbih counter. Short fixed phrases only; never altered. */
@@ -25,7 +26,7 @@ export const MEMO_GOALS = [0, 1, 3, 5, 10] as const;
 export const REEL_GOALS = [0, 1, 2, 3] as const;
 export const DHIKR_GOALS = [0, 33, 100, 300, 1000] as const;
 
-// Weekly goals (owner request 2026-11-09): reset every Monday, like the daily ones at midnight.
+// Weekly goals (owner request 2026-11-09): reset at Friday Maghrib, one week everywhere like Ranks (F9, 2026-11-13).
 export const WEEK_PAGES = [0, 7, 14, 25, 50, 100] as const;
 /** Minutes of recitation listened to. */
 export const WEEK_LISTEN = [0, 30, 60, 120, 300] as const;
@@ -142,7 +143,7 @@ export function setGoals(g: Goals) {
 export interface GoalProgress {
   id: string;
   kind: 'pages' | 'memorise' | 'reels' | 'dhikr' | 'adhkar' | 'custom' | 'listen' | 'surahs' | 'duas' | 'nights' | 'lessons';
-  /** A weekly goal: the Monday its week starts. */
+  /** A weekly goal: the Saturday its week starts (the bridge week of 9 November began on Monday). */
   week?: string;
   dhikr?: DhikrId;
   /** Adhkar: morning ('s') or evening ('m'). */
@@ -177,47 +178,35 @@ export function todayGoals(now = new Date()): GoalProgress[] {
   return out;
 }
 
-/** This week's goals (Monday to Sunday) that are on, with progress. Ids carry the week, so each week's claim is new. */
+/** This week's goals that are on, with progress: the week runs Saturday → Friday by Islamic days and ends at Friday
+ *  Maghrib, like Ranks (F9). Ids carry the week, so each week's claim is new. */
 export function weekGoals(now = new Date()): GoalProgress[] {
   const w = goals().weekly;
-  const wk = weekOf(dayKey(now));
-  const days = allDays();
-  const log = readLogAll();
-  let pages = 0, listen = 0, surahs = 0, reels = 0, nights = 0;
-  for (let i = 0; i < 7; i++) {
-    const k = addDays(wk, i);
-    pages += log[k]?.length ?? 0;
-    const d = days[k];
-    listen += d?.l ?? 0;
-    surahs += d?.s?.length ?? 0;
-    reels += d?.r ?? 0;
-    if (d?.dm?.includes('sleep')) nights++;
-  }
+  const { week: wk, tot } = weekTotals(now);
   const out: GoalProgress[] = [];
   const add = (kind: GoalProgress['kind'], done: number, target: number) => {
     if (target) out.push({ id: `w:${wk}:${kind}`, kind, week: wk, done, target });
   };
-  add('pages', pages, w.pages);
-  add('listen', Math.floor(listen / 60), w.listen);
-  add('surahs', surahs, w.surahs);
-  add('reels', reels, w.reels);
-  add('nights', nights, w.nights);
+  add('pages', tot.pages, w.pages);
+  add('listen', Math.floor(tot.listen / 60), w.listen);
+  add('surahs', tot.surahs, w.surahs);
+  add('reels', tot.reels, w.reels);
+  add('nights', tot.nights, w.nights);
   return out;
 }
 /** Id of the reward for every weekly goal met. */
-export const weekAllId = (now = new Date()) => `w:${weekOf(dayKey(now))}:all`;
-/** A weekly reward claimed on any day of its week. */
+export const weekAllId = (now = new Date()) => `w:${rankWeek(rankDay(now))}:all`;
+/** A weekly reward claimed on any day of its week (local days, Friday evening before it to the Saturday after). */
 export function weekClaimed(id: string, now = new Date()): boolean {
-  const wk = weekOf(dayKey(now));
+  const wk = rankWeek(rankDay(now));
   const days = allDays();
-  for (let i = 0; i < 7; i++) if (days[addDays(wk, i)]?.cl?.includes(id)) return true;
+  for (let i = -1; i <= 8; i++) if (days[addDays(wk, i)]?.cl?.includes(id)) return true;
   return false;
 }
-/** When the day's goals start again (local midnight) and the week's (Monday 00:00). */
+/** When the day's goals start again (local midnight) and the week's (this week's Friday Maghrib). */
 export function resetsAt(now = new Date()): { day: Date; week: Date } {
   const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const toMon = (8 - now.getDay()) % 7 || 7;
-  return { day, week: new Date(now.getFullYear(), now.getMonth(), now.getDate() + toMon) };
+  return { day, week: weekEndAt(now) };
 }
 
 /** The flame's rule: one goal met (or one counted page) lights the day; with no goals, opening does. */

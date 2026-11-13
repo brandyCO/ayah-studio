@@ -622,6 +622,8 @@ body[data-view="reel"] .chip.on, body[data-view="reel"] .tab.on { background: va
 .grade-mono { background: linear-gradient(160deg, #555, #151515); }
 .colour-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 10px; }
 .colour-grid .swatch { width: 100%; height: auto; aspect-ratio: 1; }
+.untimed { display: grid; gap: 8px; justify-items: start; }
+.untimed .chip { display: inline-flex; align-items: center; gap: 6px; }
 .swatch.eyedropper { display: flex; align-items: center; justify-content: center; background: var(--line); color: var(--text); }
 
 /* effect samples: a word animated like the effect (loops) */
@@ -892,7 +894,7 @@ body[data-view="kids"] {
 @media (prefers-reduced-motion: reduce) { .kids-stop.next .kids-lantern, .kids-stop.bloom .kids-lantern { animation: none; } }
 .kids-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 8px; padding: 12px 0; }
 .kids-ar {
-  margin: 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(34px, 9.5vw, 54px); line-height: 2.1;
+  margin: 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(40px, 11.5vw, 64px); line-height: 2.1;
   direction: rtl; overflow-wrap: break-word;
 }
 .kids-word { border-radius: var(--r-m); padding: 0 .08em; transition: background-color .35s cubic-bezier(.25,.1,.25,1), box-shadow .35s; }
@@ -925,7 +927,7 @@ body[data-view="kids"] {
 .kids-meaning:not(:empty) { align-self: center; padding: 6px 16px; border-radius: var(--r-l); background: var(--kids-card); border: 1px solid var(--kids-line); }
 .kids-meaning-ar { font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: var(--fs-h1); margin-inline-end: 6px; }
 .kids-chips { display: flex; justify-content: center; gap: 10px; }
-.kids-chip { min-height: 48px; padding: 0 18px; border-radius: 24px; border: 1px solid var(--kids-line); background: var(--kids-card); color: var(--kids-ink); font: inherit; font-size: var(--fs-l); cursor: pointer; }
+.kids-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 18px 0 14px; border-radius: 24px; border: 1px solid var(--kids-line); background: var(--kids-card); color: var(--kids-ink); font: inherit; font-size: var(--fs-l); cursor: pointer; }
 .kids-hint { margin: 0; text-align: center; font-size: var(--fs-m); color: var(--kids-soft); }
 .kids-done { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
 .kids-done h2 { margin: 8px 0 0; font-size: 30px; }
@@ -1027,7 +1029,7 @@ body[data-view="kids"] {
 .night-block {
   position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
   width: min(640px, calc(100% - 40px)); text-align: center;
-  opacity: 0; transition: opacity 1.3s ease;
+  opacity: 0; transition: opacity .5s ease;
   text-shadow: 0 1px 14px rgba(5, 8, 26, .9), 0 0 2px rgba(5, 8, 26, .8);
 }
 .night-block::before { /* legibility scrim: a soft dark pool under the text */
@@ -1035,6 +1037,7 @@ body[data-view="kids"] {
   background: radial-gradient(closest-side, rgba(5, 8, 26, .55), rgba(5, 8, 26, 0));
 }
 .night-block.in { opacity: 1; }
+.night-block.gone { transition-duration: .25s; }
 .night-ar, .night-measure {
   margin: 0; font-family: 'UthmanicHafs', 'AmiriQuran', serif; line-height: 2.05; direction: rtl;
   color: #fff8ec; transition: opacity .45s ease;
@@ -1060,6 +1063,7 @@ body[data-view="kids"] {
   opacity: 0; transform: translateY(-8px); transition: opacity .5s ease, transform .5s ease; pointer-events: none;
 }
 .night.show-ctl .night-controls { opacity: 1; transform: none; pointer-events: auto; }
+.night-bottom { top: auto; bottom: 0; padding: 18px 12px max(14px, env(safe-area-inset-bottom)); background: linear-gradient(rgba(5, 8, 26, 0), rgba(5, 8, 26, .65)); transform: translateY(8px); }
 .night-spacer { flex: 1; }
 .night-btn { color: #f6efe2; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .14); }
 .night-sleep { flex: 1 0 100%; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
@@ -1911,3 +1915,15 @@ body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary) > sv
   flex: none; vertical-align: -0.22em; margin-inline-end: 0.45em; }
 body .menu-item > svg:first-child:is([width="16"], [width="18"], [width="20"]) { margin-inline-end: 0; opacity: .8; }
 
+
+/* F32: Kids chips say what they set. */
+.kids-chip .kc-t { display: grid; text-align: start; line-height: 1.1; }
+.kids-chip .kc-t small { font-size: 12px; font-weight: 700; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+.kids-chip .kc-t b { font-size: var(--fs-m); }
+.kids-chip > svg { flex: none; margin: 0 !important; }
+/* F32: an unlit lantern holds a small warm ember, so the path reads as lanterns waiting to be lit, not empty jars;
+   the next one glows a little more. */
+.kids-stop:not(.lit) .l-flame { fill: var(--kids-lamp); fill-opacity: .35; }
+.kids-stop:not(.lit) .l-body { fill: var(--kids-lamp); fill-opacity: .1; }
+.kids-stop.next .l-flame { fill-opacity: .8; filter: drop-shadow(0 0 4px var(--kids-lamp-glow)); }
+.kids-stop.next .kids-lantern { background: radial-gradient(circle, color-mix(in srgb, var(--kids-lamp-glow) 55%, transparent) 0%, transparent 70%); }

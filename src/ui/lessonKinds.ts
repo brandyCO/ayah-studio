@@ -49,7 +49,7 @@ export function meaningCards(c: KindCtx): HTMLElement {
       row.append(tile);
     });
     box.append(
-      h('p', { class: 'lk-ayahref' }, c.refOf(a)),
+      c.range[0] < c.range[1] ? h('p', { class: 'lk-ayahref' }, c.refOf(a)) : '', // one ayah: the header already names it
       row,
       c.trans[a - 1] ? h('p', { class: 'lk-trans', lang: c.tr.lang, dir: c.tr.dir }, c.trans[a - 1]) : '');
   }

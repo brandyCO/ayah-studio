@@ -2012,6 +2012,20 @@ duas/reflections section in Me.
       `rank_lamp_light` / `_wall` / `_ameen` / `_remove` / `_report`), pgTAP `lamp_wall.test.sql` (18). The **week card**
       (`rankRecap.ts`, shown from the player's Friday Maghrib) now has the character cheering beside the league's emblem, the
       lamp of Light and the streak
+- [ ] M25 Front-end review, round 1 (owner approved every item 2026-11-13; Claude Doc "Front end review, round 1", F1–F47),
+      shipped in parts (PRs #240 onwards). Part 6: Ranks league on the first screen (compact hero with the podium inside,
+      an example league when signed out), rival search shown as "Finding your rival…", rooms start with a sprout + kilim
+      (`STARTER` in `roomItems.ts`), empty shelves say how to fill them, lesson steps on the path show an open mushaf.
+      Part 7: adhkar sessions with > 9 items show one segmented bar, long notes fold under "How to say it"; Kids chips
+      with icons and labels, larger Arabic, unlit lanterns keep an ember; lessons: one slim bar for the five parts (the
+      part named beside the goal), New / Link / Whole surah, view, meanings and the reciter under ⋯ (the app's own reciter
+      sheet: recordings as chips, samples, search), the reference once; studio: a reciter without word timings shows one
+      line + "Choose a reciter with word timings" instead of disabled options; Night listening: the next ayah comes in at
+      once (0.5 s), the sleep timer moved to the bottom, clear of the crescent. **One week everywhere** (F9): `weekOf()`
+      in `journey.ts` starts on Saturday (streak row, free freeze, weeks in a row, "this week" stats, the streak widget
+      laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
+      `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
+      Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

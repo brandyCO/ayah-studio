@@ -10,7 +10,7 @@
 //
 // Streak: a day is lit when one of the day's goals is met (a counted page always counts; with no
 // goals set, opening the app is enough; see rewards.ts). A missed day is covered by the week's free freeze
-// (one per calendar week, Monday first, used by itself), and one extra freeze every 30 days covers a
+// (one per week, Saturday first, used by itself), and one extra freeze every 30 days covers a
 // second missed day in a week (owner decision 2026-10-31). When the missed days cannot all be
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
@@ -200,8 +200,8 @@ export const allDays = (): Readonly<Record<string, Readonly<DayRec>>> => view().
 // --- days and weeks ---
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 export const addDays = (k: string, n: number) => { const d = parse(k); d.setDate(d.getDate() + n); return dayKey(d); };
-/** The Monday of the week holding day `k`. */
-export const weekOf = (k: string) => { const d = parse(k); return addDays(k, -((d.getDay() + 6) % 7)); };
+/** The Saturday of the week holding day `k`: one week everywhere, Saturday → Friday like Ranks (owner decision 2026-11-13). */
+export const weekOf = (k: string) => { const d = parse(k); return addDays(k, -((d.getDay() + 1) % 7)); };
 
 function covered(s = view()): Set<string> {
   const out = new Set(s.frozen.concat(s.revived));
@@ -295,7 +295,7 @@ export interface Streak {
   freeze: { free: boolean; day?: string };
   /** The extra freeze (one every 30 days): ready, or the day it is ready again. */
   extra: { free: boolean; next?: string };
-  /** Monday → Sunday of this week: lit, frozen, revived, today (not yet), or missed / to come. */
+  /** Saturday → Friday of this week: lit, frozen, revived, today (not yet), or missed / to come. */
   week: { day: string; state: 'lit' | 'frozen' | 'revived' | 'today' | 'missed' | 'future' }[];
   lost?: { n: number; days: string[] };
 }
@@ -525,7 +525,7 @@ export function reelMade(now = new Date()) {
 export type Period = 'week' | 'month' | 'all';
 export interface Stats extends Totals { surahList: number[]; goalDays: number; litDays: number; light: number }
 
-/** Stats for this week (from Monday), this month, or all time on this device. */
+/** Stats for this week (from Saturday), this month, or all time on this device. */
 let allMemo: { ver: number; v: Stats } | null = null;
 export function stats(period: Period, now = new Date()): Stats {
   const s = view();

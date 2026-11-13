@@ -11,7 +11,7 @@ import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
 import { isFriendFireDay } from '../data/fireDays';
-import { islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
+import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
@@ -56,14 +56,7 @@ export const rankName = () => { try { return localStorage.getItem('rankName') ||
 // waits out the gap itself instead of sending it and wrongly marking the numbers as sent.
 const GAP = 5_200;
 let lastAt = 0;
-function totals(k: string) {
-  const d = allDays()[k];
-  // Adhkar sessions said in full (morning, evening, the du'a moments) and dhikr counted: kept for friend challenges and
-  // duels, never in the league score; the server limits how fast they may grow.
-  const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
-  const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, flawless: d?.lf ?? 0, adhkar, dhikr };
-}
+const totals = dayTotals;
 let timer = 0;
 let busy = false;
 export function reportSoon(delay = 2_500) {
