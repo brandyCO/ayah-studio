@@ -88,7 +88,25 @@ export async function storyCanvas(now = new Date()): Promise<HTMLCanvasElement> 
   };
   if (fig) {
     const s = figureSvg(fig, { still: true, cheer: true }).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="523" ');
+    // Their level shows as on the character everywhere: light gathering at the feet, brighter as it grows.
+    const { levelOf, myXp, lookBand } = await import('../data/xp');
+    const xp = myXp(), band = xp > 0 ? lookBand(levelOf(xp)) : 0;
+    if (band) {
+      const gold = band >= 6;
+      const pool = g.createRadialGradient(W / 2 - 100, 975, 10, W / 2 - 100, 975, 150 + band * 18);
+      pool.addColorStop(0, gold ? 'rgba(255,214,120,.85)' : 'rgba(255,244,214,.7)'); pool.addColorStop(1, 'rgba(255,236,190,0)');
+      g.save(); g.translate(0, 975); g.scale(1, 0.32); g.translate(0, -975);
+      g.fillStyle = pool; g.fillRect(W / 2 - 400, 600, 600, 750); g.restore();
+    }
     g.drawImage(await img(s), W / 2 - 300, 470, 400, 523);
+    if (xp > 0) {
+      const lv = fe('cb.level', { n: levelOf(xp) });
+      g.font = font(900, 30);
+      const pw = g.measureText(lv).width + 44;
+      g.fillStyle = band >= 6 ? '#e8b53c' : 'rgba(255,255,255,.92)';
+      g.beginPath(); g.roundRect(W / 2 - 100 - pw / 2, 966, pw, 46, 23); g.fill();
+      g.fillStyle = band >= 6 ? '#3a2500' : '#3b2a6b'; g.fillText(lv, W / 2 - 100, 999);
+    }
     if (days > 0) {
       flameAt(W / 2 + 210, 840, 2);
       g.fillStyle = '#fff'; g.font = font(900, 92); g.fillText(String(days), W / 2 + 210, 940);

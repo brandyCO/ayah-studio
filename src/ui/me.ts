@@ -60,6 +60,7 @@ import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
+import { smartReminder } from '../data/usualTime';
 import { chest } from './chest';
 import { mpt } from '../i18n/mePages';
 import { inboxBell } from './inbox';
@@ -729,6 +730,20 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       h('button', { class: 'icon-btn ws-x', 'aria-label': t('common.close'), onclick: close }, icon('close', 18))));
   }).catch(() => {});
   let nextSig = '';
+  // The user's own character beside the step (their face, outfit and background), the step's sign on a badge.
+  const nextFace = (ic: string) => {
+    const plain = h('span', { class: 'nx-ic', 'aria-hidden': 'true' }, icon(ic, 26));
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure'); } catch { /* private */ }
+    if (code) void import('./figure').then(({ parse, bustMarkup }) => {
+      const f = parse(code);
+      if (!f || !plain.isConnected && !plain.parentNode) return;
+      plain.className = 'nx-ic nx-me';
+      plain.innerHTML = `<svg viewBox="1 1 38 38" width="60" height="60">${bustMarkup(f, 19)}</svg>`;
+      plain.append(h('span', { class: 'nx-badge' }, icon(ic, 15)));
+    });
+    return plain;
+  };
   const paintNext = () => {
     if (page) return;
     const list = needsPace() ? [] : todayGoals();
@@ -766,7 +781,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     nextBox.replaceChildren(
       h('p', { class: 'nx-kicker' }, fe('nx.kicker')),
       h('div', { class: 'nx-row' },
-        h('span', { class: 'nx-ic', 'aria-hidden': 'true' }, icon(step.ic, 26)),
+        nextFace(step.ic),
         h('span', { class: 'nx-txt' }, h('b', {}, step.title), h('span', { class: 'muted small' }, step.sub),
           step.p ? h('span', { class: 'nx-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round(Math.min(1, step.p) * 100)}%` })) : '')),
       h('button', { class: `primary brand-btn nx-go${step.k === 'done' ? ' quiet' : ''}`, onclick: () => { haptic(10); go(); } }, step.btn),
@@ -1425,8 +1440,14 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
         isNative() ? toggle('risk', t('nudge.setRisk')) : ''),
       isNative() && n.risk ? h('div', {},
         h('b', { class: 'set-label' }, t('nudge.riskWhen')),
-        chips(RISK_TIMES, (x) => x === n.riskAt, (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), 0)),
-          (x) => setNudgeSettings({ ...nudgeSettings(), riskAt: x }))) : '',
+        chips(RISK_TIMES, (x) => x === n.riskAt,
+          (tm) => tm === 'auto' ? t('nudge.usual') : timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), 0)),
+          (x) => setNudgeSettings({ ...nudgeSettings(), riskAt: x })),
+        n.riskAt === 'auto' ? (() => {
+          const r = smartReminder();
+          const at = timeFmt.format(new Date(2026, 0, 1, r.h, r.m));
+          return h('p', { class: 'muted small' }, r.learned ? t('nudge.usualAt', { at }) : t('nudge.usualLearning', { at }));
+        })() : '') : '',
       h('p', { class: 'muted small' }, t('nudge.calm')));
   };
   let times: Date[] | null = null;

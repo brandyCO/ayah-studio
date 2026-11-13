@@ -2042,6 +2042,10 @@ duas/reflections section in Me.
       claims 50 Light once (`rank_my_invites()`, `rank_claim_invite(pid | null)` → `claimGoal('iv:…')`; an inviter is
       rewarded for ≤ 20 friends). Friends tab: "Light for inviting" rows (n of 3 days, Claim). The week story card shares the
       signed-in player's invite link (`storyLink()`), else the app link
+      **Reminder at your usual time** (`src/data/usualTime.ts`): the time the flame is lit each day is kept (localStorage
+      `flameTimes`, 30 days, synced); the evening reminder's new default **Your usual time** (`riskAt: 'auto'`) comes 45 min
+      after the median of the last 3 weeks (≥ 4 days; after-midnight readers → 22:00), on the quarter hour, 07:00–22:00, only
+      while the flame is unlit, "You usually read by now…"; 21:00 until it is learned. Fixed hours stay in Me → ⚙ → Goal notes
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
