@@ -122,6 +122,8 @@ export async function signOut() {
 /** Deletes the account and everything synced to it. This device keeps its own copy. */
 export async function deleteAccount() {
   const sb = await supabase();
+  // shared harakat clip files are not in the database, so they go first (best effort)
+  await import('./clipFiles').then((m) => m.removeMyClipFiles(sb)).catch(() => {});
   const { error } = await sb.rpc('delete_my_account');
   if (error) throw error;
   await signOut();
