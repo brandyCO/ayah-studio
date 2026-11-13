@@ -1,0 +1,22 @@
+/* The golden mushaf shelf */
+.sh-case { display: grid; gap: 14px; padding: 12px 10px 4px; margin: 8px 0; border-radius: 16px;
+  background: linear-gradient(#5b3a22, #4a2f1b); box-shadow: inset 0 2px 0 #7a5233, inset 0 -3px 0 #2e1c10; }
+.sh-row { display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; align-items: end; height: 92px; padding: 0 2px;
+  border-bottom: 7px solid #8a5d36; box-shadow: 0 5px 0 #3a2414; }
+.sh-book { position: relative; height: var(--h); min-width: 0; padding: 0; border: 0; border-radius: 3px 3px 1px 1px; cursor: pointer; overflow: hidden;
+  background: linear-gradient(90deg, #1d5a4a, #24735f 45%, #1a5243); box-shadow: inset 0 0 0 1px #0f3a2f; }
+.sh-book:nth-child(3n) { background: linear-gradient(90deg, #3d2f6b, #4c3b86 45%, #362a60); box-shadow: inset 0 0 0 1px #241b45; }
+.sh-book:nth-child(3n+1) { background: linear-gradient(90deg, #6b2a2a, #833535 45%, #5f2525); box-shadow: inset 0 0 0 1px #3f1616; }
+.sh-gold { position: absolute; inset: auto 0 0; height: calc(var(--f) * 100%);
+  background: linear-gradient(90deg, #b8860b, #ffd76a 40%, #f2b632 60%, #a87a0a); transition: height .8s var(--ease-spring, ease); }
+.sh-book.full .sh-gold::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, #fff8 50%, transparent 70%);
+  translate: 0 -120%; animation: sh-shine 4.2s ease-in-out infinite; animation-delay: calc(var(--f) * 1s); }
+.sh-book.full { box-shadow: 0 0 10px #ffd76a99, inset 0 0 0 1px #8a6408; }
+.sh-n { position: absolute; inset: auto 0 6px; text-align: center; font: 900 10px var(--ui-round); color: #fffc; text-shadow: 0 1px 0 #0006; }
+.sh-book.full .sh-n, .sh-book.some .sh-n { color: #fff; }
+.sh-book:active { translate: 0 2px; }
+.sh-count { font: 900 15px var(--ui-round); color: #b8860b; }
+.sh.done .sh-case { box-shadow: inset 0 2px 0 #7a5233, 0 0 24px #ffd76a66; }
+@keyframes sh-shine { 0%, 70% { translate: 0 120%; } 100% { translate: 0 -120%; } }
+@media (prefers-reduced-motion: reduce) { .sh-book.full .sh-gold::after { animation: none; } }
+html.lite .sh-book.full .sh-gold::after { animation: none; }

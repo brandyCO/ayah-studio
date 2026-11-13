@@ -307,3 +307,13 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 .lp-intro-links { display: flex; gap: 14px; }
 .lp-intro-links button { border: 0; background: none; padding: 2px; color: #2f8f1e; font-weight: 800; font-size: .88rem; text-decoration: underline; text-underline-offset: 3px; }
 .lp-menu .lp-menu-item { display: flex; align-items: center; gap: 12px; }
+
+/* Practice: three minutes on what slips most, beside Continue */
+.lp-prac {
+  flex: none; width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; align-content: center; gap: 1px;
+  background: #ff9f1c; color: #fff; text-decoration: none; box-shadow: 0 5px 0 #cc7a0a, 0 10px 24px #0000002e;
+  font: 900 11px var(--ui-round); letter-spacing: .02em; animation: lp-pop var(--dur-2) var(--ease-spring);
+}
+.lp-prac[hidden] { display: none; }
+.lp-prac:active { translate: 0 4px; box-shadow: 0 1px 0 #cc7a0a; }
+.lp-prac svg { width: 24px; height: 24px; }

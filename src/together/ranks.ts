@@ -293,7 +293,10 @@ export interface Challenge {
   id: string; code: string | null; start: string | null; end: string | null; waiting: boolean; expired: boolean;
   day: number | null; over: boolean; claimed: boolean; me: number | null; them: number | null; friend: Row | null;
   kind?: ChallengeKind; asked?: boolean; incoming?: boolean;
+  /** A team quest: both work towards this shared goal instead of racing. */
+  goal?: number | null;
 }
+export type ChallengeResult = { result: 'won' | 'tie' | 'lost' | 'reached' | 'short'; light: number };
 export const myChallenges = (fresh = false) => cached('challenges', () => rpc<Challenge[]>('rank_my_challenges', { d: rankDay() }), fresh);
 export async function createChallenge(kind: ChallengeKind = 'read'): Promise<{ id: string; code: string }> {
   await report();
@@ -311,6 +314,13 @@ export async function acceptChallenge(code: string): Promise<string> {
 export async function challengeFriend(pid: string, kind: ChallengeKind): Promise<string> {
   await report();
   const id = await rpc<string>('rank_challenge_friend', { who: pid, k: kind });
+  dropCache();
+  return id;
+}
+/** A team quest with a friend: one shared goal for the 7 days; it waits for their yes. */
+export async function teamWithFriend(pid: string, kind: ChallengeKind, goal: number): Promise<string> {
+  await report();
+  const id = await rpc<string>('rank_challenge_team', { who: pid, k: kind, g: goal });
   dropCache();
   return id;
 }
@@ -337,8 +347,8 @@ export async function sendCheer(ch: string, kind: number): Promise<number> {
   return n;
 }
 /** Claims a finished challenge's Light once (winner 100, tie 60, otherwise 30). */
-export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 'tie' | 'lost'; light: number } | null> {
-  const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });
+export async function claimChallenge(c: Challenge): Promise<ChallengeResult | null> {
+  const r = await rpc<ChallengeResult | null>('rank_challenge_claim', { ch: c.id });
   dropCache();
   if (r) claimGoal(`ch:${c.id}`, r.light);
   return r;

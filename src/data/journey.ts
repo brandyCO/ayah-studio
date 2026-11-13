@@ -163,6 +163,7 @@ export const todayRec = (now = new Date()): Readonly<DayRec> => view().days[dayK
 export const totals = (): Readonly<Totals> => view().totals;
 /** Distinct pages ever counted (on all the user's devices). */
 export const pagesEver = () => Object.keys(view().pageLast).length;
+export const pageLast = (): Readonly<Record<number, number>> => view().pageLast;
 /** The page was counted as read at or after `ms`. */
 export const pageReadSince = (page: number, ms: number) => (view().pageLast[page] ?? 0) >= ms;
 export const earnedBadges = (): Readonly<Record<string, string>> => view().badges;

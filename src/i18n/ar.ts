@@ -1150,6 +1150,8 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'cel.ok': 'الحمد لله',
   'cel.combo': '{n} على التوالي',
   'set.soundsOn': 'الأصوات: تعمل',
+  'set.easyOn': 'نص وأزرار كبيرة: يعمل',
+  'set.easyOff': 'نص وأزرار كبيرة: متوقف',
   'set.harakatHelp': 'المساعدة في تحسين التحقق من الحركات',
   'set.soundsOff': 'الأصوات: متوقفة',
   'set.usageOn': 'إحصاءات استخدام مجهولة: تعمل',

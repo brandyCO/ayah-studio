@@ -8,8 +8,8 @@ import { account } from '../cloud/auth';
 import { icon } from './icons';
 import { clt, type ChallengeKey } from '../i18n/challenges';
 import {
-  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, claimDuel, myChallenges, myDuel,
-  type Challenge, type ChallengeKind, type DuelQuest, type DuelState, type Row,
+  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, teamWithFriend, claimDuel, myChallenges, myDuel,
+  type Challenge, type ChallengeKind, type ChallengeResult, type DuelQuest, type DuelState, type Row,
 } from '../together/ranks';
 import { chestArt, chestTier } from './chest';
 import { h, haptic, toast } from './dom';
@@ -38,21 +38,38 @@ function sheet(title: string, ...body: (Node | string)[]) {
   return d;
 }
 
-/** "Challenge Yusuf": pick the good deed, and it is sent straight to them. */
+/** The shared goal of a team quest, for two friends over 7 days. */
+export const TEAM_GOAL: Record<ChallengeKind, number> = { read: 1400, pages: 70, listen: 210, lessons: 14, adhkar: 14, dhikr: 2000 };
+
+/** "Challenge Yusuf": a race or a team quest, then the good deed; it is sent straight to them. */
 export function openChallengePicker(friend: { pid: string; name: string }, after?: () => void) {
-  const tiles = CHALLENGE_KINDS.map((k) => h('button', { class: 'cl-kind', onclick: async () => {
-    haptic(10);
-    d.close();
-    try {
-      await challengeFriend(friend.pid, k);
-      toast(clt('cl.sent', { name: friend.name }));
-      after?.();
-    } catch (e) { toast((e as Error).message); }
-  } }, h('span', { class: 'cl-kind-ic', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
-    h('b', {}, clt(`cl.k.${k}` as ChallengeKey)), h('small', {}, clt(`cl.d.${k}` as ChallengeKey))));
+  let team = false;
+  const sub = h('p', { class: 'muted small' });
+  const kinds = h('div', { class: 'cl-kinds' });
+  const mode = (on: boolean, label: string) => h('button', { class: 'chip', type: 'button', role: 'radio', onclick: () => { team = on; haptic(6); paint(); } }, label);
+  const race = mode(false, clt('tq.race')), together = mode(true, clt('tq.team'));
+  const title = h('h2', {});
+  function paint() {
+    for (const [b, on] of [[race, !team], [together, team]] as const) { b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
+    title.textContent = team ? clt('tq.pickTitle', { name: friend.name }) : clt('cl.pickTitle', { name: friend.name });
+    sub.textContent = team ? clt('tq.pickSub') : clt('cl.pickSub');
+    kinds.replaceChildren(...CHALLENGE_KINDS.map((k) => h('button', { class: `cl-kind${team ? ' team' : ''}`, onclick: async () => {
+      haptic(10);
+      d.close();
+      try {
+        if (team) await teamWithFriend(friend.pid, k, TEAM_GOAL[k]); else await challengeFriend(friend.pid, k);
+        toast(clt(team ? 'tq.sent' : 'cl.sent', { name: friend.name }));
+        after?.();
+      } catch (e) { toast((e as Error).message); }
+    } }, h('span', { class: 'cl-kind-ic', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
+      h('b', {}, clt(`cl.k.${k}` as ChallengeKey)),
+      h('small', {}, team ? clt('tq.goal', { n: num(TEAM_GOAL[k]), u: unit(k) }) : clt(`cl.d.${k}` as ChallengeKey)))));
+  }
   const d = sheet(clt('cl.pickTitle', { name: friend.name }),
-    h('div', { class: 'sheet-scroll' }, h('p', { class: 'muted small' }, clt('cl.pickSub')),
-      h('div', { class: 'cl-kinds' }, ...tiles), h('p', { class: 'muted small' }, clt('cl.trust'))));
+    h('div', { class: 'sheet-scroll' }, h('div', { class: 'chips cl-mode', role: 'radiogroup' }, race, together), sub,
+      kinds, h('p', { class: 'muted small' }, clt('cl.trust'))));
+  d.querySelector('.sheet-head h2')?.replaceWith(title);
+  paint();
 }
 
 const unit = (k: ChallengeKind) => clt(`cl.u.${k}` as ChallengeKey);
@@ -64,13 +81,14 @@ const bars = (me: number, them: number, friend: Row | null, k: ChallengeKind) =>
   return [row(me, true, meDisc(30)), row(them, false, theirDisc(friend, 30))];
 };
 
-async function openChest(title: string, claim: () => Promise<{ result: 'won' | 'tie' | 'lost'; light: number } | null>, who: string, el: HTMLElement) {
+async function openChest(title: string, claim: () => Promise<ChallengeResult | null>, who: string, el: HTMLElement, goal = 0) {
   try {
     const r = await claim();
     if (!r) return;
     const { celebrate } = await import('./celebrate');
     await celebrate({ kind: 'chest', kicker: title,
-      title: r.result === 'won' ? clt('cl.won', { name: who }) : r.result === 'tie' ? clt('cl.tie') : clt('cl.lost', { name: who }),
+      title: r.result === 'reached' ? clt('tq.reached') : r.result === 'short' ? clt('tq.title')
+        : r.result === 'won' ? clt('cl.won', { name: who }) : r.result === 'tie' ? clt('cl.tie') : clt('cl.lost', { name: who }),
       sub: clt('cl.chestSub'), loot: [{ kind: 'light', n: r.light }] }, el, r.light);
   } catch (e) { toast((e as Error).message); }
 }
@@ -82,6 +100,7 @@ function card(c: Challenge, repaint: () => void): HTMLElement | null {
   const head = h('div', { class: 'cl-head' }, h('span', { class: 'cl-kind-ic sm', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
     h('b', {}, clt(`cl.k.${k}` as ChallengeKey)),
     h('span', { class: 'muted small' }, c.over ? clt('cl.over') : c.start ? clt('cl.day', { d: c.day ?? 1 }) : ''));
+  if (c.goal && !c.incoming && !c.asked && !c.waiting) return teamCard(c, k, who, repaint);
   if (c.incoming) {
     const act = (yes: boolean) => async () => {
       haptic(10);
@@ -89,7 +108,8 @@ function card(c: Challenge, repaint: () => void): HTMLElement | null {
       repaint();
     };
     return h('div', { class: 'cl-card in' }, head,
-      h('div', { class: 'cl-who' }, theirDisc(c.friend, 40), h('p', {}, h('b', {}, clt('cl.incoming', { name: who })), h('br'), h('small', { class: 'muted' }, clt(`cl.d.${k}` as ChallengeKey)))),
+      h('div', { class: 'cl-who' }, theirDisc(c.friend, 40), h('p', {}, h('b', {}, clt(c.goal ? 'tq.incoming' : 'cl.incoming', { name: who })), h('br'),
+        h('small', { class: 'muted' }, c.goal ? clt('tq.goal', { n: num(c.goal), u: unit(k) }) : clt(`cl.d.${k}` as ChallengeKey)))),
       h('div', { class: 'chips' }, h('button', { class: 'primary brand-btn', onclick: act(true) }, clt('cl.yes')), h('button', { class: 'chip', onclick: act(false) }, clt('cl.no'))));
   }
   if (c.waiting) return null; // a link nobody took yet: kept on Ranks → My boards
@@ -104,6 +124,24 @@ function card(c: Challenge, repaint: () => void): HTMLElement | null {
   const claim = c.over && !c.claimed ? h('button', { class: 'primary brand-btn cl-claim' }, chestArt(chestTier(me > them ? 100 : me === them ? 60 : 30)), ` ${clt('cl.open')}`) : null;
   claim?.addEventListener('click', () => void openChest(clt(`cl.k.${k}` as ChallengeKey), () => claimChallenge(c), who, claim).then(repaint));
   return h('div', { class: `cl-card${c.over ? ' over' : ''}` }, head, ...bars(me, them, c.friend, k), h('p', { class: 'small cl-line' }, line), claim ?? '');
+}
+
+/** A team quest: one bar to the shared goal, each friend's part in their own shade. */
+export function teamCard(c: Challenge, k: ChallengeKind, who: string, repaint: () => void): HTMLElement {
+  const goal = c.goal ?? 1, me = c.me ?? 0, them = c.them ?? 0, sum = me + them;
+  const pct = (n: number) => `${Math.min(100, (n / goal) * 100).toFixed(1)}%`;
+  const head = h('div', { class: 'cl-head' }, h('span', { class: 'cl-kind-ic sm team', 'aria-hidden': 'true' }, icon(ICON[k], 22)),
+    h('b', {}, `${clt('tq.title')} · ${clt(`cl.k.${k}` as ChallengeKey)}`),
+    h('span', { class: 'muted small' }, c.over ? clt('cl.over') : clt('cl.day', { d: c.day ?? 1 })));
+  const bar = h('div', { class: 'tq-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(goal), 'aria-valuenow': String(sum) },
+    h('span', { class: 'tq-me', style: `width:${pct(me)}` }), h('span', { class: 'tq-them', style: `width:${pct(Math.min(them, Math.max(0, goal - me)))}` }));
+  const faces = h('div', { class: 'tq-faces' },
+    h('span', {}, meDisc(26), clt('tq.you', { n: num(me) })), h('span', {}, theirDisc(c.friend, 26), clt('tq.them', { name: who, n: num(them) })),
+    h('b', { class: 'tq-goal' }, `${num(sum)} / ${num(goal)} ${unit(k)}`));
+  const line = sum >= goal ? clt('tq.reached') : c.over ? clt('tq.short', { n: num(sum), goal: num(goal) }) : clt('tq.left', { n: num(goal - sum), u: unit(k) });
+  const claim = c.over && !c.claimed ? h('button', { class: 'primary brand-btn cl-claim' }, chestArt(chestTier(sum >= goal ? 100 : 30)), ` ${clt('cl.open')}`) : null;
+  claim?.addEventListener('click', () => void openChest(clt('tq.title'), () => claimChallenge(c), who, claim, goal).then(repaint));
+  return h('div', { class: `cl-card team${c.over ? ' over' : ''}${sum >= goal ? ' reached' : ''}` }, head, bar, faces, h('p', { class: 'small cl-line' }, line), claim ?? '');
 }
 
 /** Me → goals → Challenges: friend challenges only (the weekly rival is on Ranks, with a small pill here). */

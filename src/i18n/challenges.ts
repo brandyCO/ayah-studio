@@ -65,6 +65,19 @@ const en = {
   'du.vs': 'vs',
   'du.today': 'Today ends in',
   'du.week': 'Duel ends in',
+  'tq.race': 'Race',
+  'tq.team': 'Together',
+  'tq.pickTitle': 'Team up with {name}',
+  'tq.pickSub': '7 days from the day they say yes. Reach one goal together and you both open the big chest.',
+  'tq.goal': 'Goal together: {n} {u}',
+  'tq.sent': 'Team quest sent to {name}',
+  'tq.incoming': '{name} wants to team up',
+  'tq.left': '{n} {u} to go together',
+  'tq.reached': 'You reached it together, MashaAllah!',
+  'tq.short': 'You got {n} of {goal} together',
+  'tq.you': 'You {n}',
+  'tq.them': '{name} {n}',
+  'tq.title': 'Team quest',
 };
 export type ChallengeKey = keyof typeof en;
 const ar: Partial<Record<ChallengeKey, string>> = {
@@ -130,6 +143,19 @@ const ar: Partial<Record<ChallengeKey, string>> = {
   'du.vs': 'ضد',
   'du.today': 'ينتهي اليوم بعد',
   'du.week': 'تنتهي المنافسة بعد',
+  'tq.race': 'سباق',
+  'tq.team': 'معًا',
+  'tq.pickTitle': 'كوّن فريقًا مع {name}',
+  'tq.pickSub': '7 أيام من يوم موافقته. بلغا هدفًا واحدًا معًا وافتحا الصندوق الكبير كلاكما.',
+  'tq.goal': 'الهدف معًا: {n} {u}',
+  'tq.sent': 'أُرسلت مهمة الفريق إلى {name}',
+  'tq.incoming': '{name} يريد أن تعملا معًا',
+  'tq.left': 'بقي {n} {u} معًا',
+  'tq.reached': 'بلغتماه معًا، ما شاء الله!',
+  'tq.short': 'جمعتما {n} من {goal}',
+  'tq.you': 'أنت {n}',
+  'tq.them': '{name} {n}',
+  'tq.title': 'مهمة فريق',
 };
 
 export function clt(key: ChallengeKey, vars?: Record<string, string | number>): string {

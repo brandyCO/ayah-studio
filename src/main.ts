@@ -140,6 +140,7 @@ async function route() {
 const launch = !location.hash || location.hash === '#' || location.hash === '#/';
 applyTheme(); // the user's brand gradient, before the first screen
 applyLite(); // old-phone mode: heavy decorations off (src/lite.ts)
+try { document.documentElement.classList.toggle('easy', localStorage.getItem('easyMode') === 'on'); } catch { /* storage blocked */ } // easy mode: bigger text and buttons
 initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
@@ -170,6 +171,7 @@ markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
+later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
 later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets

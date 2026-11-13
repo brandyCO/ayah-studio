@@ -33,6 +33,7 @@ import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
 import { isFireDay } from '../data/fireDays';
+import { isCalm } from '../data/nightCalm';
 const hasFigure = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
 import { dayMark } from './streakMoment';
 import { rewardPalette, rgba } from './theme';
@@ -87,6 +88,13 @@ const challengeWaiting = () => {
     return !!v?.some((c) => c.incoming || (c.over && !c.claimed && c.start));
   } catch { return false; }
 };
+/** Easy mode: bigger text and buttons everywhere (`html.easy`, localStorage `easyMode`). */
+const easyOn = () => document.documentElement.classList.contains('easy');
+function setEasy(on: boolean) {
+  document.documentElement.classList.toggle('easy', on);
+  try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
+}
+
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
 export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
 export type MePage = (typeof ME_PAGES)[number];
@@ -246,6 +254,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('button', { class: 'chip', onclick: done }, mpt('mp.askNo'))))));
   };
   const statsBox = h('section', { class: 'me-card' });
+  /** The golden mushaf shelf (shelf.ts, loaded with the Stats page). */
+  const shelfSlot = () => {
+    const slot = h('div', { class: 'sh-slot' });
+    void import('./shelf').then((m) => slot.replaceChildren(m.shelf((p) => goMushaf(`page:${p}`)))).catch(() => {});
+    return slot;
+  };
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
   const prayerBox = h('section', { class: 'me-card' });
@@ -406,6 +420,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       }, 2900);
     });
   };
+  /** The streak's next target: the next day the character goes up in flames, with the way there as a bar. */
+  const fireChip = (days: number, lit: boolean) => {
+    let to = days + 1;
+    while (!isFireDay(to)) to++;
+    let from = days;
+    while (from > 0 && !isFireDay(from)) from--;
+    const left = to - days;
+    const p = Math.max(0.06, Math.min(1, (days - from) / Math.max(1, to - from)));
+    const label = left === 1 ? fe(lit ? 'st.fire1' : 'st.fire0', { m: to }) : fe('st.fireN', { n: left, m: to });
+    return h('span', { class: 'me-chip me-fire', title: label },
+      h('span', { class: 'me-fire-t' }, label), h('span', { class: 'me-fire-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round(p * 100)}%` })));
+  };
+  const bedtimeTonight = () => { try { return localStorage.getItem('bedtimeDone') === dayKey(new Date(Date.now() - 12 * 3600e3)); } catch { return false; } };
   const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
   const paintHero = () => {
     const s = streak();
@@ -439,6 +466,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       lost ? lostCard(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
+        !loading && s.days > 0 ? fireChip(s.days, s.litToday) : '',
         s.weeks ? h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })) : '',
         s.best > s.days ? h('span', { class: 'me-chip' }, t('me.best', { n: s.best })) : '',
         myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
@@ -798,6 +826,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     else if (adhkar) step = { k: 'adhkar', ic: adhkar.period === 'm' ? 'crescent' : 'sun', title: fe(adhkar.period === 'm' ? 'nx.eve' : 'nx.morn'),
       sub: adhkar.done ? fe('nx.of', { n: adhkar.done, of: adhkar.target }) : fe('nx.adhkarSub'), btn: fe(adhkar.done ? 'nx.continue' : 'nx.begin'),
       go: () => openAdhkarSession(adhkar.period ?? 's'), p: adhkar.done / adhkar.target };
+    else if (isCalm() && !bedtimeTonight()) step = { k: 'sleep', ic: 'crescent', title: fe('nc.title'), sub: fe('nc.sub'), btn: fe('nx.begin'),
+      go: () => void import('./adhkar').then((m) => m.openDuas('sleep')) };
     else if (js && !js.done && js.today > 0 && js.next) step = { k: 'pages', ic: 'book', title: fe(js.today === 1 ? 'nx.portion1' : 'nx.portion', { n: js.today }),
       sub: fe('nx.of', { n: js.read, of: js.total }), btn: fe('nx.open'), go: pageGo, p: js.read / js.total };
     else {
@@ -1217,7 +1247,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   } else if (page) {
     // A door's full screen: the same live sections, on their own.
     const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib') }[page];
-    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, badgeBox], library: [libBox] }[page];
+    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, shelfSlot(), badgeBox], library: [libBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
         h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
@@ -1402,6 +1432,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', onclick: () => void import('./themePicker').then((m) => m.openThemePicker()) }, icon('colours', 18), t('theme.menu')),
           h('button', { class: 'menu-item', onclick: openLanguage }, icon('voice', 18), t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })),
           h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, icon(soundsOn() ? 'bell' : 'bellOff', 18), t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')),
+          h('button', { class: 'menu-item', 'aria-pressed': String(easyOn()), onclick: () => { setEasy(!easyOn()); paint(); } }, icon('book', 18), t(easyOn() ? 'set.easyOn' : 'set.easyOff')),
           h('button', { class: 'menu-item', 'aria-pressed': String(usageOn()), title: t('set.usageHelp'), onclick: () => { setUsageOn(!usageOn()); paint(); } }, icon('target', 18), t(usageOn() ? 'set.usageOn' : 'set.usageOff')),
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),

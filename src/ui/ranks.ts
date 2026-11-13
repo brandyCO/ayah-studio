@@ -757,6 +757,12 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const live = list.filter((c) => !c.expired && !(c.over && c.claimed));
     const done = list.filter((c) => c.over && c.claimed).slice(0, 3);
     const card = (c: Challenge) => {
+      if (c.goal && !c.waiting) {
+        // A team quest: drawn by challenges.ts (one bar to the shared goal).
+        const box = h('div', { class: 'rk-ch-team' });
+        void import('./challenges').then((m) => box.replaceChildren(m.teamCard(c, c.kind ?? 'read', c.friend?.name ?? rt('rk.private'), () => void paint(true))));
+        return box;
+      }
       if (c.waiting) {
         return h('div', { class: 'rk-ch me-card wait' },
           h('div', { class: 'rk-ch-vs' }, avatar(status?.private ? null : status?.avatar ?? 0, status?.tier ?? 0, 40, status?.frame ?? 0, status?.figure),

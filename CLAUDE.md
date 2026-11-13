@@ -2077,6 +2077,22 @@ duas/reflections section in Me.
       Now `ArabicUI` = Noto Sans Arabic 400 / 700 (OFL, Arabic blocks only, ~70 KB each, `public/fonts/NotoSansArabic-*`,
       fetched only when Arabic interface text shows) sits before it in the body stack and in `--ui-round`; iOS and Windows
       keep their own Arabic system font. The Quran text keeps its own fonts
+      **Practice** (`src/data/practice.ts`): an orange ⚡ Practice button beside Continue on the Learn path, shown when
+      something slips: the surah with the most weak words (`learnWeak`, `weakCounts()`) among those started →
+      `#/learn/{s}/practice` = the lesson's exercises on the ≤ 4 ayat holding most of them (`practiceRange()`), no lamps,
+      no reciting; else the due page held least firmly → `#/learn/page/P`. The first practice of a day adds 10 Light
+      (`pr:{day}`) and every practice a lamp back; the end offers the next thing to practise. Strings `pr.*` in `front.ts`
+      **Streak target**: a chip on Me's streak card "On fire in n days · day m" with a bar from the last fire day to the next
+      (`fireChip()` in me.ts, `isFireDay()`). **Team quests** (migration `20261114100000_team_quests.sql`, pgTAP
+      `team_quests.test.sql` 10): the challenge picker has Race / Together; Together sends `rank_challenge_team(who, k, g)` with
+      a shared goal for the 7 days (`TEAM_GOAL`: 70 pages, 2000 dhikr, 14 adhkar, 210 min, 14 lessons, 1400 XP); one bar in
+      two shades (`teamCard()` in challenges.ts, also on Ranks); the chest gives each 100 Light when reached, else 30
+      **Golden mushaf** (`src/ui/shelf.ts`, Me → Stats): the 30 juz as books on two shelves, each spine filling with gold
+      as its pages are counted (`pageLast()`), a juz read through shines; tap → its first page not read yet. **Night calm**
+      (`src/data/nightCalm.ts`, `html.calm`): from Isha to Fajr (prayer settings, kept in `calmTimes`; else 21:00 → 04:30)
+      reward sounds rest, goal banners wait, the tab bar and Learn dock soften, and Next up offers the bedtime du'a once the
+      flame is lit. **Big text and buttons** (Me → ⚙ → App, `html.easy`, localStorage `easyMode`): larger `--fs-*` and
+      `--tap` tokens, chips, buttons, menu rows and tab icons
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
