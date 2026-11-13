@@ -2046,6 +2046,24 @@ duas/reflections section in Me.
       `flameTimes`, 30 days, synced); the evening reminder's new default **Your usual time** (`riskAt: 'auto'`) comes 45 min
       after the median of the last 3 weeks (≥ 4 days; after-midnight readers → 22:00), on the quarter hour, 07:00–22:00, only
       while the flame is unlit, "You usually read by now…"; 21:00 until it is learned. Fixed hours stay in Me → ⚙ → Goal notes
+      **Fewer, bigger moments**: one daily goal's chest opens with a quiet tick in place (it squashes, "+n ✦" rises, its Light
+      flies to the counter; `quietChest()` in me.ts) and a goal met elsewhere gives the Me tab a small check (`tabTick()`,
+      no banner or notification); full-screen moments stay for every goal met, the week's chests, a ×2 surprise, Al-Kahf,
+      badges, the harvest, streak fire days and finished surahs. Next up shows the user's own bust (`bustMarkup`)
+      **The character reacts**: in Learn exercises the user's own character stands beside the verdict (`coachFor()` in
+      lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
+      mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
+      and from 17:00 leans to look at a flame still waiting
+      **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
+      ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
+      never held back
+      **Ranks opens on your place**: the first time the league shows on a visit, the list scrolls so your row sits mid-screen
+      with the players around you, even when last (`openOnMe()` in ranks.ts)
+      **Arabic interface font** (F23): Android's Roboto has no Arabic, so the Quran-marks face (AmiriQuran over the whole
+      Arabic block) used to draw every Arabic interface word in calligraphy while bold headings fell to the system font.
+      Now `ArabicUI` = Noto Sans Arabic 400 / 700 (OFL, Arabic blocks only, ~70 KB each, `public/fonts/NotoSansArabic-*`,
+      fetched only when Arabic interface text shows) sits before it in the body stack and in `--ui-round`; iOS and Windows
+      keep their own Arabic system font. The Quran text keeps its own fonts
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

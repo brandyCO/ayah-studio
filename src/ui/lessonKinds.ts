@@ -13,6 +13,17 @@ import { h, haptic } from './dom';
 import { popIn, reduced, squash } from './juice';
 import { sfx } from './sfx';
 
+// The user's own character answers with them (front-end backlog, "the character reacts"): a happy hop for a right
+// answer, a cheer for three in a row, and for a mistake a calm, kind sink, never a frown. Only when they have one.
+type Coach = import('./actor').Actor;
+let coachMod: Promise<typeof import('./actor') | null> | null = null;
+const hasFigure = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
+function coachFor(): Promise<Coach | null> {
+  if (!hasFigure()) return Promise.resolve(null);
+  coachMod ??= import('./actor').catch(() => null);
+  return coachMod.then((m) => m?.actor('lk-coach') ?? null);
+}
+
 export interface KindCtx {
   s: number;
   range: [number, number];
@@ -175,10 +186,21 @@ export function drills(c: KindCtx, done: (missed: number) => void, lamps?: Drill
     bar.setAttribute('aria-valuenow', String(right));
   };
 
+  let coach: Coach | null = null, streakRight = 0;
+  void coachFor().then((c) => { coach = c; });
   function feedback(ok: boolean, card: Card, answerNode: Node | null) {
-    foot.className = `lk-foot show ${ok ? 'good' : 'bad'}`;
+    foot.className = `lk-foot show ${ok ? 'good' : 'bad'}${coach ? ' with-coach' : ''}`;
     const cont = h('button', { class: 'primary lk-continue', onclick: () => next() }, lt('learn.continue'));
+    streakRight = ok ? streakRight + 1 : 0;
+    if (coach) {
+      const c = coach;
+      setTimeout(() => {
+        if (!ok) { c.sink(); return; }
+        if (streakRight >= 3 && streakRight % 3 === 0) { c.face('star', 1800); c.cheer(1500); } else { c.face('happy', 1200); c.hop(0.6); }
+      }, 120);
+    }
     foot.replaceChildren(
+      ...(coach ? [h('span', { class: 'lk-coach-box', 'aria-hidden': 'true' }, coach.el)] : []),
       h('div', { class: 'lk-verdict' },
         h('strong', {}, lt(ok ? pick(['learn.good1', 'learn.good2', 'learn.good3'] as const) : 'learn.notQuite')),
         !ok && answerNode ? h('span', { class: 'lk-answer' }, ...((answerNode as Element).classList?.contains('lk-ar') ? [lt('learn.answerIs'), ' ', answerNode] : [answerNode])) : ''),

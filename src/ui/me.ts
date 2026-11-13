@@ -390,6 +390,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
+      // It reacts to how today is going (front-end backlog): proud once the flame is lit by reading, a look over at
+      // the flame in the evening while it still waits, and calm (never sad) when the flame went out.
+      setTimeout(() => {
+        if (!a.el.isConnected || look.mode === 'asleep') return;
+        const st = streak();
+        if (st.litToday) a.face(look.mode === 'reading' ? 'proud' : 'happy', 2600);
+        else if (st.lost) a.face('calm', 2600);
+        else if (new Date().getHours() >= 17 && st.days > 0) {
+          const fl = hero.querySelector('.flame, .me-flame');
+          const r = a.el.getBoundingClientRect(), f = fl?.getBoundingClientRect();
+          a.lean(f && f.left + f.width / 2 < r.left + r.width / 2 ? -1 : 1);
+        }
+      }, 2900);
     });
   };
   const hasFig = () => { try { return !!localStorage.getItem('rankFigure'); } catch { return false; } };
@@ -475,7 +488,32 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
       () => claimGoal(id, n));
   };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  // Fewer, bigger moments: one daily goal is a quiet tick (the chest pops open where it is and its Light flies to the
+  // counter); the full-screen chest is kept for the big ones (every goal met, the week, a surprise ×2, Al-Kahf, badges).
+  const quietChest = async (id: string, n: number, from: Element) => {
+    if (playing) return;
+    playing = true;
+    try {
+      haptic(10);
+      void import('./sfx').then((m) => { m.sfx.open(0, 0); setTimeout(() => m.sfx.pop(0), 120); });
+      const r = from.getBoundingClientRect();
+      const tickEl = h('span', { class: 'goal-tick', 'aria-hidden': 'true', style: `left:${r.left + r.width / 2}px;top:${r.top}px` }, `+${n} ✦`);
+      document.body.append(tickEl);
+      setTimeout(() => tickEl.remove(), 1300);
+      const c = await import('./celebrate');
+      c.flyLight(from, 0);
+      from.animate([{ scale: '1' }, { scale: '1.25 .8' }, { scale: '.9 1.15' }, { scale: '1' }], { duration: 420, easing: 'ease-out' });
+      // The list keeps its order until the Light has flown, so nothing moves under the tick.
+      await new Promise((r) => setTimeout(r, 950));
+      claimGoal(id, n);
+    } finally {
+      playing = false;
+      void import('./nudges').then((m) => m.maybeAskNudges());
+    }
+  };
+  const claimGoalRow = (g: GoalProgress, from?: Element) => !g.week && from && surprise(g.id) === 1
+    ? quietChest(g.id, lightFor(g), from)
+    : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
   const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
   const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
@@ -1197,6 +1235,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       prayerStrip, hero, syncLine, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
+    // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
+    // season ahead, the du'a-notes ask, the widget hint) only the most useful one shows at a time; the rest wait
+    // for another visit. Ramadan itself (a live season card) is never held back.
+    const EXTRAS = ['.ws-card', '.aic-new', '.snc:not(.live)', '.me-ask', '.wg-hint'];
+    let quietRaf = 0;
+    const quietExtras = () => {
+      quietRaf = 0;
+      let shown = false;
+      for (const sel of EXTRAS) for (const el of root.querySelectorAll<HTMLElement>(sel)) {
+        el.hidden = shown;
+        shown = true;
+      }
+    };
+    new MutationObserver(() => { if (!quietRaf) quietRaf = requestAnimationFrame(quietExtras); }).observe(root, { childList: true, subtree: true });
+    quietExtras();
   }
   paintRoom();
 

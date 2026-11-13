@@ -84,6 +84,9 @@ export function checkNudges() {
   st.ids.push(...fresh.map((g) => g.id), ...(allNow ? ['all'] : []));
   if (fzMsg) write('nudgeFreeze', [...read<string[]>('nudgeFreeze', []), fz].slice(-8));
   if (first) { write('nudgeSaid', st); return; }
+  // Fewer, bigger moments: one goal met is a quiet tick on the Me tab, never a banner or a notification;
+  // the note is kept for every goal met and for the freeze.
+  if (msg && !allNow) { if (!document.hidden) tabTick(); msg = null; }
   const say = msg ?? fzMsg;
   if (!say) { write('nudgeSaid', st); return; }
   if (document.hidden) {
@@ -107,6 +110,17 @@ async function notifyNow(title: string, body: string) {
       extra: { hash: '#/me', focus: 'claim' },
     }] });
   } catch { /* an older build or notifications off */ }
+}
+
+/** A goal met: the Me tab gives a small check and a soft tap, nothing more. */
+function tabTick() {
+  const me = document.querySelector<HTMLElement>('.tab-btn.me');
+  if (!me || busyScreen()) return;
+  me.classList.remove('ticked');
+  void me.offsetWidth;
+  me.classList.add('ticked');
+  haptic(6);
+  setTimeout(() => me.classList.remove('ticked'), 1600);
 }
 
 /** The in-app note: slides down from the top, stays ~4 s, tap → Me. Never over a dialog. */
