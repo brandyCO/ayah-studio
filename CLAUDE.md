@@ -2093,6 +2093,14 @@ duas/reflections section in Me.
       reward sounds rest, goal banners wait, the tab bar and Learn dock soften, and Next up offers the bedtime du'a once the
       flame is lit. **Big text and buttons** (Me → ⚙ → App, `html.easy`, localStorage `easyMode`): larger `--fs-*` and
       `--tap` tokens, chips, buttons, menu rows and tab icons
+      **What brings you here?** (`openWhySheet()` in `src/ui/firstSteps.ts`, after the tour, once; localStorage `whyHere`,
+      synced): Read more / Memorise / Understand the meaning / Share ayat as reels / Remember Allah, any number; the pace sheet
+      then recommends Steady for memorising, and the chosen pace leans towards the picks (`tailor()`: memorise → 1 ayah + 1 lesson
+      a day, reels → 1 a week, dhikr → adhkar + 3 du'a lanterns); with every goal met, Next up offers the next lesson / reading
+      with the meaning / a reel / a round of tasbih instead of Listen. **You stopped here** (`src/data/stopped.ts`, localStorage
+      `stoppedAt`, synced): the ayah being recited when listening ended, or on a page read in silence its first ayah (20 s) or
+      last one (page counted); after a 20 min break the mushaf opening on that page glows the ayah twice and shows a pill
+      "You stopped here · ref" (+ Listen on after listening), once (`src/ui/stopGlow.ts` + `.css`, lazy)
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

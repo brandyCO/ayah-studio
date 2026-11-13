@@ -55,7 +55,7 @@ import { firstSyncPending, onSyncStatus, syncNow, syncStatus } from '../cloud/sy
 import { tick as tickNum } from './juice';
 import { openAccount } from './account';
 import { goalLabel, goalText } from './goalName';
-import { dayCard } from './firstSteps';
+import { dayCard, whyHere } from './firstSteps';
 import { openPicker } from './todayCard';
 import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
@@ -838,6 +838,15 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     // No goals yet (the pace card below is the next step) or none to show: no card.
     if (!step && !list.length) { nextSig = ''; nextBox.hidden = true; nextBox.replaceChildren(); return; }
     nextBox.hidden = false;
+    // Everything met: one step towards what brought the user here (asked after the tour), else Listen.
+    if (!step) {
+      const why = whyHere();
+      const lessonsDone = list.some((g) => g.kind === 'lessons' && g.done >= g.target);
+      if (why.includes('memorise') && !lessonsDone) step = { k: 'lessons', ic: 'sprout', title: fe('why.nxMemorise'), sub: fe('why.nxMemoriseSub'), btn: fe('nx.begin'), go: () => { location.hash = '#/learn'; } };
+      else if (why.includes('understand')) step = { k: 'pages', ic: 'translation', title: fe('why.nxUnderstand'), sub: fe('why.nxUnderstandSub'), btn: fe('nx.open'), go: () => { setReaderMode('translation'); location.hash = lastRead(); } };
+      else if (why.includes('reels') && !list.some((g) => g.kind === 'reels' && g.done >= g.target)) step = { k: 'reels', ic: 'film', title: fe('why.nxReels'), sub: fe('why.nxReelsSub'), btn: fe('nx.begin'), go: () => goMushaf('pick') };
+      else if (why.includes('dhikr')) step = { k: 'dhikr', ic: 'beads', title: fe('why.nxDhikr'), sub: fe('why.nxDhikrSub'), btn: fe('nx.begin'), go: () => void import('./tasbih').then((m) => m.openTasbih()) };
+    }
     step ??= { k: 'done', ic: 'check', title: fe('nx.done'), sub: fe('nx.doneSub'), btn: fe('nx.listen'), go: () => goMushaf('listen') };
     const plan = currentPlan();
     const foot = js && !js.done ? `${t(`jr.${js.id}` as Key)} · ${t('jr.dayOf', { day: Math.min(js.day, js.days), n: js.days })}` : plan ? '' : t('jr.start');
