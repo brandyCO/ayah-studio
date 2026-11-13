@@ -8,8 +8,9 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI run number, so each APK from GitHub Actions installs as an update of the previous one.
-        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer)
-        versionName "0.1.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+        // A Play Store release (.github/workflows/release.yml) passes its own, always higher, number.
+        versionCode((System.getenv('ANDROID_VERSION_CODE') ?: System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer)
+        versionName(System.getenv('ANDROID_VERSION_NAME') ?: "0.1.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -37,6 +38,8 @@ android {
             if (keystorePath) signingConfig signingConfigs.app
         }
         release {
+            // The same key is the Play upload key (Play App Signing re-signs for the store).
+            if (keystorePath) signingConfig signingConfigs.app
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

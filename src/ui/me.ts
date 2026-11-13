@@ -6,6 +6,7 @@ import { levelLabel, levelOf, myXp } from '../data/xp';
 import { icon } from './icons';
 const iconOf = icon;
 import { setSoundsOn, soundsOn } from './sfx';
+import { setUsageOn, usageOn } from '../usage';
 import './me.css';
 import { eveningFrom, refreshAsr } from '../data/adhkar';
 import { akt } from '../i18n/adhkar';
@@ -1432,6 +1433,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', onclick: openLanguage }, icon('voice', 18), t('menu.language', { name: LANGS.find((l) => l.id === lang())!.name })),
           h('button', { class: 'menu-item', 'aria-pressed': String(soundsOn()), onclick: () => { setSoundsOn(!soundsOn()); paint(); } }, icon(soundsOn() ? 'bell' : 'bellOff', 18), t(soundsOn() ? 'set.soundsOn' : 'set.soundsOff')),
           h('button', { class: 'menu-item', 'aria-pressed': String(easyOn()), onclick: () => { setEasy(!easyOn()); paint(); } }, icon('book', 18), t(easyOn() ? 'set.easyOn' : 'set.easyOff')),
+          h('button', { class: 'menu-item', 'aria-pressed': String(usageOn()), title: t('set.usageHelp'), onclick: () => { setUsageOn(!usageOn()); paint(); } }, icon('target', 18), t(usageOn() ? 'set.usageOn' : 'set.usageOff')),
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],

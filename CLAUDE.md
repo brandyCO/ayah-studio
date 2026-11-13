@@ -740,6 +740,19 @@ Pro and a load test come later, when the owner decides to pay).
       bucket `harakat-clips` (`src/cloud/clipFiles.ts`, `harakat_clip_add_file`; own folder only, teachers read all;
       files removed with Forget my clips and account deletion); older clips keep their `audio` and still play
       (migration `20261113100000_harakat_clips_storage.sql`, pgTAP 29)
+- [x] Round 2 (owner "yes all 7", 2026-11-13, PR #258): rivals paired by a job every 5 min (`rank_pair_duels()`, one pass by
+      clock band, league, 14-day average; a waiter meets the next to wait), Ranks polls a pulse (`rank_pulse`, one md5) and
+      refreshes only on change, Hall of fame cached 10 min, per-surah SuraNames fonts (`public/fonts/suras/`,
+      `scripts/make-sura-fonts.py`, 1.3 KB each), the page font + Me / Learn chunks preloaded per route (`routePreloads()` in
+      `vite.config.ts`), the recitation code out of first load (122 KB). Migration `20261113300000_rank_scale.sql`, pgTAP 15
+- [x] Daily database backup (`.github/workflows/backup.yml`, `scripts/db-backup.sh`): public + auth dumped at 01:15 UTC,
+      encrypted with the database password, restored into an empty Postgres 17 and checked row for row, kept 30 days as an
+      artifact; a failure opens an issue. Uptime (`.github/workflows/uptime.yml`, every 10 min): Pages, Auth, database, edge
+      proxy → an issue "Down: …" assigned to the owner, closed when back. Restore steps: `docs/backup.md`
+- [x] Anonymous usage counts (`src/usage.ts`): each day a phone sends a list of words once each (screens `v:…`, actions
+      `ev:…`, `age:…` since install, `p:`, `l:`, first day again under `d0:`), no id; `usage_add()` adds 1 per word
+      (migration `20261113400000_usage_counts.sql`, pgTAP `usage_counts.test.sql`); owner reads the views `usage_by_day` and
+      `usage_first_day` in the Supabase SQL editor; off in the Kids space and with Me → ⚙ → App → Anonymous usage counts
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
