@@ -91,3 +91,30 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-card-wrap .fr-card { padding-bottom: 52px; }
 .fr-ch-btn { position: absolute; z-index: 1; bottom: 12px; inset-inline-end: 12px; white-space: nowrap; min-height: 34px; padding: 4px 14px; font-size: 14px; }
 .fr-ch { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Friends' news: milestones of the week, one MashaAllah each (no chat) */
+.fn-news { display: grid; gap: 8px; margin: 4px 0 16px; }
+.fn-news h3 { margin: 6px 0 0; font-size: var(--fs-s); color: var(--muted); }
+.fn-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 16px; background: var(--card);
+  border: 2px solid var(--line); border-bottom-width: 4px; }
+.fn-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.fn-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fn-what { display: flex; align-items: center; gap: 5px; font-size: var(--fs-s); flex-wrap: wrap; }
+.fn-what small { color: var(--muted); }
+.fn-ic { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #12a594; flex: none; }
+.fn-ic.big { width: 40px; height: 40px; border-radius: 12px; }
+.k-streak .fn-ic, .fn-mine .fn-ic { background: #ff6b4a; }
+.k-level .fn-ic { background: #6c5ce7; }
+.k-khatm .fn-ic { background: #f59f00; }
+.fn-cheer { flex: none; font-weight: 700; }
+.fn-cheer.on { background: color-mix(in srgb, #f59f00 18%, var(--card)); border-color: #f59f00; color: inherit; opacity: 1; }
+.fn-cheer.pop { animation: fn-pop .45s var(--ease-spring); }
+@keyframes fn-pop { 40% { scale: 1.14; } }
+@media (prefers-reduced-motion: reduce) { .fn-cheer.pop { animation: none; } }
+
+/* Reading now: a soft live dot while a friend is in the mushaf */
+.fr-live { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; color: #12a594; }
+.fr-live i { width: 8px; height: 8px; border-radius: 50%; background: #12a594; box-shadow: 0 0 0 0 color-mix(in srgb, #12a594 60%, transparent);
+  animation: fr-live 1.8s ease-out infinite; }
+@keyframes fr-live { to { box-shadow: 0 0 0 8px transparent; } }
+@media (prefers-reduced-motion: reduce) { .fr-live i { animation: none; } }
