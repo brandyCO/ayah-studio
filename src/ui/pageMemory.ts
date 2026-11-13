@@ -24,7 +24,8 @@ import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
-import { followFailKey, followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { followFailKey, followChecksHarakat, followSupported, followUse, resetFollowUse, startFollow, type Follower } from './follow';
+import { reportFollow, sendFollowStat, type FollowOutcome } from './followBeta';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
 import { popIn, reduced, squash } from './juice';
@@ -420,6 +421,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     if (follower) stopFollow();
     jar.clear();
     said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); unclearS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
+    resetFollowUse();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
     revealed.clear(); helped.clear(); shown.clear(); missed.clear(); checking = false;
@@ -449,7 +451,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     else if (!checking) {
       const slips = new Set([...helped, ...skip, ...skipP]).size;
       const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
-        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
+        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow'), h('span', { class: 'beta-pill' }, lt('learn.beta'))) : '';
       actions.replaceChildren(
         h('p', { class: 'ls-hint muted small' }, slips ? lt(skip.size || skipP.size ? 'learn.followSkipped' : 'learn.slipsSoFar', { n: slips }) : lt(follower ? 'learn.followHint' : 'learn.memoryHint')),
         folBtn, b(lt('learn.stuck'), stuck, 'chip ts-stuck'),
@@ -457,8 +459,11 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     } else {
       const total = new Set([...helped, ...missed]).size;
       const verdict = total === 0 ? 2 : total <= Math.max(2, Math.round(els.size * 0.04)) ? 1 : 0;
+      const outcome = (v?: number): FollowOutcome => ({ mode: 'page', ref: `p:${p}`, words: fw.length || els.size, said, skipped: skip,
+        wrong: wrongS, unclear: unclearS, missed, helped: helped.size, verdict: v });
       const res = (k: 0 | 1 | 2, label: string) => {
-        const el = k === verdict ? primary(label, () => done(k)) : b(label, () => done(k));
+        const go = () => { sendFollowStat(outcome(k)); done(k); };
+        const el = k === verdict ? primary(label, go) : b(label, go);
         return el;
       };
       actions.replaceChildren(
@@ -466,6 +471,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
         hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
         hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
+        followUse() ? h('div', { class: 'ts-ab' }, h('button', { class: 'chip ts-misheard', onclick: () => reportFollow(outcome()) }, lt('learn.followReport'))) : '',
         res(0, lt('learn.notYet')), res(1, lt('learn.someSlips')), res(2, lt('learn.hadIt')));
     }
   }

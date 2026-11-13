@@ -2176,6 +2176,15 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       the look-ahead jumped counts as said. Recorded parts for the server are brought to ≈ −20 dBFS (≤ 8×). Simulated
       breath repeats over 400 random ranges: words wrongly marked 836 → 0; 2115 clean ranges across the Quran followed
       exactly; `server/harakat/follow.py` kept identical (1200 cases).
+      **Beta** (owner decision 2026-11-13, a ~20-person beta before everyone): the button carries a Beta pill;
+      each checked recitation sends one row of counts (`src/ui/followBeta.ts` → `follow_stat()`, table
+      `follow_stats`, no audio / text / account, install id only, 180 days): recogniser (`android-device`,
+      `android`, `web`, `server`; `followUse()` in `follow.ts`), OS + model or browser, words heard / passed over /
+      wrong / unclear, `untapped` (phone said passed over, reciter disagreed) and `added` (phone heard it, reciter
+      marked it missed). The owner reads the view `follow_beta` (per recogniser: recitations, phones,
+      `phone_right_pct`, `unclear_pct`, failures). The check screen has "Voice heard me wrong? Tell us" → problem
+      report kind `follow` with the counts and word positions. Migration `20261113200000_follow_beta.sql`, pgTAP
+      `follow_beta.test.sql` (9)
       **Harakat check on our server** (owner decision 2026-11-10, "only on the server"): `server/harakat` (Python,
       onnxruntime; Docker image with the 4-bit ONNX of the Quran CTC model `mostafanewir70/quran-recitation-ctc-onnx`,
       pinned + SHA-256, Apache-2.0). With the repo variable `HARAKAT_URL` set and the learner signed in, Follow my voice

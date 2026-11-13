@@ -794,6 +794,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'rp.k.text': 'نص القرآن أو الترجمة',
   'rp.k.reel': 'المقطع أو التصدير',
   'rp.k.app': 'التطبيق (بطء، توقف، إغلاق)',
+  'rp.k.follow': 'أخطأ «تابع صوتي» في سماعي',
   'rp.k.other': 'شيء آخر',
   'rp.note': 'هل تريد إضافة شيء؟ (اختياري)',
   'rp.send': 'إرسال',

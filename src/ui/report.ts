@@ -9,13 +9,14 @@ import { isNative } from '../native';
 import { t } from '../i18n';
 import { h, toast } from './dom';
 
-export type ReportKind = 'start' | 'highlight' | 'voice' | 'skip' | 'cut' | 'text' | 'reel' | 'app' | 'other';
+export type ReportKind = 'start' | 'highlight' | 'voice' | 'skip' | 'cut' | 'text' | 'reel' | 'app' | 'other' | 'follow';
 /** What was happening; small and plain (the database keeps ≤ 2000 characters of it). */
 export type ReportContext = Record<string, string | number | boolean | null | undefined>;
 
-const KINDS: { id: ReportKind; listen?: boolean }[] = [
+/** `only`: shown only when the sheet opens on it (Follow my voice's check screen). */
+const KINDS: { id: ReportKind; listen?: boolean; only?: boolean }[] = [
   { id: 'start', listen: true }, { id: 'highlight', listen: true }, { id: 'skip', listen: true }, { id: 'voice', listen: true },
-  { id: 'cut', listen: true }, { id: 'text' }, { id: 'reel' }, { id: 'app' }, { id: 'other' },
+  { id: 'cut', listen: true }, { id: 'text' }, { id: 'reel' }, { id: 'app' }, { id: 'other' }, { id: 'follow', only: true },
 ];
 const QUEUE = 'reportQueue';
 
@@ -60,7 +61,7 @@ export function openReport(context: ReportContext = {}, opts: { listening?: bool
   let kind: ReportKind | null = opts.kind ?? null;
   const send = h('button', { class: 'primary brand-btn', disabled: !kind }, t('rp.send')) as HTMLButtonElement;
   const chips = h('div', { class: 'chips rp-kinds', role: 'radiogroup', 'aria-label': t('rp.what') },
-    ...KINDS.filter((k) => opts.listening || !k.listen || k.id === 'text').map((k) => {
+    ...KINDS.filter((k) => (k.only ? opts.kind === k.id : opts.listening || !k.listen || k.id === 'text')).map((k) => {
       const c = h('button', {
         class: `chip${kind === k.id ? ' on' : ''}`, role: 'radio', 'aria-checked': String(kind === k.id),
         onclick: () => {
