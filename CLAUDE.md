@@ -1951,6 +1951,13 @@ duas/reflections section in Me.
       locked ones say how (streak progress, Ranks weeks, badges) and when they come back (weekly prizes in n weeks, seasonal
       pieces in n days by the Umm al-Qura calendar). A tap opens the piece large: Get / Wear it / Put it in my room / Use it.
       Me's lantern strip still opens "Your Light"
+      **Every piece desirable** (owner request 2026-11-13): every avatar and frame has its name (`lookName()`), the two sold
+      backgrounds too (Midnight blue, Golden glow); a piece's card shows it where it will live — a character part on the
+      user's whole character (alive, hops on open, cheers once bought; a round close-up for small pieces: watch, glasses, what
+      is held), a room piece standing in their own room as it is now (`backSvg`), an avatar or frame large and on their own
+      board row — with one true line on what having it does (`sh.why.*`). Rarity staging: a glow under the art from Rare,
+      a passing shine from Epic, a gold rim (Legendary) or an iridescent one (Mythic) with twinkles, gold / iridescent card
+      skies; locked pieces keep their colour. No fake scarcity, nothing random
 - [x] M20 XP levels (owner decision 2026-11-11, "light is money, XP is progress"): Ranks points are now called **XP**
       (never spent; Light stays the only currency, never ranked). This week's XP sets the league place; all-time XP
       (`rank_players.total`, in every row as `xp`) gives the character a level 1–50 (`src/data/xp.ts`: level =

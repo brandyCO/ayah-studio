@@ -83,6 +83,15 @@ const en = {
   'sh.cantWear': 'Your character can’t wear this one. Try it on another look in the builder.',
   'sh.signIn': 'Sign in on Ranks to use it on the boards.',
   'sh.note': 'Light is never money and never a measure of reward with Allah.',
+  'sh.bg.6': 'Midnight blue', 'sh.bg.7': 'Golden glow',
+  'sh.you': 'You',
+  'sh.why.char': 'Your character wears it on the boards, in your room and in every celebration.',
+  'sh.why.room': 'It stays in your room, and friends see it when they visit.',
+  'sh.why.look': 'Everyone in your league sees it beside your name, all week.',
+  'sh.why.won': 'It can only be won, never bought, so it shows what you did.',
+  'sh.why.season': 'It comes once a year. Earn it in its season and keep it for good.',
+  'sh.why.freeze': 'A missed day will not put your flame out.',
+  'sh.why.icon': 'Your home screen shows how far you have come.',
   'sh.r.common': 'Common', 'sh.r.cute': 'Cute', 'sh.r.rare': 'Rare', 'sh.r.epic': 'Epic', 'sh.r.legendary': 'Legendary', 'sh.r.mythic': 'Mythic', 'sh.r.prize': 'Prize',
 };
 export type ShopKey = keyof typeof en;
@@ -168,6 +177,15 @@ const ar: Partial<Record<ShopKey, string>> = {
   'sh.cantWear': 'لا تناسب شخصيتك الحالية. جرّبها بمظهر آخر في صانع الشخصية.',
   'sh.signIn': 'سجّل الدخول في الترتيب لتستخدمها هناك.',
   'sh.note': 'النور ليس مالًا أبدًا، ولا مقياسًا للأجر عند الله.',
+  'sh.bg.6': 'أزرق منتصف الليل', 'sh.bg.7': 'الوهج الذهبي',
+  'sh.you': 'أنت',
+  'sh.why.char': 'ترتديها شخصيتك في الترتيب وفي غرفتك وفي كل احتفال.',
+  'sh.why.room': 'تبقى في غرفتك، ويراها أصدقاؤك حين يزورونك.',
+  'sh.why.look': 'يراها كل من في دوريّك بجانب اسمك طوال الأسبوع.',
+  'sh.why.won': 'لا تُشترى أبدًا، تُكسب فقط، فهي تدل على ما أنجزت.',
+  'sh.why.season': 'تأتي مرة في السنة. اكسبها في موسمها واحتفظ بها للأبد.',
+  'sh.why.freeze': 'لن ينطفئ لهبك إن فاتك يوم.',
+  'sh.why.icon': 'تُظهر شاشتك الرئيسية كم قطعت من الطريق.',
   'sh.r.common': 'عادي', 'sh.r.cute': 'لطيف', 'sh.r.rare': 'نادر', 'sh.r.epic': 'ملحمي', 'sh.r.legendary': 'أسطوري', 'sh.r.mythic': 'خرافي', 'sh.r.prize': 'جائزة',
 };
 
