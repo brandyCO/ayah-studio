@@ -453,3 +453,10 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .ws-card .primary { grid-column: 1 / -1; width: 100%; }
 .ws-x { position: absolute; top: 8px; inset-inline-end: 8px; width: 34px; height: 34px; background: rgba(255, 255, 255, .14); border: 0; color: #fff; }
 .ws-share { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }
+
+/* A daily goal's quiet tick: "+n ✦" rises from its chest and fades. */
+.goal-tick { position: fixed; z-index: 60; translate: -50% 0; pointer-events: none; font-weight: 900; font-size: 17px;
+  color: var(--rw-2, #f59f00); text-shadow: 0 1px 0 var(--card); animation: goal-tick 1.2s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes goal-tick { 0% { opacity: 0; transform: translateY(6px) scale(.7); } 18% { opacity: 1; transform: translateY(-6px) scale(1.12); }
+  35% { transform: translateY(-12px) scale(1); } 100% { opacity: 0; transform: translateY(-46px); } }
+@media (prefers-reduced-motion: reduce) { .goal-tick { animation: none; opacity: 1; } }

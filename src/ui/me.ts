@@ -475,7 +475,32 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
       () => claimGoal(id, n));
   };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  // Fewer, bigger moments: one daily goal is a quiet tick (the chest pops open where it is and its Light flies to the
+  // counter); the full-screen chest is kept for the big ones (every goal met, the week, a surprise ×2, Al-Kahf, badges).
+  const quietChest = async (id: string, n: number, from: Element) => {
+    if (playing) return;
+    playing = true;
+    try {
+      haptic(10);
+      void import('./sfx').then((m) => { m.sfx.open(0, 0); setTimeout(() => m.sfx.pop(0), 120); });
+      const r = from.getBoundingClientRect();
+      const tickEl = h('span', { class: 'goal-tick', 'aria-hidden': 'true', style: `left:${r.left + r.width / 2}px;top:${r.top}px` }, `+${n} ✦`);
+      document.body.append(tickEl);
+      setTimeout(() => tickEl.remove(), 1300);
+      const c = await import('./celebrate');
+      c.flyLight(from, 0);
+      from.animate([{ scale: '1' }, { scale: '1.25 .8' }, { scale: '.9 1.15' }, { scale: '1' }], { duration: 420, easing: 'ease-out' });
+      // The list keeps its order until the Light has flown, so nothing moves under the tick.
+      await new Promise((r) => setTimeout(r, 950));
+      claimGoal(id, n);
+    } finally {
+      playing = false;
+      void import('./nudges').then((m) => m.maybeAskNudges());
+    }
+  };
+  const claimGoalRow = (g: GoalProgress, from?: Element) => !g.week && from && surprise(g.id) === 1
+    ? quietChest(g.id, lightFor(g), from)
+    : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
   const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
   const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => play(

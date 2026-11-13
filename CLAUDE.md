@@ -2040,6 +2040,10 @@ duas/reflections section in Me.
       `flameTimes`, 30 days, synced); the evening reminder's new default **Your usual time** (`riskAt: 'auto'`) comes 45 min
       after the median of the last 3 weeks (≥ 4 days; after-midnight readers → 22:00), on the quarter hour, 07:00–22:00, only
       while the flame is unlit, "You usually read by now…"; 21:00 until it is learned. Fixed hours stay in Me → ⚙ → Goal notes
+      **Fewer, bigger moments**: one daily goal's chest opens with a quiet tick in place (it squashes, "+n ✦" rises, its Light
+      flies to the counter; `quietChest()` in me.ts) and a goal met elsewhere gives the Me tab a small check (`tabTick()`,
+      no banner or notification); full-screen moments stay for every goal met, the week's chests, a ×2 surprise, Al-Kahf,
+      badges, the harvest, streak fire days and finished surahs. Next up shows the user's own bust (`bustMarkup`)
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
