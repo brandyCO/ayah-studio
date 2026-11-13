@@ -71,22 +71,37 @@ export function hintsFrom(words: FollowWord[], from: number, n = 24): string[] {
   return out;
 }
 
-export interface Step { cursor: number; said: number[]; skipped: number[]; wrong: number[] }
+export interface Step {
+  cursor: number; said: number[]; skipped: number[]; wrong: number[];
+  /** Not heard clearly (said quietly, or one word the phone missed): shown, but never counted as a mistake. */
+  unclear: number[];
+  /** Words before the cursor said again clearly (the reciter went back after a breath). */
+  again: number[];
+}
 
 const LOOK = 5;
-/** Below this a word that was matched is taken as said differently (short words are too noisy to judge). */
+/** How far back a repeat may start (a reciter out of breath goes back a few words, often to the ayah's start). */
+const BACK = 12;
+/** Below this a word that was matched is taken as heard only partly (short words are too noisy to judge). */
 const CLEAR = 0.75;
 const need = (off: number, len: number) => (off === 0 ? (len <= 2 ? 0.5 : 0.6) : len < 3 ? 2 : 0.8);
+const fits = (w: FollowWord, h: string) => likeness(w.forms, h) >= need(0, w.forms[0].length);
+/** A word said again is said clearly: a short word exactly, a longer one closely (near-rhymes are not repeats). */
+const again1 = (w: FollowWord, h: string) => likeness(w.forms, h) >= (w.forms[0].length <= 2 ? 1 : CLEAR);
 
 /**
  * Follows the words heard (one utterance, as the recogniser has it so far) from `start`.
- * Returns where the reciter is now, the words said and the words passed over.
+ * Returns where the reciter is now, the words said and the words passed over. Going back to say words
+ * again (out of breath, to start the phrase afresh) keeps the place: nothing is skipped or counted.
+ * Only a clearly different word in a word's place is "wrong"; a word heard partly, or a single word the
+ * phone did not catch between two it did, is "unclear".
  */
 export function follow(words: FollowWord[], start: number, heardText: string): Step {
   const heard = heardText.split(/\s+/).map((x) => letterForms(x)[0]).filter((x) => x.length > 0);
-  const said: number[] = [], skipped: number[] = [], wrong: number[] = [];
-  let c = start, j = 0, junk = 0; // junk: heard words since the last match that matched nothing
-  let near = false; // a heard word since the last match was like the next word: passing it means it was said wrong
+  const said: number[] = [], skipped: number[] = [], wrong: number[] = [], unclear: number[] = [], again: number[] = [];
+  let c = start, j = 0;
+  let junk: string[] = []; // heard words since the last match that matched nothing
+  let near = false; // a heard word since the last match was like the next word
 
   while (j < heard.length && c < words.length) {
     let best: { off: number; take: number; span: number; score: number; sim: number } | null = null;
@@ -98,7 +113,8 @@ export function follow(words: FollowWord[], start: number, heardText: string): S
         if (j + take > heard.length) continue;
         const sim = likeness(w.forms, heard.slice(j, j + take).join(''));
         if (off === 0 && sim >= need(0, len)) near = true;
-        if (sim >= need(off, len)) {
+        // two heard words joined only to a word further on must be very close (else a short word passed is lost)
+        if (sim >= need(off, len) && (take === 1 || off === 0 || sim >= 0.9)) {
           const score = sim - off * 0.08 - (take - 1) * 0.03;
           if (!best || score > best.score) best = { off, take, span: 1, score, sim };
         }
@@ -113,14 +129,55 @@ export function follow(words: FollowWord[], start: number, heardText: string): S
         }
       }
     }
-    if (!best) { j++; junk++; continue; } // not in the text here: a repeat, a stray word, or a word said wrong
-    // words passed over: as many as there were unmatched heard words were said as something else
-    for (let k = 0; k < best.off; k++) (k < junk || (k === 0 && near) ? wrong : skipped).push(c + k);
-    const off = words[c + best.off].forms[0].length > 2 && best.sim < CLEAR;
-    for (let k = 0; k < best.span; k++) (off ? wrong : said).push(c + best.off + k);
-    junk = 0; near = false;
+    // A repeat: the heard words go on like words already behind the cursor. `cont`: the repeat runs up to the
+    // cursor and the next heard word is the cursor's own word (gone back, then on exactly where it was)
+    let back: { k: number; m: number; cont: boolean } | null = null;
+    for (let k = 1; k <= Math.min(BACK, c); k++) {
+      let m = 0;
+      while (m < k && j + m < heard.length && again1(words[c - k + m], heard[j + m])) m++;
+      const cont = m === k && j + m < heard.length && again1(words[c], heard[j + m]);
+      const ok = m >= 2 || (m === 1 && (cont || (words[c - k].forms[0].length >= 3 && (k === 1 || j + 1 === heard.length))));
+      // going back and on from exactly where it was is the likeliest repeat; else the longest
+      if (ok && (!back || (cont ? 100 : 0) + m > (back.cont ? 100 : 0) + back.m)) back = { k, m, cont };
+    }
+    if (back) {
+      // how far the forward reading holds; the repeat wins when it explains more (a tie stays forward:
+      // the text itself repeats, as in Ar-Rahman's refrain, and the cursor's own word is the likelier one)
+      let mf = 0;
+      if (best) {
+        mf = 1;
+        while (j + best.take + mf - 1 < heard.length && c + best.off + best.span + mf - 1 < words.length
+          && mf < BACK && fits(words[c + best.off + best.span + mf - 1], heard[j + best.take + mf - 1])) mf++;
+      }
+      const wins = !best || (back.cont
+        ? !(best.off === 0 && best.take === 1 && mf > back.m + 1)
+        : best.off === 0 ? back.m > mf : back.m >= mf);
+      if (wins) {
+        for (let i = 0; i < back.m; i++) again.push(c - back.k + i);
+        j += back.m; junk = []; near = false;
+        continue;
+      }
+    }
+    if (!best) { junk.push(heard[j]); j++; continue; } // not in the text here: a stray word or a word said differently
+    // words passed over: a short word heard in its place was said (the look-ahead does not take short words);
+    // a clearly different word heard in a word's place = wrong; a word heard only partly, or a single word the
+    // phone missed between two it caught (said quietly) = unclear; a run passed over = skipped
+    const left: number[] = [], pool = [...junk];
+    for (let k = 0; k < best.off; k++) {
+      const i = pool.findIndex((x) => fits(words[c + k], x));
+      if (i >= 0) { said.push(c + k); pool.splice(i, 1); } else left.push(k);
+    }
+    left.forEach((k, n) => {
+      const inPlace = n < pool.length ? pool[pool.length - Math.min(pool.length, left.length) + n] : undefined;
+      if (inPlace !== undefined) (inPlace.length >= 3 && likeness(words[c + k].forms, inPlace) < 0.5 ? wrong : unclear).push(c + k);
+      else if ((k === 0 && near) || (left.length === 1 && !pool.length)) unclear.push(c + k);
+      else skipped.push(c + k);
+    });
+    const part = words[c + best.off].forms[0].length > 2 && best.sim < CLEAR;
+    for (let k = 0; k < best.span; k++) (part ? unclear : said).push(c + best.off + k);
+    junk = []; near = false;
     c += best.off + best.span;
     j += best.take;
   }
-  return { cursor: c, said, skipped, wrong };
+  return { cursor: c, said, skipped, wrong, unclear, again };
 }
