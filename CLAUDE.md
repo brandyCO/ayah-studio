@@ -2026,6 +2026,12 @@ duas/reflections section in Me.
       laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
       `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
       Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
+      **Comeback welcome** (owner go-ahead 2026-11-13, `src/ui/comeback.ts` + `.css`, strings `src/i18n/front.ts` `fe()`): the first
+      time the app opens after ≥ 3 days away (`daysAway()`, journey days with `o`; signed in, only after the account's sync), once
+      per return (`comebackSeen`): the character drops onto a hill and waves, "It's so good to see you", what is kept (Light,
+      badges, level), one button "Read one page" (lights today's flame); no days counted, no lost streak. **Next up** on Me: one
+      card with the single most useful step (light today's flame → the adhkar whose time it is → today's journey portion → the
+      goal closest to done → all met: Listen), one big button; replaces Noor's line and the journey card (journey in its footer)
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops

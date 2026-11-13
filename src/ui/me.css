@@ -422,3 +422,20 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .bdf-more[open] > summary { margin-bottom: 8px; }
 /* "More goals (n)" under the first three. */
 .goals-more { display: block; margin: 4px auto 0; }
+
+/* One clear next step (Me): kicker, the step with its icon, one big button. */
+.me-next { --nc: #12a594; display: flex; flex-direction: column; gap: 10px; }
+.me-next.nx-adhkar { --nc: #6c5ce7; } .me-next.nx-listen { --nc: #2f7fd6; } .me-next.nx-dhikr { --nc: #ff6b4a; }
+.me-next:is(.nx-lessons, .nx-memorise) { --nc: #4caf2a; } .me-next.nx-reels { --nc: #e8590c; } .me-next:is(.nx-duas, .nx-nights) { --nc: #6c5ce7; }
+.me-next.nx-done { --nc: #f59f00; }
+.nx-kicker { margin: 0; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--nc); }
+.nx-row { display: flex; align-items: center; gap: 12px; }
+.nx-ic { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  background: var(--nc); box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); }
+.nx-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nx-txt b { font-size: 18px; font-weight: 900; line-height: 1.25; }
+.nx-bar { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--nc) 16%, transparent); overflow: hidden; margin-top: 3px; }
+.nx-bar i { display: block; height: 100%; border-radius: inherit; background: var(--nc); }
+.nx-go { width: 100%; font-size: 17px; padding: 14px; }
+.nx-go.quiet { background: color-mix(in srgb, var(--nc) 16%, var(--card)); color: color-mix(in srgb, var(--nc) 70%, var(--text)); box-shadow: 0 3px 0 color-mix(in srgb, var(--nc) 30%, transparent); }
+.nx-foot { align-self: center; border: 0; background: none; padding: 2px 6px; cursor: pointer; font: inherit; font-size: var(--fs-s); }
