@@ -386,3 +386,24 @@
 .set-row-ic.s-notes { background: #f59f00; }
 .set-row-ic.s-quran { background: #6c5ce7; }
 .set-row-ic.s-app { background: #667085; }
+
+/* F21: Library as cards */
+.lib-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
+.lib-reel, .lib-page { flex: none; scroll-snap-align: start; display: grid; gap: 6px; text-decoration: none; color: var(--text); }
+.lib-reel { width: 96px; }
+.lib-reel-pic { display: grid; place-items: center; width: 96px; aspect-ratio: 9 / 16; border-radius: 14px; background: #1d2a26 center / cover no-repeat;
+  box-shadow: 0 3px 0 #0002; color: #fff; }
+.lib-new { border: 0; background: none; padding: 0; text-align: start; }
+.lib-new .lib-reel-pic { background: color-mix(in srgb, #ff6b4a 16%, var(--card)); color: #ff6b4a; border: 2px dashed #ff6b4a77; }
+.lib-cap { font-size: .78rem; font-weight: 700; line-height: 1.25; }
+.lib-page { width: 104px; padding: 10px; border-radius: 12px; background: var(--paper, #fbf6ea); color: #2b2418;
+  box-shadow: inset 0 0 0 1px #0000000f, 0 3px 0 #00000014; justify-items: center; text-align: center; }
+.lib-page-n { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.lib-page-ar { font-family: var(--font-quran-ui, 'AmiriQuran', serif); font-size: 1.05rem; }
+.lib-bm { display: grid; gap: 6px; padding: 6px 0 10px; }
+.lib-bm .chips { flex-wrap: wrap; }
+/* F42: badge families fold until begun */
+.bdf-more { margin-top: 12px; }
+.bdf-more > summary { cursor: pointer; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); font-weight: 800; text-align: center; list-style: none; }
+.bdf-more > summary::-webkit-details-marker { display: none; }
+.bdf-more[open] > summary { margin-bottom: 8px; }
