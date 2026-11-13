@@ -2036,6 +2036,10 @@ duas/reflections section in Me.
       beside the streak flame, up to four tiles: pages, minutes, adhkar, surahs / lessons / dhikr, never a 0; the seven days lit;
       "Read with me on Ayah Studio"; inside the story safe area y 250–1650), shared with the app link; Me shows "Your week is
       ready" from Friday Maghrib through Sunday once a week (`weekStorySeen`), Stats has Share my week any time (this week so far)
+      **Reminder at your usual time** (`src/data/usualTime.ts`): the time the flame is lit each day is kept (localStorage
+      `flameTimes`, 30 days, synced); the evening reminder's new default **Your usual time** (`riskAt: 'auto'`) comes 45 min
+      after the median of the last 3 weeks (≥ 4 days; after-midnight readers → 22:00), on the quarter hour, 07:00–22:00, only
+      while the flame is unlit, "You usually read by now…"; 21:00 until it is learned. Fixed hours stay in Me → ⚙ → Goal notes
       **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
       the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
       the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
