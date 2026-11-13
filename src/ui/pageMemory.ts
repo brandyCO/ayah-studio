@@ -24,7 +24,8 @@ import { lt } from '../i18n/learn';
 import { h, haptic, toast } from './dom';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
-import { followFailKey, followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { followFailKey, followChecksHarakat, followSupported, followUse, resetFollowUse, startFollow, type Follower } from './follow';
+import { reportFollow, sendFollowStat, type FollowOutcome } from './followBeta';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { icon } from './icons';
 import { popIn, reduced, squash } from './juice';
@@ -201,6 +202,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   const where = new Map<string, [number, number]>(); // word key -> surah, ayah
   let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
+  // heard only partly or not caught (said quietly): shown, never counted as a slip
+  const unclearS = new Set<string>(); let unclearP = new Set<string>(); let louderAt = 0;
   const twins = new Map<string, string[]>(); // glyphs that show the same display word go together
   let harakatOn = false;
   void followChecksHarakat().then((x) => { harakatOn = x; });
@@ -224,6 +227,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
       const bad = mode === 'recite' && !checking && (skip.has(k) || skipP.has(k)), wr = wrongS.has(k) || wrongP.has(k);
       el.classList.toggle('skipped', bad && !wr);
       el.classList.toggle('wrong', bad && wr);
+      el.classList.toggle('unclear', mode === 'recite' && !checking && !bad && (unclearS.has(k) || unclearP.has(k)));
       el.classList.toggle('harakah', mode === 'recite' && !checking && hkS.has(k));
     }
   }
@@ -366,23 +370,31 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     for (const k of sayP) said.add(k);
     for (const k of skipP) skip.add(k);
     for (const k of wrongP) wrongS.add(k);
-    sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    for (const k of unclearP) unclearS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
   }
   let lastSig = '';
   const withTwins = (keys: string[]) => new Set(keys.flatMap((k) => [k, ...(twins.get(k) ?? [])]));
   function heard(text: string, final: boolean) {
     if (!follower || mode !== 'recite' || checking) return;
     const r = follow(fw, fBase, text);
-    const touched = new Set([...sayP, ...skipP]);
-    sayP = withTwins(r.said.map((x) => fw[x].key));
+    const touched = new Set([...sayP, ...skipP, ...unclearP]);
+    unclearP = withTwins(r.unclear.map((x) => fw[x].key));
+    sayP = new Set([...withTwins(r.said.map((x) => fw[x].key)), ...unclearP]);
     wrongP = withTwins(r.wrong.map((x) => fw[x].key));
     skipP = new Set([...withTwins(r.skipped.map((x) => fw[x].key)), ...wrongP]);
+    // said again after a breath: a word passed over or heard unclearly before now counts as said
+    for (const k of withTwins(r.again.map((x) => fw[x].key))) {
+      if (skip.has(k) || wrongS.has(k) || unclearS.has(k)) { skip.delete(k); wrongS.delete(k); unclearS.delete(k); said.add(k); touched.add(k); }
+    }
     if (final) {
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
       for (const k of wrongP) wrongS.add(k);
+      if (unclearP.size && Date.now() - louderAt > 25_000) { louderAt = Date.now(); toast(lt('learn.followLouder')); }
+      for (const k of unclearP) unclearS.add(k);
       for (const k of withTwins(hkNext)) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
-      sayP = new Set(); skipP = new Set(); wrongP = new Set();
+      sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
       fBase = r.cursor;
     }
     hkNext = [];
@@ -408,7 +420,8 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   function setMode(m: Mode) {
     if (follower) stopFollow();
     jar.clear();
-    said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); unclearS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
+    resetFollowUse();
     mode = m;
     try { sessionStorage.setItem('pmMode', m); } catch { /* ignore */ }
     revealed.clear(); helped.clear(); shown.clear(); missed.clear(); checking = false;
@@ -438,7 +451,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     else if (!checking) {
       const slips = new Set([...helped, ...skip, ...skipP]).size;
       const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
-        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
+        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow'), h('span', { class: 'beta-pill' }, lt('learn.beta'))) : '';
       actions.replaceChildren(
         h('p', { class: 'ls-hint muted small' }, slips ? lt(skip.size || skipP.size ? 'learn.followSkipped' : 'learn.slipsSoFar', { n: slips }) : lt(follower ? 'learn.followHint' : 'learn.memoryHint')),
         folBtn, b(lt('learn.stuck'), stuck, 'chip ts-stuck'),
@@ -446,8 +459,11 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
     } else {
       const total = new Set([...helped, ...missed]).size;
       const verdict = total === 0 ? 2 : total <= Math.max(2, Math.round(els.size * 0.04)) ? 1 : 0;
+      const outcome = (v?: number): FollowOutcome => ({ mode: 'page', ref: `p:${p}`, words: fw.length || els.size, said, skipped: skip,
+        wrong: wrongS, unclear: unclearS, missed, helped: helped.size, verdict: v });
       const res = (k: 0 | 1 | 2, label: string) => {
-        const el = k === verdict ? primary(label, () => done(k)) : b(label, () => done(k));
+        const go = () => { sendFollowStat(outcome(k)); done(k); };
+        const el = k === verdict ? primary(label, go) : b(label, go);
         return el;
       };
       actions.replaceChildren(
@@ -455,6 +471,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
         hkS.size ? h('p', { class: 'ls-hint muted small' }, lt('learn.harakahN', { n: hkS.size })) : '',
         hkS.size && jar.size && helpChoice() === null && !kidsOn() ? helpCard(() => paintActions()) : '',
+        followUse() ? h('div', { class: 'ts-ab' }, h('button', { class: 'chip ts-misheard', onclick: () => reportFollow(outcome()) }, lt('learn.followReport'))) : '',
         res(0, lt('learn.notYet')), res(1, lt('learn.someSlips')), res(2, lt('learn.hadIt')));
     }
   }

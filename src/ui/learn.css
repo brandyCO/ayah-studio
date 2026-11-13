@@ -435,8 +435,11 @@
 .ts-mic { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: .6; }
 .ts-follow.live { color: var(--accent); border-color: var(--accent); }
 .ts-follow.live .ts-mic { opacity: 1; animation: ts-listen 1.4s ease-in-out infinite; }
+.ts-follow .beta-pill { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.ts-misheard { opacity: .85; }
 @keyframes ts-listen { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
 @media (prefers-reduced-motion: reduce) { .lw.heard, .ts-follow.live .ts-mic { animation: none; } }
+.lw.unclear, .ls-page .lw.unclear { text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 6px; text-decoration-thickness: 2px; }
 .lw.wrong, .ls-page .lw.wrong { color: #d4383d; text-decoration: underline wavy #d4383d; text-underline-offset: 6px; text-decoration-thickness: 1.5px; }
 .lw.harakah, .ls-page .lw.harakah { color: inherit; text-decoration: underline wavy #e08a00; text-underline-offset: 6px; text-decoration-thickness: 2px; }
 /* "Help improve the harakat check?" (asked once at a check) */
