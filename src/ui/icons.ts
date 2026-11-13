@@ -28,7 +28,7 @@ const P: Record<string, string> = {
   replace: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   transition: '<path d="M4 6l8 6-8 6zM20 6l-8 6 8 6z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
-  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/>',
+  search: '<circle cx="10.75" cy="10.75" r="6.25"/><path d="M15.25 15.25 19.5 19.5"/>', // same 15 × 15 box as listen
   magnet: '<path d="M6 4v7a6 6 0 0 0 12 0V4M6 8h4M14 8h4"/>',
   grade: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
   darken: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
@@ -60,7 +60,7 @@ const P: Record<string, string> = {
   save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
   flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
   book: '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5v13"/>',
-  listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4" height="6" rx="1.5"/><rect x="16.5" y="14" width="4" height="6" rx="1.5"/>',
+  listen: '<path d="M4 17v-4.5a8 8 0 0 1 16 0V17"/><path d="M4 13h2.5A1.5 1.5 0 0 1 8 14.5v3.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 18zM20 13h-2.5a1.5 1.5 0 0 0-1.5 1.5v3.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5z"/>', // optically matched to search (closed cups weigh like the lens)
   create: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor" stroke="none"/>',
   sprout: '<path d="M12 21v-8.5"/><path d="M12 12.5C12 8 15 5.5 20 5.5c0 4.6-3 7-8 7z"/><path d="M12 15c0-3.6-2.6-6-7-6 0 3.7 2.6 6 7 6z"/><path d="M8 21h8"/>',
   copy: '<rect x="8.5" y="8.5" width="11.5" height="12" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h2.5"/>',
