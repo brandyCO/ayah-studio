@@ -6,8 +6,8 @@
 // done on local day K-1 after its Maghrib, plus local day K up to its Maghrib. What a day held at its Maghrib is kept
 // (`rankSnap`): taken by a timer at Maghrib while the app is open, else when it opens again (nothing is counted while
 // it is closed). Maghrib comes from the prayer settings (Me → Prayer times); without a location, 18:00 local.
-import { addDays } from './journey';
-import { dayKey } from './readLog';
+import { addDays, allDays } from './journey';
+import { dayKey, readLogAll } from './readLog';
 
 const FALLBACK_H = 18;
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -76,7 +76,7 @@ function keep(day: string, t: Tot) {
   const s = loadSnaps();
   if (s[day]) return s[day];
   s[day] = t;
-  for (const k of Object.keys(s)) if (k < addDays(day, -4)) delete s[k];
+  for (const k of Object.keys(s)) if (k < addDays(day, -9)) delete s[k]; // a whole week back (weekly goals)
   try { localStorage.setItem('rankSnap', JSON.stringify(s)); } catch { /* ignore */ }
   return t;
 }
@@ -89,6 +89,32 @@ export function islamicTotals(k: string, local: (day: string) => Tot, now = new 
   const out: Tot = {};
   for (const f of Object.keys(b)) out[f] = Math.max(0, (a[f] ?? 0) - (sp[f] ?? 0)) + (sk[f] ?? 0);
   return out;
+}
+
+/** What a local day holds, for Ranks and the weekly goals (all devices combined). */
+export function dayTotals(k: string) {
+  const d = allDays()[k];
+  // Adhkar sessions said in full (morning, evening, the du'a moments) and dhikr counted: kept for friend challenges and
+  // duels, never in the league score; the server limits how fast they may grow.
+  const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
+  const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+  return {
+    pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0,
+    lessons: d?.ls ?? 0, flawless: d?.lf ?? 0, adhkar, dhikr, nights: d?.dm?.includes('sleep') ? 1 : 0,
+  };
+}
+export type DayTotals = ReturnType<typeof dayTotals>;
+
+/** One week everywhere (owner decision 2026-11-13, F9): the week's totals by Islamic days, from its Saturday (begun at
+ *  Friday's Maghrib) to now; it ends at this week's Friday Maghrib, like Ranks. */
+export function weekTotals(now = new Date()): { week: string; end: Date; tot: DayTotals } {
+  const k = rankDay(now), week = rankWeek(k);
+  const tot = Object.fromEntries(Object.keys(dayTotals(k)).map((f) => [f, 0])) as DayTotals;
+  for (let d = week; d <= k; d = addDays(d, 1)) {
+    const v = islamicTotals(d, dayTotals, now) as DayTotals;
+    for (const f of Object.keys(tot) as (keyof DayTotals)[]) tot[f] += v[f] ?? 0;
+  }
+  return { week, end: weekEndAt(now), tot };
 }
 
 let timer = 0;

@@ -569,7 +569,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     return h('button', { class: 'goal-harvest', onclick: harvestAll },
       h('span', {}, mt('hv.open', { n: list.length })), h('b', {}, star(), ` ${list.reduce((a, c) => a + c.light, 0)}`));
   };
-  // This week's goals (reset every Monday): their own rows and chest for all of them.
+  // This week's goals (reset at Friday Maghrib, like Ranks): their own rows and chest for all of them.
   const claimWeekAll = (from?: Element) => openChest(weekAllId(), WEEK_ALL_LIGHT, { title: t('wkg.allTitle'), sub: t('wkg.allSub'), kicker: t('wkg.title') }, from);
   const weekBox = () => {
     const list = weekGoals();
@@ -840,7 +840,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         tile(String(st.dhikr), t('me.dhikr'), vs('dhikr')),
         tile(String(st.reels), t('me.reels'), vs('reels'))),
       h('p', { class: 'muted small' }, last
-        ? (now.getDay() === 1 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
+        ? (now.getDay() === 6 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
         : t('me.honest', { time: timeLabel(pageSeconds()) })));
   };
 

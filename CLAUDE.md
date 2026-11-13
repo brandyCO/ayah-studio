@@ -2021,8 +2021,11 @@ duas/reflections section in Me.
       part named beside the goal), New / Link / Whole surah, view, meanings and the reciter under ⋯ (the app's own reciter
       sheet: recordings as chips, samples, search), the reference once; studio: a reciter without word timings shows one
       line + "Choose a reciter with word timings" instead of disabled options; Night listening: the next ayah comes in at
-      once (0.5 s), the sleep timer moved to the bottom, clear of the crescent. Still to do: F9 (one week ending at Friday
-      Maghrib everywhere) and the rest of the list
+      once (0.5 s), the sleep timer moved to the bottom, clear of the crescent. **One week everywhere** (F9): `weekOf()`
+      in `journey.ts` starts on Saturday (streak row, free freeze, weeks in a row, "this week" stats, the streak widget
+      laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
+      `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
+      Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
