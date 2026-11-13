@@ -445,3 +445,43 @@
 .rk-hall-cup > * { width: 22px !important; height: 22px !important; }
 .rk-hall-row .rk-note { display: block; }
 @media (prefers-reduced-motion: reduce) { .rk-wait-moon, .rk-danger, .rk-row.me.danger { animation: none; } }
+
+/* Signed out (F19): a sample league above the sign-in line. */
+.rk-sample { padding-top: 14px; overflow: hidden; }
+.rk-sample-league { position: relative; width: 100%; pointer-events: none; }
+.rk-sample-league .rk-podium { margin: 0; }
+.rk-sample-list { margin: 6px 0 0; opacity: .75; -webkit-mask: linear-gradient(#000 30%, transparent); mask: linear-gradient(#000 30%, transparent); }
+/* F33: the compact hero — emblem, league and XP in one row, the podium under it; the list starts on the first screen. */
+.rk-hero.compact { justify-items: stretch; gap: 6px; padding: 10px 12px 0; }
+.rk-hero.compact::before { inset: -80% -20% auto; }
+.rk-hero-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; text-align: start; }
+.rk-hero-em { display: grid; place-items: center; width: 44px; height: 44px; filter: drop-shadow(0 0 10px rgba(255,255,255,.45)); }
+.rk-hero-em > svg { width: 100%; height: 100%; }
+.rk-hero-txt { min-width: 0; }
+.rk-hero.compact .rk-hero-title { margin: 0; font-size: 19px; line-height: 1.15; }
+.rk-hero.compact .rk-hero-sub { font-size: var(--fs-2xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-hero.compact .rk-hero-pts { margin: 0; padding: 5px 6px 5px 10px; }
+.rk-hero.compact .rk-x2 { justify-self: center; margin: 0; padding: 3px 10px; font-size: var(--fs-2xs); }
+.rk-hero.compact > .du-badge { justify-self: center; margin: 0 0 8px; }
+.rk-podium.in-hero { margin: 0 -12px; padding: 4px 14px 0; border-radius: 0; background: none; box-shadow: none; }
+.rk-podium.in-hero::before { display: none; }
+.rk-podium.in-hero .rk-pod-who { height: 84px; }
+.rk-podium.in-hero .rk-pod.p1 .rk-pod-who { height: 96px; }
+.rk-podium.in-hero .rk-pod .rk-pod-fig { width: 62%; max-width: 70px; }
+.rk-podium.in-hero .rk-pod.p1 .rk-pod-fig { width: 70%; max-width: 80px; }
+.rk-podium.in-hero .rk-pod-name { font-size: 12px; }
+.rk-podium.in-hero .rk-pod-step { padding-top: 4px; border-radius: 10px 10px 0 0; }
+.rk-podium.in-hero .rk-pod-step b { font-size: 20px; }
+.rk-podium.in-hero .rk-pod-step span { font-size: 11px; }
+.rk-podium.in-hero .rk-pod.p1 .rk-pod-step { height: 56px; }
+.rk-podium.in-hero .rk-pod.p2 .rk-pod-step { height: 46px; }
+.rk-podium.in-hero .rk-pod.p3 .rk-pod-step { height: 42px; }
+.rk-strip-rival { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-strip-rival .rk-av { flex: none; }
+.rk-week .rk-rival { margin-bottom: 0; }
+/* Signed out: rows line up like the real list; the How link sits in the middle. */
+.rk-sample .rk-how-btn { justify-self: center; }
+.rk-sample h2 { margin: 6px 0 0; }
+.rk-sample p { margin: 0; }
+.rk-sample-list { text-align: start; }
+.rk-sample-list .rk-name { flex: 1; }
