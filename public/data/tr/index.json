@@ -148,5 +148,145 @@
   "dir": "ltr",
   "file": "sw.barwani.json",
   "bytes": 776905
+ },
+ {
+  "id": "fa.fooladvand",
+  "lang": "fa",
+  "langName": "فارسی",
+  "langEn": "Persian",
+  "translator": "Mohammad Mahdi Fooladvand",
+  "dir": "ltr",
+  "file": "fa.fooladvand.json",
+  "bytes": 1315643
+ },
+ {
+  "id": "ps.abdulwali",
+  "lang": "ps",
+  "langName": "پښتو",
+  "langEn": "Pashto",
+  "translator": "Abdul Wali",
+  "dir": "ltr",
+  "file": "ps.abdulwali.json",
+  "bytes": 1543828
+ },
+ {
+  "id": "uz.sodik",
+  "lang": "uz",
+  "langName": "Oʻzbekcha",
+  "langEn": "Uzbek",
+  "translator": "Muhammad Sodik Muhammad Yusuf",
+  "dir": "ltr",
+  "file": "uz.sodik.json",
+  "bytes": 2505061
+ },
+ {
+  "id": "az.musayev",
+  "lang": "az",
+  "langName": "Azərbaycanca",
+  "langEn": "Azerbaijani",
+  "translator": "Alikhan Musayev",
+  "dir": "ltr",
+  "file": "az.musayev.json",
+  "bytes": 943957
+ },
+ {
+  "id": "bs.korkut",
+  "lang": "bs",
+  "langName": "Bosanski",
+  "langEn": "Bosnian",
+  "translator": "Besim Korkut",
+  "dir": "ltr",
+  "file": "bs.korkut.json",
+  "bytes": 777206
+ },
+ {
+  "id": "sq.ahmeti",
+  "lang": "sq",
+  "langName": "Shqip",
+  "langEn": "Albanian",
+  "translator": "Sherif Ahmeti",
+  "dir": "ltr",
+  "file": "sq.ahmeti.json",
+  "bytes": 962496
+ },
+ {
+  "id": "pt.elhayek",
+  "lang": "pt",
+  "langName": "Português",
+  "langEn": "Portuguese",
+  "translator": "Samir El-Hayek",
+  "dir": "ltr",
+  "file": "pt.elhayek.json",
+  "bytes": 828258
+ },
+ {
+  "id": "it.piccardo",
+  "lang": "it",
+  "langName": "Italiano",
+  "langEn": "Italian",
+  "translator": "Hamza Roberto Piccardo",
+  "dir": "ltr",
+  "file": "it.piccardo.json",
+  "bytes": 824718
+ },
+ {
+  "id": "nl.siregar",
+  "lang": "nl",
+  "langName": "Nederlands",
+  "langEn": "Dutch",
+  "translator": "Sofian S. Siregar",
+  "dir": "ltr",
+  "file": "nl.siregar.json",
+  "bytes": 956992
+ },
+ {
+  "id": "ha.gumi",
+  "lang": "ha",
+  "langName": "Hausa",
+  "langEn": "Hausa",
+  "translator": "Abubakar Mahmoud Gumi",
+  "dir": "ltr",
+  "file": "ha.gumi.json",
+  "bytes": 926662
+ },
+ {
+  "id": "so.abduh",
+  "lang": "so",
+  "langName": "Soomaali",
+  "langEn": "Somali",
+  "translator": "Mahmud Muhammad Abduh",
+  "dir": "ltr",
+  "file": "so.abduh.json",
+  "bytes": 756378
+ },
+ {
+  "id": "ta.tamil",
+  "lang": "ta",
+  "langName": "தமிழ்",
+  "langEn": "Tamil",
+  "translator": "Jan Trust Foundation",
+  "dir": "ltr",
+  "file": "ta.tamil.json",
+  "bytes": 3326315
+ },
+ {
+  "id": "ml.abdulhameed",
+  "lang": "ml",
+  "langName": "മലയാളം",
+  "langEn": "Malayalam",
+  "translator": "Cheriyamundam Abdul Hameed & Kunhi Mohammed Parappoor",
+  "dir": "ltr",
+  "file": "ml.abdulhameed.json",
+  "bytes": 3207824
+ },
+ {
+  "id": "zh.jian",
+  "lang": "zh",
+  "langName": "中文",
+  "langEn": "Chinese",
+  "translator": "Ma Jian",
+  "dir": "ltr",
+  "file": "zh.jian.json",
+  "bytes": 742040
  }
 ]

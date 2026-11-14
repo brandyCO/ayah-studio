@@ -3,7 +3,7 @@ import { icon } from './icons';
 // the mushaf view (long-press, drag, tap to extend).
 import { loadMeta, surahText, surahTranslation } from '../data/quran';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { surahName, t } from '../i18n';
+import { surahMeaning, surahName, t } from '../i18n';
 import { h } from './dom';
 import { setReaderMode } from './prefs';
 // The reflections sheet loads on first use (out of the first load).
@@ -39,7 +39,7 @@ export async function showReader(root: HTMLElement, n: number, focusAyah?: numbe
   root.append(
     h('header', { class: 'topbar' },
       h('a', { class: 'icon-btn back-btn', href: '#/', 'aria-label': t('mushaf.allSurahs') }, icon('back', 22)),
-      h('div', { class: 'brand' }, h('h1', {}, t('common.surahTitle', { n: s.n, name: surahName(s) })), h('p', { class: 'muted' }, t('list.surahInfo', { tr: s.tr, n: s.ayahs }))),
+      h('div', { class: 'brand' }, h('h1', {}, t('common.surahTitle', { n: s.n, name: surahName(s) })), h('p', { class: 'muted' }, t('list.surahInfo', { tr: surahMeaning(s), n: s.ayahs }))),
       sizeBtn(),
       h('button', { class: 'chip', onclick: () => { setReaderMode('mushaf'); window.dispatchEvent(new HashChangeEvent('hashchange')); } }, t('reader.mushaf'))),
     h('p', { class: 'hint muted' }, t('reader.hint')),

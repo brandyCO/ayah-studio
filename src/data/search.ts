@@ -1,6 +1,7 @@
 // Finding things in the Quran: references typed as text ("2:255", "juz 5", "page 50", "hizb 3")
 // and words — Arabic (without harakat, any alif/hamza form) or the chosen translation. The text is only
 // read here, never changed: a match is reported as the words (Arabic) or the range (translation) to mark.
+import { surahMeaning } from '../i18n';
 import { loadMeta, surahText, surahTranslation, type SurahMeta } from './quran';
 import { fold, findFolded } from './reflections';
 import { currentTranslation } from './translations';
@@ -161,7 +162,7 @@ export function matchSurahs(meta: SurahMeta[], q: string): SurahMeta[] {
     return qa ? meta.filter((s) => normArName(s.ar).includes(qa)) : [];
   }
   const qn = normName(t);
-  return qn ? meta.filter((s) => normName(s.en).includes(qn) || normName(s.tr).includes(qn)) : [];
+  return qn ? meta.filter((s) => normName(s.en).includes(qn) || normName(s.tr).includes(qn) || normName(surahMeaning(s)).includes(qn)) : [];
 }
 
 /** Where a typed reference leads: "2:255", "2 255", "baqara 255", "juz 5", "hizb 3", "page 50". */

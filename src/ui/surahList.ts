@@ -13,7 +13,7 @@ import { h, skeletonRows } from './dom';
 import { lastRead } from './prefs';
 import { listenReciterId, offlineSurahs } from '../data/offlineMarks';
 import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
-import { errMsg, locale, surahName, t } from '../i18n';
+import { errMsg, locale, surahMeaning, surahName, t } from '../i18n';
 
 function ago(at: number) {
   const s = (Date.now() - at) / 1000;
@@ -149,7 +149,7 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
         h('span', { class: 'surah-num' }, String(s.n)),
         h('span', { class: 'surah-names' },
           h('strong', {}, s.en, offline.has(s.n) ? offMark() : ''),
-          h('span', { class: 'muted' }, t('list.surahInfo', { tr: s.tr, n: s.ayahs }))),
+          h('span', { class: 'muted' }, t('list.surahInfo', { tr: surahMeaning(s), n: s.ayahs }))),
         h('span', { class: 'surah-ar', lang: 'ar', dir: 'rtl' }, s.ar)));
 
   /** A row that opens surah:ayah: badge, title, "Al-Baqara · 2:142 · Page 22". */

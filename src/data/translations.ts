@@ -1,5 +1,6 @@
 // Translations of the meaning (docs/grow.md, G1): the bundled list, the reader's choice (a synced
 // preference) and loading one. Files: public/data/tr/ (scripts/fetch-translations.mjs).
+import { lang } from '../i18n';
 import { touchPref } from '../ui/prefs';
 import { TRANSLATIONS, type TranslationInfo } from './translationList';
 
@@ -17,6 +18,10 @@ function fromPhone(): string {
   if (phoneDefault) return phoneDefault;
   phoneDefault = DEFAULT_TRANSLATION;
   try {
+    // The interface language first (picked in onboarding or Settings), then the phone's own languages.
+    const ui = TRANSLATIONS.find((x) => x.lang === lang());
+    if (ui) return (phoneDefault = ui.id);
+    if (lang() !== 'en' && lang() !== 'ar') return phoneDefault; // a language without a translation of its own
     const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
     for (const l of langs) {
       const code = (l || '').toLowerCase().split('-')[0];

@@ -69,6 +69,18 @@ dialog.ob.out { animation: ob-out .3s ease-in forwards; }
   box-shadow: inset 0 -3px 0 #0003; }
 .ob-lang { background: #12a594; font: 900 19px/1 var(--ui-round, system-ui); }
 .l-ar .ob-lang { background: #6c5ce7; font-size: 24px; }
+/* Thirty languages: two columns of compact rows, each mark in its own colour; the tick only on the one picked. */
+.ob-list.langs { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
+.ob-list.langs .ob-opt { gap: 10px; padding: 9px 10px; border-radius: 16px; }
+.ob-list.langs .ob-ic { width: 38px; height: 38px; border-radius: 12px; font-size: 16px; }
+.ob-list.langs .ob-txt b { font-size: 15.5px; overflow-wrap: anywhere; }
+.ob-list.langs .ob-txt small { font-size: 12px; }
+.ob-list.langs .ob-opt:not(.on) .ob-tick { display: none; }
+.ob-list.langs .c1 .ob-lang { background: #6c5ce7; }
+.ob-list.langs .c2 .ob-lang { background: #ff6b4a; }
+.ob-list.langs .c3 .ob-lang { background: #4caf2a; }
+.ob-list.langs .c4 .ob-lang { background: #e0a100; }
+.ob-list.langs .c5 .ob-lang { background: #2d8cf0; }
 .w-read .ob-ic { background: #12a594; }
 .w-memorise .ob-ic { background: #4caf2a; }
 .w-understand .ob-ic { background: #6c5ce7; }

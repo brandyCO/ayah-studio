@@ -2,7 +2,7 @@
 // Read, Me, Create and Learn. The line follows what is true right now (goals, the flame, the garden);
 // it never guilts and never says anything about the religion itself. Loaded with each screen.
 import './noor.css';
-import { lang } from '../i18n';
+import { lang, locale, tr } from '../i18n';
 import { todayGoals } from '../data/goals';
 import { pageSeconds, streak } from '../data/journey';
 import { started, thirstyTrees, trees } from '../data/garden';
@@ -47,12 +47,14 @@ const ar: Record<Key, string> = {
   days: 'سلسلة {n} أيام',
 };
 const say = (k: Key, vars: Record<string, string | number> = {}) =>
-  ((lang() === 'ar' ? ar[k] : en[k]) ?? en[k]).replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? ''));
+  ((lang() === 'ar' ? ar[k] : tr('noor', k)) ?? en[k]).replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? ''));
 
 const minutes = (sec: number) => {
   const m = sec / 60;
   const n = Number.isInteger(m) ? String(m) : `${Math.floor(m)}½`;
-  return lang() === 'ar' ? `${n} ${m <= 1 ? 'دقيقة' : 'دقائق'}` : `${n} ${m <= 1 ? 'minute' : 'minutes'}`;
+  if (lang() === 'ar') return `${n} ${m <= 1 ? 'دقيقة' : 'دقائق'}`;
+  if (lang() === 'en') return `${n} ${m <= 1 ? 'minute' : 'minutes'}`;
+  return new Intl.NumberFormat(locale(), { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(m);
 };
 
 export type Where = 'me' | 'read' | 'create' | 'learn';

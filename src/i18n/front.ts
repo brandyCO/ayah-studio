@@ -1,6 +1,6 @@
 // Strings for the front-end review's last items (comeback welcome, Me's next step, the Friday story card), loaded
 // with them so the first load does not grow. English is the source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'cb.kicker': 'Welcome back',
@@ -296,6 +296,6 @@ const ar: Partial<Record<FrontKey, string>> = {
 
 /** A string, with {name} placeholders filled from `vars`. */
 export function fe(key: FrontKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('front', key)) ?? en[key];
+  return fill(s, vars);
 }

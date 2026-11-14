@@ -6,6 +6,7 @@
 // Weekly prizes (rank_prize_item): 40–51 jewels for a week's #1; frames 8 pearls, 9 crescent crown,
 // 10 mosaic, 11 aurora, 12 lanterns, 13 rosette for its #2 and #3.
 import { h } from './dom';
+import { tr } from '../i18n';
 import { bustMarkup, parse } from './figure';
 import { circlePath, edge, mix, shine, two } from './flat';
 
@@ -171,7 +172,8 @@ const FR_NAMES: Record<number, [string, string]> = {
 /** A name for avatar n or frame n, or null where there is none (the free ones; limited frames have their own). */
 export function lookName(kind: 'avatar' | 'frame', n: number, ar = false): string | null {
   const v = (kind === 'avatar' ? AV_NAMES : FR_NAMES)[n];
-  return v ? v[ar ? 1 : 0] : null;
+  if (!v) return null;
+  return ar ? v[1] : tr('extra', `${kind === 'avatar' ? 'av' : 'fr'}.${n}`) ?? v[0];
 }
 
 /** An avatar disc with its frame. `i` null = a private player. */
