@@ -46,10 +46,10 @@ export function options(slot: Slot, f: Fig): number[] {
     case 'beard': return b === MAN ? [0, 1, 2, 3] : [];
     case 'head': return b === MAN ? [0, 1, 7, 2, 3, 6] : b === BOY ? [0, 1, 7, 2, 6] : b === WOMAN ? [4, 5] : [0, 4, 6];
     case 'headC': return n(HEADC.length);
-    case 'outfit': return [...(b === MAN ? [0, 1, 2, 12, 13, 14, 15, 6] : b === BOY ? [0, 1, 2, 12, 13, 14] : b === WOMAN ? [3, 4, 12, 13, 15, 16, 6] : [3, 2, 12, 13, 16]), 7, 8, 9, 10, 11];
+    case 'outfit': return [...(b === MAN ? [0, 1, 2, 12, 13, 14, 15, 19, 20, 6] : b === BOY ? [0, 1, 2, 12, 13, 14, 19, 20] : b === WOMAN ? [3, 4, 12, 13, 15, 16, 17, 18, 21, 22, 6] : [3, 2, 12, 13, 16, 17, 18, 22]), 7, 8, 9, 10, 11];
     case 'outC': return n(CLOTH.length);
     case 'glasses': return [0, 1, 2, 3];
-    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     case 'pose': return [0, 1];
     case 'bg': return n(BG.length);
     // Round 5. The face slots keep their value while the face is off (the builder hides them then).
@@ -72,7 +72,10 @@ export const hairShows = (f: Fig) => !hairHidden(f) && f.hair > 0 && options('ha
 
 /** Parts bought with Light (`fg:{slot}:{value}` in the shop), and the one only a week at #1 gives. */
 export const PRICE: Record<string, number> = { 'head:3': 150, 'outfit:1': 120, 'outfit:4': 120, 'hold:5': 100, 'bg:6': 80, 'bg:7': 120,
-  'outfit:15': 120, 'pattern:4': 80, 'acc:1': 60 };
+  'outfit:15': 120, 'pattern:4': 80, 'acc:1': 60,
+  // Couture and new things to hold (2026-11-14).
+  'outfit:17': 220, 'outfit:18': 200, 'outfit:19': 220, 'outfit:20': 160, 'outfit:21': 200, 'outfit:22': 240,
+  'hold:12': 140, 'hold:13': 120, 'hold:14': 120, 'hold:15': 90, 'hold:16': 80, 'hold:17': 110 };
 export const PRIZE = 'outfit:6';
 /** Weekly prize pieces (owner request 2026-11-10): a league's top 3 win the week's piece, in turn, back after
  *  6 weeks (server: rank_prize_piece); never sold. Kept as `fg:{slot}:{value}` once claimed. */
@@ -210,6 +213,7 @@ function robeBody(f: Fig): string {
     }
     return s + shine('M58 168Q60 156 72 152', 4, 0.22) + `<ellipse cx="100" cy="${hem}" rx="54" ry="5" fill="#ffe7a3" opacity=".25" class="fg-glow"/>`;
   }
+  if (f.outfit >= 17) return s + couture(f, robe, hem, sit);
   if (f.outfit >= 12) return s + ummah(f, robe, hem, sit);
   const outfit = f.outfit === 6 ? 0 : f.outfit;
   if (sit) s += S('M40 224Q100 196 160 224Q166 240 150 242H50Q34 240 40 224Z', outfit === 2 ? ['#33415c', '#212b3f'][0] : c[0], outfit === 2 ? '#212b3f' : c[1]);
@@ -414,6 +418,134 @@ function front(f: Fig): string {
   return '';
 }
 
+/** Couture (owner request 2026-11-14, "unique, extremely beautiful, gorgeous outfit designs"): 17 Moroccan kaftan with
+ *  a jewelled belt, 18 Palestinian thobe with tatreez, 19 sherwani, 20 Omani dishdasha with its tassel, 21 kebaya over a
+ *  batik sarong, 22 anarkali with a dupatta. Each in the outfit colour, with gold and hand-work drawn in. */
+function couture(f: Fig, robe: string, hem: number, sit: boolean): string {
+  const c = CLOTH[f.outC];
+  const lap = 'M40 224Q100 196 160 224Q166 240 150 242H50Q34 240 40 224Z';
+  const gold = '#f2c14e', goldD = '#a8740f', goldL = '#fff2b8';
+  const g = (d: string, w: number) => `<path d="${d}" stroke="${goldD}" stroke-width="${w + 1}" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(.5 1)"/><path d="${d}" stroke="${gold}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const gem = (x: number, y: number, r: number, col: string) => `<circle cx="${x}" cy="${y + .8}" r="${r + 1}" fill="${goldD}"/><circle cx="${x}" cy="${y}" r="${r + 1}" fill="${gold}"/><circle cx="${x}" cy="${y}" r="${r}" fill="${col}"/><circle cx="${x - r * .35}" cy="${y - r * .35}" r="${r * .35}" fill="#fff" opacity=".85"/>`;
+  let s = '';
+  switch (f.outfit) {
+    case 17: {
+      // Kaftan: a sfifa braid down the front with knotted buttons, a gold neckline, a wide mdamma belt with a jewelled
+      // buckle, and a scalloped gold hem.
+      if (sit) s += S(lap, c[0], c[1]);
+      s += S(robe, c[0], c[1], -8, -4) + folds(robe, c[1], hem);
+      s += g(`M100 160V${hem - 4}`, 4) + `<path d="M100 160V${hem - 4}" stroke="${goldL}" stroke-width="1.2" stroke-dasharray="2 2.4" opacity=".9"/>`;
+      for (let y = 164; y < 194; y += 6) s += `<circle cx="100" cy="${y}" r="2.2" fill="${goldD}"/><circle cx="99.5" cy="${y - .5}" r="1.4" fill="${goldL}"/>`;
+      s += g('M80 148Q100 170 120 148', 4.5);
+      s += [[86, 156], [114, 156]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="${goldL}"/>`).join('');
+      const belt = 'M46 196Q100 188 154 196L154 210Q100 202 46 210Z';
+      s += clipped(robe, `<path d="${belt}" fill="${goldD}" transform="translate(0 1.2)"/><path d="${belt}" fill="${gold}"/>`
+        + Array.from({ length: 12 }, (_, i) => { const x = 50 + i * 9; return `<path d="M${x} ${199 - Math.sin(((x - 46) / 108) * Math.PI) * 4}l3 3.6l-3 3.6l-3 -3.6z" fill="${goldD}" opacity=".7"/>`; }).join('')
+        + `<path d="M46 197Q100 189 154 197" stroke="${goldL}" stroke-width="1" fill="none" opacity=".8"/>`);
+      s += `<ellipse cx="100" cy="196" rx="11" ry="9" fill="${goldD}"/><ellipse cx="100" cy="195" rx="10" ry="8" fill="${gold}"/>` + gem(100, 195, 4.2, '#2fb38c')
+        + [[-7, -4], [7, -4], [-7, 5], [7, 5]].map(([dx, dy]) => `<circle cx="${100 + dx}" cy="${195 + dy}" r="1.3" fill="#d94a6a"/>`).join('');
+      const band = `M44 ${hem - 12}Q100 ${hem - 4} 156 ${hem - 12}L158 ${hem + 4}Q100 ${hem + 12} 42 ${hem + 4}Z`;
+      s += clipped(robe, `<path d="${band}" fill="${goldD}"/><path d="${band}" fill="${gold}" transform="translate(0 -1)"/>`
+        + Array.from({ length: 14 }, (_, i) => { const x = 46 + i * 8.4, y = hem - 9 + Math.sin(((x - 44) / 112) * Math.PI) * 4; return `<path d="M${x.toFixed(1)} ${y.toFixed(1)}a4 4 0 0 0 8 0" stroke="${goldD}" stroke-width="1.4" fill="none"/>`; }).join(''));
+      return s;
+    }
+    case 18: {
+      // Palestinian thobe: black (or cream on a light colour) with a cross-stitched chest panel (qabbeh), stitched
+      // side panels and a stitched hem, in red with touches of green and gold.
+      const light = f.outC <= 2;
+      const base: Pair = light ? ['#f6efe0', '#d6c9ad'] : ['#26262e', '#121218'];
+      const red = '#d0283e', red2 = '#8e1426', green = '#2f9a64';
+      if (sit) s += S(lap, base[0], base[1]);
+      s += S(robe, base[0], base[1], -8, -4) + folds(robe, base[1], hem);
+      const x = (cx: number, cy: number, col: string, k = 1.9) => `<path d="M${cx - k} ${cy - k}L${cx + k} ${cy + k}M${cx + k} ${cy - k}L${cx - k} ${cy + k}" stroke="${col}" stroke-width="1.3" stroke-linecap="round"/>`;
+      // Chest panel: a framed square of diamonds with an eight-pointed star in the middle.
+      s += `<rect x="79" y="156" width="42" height="38" rx="2" fill="${red2}" opacity=".35"/><rect x="79" y="156" width="42" height="38" rx="2" fill="none" stroke="${red}" stroke-width="2"/>`;
+      for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) {
+        const cx = 84 + i * 8, cy = 161 + j * 9.3, d = Math.abs(i - 2) + Math.abs(j - 1.5);
+        s += x(cx, cy, d < 1.2 ? gold : d < 2.6 ? red : green, d < 1.2 ? 2.2 : 1.8);
+      }
+      s += `<path d="${star4(100, 175, 6)}" fill="${gold}" opacity=".9"/>`;
+      // Side panels (two stitched columns) and the hem.
+      for (const sx of [60, 140]) for (let y = 204; y < hem - 12; y += 7) s += x(sx, y, (y / 7) % 2 ? red : green, 2.1) + x(sx, y + 3.5, red, 1.2);
+      for (let i = 0; i < 15; i++) { const cx = 48 + i * 7.4; s += x(cx, hem - 6 + Math.sin(((cx - 44) / 112) * Math.PI) * 4, i % 3 ? red : gold, 2.2); }
+      s += `<path d="M84 150Q100 160 116 150" stroke="${red}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+      return s;
+    }
+    case 19: {
+      // Sherwani: a fitted long coat with a gold mandarin collar, gold buttons, a woven brocade and gold edges down the
+      // front opening and round the hem, over light churidar.
+      if (sit) s += S(lap, c[0], c[1]);
+      else s += S(`M86 ${hem - 6}H114V${hem + 4}H86Z`, '#f3ece0', '#d3c6ae', -2, -2);
+      const coat = sit ? robe : `M68 149Q100 140 132 149Q150 154 152 174Q153 188 150 198Q153 ${hem - 22} 157 ${hem - 6}Q159 ${hem + 2} 149 ${hem + 2}L104 ${hem - 2}L100 206L96 ${hem - 2}L51 ${hem + 2}Q41 ${hem + 2} 43 ${hem - 6}Q47 ${hem - 22} 50 198Q47 188 48 174Q50 154 68 149Z`;
+      s += S(coat, c[0], c[1], -8, -4) + folds(coat, c[1], hem);
+      s += clipped(coat, `<g opacity=".28">` + Array.from({ length: 30 }, (_, i) => {
+        const cx = 54 + (i % 6) * 18 + (Math.floor(i / 6) % 2) * 9, cy = 166 + Math.floor(i / 6) * 16;
+        return `<path d="M${cx} ${cy - 4}q3 2 0 4q-3 2 0 4M${cx - 4} ${cy + 2}h8" stroke="${gold}" stroke-width="1.2" fill="none" stroke-linecap="round"/>`;
+      }).join('') + '</g>');
+      s += g(`M100 152V206${sit ? '' : `M100 206L96 ${hem - 2}M100 206L104 ${hem - 2}`}`, 2.6);
+      s += g(`M50 ${hem}Q100 ${hem + 6} 150 ${hem}`, 3);
+      s += S('M82 145Q100 151 118 145L119 155Q100 161 81 155Z', gold, goldD, -1, -1.5) + `<path d="M84 150Q100 155 116 150" stroke="${goldD}" stroke-width="1" fill="none" stroke-dasharray="2 2"/>`;
+      for (let y = 162; y < 204; y += 8) s += gem(100, y, 1.6, '#fff8e6');
+      s += S('M118 166h10l-1 6h-8z', gold, goldD, -1, -1);
+      return s;
+    }
+    case 20: {
+      // Omani dishdasha: collarless, a round neck edged in embroidery, a stitched placket and the furakha, a perfumed
+      // tassel hanging from the neck.
+      const w: Pair = f.outC === 5 ? ['#f7f5ef', '#cfc6b4'] : c;
+      const thread = f.outC === 0 || f.outC === 1 ? '#b8862a' : '#fff4d6';
+      if (sit) s += S(lap, w[0], w[1]);
+      s += S(robe, w[0], w[1], -8, -4) + folds(robe, w[1], hem);
+      s += `<path d="M84 148Q100 160 116 148" stroke="${thread}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M86 152Q100 163 114 152" stroke="${thread}" stroke-width="1.2" fill="none" stroke-dasharray="1.6 2"/>`
+        + `<path d="M100 156V188" stroke="${thread}" stroke-width="1.6" stroke-dasharray="2.4 2"/>`
+        + Array.from({ length: 6 }, (_, i) => `<path d="M${96} ${160 + i * 5}l4 2.4l4 -2.4" stroke="${thread}" stroke-width="1.2" fill="none"/>`).join('');
+      // The tassel: a cord from the neck to a crown of knots and a soft fringe.
+      s += `<path d="M104 152Q107 168 105 186" stroke="${w[1]}" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M104 152Q107 168 105 186" stroke="${thread}" stroke-width="1.2" fill="none" stroke-linecap="round"/>`
+        + `<ellipse cx="105" cy="188" rx="3.6" ry="3" fill="${thread}"/><path d="M101.6 190Q100 200 101.4 206M103.6 191Q103 201 104 207M106 191Q106.6 201 106 207M108.4 190Q110 200 108.6 206" stroke="${thread}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
+      return s;
+    }
+    case 21: {
+      // Kebaya: a fitted lace blouse to the hip with a scalloped edge, three gold kerongsang brooches, over a batik
+      // sarong in deep brown with a parang pattern.
+      const sar: Pair = ['#5a3a22', '#3a2414'];
+      const top = sit ? 196 : 206;
+      const sr = `M46 ${top - 6}H154L157 ${hem - 6}Q159 ${hem + 2} 149 ${hem + 2}Q100 ${hem + 8} 51 ${hem + 2}Q41 ${hem + 2} 43 ${hem - 6}Z`;
+      if (sit) s += S(lap, sar[0], sar[1]);
+      s += S(sr, sar[0], sar[1], -4, -3) + clipped(sr, Array.from({ length: 14 }, (_, i) => {
+        const x0 = 30 + i * 10;
+        return `<path d="M${x0} ${hem + 6}L${x0 + 26} ${top - 8}" stroke="#d9a35a" stroke-width="3" opacity=".75"/><path d="M${x0 + 4} ${hem + 6}L${x0 + 30} ${top - 8}" stroke="#f3dcae" stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/>`;
+      }).join(''));
+      const blouse = `M68 149Q100 140 132 149Q150 154 152 174Q153 190 152 ${top}Q140 ${top + 8} 126 ${top + 2}Q112 ${top + 10} 100 ${top + 4}Q88 ${top + 10} 74 ${top + 2}Q60 ${top + 8} 48 ${top}Q47 190 48 174Q50 154 68 149Z`;
+      s += S(blouse, c[0], c[1], -8, -4) + folds(blouse, c[1], top);
+      s += clipped(blouse, `<g fill="none" stroke="#fff" stroke-width="1.2" opacity=".55">` + Array.from({ length: 14 }, (_, i) => {
+        const cx = 58 + (i % 5) * 21 + (Math.floor(i / 5) % 2) * 10, cy = 166 + Math.floor(i / 5) * 14;
+        return `<circle cx="${cx}" cy="${cy}" r="3.4"/>` + [0, 1, 2, 3, 4].map((k) => { const a = (k / 5) * Math.PI * 2; return `<circle cx="${(cx + Math.cos(a) * 5.4).toFixed(1)}" cy="${(cy + Math.sin(a) * 5.4).toFixed(1)}" r="1.6"/>`; }).join('');
+      }).join('') + '</g>');
+      s += `<path d="M48 ${top}Q60 ${top + 8} 74 ${top + 2}Q88 ${top + 10} 100 ${top + 4}Q112 ${top + 10} 126 ${top + 2}Q140 ${top + 8} 152 ${top}" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="1 2.4" opacity=".8"/>`;
+      s += `<path d="M86 150L100 168L114 150" stroke="${c[1]}" stroke-width="3" fill="none" stroke-linejoin="round"/>`;
+      s += [170, 182, 194].map((y, i) => gem(100, y, i === 0 ? 3.6 : 2.8, i === 1 ? '#d94a6a' : '#2fb38c')).join('');
+      return s;
+    }
+    case 22: {
+      // Anarkali: a fitted bodice and a full skirt in radiating pleats, a broad gold border with mirror-work, and a
+      // sheer dupatta across one shoulder with a gold edge.
+      if (sit) s += S(lap, c[0], c[1]);
+      s += S(robe, c[0], c[1], -8, -4) + folds(robe, c[1], hem);
+      s += clipped(robe, Array.from({ length: 11 }, (_, i) => { const x = 54 + i * 9.2; return `<path d="M100 192L${(x + (x - 100) * .35).toFixed(1)} ${hem + 6}" stroke="${c[1]}" stroke-width="1.6" opacity=".55"/>`; }).join(''));
+      s += g('M50 190Q100 178 150 190', 3) + `<path d="M82 149Q100 166 118 149" stroke="${gold}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      s += Array.from({ length: 7 }, (_, i) => `<circle cx="${82 + i * 6}" cy="${186 - Math.sin((i / 6) * Math.PI) * 2.6}" r="1.4" fill="${goldL}"/>`).join('');
+      const band = `M42 ${hem - 14}Q100 ${hem - 6} 158 ${hem - 14}L160 ${hem + 4}Q100 ${hem + 12} 40 ${hem + 4}Z`;
+      s += clipped(robe, `<path d="${band}" fill="${goldD}"/><path d="${band}" fill="${gold}" transform="translate(0 -1)"/>`
+        + Array.from({ length: 12 }, (_, i) => { const x = 50 + i * 9.2, y = hem - 6 + Math.sin(((x - 44) / 112) * Math.PI) * 4; return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#e9f3ff"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="none" stroke="${goldD}" stroke-width="1"/>`; }).join(''));
+      const dup: Pair = [f.outC === 8 ? '#f7d58a' : '#ffc2d2', '#000'];
+      const dd = 'M58 152Q80 150 98 172Q120 200 152 206L156 222Q118 214 92 186Q74 166 54 164Z';
+      s += `<path d="${dd}" fill="${dup[0]}" opacity=".72"/><path d="M156 222Q118 214 92 186Q74 166 54 164" stroke="${gold}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+        + Array.from({ length: 6 }, (_, i) => `<circle cx="${100 + i * 10}" cy="${190 + i * 4.4}" r="1.2" fill="${goldL}"/>`).join('');
+      return s;
+    }
+  }
+  return s;
+}
 /** The wardrobe's robes (8 midnight, 9 dawn, 10 Eid best, 11 white of Dhul Hijjah), for every body. */
 const ROBE: Record<number, Pair> = { 8: ['#34448f', '#1b2556'], 9: ['#fffaf0', '#ead9b6'], 11: ['#ffffff', '#dcdfe6'] };
 const eidCloth = (f: Fig): Pair => female(f.body) ? ['#f6a8bf', '#d0708e'] : ['#f4ead2', '#d4c39b'];
@@ -476,6 +608,8 @@ function robeOf(f: Fig, robe: string, hem: number, sit: boolean): string {
 /** The sleeve colour: the outfit's, the champion's (white thobe / black abaya) or the robe of light's emerald. */
 function sleeve(f: Fig): Pair {
   if (f.outfit === 7) return ['#16a37a', '#0a5a43'];
+  if (f.outfit === 18) return f.outC <= 2 ? ['#f6efe0', '#d6c9ad'] : ['#26262e', '#121218'];
+  if (f.outfit === 20 && f.outC === 5) return CLOTH[0];
   if (f.outfit === 10) return eidCloth(f);
   if (ROBE[f.outfit]) return ROBE[f.outfit];
   return f.outfit === 6 && !female(f.body) ? CLOTH[0] : f.outfit === 6 ? ['#2a2d38', '#15171e'] : CLOTH[f.outC];
@@ -593,6 +727,74 @@ function holds(f: Fig): string {
       s += S('M112 178h16l-2 24h-12z', '#dff4ff', '#a8cfe0', -1, -1) + '<path d="M114.5 186h11l-1.3 14h-8.4z" fill="#7cc6ec" opacity=".55"/>' + shine('M115 181v17', 1.8, .7);
       return s + hand(68, 206) + hand(132, 206);
     }
+    case 12: {
+      // A mabkhara (incense burner): carved dark wood banded in brass, a pierced dome, two soft ribbons of smoke.
+      s += arm(70, 160, 74, 202, k) + arm(130, 160, 126, 202, k);
+      s += '<g class="fg-glow" fill="none" stroke="#dcd6e8" stroke-linecap="round" opacity=".7"><path d="M98 182Q90 172 98 162Q106 152 98 142" stroke-width="3"/><path d="M104 180Q112 170 104 160Q98 152 106 146" stroke-width="2.2"/></g>';
+      s += S('M90 184Q100 176 110 184L112 192H88Z', '#d9a63a', '#93661a', -1, -1)
+        + `<path d="M93 186l2 4M100 182v6M107 186l-2 4" stroke="#6a4512" stroke-width="1.2"/><circle cx="100" cy="179" r="2.4" fill="#f2c14e"/>`;
+      s += S('M84 192H116L112 214H88Z', '#5a3220', '#341a0e', -2, -2)
+        + '<path d="M84 192H116M86 202H114M88 212H112" stroke="#e0aa3e" stroke-width="2.2"/>'
+        + '<path d="M95 196l5 4l5 -4M95 208l5 -4l5 4" stroke="#f2c14e" stroke-width="1.2" fill="none"/><circle cx="100" cy="206" r="2" fill="#d94a6a"/>';
+      s += S('M92 214H108L112 226H88Z', '#5a3220', '#341a0e', -1.5, -1.5) + '<path d="M88 226H112" stroke="#e0aa3e" stroke-width="2.4" stroke-linecap="round"/>';
+      return s + hand(80, 204) + hand(120, 204);
+    }
+    case 13: {
+      // A dallah: a brass Arabic coffee pot with its crescent spout and pointed lid, held by the handle; a small finjan
+      // cup in the other hand.
+      s += arm(70, 160, 72, 200, k) + arm(130, 160, 140, 188, k);
+      s += S('M134 196Q128 206 130 216Q132 228 142 230Q154 228 156 216Q158 206 150 196Z', '#e8b04a', '#a8731e', -2, -2)
+        + S('M136 196Q142 190 148 196Z', '#e8b04a', '#a8731e', -1, -1) + S('M138 192L142 172L146 192Z', '#f2c14e', '#a8731e', -1, -1)
+        + S('M131 212Q118 206 114 196Q120 198 124 196Q126 204 132 206Z', '#e8b04a', '#a8731e', -1, -1)
+        + '<path d="M156 204Q166 206 162 220" stroke="#a8731e" stroke-width="3" fill="none" stroke-linecap="round"/>'
+        + '<path d="M133 216Q143 222 155 216" stroke="#fff3c4" stroke-width="1.4" fill="none" opacity=".7"/><path d="M134 206H152" stroke="#a8731e" stroke-width="1.6"/><circle cx="142" cy="171" r="2" fill="#f2c14e"/>';
+      s += S('M62 204H78L76 214Q70 217 64 214Z', '#fbf4df', '#d8c79c', -1, -1) + '<path d="M62 204H78" stroke="#3dbfa0" stroke-width="2"/><ellipse cx="70" cy="205" rx="6" ry="1.4" fill="#c99a5c"/>';
+      return s + hand(70, 214) + hand(160, 206);
+    }
+    case 14: {
+      // Moroccan tea: a silver teapot with a curved spout and a pointed lid in one hand, a gilded tea glass with mint
+      // in the other.
+      s += arm(70, 160, 72, 200, k) + arm(130, 160, 136, 194, k);
+      s += S('M126 210Q124 222 132 228H152Q160 222 158 210Q156 200 142 200Q128 200 126 210Z', '#d9dde4', '#8e96a4', -2, -2)
+        + S('M132 200Q142 186 152 200Z', '#e6e9ee', '#8e96a4', -1, -1) + `<path d="${star4(142, 186, 3.6)}" fill="#e6e9ee"/>`
+        + '<path d="M128 214Q114 210 112 198" stroke="#8e96a4" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M128 213Q115 209 113 199" stroke="#e6e9ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+        + '<path d="M128 214Q140 220 156 214M130 222H154" stroke="#f2c14e" stroke-width="1.4" fill="none"/><path d="M128 230H156" stroke="#8e96a4" stroke-width="3" stroke-linecap="round"/>';
+      s += S('M62 196H80L78 216H64Z', '#e9f6ff', '#a8cfe0', -1, -1) + '<path d="M63 202H79L77.6 214H64.4Z" fill="#c58a2a" opacity=".55"/>'
+        + '<path d="M62 196H80M63.4 208H78.6" stroke="#f2c14e" stroke-width="1.6"/><path d="M74 196q4 -6 8 -4q-2 4 -8 4z" fill="#3fae5a"/><path d="M71 196q-1 -6 3 -8q1 4 -3 8z" fill="#2f9a4a"/>';
+      return s + hand(70, 214) + hand(138, 196);
+    }
+    case 15: {
+      // A bouquet of roses and jasmine wrapped in paper with a satin bow, held in both hands.
+      s += arm(70, 160, 78, 204, k) + arm(130, 160, 122, 204, k);
+      s += S('M86 196L100 236L114 196Z', '#f4e6d4', '#d4bea2', -1.5, -1.5) + '<path d="M90 196L100 230L110 196" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/>';
+      for (const [x, y] of [[84, 186], [116, 186], [92, 174], [108, 174], [100, 166], [76, 178], [124, 178]] as [number, number][]) s += `<path d="M${x} ${y}q-8 -6 -2 -12q6 4 2 12z" fill="#3a9a5a"/>`;
+      const rose = (x: number, y: number, a: string, b: string) => S(circ(x, y, 7), a, b, -1.5, -1.5) + `<path d="M${x - 3} ${y}q3 -4 6 0q-3 4 -6 0M${x - 4.4} ${y + 2}q4.4 4 8.8 0" stroke="${b}" stroke-width="1.3" fill="none"/>`;
+      s += rose(88, 190, '#e8526a', '#a82a40') + rose(112, 190, '#f08aa0', '#c2506a') + rose(100, 182, '#d93a54', '#9a1a32') + rose(94, 172, '#fff1f4', '#e0b8c2') + rose(108, 170, '#e8526a', '#a82a40');
+      for (const [x, y] of [[80, 186], [120, 184], [100, 162], [86, 176], [116, 176]] as [number, number][]) s += [0, 1, 2, 3, 4].map((i) => { const t = (i / 5) * Math.PI * 2; return `<circle cx="${(x + Math.cos(t) * 2.4).toFixed(1)}" cy="${(y + Math.sin(t) * 2.4).toFixed(1)}" r="1.7" fill="#fffdf6"/>`; }).join('') + `<circle cx="${x}" cy="${y}" r="1.1" fill="#f2c14e"/>`;
+      s += S('M90 212q10 6 20 0q-4 6 -10 6q-6 0 -10 -6z', '#b23a5a', '#7a1a36', -1, -1) + '<path d="M100 216l-8 12M100 216l8 12" stroke="#b23a5a" stroke-width="3" stroke-linecap="round"/>';
+      return s + hand(84, 206) + hand(116, 206);
+    }
+    case 16: {
+      // An Eid gift (Eidiya): a box in emerald with a gold ribbon and bow, a little star tag.
+      s += arm(70, 160, 72, 200, k) + arm(130, 160, 128, 200, k);
+      s += S('M74 190H126V226H74Z', '#1f9a74', '#126046', -2, -2) + S('M70 182H130V194H70Z', '#25b088', '#126046', -1.5, -1.5)
+        + '<path d="M100 182V226M70 188H130" stroke="#f2c14e" stroke-width="6"/><path d="M100 182V226" stroke="#fff2b8" stroke-width="1.6" opacity=".8"/>'
+        + S('M100 182Q86 166 82 176Q82 184 100 182Z', '#f2c14e', '#a8740f', -1, -1) + S('M100 182Q114 166 118 176Q118 184 100 182Z', '#f2c14e', '#a8740f', -1, -1)
+        + `<circle cx="100" cy="182" r="3.4" fill="#a8740f"/><circle cx="99.4" cy="181.4" r="2.4" fill="#f2c14e"/>`
+        + Array.from({ length: 8 }, (_, i) => `<path d="${star4(80 + (i % 4) * 13 + (i > 3 ? 6 : 0), 202 + (i > 3 ? 14 : 0), 2.6)}" fill="#fff2b8" opacity=".75"/>`).join('')
+        + '<path d="M118 194L124 204" stroke="#f2c14e" stroke-width="1.2"/>' + `<path d="${star4(126, 208, 5)}" fill="#fff2b8" stroke="#a8740f" stroke-width=".8"/>`;
+      return s + hand(68, 210) + hand(132, 210);
+    }
+    case 17: {
+      // A mrash (rosewater sprinkler): a slender silver bottle with a long neck, engraved, a few drops in the air.
+      s += arm(70, 160, 74, 204, k) + arm(130, 160, 136, 196, k);
+      s += S('M130 206Q124 214 128 226Q132 234 140 234Q148 234 152 226Q156 214 150 206Z', '#dfe3ea', '#8e96a4', -2, -2)
+        + S('M137 206L138 174H142L143 206Z', '#e6e9ee', '#8e96a4', -1, -1) + S('M136 172Q140 162 144 172Z', '#f2c14e', '#a8740f', -1, -1)
+        + '<path d="M130 216Q140 222 150 216M132 224Q140 228 148 224" stroke="#a8740f" stroke-width="1.2" fill="none"/><path d="M137 186H143M137 196H143" stroke="#a8740f" stroke-width="1.2"/>'
+        + `<path d="M140 210l3 4l-3 4l-3 -4z" fill="#d94a6a"/>`
+        + [[146, 160], [152, 152], [138, 152], [158, 162]].map(([x, y]) => `<path d="M${x} ${y - 3}q2.4 3 0 5q-2.4 -2 0 -5z" fill="#ffd2dc"/>`).join('');
+      return s + hand(74, 206) + hand(138, 200);
+    }
     default:
       s += arm(70, 160, 74, 204, k) + arm(130, 160, 140, 192, k);
       s += '<circle cx="142" cy="224" r="30" fill="#ffd36b" opacity=".18" class="fg-glow"/><path d="M142 196v10" stroke="#8a5a1c" stroke-width="3"/>';
@@ -615,6 +817,12 @@ function mix(a: string, b: string, t: number): string {
 }
 /** The skin colour the upper lid is drawn in (set by `features()` before the eyes). */
 let LID = '#e0a676';
+/** Grown men get calm eyes: one small catch light, no sparkle (owner, 2026-11-14). */
+let CALM = false;
+/** The lip colour: a natural deeper skin tone for men, never red under a beard; a warm rose-brown otherwise. */
+let LIP = '#7a3222';
+/** Lips seen through a full beard: the skin's own deeper tone, so the smile still shows. */
+let LIPB = '#cf9a6e';
 /** An eye (2026-11-14 premium pass): a white eye with a soft shade under the lid, a deep brown iris looking a little
  *  inwards, a dark pupil and two catch lights; grown-ups get a skin lid over its top edge, children a clean round eye. */
 function glossy(x: number, ey: number, rx: number, ry: number, lid = true): string {
@@ -626,7 +834,8 @@ function glossy(x: number, ey: number, rx: number, ry: number, lid = true): stri
   let inner = `<path d="${sc}" fill="#fff"/><ellipse cx="${x}" cy="${f(ey - Y * .78)}" rx="${f(R * 1.1)}" ry="${f(Y * .55)}" fill="#cfc6d8" opacity=".55"/>`
     + `<circle cx="${f(px)}" cy="${f(py)}" r="${f(pr)}" fill="#6b3a1f"/><circle cx="${f(px)}" cy="${f(py + pr * .28)}" r="${f(pr * .78)}" fill="#8e4f28" opacity=".7"/>`
     + `<circle cx="${f(px)}" cy="${f(py)}" r="${f(pr * .56)}" fill="#160c07"/>`
-    + `<circle cx="${f(px + pr * .34)}" cy="${f(py - pr * .4)}" r="${f(pr * .34)}" fill="#fff"/><circle cx="${f(px - pr * .38)}" cy="${f(py + pr * .4)}" r="${f(pr * .14)}" fill="#fff" opacity=".85"/>`;
+    + (CALM ? `<circle cx="${f(px + pr * .3)}" cy="${f(py - pr * .34)}" r="${f(pr * .2)}" fill="#fff" opacity=".9"/>`
+      : `<circle cx="${f(px + pr * .34)}" cy="${f(py - pr * .4)}" r="${f(pr * .34)}" fill="#fff"/><circle cx="${f(px - pr * .38)}" cy="${f(py + pr * .4)}" r="${f(pr * .14)}" fill="#fff" opacity=".85"/>`);
   if (lid) inner += `<path d="M${f(x - R - 2)} ${f(ey - Y - 3)}H${f(x + R + 2)}V${f(lidY + 1)}Q${x} ${f(lidY - Y * .42)} ${f(x - R - 2)} ${f(lidY + 1)}Z" fill="${LID}"/>`;
   const line = lid ? `M${f(x - R + .4)} ${f(lidY + .8)}Q${x} ${f(lidY - Y * .42)} ${f(x + R - .2)} ${f(lidY + .6)}`
     : `M${f(x - R)} ${f(ey + .5)}A${f(R)} ${f(Y)} 0 0 1 ${f(x + R)} ${f(ey + .5)}`;
@@ -676,7 +885,7 @@ function brows(kind: number, ey: number, col: string, xp: Xp | null): string {
 }
 /** Mouths: 0 smile, 1 open grin, 2 soft, 3 cheeky; or an expression's. */
 function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): string {
-  const lip = beard ? '#f3b9a6' : '#7a3222';
+  const lip = beard ? LIPB : LIP;
   const ring = (d: string) => beard ? `<path d="${d}" fill="none" stroke="${lip}" stroke-width="1.6"/>` : '';
   // An open smile: a soft D with a little tongue, teeth only on a big grin.
   const open = (w: number, d: number, teeth: boolean) => {
@@ -706,6 +915,9 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || xp === 'happy' || xp === 'proud' || xp === 'star';
   const pink = mix(sk[0], '#ff5a6e', .55);
   LID = sk[0];
+  CALM = f.body === MAN;
+  LIPB = mix(sk[1], sk[0], .3);
+  LIP = f.body === MAN ? mix(sk[1], '#4a2216', .45) : '#7a3222';
   if (blush && !niqab) s += [100 - cx, 100 + cx].map((x) => `<ellipse cx="${x}" cy="${ey + 11}" rx="8" ry="5" fill="${pink}" opacity="${xp ? .5 : young ? .38 : .24}"/><ellipse cx="${x}" cy="${ey + 11}" rx="4.6" ry="2.8" fill="${pink}" opacity=".35"/><circle cx="${x + 2.6}" cy="${ey + 9.4}" r="1.1" fill="#fff" opacity=".55"/>`).join('');
   if ((f.cheeks === 3 || f.cheeks === 4) && !niqab) s += [100 - cx, 100 + cx].map((x) => [[-3, -1], [1, -2.4], [3.4, 1], [-1, 2]].map(([dx, dy]) => `<circle cx="${x + dx}" cy="${ey + 10 + dy}" r="1.15" fill="${sk[1]}"/>`).join('')).join('');
   if (!niqab) {
@@ -757,7 +969,6 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
     + `C${hx + fr * 1.02} ${fy + fr * .62} ${hx + fr * .6} ${fy + fr * .98} ${hx} ${fy + fr * .98}C${hx - fr * .6} ${fy + fr * .98} ${hx - fr * 1.02} ${fy + fr * .62} ${hx - fr} ${fy}Z`;
   s += S(face, sk[0], soft, -5, -5);
   // Light from behind on the far cheek, the hair's soft shadow on the forehead, the cloth's shadow round a covered face.
-  if (hairShows(f)) s += clipped(face, `<g transform="translate(1.5 4.5)" opacity=".13">${hairFront(f, hc).replace(/(fill|stroke)="#[0-9a-fA-F]{3,6}"/g, '$1="#3a1d10"')}</g>`);
   if (f.beard) s += beardOf(f);
   if (f.head === 5) s += S('M66 104H134Q138 146 100 152Q62 146 66 104Z', wc[0], wc[1], -5, -3) + `<path d="M66 104H134" stroke="${wc[1]}" stroke-width="2.5"/>`;
   const ey = fy + (f.head === 5 ? -3 : covered ? 2 : 8);
@@ -850,7 +1061,12 @@ function hairBack(f: Fig, hc: Pair): string {
 function hairFront(f: Fig, hc: Pair): string {
   const strand = (d: string, w = 2) => `<path d="${d}" stroke="${hc[1]}" stroke-width="${w}" fill="none" stroke-linecap="round" opacity=".4"/>`;
   const side = f.beard ? '' : `<path d="M58 84Q57 93 60 99M142 84Q143 93 140 99" stroke="${hc[0]}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-  let s = '';
+  // The cap of hair that follows the skull just outside the face's own outline, so no forehead or temple shows
+  // past the hair at the sides (owner, 2026-11-14: "hair isn't properly placed on the head").
+  const R = 47, fy = 96;
+  const cap = `M${100 - R} ${fy - 2}C${100 - R} ${fy - R * .6} ${100 - R * .56} ${fy - R} 100 ${fy - R}C${100 + R * .56} ${fy - R} ${100 + R} ${fy - R * .6} ${100 + R} ${fy - 2}`
+    + `Q${100 + R - 5} ${fy - 24} ${126} ${fy - 30}Q100 ${fy - 26} 74 ${fy - 30}Q${100 - R + 5} ${fy - 24} ${100 - R} ${fy - 2}Z`;
+  let s = S(cap, hc[0], hc[1], -4, -4);
   switch (f.hair) {
     case 1:
       s += S('M56 92Q50 46 100 46Q150 46 144 92Q140 74 128 68Q118 76 104 70Q90 76 78 68Q62 72 56 92Z', hc[0], hc[1], -4, -4) + side
