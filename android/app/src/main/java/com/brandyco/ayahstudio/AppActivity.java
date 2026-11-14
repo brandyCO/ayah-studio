@@ -2,11 +2,21 @@ package com.brandyco.ayahstudio;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.View;
+import android.view.animation.DecelerateInterpolator;
+import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
 
 public class AppActivity extends BridgeActivity {
     static final String EXTRA_HASH = "ayahstudio.hash";
     private static String pendingHash = null;
+    /** The opening (owner reports 2026-11-14: every web-drawn opening lagged on the phone, because the WebView's
+     *  GPU is busiest exactly while the app starts): the system splash (the launcher icon on the splash colour) stays
+     *  until the first screen is drawn underneath (LaunchPlugin.ready, at most 4 s), then leaves with a native
+     *  animation, drawn by Android itself and not by the WebView. */
+    private static volatile boolean firstUp = false;
+    static void firstScreen() { firstUp = true; }
 
     /** The app address a widget tap asked for, once (DailyPlugin.takeLaunchHash). */
     static synchronized String takeHash() {
@@ -30,7 +40,19 @@ public class AppActivity extends BridgeActivity {
         registerPlugin(AppIconPlugin.class);
         registerPlugin(SpeechPlugin.class);
         registerPlugin(FontPackPlugin.class);
+        registerPlugin(LaunchPlugin.class);
         keepHash(getIntent());
+        firstUp = false;
+        final long until = SystemClock.uptimeMillis() + 4000;
+        SplashScreen splash = SplashScreen.installSplashScreen(this);
+        splash.setKeepOnScreenCondition(() -> !firstUp && SystemClock.uptimeMillis() < until);
+        splash.setOnExitAnimationListener((v) -> {
+            View icon = v.getIconView();
+            if (icon != null) icon.animate().scaleX(1.15f).scaleY(1.15f).alpha(0f).setDuration(320)
+                .setInterpolator(new DecelerateInterpolator()).start();
+            v.getView().animate().alpha(0f).setStartDelay(80).setDuration(300)
+                .setInterpolator(new DecelerateInterpolator()).withEndAction(v::remove).start();
+        });
         super.onCreate(savedInstanceState);
     }
 

@@ -1120,17 +1120,6 @@ body[data-view="kids"] {
 .lantern-progress .lp-cap { fill: #c98b3e; }
 .lantern-progress .lp-string { stroke: rgba(255, 241, 214, .5); stroke-width: 1.5; }
 
-/* Opening (src/ui/opening.ts): the overlay in the launcher icon's gradient shows at once, out of the splash colour;
-   the show itself (src/ui/openingShow.ts + opening.css) comes in its own chunk. */
-.app-opening {
-  position: fixed; inset: 0; z-index: 100; overflow: hidden;
-  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--op-glow) 55%, transparent), transparent 62%),
-    linear-gradient(var(--op-top), var(--op-bottom));
-}
-.app-opening::before { content: ''; position: absolute; inset: 0; z-index: 2; background: #07130f; pointer-events: none; animation: op-fade .3s ease-out both; }
-@keyframes op-fade { to { opacity: 0; } }
-.app-opening.gone { opacity: 0; transition: opacity .28s ease-in; }
-
 /* ---- Noor in the 2D Kids screens (src/ui/kidsNoor.ts): a warm core, a soft halo, a short trail
    while it glides; no face or body. Constellations of learned surahs (one star per ayah) ---- */
 .kids-noor { position: absolute; inset: 0; pointer-events: none; z-index: 2; transition: opacity .9s ease; }
