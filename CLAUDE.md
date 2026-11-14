@@ -2234,13 +2234,19 @@ duas/reflections section in Me.
       **Kept simple, Duolingo style** (owner 2026-11-14): the splash is the default icon's marker, star and the character
       standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
       `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
-      **Animated, drawn by Android** (owner 2026-11-14, "the animation didn't play"): on Android 12+ the icon is an
-      AnimatedVectorDrawable (`drawable-v31/splash_anim.xml`, 1 s: the marker pops in, the character springs up out of it,
-      the star spins in, two cheering hops with the shadow squeezing; `KEYS` in `make-character-icons.py`). Android draws
-      the launch screen in its own process and runs vector animations on the render thread, so app start-up can't make it
-      stutter; the splash stays ≥ 1.05 s so it plays through. The art is converted by `scripts/svg_to_vd.py` (clip paths,
-      gradients, transforms; `to_svg()` renders it back to compare with the original). Android 11 and older show the
-      finished pose still (`drawable/splash_anim.xml` = `splash_icon.webp`)
+      **The character comes alive** (owner 2026-11-14: "animate the character, not the icon", "make a motion animation
+      that's premium"; the animated vector icon was too stiff, small and short): `scripts/opening_anim.py` rigs the default
+      character (sleeve arms bending along a curve and trailing their swing, mitten hands, squash and stretch round the
+      feet, a lagging, tilting head that squashes less, blinks, an opening mouth, faces changed in two frames; springs with
+      take-off / landing impulses give the overshoot and follow-through) and animates 2.25 s at 60 fps: pops out of the
+      ground surprised, arms up → lands with dust → smiles, blinks, crouches → leaps with star eyes → lands in gold
+      sparkles → waves, head tilted, and holds. Frames are SVG rendered by Chromium, encoded as an animated WebP with alpha
+      (`res/raw/opening.webp`, ~2.5 MB; `--preview OUT.mp4` renders a video). Android 9+: the system splash is the plain
+      splash colour (a clear icon, `drawable-v28/splash_anim.xml`) while `AppActivity` decodes the picture off the main
+      thread (≤ 0.7 s), then a full-screen layer on the same colour plays it with `AnimatedImageDrawable` (its own decode
+      and render threads, so start-up can't make it stutter); he holds his last pose until the first screen is drawn
+      (`LaunchPlugin.ready`, ≤ 7 s), then the layer fades out over 0.25 s. Android 8 and older: the still splash picture
+      (`drawable/splash_anim.xml` = `splash_icon.webp`) until the first screen
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)
