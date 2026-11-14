@@ -55,9 +55,12 @@ jobs:
         run: |
           PLAYERS=${{ inputs.players }}
           LTPW=$(printf '%s' "$STAGING_DB_PASSWORD$GITHUB_RUN_ID" | sha256sum | cut -c1-24)
-          psql "$DB" -X -q -f scripts/launchtest/reset.sql
-          time psql "$DB" -X -q -v ON_ERROR_STOP=1 -v n="$PLAYERS" -v docs=10 -f scripts/loadtest/seed.sql
-          psql "$DB" -X -q -v pw="$LTPW" -v signins=25 -f scripts/launchtest/users.sql
+          # Seeding takes minutes on the free plan: no statement time limit for these sessions.
+          psql "$DB" -X -q -c 'set statement_timeout = 0' -f scripts/launchtest/reset.sql
+          psql "$DB" -X -q -c 'set statement_timeout = 0' -c 'vacuum analyze public.user_docs, public.rank_days, public.rank_weeks, public.rank_players'
+          time psql "$DB" -X -q -v ON_ERROR_STOP=1 -v n="$PLAYERS" -v docs=10 -c 'set statement_timeout = 0' -f scripts/loadtest/seed.sql
+          psql "$DB" -X -q -v pw="$LTPW" -v signins=25 -c 'set statement_timeout = 0' -f scripts/launchtest/users.sql
+          psql "$DB" -X -q -c 'set statement_timeout = 0' -c 'analyze'
           psql "$DB" -X -qtA -c "select json_build_object(
               'leagues', (select json_agg(distinct w.league) from public.rank_weeks w where w.league is not null and w.user_id::text like '00000000-0000-0000-0000-%'),
               'pids', (select json_agg(p.pid) from public.rank_players p where p.user_id::text like '00000000-0000-0000-0000-%' and p.pid is not null))" > ids.json
