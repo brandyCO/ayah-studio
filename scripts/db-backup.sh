@@ -6,11 +6,17 @@
 #                                        BACKUP_KEY (AES-256, PBKDF2), plus counts.txt (rows per table, no content)
 #   db-backup.sh verify DB_URL IN_DIR    decrypt, restore into the empty database DB_URL and compare the rows of
 #                                        every table with counts.txt (fails on any difference)
+#   db-backup.sh files  DB_URL OUT_DIR   the files users keep in Storage (bucket harakat-clips: opt-in voice clips),
+#                                        downloaded with SERVICE_KEY from SUPABASE_URL, packed and encrypted as
+#                                        files.tar.enc, with files.txt (how many); fails if any listed file is missing
+#   db-backup.sh checkfiles IN_DIR       decrypt files.tar.enc and check it holds as many files as files.txt says
 #
-# The repo is public, so a backup only ever leaves the runner encrypted. BACKUP_KEY is the database password
-# (the secret SUPABASE_DB_PASSWORD): anyone who can read a backup could already read the database itself.
+# The repo is public, so a backup only ever leaves the runner encrypted. BACKUP_KEY is the secret BACKUP_KEY
+# (its own key, so changing the database password never locks old backups); until the owner adds it, the
+# database password. key.txt in each backup names which one locked it.
 set -euo pipefail
-cmd=${1:?dump or verify}; url=${2:?database url}; dir=${3:?folder}
+cmd=${1:?dump, verify, files or checkfiles}
+if [ "$cmd" = checkfiles ]; then url=; dir=${2:?folder}; else url=${2:?database url}; dir=${3:?folder}; fi
 : "${BACKUP_KEY:?BACKUP_KEY is not set}"
 SCHEMAS=(-n public -n auth)
 
@@ -52,6 +58,28 @@ SQL
       echo "::error::The restored database differs from the backup (see above)."; grep 'error:' /tmp/restore.log | head -40; exit 1
     fi
     rm -f /tmp/db.dump
+    ;;
+  files)
+    : "${SERVICE_KEY:?SERVICE_KEY is not set}"; : "${SUPABASE_URL:?SUPABASE_URL is not set}"
+    mkdir -p "$dir" /tmp/files
+    psql "$url" -X -A -t -v ON_ERROR_STOP=1 -c "select bucket_id || '/' || name from storage.objects where bucket_id in ('harakat-clips') order by 1" > /tmp/files.list
+    n=0
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      mkdir -p "/tmp/files/$(dirname "$f")"
+      curl -sf --retry 3 -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+        "$SUPABASE_URL/storage/v1/object/authenticated/$f" -o "/tmp/files/$f" || { echo "::error::Could not download a stored file."; exit 1; }
+      n=$((n + 1))
+    done < /tmp/files.list
+    echo "$n" > "$dir/files.txt"
+    tar -C /tmp/files -cf - . | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_KEY -out "$dir/files.tar.enc"
+    rm -rf /tmp/files /tmp/files.list
+    echo "Backed up $n stored files, $(du -h "$dir/files.tar.enc" | cut -f1) encrypted."
+    ;;
+  checkfiles)
+    want=$(cat "$dir/files.txt")
+    got=$(openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:BACKUP_KEY -in "$dir/files.tar.enc" | tar -tf - | grep -vc '/$' || true)
+    if [ "$got" = "$want" ]; then echo "Stored files checked: $got of $want."; else echo "::error::The files backup holds $got of $want files."; exit 1; fi
     ;;
   *) echo "unknown command $cmd"; exit 2 ;;
 esac

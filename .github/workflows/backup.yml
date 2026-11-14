@@ -1,6 +1,7 @@
 # Daily backup of the live database (owner request 2026-11-13: nothing users earned may ever be lost).
-# Every night: the schemas public + auth are dumped through the session pooler, encrypted with the database
-# password (the repo is public: nothing leaves the runner unencrypted) and kept 30 days as the artifact
+# Every night: the schemas public + auth are dumped through the session pooler, and the files users keep in Storage
+# (voice clips) are downloaded; both are encrypted with the secret BACKUP_KEY (until it is added: the database
+# password; key.txt says which) — the repo is public, nothing leaves the runner unencrypted — and kept 30 days as the artifact
 # "db-backup-<date>". The same run restores it into an empty Postgres and checks every table has the same rows,
 # so a backup that would not restore fails loudly (and opens an issue). How to restore: docs/backup.md.
 name: Database backup
@@ -16,7 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      BACKUP_KEY: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      BACKUP_KEY: ${{ secrets.BACKUP_KEY || secrets.SUPABASE_DB_PASSWORD }}
+      KEY_NAME: ${{ secrets.BACKUP_KEY != '' && 'BACKUP_KEY' || 'SUPABASE_DB_PASSWORD' }}
       PROJECT_REF: jposubjybzstfmnngews
     services:
       restore:
@@ -39,12 +42,28 @@ jobs:
           HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$PROJECT_REF/config/database/pooler" \
             | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
-          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['BACKUP_KEY'].strip(), safe=''))")
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
           for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
             echo "Dumping through $h"
-            if bash scripts/db-backup.sh dump "postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres" backup; then exit 0; fi
+            URL="postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres"
+            if bash scripts/db-backup.sh dump "$URL" backup; then
+              echo "$KEY_NAME" > backup/key.txt
+              echo "$h" > /tmp/dbhost
+              exit 0
+            fi
           done
           echo "::error::Could not dump the database."; exit 1
+      - name: Stored files (voice clips)
+        run: |
+          set -euo pipefail
+          SERVICE_KEY=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true" \
+            | python3 -c "import json,sys; print(next(k['api_key'] for k in json.load(sys.stdin) if k.get('name') == 'service_role'))")
+          echo "::add-mask::$SERVICE_KEY"
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          SERVICE_KEY="$SERVICE_KEY" SUPABASE_URL="https://$PROJECT_REF.supabase.co" \
+            bash scripts/db-backup.sh files "postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres" backup
+          bash scripts/db-backup.sh checkfiles backup
       - name: Restore into an empty database and compare
         run: bash scripts/db-backup.sh verify "postgresql://postgres:restore@localhost:5433/postgres" backup
       - id: day

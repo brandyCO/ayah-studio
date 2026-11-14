@@ -862,7 +862,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) });
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
-      if (fresh) await report();
+      if (fresh) await report(true);
       await paintHead(fresh);
       if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);

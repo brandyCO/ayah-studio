@@ -63,7 +63,17 @@ export function reportSoon(delay = 2_500) {
   if (!account() || timer) return;
   timer = window.setTimeout(() => { timer = 0; void report(); }, delay);
 }
-export async function report(): Promise<void> {
+const LISTEN_GAP = 60_000;
+let listenAt = 0;
+/** Two report signatures (id:pages:listen:…) that differ only in the minutes listened. */
+const sameButListen = (a: string | undefined, b: string) => {
+  if (!a) return false;
+  const x = a.split(':'), y = b.split(':');
+  x[2] = y[2] = '';
+  return x.join(':') === y.join(':');
+};
+/** `now`: send everything at once (the app is being left). */
+export async function report(now = false): Promise<void> {
   if (!account() || busy) return;
   busy = true;
   try {
@@ -78,6 +88,13 @@ export async function report(): Promise<void> {
       const v = islamicTotals(k, totals) as ReturnType<typeof totals>;
       const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.flawless}:${v.adhkar}:${v.dhikr}`;
       if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons && !v.adhkar && !v.dhikr)) continue;
+      // Only the minutes listened moved: sent at most once a minute (the player adds them every 15 s), unless the
+      // app is being left. Pages, lessons and the rest still go within seconds (round 3: ~4× fewer writes).
+      if (!now && k === today && sameButListen(sent[k], sig) && Date.now() - listenAt < LISTEN_GAP) {
+        reportSoon(LISTEN_GAP - (Date.now() - listenAt) + 200);
+        continue;
+      }
+      if (k === today) listenAt = Date.now();
       lastAt = Date.now();
       await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons, adhkar: v.adhkar, dhikr: v.dhikr, week_end: weekEndAt().toISOString(), utc_off: utcOff() });
       // Flawless lessons: 10 extra XP each (rank_flawless; an older server without it is skipped).
@@ -105,16 +122,22 @@ export function watchRanks() {
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
   window.addEventListener('journey-changed', () => featsSoon());
-  // Reading now: once a minute while the mushaf is open or a recitation plays, so friends see a live dot.
+  // Reading now: every 2 minutes while the mushaf is open or a recitation plays (friends see the dot for 4), and at
+  // once when it changes between reading and listening. Checked every 30 s, sent only when needed (round 3).
+  let liveK: string | null = null;
+  let liveAt = 0;
   setInterval(() => {
     if (!account() || document.hidden) return;
     const b = document.body.classList;
     const k = b.contains('listening') || b.contains('listening-away') ? 'listen' : b.contains('mushaf-mode') ? 'read' : null;
-    if (k) void rpc('rank_live', { k }).catch(() => {});
-  }, 60_000);
+    if (!k) { liveK = null; return; }
+    if (k === liveK && Date.now() - liveAt < 120_000) return;
+    liveK = k; liveAt = Date.now();
+    void rpc('rank_live', { k }).catch(() => {});
+  }, 30_000);
   window.addEventListener('readlog-changed', soon);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); }
+    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(true); }
     if (!document.hidden) { setTimeout(() => void friendMoments(), 2500); setTimeout(() => void cheersSoon(), 6000); }
   });
   onAccount((a) => {

@@ -107,13 +107,13 @@ reset role;
 insert into auth.users (id, email) values ('eeeeeeee-0000-0000-0000-000000000005', 'emre@example.com'),
   ('ffffffff-0000-0000-0000-000000000006', 'farah@example.com'), ('99999999-0000-0000-0000-000000000007', 'gamal@example.com');
 insert into rank_players (user_id, name) values ('eeeeeeee-0000-0000-0000-000000000005', 'Emre');
-insert into rank_leagues (id, week, tier, size) values ('11111111-0000-0000-0000-000000000001', rank_week(current_date) - 7, 0, 3);
+insert into rank_leagues (id, week, tier, size) values ('11111111-0000-0000-0000-000000000001', rank_week(rank_week(current_date) - 1), 0, 3);
 insert into rank_weeks (user_id, week, score, league) values
-  ('eeeeeeee-0000-0000-0000-000000000005', rank_week(current_date) - 7, 900, '11111111-0000-0000-0000-000000000001'),
-  ('ffffffff-0000-0000-0000-000000000006', rank_week(current_date) - 7, 500, '11111111-0000-0000-0000-000000000001'),
-  ('99999999-0000-0000-0000-000000000007', rank_week(current_date) - 7, 300, '11111111-0000-0000-0000-000000000001');
-insert into ids values ('lastwk', (rank_week(current_date) - 7)::text),
-  ('item', rank_prize_item(rank_week(current_date) - 7, 1)), ('other', rank_prize_item(rank_week(current_date), 1));
+  ('eeeeeeee-0000-0000-0000-000000000005', rank_week(rank_week(current_date) - 1), 900, '11111111-0000-0000-0000-000000000001'),
+  ('ffffffff-0000-0000-0000-000000000006', rank_week(rank_week(current_date) - 1), 500, '11111111-0000-0000-0000-000000000001'),
+  ('99999999-0000-0000-0000-000000000007', rank_week(rank_week(current_date) - 1), 300, '11111111-0000-0000-0000-000000000001');
+insert into ids values ('lastwk', (rank_week(rank_week(current_date) - 1))::text),
+  ('item', rank_prize_item(rank_week(rank_week(current_date) - 1), 1)), ('other', rank_prize_item(rank_week(current_date), 1));
 select pg_temp.act_as('eeeeeeee-0000-0000-0000-000000000005');
 select is((rank_status(current_date) ->> 'tier')::int, 1, 'the winner moves up a tier');
 select is((rank_my_prizes() -> 0 ->> 'light')::int, 350, '#1: 300 Light, and 50 for moving up');
