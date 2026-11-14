@@ -753,6 +753,12 @@ Pro and a load test come later, when the owner decides to pay).
       `ev:…`, `age:…` since install, `p:`, `l:`, first day again under `d0:`), no id; `usage_add()` adds 1 per word
       (migration `20261113400000_usage_counts.sql`, pgTAP `usage_counts.test.sql`); owner reads the views `usage_by_day` and
       `usage_first_day` in the Supabase SQL editor; off in the Kids space and with Me → ⚙ → App → Anonymous usage counts
+- [x] Round 3 (owner "Yes", 2026-11-14): minutes listened go to Ranks at most once a minute (other progress within seconds;
+      everything at once when the app is left or Ranks opens), "reading now" every 2 min (dot kept 4 min); the backup also
+      packs the Storage voice clips (`files.tar.enc`) and uses its own secret `BACKUP_KEY` (owner adds it; until then the
+      database password, `key.txt` says which); `usage_add` takes no new words once a day has 3000; `tidy_db()` also removes
+      friends' news > 30 days, challenges started > 90 days ago or never accepted in 30, duels > 8 weeks, gifts opened > a year
+      (migration `20261114300000_round3_lighter.sql`, pgTAP `round3_lighter.test.sql` 12)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
@@ -1615,6 +1621,15 @@ duas/reflections section in Me.
       shown from above in the tiles (`rugTop()`), carved arches with lamps, cedar panels with stars under a brass rail, veined
       marble, an embroidered pouf; the kurta's vest edged in gold with paisleys, the embroidered abaya with a vine of flowers,
       a jewelled collar and a band of diamonds; the freeze a cut crystal
+      **Premium characters** (owner request 2026-11-14, "Duolingo premium quality … see the beauty of what they chose"; preview
+      artifact QwsVtqPtNjE4AWkNMqkTNb): eyes are a white with a deep brown iris and catch lights (`glossy()`; grown-ups a skin
+      lid, men calm with one small catch light, `CALM`), lips a natural skin tone for men and under beards (`LIP` / `LIPB`),
+      grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
+      temple shows (`hairFront()`), tapered sleeves with cuffs (`arm()`), mitten hands (`mitten()`), a new robe silhouette
+      (rounded shoulders, waist, flare, curved hem) with shoes, a neck and the thobe's collar. New pieces for Light: couture
+      outfits 17–22 (`couture()`: kaftan, tatreez thobe, sherwani, Omani dishdasha, kebaya, anarkali), held items 12–17
+      (mabkhara, dallah, Moroccan tea, roses, Eid gift, rosewater), worn decorations `acc` 5–10 (pearls, khatam brooch, sash,
+      pashmina, crescent medallion, jasmine; lower under a hijab) and room pieces orchid, lemon, kursi, lanterns, qandil, damask
       **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
       `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
       hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when
