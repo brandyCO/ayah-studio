@@ -63,14 +63,23 @@ const routePreloads = (): Plugin => ({
   },
 });
 
+const BUILD = (process.env.GITHUB_SHA ?? '').slice(0, 7) || new Date().toISOString().slice(0, 16);
+// version.json: which data version and build these files are. The service worker takes a versioned file (?v=…)
+// from the Cloudflare copy of the site only when it holds that version (public/sw.js).
+const versionFile = (): Plugin => ({
+  name: 'version-file',
+  apply: 'build',
+  generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ data: DATA_VERSION, build: BUILD }) }); },
+});
+
 export default defineConfig({
   base: './',
   // index.html starts the mushaf layout download before the app's code has even loaded (see there).
-  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads()],
+  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads(), versionFile()],
   define: {
     __DATA_VERSION__: JSON.stringify(DATA_VERSION),
     // Which build a problem report came from (the commit on GitHub's runners, else the build date).
-    __BUILD__: JSON.stringify((process.env.GITHUB_SHA ?? '').slice(0, 7) || new Date().toISOString().slice(0, 16)),
+    __BUILD__: JSON.stringify(BUILD),
   },
   // Mediabunny and its optional WASM AAC encoder are large but loaded lazily by the editor.
   build: { chunkSizeWarningLimit: 1100 },

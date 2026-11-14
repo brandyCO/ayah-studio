@@ -6,8 +6,8 @@
 export const EDGE = (import.meta.env.VITE_PIXABAY_PROXY ?? '').replace(/\/+$/, '');
 
 /**
- * Where the big static files (mushaf page fonts, word timings) come from: the Cloudflare worker
- * `ayah-studio-files` (files/wrangler.toml), which has no bandwidth limit, beside the edge proxy on the same
+ * The Cloudflare copy of the built site (code, data, fonts, backgrounds; worker `ayah-studio-files`,
+ * files/wrangler.toml), which has no bandwidth limit, beside the edge proxy on the same
  * workers.dev address (or `VITE_FILES_URL`). Empty when unknown: then everything comes from the Pages site.
  * Every caller falls back to the Pages site when it does not answer.
  */
@@ -43,8 +43,10 @@ export interface RemoteConfig {
   syncMinutes: number;
   /** Ranks asks the edge for its league's fingerprint (one database read per league, not per player). */
   leaguePulse: boolean;
+  /** Friends' and the rival's fingerprint through the proxy (round 6). */
+  friendPulse: boolean;
 }
-const DEFAULTS: RemoteConfig = { stock: true, popular: true, mushafDownload: true, syncMinutes: 1, leaguePulse: true };
+const DEFAULTS: RemoteConfig = { stock: true, popular: true, mushafDownload: true, syncMinutes: 1, leaguePulse: true, friendPulse: true };
 const KEY = 'remoteConfig';
 const TTL = 3600e3;
 
@@ -75,7 +77,7 @@ export function remoteConfig(): Promise<RemoteConfig> {
 function clean(v: Partial<RemoteConfig> | null): RemoteConfig {
   const o = { ...DEFAULTS };
   if (v && typeof v === 'object') {
-    for (const k of ['stock', 'popular', 'mushafDownload', 'leaguePulse'] as const) if (typeof v[k] === 'boolean') o[k] = v[k];
+    for (const k of ['stock', 'popular', 'mushafDownload', 'leaguePulse', 'friendPulse'] as const) if (typeof v[k] === 'boolean') o[k] = v[k];
     if (typeof v.syncMinutes === 'number' && v.syncMinutes >= 0 && v.syncMinutes <= 120) o.syncMinutes = v.syncMinutes;
   }
   return o;

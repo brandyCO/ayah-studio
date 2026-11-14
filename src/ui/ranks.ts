@@ -13,7 +13,7 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
-  StaleMiss, staleFirst, refreshCached, dropCache, rankPulse,
+  StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
@@ -917,7 +917,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         await report();
         // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when
         // it changed, or once a minute for the places among everyone; the other views ask again as before.
-        const p = view === 'league' ? await rankPulse() : null;
+        // The friends view the same way through the friends' fingerprint (round 6).
+        const p = view === 'league' ? await rankPulse() : view === 'friends' ? await socialPulse() : null;
         if (p && p === lastPulse && Date.now() - fullAt < 60_000) quiet++;
         else {
           lastPulse = p;
