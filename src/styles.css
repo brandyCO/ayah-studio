@@ -1948,7 +1948,8 @@ html[data-script="malayalam"] body { line-height: 1.6; }
 
 /* F3: one line-icon set. An icon before a label sits on the text's line with a small gap (the studio keeps its own). */
 /* Label icons are drawn at 14–20 px; bigger ones stand alone (icon buttons, tiles), so they get no gap. */
-body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary) > svg:first-child:is([width="14"], [width="16"], [width="18"], [width="20"]) {
+/* (not in icon-only buttons: the gap would push their icon off centre, owner report 2026-11-14) */
+body:not([data-view="reel"]) :where(button, a, b, h2, h3, p, span, summary):where(:not(.icon-btn, .fold-chev, .today-ico, .today-icon, .ob-tick, .me-safe-ic, .me-safe-lock)) > svg:first-child:is([width="14"], [width="16"], [width="18"], [width="20"]) {
   flex: none; vertical-align: -0.22em; margin-inline-end: 0.45em; }
 body .menu-item > svg:first-child:is([width="16"], [width="18"], [width="20"]) { margin-inline-end: 0; opacity: .8; }
 
