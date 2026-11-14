@@ -45,7 +45,7 @@ jobs:
             fi
           done
           [ -n "$URL" ] || { echo "::error::Could not reach the database."; exit 1; }
-          calls() { psql "$URL" -tAc "select coalesce(sum(calls), 0) from extensions.pg_stat_statements" 2>/dev/null || echo 0; }
+          calls() { psql "$URL" -tAc "select coalesce(sum(calls), 0)::bigint from extensions.pg_stat_statements" || echo x; }
           C1=$(calls); T1=$(date +%s.%N)
           PEOPLE=$(psql "$URL" -tA -c "set statement_timeout = '30s'" -c "
             select count(*) from (
@@ -53,11 +53,12 @@ jobs:
                 where last_report > now() - interval '5 minutes' or live_at > now() - interval '5 minutes'
               union
               select user_id from public.user_docs where updated_at > now() - interval '5 minutes'
-            ) s" | tail -1)
+            ) s" | tail -1) || true
+          [[ "$PEOPLE" =~ ^[0-9]+$ ]] || { echo "::error::Could not count the people at once ($PEOPLE)."; exit 1; }
           CONNS=$(psql "$URL" -tAc "select count(*) from pg_stat_activity where datname = current_database()")
           sleep 60
           C2=$(calls); T2=$(date +%s.%N)
-          RATE=$(python3 -c "print(max(0, round(($C2 - $C1) / ($T2 - $T1))))")
+          RATE="?"; [[ "$C1$C2" =~ ^[0-9]+$ ]] && RATE=$(python3 -c "print(max(0, round(($C2 - $C1) / ($T2 - $T1))))")
           echo "People at once (signed in, last 5 min): $PEOPLE · database calls a second: $RATE · connections: $CONNS" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "people=$PEOPLE" >> "$GITHUB_OUTPUT"; echo "rate=$RATE" >> "$GITHUB_OUTPUT"; echo "conns=$CONNS" >> "$GITHUB_OUTPUT"
       - name: Tell the owner
