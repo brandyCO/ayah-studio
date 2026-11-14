@@ -68,3 +68,32 @@ jobs:
           name: ayah-studio-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  # The Play bundle with the mushaf page fonts as a fast-follow asset pack (release.yml builds the signed one):
+  # built unsigned on every change, so the asset pack setup never breaks unnoticed.
+  play-bundle:
+    runs-on: ubuntu-latest
+    env:
+      FONT_PACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_FONT_PACK: '1'
+      - run: rm -rf dist/data/words
+      - run: bash scripts/font-pack.sh dist android/qcf_fonts/src/main/assets
+      - run: npx cap sync android
+      - run: ./gradlew bundleRelease --no-daemon
+        working-directory: android
+      - name: Check the bundle
+        run: bash scripts/font-pack.sh check android/app/build/outputs/bundle/release/app-release.aab | tee -a "$GITHUB_STEP_SUMMARY"

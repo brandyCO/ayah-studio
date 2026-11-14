@@ -1,4 +1,6 @@
 include ':app'
+// The mushaf page fonts as a Play asset pack, only in the Play build (release.yml: FONT_PACK=1).
+if (System.getenv('FONT_PACK') == '1') include ':qcf_fonts'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 

@@ -60,6 +60,13 @@ export const ROOM_ITEMS: RoomItem[] = [
   { id: 'silk', slot: 'rug', r: 'legendary', price: 1200, limited: true },
   { id: 'medallion', slot: 'wall', r: 'legendary', price: 1000, limited: true },
   { id: 'brocade', slot: 'curtain', r: 'legendary', price: 1000, limited: true },
+  // Premium pieces (owner request 2026-11-14).
+  { id: 'orchid', slot: 'plant', r: 'rare', price: 180 },
+  { id: 'lemon', slot: 'plant', r: 'epic', price: 280 },
+  { id: 'kursi', slot: 'side', r: 'epic', price: 320 },
+  { id: 'lanterns', slot: 'side', r: 'epic', price: 260 },
+  { id: 'qandil', slot: 'hang', r: 'epic', price: 300 },
+  { id: 'damask', slot: 'curtain', r: 'rare', price: 190 },
   { id: 'ginger', slot: 'pet', r: 'rare', price: 200 },
   { id: 'tabby', slot: 'pet', r: 'rare', price: 200 },
   { id: 'snow', slot: 'pet', r: 'epic', price: 280 },

@@ -94,9 +94,16 @@ export function noorLine(where: Where): HTMLElement {
 /** Put (or refresh) Noor's line as the last child of `box`; on Read, today's pages ring above it. */
 export function noorInto(box: Element, where: Where) {
   if (where === 'read') {
+    // Read's bar stays one row (front-end review G4): the pages ring sits beside the title, and Noor's line
+    // shows at most once a day, so a tap on the page hides as little of it as possible.
     const strip = readStrip();
     const was = box.querySelector(':scope > .read-goal');
-    if (was) was.replaceWith(strip); else box.append(strip);
+    if (was) was.replaceWith(strip); else (box.querySelector(':scope > .brand') ?? box.lastElementChild)?.after(strip);
+    const day = dayKey();
+    let seen = '';
+    try { seen = localStorage.getItem('readNoorDay') ?? ''; } catch { /* ignore */ }
+    if (seen === day) { box.querySelector(':scope > .noor-line')?.remove(); return; }
+    try { localStorage.setItem('readNoorDay', day); } catch { /* ignore */ }
   }
   const old = box.querySelector(':scope > .noor-line');
   const text = noorText(where);
@@ -124,6 +131,7 @@ function readStrip(): HTMLElement {
     svg('circle', { cx: 18, cy: 18, r: 14, fill: 'none', stroke: '#ffd43b', 'stroke-width': 5, 'stroke-linecap': 'round',
       'stroke-dasharray': `${(C * f).toFixed(1)} ${C.toFixed(1)}`, transform: 'rotate(-90 18 18)', class: 'rg-fill', opacity: f ? 1 : 0 }));
   const label = p ? say('ofPages', { n: p.done, of: p.target }) : say(done === 1 ? 'page1Today' : 'pagesToday', { n: done });
-  return h('div', { class: 'read-goal' }, ring, h('span', { class: 'rg-txt' }, label),
-    s && s.days > 0 ? h('a', { class: `rg-streak${s.litToday ? ' lit' : ''}`, href: '#/me', 'aria-label': say('days', { n: s.days }) }, String(s.days)) : '');
+  const short = p ? `${p.done}/${p.target}` : String(done);
+  return h('a', { class: 'read-goal', href: '#/me', 'aria-label': label, title: label }, ring, h('span', { class: 'rg-txt' }, short),
+    s && s.days > 0 ? h('span', { class: `rg-streak${s.litToday ? ' lit' : ''}`, 'aria-label': say('days', { n: s.days }) }, String(s.days)) : '');
 }

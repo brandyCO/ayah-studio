@@ -1,6 +1,7 @@
 # Daily backup of the live database (owner request 2026-11-13: nothing users earned may ever be lost).
-# Every night: the schemas public + auth are dumped through the session pooler, encrypted with the database
-# password (the repo is public: nothing leaves the runner unencrypted) and kept 30 days as the artifact
+# Every night: the schemas public + auth are dumped through the session pooler, and the files users keep in Storage
+# (voice clips) are downloaded; both are encrypted with the secret BACKUP_KEY (until it is added: the database
+# password; key.txt says which) — the repo is public, nothing leaves the runner unencrypted — and kept 30 days as the artifact
 # "db-backup-<date>". The same run restores it into an empty Postgres and checks every table has the same rows,
 # so a backup that would not restore fails loudly (and opens an issue). How to restore: docs/backup.md.
 name: Database backup
@@ -16,7 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      BACKUP_KEY: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      BACKUP_KEY: ${{ secrets.BACKUP_KEY || secrets.SUPABASE_DB_PASSWORD }}
+      KEY_NAME: ${{ secrets.BACKUP_KEY != '' && 'BACKUP_KEY' || 'SUPABASE_DB_PASSWORD' }}
       PROJECT_REF: jposubjybzstfmnngews
     services:
       restore:
@@ -39,12 +42,85 @@ jobs:
           HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$PROJECT_REF/config/database/pooler" \
             | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
-          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['BACKUP_KEY'].strip(), safe=''))")
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
           for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
             echo "Dumping through $h"
-            if bash scripts/db-backup.sh dump "postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres" backup; then exit 0; fi
+            URL="postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres"
+            if bash scripts/db-backup.sh dump "$URL" backup; then
+              echo "$KEY_NAME" > backup/key.txt
+              echo "$h" > /tmp/dbhost
+              exit 0
+            fi
           done
           echo "::error::Could not dump the database."; exit 1
+      - name: Space left on the free plan
+        # Free plan: 500 MB database, 1 GB file storage. Past 400 MB / 800 MB an issue "Space: …" is opened for the
+        # owner (and closed again when back under); never stops the backup.
+        id: space
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          URL="postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres"
+          read -r DB FILES <<< "$(psql "$URL" -tAF ' ' -c "select pg_database_size(current_database()),
+            coalesce((select sum((metadata ->> 'size')::bigint) from storage.objects), 0)")"
+          DBM=$((DB / 1048576)); FM=$((FILES / 1048576))
+          echo "Database $DBM MB of 500 MB, stored files $FM MB of 1024 MB" | tee -a "$GITHUB_STEP_SUMMARY"
+          OVER=""
+          [ "$DBM" -ge 400 ] && OVER="database $DBM MB of 500 MB"
+          [ "$FM" -ge 800 ] && OVER="${OVER:+$OVER, }stored files $FM MB of 1 GB"
+          echo "over=$OVER" >> "$GITHUB_OUTPUT"
+          echo "db=$DBM" >> "$GITHUB_OUTPUT"; echo "files=$FM" >> "$GITHUB_OUTPUT"
+      - name: Tell the owner when space runs low
+        if: steps.space.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          OVER: ${{ steps.space.outputs.over }}
+          DB: ${{ steps.space.outputs.db }}
+          FILES: ${{ steps.space.outputs.files }}
+        with:
+          script: |
+            const over = process.env.OVER;
+            const { data } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'space' });
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            if (over && !data.length) {
+              await github.rest.issues.create({ ...context.repo, title: `Space: ${over}`, labels: ['space'], assignees: [context.repo.owner],
+                body: `The free Supabase plan is filling up: ${over}.\n\nNothing is lost yet. Before it is full, either move to Supabase Pro ($25/month: 8 GB database, 100 GB files) or ask Claude to look at what can be tidied.\n\nChecked by the nightly backup: ${run}\n\nThis issue closes itself when both are back under the line.` });
+            } else if (!over && data.length) {
+              for (const i of data) {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: `Back under the line: database ${process.env.DB} MB, stored files ${process.env.FILES} MB.` });
+                await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+              }
+            }
+      - name: Stored files (voice clips)
+        # Needs the service key: the repo secret SUPABASE_SERVICE_KEY, else it is asked from the Supabase management
+        # API with SUPABASE_ACCESS_TOKEN. Without either the database backup still goes ahead and the run says why.
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -uo pipefail
+          if [ -z "$SERVICE_KEY" ]; then
+            code=$(curl -s -o /tmp/keys.json -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true")
+            if [ "$code" = 200 ]; then
+              SERVICE_KEY=$(python3 -c "import json; print(next((k.get('api_key') or '' for k in json.load(open('/tmp/keys.json')) if k.get('name') == 'service_role'), ''))")
+            else
+              echo "Supabase management API answered $code."
+            fi
+            rm -f /tmp/keys.json
+          fi
+          if [ -z "$SERVICE_KEY" ]; then
+            echo "::warning::Stored files (voice clips) were not backed up: add the repo secret SUPABASE_SERVICE_KEY (Supabase → Project Settings → API keys → service_role)."
+            echo skipped > backup/files.txt
+            exit 0
+          fi
+          echo "::add-mask::$SERVICE_KEY"
+          set -e
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          SERVICE_KEY="$SERVICE_KEY" SUPABASE_URL="https://$PROJECT_REF.supabase.co" \
+            bash scripts/db-backup.sh files "postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres" backup
+          bash scripts/db-backup.sh checkfiles backup
       - name: Restore into an empty database and compare
         run: bash scripts/db-backup.sh verify "postgresql://postgres:restore@localhost:5433/postgres" backup
       - id: day
