@@ -2225,6 +2225,12 @@ duas/reflections section in Me.
       name rises in as one piece, fly-out. No filters, rays, motes, rings, bursts or per-letter name; the overlay fades
       only in its last 0.28 s (an opacity animation on it for the whole show made the GPU redraw the full screen every
       frame). Set-up at 6× CPU ~400 → ~55 ms
+      Still lagging → **native splash instead** (2026-11-14): while the app starts, the WebView's GPU is busy drawing the
+      first page, so any opening drawn by the page stutters on a weak phone. The web show is gone (`openingShow.ts`,
+      `opening.css`, `.app-opening` removed); in the app Android's own splash (the launcher icon on `splash_background`,
+      core-splashscreen in `AppActivity.java`) stays until the first screen is drawn (`playOpening()` → `LaunchPlugin.ready`,
+      ≤ 3.5 s; the splash itself lets go after 4 s), then leaves with a native animation (icon swells and fades, splash
+      fades, ~0.4 s). The web build shows the page at once
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)

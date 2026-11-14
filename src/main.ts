@@ -27,7 +27,7 @@ import { setupOffline } from './offline';
 import { isNative } from './native';
 import { initI18n, t } from './i18n';
 import { applyTheme } from './ui/theme';
-import { applyLite, liteMode } from './lite';
+import { applyLite } from './lite';
 import { initErrors } from './errors';
 import { initUsage, markRoute } from './usage';
 import { showSurahList } from './ui/surahList';
@@ -145,11 +145,11 @@ initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (launch) history.replaceState(null, '', lastRead());
-// A launch (not a shared link) opens with the character arriving (src/ui/opening.ts) once the first page is up;
-// the start-up extras below wait until it is over, so they never make it stutter.
+// In the app the system splash (the launcher icon) stays until the first screen is drawn, then leaves with a
+// native animation (src/ui/opening.ts, AppActivity.java); the start-up extras below wait until it has gone.
 let firstUp = () => {};
 const firstScreen = new Promise<void>((r) => { firstUp = r; });
-const opening = launch && !liteMode() ? playOpening(firstScreen) : Promise.resolve();
+const opening = playOpening(firstScreen);
 
 window.addEventListener('hashchange', route);
 // Everything below the first screen waits until that screen is up (and the phone has a quiet moment),
