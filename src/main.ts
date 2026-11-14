@@ -173,6 +173,8 @@ document.addEventListener('visibilitychange', markOpen);
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
 later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
 later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
+// The onboarding's language screen reloads the app in the language picked; carry on where it was.
+try { if (sessionStorage.getItem('obResume')) void import('./ui/onboard').then((m) => setTimeout(() => m.openOnboarding(true), 500)); } catch { /* private */ }
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder

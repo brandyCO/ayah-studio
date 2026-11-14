@@ -6,7 +6,7 @@
 import './onboard.css';
 import { choosePace, goals, needsPace, type Pace } from '../data/goals';
 import { fe, type FrontKey } from '../i18n/front';
-import { t, type Key } from '../i18n';
+import { lang, LANGS, setLang, t, type Key } from '../i18n';
 import { actor, myFigureCode, type Actor } from './actor';
 import { h, haptic } from './dom';
 import { DEFAULT, encode, normalize } from './figure';
@@ -16,20 +16,23 @@ import { icon } from './icons';
 import { sfx } from './sfx';
 import { paceLine, saveWhy, tailor, WHY_IC, WHYS, type Why } from './firstSteps';
 
-type Screen = 'hi' | 'few' | 'why' | 'react' | 'pace' | 'done';
+type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pace' | 'done';
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Shows the flow (once: nothing when both questions were answered before). */
-export function openOnboarding() {
+/** Shows the flow (once: nothing when both questions were answered before). `resumed`: back after the
+ *  language screen reloaded the app in the language picked. */
+export function openOnboarding(resumed = false) {
+  try { sessionStorage.removeItem('obResume'); } catch { /* private */ }
   let asked = false;
   try { asked = localStorage.getItem('whyHere') !== null; } catch { /* private */ }
   const pace = needsPace();
   if (asked && !pace) return;
   if (document.querySelector('.ob')) return;
-  const screens: Screen[] = asked ? ['hi', 'pace', 'done'] : pace ? ['hi', 'few', 'why', 'react', 'pace', 'done'] : ['hi', 'why', 'react'];
+  const screens: Screen[] = asked ? ['hi', 'pace', 'done'] : pace ? ['lang', 'hi', 'few', 'why', 'react', 'pace', 'done'] : ['lang', 'hi', 'why', 'react'];
   const picked = new Set<Why>();
   let chosen: Pace | null = null;
-  let i = 0;
+  let i = resumed && screens[0] === 'lang' ? 1 : 0;
+  let tongue = lang();
   let typing = 0;
 
   const code = myFigureCode() ?? encode(normalize({ ...DEFAULT, face: 1 }));
@@ -77,17 +80,29 @@ export function openOnboarding() {
   function draw(dir = 1) {
     const s = screens[i];
     bar.style.width = `${Math.round(((i + 1) / screens.length) * 100)}%`;
-    back.style.visibility = i ? 'visible' : 'hidden';
+    back.style.visibility = i && !(resumed && i === 1) ? 'visible' : 'hidden';
     skip.style.visibility = s === 'why' || s === 'pace' ? 'visible' : 'hidden';
     const bubble = h('p', { class: 'ob-say' });
-    const ask = s === 'why' || s === 'pace';
+    const ask = s === 'why' || s === 'pace' || s === 'lang';
     const a = who(!ask);
     const body: HTMLElement[] = [];
     let line = '';
     let flameEl: HTMLElement | null = null;
     go.textContent = fe('why.go');
     go.disabled = false;
-    if (s === 'hi') line = fe('ob.hi');
+    if (s === 'lang') {
+      // Asked in both languages at once, before anything else is read.
+      line = '';
+      const opts = LANGS.map((l) => opt(`l-${l.id}`, l.id === tongue, [
+        h('span', { class: 'ob-ic ob-lang', 'aria-hidden': 'true' }, l.id === 'ar' ? 'ع' : 'En'),
+        h('span', { class: 'ob-txt' }, h('b', { lang: l.id }, l.name)),
+        h('span', { class: 'ob-tick', 'aria-hidden': 'true' }, icon('check', 16))], () => {
+        tongue = l.id;
+        opts.forEach((o, k) => { const on = LANGS[k].id === l.id; o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
+        sfx.pop(1); a?.hop(0.25); haptic(8);
+      }));
+      body.push(h('div', { class: 'ob-list' }, ...opts));
+    } else if (s === 'hi') line = fe('ob.hi');
     else if (s === 'few') line = fe('ob.few');
     else if (s === 'react') line = picked.size > 1 ? fe('ob.many') : picked.size ? fe(`ob.${[...picked][0]}` as FrontKey) : fe('ob.none');
     else if (s === 'why') {
@@ -137,7 +152,10 @@ export function openOnboarding() {
       page.animate([{ opacity: 0, translate: `${48 * x}px 0` }, { opacity: 1, translate: '0 0' }], { duration: 360, delay: 120, easing: 'cubic-bezier(.2,.9,.3,1.15)', fill: 'backwards' });
     } else old?.remove();
     stage.append(page);
-    say(bubble, line, a);
+    if (s === 'lang') {
+      bubble.append(h('span', { class: 'ob-two', lang: 'en', dir: 'ltr' }, 'Which language?'), h('span', { class: 'ob-two', lang: 'ar', dir: 'rtl' }, 'أي لغة تفضّل؟'));
+      a?.face('happy', 1200);
+    } else say(bubble, line, a);
     if (s === 'hi') setTimeout(() => a?.wave(2400), 380);
     else if (s === 'react') setTimeout(() => a?.cheer(1700), 420);
     else if (s === 'done') setTimeout(() => { a?.cheer(2200); sfx.shimmer(); }, 420);
@@ -155,6 +173,12 @@ export function openOnboarding() {
   };
   const next = () => {
     const s = screens[i];
+    if (s === 'lang' && tongue !== lang()) {
+      // The whole app changes language: reload in it and carry on from hello.
+      try { sessionStorage.setItem('obResume', '1'); } catch { /* private */ }
+      setLang(tongue);
+      return;
+    }
     if (s === 'why') saveWhy([...picked]);
     if (s === 'pace' && chosen) { choosePace(chosen); tailor(asked ? whyNow() : [...picked]); }
     haptic(12);
@@ -164,14 +188,15 @@ export function openOnboarding() {
     draw(1);
   };
   go.onclick = next;
-  back.onclick = () => { if (i > 0) { i--; draw(-1); } };
+  const canBack = () => i > 0 && !(resumed && i === 1);
+  back.onclick = () => { if (canBack()) { i--; draw(-1); } };
   skip.onclick = () => {
     const s = screens[i];
     if (s === 'why') { picked.clear(); saveWhy([]); i++; draw(1); return; }
     finish(); // pace: "later", as before (Me asks again)
   };
   // Android back / Esc steps back a screen; on the first it closes.
-  d.addEventListener('cancel', (e) => { e.preventDefault(); if (i > 0) { i--; draw(-1); } else finish(); });
+  d.addEventListener('cancel', (e) => { e.preventDefault(); if (canBack()) { i--; draw(-1); } else finish(); });
   d.addEventListener('close', () => {
     if (screens[i] === 'why' && !asked) saveWhy([...picked]);
     d.remove();
