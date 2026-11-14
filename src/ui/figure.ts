@@ -183,7 +183,10 @@ function robeBody(f: Fig): string {
   const sit = f.pose === 1;
   const hem = sit ? 214 : 240;
   let s = '';
-  const robe = `M66 150Q100 140 134 150Q150 158 152 180L160 ${hem - 8}Q161 ${hem + 2} 150 ${hem + 2}H50Q39 ${hem + 2} 40 ${hem - 8}L48 180Q50 158 66 150Z`;
+  // Premium pass 2026-11-14: rounded shoulders, a soft waist, a gentle flare and a hem that curves with the body.
+  const robe = `M68 149Q100 140 132 149Q150 154 152 174Q153 188 150 198Q153 ${hem - 22} 157 ${hem - 6}Q159 ${hem + 2} 149 ${hem + 2}Q100 ${hem + 8} 51 ${hem + 2}Q41 ${hem + 2} 43 ${hem - 6}Q47 ${hem - 22} 50 198Q47 188 48 174Q50 154 68 149Z`;
+  // Shoes peeking out under the hem, so the character stands on the ground.
+  if (!sit) s += [82, 118].map((x) => { const o = x < 100 ? -1 : 1; return S(`M${x - 12 + o * 3} ${hem + 9}Q${x - 11 + o * 3} ${hem} ${x + o * 3} ${hem}Q${x + 12 + o * 3} ${hem} ${x + 13 + o * 3} ${hem + 9}Q${x + o * 3} ${hem + 13} ${x - 12 + o * 3} ${hem + 9}Z`, '#4a3428', '#2a1c14', -2, -2); }).join('');
   if (f.outfit === 6 && female(f.body)) {
     // The champion's abaya: black with wide gold bands.
     if (sit) s += S('M40 224Q100 196 160 224Q166 240 150 242H50Q34 240 40 224Z', '#2a2d38', '#15171e');
@@ -213,6 +216,8 @@ function robeBody(f: Fig): string {
   s += S(robe, c[0], c[1], -8, -4) + folds(robe, c[1], hem) + pattern(f, robe, c, hem);
   if (outfit === 3 || outfit === 4) s += `<path d="${robe}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2.5"/>`;
   s += shine('M58 168Q60 156 72 152', 4, 0.18);
+  // A thobe's stand collar.
+  if (outfit === 0) s += S('M82 147Q100 153 118 147L119 156Q100 162 81 156Z', c[0], c[1], -1.5, -2);
   if (outfit === 0) s += `<path d="M100 150v42" stroke="${c[1]}" stroke-width="3" stroke-linecap="round"/>${[160, 172, 184].map((y) => `<circle cx="100" cy="${y}" r="2.6" fill="${c[1]}"/>`).join('')}`;
   if (outfit === 1) {
     // Kurta with a vest over it (a Light part, 2026-11-13 richer): a placket of small buttons, the vest edged in gold
@@ -744,6 +749,8 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   const fr = covered ? 33 : 44, fy = covered ? hy + 8 : hy;
   // The face (cute pass 2026-11-14): a little wider at the cheeks, softly shaded, ears with a warm inner curve.
   const soft = mix(sk[0], sk[1], .62);
+  // A neck under an uncovered face, in the shade the chin casts.
+  if (!covered && f.head !== 2) s += S(`M88 ${fy + 26}H112V${fy + 46}Q100 ${fy + 51} 88 ${fy + 46}Z`, mix(sk[0], sk[1], .45), sk[1], -3, 4);
   if (!covered && f.head !== 2) s += S(circ(hx - fr + 1, fy + 8, 8.5), sk[0], soft, -2, -2) + S(circ(hx + fr - 1, fy + 8, 8.5), sk[0], soft, -2, -2)
     + `<path d="M${hx - fr} ${fy + 5}q2.6 3.6 0 7M${hx + fr} ${fy + 5}q-2.6 3.6 0 7" stroke="${sk[1]}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
   const face = `M${hx - fr} ${fy}C${hx - fr} ${fy - fr * .58} ${hx - fr * .56} ${fy - fr} ${hx} ${fy - fr}C${hx + fr * .56} ${fy - fr} ${hx + fr} ${fy - fr * .58} ${hx + fr} ${fy}`
