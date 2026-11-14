@@ -6,6 +6,7 @@
 // other ayah stays in Ayah mode (rule 8).
 import { Capacitor } from '@capacitor/core';
 import { PUBLIC_URL } from '../cloud/config';
+import { FILES } from '../net';
 import { hasAlignedWords, wordsKey, type Reciter } from './reciters';
 
 export type AyahWords = [number, number, number][];
@@ -30,14 +31,16 @@ export function alignedWords(r: Reciter, surah: number): Promise<Record<string, 
 const WORDS_CACHE = 'words';
 
 /** Web: the bundled file. Android app: the word times (~34 MB in all) are left out of the APK, so they come
- *  from the Pages site on first use and are kept in Cache Storage (newest 1500 surahs: favourite reciters' too) for offline reels. */
+ *  from Cloudflare (else the Pages site) on first use and are kept in Cache Storage (newest 1500 surahs: favourite reciters' too) for offline reels. */
 async function wordsFile(path: string): Promise<Response> {
   if (!Capacitor.isNativePlatform()) return fetch(path);
   const url = PUBLIC_URL + path.replace(/^\.\//, '');
   const cache = await caches.open(WORDS_CACHE);
   const hit = await cache.match(url);
   if (hit) return hit;
-  const res = await fetch(url);
+  // Cloudflare first (no bandwidth limit), the Pages site when it does not answer; kept under the site's address.
+  const viaFiles = FILES ? await fetch(`${FILES}/${path.replace(/^\.\//, '')}`).catch(() => null) : null;
+  const res = viaFiles?.ok ? viaFiles : await fetch(url);
   if (!res.ok) return res;
   await cache.put(url, res.clone());
   const keys = await cache.keys();

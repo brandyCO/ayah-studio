@@ -5,6 +5,16 @@
 /** The edge proxy (Cloudflare Worker); empty in builds without one. */
 export const EDGE = (import.meta.env.VITE_PIXABAY_PROXY ?? '').replace(/\/+$/, '');
 
+/**
+ * Where the big static files (mushaf page fonts, word timings) come from: the Cloudflare worker
+ * `ayah-studio-files` (files/wrangler.toml), which has no bandwidth limit, beside the edge proxy on the same
+ * workers.dev address (or `VITE_FILES_URL`). Empty when unknown: then everything comes from the Pages site.
+ * Every caller falls back to the Pages site when it does not answer.
+ */
+export const FILES = (import.meta.env.VITE_FILES_URL
+  || EDGE.replace(/^https:\/\/ayah-studio-pixabay\.([a-z0-9-]+\.workers\.dev)$/, 'https://ayah-studio-files.$1')
+  .replace(/^(?!https:\/\/ayah-studio-files\.).*$/, '')).replace(/\/+$/, '');
+
 /** A random id for this install (shared with sync's device id). Nothing about the person. */
 export function installId(): string {
   try {
@@ -31,8 +41,10 @@ export interface RemoteConfig {
   mushafDownload: boolean;
   /** Least minutes between two sync rounds started by returning to the app. */
   syncMinutes: number;
+  /** Ranks asks the edge for its league's fingerprint (one database read per league, not per player). */
+  leaguePulse: boolean;
 }
-const DEFAULTS: RemoteConfig = { stock: true, popular: true, mushafDownload: true, syncMinutes: 1 };
+const DEFAULTS: RemoteConfig = { stock: true, popular: true, mushafDownload: true, syncMinutes: 1, leaguePulse: true };
 const KEY = 'remoteConfig';
 const TTL = 3600e3;
 
@@ -63,7 +75,7 @@ export function remoteConfig(): Promise<RemoteConfig> {
 function clean(v: Partial<RemoteConfig> | null): RemoteConfig {
   const o = { ...DEFAULTS };
   if (v && typeof v === 'object') {
-    for (const k of ['stock', 'popular', 'mushafDownload'] as const) if (typeof v[k] === 'boolean') o[k] = v[k];
+    for (const k of ['stock', 'popular', 'mushafDownload', 'leaguePulse'] as const) if (typeof v[k] === 'boolean') o[k] = v[k];
     if (typeof v.syncMinutes === 'number' && v.syncMinutes >= 0 && v.syncMinutes <= 120) o.syncMinutes = v.syncMinutes;
   }
   return o;

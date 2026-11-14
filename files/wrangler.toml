@@ -1,0 +1,11 @@
+# The app's big static files (mushaf page fonts and word timings) served by Cloudflare, so the GitHub Pages
+# site never runs into its monthly bandwidth limit. Assets only (no code): requests to static assets are free
+# and unlimited on Cloudflare's free plan. Deployed by .github/workflows/files.yml, which first copies
+# public/fonts and public/data/words into site/.
+name = "ayah-studio-files"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[assets]
+directory = "./site"
+not_found_handling = "none"

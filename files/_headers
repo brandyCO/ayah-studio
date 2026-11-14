@@ -1,0 +1,7 @@
+/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff
+/fonts/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=2592000

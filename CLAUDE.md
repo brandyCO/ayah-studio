@@ -769,6 +769,16 @@ Pro and a load test come later, when the owner decides to pay).
       the app; until the pack is in, a page waits on a "Preparing your mushaf" card (`src/ui/mushafPrep.ts`, progress, Wi-Fi →
       "Download on mobile data") while that page alone comes from the site (`src/data/fontPack.ts`); test APKs keep every font
       (migration `20261114400000_round4_storage_streaks.sql`, pgTAP `round4.test.sql` 16)
+- [x] Round 5 (owner "yes to all 3", 2026-11-14): the mushaf page fonts and word timings come from Cloudflare (worker
+      `ayah-studio-files`, static assets only: free, no bandwidth limit; `files/`, deployed by `.github/workflows/files.yml`
+      with the proxy's Cloudflare secrets), so GitHub Pages' ~100 GB a month is never reached; `FILES` in `src/net.ts` (beside
+      the proxy's workers.dev address, or `VITE_FILES_URL`), used by the service worker (`sw.js?files=…`: fetched there, kept
+      under the site's own address, the site when Cloudflare fails), the Play pack's site fallback and the app's word files.
+      The nightly backup lists the slowest database calls (`pg_stat_statements`) and opens an issue "Slow: …" for one over
+      300 ms on average. Ranks' fingerprint in two parts: `rank_my_pulse(d)` (own row + league id, about once a minute and after
+      each report) and `rank_league_pulse(lg, d)` through the proxy (`GET /lp`, kept 8 s per league, switch `leaguePulse`), so
+      a league watching costs ~1 read every 8 s instead of one per player; any failure falls back to `rank_pulse`
+      (migration `20261114500000_round5_league_pulse.sql`, pgTAP `round5.test.sql` 10)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);

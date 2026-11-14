@@ -10,6 +10,7 @@ import { addDays, allDays, claimGoal, earnedBadges, streak, todayRec } from '../
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
+import { EDGE, installId, remoteConfig } from '../net';
 import { isFireDay, isFriendFireDay } from '../data/fireDays';
 import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 
@@ -100,6 +101,7 @@ export async function report(now = false): Promise<void> {
       // Flawless lessons: 10 extra XP each (rank_flawless; an older server without it is skipped).
       if (v.flawless) await rpc('rank_flawless', { d: k, n: v.flawless }).catch(() => undefined);
       sent[k] = sig;
+      ownPulse = null; // my own part of the league fingerprint has changed: ask again
       if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
     // The lamp of Light by the name (sent when it changes).
@@ -227,7 +229,28 @@ export async function refreshCached(live: (key: string) => boolean): Promise<boo
 }
 
 /** One short fingerprint of everything the league screen shows (null on an older server: then everything is asked). */
-export const rankPulse = () => rpc<string | null>('rank_pulse', { d: rankDay() }).catch(() => null);
+const fullPulse = () => rpc<string | null>('rank_pulse', { d: rankDay() }).catch(() => null);
+// Round 5: the fingerprint in two parts. My own part (and which league) from the database about once a minute and
+// after each report; the league's part through the edge proxy, which answers a whole league from one read every 8 s.
+// Any failure (no proxy, switched off, offline, an older server) falls back to the full pulse, so nothing is missed.
+let ownPulse: { p: string; l: string | null; d: string; u?: string; at: number } | null = null;
+export async function rankPulse(): Promise<string | null> {
+  const d = rankDay();
+  if (!EDGE || !(await remoteConfig()).leaguePulse) return fullPulse();
+  if (!ownPulse || ownPulse.d !== d || ownPulse.u !== account()?.id || Date.now() - ownPulse.at > 60_000) {
+    const m = await rpc<{ p: string; l: string | null } | null>('rank_my_pulse', { d }).catch(() => undefined);
+    if (m === undefined) return fullPulse();
+    if (m === null) return null;
+    ownPulse = { ...m, d, u: account()?.id, at: Date.now() };
+  }
+  if (!ownPulse.l) return ownPulse.p;
+  try {
+    const r = await fetch(`${EDGE}/lp?l=${encodeURIComponent(ownPulse.l)}&d=${d}&i=${encodeURIComponent(installId())}`);
+    const lp = r.ok ? ((await r.json()) as { p?: string | null }).p : undefined;
+    if (typeof lp === 'string') return `${ownPulse.p}:${lp}`;
+  } catch { /* the proxy did not answer: ask the database */ }
+  return fullPulse();
+}
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: rankDay() });
   if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }

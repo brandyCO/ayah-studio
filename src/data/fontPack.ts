@@ -7,6 +7,7 @@
 
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { PUBLIC_URL } from '../cloud/config';
+import { FILES } from '../net';
 
 export interface PackState {
   /** completed · pending · downloading · transferring · wifi · confirm · failed · canceled · missing · unknown */
@@ -90,13 +91,14 @@ async function loadFace(family: string, url: string): Promise<boolean> {
 export async function loadPackFont(page: number, family: string): Promise<void> {
   start();
   const fromPack = () => Capacitor.convertFileSrc(`${state.path}/qcf-v2/p${page}.woff2`);
-  const fromSite = `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`;
+  // Cloudflare first (no bandwidth limit), the Pages site when it does not answer.
+  const sites = [FILES && `${FILES}/fonts/qcf-v2/p${page}.woff2`, `${PUBLIC_URL}fonts/qcf-v2/p${page}.woff2`].filter(Boolean);
   // The pack about to land: wait a moment for it rather than fetch the page twice.
   const nearly = state.state === 'transferring' || (!!state.total && (state.done ?? 0) / state.total > 0.9);
   if (!state.path && nearly) await nextChance(1200);
   for (let wait = 2000; ; wait = Math.min(wait * 2, 30000)) {
     if (state.path && (await loadFace(family, fromPack()))) return;
-    if (navigator.onLine !== false && (await loadFace(family, fromSite))) return;
+    if (navigator.onLine !== false) for (const u of sites) if (await loadFace(family, u)) return;
     await nextChance(wait);
   }
 }

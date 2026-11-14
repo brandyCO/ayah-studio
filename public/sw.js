@@ -14,6 +14,11 @@ const MAX_APP_FILES = 80;
 const MAX_PAGE_FONTS = 700; // mushaf page fonts (~150 KB each): all 604 are kept (the app downloads the whole mushaf)
 const MAX_NET = 120; // recitation timings answers
 const SCOPE = new URL(self.registration.scope);
+// The big files (page fonts, word timings) are fetched from Cloudflare (sw.js?files=…, see src/net.ts FILES)
+// and kept under their own address on this site, so a copy kept before is found either way; the site itself
+// answers when Cloudflare does not.
+const FILES = (() => { try { const u = new URL(new URL(self.location.href).searchParams.get('files') || ''); return u.protocol === 'https:' ? u.href.replace(/\/+$/, '') : ''; } catch { return ''; } })();
+const BIG = (path) => path.startsWith('fonts/qcf-v2/') || path.startsWith('data/words/');
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -60,6 +65,7 @@ self.addEventListener('fetch', (event) => {
       return event.respondWith(networkFirst(APP, req, SCOPE.href, 800));
     }
     if (path.startsWith('assets/')) return event.respondWith(cacheFirst(APP, req));
+    if (FILES && BIG(path)) return event.respondWith(bigFile(req, path));
     if (path.startsWith('data/') || path.startsWith('fonts/') || path.startsWith('backgrounds/')) {
       return event.respondWith(cacheFirst(STATIC, req, path.startsWith('data/')));
     }
@@ -88,6 +94,27 @@ async function cacheFirst(name, req, onePerPath = false) {
       await cache.put(req, copy);
       if (name === APP) await trim(cache, MAX_APP_FILES);
       else if (new URL(req.url).pathname.includes('/fonts/qcf-v2/')) await trim(cache, MAX_PAGE_FONTS, '/fonts/qcf-v2/');
+    })();
+  }
+  return res;
+}
+
+/** A page font or word-timings file: the kept copy, else Cloudflare, else this site. Kept under this site's address. */
+async function bigFile(req, path) {
+  const cache = await caches.open(STATIC);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  let res = null;
+  try {
+    const r = await fetch(`${FILES}/${path}`, { mode: 'cors', credentials: 'omit', priority: req.priority });
+    if (r.ok && r.status === 200) res = r;
+  } catch { /* Cloudflare unreachable: the site below */ }
+  res ??= await fetch(req);
+  if (res.ok && res.status === 200) {
+    const copy = res.clone();
+    void (async () => {
+      await cache.put(req, copy);
+      if (path.startsWith('fonts/qcf-v2/')) await trim(cache, MAX_PAGE_FONTS, '/fonts/qcf-v2/');
     })();
   }
   return res;
