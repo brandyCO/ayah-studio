@@ -109,8 +109,25 @@ jobs:
         if: always()
         with: { name: 'k6-${{ matrix.shard }}', path: 'summary-*.json', retention-days: 30 }
 
+  watch:
+    # What the staging database does while the virtual players run: connections, waits, the longest query.
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find the staging database
+        run: bash scripts/launchtest/find-db.sh
+      - name: Watch it for 13 minutes
+        run: |
+          end=$(( $(date +%s) + 780 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            psql "$DB" -X -qtA -F ' | ' -f scripts/launchtest/watch.sql 2>&1 | tail -1 || true
+            sleep 10
+          done
+
   report:
-    needs: [prepare, k6]
+    needs: [prepare, k6, watch]
     if: always() && needs.prepare.result == 'success'
     runs-on: ubuntu-latest
     steps:
@@ -133,4 +150,4 @@ jobs:
             psql "$DB" -X -P pager=off -c "select pg_size_pretty(pg_database_size(current_database())) as database_size,
               (select count(*) from pg_stat_activity) as connections_now"
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
