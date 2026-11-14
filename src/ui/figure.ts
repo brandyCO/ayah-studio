@@ -322,7 +322,9 @@ function ummah(f: Fig, robe: string, hem: number, sit: boolean): string {
 /** Soft folds on a robe (cute pass 2026-11-14): two drapes from the chest to the hem, a fold at each elbow,
  *  a light rim down the lit side and a shadow under the chin, all clipped to the cloth. */
 function folds(robe: string, dark: string, hem: number): string {
-  return clipped(robe, `<g fill="none" stroke="${dark}" stroke-linecap="round" opacity=".42">`
+  const g = `fg${++uid}`;
+  return clipped(robe, `<linearGradient id="${g}" x1="0" y1="0" x2=".7" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".16"/></linearGradient><rect x="30" y="140" width="140" height="112" fill="url(#${g})"/>`
+    + `<g fill="none" stroke="${dark}" stroke-linecap="round" opacity=".42">`
     + `<path d="M78 176Q74 206 70 ${hem - 6}" stroke-width="2.6"/><path d="M124 178Q128 208 132 ${hem - 6}" stroke-width="2.6"/>`
     + `<path d="M58 196q6 4 12 2M142 196q-6 4 -12 2" stroke-width="2"/></g>`
     + `<path d="M50 ${hem - 4}L46 186Q48 162 62 154" stroke="#fff" stroke-width="3" fill="none" opacity=".16" stroke-linecap="round"/>`
@@ -590,35 +592,37 @@ function mix(a: string, b: string, t: number): string {
   return `#${x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 }
 /** A glossy eye (2026-11-14 cute pass): deep brown with a warm glow underneath, a big catch light and a sparkle. */
-function glossy(x: number, ey: number, rx: number, ry: number): string {
-  return `<ellipse cx="${x}" cy="${ey}" rx="${rx}" ry="${ry}" fill="${DARK}"/>`
+function glossy(x: number, ey: number, rx: number, ry: number, lid = true): string {
+  return (lid ? `<path d="M${x - rx - 1} ${(ey - ry * .1).toFixed(2)}Q${x - rx * .2} ${(ey - ry - 2.6).toFixed(2)} ${x + rx + 1.2} ${(ey - ry * .3).toFixed(2)}" stroke="${DARK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` : '') + `<ellipse cx="${x}" cy="${ey}" rx="${rx}" ry="${ry}" fill="${DARK}"/>`
     + `<ellipse cx="${x}" cy="${(ey + ry * .4).toFixed(2)}" rx="${(rx * .7).toFixed(2)}" ry="${(ry * .4).toFixed(2)}" fill="${IRIS}" opacity=".95"/>`
     + `<ellipse cx="${(x + rx * .26).toFixed(2)}" cy="${(ey - ry * .32).toFixed(2)}" rx="${(rx * .44).toFixed(2)}" ry="${(ry * .38).toFixed(2)}" fill="#fff"/>`
     + `<circle cx="${(x - rx * .36).toFixed(2)}" cy="${(ey + ry * .34).toFixed(2)}" r="${(rx * .2).toFixed(2)}" fill="#fff" opacity=".9"/>`;
 }
 /** Eyes: a kind from the face (0 round, 1 almond, 2 big, 3 lashes, 4 smiling) or an expression's. */
-function eyes(kind: number | Xp, ey: number, sk: Pair, older: boolean): string {
+function eyes(kind: number | Xp, ey: number, sk: Pair, older: boolean, young: boolean): string {
   const at = [82, 118];
+  // Grown-ups get finer eyes under a lid line; children rounder, brighter ones.
+  const k = young ? 1.06 : .9;
   const arc = (x: number, up: boolean, w = 3.8) => `<path d="M${x - 7} ${ey + (up ? 2.5 : -1)}Q${x} ${ey + (up ? -6.5 : 5.5)} ${x + 7} ${ey + (up ? 2.5 : -1)}" stroke="${DARK}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
   const lash = (x: number, o: number, up = true) => `<path d="M${x + 5.6 * o} ${ey + (up ? -4.6 : 1)}q${2.6 * o} ${up ? -1.4 : 1} ${4 * o} ${up ? -3.6 : 2.4}" stroke="${DARK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
   let s = '';
   if (kind === 'happy' || kind === 'proud' || kind === 4) s = at.map((x, i) => arc(x, true) + (kind === 4 ? lash(x, i ? 1 : -1, true) : '')).join('');
   else if (kind === 'sleepy') s = at.map((x) => arc(x, false, 3.2)).join('');
   else if (kind === 'calm') s = at.map((x, i) => `<path d="M${x - 7} ${ey}Q${x} ${ey + 6} ${x + 7} ${ey}" stroke="${DARK}" stroke-width="3.4" fill="none" stroke-linecap="round"/>` + lash(x, i ? 1 : -1, false)).join('');
-  else if (kind === 'wow') s = at.map((x) => glossy(x, ey, 6.8, 8.8)).join('');
+  else if (kind === 'wow') s = at.map((x) => glossy(x, ey, 6.8 * k, 8.8 * k, false)).join('');
   else if (kind === 'star') s = at.map((x) => `<path d="${star4(x, ey, 8.6)}" fill="#ffc533" stroke="#b8860b" stroke-width="1.2" stroke-linejoin="round"/><circle cx="${x - 2}" cy="${ey - 2.4}" r="1.6" fill="#fff"/>`).join('');
   else if (kind === 1) s = at.map((x, i) => {
     // Almond: a slightly narrower eye under a lid line that flicks up at the outer corner.
     const o = i ? 1 : -1;
-    return glossy(x, ey + .6, 6.4, 6.6) + `<path d="M${x - 7.4 * o} ${ey - 1}Q${x} ${ey - 9} ${x + 7.6 * o} ${ey - 3.6}l${2.4 * o} -1.6" stroke="${DARK}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    return glossy(x, ey + .6, 6.4 * k, 6.6 * k, false) + `<path d="M${x - 7.4 * o} ${ey - 1}Q${x} ${ey - 9} ${x + 7.6 * o} ${ey - 3.6}l${2.4 * o} -1.6" stroke="${DARK}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
   }).join('');
-  else if (kind === 2) s = at.map((x) => glossy(x, ey, 7.6, 9.2)).join('');
+  else if (kind === 2) s = at.map((x) => glossy(x, ey, 7.2 * k, 8.8 * k, !young)).join('');
   else if (kind === 3) s = at.map((x, i) => {
     const o = i ? 1 : -1;
-    return glossy(x, ey, 6.2, 7.8) + `<path d="M${x - 6.6 * o} ${ey - 4}Q${x} ${ey - 10.2} ${x + 6.8 * o} ${ey - 4.6}" stroke="${DARK}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`
+    return glossy(x, ey, 6.2 * k, 7.8 * k, false) + `<path d="M${x - 6.6 * o} ${ey - 4}Q${x} ${ey - 10.2} ${x + 6.8 * o} ${ey - 4.6}" stroke="${DARK}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`
       + `<path d="M${x + 6 * o} ${ey - 5}q${2.8 * o} -1 ${4.4 * o} -3.8M${x + 6.8 * o} ${ey - 1.8}q${3 * o} -.4 ${4.8 * o} -2.4" stroke="${DARK}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
   }).join('');
-  else s = at.map((x) => glossy(x, ey, 6.2, 7.8)).join('');
+  else s = at.map((x) => glossy(x, ey, 6.2 * k, 7.8 * k, !young)).join('');
   // Smile lines at the outer corners for an older face.
   if (older) s += at.map((x, i) => { const o = i ? 1 : -1; return `<path d="M${x + 10 * o} ${ey - 2.6}q${3 * o} 2.6 0 5.6" stroke="${sk[1]}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".9"/>`; }).join('');
   return s;
@@ -637,7 +641,7 @@ function brows(kind: number, ey: number, col: string, xp: Xp | null): string {
   }).join('');
 }
 /** Mouths: 0 smile, 1 open grin, 2 soft, 3 cheeky; or an expression's. */
-function mouth(kind: number | Xp, my: number, beard: boolean): string {
+function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): string {
   const lip = beard ? '#f3b9a6' : '#7a3222';
   const ring = (d: string) => beard ? `<path d="${d}" fill="none" stroke="${lip}" stroke-width="1.6"/>` : '';
   // An open smile: a soft D with a little tongue, teeth only on a big grin.
@@ -651,20 +655,23 @@ function mouth(kind: number | Xp, my: number, beard: boolean): string {
   if (kind === 'proud') return `<path d="M88 ${my}Q100 ${my + 10} 112 ${my}" stroke="${lip}" stroke-width="3.4" fill="none" stroke-linecap="round"/><path d="M87 ${my - 2}q-1.6 2 0 4M113 ${my - 2}q1.6 2 0 4" stroke="${lip}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
   if (kind === 'calm' || kind === 2) return `<path d="M94 ${my + 1}Q100 ${my + 5.4} 106 ${my + 1}" stroke="${lip}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
   if (kind === 3) return `<path d="M92 ${my + 1.4}Q101 ${my + 7} 109 ${my - 1.6}" stroke="${lip}" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M108 ${my - 3}q2 1 1.4 3" stroke="${lip}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
-  return open(7, 7, false);
+  if (young) return open(7, 7, false);
+  // A grown-up's smile: a fine curve with the soft shade of the lower lip under it.
+  return `<path d="M90 ${my}Q100 ${my + 7.5} 110 ${my}" stroke="${lip}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    + (beard ? '' : `<path d="M95 ${my + 6.4}Q100 ${my + 8.4} 105 ${my + 6.4}" stroke="#c4605a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".35"/>`);
 }
 /** The face's features for one expression (null = the face as built). */
 function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   const sk = SKIN[f.skin];
   const niqab = f.head === 5, beard = f.beard >= 2;
-  const older = f.age === 1;
+  const older = f.age === 1, young = kid(f);
   const col = older ? '#b9bcc2' : HAIR[f.hairC][1];
   let s = '';
   // Cheeks: 0 as before (a blush without a beard), 1 none, 2 blush, 3 freckles, 4 both. Happy faces blush more.
   const cx = Math.min(27, fr - 12);
   const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || xp === 'happy' || xp === 'proud' || xp === 'star';
   const pink = mix(sk[0], '#ff5a6e', .55);
-  if (blush && !niqab) s += [100 - cx, 100 + cx].map((x) => `<ellipse cx="${x}" cy="${ey + 11}" rx="8" ry="5" fill="${pink}" opacity="${xp ? .5 : .38}"/><ellipse cx="${x}" cy="${ey + 11}" rx="4.6" ry="2.8" fill="${pink}" opacity=".35"/><circle cx="${x + 2.6}" cy="${ey + 9.4}" r="1.1" fill="#fff" opacity=".55"/>`).join('');
+  if (blush && !niqab) s += [100 - cx, 100 + cx].map((x) => `<ellipse cx="${x}" cy="${ey + 11}" rx="8" ry="5" fill="${pink}" opacity="${xp ? .5 : young ? .38 : .24}"/><ellipse cx="${x}" cy="${ey + 11}" rx="4.6" ry="2.8" fill="${pink}" opacity=".35"/><circle cx="${x + 2.6}" cy="${ey + 9.4}" r="1.1" fill="#fff" opacity=".55"/>`).join('');
   if ((f.cheeks === 3 || f.cheeks === 4) && !niqab) s += [100 - cx, 100 + cx].map((x) => [[-3, -1], [1, -2.4], [3.4, 1], [-1, 2]].map(([dx, dy]) => `<circle cx="${x + dx}" cy="${ey + 10 + dy}" r="1.15" fill="${sk[1]}"/>`).join('')).join('');
   if (!niqab) {
     // A small button nose with a touch of light, and smile folds for an older face.
@@ -672,12 +679,12 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
     if (older && !f.beard) s += `<path d="M84 ${ey + 12}Q81 ${ey + 18} 85 ${ey + 22}M116 ${ey + 12}Q119 ${ey + 18} 115 ${ey + 22}" stroke="${sk[1]}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".8"/>`;
   }
   const open = !xp || xp === 'wow';
-  const e = eyes(xp ?? f.eyes, ey, sk, older);
+  const e = eyes(xp ?? f.eyes, ey, sk, older, young);
   s += open ? `<g class="fg-eyes">${e}</g>` : e;
   s += brows(f.brows || (xp === 'wow' ? 1 : 0), ey, col, xp);
   if (!niqab) {
     if (f.beard) s += `<path d="M86 ${ey + 13}Q100 ${ey + 7} 114 ${ey + 13}Q108 ${ey + 16.4} 100 ${ey + 13.6}Q92 ${ey + 16.4} 86 ${ey + 13}Z" fill="${HAIR[f.hairC][1]}"/>`;
-    s += mouth(xp ?? f.mouth, ey + (f.beard ? 18 : 15), beard);
+    s += mouth(xp ?? f.mouth, ey + (f.beard ? 18 : 15), beard, young);
   }
   return s;
 }
@@ -710,6 +717,8 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   const face = `M${hx - fr} ${fy}C${hx - fr} ${fy - fr * .58} ${hx - fr * .56} ${fy - fr} ${hx} ${fy - fr}C${hx + fr * .56} ${fy - fr} ${hx + fr} ${fy - fr * .58} ${hx + fr} ${fy}`
     + `C${hx + fr * 1.02} ${fy + fr * .62} ${hx + fr * .6} ${fy + fr * .98} ${hx} ${fy + fr * .98}C${hx - fr * .6} ${fy + fr * .98} ${hx - fr * 1.02} ${fy + fr * .62} ${hx - fr} ${fy}Z`;
   s += S(face, sk[0], soft, -5, -5);
+  // Light from behind on the far cheek, the hair's soft shadow on the forehead, the cloth's shadow round a covered face.
+  if (hairShows(f)) s += clipped(face, `<g transform="translate(1.5 4.5)" opacity=".13">${hairFront(f, hc).replace(/(fill|stroke)="#[0-9a-fA-F]{3,6}"/g, '$1="#3a1d10"')}</g>`);
   if (f.beard) s += beardOf(f);
   if (f.head === 5) s += S('M66 104H134Q138 146 100 152Q62 146 66 104Z', wc[0], wc[1], -5, -3) + `<path d="M66 104H134" stroke="${wc[1]}" stroke-width="2.5"/>`;
   const ey = fy + (f.head === 5 ? -3 : covered ? 2 : 8);
@@ -721,7 +730,7 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   if (f.glasses === 2) s += `<g fill="none" stroke="#1e2733" stroke-width="3.2"><rect x="68" y="${ey - 10}" width="27" height="20" rx="6"/><rect x="105" y="${ey - 10}" width="27" height="20" rx="6"/><path d="M95 ${ey - 2}h10"/></g>`;
   if (f.glasses === 3) s += `<g fill="none" stroke-width="3.4"><g stroke="#a8740f" transform="translate(.6 1.2)"><circle cx="82" cy="${ey}" r="13"/><circle cx="118" cy="${ey}" r="13"/><path d="M95 ${ey - 2}q5 -4 10 0"/></g><g stroke="#f2c14e"><circle cx="82" cy="${ey}" r="13"/><circle cx="118" cy="${ey}" r="13"/><path d="M95 ${ey - 2}q5 -4 10 0"/></g></g>`;
   if (f.glasses) s += `<path d="M74 ${ey - 6}l5 -3M110 ${ey - 6}l5 -3" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>`;
-  s += `<ellipse cx="${hx - fr * .42}" cy="${fy - fr * .5}" rx="${fr * .26}" ry="${fr * .14}" fill="#fff" opacity=".22" transform="rotate(-30 ${hx - fr * .42} ${fy - fr * .5})"/>`;
+  if (!hair) s += `<ellipse cx="${hx - fr * .42}" cy="${fy - fr * .5}" rx="${fr * .26}" ry="${fr * .14}" fill="#fff" opacity=".22" transform="rotate(-30 ${hx - fr * .42} ${fy - fr * .5})"/>`;
   if (hair) s += hairFront(f, hc);
   if (f.head === 1) s += S('M58 82Q58 42 100 42Q142 42 142 82Q100 72 58 82Z', wc[0], wc[1], -5, -4) + `<path d="M60 78Q100 68 140 78" stroke="${wc[1]}" stroke-width="3" fill="none"/>`
     + [0, 1, 2, 3, 4, 5, 6].map((i) => `<circle cx="${70 + i * 10}" cy="${62 + Math.abs(i - 3) * 2}" r="1.8" fill="${wc[1]}"/>`).join('');
@@ -749,7 +758,12 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
     s += S('M140 120Q154 150 124 168Q94 182 58 164Q60 156 68 154Q96 166 118 154Q134 142 134 122Z', wc[0], wc[1], -3, -3)
       + `<path d="M70 160Q98 172 120 158" stroke="${wc[1]}" stroke-width="2" fill="none" opacity=".6"/>`;
   }
-  if (covered) s += shine('M62 70Q80 50 100 48', 5, 0.2);
+  if (covered) {
+    // The cloth's drape: two soft folds down each side and a small pin under the chin.
+    s += `<g fill="none" stroke="${wc[1]}" stroke-linecap="round" opacity=".5"><path d="M58 80Q52 112 62 146" stroke-width="2.6"/><path d="M142 80Q148 112 138 146" stroke-width="2.6"/><path d="M66 60Q58 84 60 104" stroke-width="1.8"/></g>`
+      + shine('M62 70Q80 50 100 48', 5, 0.24);
+    if (f.head === 4 && wrap !== 2) s += `<circle cx="${hx + 18}" cy="${fy + 36}" r="3.2" fill="#a8740f"/><circle cx="${hx + 17.4}" cy="${fy + 35.2}" r="2.4" fill="#f2c14e"/><circle cx="${hx + 16.6}" cy="${fy + 34.4}" r=".9" fill="#fff"/>`;
+  }
   return s;
 }
 
@@ -832,7 +846,7 @@ function hairFront(f: Fig, hc: Pair): string {
       break;
     default:
       // 4 long, 5 bun, 10 braids, 11 ponytail: a fringe swept to one side.
-      s += S('M58 88Q60 50 100 50Q140 50 142 88Q120 62 96 70Q76 74 58 88Z', hc[0], hc[1], -4, -4) + strand('M70 70Q88 60 110 62') + strand('M66 80Q80 70 96 70', 1.6);
+      s += S('M54 96Q52 48 100 47Q148 48 146 96Q124 62 96 70Q74 74 54 96Z', hc[0], hc[1], -4, -4) + strand('M70 70Q88 60 110 62') + strand('M66 80Q80 70 96 70', 1.6);
   }
   // A glossy band of light across the hair.
   return s + `<path d="M66 70Q76 52 100 49Q118 48 128 54Q110 52 96 56Q78 60 66 70Z" fill="#fff" opacity=".26"/><path d="M110 51Q122 52 130 58" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".3"/>`;
