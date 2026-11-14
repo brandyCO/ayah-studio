@@ -502,6 +502,37 @@ def manifest():
     text = re.sub(re.escape(start) + '.*?' + re.escape(end), lambda _: new_start + aliases + end, text, flags=re.S)
     man.write_text(text)
 
+SPLASH_BG = '#5b3fbf'   # values/ic_launcher_background.xml splash_background: the sky of the default icon
+
+def splash():
+    """The launch screen (Duolingo-like, owner 2026-11-14): the default icon's marker, character and star alone on one
+    solid colour. Android 12+ draws windowSplashScreenAnimatedIcon on a 288 dp canvas and shows only its middle 192 dp
+    circle, so the whole front is fitted inside that circle. Writes drawable-{density}/splash_icon.webp."""
+    figures()
+    with tempfile.TemporaryDirectory() as d:
+        UID[0] = 0
+        top, bot, glow, edge, face = THEME_B['emerald']
+        # the icon's front, but the character a little smaller and whole (in the icon the tile cuts off its legs)
+        front = chunky(rosette(272, 256, 244), '#ffffff', edge, 14, 34)
+        front += f'<path d="{rosette(222, 256, 244)}" fill="{face}" stroke="{face}" stroke-width="26" stroke-linejoin="round"/>'
+        front += '<ellipse cx="256" cy="476" rx="92" ry="12" fill="#1d1640" opacity=".28"/>' + fig('man', 1.6, 128)
+        front += lstar(404, 92, 32, 'url(#gold)', '#e07a00', 6)
+        p = Path(d) / 'front.png'
+        mi.render(mi.svg(512, 512, DEFS + front), 1024, 1024, p, transparent=True)
+        im = Image.open(p).convert('RGBA')
+        a = im.split()[3].load()
+        cx, cy = MX * 2, MY * 2
+        r = max(math.hypot(x - cx, y - cy) for y in range(0, im.height, 2) for x in range(0, im.width, 2) if a[x, y] > 16)
+        side = round(3 * r * 1.04)            # the front's farthest pixel sits just inside the 2/3 circle
+        can = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+        can.alpha_composite(im.crop((max(0, cx - side // 2), max(0, cy - side // 2), cx + side // 2, cy + side // 2)),
+                            (max(0, side // 2 - cx), max(0, side // 2 - cy)))
+        for dn, k in DENS_ALL.items():
+            out = RES / f'drawable-{dn}' / 'splash_icon.webp'
+            out.parent.mkdir(parents=True, exist_ok=True)
+            can.resize((round(288 * k), round(288 * k)), Image.LANCZOS).save(out, 'WEBP', quality=92, method=6)
+    print('splash done')
+
 def main():
     themes = [t[0] for t in mi.themes()]
     assert themes == list(THEME_B), f'THEME_B must list the themes of theme.ts in order: {themes}'
@@ -536,4 +567,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    splash() if '--splash' in sys.argv else main()
