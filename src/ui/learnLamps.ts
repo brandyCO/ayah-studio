@@ -86,7 +86,7 @@ export function lampChip(): HTMLElement {
   const btn = h('button', { class: 'lp-pill lp-lamps', type: 'button', onclick: () => { haptic(); squash(btn, 0.1); lampSheet(); } }, lampArt(18), num);
   watch(() => {
     const { n } = lamps();
-    num.textContent = String(n);
+    num.textContent = `${n}/${LAMPS}`; // G6: "5/5" never reads as Light
     btn.classList.toggle('none', n === 0);
     btn.setAttribute('aria-label', lt('learn.lampsAria', { n, of: LAMPS }));
   }, btn);

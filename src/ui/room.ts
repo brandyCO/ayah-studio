@@ -196,7 +196,8 @@ export function roomScreen(edit: () => void, top: HTMLElement): HTMLElement | nu
     top,
     stage,
     h('div', { class: 'rm-dock' },
-      h('p', { class: 'rm-full-sub small' }, b.cups ? rt('room.sub', { n: b.cups }) : rt('room.subEmpty')),
+      // The empty shelf already says how to fill it: the dock repeats nothing (front-end review G10).
+      b.cups ? h('p', { class: 'rm-full-sub small' }, rt('room.sub', { n: b.cups })) : '',
       slots,
       h('div', { class: 'rm-dock-main' },
         h('button', { class: 'primary brand-btn rm-shop-b', type: 'button', onclick: () => shop() }, `✦ ${rt('rs.shop')}`),

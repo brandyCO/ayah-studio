@@ -6,6 +6,7 @@
 import './onboard.css';
 import { choosePace, goals, needsPace, setGoals } from '../data/goals';
 import { mark } from '../usage';
+import { account, signInAvailable } from '../cloud/auth';
 import { fe, type FrontKey } from '../i18n/front';
 import { lang, LANGS, setLang, t } from '../i18n';
 import { actor, myFigureCode, type Actor } from './actor';
@@ -169,6 +170,8 @@ export function openOnboarding(resumed = false) {
       line = pagesN === null ? fe('ob.doneLater') : t('fs.paceSet', { goal: goalText('pages', goals().pages) });
       go.textContent = fe('ob.start');
       flameEl = h('div', { class: 'ob-flame', 'aria-hidden': 'true' }, flame(1, 76));
+      // One quiet line (front-end review G1): progress can follow them to any phone once they sign in on Me.
+      if (!account() && signInAvailable()) body.push(h('p', { class: 'ob-hint ob-safe' }, fe('g1.ob')));
     }
     const talk = ask
       ? h('div', { class: 'ob-talk ask' }, a?.el ?? '', h('div', { class: 'ob-bubble' }, bubble))

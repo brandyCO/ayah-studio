@@ -50,7 +50,7 @@ import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders }
 import { isNative } from '../native';
 import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
-import { account } from '../cloud/auth';
+import { account, onAccount, signIn, signInAvailable } from '../cloud/auth';
 import { firstSyncPending, onSyncStatus, syncNow, syncStatus } from '../cloud/sync';
 import { tick as tickNum } from './juice';
 import { openAccount } from './account';
@@ -307,7 +307,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const prayerStrip = h('a', { class: 'me-pr-strip', href: '#/me/prayer' });
   let prayerLine = '';
   const timeFmt = new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
-  const dayFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
+  // One letter a day where the letters differ (Arabic); else two, so Saturday and Sunday are not both "S" (G11).
+  const narrowFmt = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
+  const shortFmt = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
+  const narrowUnique = new Set(Array.from({ length: 7 }, (_, i) => narrowFmt.format(new Date(2026, 0, 4 + i)))).size === 7;
+  const dayFmt = { format: (d: Date) => (narrowUnique ? narrowFmt.format(d) : shortFmt.format(d).replace(/\.$/, '').slice(0, 2)) };
   const longDay = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
 
   let heroSig = '';
@@ -446,7 +450,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     arriving = false;
     shownDays = loading ? -1 : s.days;
     const lost = loading ? undefined : s.lost; // the other phones' days are on their way: nothing is lost
-    const tier = loading ? flameTier(1, true) : flameTier(s.days, s.litToday); // a new phone: a small flame, never an ember
+    // Never lit yet (front-end review G2): no grey ember and no big 0 — the first flame waits, glowing at its edges.
+    const first = !loading && s.days === 0 && s.best === 0 && !s.lost;
+    const tier = loading || first ? flameTier(1, true) : flameTier(s.days, s.litToday); // a new phone: a small flame, never an ember
     const pip = (w: (typeof s.week)[number]) => h('span', { class: `me-pip ${w.state}`, title: longDay.format(parse(w.day)) },
       dayMark(w.state),
       h('span', { class: 'me-pip-d' }, dayFmt.format(parse(w.day))));
@@ -455,14 +461,17 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     catchNext = false;
     const num = h('b', {}, loading ? '…' : String(catchNow ? s.days - 1 : s.days));
     hero.classList.toggle('loading', loading);
-    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}` }, flame(tier, 104, reduced), freezeBadge(s));
+    const flameBox = h('div', { class: `me-flame${catchNow ? ' catch' : ''}${first ? ' waiting' : ''}` },
+      first ? h('span', { class: 'me-flame-aura', 'aria-hidden': 'true' }) : '', flame(tier, 104, reduced), first ? '' : freezeBadge(s));
+    hero.classList.toggle('first', first);
     hero.replaceChildren(
       hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
         flameBox,
         h('div', { class: 'me-top-txt' },
-          h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
-          h('p', { class: 'me-status' }, loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
+          first ? h('div', { class: 'me-count me-first' }, h('b', {}, fe('g2.title')))
+            : h('div', { class: 'me-count' }, num, h('span', {}, t(s.days === 1 ? 'me.day' : 'me.days'))),
+          h('p', { class: 'me-status' }, first ? fe('g2.sub') : loading ? mpt(navigator.onLine ? 'mp.bringing' : 'mp.bringOffline') : s.days === 0 ? t('me.statusStart') : s.litToday ? t('me.statusLit') : t('me.statusKeep')))),
       lost ? lostCard(lost) : '',
       h('div', { class: 'me-week', role: 'list', 'aria-label': t('me.thisWeek') }, ...s.week.map(pip)),
       h('div', { class: 'me-chips' },
@@ -902,8 +911,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
       : [fridayBox(), tip ? tipCard(tip) : '',
-        list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
+        // The goals first, then the chest for meeting all of them (front-end review G5).
         list.length ? goalsList(list, 'day') : h('p', { class: 'muted' }, t('goal.none')),
+        list.length > 1 ? dayRow(list) : all ? h('p', { class: 'goal-all' }, t('goal.allMet')) : '',
         list.length && stats('all').light > 0 ? lightStrip() : ''];
     goalsBox.replaceChildren(
       h('div', { class: 'me-row goal-head' },
@@ -1020,24 +1030,33 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const tile = (n: string, label: string, diff: Node | string, sub?: string) =>
       h('div', { class: 'me-tile' }, h('span', { class: 'me-tile-n' }, h('b', {}, n), diff), h('span', {}, label), sub ? h('span', { class: 'muted small' }, sub) : '');
     const names = st.surahList.slice(-3).map((s) => surahName(meta[s - 1])).join(' · ');
+    // No wall of zeros (front-end review G2): pages and listening always show; the rest once there is something to count
+    // (in this period, or last week to compare with).
+    const zero = (k: keyof Stats) => !(st[k] as number) && !(last && (last[k] as number));
+    const all: [keyof Stats, Node, boolean][] = [
+      ['light', tile(String(st.light), t('me.light'), vs('light')), false],
+      ['pages', tile(String(st.pages), t('me.pages'), vs('pages')), true],
+      ['ayat', tile(String(st.ayat), t('me.ayat'), vs('ayat')), false],
+      ['listen', tile(minutes(st.listen), t('me.listened'), vs('listen', (n) => minutes(n))), true],
+      ['surahs', tile(String(st.surahs), t('me.surahs'), vs('surahs'), names || undefined), false],
+      ['juz', tile(String(st.juz), t('me.juz'), vs('juz')), false],
+      ['memorised', tile(String(st.memorised), t('me.memorised'), vs('memorised')), false],
+      ['dhikr', tile(String(st.dhikr), t('me.dhikr'), vs('dhikr')), false],
+      ['reels', tile(String(st.reels), t('me.reels'), vs('reels')), false],
+    ];
+    const shown = all.filter(([k, , core]) => core || !zero(k)).map(([, n]) => n);
+    const hidden = shown.length < all.length;
+    const empty = all.every(([k]) => zero(k));
     statsBox.replaceChildren(
       h('h2', { class: 'me-h' }, t('me.stats')),
       h('div', { class: 'tabs me-tabs', role: 'tablist' },
         tab('week', t('me.week')), tab('month', t('me.month')), tab('all', t('me.all'))),
-      h('div', { class: 'me-tiles' },
-        tile(String(st.light), t('me.light'), vs('light')),
-        tile(String(st.pages), t('me.pages'), vs('pages')),
-        tile(String(st.ayat), t('me.ayat'), vs('ayat')),
-        tile(minutes(st.listen), t('me.listened'), vs('listen', (n) => minutes(n))),
-        tile(String(st.surahs), t('me.surahs'), vs('surahs'), names || undefined),
-        tile(String(st.juz), t('me.juz'), vs('juz')),
-        tile(String(st.memorised), t('me.memorised'), vs('memorised')),
-        tile(String(st.dhikr), t('me.dhikr'), vs('dhikr')),
-        tile(String(st.reels), t('me.reels'), vs('reels'))),
+      h('div', { class: 'me-tiles' }, ...shown),
+      hidden ? h('p', { class: 'muted small me-tiles-more' }, fe('g2.more')) : '',
       h('p', { class: 'muted small' }, last
         ? (now.getDay() === 6 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
         : t('me.honest', { time: timeLabel(pageSeconds()) })),
-      h('button', { class: 'chip ws-share', onclick: () => { haptic(8); void import('./weekStory').then((m) => m.shareStory()); } }, icon('share', 18), fe('ws.share')));
+      empty ? '' : h('button', { class: 'chip ws-share', onclick: () => { haptic(8); void import('./weekStory').then((m) => m.shareStory()); } }, icon('share', 18), fe('ws.share')));
   };
 
   const paintBadges = () => {
@@ -1196,9 +1215,37 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   };
 
   void import('../together/relight').then((m) => m.takeRelights());
+  // Keep your flame safe (front-end review G1): signed out, once the first flame was lit, one card asks for Google
+  // sign-in so the streak, Light and character follow the user to any phone. "Later" rests it for 3 days.
+  const safeCard = h('section', { class: 'me-card me-safe', hidden: true });
+  const paintSafe = () => {
+    let later = 0;
+    try { later = Number(localStorage.getItem('safeLater')) || 0; } catch { /* ignore */ }
+    const s = streak();
+    const show = !page && !account() && signInAvailable() && (s.best > 0 || s.days > 0) && Date.now() - later > 3 * 86400e3;
+    safeCard.hidden = !show;
+    if (!show || safeCard.childElementCount) return;
+    safeCard.append(
+      h('div', { class: 'me-safe-ic', 'aria-hidden': 'true' }, flame(flameTier(Math.max(1, streak().days), true), 44, true), h('span', { class: 'me-safe-lock' }, icon('lock', 16))),
+      h('div', { class: 'me-safe-txt' }, h('h2', {}, fe('g1.title')), h('p', {}, fe('g1.sub'))),
+      h('div', { class: 'me-safe-row' },
+        h('button', { class: 'primary google-btn', type: 'button', onclick: async (e: Event) => {
+          const btn = e.currentTarget as HTMLButtonElement;
+          btn.disabled = true;
+          haptic(8);
+          try { await signIn(); } catch (err) {
+            if (!/cancel/i.test(err instanceof Error ? err.message : String(err))) openAccount();
+          } finally { btn.disabled = false; }
+        } }, fe('g1.go')),
+        h('button', { class: 'chip', type: 'button', onclick: () => {
+          try { localStorage.setItem('safeLater', String(Date.now())); } catch { /* ignore */ }
+          safeCard.hidden = true;
+        } }, fe('g1.later'))));
+  };
+  const offAcct = onAccount(() => paintSafe());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
+  const paintAll = () => { queued = 0; paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
   const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
@@ -1272,7 +1319,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
@@ -1340,6 +1387,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
     document.removeEventListener('close', onClose, true);
     offSync();
+    offAcct();
     clearInterval(syncTick);
     window.removeEventListener('journey-changed', onArrive);
     clearInterval(tick);

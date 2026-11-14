@@ -27,7 +27,7 @@
 .me-h { font-weight: 900; font-size: var(--fs-h2); }
 .me-card { border: 0; border-radius: 22px; box-shadow: 0 4px 0 var(--line); }
 .goal.k-pages, .goal.k-surahs { --gc: #12a594; } .goal.k-listen { --gc: #2f7fd6; } .goal.k-memorise, .goal.k-lessons { --gc: #4caf2a; }
-.goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; }
+.goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; } .goal.k-duas { --gc: #d98a00; } .goal.k-nights { --gc: #4c5fd5; } /* G5: these two had no colour, so their button was invisible */
 .goal[class*='k-'] { margin-bottom: 10px; padding: 10px 12px; border-radius: 18px;
   background: color-mix(in srgb, var(--gc) 11%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 26%, var(--card)); }
 .goal[class*='k-'] .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }
@@ -468,3 +468,22 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .me-chip.me-fire { display: inline-grid; gap: 3px; padding-block: 5px 6px; font-weight: 800; }
 .me-fire-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
 .me-fire-bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #ffb703, #ff6b2c); }
+
+/* The first flame, not lit yet (front-end review G2): the flame waits, dimmed, with a light breathing round it. */
+.me-flame.waiting > .flame { opacity: .6; }
+.me-flame-aura { position: absolute; left: 50%; top: 54%; width: 128px; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 214, 120, .75) 0%, rgba(255, 170, 60, .28) 42%, transparent 70%);
+  animation: me-aura 2.6s ease-in-out infinite; }
+@keyframes me-aura { 0%, 100% { opacity: .45; scale: .86; } 50% { opacity: 1; scale: 1.06; } }
+.me-count.me-first b { font-size: clamp(26px, 7.4vw, 32px); line-height: 1.15; text-align: center; text-wrap: balance; }
+@media (prefers-reduced-motion: reduce) { .me-flame-aura { animation: none; opacity: .8; } }
+
+/* Keep your flame safe (front-end review G1). */
+.me-safe { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; }
+.me-safe-ic { position: relative; display: grid; place-items: center; width: 60px; height: 64px; border-radius: 18px; background: color-mix(in srgb, #f59f00 14%, var(--card)); }
+.me-safe-lock { position: absolute; inset-inline-end: -4px; bottom: -4px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--brand-fill, var(--accent)); color: #fff; box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, #000); }
+.me-safe-txt h2 { margin: 0 0 2px; font: 900 var(--fs-l, 17px)/1.25 var(--ui-round, system-ui); }
+.me-safe-txt p { margin: 0; color: color-mix(in srgb, var(--text) 70%, transparent); font-size: var(--fs-s, 14px); line-height: 1.4; }
+.me-safe-row { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.me-safe-row .google-btn { flex: 1; }

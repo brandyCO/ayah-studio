@@ -2122,6 +2122,16 @@ duas/reflections section in Me.
       into Web Animations keyframes (transform / opacity, compositor), faces / poses / sounds (`SOUNDS`, sfx) follow
       the same clock, and `show(…, manual)` seeks any moment (frame-exact preview renders). Loading spinners are the
       gold Light star turning and twinkling (`.spinner`)
+- [x] M26 Front-end review, round 2 (owner "build all", 2026-11-14; Claude Doc "Front end review, round 2", G1–G12): **Keep your
+      flame safe** (signed out, once a flame was lit: a Google sign-in card under the streak, Later rests it 3 days, `safeLater`;
+      a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
+      "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
+      a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
+      Read's bar: the pages ring sits in the title row with the count inside, Noor's line once a day (`readNoorDay`), Today lines
+      clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
+      was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
+      card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
+      repeats; Me and Learn fetched in a quiet moment after the first screen (not on Data Saver)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
