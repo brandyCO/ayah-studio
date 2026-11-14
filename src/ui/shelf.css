@@ -7,6 +7,9 @@
   background: linear-gradient(90deg, #1d5a4a, #24735f 45%, #1a5243); box-shadow: inset 0 0 0 1px #0f3a2f; }
 .sh-book:nth-child(3n) { background: linear-gradient(90deg, #3d2f6b, #4c3b86 45%, #362a60); box-shadow: inset 0 0 0 1px #241b45; }
 .sh-book:nth-child(3n+1) { background: linear-gradient(90deg, #6b2a2a, #833535 45%, #5f2525); box-shadow: inset 0 0 0 1px #3f1616; }
+/* Round 3: a juz not opened yet is an empty slot (a faint outline), so the shelf fills as you read */
+.sh-book.empty { background: #00000026; box-shadow: inset 0 0 0 1.5px #ffffff2b; }
+.sh-book.empty .sh-n { color: #ffffff73; text-shadow: none; }
 .sh-gold { position: absolute; inset: auto 0 0; height: calc(var(--f) * 100%);
   background: linear-gradient(90deg, #b8860b, #ffd76a 40%, #f2b632 60%, #a87a0a); transition: height .8s var(--ease-spring, ease); }
 .sh-book.full .sh-gold::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, #fff8 50%, transparent 70%);

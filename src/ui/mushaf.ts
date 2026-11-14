@@ -54,15 +54,11 @@ const DAY = 86_400_000;
 let listenHere: ((s: number, a: number) => void) | null = null;
 registerToday(async () => {
   const [meta, d] = await Promise.all([loadMeta(), todaysAyah()]);
-  const info = translationInfo(currentTranslation());
-  const tr = await surahTranslation(d.s, info.id).catch(() => null);
-  const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
-    sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
+    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`, inline: true,
     actions: [
-      { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
-      { label: t('today.reel'), href: `#/reel/${d.s}/${d.from}-${d.to}` },
+      { label: t('today.listen'), icon: 'play', onClick: () => listenHere?.(d.s, d.from) },
+      { label: t('today.reel'), icon: 'film', href: `#/reel/${d.s}/${d.from}-${d.to}` },
     ],
   }];
 });
@@ -72,8 +68,8 @@ registerToday(async () => {
   const a = p.ayat[0];
   if (!a) return [];
   return [{
-    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
-    actions: [{ label: t('today.popularReel'), href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
+    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`, inline: true,
+    actions: [{ label: t('today.popularReel'), icon: 'film', href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
   }];
 });
 registerToday(async () => {
