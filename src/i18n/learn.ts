@@ -1,6 +1,6 @@
 // Learn tab strings (the juz gardens and lessons), loaded with those screens so the app's first
 // download stays small. English is the source; Arabic falls back to it per key. Interface words only.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'learn.title': 'Learn',
@@ -844,6 +844,6 @@ const ar: Partial<Record<LearnKey, string>> = {
 
 /** A Learn string, with {name} placeholders filled from `vars` (numbers as written). */
 export function lt(key: LearnKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('learn', key)) ?? en[key];
+  return fill(s, vars);
 }

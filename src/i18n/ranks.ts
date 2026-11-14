@@ -1,6 +1,6 @@
 // Ranks strings, loaded with the Ranks screen so the app's first download stays small.
 // English is the source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'rk.title': "Ranks",
@@ -899,6 +899,6 @@ const ar: Partial<Record<RankKey, string>> = {
 
 /** A Ranks string, with {name} placeholders filled from `vars`. */
 export function rt(key: RankKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('ranks', key)) ?? en[key];
+  return fill(s, vars);
 }

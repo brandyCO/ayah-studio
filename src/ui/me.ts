@@ -28,7 +28,8 @@ import { ALL_LIGHT, BADGE_LIGHT, DUA_GOALS, LESSON_GOALS, WEEK_ALL_LIGHT, WEEK_L
 import { bookmarks } from '../data/bookmarks';
 import { recentPages } from '../data/history';
 import { loadMeta, type SurahMeta } from '../data/quran';
-import { LANGS, daysText, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
+import { daysText, lang, locale, setLang, surahName, t, type Key, uiRef } from '../i18n';
+import { LANGS } from '../i18n/langs';
 import { h, haptic, toast } from './dom';
 import { mt } from '../i18n/moments';
 import { flame, flameTier } from './flame';
@@ -1474,10 +1475,11 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
   const openLanguage = () => {
     dialog(t('lang.title'),
       h('p', { class: 'muted small' }, t('lang.note')),
-      h('div', { class: 'menu' }, ...LANGS.map((l) => h('button', {
+      h('div', { class: 'sheet-scroll' }, h('div', { class: 'menu' }, ...LANGS.map((l) => h('button', {
         class: `menu-item tr-item${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir,
         onclick: (e: Event) => { if (l.id !== lang()) setLang(l.id); else (e.currentTarget as HTMLElement).closest('dialog')?.close(); },
-      }, h('span', { class: 'tr-name' }, l.name), h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : '')))));
+      }, h('span', { class: 'tr-name' }, l.name, l.id === 'en' ? '' : h('small', { class: 'muted', lang: 'en', dir: 'ltr' }, ` · ${l.en}`)),
+      h('span', { class: 'tr-tick', 'aria-hidden': 'true' }, l.id === lang() ? '✓' : ''))))));
   };
   const alertsSection = () => {
     const a = prayerAlerts();

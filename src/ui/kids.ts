@@ -258,8 +258,8 @@ export async function showKids(root: HTMLElement): Promise<() => void> {
     },
     h('span', { class: 'kids-lantern' }, lantern()),
     h('span', { class: 'kids-stop-label' },
-      h('strong', lang() === 'ar' ? { class: 'kids-stop-ar', lang: 'ar' } : {}, surahName(s)),
-      lang() === 'ar' ? h('span', { class: 'kids-stop-sub', lang: 'en', dir: 'ltr' }, s.en) : h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
+      h('strong', surahName(s) === s.ar ? { class: 'kids-stop-ar', lang: 'ar' } : {}, surahName(s)),
+      surahName(s) === s.ar ? h('span', { class: 'kids-stop-sub', lang: 'en', dir: 'ltr' }, s.en) : h('span', { class: 'kids-stop-ar', lang: 'ar', dir: 'rtl' }, s.ar),
       h('span', { class: 'kids-stop-sub' }, t('common.ayat', { n: s.ayahs }))));
     if (lit[i]) el.append(constellationSvg(i, n, s.ayahs));
     if (i === (bloom >= 0 ? bloom : next)) target = el;

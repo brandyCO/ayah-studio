@@ -1,6 +1,6 @@
 // Badge names and goals (src/data/badges.ts), loaded with the screens that show them so the first load does
 // not grow. English is the source; Arabic falls back to it per key. `{n}` is the badge's number.
-import { lang } from './index';
+import { fill, lang, locale, tr } from './index';
 import type { BadgeDef } from '../data/badges';
 
 const en = {
@@ -100,9 +100,8 @@ const ar: Partial<Record<BadgeKey, string>> = {
 };
 
 export function bt(k: BadgeKey, vars?: Record<string, string | number>): string {
-  let s = (lang() === 'ar' ? ar[k] : undefined) ?? en[k];
-  if (vars) for (const [a, v] of Object.entries(vars)) s = s.replaceAll(`{${a}}`, String(typeof v === 'number' ? v.toLocaleString(lang() === 'ar' ? 'ar-u-nu-latn' : 'en') : v));
-  return s;
+  const s = (lang() === 'ar' ? ar[k] : tr('badges', k)) ?? en[k];
+  return fill(s, vars, (v) => String(typeof v === 'number' ? v.toLocaleString(locale() ?? 'en') : v));
 }
 /** "Pages read · Gold" */
 export const badgeName = (b: Pick<BadgeDef, 'fam' | 'step'>) => `${bt(`f.${b.fam}` as BadgeKey)} · ${bt(`t${b.step}` as BadgeKey)}`;

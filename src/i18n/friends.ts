@@ -1,6 +1,6 @@
 // Strings for friends on Ranks (profiles, friend streaks), loaded with them. English is the source; Arabic falls back
 // to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'fr.tab': 'Friends',
@@ -157,6 +157,6 @@ const ar: Partial<Record<FriendKey, string>> = {
 };
 
 export function ft(key: FriendKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('friends', key)) ?? en[key];
+  return fill(s, vars);
 }

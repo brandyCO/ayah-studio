@@ -13,7 +13,7 @@ import { claimGoal, goalClaimed, markMoment, setAdhkar } from '../data/journey';
 import { goals, lightFor } from '../data/goals';
 import { surahMeta } from '../data/quran';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
-import { lang, t } from '../i18n';
+import { dir, lang, locale, surahName, t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { chest } from './chest';
 import { popIn, squash } from './juice';
@@ -58,7 +58,7 @@ async function runSession(cfg: SessionCfg) {
   if (!list.length) return;
   const names = new Map<number, string>();
   await Promise.all([...new Set(list.flatMap((x) => [...(x.quran ? [x.quran.s] : []), ...(x.read ?? [])]))].map(async (s) => {
-    try { const m = await surahMeta(s); names.set(s, lang() === 'ar' ? m.ar : m.en); } catch { /* reference only */ }
+    try { const m = await surahMeta(s); names.set(s, surahName(m)); } catch { /* reference only */ }
   }));
   const isDone = (d: Dua) => saidCount(p, d.id) >= d.count;
   const firstOpen = () => list.findIndex((d) => !isDone(d));
@@ -105,8 +105,8 @@ async function runSession(cfg: SessionCfg) {
   const of = h('span', { class: 'ak-of' }, '');
   const gain = h('span', { class: 'ak-gain', 'aria-live': 'polite' }, '');
   const counter = h('button', { class: 'ak-count', onclick: () => tap() }, ring, h('span', { class: 'ak-center' }, num, of), gain);
-  const prev = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.prev'), onclick: () => go(i - 1) }, lang() === 'ar' ? '›' : '‹');
-  const next = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.next'), onclick: () => go(i + 1) }, lang() === 'ar' ? '‹' : '›');
+  const prev = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.prev'), onclick: () => go(i - 1) }, dir() === 'rtl' ? '›' : '‹');
+  const next = h('button', { class: 'icon-btn ak-nav', 'aria-label': akt('ak.next'), onclick: () => go(i + 1) }, dir() === 'rtl' ? '‹' : '›');
   const undo = h('button', { class: 'chip ak-undo', onclick: () => { if (saidCount(p, list[i].id) > 0) { say(p, list[i], -1, list[i].count); paint(); } } }, akt('ak.undo'));
   const hint = h('p', { class: 'muted small ak-hint' }, akt('ak.tap'));
   const foot = h('div', { class: 'ak-foot' }, prev, h('div', { class: 'ak-mid' }, counter, hint), next);
@@ -126,7 +126,7 @@ async function runSession(cfg: SessionCfg) {
   const kickerOf = (d: Dua, q: Dua['quran'], ref: string) => {
     if (d.act) return akt('du.sunnah');
     const base = q ? akt('ak.quran', { name: names.get(q.s) ?? '', ref }) : timesLine(d.count);
-    return d.prayers && d.prayers.length < PRAYER_LIST.length ? `${base} · ${akt('du.only', { list: d.prayers.map(prayerName).join(lang() === 'ar' ? ' و' : ' & ') })}` : base;
+    return d.prayers && d.prayers.length < PRAYER_LIST.length ? `${base} · ${akt('du.only', { list: (lang() === 'ar' ? d.prayers.map(prayerName).join(' و') : lang() === 'en' ? d.prayers.map(prayerName).join(' & ') : new Intl.ListFormat(locale(), { type: 'conjunction' }).format(d.prayers.map(prayerName))) })}` : base;
   };
 
   // F30: a long list is one thin bar of segments (still tappable), next to "1 of 17" in the title.
@@ -262,7 +262,7 @@ async function runSession(cfg: SessionCfg) {
   body.addEventListener('pointerup', (e) => {
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5 || finished) return;
-    const forward = lang() === 'ar' ? dx > 0 : dx < 0;
+    const forward = dir() === 'rtl' ? dx > 0 : dx < 0;
     go(forward ? i + 1 : i - 1);
   });
 
@@ -274,8 +274,8 @@ async function runSession(cfg: SessionCfg) {
   const close = () => dialog.close();
   const onKey = (e: KeyboardEvent) => {
     if (e.key === ' ' || e.key === 'Enter') { if (e.target === dialog || e.target === counter) { e.preventDefault(); tap(); } }
-    else if (e.key === 'ArrowRight') go(lang() === 'ar' ? i - 1 : i + 1);
-    else if (e.key === 'ArrowLeft') go(lang() === 'ar' ? i + 1 : i - 1);
+    else if (e.key === 'ArrowRight') go(dir() === 'rtl' ? i - 1 : i + 1);
+    else if (e.key === 'ArrowLeft') go(dir() === 'rtl' ? i + 1 : i - 1);
   };
   // After the adhan / the salah: which prayer (what is said after Fajr and Maghrib differs).
   const prayers = cfg.prayer ? h('div', { class: 'chips ak-prayers', role: 'group', 'aria-label': akt('du.which') },

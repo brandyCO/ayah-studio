@@ -1,5 +1,5 @@
 // Strings for the Light shop (src/ui/shop.ts), loaded with it. English is the source; Arabic falls back per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'sh.title': 'Shop',
@@ -190,6 +190,6 @@ const ar: Partial<Record<ShopKey, string>> = {
 };
 
 export function sht(key: ShopKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('shop', key)) ?? en[key];
+  return fill(s, vars);
 }

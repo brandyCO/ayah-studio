@@ -1,6 +1,6 @@
 // Strings for the reward moments added in round 4 (chest suspense, the harvest, streak milestones), loaded with
 // them so the first load does not grow. English is the source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'mt.pm.left1': '1 page to finish {name}',
@@ -78,6 +78,6 @@ const ar: Partial<Record<MomentKey, string>> = {
 
 /** A moment string, with {name} placeholders filled from `vars`. */
 export function mt(key: MomentKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('moments', key)) ?? en[key];
+  return fill(s, vars);
 }

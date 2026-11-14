@@ -26,3 +26,21 @@ a translation names its translator. Before any paid offering, ask each publisher
 | ru.kuliev | Russian | Elmir Kuliev |
 | hi.hindi | Hindi | Suhel Farooq Khan & Saifur Rahman Nadwi |
 | sw.barwani | Swahili | Ali Muhsin Al-Barwani |
+| fa.fooladvand | Persian | Mohammad Mahdi Fooladvand |
+| ps.abdulwali | Pashto | Abdul Wali |
+| uz.sodik | Uzbek | Muhammad Sodik Muhammad Yusuf |
+| az.musayev | Azerbaijani | Alikhan Musayev |
+| bs.korkut | Bosnian | Besim Korkut |
+| sq.ahmeti | Albanian | Sherif Ahmeti |
+| pt.elhayek | Portuguese | Samir El-Hayek |
+| it.piccardo | Italian | Hamza Roberto Piccardo |
+| nl.siregar | Dutch | Sofian S. Siregar |
+| ha.gumi | Hausa | Abubakar Mahmoud Gumi |
+| so.abduh | Somali | Mahmud Muhammad Abduh |
+| ta.tamil | Tamil | Jan Trust Foundation |
+| ml.abdulhameed | Malayalam | Cheriyamundam Abdul Hameed & Kunhi Mohammed Parappoor |
+| zh.jian | Chinese | Ma Jian |
+
+Left out (2026-11-14): Japanese and Korean (Tanzil names no translator) and Kurdish `ku.asan` (ayah 108:3 is empty
+at the source); the Japanese, Korean and Kurdish interfaces show Saheeh International until a complete, credited
+translation is found.

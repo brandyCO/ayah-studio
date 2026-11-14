@@ -1122,6 +1122,36 @@ tafsir only from published, credited editions; UI strings only are translated by
       the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
       start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
       "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
+      **30 interface languages** (owner request 2026-11-14, "it should be in all languages"): English, Arabic + Urdu,
+      Indonesian, Bengali, Turkish, Persian, French, Malay, Hindi, Russian, Spanish, German, Portuguese, Swahili, Hausa,
+      Somali, Pashto, Uzbek, Azerbaijani, Bosnian, Albanian, Kurdish (Sorani), Tamil, Malayalam, Chinese, Italian, Dutch,
+      Japanese, Korean. Source: `scripts/i18n-source.mjs` collects every English string (en.ts, enStudio.ts, each lazy
+      module's `en`, Noor's lines, the engine's effect/mood/theme names `scripts/i18n/engine-en.json`, server messages
+      `scripts/i18n/messages-en.json` (`@`-keys = templates for the patterns in `src/i18n/more.ts`), and `extra-en.json`:
+      level labels, avatar/frame names, Android shortcut labels, the 114 surah-name meanings) into `scripts/i18n/en.json`
+      (by module). Each language is one lazy bundle `src/i18n/locales/{id}.json` (same modules; loaded at start with
+      `src/i18n/more.ts`: ICU plurals `{n, plural, one {…} few {…} other {…}}`, messages). Arabic keeps its own
+      dictionaries (ar.ts, arMessages.ts, each module's `ar`). Lookups: `t()` (core + studio + engine merged into `dict`),
+      each module's own function → `tr(module, key)` → English; `fill()` fills placeholders and plurals. Device language
+      picked on first start (`deviceLang()`: first of the phone's languages offered; `in` → Indonesian, Dari → Persian);
+      onboarding's first screen lists every language (the phone's first, two columns, asked "Which language?" in the
+      phone's language + English), also the welcome and Me → ⚙ → Language (names in `src/i18n/langs.ts`). RTL for Arabic,
+      Urdu, Persian, Pashto, Kurdish (`dir()`; arrows and swipes follow `dir()`, not Arabic); surah names in Arabic for
+      those five (`surahName()`), surah meanings translated (`surahMeaning()`); `html[data-script]` (Cyrillic, Indic, CJK
+      use the phone's font instead of Nunito, Indic scripts a taller line); numbers and dates in the language's locale with
+      Western digits (`locale()`, `intlLoc()`). Server / network messages: known ones translated (`msg` module), an unknown
+      one in a non-Latin language becomes "could not do that, try again". Ayah translations: 14 more published Tanzil
+      editions (fa.fooladvand, ps.abdulwali, uz.sodik, az.musayev, bs.korkut, sq.ahmeti, pt.elhayek, it.piccardo,
+      nl.siregar, ha.gumi, so.abduh, ta.tamil, ml.abdulhameed, zh.jian); the default translation follows the interface
+      language (Japanese, Korean, Kurdish: none with a named translator / complete text yet → Saheeh International).
+      Android shortcut labels per language (`scripts/make-android-strings.mjs` → `res/values-{lang}`). Translations were
+      written by the build session from `scripts/i18n/GUIDE.md` (rules: placeholders, Allah stays Allah, each language's
+      own Islamic terms, Light = the language's word for light, league names as each language knows the events); a native
+      speaker should read each before a big launch in that country.
+      **Adding English strings**: run `node scripts/i18n-source.mjs`, then translate the new keys for every language
+      (`node scripts/check-i18n.mjs --strict` lists what is missing; `scripts/i18n/parts/` + `scripts/i18n-merge.mjs {id}`
+      for a big batch). Until then the app shows English for them; the PR check (`check-i18n.mjs`, in checks.yml) fails
+      only on a broken translation (placeholders, plurals). Smoke test: English, Arabic, Urdu, Russian, Chinese, French
 - [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
       (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,

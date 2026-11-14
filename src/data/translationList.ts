@@ -135,5 +135,131 @@ export const TRANSLATIONS: TranslationInfo[] = [
   "translator": "Ali Muhsin Al-Barwani",
   "dir": "ltr",
   "bytes": 776905
+ },
+ {
+  "id": "fa.fooladvand",
+  "lang": "fa",
+  "langName": "فارسی",
+  "langEn": "Persian",
+  "translator": "Mohammad Mahdi Fooladvand",
+  "dir": "ltr",
+  "bytes": 1315643
+ },
+ {
+  "id": "ps.abdulwali",
+  "lang": "ps",
+  "langName": "پښتو",
+  "langEn": "Pashto",
+  "translator": "Abdul Wali",
+  "dir": "ltr",
+  "bytes": 1543828
+ },
+ {
+  "id": "uz.sodik",
+  "lang": "uz",
+  "langName": "Oʻzbekcha",
+  "langEn": "Uzbek",
+  "translator": "Muhammad Sodik Muhammad Yusuf",
+  "dir": "ltr",
+  "bytes": 2505061
+ },
+ {
+  "id": "az.musayev",
+  "lang": "az",
+  "langName": "Azərbaycanca",
+  "langEn": "Azerbaijani",
+  "translator": "Alikhan Musayev",
+  "dir": "ltr",
+  "bytes": 943957
+ },
+ {
+  "id": "bs.korkut",
+  "lang": "bs",
+  "langName": "Bosanski",
+  "langEn": "Bosnian",
+  "translator": "Besim Korkut",
+  "dir": "ltr",
+  "bytes": 777206
+ },
+ {
+  "id": "sq.ahmeti",
+  "lang": "sq",
+  "langName": "Shqip",
+  "langEn": "Albanian",
+  "translator": "Sherif Ahmeti",
+  "dir": "ltr",
+  "bytes": 962496
+ },
+ {
+  "id": "pt.elhayek",
+  "lang": "pt",
+  "langName": "Português",
+  "langEn": "Portuguese",
+  "translator": "Samir El-Hayek",
+  "dir": "ltr",
+  "bytes": 828258
+ },
+ {
+  "id": "it.piccardo",
+  "lang": "it",
+  "langName": "Italiano",
+  "langEn": "Italian",
+  "translator": "Hamza Roberto Piccardo",
+  "dir": "ltr",
+  "bytes": 824718
+ },
+ {
+  "id": "nl.siregar",
+  "lang": "nl",
+  "langName": "Nederlands",
+  "langEn": "Dutch",
+  "translator": "Sofian S. Siregar",
+  "dir": "ltr",
+  "bytes": 956992
+ },
+ {
+  "id": "ha.gumi",
+  "lang": "ha",
+  "langName": "Hausa",
+  "langEn": "Hausa",
+  "translator": "Abubakar Mahmoud Gumi",
+  "dir": "ltr",
+  "bytes": 926662
+ },
+ {
+  "id": "so.abduh",
+  "lang": "so",
+  "langName": "Soomaali",
+  "langEn": "Somali",
+  "translator": "Mahmud Muhammad Abduh",
+  "dir": "ltr",
+  "bytes": 756378
+ },
+ {
+  "id": "ta.tamil",
+  "lang": "ta",
+  "langName": "தமிழ்",
+  "langEn": "Tamil",
+  "translator": "Jan Trust Foundation",
+  "dir": "ltr",
+  "bytes": 3326315
+ },
+ {
+  "id": "ml.abdulhameed",
+  "lang": "ml",
+  "langName": "മലയാളം",
+  "langEn": "Malayalam",
+  "translator": "Cheriyamundam Abdul Hameed & Kunhi Mohammed Parappoor",
+  "dir": "ltr",
+  "bytes": 3207824
+ },
+ {
+  "id": "zh.jian",
+  "lang": "zh",
+  "langName": "中文",
+  "langEn": "Chinese",
+  "translator": "Ma Jian",
+  "dir": "ltr",
+  "bytes": 742040
  }
 ];

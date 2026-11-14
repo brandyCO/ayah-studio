@@ -1,6 +1,6 @@
 // The Ramadan season's strings (owner request 2026-11-11), loaded with the season screens. English is the
 // source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'sn.title': 'Ramadan season',
@@ -209,6 +209,6 @@ const ar: Partial<Record<SeasonKey, string>> = {
 
 /** A season string, with {name} placeholders filled from `vars`. */
 export function snt(key: SeasonKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('season', key)) ?? en[key];
+  return fill(s, vars);
 }

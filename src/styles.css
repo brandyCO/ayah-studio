@@ -1840,6 +1840,13 @@ body[data-view="reel"] .player, body[data-view="kids"] .player { display: none; 
    coral, Ranks violet, Me amber), buttons are chunky with a solid edge that sinks on press, headings in
    bold Nunito. Never on the mushaf page, the Arabic text or the reel; the studio and Kids keep theirs. */
 :root { --ui-round: Nunito, 'ArabicUI', system-ui, sans-serif; }
+/* Interface languages in other scripts (html[data-script], src/i18n/index.ts): Nunito has Latin letters only, so
+   Cyrillic, Indic and CJK text uses the phone's own font throughout (no Latin digits in another face), with a little
+   more line height where the script has tall marks above and below. */
+html[data-script="cyrillic"], html[data-script="devanagari"], html[data-script="bengali"], html[data-script="tamil"],
+html[data-script="malayalam"], html[data-script="cjk"] { --ui-round: system-ui, sans-serif; }
+html[data-script="devanagari"] body, html[data-script="bengali"] body, html[data-script="tamil"] body,
+html[data-script="malayalam"] body { line-height: 1.6; }
 :where(h1, h2, h3, .brand h1, .tab-btn) { font-family: var(--ui-round); font-weight: 800; }
 .tabbar { background: var(--card); border-top: 2px solid var(--line); backdrop-filter: none; }
 .tab-btn { font-weight: 800; font-size: var(--fs-2xs); }

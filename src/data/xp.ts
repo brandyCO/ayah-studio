@@ -2,7 +2,7 @@
 // place; all the XP ever earned (the server's `total`) gives the character its level, which it visibly grows into
 // (src/ui/levelLook.ts). Level L starts at 100 × (L − 1)² XP, up to level 50. Kept on this device as `rankXp` (from the
 // last Ranks status) so Me can show it without asking the server.
-import { lang } from '../i18n';
+import { lang, tr } from '../i18n';
 
 export const MAX_LEVEL = 50;
 export const levelOf = (xp: number) => Math.min(MAX_LEVEL, Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1);
@@ -23,4 +23,5 @@ export const setMyXp = (xp: number) => { try { localStorage.setItem('rankXp', St
 
 /** "Lv 12" / "م 12" (short) or "Level 12" / "المستوى 12". */
 export const levelLabel = (l: number, short = false) =>
-  lang() === 'ar' ? (short ? `م ${l}` : `المستوى ${l}`) : short ? `Lv ${l}` : `Level ${l}`;
+  lang() === 'ar' ? (short ? `م ${l}` : `المستوى ${l}`)
+    : (tr('extra', short ? 'xp.lv' : 'xp.level') ?? (short ? 'Lv {n}' : 'Level {n}')).replace('{n}', String(l));

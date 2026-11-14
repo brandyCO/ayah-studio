@@ -7,7 +7,8 @@ import './onboard.css';
 import { choosePace, goals, needsPace, setGoals } from '../data/goals';
 import { mark } from '../usage';
 import { fe, type FrontKey } from '../i18n/front';
-import { lang, LANGS, setLang, t } from '../i18n';
+import { lang, setLang, t, type Lang } from '../i18n';
+import { LANGS } from '../i18n/langs';
 import { actor, myFigureCode, type Actor } from './actor';
 import { h, haptic } from './dom';
 import { DEFAULT, encode, normalize, parse } from './figure';
@@ -16,6 +17,18 @@ import { goalText } from './goalName';
 import { icon } from './icons';
 import { sfx } from './sfx';
 import { saveWhy, tailor, WHY_IC, WHYS, type Why } from './firstSteps';
+
+/** "Which language?" in each language, asked before anything else is read. */
+const LANG_ASK: Partial<Record<Lang, string>> = {
+  en: 'Which language?', ar: 'أي لغة تفضّل؟', ur: 'آپ کون سی زبان پسند کریں گے؟', id: 'Mau pakai bahasa apa?',
+  bn: 'কোন ভাষা পছন্দ করবেন?', tr: 'Hangi dili tercih edersin?', fa: 'کدام زبان را ترجیح می‌دهی؟', fr: 'Quelle langue préfères-tu ?',
+  ms: 'Bahasa mana pilihan anda?', hi: 'आप कौन सी भाषा चाहेंगे?', ru: 'Какой язык тебе удобнее?', es: '¿Qué idioma prefieres?',
+  de: 'Welche Sprache möchtest du?', pt: 'Qual idioma você prefere?', sw: 'Ungependa lugha gani?', ha: 'Wane harshe kake so?',
+  so: 'Luqaddee ayaad doorbidaysaa?', ps: 'کومه ژبه غوره کوې؟', uz: 'Qaysi tilni tanlaysiz?', az: 'Hansı dili seçirsən?',
+  bs: 'Koji jezik želiš?', sq: 'Cilën gjuhë preferon?', ckb: 'کام زمانت پێ باشترە؟', ta: 'எந்த மொழி வேண்டும்?',
+  ml: 'ഏത് ഭാഷ വേണം?', zh: '你想用哪种语言？', it: 'Quale lingua preferisci?', nl: 'Welke taal wil je?', ja: 'どの言語にしますか？',
+  ko: '어떤 언어로 할까요?',
+};
 
 type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'done';
 const PAGES = [1, 2, 5, 10, 20] as const;
@@ -118,15 +131,18 @@ export function openOnboarding(resumed = false) {
     if (s === 'lang') {
       // Asked in both languages at once, before anything else is read.
       line = '';
-      const opts = LANGS.map((l) => opt(`l-${l.id}`, l.id === tongue, [
-        h('span', { class: 'ob-ic ob-lang', 'aria-hidden': 'true' }, l.id === 'ar' ? 'ع' : 'En'),
-        h('span', { class: 'ob-txt' }, h('b', { lang: l.id }, l.name)),
+      // The phone's language first (already picked), then every other one; each in its own words, with the
+      // English name under it.
+      const list = [...LANGS].sort((x, y) => Number(y.id === tongue) - Number(x.id === tongue));
+      const opts = list.map((l, k) => opt(`l-${l.id} c${k % 6}`, l.id === tongue, [
+        h('span', { class: 'ob-ic ob-lang', 'aria-hidden': 'true', lang: l.id }, l.mark),
+        h('span', { class: 'ob-txt' }, h('b', { lang: l.id, dir: l.dir }, l.name), l.id === 'en' ? '' : h('small', { lang: 'en' }, l.en)),
         h('span', { class: 'ob-tick', 'aria-hidden': 'true' }, icon('check', 16))], () => {
         tongue = l.id;
-        opts.forEach((o, k) => { const on = LANGS[k].id === l.id; o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
+        opts.forEach((o, j) => { const on = list[j].id === l.id; o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
         sfx.pop(1); a?.hop(0.25); haptic(8);
       }));
-      body.push(h('div', { class: 'ob-list' }, ...opts));
+      body.push(h('div', { class: 'ob-list langs' }, ...opts));
     } else if (s === 'hi') line = fe('ob.hi');
     else if (s === 'few') line = fe('ob.few');
     else if (s === 'react') line = picked.size > 1 ? fe('ob.many') : picked.size ? fe(`ob.${[...picked][0]}` as FrontKey) : fe('ob.none');
@@ -182,7 +198,10 @@ export function openOnboarding(resumed = false) {
     } else old?.remove();
     stage.append(page);
     if (s === 'lang') {
-      bubble.append(h('span', { class: 'ob-two', lang: 'en', dir: 'ltr' }, 'Which language?'), h('span', { class: 'ob-two', lang: 'ar', dir: 'rtl' }, 'أي لغة تفضّل؟'));
+      // Asked in the phone's language, and in English (or Arabic, for an English phone) under it.
+      const second = tongue === 'en' ? 'ar' : 'en';
+      const line2 = (id: Lang) => h('span', { class: 'ob-two', lang: id, dir: LANGS.find((l) => l.id === id)?.dir ?? 'ltr' }, LANG_ASK[id] ?? LANG_ASK.en);
+      bubble.append(line2(tongue), line2(second));
       a?.face('happy', 1200);
     } else say(bubble, line, a);
     if (s === 'hi') setTimeout(() => a?.wave(2400), 380);

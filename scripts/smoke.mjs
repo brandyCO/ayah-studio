@@ -37,7 +37,8 @@ const SCREENS = [
 ];
 const problems = [];
 const browser = await chromium.launch();
-for (const lang of ['en-US', 'ar-SA']) {
+// English, Arabic and four more interface languages in other scripts and directions (picked from the phone's locale).
+for (const lang of ['en-US', 'ar-SA', 'ur-PK', 'ru-RU', 'zh-CN', 'fr-FR']) {
   const ctx = await browser.newContext({ locale: lang, viewport: { width: 360, height: 760 }, serviceWorkers: 'block' });
   // Outside hosts (audio, Supabase, fonts) are cut off: the screens must still open without them.
   await ctx.route((url) => !url.href.startsWith(base), (r) => r.abort());
