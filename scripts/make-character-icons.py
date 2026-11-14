@@ -513,10 +513,8 @@ def splash():
         UID[0] = 0
         top, bot, glow, edge, face = THEME_B['emerald']
         # the icon's front, but the character a little smaller and whole (in the icon the tile cuts off its legs)
-        front = chunky(rosette(272, 256, 244), '#ffffff', edge, 14, 34)
-        front += f'<path d="{rosette(222, 256, 244)}" fill="{face}" stroke="{face}" stroke-width="26" stroke-linejoin="round"/>'
-        front += '<ellipse cx="256" cy="476" rx="92" ry="12" fill="#1d1640" opacity=".28"/>' + fig('man', 1.6, 128)
-        front += lstar(404, 92, 32, 'url(#gold)', '#e07a00', 6)
+        pt = front_parts(top, bot, glow, edge, face)
+        front = pt['marker'] + pt['shadow'] + pt['man'] + pt['star']
         p = Path(d) / 'front.png'
         mi.render(mi.svg(512, 512, DEFS + front), 1024, 1024, p, transparent=True)
         im = Image.open(p).convert('RGBA')
@@ -531,7 +529,82 @@ def splash():
             out = RES / f'drawable-{dn}' / 'splash_icon.webp'
             out.parent.mkdir(parents=True, exist_ok=True)
             can.resize((round(288 * k), round(288 * k)), Image.LANCZOS).save(out, 'WEBP', quality=92, method=6)
+    splash_anim(pt)
     print('splash done')
+
+def front_parts(top, bot, glow, edge, face):
+    UID[0] = 0
+    return {
+        'marker': chunky(rosette(272, 256, 244), '#ffffff', edge, 14, 34)
+                  + f'<path d="{rosette(222, 256, 244)}" fill="{face}" stroke="{face}" stroke-width="26" stroke-linejoin="round"/>',
+        'shadow': '<ellipse cx="256" cy="476" rx="92" ry="12" fill="#1d1640" opacity=".28"/>',
+        'man': fig('man', 1.6, 128),
+        'star': lstar(404, 92, 32, 'url(#gold)', '#e07a00', 6),
+    }
+
+# The animated splash (Android 12+, owner 2026-11-14: "like Duolingo, a short animation, never laggy"): the same drawing
+# as a VectorDrawable inside an AnimatedVectorDrawable. Android 12+ draws the launch screen in the system's own process
+# and runs a vector animation on the render thread, so the app starting up can't make it stutter. 1 s: the marker pops
+# in, the character springs up out of it, the star spins in, then two small cheering hops with the shadow squeezing.
+# The drawable's own values are the last pose, so anything that shows it still (Android 11 and older) shows the finish.
+SPLASH_V = 790        # viewport side round the marker's centre: the star at the 2/3 circle's edge, room for overshoot
+SPLASH_MS = 1000
+KEYS = {  # group → property → [(fraction, value, interpolator)]
+    'pop': {'scaleX': [(0, .3, None), (.3, 1.08, 'decel'), (.45, 1, 'smooth')],
+            'scaleY': [(0, .3, None), (.3, 1.08, 'decel'), (.45, 1, 'smooth')]},
+    'man': {'scaleX': [(0, 0, None), (.15, 0, None), (.42, 1.1, 'decel'), (.55, .94, 'smooth'), (.62, 1, 'smooth')],
+            'scaleY': [(0, 0, None), (.15, 0, None), (.42, 1.14, 'decel'), (.55, .92, 'smooth'), (.62, 1, 'smooth')]},
+    'hop': {'translateY': [(0, 0, None), (.62, 0, None), (.74, -26, 'decel'), (.84, 0, 'accel'), (.92, -12, 'decel'),
+                           (1, 0, 'accel')]},
+    'shadow': {'scaleX': [(0, 0, None), (.15, 0, None), (.42, 1, 'decel'), (.62, 1, None), (.74, .7, 'decel'),
+                          (.84, 1, 'accel'), (.92, .85, 'decel'), (1, 1, 'accel')]},
+    'star': {'scaleX': [(0, 0, None), (.3, 0, None), (.6, 1.25, 'decel'), (.75, 1, 'smooth')],
+             'scaleY': [(0, 0, None), (.3, 0, None), (.6, 1.25, 'decel'), (.75, 1, 'smooth')],
+             'rotation': [(0, -160, None), (.3, -160, None), (.75, 0, 'decel')]},
+}
+INTERP = {'decel': '@android:interpolator/decelerate_cubic', 'accel': '@android:interpolator/accelerate_cubic',
+          'smooth': '@android:interpolator/fast_out_slow_in'}
+PIVOTS = {'pop': (256, 244), 'man': (256, 476), 'hop': None, 'shadow': (256, 476), 'star': (404, 92)}
+
+def splash_anim(parts):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import svg_to_vd as sv
+    defs = glossy_star_defs()
+    vd = {k: sv.convert(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>{defs}</defs>{v}</svg>')
+          for k, v in parts.items()}
+
+    def grp(name, body):
+        pv = PIVOTS.get(name)
+        piv = f' android:pivotX="{pv[0]}" android:pivotY="{pv[1]}"' if pv else ''
+        return f'<group android:name="{name}"{piv}>{body}</group>'
+
+    half = SPLASH_V / 2
+    drawing = (f'<group android:translateX="{half - 256:g}" android:translateY="{half - 244:g}">'
+               + grp('pop', vd['marker'] + grp('shadow', vd['shadow']) + grp('hop', grp('man', vd['man'])))
+               + grp('star', vd['star']) + '</group>')
+    targets = ''
+    for name, props in KEYS.items():
+        holders = ''
+        for prop, keys in props.items():
+            kf = ''.join(f'<keyframe android:fraction="{fr:g}" android:value="{v:g}"'
+                         + (f' android:interpolator="{INTERP[i]}"' if i else '') + '/>' for fr, v, i in keys)
+            holders += f'<propertyValuesHolder android:propertyName="{prop}">{kf}</propertyValuesHolder>'
+        targets += (f'<target android:name="{name}"><aapt:attr name="android:animation">'
+                    f'<objectAnimator android:duration="{SPLASH_MS}">{holders}</objectAnimator></aapt:attr></target>')
+    xml = ('<?xml version="1.0" encoding="utf-8"?>\n<!-- Generated by scripts/make-character-icons.py (splash mode) -->\n'
+           '<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" '
+           'xmlns:aapt="http://schemas.android.com/aapt">'
+           f'<aapt:attr name="android:drawable"><vector android:width="288dp" android:height="288dp" '
+           f'android:viewportWidth="{SPLASH_V}" android:viewportHeight="{SPLASH_V}">{drawing}</vector></aapt:attr>'
+           f'{targets}</animated-vector>\n')
+    out = RES / 'drawable-v31' / 'splash_anim.xml'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(xml)
+    (RES / 'drawable' / 'splash_anim.xml').write_text(
+        '<?xml version="1.0" encoding="utf-8"?>\n<!-- Android 11 and older: the still splash picture '
+        '(Android 12+ uses drawable-v31/splash_anim.xml) -->\n'
+        '<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/splash_icon"/>\n')
+    return drawing
 
 def main():
     themes = [t[0] for t in mi.themes()]

@@ -42,9 +42,14 @@ public class AppActivity extends BridgeActivity {
         registerPlugin(LaunchPlugin.class);
         keepHash(getIntent());
         firstUp = false;
-        final long until = SystemClock.uptimeMillis() + 4000;
+        final long start = SystemClock.uptimeMillis(), until = start + 4000;
+        // Android 12+ plays the 1 s splash animation (drawable-v31/splash_anim.xml): let it finish once started
+        final long played = android.os.Build.VERSION.SDK_INT >= 31 ? start + 1050 : start;
         SplashScreen splash = SplashScreen.installSplashScreen(this);
-        splash.setKeepOnScreenCondition(() -> !firstUp && SystemClock.uptimeMillis() < until);
+        splash.setKeepOnScreenCondition(() -> {
+            long now = SystemClock.uptimeMillis();
+            return now < played || (!firstUp && now < until);
+        });
         // Duolingo-like: the logo on one solid colour, then a quick plain fade into the first screen
         splash.setOnExitAnimationListener((v) -> v.getView().animate().alpha(0f).setDuration(200)
             .setInterpolator(new DecelerateInterpolator()).withEndAction(v::remove).start());
