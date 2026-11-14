@@ -8,6 +8,8 @@
   with `pg_dump`, through the same session pooler the migrations use.
 - The files users keep in Supabase Storage (the voice clips people chose to share for the harakat check) are
   downloaded too, into `files.tar.enc`; `files.txt` holds how many, and the run checks they are all there.
+  This needs the repo secret `SUPABASE_SERVICE_KEY` (Supabase → Project Settings → API keys → `service_role`).
+  Without it the database is still backed up, `files.txt` says `skipped` and the run shows a warning.
 - Both are encrypted (AES-256) with the repo secret `BACKUP_KEY`, because the repository is public. Nothing leaves
   the runner unencrypted. `counts.txt` beside them holds only row counts per table, `key.txt` the name of the key used.
   Until `BACKUP_KEY` is added, the database password is used (`key.txt` then says `SUPABASE_DB_PASSWORD`).
