@@ -5,7 +5,8 @@
 #    files from Cloudflare, sign-in or a signed token, sync, Ranks, friends, rival, Learn, the shop, polling.
 # 3. report: one table in the run summary (per call: average, 95 %, errors), the slowest database calls on staging,
 #    database size and the bytes pulled from Supabase (the free plan allows 5 GB a month for the whole account).
-# Needs: variable STAGING_REF, secrets STAGING_DB_PASSWORD and SUPABASE_ACCESS_TOKEN (the account token the deploy uses).
+# Needs: variable STAGING_REF, secrets STAGING_DB_PASSWORD and STAGING_ACCESS_TOKEN (a Supabase access token of the
+# account that owns staging; without it SUPABASE_ACCESS_TOKEN, the deploy token, is used).
 name: Launch test (staging)
 on:
   workflow_dispatch:
@@ -23,7 +24,8 @@ concurrency: { group: launchtest, cancel-in-progress: false }
 permissions: { contents: read }
 env:
   REF: ${{ vars.STAGING_REF }}
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  # The staging project may sit in another Supabase account or organization: its own token wins.
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
   STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
   LIVE_REF: jposubjybzstfmnngews
 jobs:
@@ -40,17 +42,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with: { version: 2.120.0 }
       - name: Find the staging database
-        run: |
-          set -uo pipefail
-          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$REF/config/database/pooler" \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
-          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['STAGING_DB_PASSWORD'].strip(), safe=''))")
-          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
-            url="postgresql://postgres.$REF:$PW@$h:5432/postgres"
-            if psql "$url" -Xqtc 'select 1' >/dev/null 2>&1; then echo "::add-mask::$url"; echo "DB=$url" >> "$GITHUB_ENV"; exit 0; fi
-          done
-          echo "::error::Could not reach the staging database. Check STAGING_DB_PASSWORD."; exit 1
+        run: bash scripts/launchtest/find-db.sh
       - name: Apply every migration to staging
         run: supabase db push --db-url "$DB" --include-all
       - name: Email sign-in for test players (staging only)
@@ -129,24 +121,16 @@ jobs:
         run: |
           python3 scripts/launchtest/report.py out ${{ inputs.peak }} >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"
+      - name: Find the staging database
+        run: bash scripts/launchtest/find-db.sh
       - name: The staging database after the test
         run: |
-          set -uo pipefail
-          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$REF/config/database/pooler" \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
-          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['STAGING_DB_PASSWORD'].strip(), safe=''))")
-          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com; do
-            url="postgresql://postgres.$REF:$PW@$h:5432/postgres"; echo "::add-mask::$url"
-            if psql "$url" -Xqtc 'select 1' >/dev/null 2>&1; then
-              {
-                echo; echo "### Slowest database calls on staging during the test"; echo; echo '```'
-                psql "$url" -X -P pager=off -c "select calls, round(mean_exec_time::numeric, 1) as avg_ms, round(max_exec_time::numeric) as max_ms,
-                  left(regexp_replace(query, '\s+', ' ', 'g'), 90) as call from extensions.pg_stat_statements
-                  where query ilike '%public.%' order by mean_exec_time * calls desc limit 15"
-                psql "$url" -X -P pager=off -c "select pg_size_pretty(pg_database_size(current_database())) as database_size,
-                  (select count(*) from pg_stat_activity) as connections_now"
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
-              break
-            fi
-          done
+          {
+            echo; echo "### Slowest database calls on staging during the test"; echo; echo '```'
+            psql "$DB" -X -P pager=off -c "select calls, round(mean_exec_time::numeric, 1) as avg_ms, round(max_exec_time::numeric) as max_ms,
+              left(regexp_replace(query, '\s+', ' ', 'g'), 90) as call from extensions.pg_stat_statements
+              where query ilike '%public.%' order by mean_exec_time * calls desc limit 15"
+            psql "$DB" -X -P pager=off -c "select pg_size_pretty(pg_database_size(current_database())) as database_size,
+              (select count(*) from pg_stat_activity) as connections_now"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
