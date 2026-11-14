@@ -55,6 +55,26 @@ insert into public.user_docs (user_id, kind, id, data, device_id, updated_at)
     'dev' || i, now() - (k * i % 1000) * interval '1 minute'
   from generate_series(1, :n) i, generate_series(1, 30) k;
 
+-- Learn: lessons passed today (flawless ones are claimed later), voice-check stats (a busy day: 20,000) and
+-- voice clips in Storage (3,000 today, the daily cap).
+update public.rank_days set lessons = 1 + hashtext(user_id::text) % 3 where day = current_date and hashtext(user_id::text) % 2 = 0;
+insert into public.follow_stats (install, stat, created_at)
+  select 'seed' || (i % 4000), jsonb_build_object('engine', 'android', 'words', 40, 'untapped', 1, 'added', 0, 'unclear', 2),
+    now() - (i % 1400) * interval '1 minute'
+  from generate_series(1, 20000) i;
+insert into storage.objects (bucket_id, name, created_at)
+  select 'harakat-clips', pg_temp.uid(1 + (i * 7) % :n)::text || '/' || md5(i::text) || '.pcm', now() - (i % 1400) * interval '1 minute'
+  from generate_series(1, 3000) i;
+-- Shop: unopened gifts between friends and a lamp wall of 3,000 lamps with Ameens.
+insert into public.rank_gifts (from_id, to_id, light)
+  select pg_temp.uid(i), pg_temp.uid(((i + 36) % :n) + 1), 25 from generate_series(1, :n, 3) i;
+insert into public.rank_lamps (user_id, for_name, he, dua, light, at)
+  select pg_temp.uid(1 + (i * 13) % :n), 'Name' || i, i % 2 = 0, i % 4, 50, now() - (i % 20000) * interval '1 minute'
+  from generate_series(1, 3000) i;
+insert into public.rank_lamp_ameens (lamp, user_id)
+  select l.id, pg_temp.uid(1 + (abs(hashtext(l.id::text)) + k) % :n) from public.rank_lamps l, generate_series(1, 10) k
+  on conflict do nothing;
+
 -- Weekly rivals, by the server's own pairing job.
 select public.rank_pair_duels() as duels_paired;
 

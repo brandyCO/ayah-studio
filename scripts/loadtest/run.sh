@@ -32,6 +32,23 @@ as_player global "select public.rank_global(current_date, false, 'all')"
 as_player live "select public.rank_live('read')"
 as_player sync_pull "select kind, id, data, deleted, updated_at from public.user_docs where device_id is distinct from 'devX' and updated_at > now() - interval '2 hours' order by updated_at limit 500"
 as_player sync_push "insert into public.user_docs (user_id, kind, id, data, device_id) values ($ME, 'state', 'kv:key' || ((:i) % 30 + 1), jsonb_build_object('v', repeat('y', 400), 'at', extract(epoch from now())::bigint), 'dev' || (:i)) on conflict (user_id, kind, id) do update set data = excluded.data, updated_at = now()"
+# Learn: the path, garden and shop purchases sync as one bigger document; flawless lessons; the voice check's
+# stats (rolled back, so the seeded day stays the same size) and the voice-clip upload check.
+as_player learn_sync "insert into public.user_docs (user_id, kind, id, data, device_id) values ($ME, 'state', 'garden', jsonb_build_object('v', repeat('g', 12000), 'at', extract(epoch from now())::bigint), 'dev' || (:i)) on conflict (user_id, kind, id) do update set data = excluded.data, updated_at = now()"
+as_player learn_flawless "select public.rank_flawless(current_date, 1)"
+as_player learn_clip_check "select public.harakat_can_upload()"
+cat > "$OUT/bench/learn_follow_stat.sql" <<SQL
+\set i random(1, $N)
+begin;
+set local role anon;
+select public.follow_stat(jsonb_build_object('engine', 'android', 'words', 40, 'untapped', 1, 'added', 0, 'unclear', 2), 'lt' || (:i));
+rollback;
+SQL
+# Shop: gifts waiting, the lamp wall, wearing a look / a lamp of Light.
+as_player shop_gifts "select public.rank_my_gifts()"
+as_player shop_lamp_wall "select public.rank_lamp_wall(80)"
+as_player shop_look "select public.rank_set_look((:i) % 24, false, 0)"
+as_player shop_lamp "select public.rank_set_lamp((:i) % 5)"
 # What the edge proxy asks (anonymously, once per league / player every 8 s); the ids are looked up first.
 cat > "$OUT/bench/league_pulse.sql" <<SQL
 \set i random(1, $N)
@@ -44,7 +61,8 @@ SQL
 
 # How often phones send each call, roughly (per player-minute while the app is open; Ranks open part of the time).
 declare -A WEIGHT=( [report]=6 [status]=2 [league]=2 [my_pulse]=2 [full_pulse]=1 [friends]=1 [feats]=1 [my_social]=2 [duel]=1
-  [global]=1 [live]=3 [sync_pull]=4 [sync_push]=4 [league_pulse]=3 [player_pulse]=3 )
+  [global]=1 [live]=3 [sync_pull]=4 [sync_push]=4 [league_pulse]=3 [player_pulse]=3
+  [learn_sync]=2 [learn_flawless]=1 [learn_clip_check]=1 [learn_follow_stat]=1 [shop_gifts]=1 [shop_lamp_wall]=1 [shop_look]=1 [shop_lamp]=1 )
 
 echo "| Call | Calls a second | Average | 95 % within | Slowest |" > "$OUT/report.md"
 echo "|---|---:|---:|---:|---:|" >> "$OUT/report.md"

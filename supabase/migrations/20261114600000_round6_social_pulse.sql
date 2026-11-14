@@ -111,3 +111,6 @@ begin
 end $$;
 revoke all on function public.rank_feats_feed() from public, anon;
 grant execute on function public.rank_feats_feed() to authenticated;
+
+-- follow_stat() counts one phone's stats of the day on every recitation checked; without this it read the whole day.
+create index if not exists follow_stats_install on public.follow_stats (install, created_at);
