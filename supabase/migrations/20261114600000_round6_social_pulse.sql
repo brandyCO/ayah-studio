@@ -77,3 +77,37 @@ begin
 end $$;
 revoke all on function public.rank_my_social(date) from public, anon;
 grant execute on function public.rank_my_social(date) to authenticated;
+
+-- The load test (10,000 players) found the friends' news at ~360 ms: it read every milestone of the week and checked
+-- friendship row by row. Now it starts from my friends (≤ 100) and reads each one's newest milestones by the
+-- (user_id, at) index; faces are built for the 30 kept only. Same answer.
+create or replace function public.rank_feats_feed() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare me uuid := public.rank_me();
+begin
+  return jsonb_build_object(
+    'friends', coalesce((select jsonb_agg(public.rank_face(p, me) || jsonb_build_object('id', y.id, 'kind', y.kind, 'n', y.n,
+          'at', y.at,
+          'cheers', (select count(*) from public.rank_feat_cheers k where k.feat = y.id),
+          'cheered', exists (select 1 from public.rank_feat_cheers k where k.feat = y.id and k.user_id = me))
+        order by y.at desc)
+      from (
+        select f.id, f.user_id, f.kind, f.n, f.at
+        from (select case when r.a = me then r.b else r.a end as uid from public.rank_friends r where r.a = me
+              union all select r.a from public.rank_friends r where r.b = me) fr
+        join public.rank_players q on q.user_id = fr.uid and not q.private
+        cross join lateral (select f.id, f.user_id, f.kind, f.n, f.at from public.rank_feats f
+          where f.user_id = fr.uid and f.at > now() - interval '7 days' order by f.at desc limit 30) f
+        order by f.at desc limit 30) y
+      join public.rank_players p on p.user_id = y.user_id), '[]'::jsonb),
+    'mine', coalesce((select jsonb_agg(x order by (x ->> 'at') desc) from (
+      select jsonb_build_object('id', f.id, 'kind', f.kind, 'n', f.n, 'at', f.at,
+          'by', (select coalesce(jsonb_agg(case when p.private then '' else coalesce(p.name, '') end order by k.at), '[]'::jsonb)
+                 from public.rank_feat_cheers k join public.rank_players p on p.user_id = k.user_id where k.feat = f.id)) as x
+      from public.rank_feats f
+      where f.user_id = me and f.at > now() - interval '7 days'
+        and exists (select 1 from public.rank_feat_cheers k where k.feat = f.id)
+      order by f.at desc limit 10) y), '[]'::jsonb));
+end $$;
+revoke all on function public.rank_feats_feed() from public, anon;
+grant execute on function public.rank_feats_feed() to authenticated;

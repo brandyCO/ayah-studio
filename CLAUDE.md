@@ -790,7 +790,7 @@ Pro and a load test come later, when the owner decides to pay).
       edge**: `rank_my_social(d)` (my own part + public friend / rival ids, about once a minute) and `rank_player_pulse(pids,
       d)` through the proxy (`GET /pp`, each player kept 8 s; private players 'x', followed through my own part); Ranks →
       Friends, the MashaAllah toast, friend-streak moments and the duel page (now live, every 10 s) ask in full only when it
-      changed or once a minute (`socialPulse()`, switch `friendPulse`) (migration `20261114600000_round6_social_pulse.sql`,
+      changed or once a minute (`socialPulse()`, switch `friendPulse`); the first load test found friends' news at ~360 ms, now read from the friends' own milestones (migration `20261114600000_round6_social_pulse.sql`,
       pgTAP `round6.test.sql` 14)
 
 ### Phase 1c — app packaging
