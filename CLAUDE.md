@@ -2219,6 +2219,12 @@ duas/reflections section in Me.
       until it is over (`opening` promise in main.ts, ≤ 5.5 s), keyframes are sampled 30 a second (the compositor eases
       between them) and the glow, rays and flash are small baked canvases instead of full-resolution CSS gradients under a
       mask. 6× CPU: two short main-thread tasks during the show; motion is compositor-only
+      Still lagging on the phone → **simpler show** (2026-11-14): 2 s, eight moving layers (was ~70): the marker pops in,
+      the character springs up out of it waving (happy face and waving pose set before the first frame: a class change
+      mid-show repaints every layer of the character), the gold star lands with one small soft flash while it hops, the
+      name rises in as one piece, fly-out. No filters, rays, motes, rings, bursts or per-letter name; the overlay fades
+      only in its last 0.28 s (an opacity animation on it for the whole show made the GPU redraw the full screen every
+      frame). Set-up at 6× CPU ~400 → ~55 ms
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)
