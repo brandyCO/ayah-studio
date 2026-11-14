@@ -137,6 +137,15 @@ const en = {
   'ob.hs.search': 'You came looking for the Quran, and here it is. Welcome!',
   'ob.hs.other': 'However you found us, I’m really glad you did.',
   'ob.doneLater': 'All set! You can choose your daily goals any time on Me.',
+  'g1.title': 'Keep your flame safe',
+  'g1.sub': 'Sign in with Google so your streak, Light and character come with you to any phone.',
+  'g1.go': 'Sign in with Google',
+  'g1.later': 'Later',
+  'g1.ob': 'Sign in on Me anytime and your progress follows you to every phone.',
+  'g2.title': 'Your first flame',
+  'g2.sub': 'is one page away. Read it today and it catches.',
+  'g2.more': 'The rest fill in as you read, listen and memorise.',
+  'g3.toEarn': '{n} badges to earn',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -274,6 +283,15 @@ const ar: Partial<Record<FrontKey, string>> = {
   'ob.hs.search': 'جئت تبحث عن القرآن، وها هو. أهلًا بك!',
   'ob.hs.other': 'أيًّا كان الطريق الذي أوصلك إلينا، أنا سعيد جدًا بوصولك.',
   'ob.doneLater': 'كل شيء جاهز! يمكنك اختيار أهدافك اليومية متى شئت من صفحة أنا.',
+  'g1.title': 'احفظ شعلتك',
+  'g1.sub': 'سجّل الدخول بحساب Google لتبقى سلسلتك ونورك وشخصيتك معك على أي هاتف.',
+  'g1.go': 'تسجيل الدخول بحساب Google',
+  'g1.later': 'لاحقًا',
+  'g1.ob': 'سجّل الدخول من صفحة «أنا» متى شئت ليبقى تقدّمك معك على كل هاتف.',
+  'g2.title': 'شعلتك الأولى',
+  'g2.sub': 'على بُعد صفحة واحدة. اقرأها اليوم فتشتعل.',
+  'g2.more': 'تمتلئ البقية كلما قرأت واستمعت وحفظت.',
+  'g3.toEarn': '{n} وسامًا تنتظرك',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

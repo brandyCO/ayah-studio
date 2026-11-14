@@ -162,7 +162,9 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     document.body.append(d);
     d.showModal();
   }
-  const art = h('span', { class: 'ls-tree' });
+  // Round 3: the tree in the corner says what it is (it grows with each lesson passed in this surah).
+  const treeTip = lt('learn.treeTip', { name: surahName(m) });
+  const art = h('button', { class: 'ls-tree', type: 'button', title: treeTip, 'aria-label': treeTip, onclick: () => { haptic(6); toast(treeTip); } });
   // Focus page: the page fills the screen between two thin margins; the tools come up only when asked.
   const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
   const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
@@ -636,6 +638,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
     root.classList.toggle('ls-memory', p === 'memory');
     root.classList.toggle('ls-check', p === 'check');
+    // One next step at a time (front-end review G8): the player waits for the Listen step.
+    root.classList.toggle('ls-meaning', p === 'meaning');
     if (p !== 'memory') memExtras.replaceChildren();
   }
 

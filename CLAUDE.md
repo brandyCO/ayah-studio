@@ -753,6 +753,22 @@ Pro and a load test come later, when the owner decides to pay).
       `ev:…`, `age:…` since install, `p:`, `l:`, first day again under `d0:`), no id; `usage_add()` adds 1 per word
       (migration `20261113400000_usage_counts.sql`, pgTAP `usage_counts.test.sql`); owner reads the views `usage_by_day` and
       `usage_first_day` in the Supabase SQL editor; off in the Kids space and with Me → ⚙ → App → Anonymous usage counts
+- [x] Round 3 (owner "Yes", 2026-11-14): minutes listened go to Ranks at most once a minute (other progress within seconds;
+      everything at once when the app is left or Ranks opens), "reading now" every 2 min (dot kept 4 min); the backup also
+      packs the Storage voice clips (`files.tar.enc`) and uses its own secret `BACKUP_KEY` (owner adds it; until then the
+      database password, `key.txt` says which); `usage_add` takes no new words once a day has 3000; `tidy_db()` also removes
+      friends' news > 30 days, challenges started > 90 days ago or never accepted in 30, duels > 8 weeks, gifts opened > a year
+      (migration `20261114300000_round3_lighter.sql`, pgTAP `round3_lighter.test.sql` 12)
+- [x] Round 4 (owner "yes, as long as quality stays", 2026-11-14): voice-clip uploads count the files in Storage (40 a day each,
+      3000 a day in all; `harakat_can_upload`); friend streaks stored per pair up to 3 days ago (`rank_friend_streaks`,
+      `rank_streak_to()`; the same numbers as before) so `tidy_db()` keeps `rank_days` to 400 days (totals live in
+      `rank_players` / `rank_weeks`; every pair's streak stored and earned invites marked `ready` first); the nightly backup
+      checks space (an issue "Space: …" past 400 of 500 MB database / 800 MB of 1 GB files). **Play build**: mushaf pages
+      4–604 are the fast-follow asset pack `qcf_fonts` (`android/qcf_fonts`, `FontPackPlugin.java`, `scripts/font-pack.sh`,
+      `FONT_PACK=1` / `VITE_FONT_PACK=1` in release.yml; android.yml builds and checks it on every change), pages 1–3 stay in
+      the app; until the pack is in, a page waits on a "Preparing your mushaf" card (`src/ui/mushafPrep.ts`, progress, Wi-Fi →
+      "Download on mobile data") while that page alone comes from the site (`src/data/fontPack.ts`); test APKs keep every font
+      (migration `20261114400000_round4_storage_streaks.sql`, pgTAP `round4.test.sql` 16)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
@@ -1645,6 +1661,15 @@ duas/reflections section in Me.
       shown from above in the tiles (`rugTop()`), carved arches with lamps, cedar panels with stars under a brass rail, veined
       marble, an embroidered pouf; the kurta's vest edged in gold with paisleys, the embroidered abaya with a vine of flowers,
       a jewelled collar and a band of diamonds; the freeze a cut crystal
+      **Premium characters** (owner request 2026-11-14, "Duolingo premium quality … see the beauty of what they chose"; preview
+      artifact QwsVtqPtNjE4AWkNMqkTNb): eyes are a white with a deep brown iris and catch lights (`glossy()`; grown-ups a skin
+      lid, men calm with one small catch light, `CALM`), lips a natural skin tone for men and under beards (`LIP` / `LIPB`),
+      grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
+      temple shows (`hairFront()`), tapered sleeves with cuffs (`arm()`), mitten hands (`mitten()`), a new robe silhouette
+      (rounded shoulders, waist, flare, curved hem) with shoes, a neck and the thobe's collar. New pieces for Light: couture
+      outfits 17–22 (`couture()`: kaftan, tatreez thobe, sherwani, Omani dishdasha, kebaya, anarkali), held items 12–17
+      (mabkhara, dallah, Moroccan tea, roses, Eid gift, rosewater), worn decorations `acc` 5–10 (pearls, khatam brooch, sash,
+      pashmina, crescent medallion, jasmine; lower under a hijab) and room pieces orchid, lemon, kursi, lanterns, qandil, damask
       **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
       `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
       hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when
@@ -2152,6 +2177,21 @@ duas/reflections section in Me.
       into Web Animations keyframes (transform / opacity, compositor), faces / poses / sounds (`SOUNDS`, sfx) follow
       the same clock, and `show(…, manual)` seeks any moment (frame-exact preview renders). Loading spinners are the
       gold Light star turning and twinkling (`.spinner`)
+- [x] M26 Front-end review, round 2 (owner "build all", 2026-11-14; Claude Doc "Front end review, round 2", G1–G12): **Keep your
+      flame safe** (signed out, once a flame was lit: a Google sign-in card under the streak, Later rests it 3 days, `safeLater`;
+      a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
+      "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
+      a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
+      Read's bar: the pages ring sits in the title row with the count inside, Noor's line once a day (`readNoorDay`), Today lines
+      clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
+      was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
+      card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
+      repeats; Me and Learn fetched in a quiet moment after the first screen (not on Data Saver)
+      Round 3 (owner "yes to all", 2026-11-14): the Read bar's Today lines can be one row (`inline`: Today's ayah and Popular
+      with round ▶ / reel buttons, no translation preview); Learn's daily ring says "today" (or "+ goal" without a target);
+      the golden mushaf's unread juz are empty outlines; "115 badges to earn" before the first; no "compared with last week"
+      before there is a last week; Me's header without its subtitle; the lesson's tree explains itself on tap
+      (`learn.treeTip`); Learn's sun / moon sit beside the intro card, not behind it
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -15,7 +15,9 @@ import { gzipSync } from 'node:zlib';
 // on Me; their screens, strings and styles load on first use).
 // 2026-11-13: raised to 144.5 for one week everywhere (F9; 143.9 KB): the weekly goals count Islamic days and end at
 // Friday Maghrib, so the Maghrib / Islamic-day module (rankDay.ts, 1.5 KB) now loads with the goals instead of with Ranks.
-const BUDGET_KB = 128;
+// 2026-11-14: raised to 130 for 30 interface languages (128.3 KB): the language system in i18n (+0.9 KB) and the
+// translation list with 14 more editions, so the default translation follows the interface language (+0.7 KB).
+const BUDGET_KB = 130;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

@@ -6,31 +6,42 @@
 
 - It dumps the schemas `public` (all app data: synced progress, Ranks, reflections, reports…) and `auth` (accounts)
   with `pg_dump`, through the same session pooler the migrations use.
-- The dump is encrypted with the database password (`SUPABASE_DB_PASSWORD`, AES-256), because the repository is
-  public. Nothing leaves the runner unencrypted. `counts.txt` beside it holds only row counts per table.
+- The files users keep in Supabase Storage (the voice clips people chose to share for the harakat check) are
+  downloaded too, into `files.tar.enc`; `files.txt` holds how many, and the run checks they are all there.
+  This needs the repo secret `SUPABASE_SERVICE_KEY` (Supabase → Project Settings → API keys → `service_role`).
+  Without it the database is still backed up, `files.txt` says `skipped` and the run shows a warning.
+- Both are encrypted (AES-256) with the repo secret `BACKUP_KEY`, because the repository is public. Nothing leaves
+  the runner unencrypted. `counts.txt` beside them holds only row counts per table, `key.txt` the name of the key used.
+  Until `BACKUP_KEY` is added, the database password is used (`key.txt` then says `SUPABASE_DB_PASSWORD`).
+- **Owner, once:** make a long random password, keep it in your password manager (you need it to restore), and add
+  it as the repo secret `BACKUP_KEY` (Settings → Secrets and variables → Actions). From then on, changing the
+  database password never locks the backups.
 - The same run restores the backup into an empty Postgres 17 and checks that every table has the same number of
   rows. A backup that would not restore makes the run fail.
 - Each backup is kept 30 days as the artifact `db-backup-YYYY-MM-DD` on the run's page.
 - If a run fails, an issue "Database backup failed" is opened and assigned to the owner (GitHub e-mails it).
 
-Not in it: files in Supabase Storage (harakat clips, which users chose to share for training) and the reel videos
-(never uploaded). Storage files can be added later if they become important.
+Not in it: the reel videos (never uploaded).
 
 ### Restoring
 
 1. Actions → Database backup → the run of the day you want → download `db-backup-YYYY-MM-DD` and unzip it.
-2. Decrypt it with the database password (Supabase → Project Settings → Database):
+2. Decrypt it with the key `key.txt` names (`BACKUP_KEY` from your password manager, or for older backups the
+   database password from Supabase → Project Settings → Database):
 
    ```
    openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in db.dump.enc -out db.dump
+   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in files.tar.enc | tar -xf -   # the stored files
    ```
+
+   The files come out as `harakat-clips/{user}/{name}.pcm`; upload them back into the same bucket at the same paths.
 
 3. Look inside before touching the live database: restore into a scratch database first, for example a local one,
    `pg_restore -d postgresql://localhost/scratch --no-owner --no-privileges db.dump`.
 4. To put back one user's data or one table, copy those rows from the scratch database. A full restore over the
    live database is a last resort and should be done with the owner, never by a script.
 
-`scripts/db-backup.sh dump|verify` is what the workflow runs; it can be run by hand the same way.
+`scripts/db-backup.sh dump|verify|files|checkfiles` is what the workflow runs; it can be run by hand the same way.
 
 ## Uptime alerts
 

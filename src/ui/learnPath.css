@@ -191,7 +191,9 @@ html.lite .lp-start { animation: none; }
 .lp-day-fg { fill: none; stroke: #4caf2a; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset var(--dur-3) var(--ease-spring); }
 .lp-day.none .lp-day-fg { stroke: transparent; }
 .lp-day.none .lp-day-bg { stroke-dasharray: 4 5; }
-.lp-day-n { position: relative; font: 900 15px var(--ui-round); }
+.lp-day-n { position: relative; display: grid; justify-items: center; line-height: 1; font: 900 15px var(--ui-round); }
+.lp-day-n small { margin-top: 2px; font: 800 9.5px var(--ui-round); letter-spacing: .02em; text-transform: uppercase; opacity: .65; }
+.lp-day.none .lp-day-n { font-size: 20px; }
 .lp-day.met { background: var(--lp-gold); color: #fff; box-shadow: 0 4px 0 var(--lp-gold-edge), 0 0 22px #ffd77a99; }
 .lp-day.met .lp-day-bg, .lp-day.met .lp-day-fg { stroke: #ffffffaa; }
 .lp-cont {
@@ -288,8 +290,8 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 .lp-lamps .lamp-art { width: 16px; height: 20px; }
 .lp-lamps.none .lamp-art .lf, .lp-lamps.none .lamp-art .lfi, .lp-lamps.none .lamp-art .lg { opacity: 0; }
 .lp-lamps.none .lamp-art .lb { fill: #c9cfcb; } .lp-lamps.none .lamp-art .lc { fill: #a9b0ac; } .lp-lamps.none .lamp-art .lw { fill: #e7ebe8; }
-/* With the lamps chip the top bar is one pill wider: the Choose pill keeps only its icon below 440 px. */
-@media (max-width: 439px) {
+/* With the lamps chip the top bar is one pill wider: the Choose pill keeps only its icon below 360 px (G6: the label stays on most phones). */
+@media (max-width: 359px) {
   .lp-top { gap: 6px; }
   .lp-pill-t { display: none; }
   .lp-pill { padding: 0 9px; }
@@ -301,7 +303,7 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 }
 
 /* F8: the first visit starts on the path, with a quiet line saying where */
-.lp-intro { display: grid; gap: 6px; justify-items: center; text-align: center; margin: 8px auto 4px; max-width: 320px;
+.lp-intro { display: grid; gap: 6px; justify-items: center; text-align: center; margin: 8px auto 4px; max-width: min(280px, calc(100% - 96px));
   padding: 10px 14px; border-radius: 16px; background: #ffffffd9; color: #1f2328; font-weight: 700; font-size: .92rem;
   box-shadow: 0 2px 10px #0001; }
 .lp-intro-links { display: flex; gap: 14px; }
@@ -317,3 +319,12 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 .lp-prac[hidden] { display: none; }
 .lp-prac:active { translate: 0 4px; box-shadow: 0 1px 0 #cc7a0a; }
 .lp-prac svg { width: 24px; height: 24px; }
+
+/* Night (front-end review G9): the sun becomes a crescent and the first-visit line takes the night card colours. */
+.lp-moon-cut { display: none; }
+@media (prefers-color-scheme: dark) {
+  .lp-moon-cut { display: inline; fill: #14213a; }
+  .lp-sun-halo { opacity: .1; }
+  .lp-intro { background: #1b2a25e6; color: #eef4f1; box-shadow: 0 2px 10px #0006; }
+  .lp-intro-links button { color: #7fd36a; }
+}

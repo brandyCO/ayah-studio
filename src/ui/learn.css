@@ -121,7 +121,8 @@
 .ls-title { flex: 1; min-width: 0; text-align: center; }
 .ls-title h1 { margin: 0; font-size: var(--fs-h3); }
 .ls-ref { margin: 2px 0 0; font-size: var(--fs-s); color: var(--muted); }
-.ls-tree { flex: none; width: 56px; height: 56px; }
+.ls-tree { flex: none; width: 56px; height: 56px; padding: 0; border: 0; background: none; cursor: pointer; }
+.ls-tree:active { scale: .92; }
 .ls-steps { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 6px 0; }
 .ls-steps li { padding: 4px 12px; border-radius: 99px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); background: var(--line); }
 .ls-steps li.on { background: var(--brand-fill); color: #fff; }
@@ -659,3 +660,4 @@ html.lite .ls-noor i { animation: none; }
 .ls-more .ls-steps { justify-content: flex-start; margin: 0 0 6px; }
 .ls-more .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .ls-rec-row small { margin-inline-start: auto; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-meaning .ls-tools { display: none; }

@@ -21,7 +21,7 @@ export function shelf(open: (page: number) => void): HTMLElement {
     const f = read / (b - a + 1);
     const full = read === b - a + 1;
     return h('button', {
-      class: `sh-book${full ? ' full' : read ? ' some' : ''}`, type: 'button', style: `--f:${f.toFixed(3)};--h:${(84 + ((j * 37) % 5) * 4)}%`,
+      class: `sh-book${full ? ' full' : read ? ' some' : ' empty'}`, type: 'button', style: `--f:${f.toFixed(3)};--h:${(84 + ((j * 37) % 5) * 4)}%`,
       'aria-label': fe('gs.book', { j, n: read, of: b - a + 1 }),
       onclick: () => { haptic(6); open(first || a); },
     }, h('span', { class: 'sh-gold', 'aria-hidden': 'true' }), h('span', { class: 'sh-n' }, String(j)));
