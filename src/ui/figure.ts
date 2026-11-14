@@ -964,13 +964,14 @@ function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): s
 /** The face's features for one expression (null = the face as built). */
 function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   const sk = SKIN[f.skin];
-  const niqab = f.head === 5, beard = f.beard >= 2;
+  const niqab = f.head === 5, beard = f.beard >= 1;
   const older = f.age === 1, young = kid(f);
   const col = older ? '#b9bcc2' : HAIR[f.hairC][1];
   let s = '';
   // Cheeks: 0 as before (a blush without a beard), 1 none, 2 blush, 3 freckles, 4 both. Happy faces blush more.
   const cx = Math.min(27, fr - 12);
-  const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || xp === 'happy' || xp === 'proud' || xp === 'star';
+  // A grown man blushes only when he chose it (owner 2026-11-14: a man with a beard doesn't have blushes).
+  const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || (f.body !== MAN && (xp === 'happy' || xp === 'proud' || xp === 'star'));
   const pink = mix(sk[0], '#ff5a6e', .55);
   LID = sk[0];
   CALM = f.body === MAN;
@@ -990,7 +991,8 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   s += open ? `<g class="fg-eyes">${e}</g>` : e;
   s += brows(f.brows || (xp === 'wow' ? 1 : 0), ey, col, xp);
   if (!niqab) {
-    if (f.beard) s += `<path d="M86 ${ey + 13}Q100 ${ey + 7} 114 ${ey + 13}Q108 ${ey + 16.4} 100 ${ey + 13.6}Q92 ${ey + 16.4} 86 ${ey + 13}Z" fill="${HAIR[f.hairC][1]}"/>`;
+    // The moustache: fuller in the middle, its ends turning down into the beard at the corners of the mouth.
+    if (f.beard) s += `<path d="M82 ${ey + 17}Q84 ${ey + 10} 92 ${ey + 9.4}Q97 ${ey + 9} 100 ${ey + 11}Q103 ${ey + 9} 108 ${ey + 9.4}Q116 ${ey + 10} 118 ${ey + 17}Q112 ${ey + 14.4} 100 ${ey + 15}Q88 ${ey + 14.4} 82 ${ey + 17}Z" fill="${(f.age === 1 && f.hairC < 5 ? HAIR[5] : HAIR[f.hairC])[1]}"/>`;
     s += mouth(xp ?? f.mouth, ey + (f.beard ? 18 : 15), beard, young);
   }
   return s;
@@ -1074,15 +1076,23 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   return s;
 }
 
-/** Beards with texture: 1 short, 2 full, 3 long; strands in the darker tone, a soft highlight. */
+/** Beards with texture: 1 short, 2 full, 3 long (owner 2026-11-14: "the beard is not properly shaped, properly put on
+ *  his head"). Each grows from the sideburns under the hair, runs down in front of the ears along the jaw, leaves the
+ *  cheeks clear above a soft cheek line that meets the moustache, and opens round the mouth; strands in the darker tone,
+ *  a soft highlight. */
 function beardOf(f: Fig): string {
   const hc = f.age === 1 && f.hairC < 5 ? HAIR[5] : HAIR[f.hairC];
-  const d = f.beard === 1 ? 'M62 104Q64 140 100 144Q136 140 138 104Q130 122 116 122Q100 116 84 122Q70 122 62 104Z'
-    : f.beard === 2 ? 'M58 98Q56 148 100 152Q144 148 142 98Q134 124 120 126Q100 118 80 126Q66 124 58 98Z'
-      : 'M58 98Q54 166 100 176Q146 166 142 98Q134 124 120 126Q100 118 80 126Q66 124 58 98Z';
-  const low = f.beard === 1 ? 140 : f.beard === 2 ? 148 : 170;
-  const strands = [74, 86, 100, 114, 126].map((x, i) => `<path d="M${x} ${126 + (i % 2) * 3}Q${x + (x < 100 ? -2 : 2)} ${(126 + low) / 2} ${x + (x - 100) * .12} ${low - 6 - Math.abs(x - 100) * .2}" stroke="${hc[1]}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".55"/>`).join('');
-  return S(d, hc[0], hc[1], -4, -4) + clipped(d, strands) + shine(`M70 ${120}Q74 ${low - 12} 88 ${low - 4}`, 2.4, 0.16);
+  // [outer side, chin bottom, cheek line inset]
+  const [o, low, ins] = f.beard === 1 ? [0.5, 144, 8] : f.beard === 2 ? [2.5, 153, 7] : [2.5, 176, 7];
+  const L = 56 - o, R = 144 + o;
+  const chin = f.beard === 3
+    ? `C${L + 2} 140 ${78} 170 100 ${low}C122 170 ${R - 2} 140 ${R} 108`
+    : `C${L + 1} 128 ${72} ${low} 100 ${low}C128 ${low} ${R - 1} 128 ${R} 108`;
+  const d = `M${L + 0.5} 86C${L} 96 ${L} 102 ${L} 108${chin}C${R} 102 ${R} 96 ${R - 0.5} 86`
+    + `L${144 - ins} 86C${144 - ins} 95 ${142 - ins} 104 ${132 - ins * .4} 110Q123 115 117 120Q100 135 83 120Q77 115 ${68 + ins * .4} 110`
+    + `C${58 + ins} 104 ${56 + ins} 95 ${56 + ins} 86Z`;
+  const strands = [70, 84, 100, 116, 130].map((x, i) => `<path d="M${x} ${128 + (i % 2) * 3}Q${x + (x < 100 ? -2 : 2)} ${(128 + low) / 2} ${x + (x - 100) * .12} ${low - 6 - Math.abs(x - 100) * .2}" stroke="${hc[1]}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".5"/>`).join('');
+  return S(d, hc[0], hc[1], -4, -4) + clipped(d, strands) + shine(`M64 ${112}Q68 ${low - 14} 84 ${low - 5}`, 2.4, 0.16);
 }
 
 /** Hair behind the head (round 5): long, bun, afro, braids, ponytail. */

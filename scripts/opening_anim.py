@@ -13,7 +13,7 @@ and draws on its own threads, full screen on the splash colour, so the app start
 
   python3 scripts/opening_anim.py            # writes res/raw/opening.webp
   python3 scripts/opening_anim.py --preview OUT.mp4   # a phone-screen video on the splash colour
-  --version hello | wake | dua | flip | catch           # which animation (VERSIONS; default hello)"""
+  --version hello | wake | dua | flip | catch           # which animation (VERSIONS; default catch, owner pick 2026-11-14)"""
 import json
 import math
 import re
@@ -85,7 +85,7 @@ def load_parts(svg):
     eyes, x0rest = cut(xp['x0'], 'fg-eyes')
     hp = xp['x-happy']
     cheeks_nose = hp[:hp.index('<path d="M75 106.5')]
-    must = re.search(r'<path d="M86 117[^>]*/>', hp).group()
+    must = re.search(r'<path d="M82 121[^>]*/>', hp).group()
     mouth = hp[hp.index('<clipPath id="fg21">'):]
     return dict(body=body, neck=neck, head=head, wow=xp['x-wow'], star=xp['x-star'], squint=hp,
                 sleepy=xp['x-sleepy'], calm=xp['x-calm'], proud=xp['x-proud'], x0rest=x0rest,
@@ -553,13 +553,13 @@ class Catch(Hello):
     key, title = 'catch', 'Catch the Light'
     dur = 2.6
     hops = [(0.05, 0.33, 34.0, False, 0), (1.02, 1.52, 74.0, True, 9)]
-    faces = [(0.0, 'joy'), (0.40, 'wow'), (1.24, 'star'), (1.52, 'squint'), (1.66, 'joy')]
+    faces = [(0.0, 'joy'), (0.40, 'wow'), (1.24, 'squint'), (1.66, 'joy')]
     blinks = (2.3,)
     T_CATCH, T_BURST = 1.26, 1.60
 
     def impulse(self, kind, big, sq, head, arms):
         if kind == 'land' and big:            # landing with the star held: a softer landing
-            sq.v -= 5.0
+            sq.v -= 2.5
             head.v += 100.0
             for s in arms.values():
                 s.v -= 60.0
@@ -625,6 +625,8 @@ class Catch(Hello):
         return bez(p0, cp, end, u)
 
     def front(self, t, c):
+        if self.T_CATCH <= t < self.T_BURST:
+            return self.held(t, c)
         if t < 0.30 or t >= self.T_CATCH:
             out = ''
             if self.T_BURST <= t < self.T_BURST + 0.7:
@@ -660,12 +662,14 @@ class Catch(Hello):
                 '<stop offset="1" stop-color="#ffd34d" stop-opacity="0"/></radialGradient></defs>'
                 f'<circle cx="{x:.1f}" cy="{y - 20:.1f}" r="{r:.1f}" fill="url(#cg)" opacity="{held * fade:.3f}"/>')
 
-    def inbody(self, t, c):
+    def held(self, t, c):
+        """The star held up in the cupped hands, in front of them, glowing brighter."""
         if not (self.T_CATCH <= t < self.T_BURST):
             return ''
         u = seg(t, self.T_CATCH, self.T_BURST)
+        x, y = c['map'](100, 168 - 4 * smooth(u))
         r = 15 * (1 + 0.25 * smooth(u)) * (1 + 0.06 * math.sin(2 * math.pi * 6 * u))
-        return light_star(100, 180, r, 200 + 30 * u, 1.0 + 0.8 * u)
+        return light_star(x, y, r, 200 + 30 * u, 0.7 + 0.4 * u)
 
 
 VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch)}
@@ -848,7 +852,7 @@ def frames(key='hello'):
 
 def main():
     from PIL import Image
-    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'hello'
+    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'catch'
     with tempfile.TemporaryDirectory() as d:
         if '--preview' in sys.argv:
             out = sys.argv[sys.argv.index('--preview') + 1]
@@ -863,8 +867,8 @@ def main():
         # 60 fps in whole milliseconds: 17, 17, 16, …
         dur = [17 if i % 3 != 2 else 16 for i in range(len(ims))]
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=75, method=6,
-                    alpha_quality=80, minimize_size=True, allow_mixed=True)
+        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=60, method=6,
+                    alpha_quality=70, minimize_size=True, allow_mixed=True)
         print(OUT, OUT.stat().st_size, 'bytes,', len(ims), 'frames')
 
 

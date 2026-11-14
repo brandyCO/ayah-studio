@@ -1700,7 +1700,9 @@ duas/reflections section in Me.
       **Premium characters** (owner request 2026-11-14, "Duolingo premium quality … see the beauty of what they chose"; preview
       artifact QwsVtqPtNjE4AWkNMqkTNb): eyes are a white with a deep brown iris and catch lights (`glossy()`; grown-ups a skin
       lid, men calm with one small catch light, `CALM`), lips a natural skin tone for men and under beards (`LIP` / `LIPB`),
-      grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
+      beards that grow from the sideburns under the hair along the jaw, cheeks clear above a soft cheek line meeting a fuller
+      moustache, open round the mouth (`beardOf()`; owner 2026-11-14: "the beard is not properly shaped, properly put on his
+      head"), no blush on a grown man unless he chose it, grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
       temple shows (`hairFront()`), tapered sleeves with cuffs (`arm()`), mitten hands (`mitten()`), a new robe silhouette
       (rounded shoulders, waist, flare, curved hem) with shoes, a neck and the thobe's collar. New pieces for Light: couture
       outfits 17–22 (`couture()`: kaftan, tatreez thobe, sherwani, Omani dishdasha, kebaya, anarkali), held items 12–17
@@ -2238,10 +2240,12 @@ duas/reflections section in Me.
       that's premium"; the animated vector icon was too stiff, small and short): `scripts/opening_anim.py` rigs the default
       character (sleeve arms bending along a curve and trailing their swing, mitten hands, squash and stretch round the
       feet, a lagging, tilting head that squashes less, blinks, an opening mouth, faces changed in two frames; springs with
-      take-off / landing impulses give the overshoot and follow-through) and animates 2.25 s at 60 fps: pops out of the
-      ground surprised, arms up → lands with dust → smiles, blinks, crouches → leaps with star eyes → lands in gold
-      sparkles → waves, head tilted, and holds. Frames are SVG rendered by Chromium, encoded as an animated WebP with alpha
-      (`res/raw/opening.webp`, ~2.5 MB; `--preview OUT.mp4` renders a video). Android 9+: the system splash is the plain
+      take-off / landing impulses give the overshoot and follow-through). Five versions (`VERSIONS`, `--version`): Hello,
+      Wake up, Du'a, Backflip and **Catch the Light** (owner pick 2026-11-14, the default; 2.6 s at 60 fps): pops up → a gold
+      Light star appears above, he looks up at it, wide-eyed, points → crouches and leaps → catches it in cupped hands at
+      the top of the jump → holds it up, glowing → it bursts into light, arms thrown up → lands in sparkles, arms open, and
+      holds. Adult faces only (no blush, no star eyes on a man). Frames are SVG rendered by Chromium, encoded as an animated
+      WebP with alpha (`res/raw/opening.webp`, ~5 MB; `--preview OUT.mp4` renders a video). Android 9+: the system splash is the plain
       splash colour (a clear icon, `drawable-v28/splash_anim.xml`) while `AppActivity` decodes the picture off the main
       thread (≤ 0.7 s), then a full-screen layer on the same colour plays it with `AnimatedImageDrawable` (its own decode
       and render threads, so start-up can't make it stutter); he holds his last pose until the first screen is drawn
@@ -2255,7 +2259,7 @@ duas/reflections section in Me.
       a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
       "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
       a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
-      Read's bar: the pages ring sits in the title row with the count inside, Noor's line once a day (`readNoorDay`), Today lines
+      Read's bar: today's pages (ring + "1 of 5 pages today") and the streak are a slim row under the title (owner 2026-11-14: beside it they pushed the surah name out of sight), Noor's line once a day (`readNoorDay`), Today lines
       clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
       was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
       card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
