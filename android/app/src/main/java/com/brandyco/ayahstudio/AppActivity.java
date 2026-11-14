@@ -3,7 +3,6 @@ package com.brandyco.ayahstudio;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
@@ -46,13 +45,9 @@ public class AppActivity extends BridgeActivity {
         final long until = SystemClock.uptimeMillis() + 4000;
         SplashScreen splash = SplashScreen.installSplashScreen(this);
         splash.setKeepOnScreenCondition(() -> !firstUp && SystemClock.uptimeMillis() < until);
-        splash.setOnExitAnimationListener((v) -> {
-            View icon = v.getIconView();
-            if (icon != null) icon.animate().scaleX(1.15f).scaleY(1.15f).alpha(0f).setDuration(320)
-                .setInterpolator(new DecelerateInterpolator()).start();
-            v.getView().animate().alpha(0f).setStartDelay(80).setDuration(300)
-                .setInterpolator(new DecelerateInterpolator()).withEndAction(v::remove).start();
-        });
+        // Duolingo-like: the logo on one solid colour, then a quick plain fade into the first screen
+        splash.setOnExitAnimationListener((v) -> v.getView().animate().alpha(0f).setDuration(200)
+            .setInterpolator(new DecelerateInterpolator()).withEndAction(v::remove).start());
         super.onCreate(savedInstanceState);
     }
 

@@ -17,5 +17,5 @@ export function playOpening(firstScreen: Promise<unknown> = Promise.resolve()): 
   return Promise.race([firstScreen.catch(() => {}), wait(3500)])
     .then(frames)
     .then(() => Launch.ready().catch(() => {}))
-    .then(() => wait(420));
+    .then(() => wait(220));
 }

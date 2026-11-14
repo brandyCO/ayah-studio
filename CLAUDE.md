@@ -2231,6 +2231,9 @@ duas/reflections section in Me.
       core-splashscreen in `AppActivity.java`) stays until the first screen is drawn (`playOpening()` → `LaunchPlugin.ready`,
       ≤ 3.5 s; the splash itself lets go after 4 s), then leaves with a native animation (icon swells and fades, splash
       fades, ~0.4 s). The web build shows the page at once
+      **Kept simple, Duolingo style** (owner 2026-11-14): the splash is the default icon's marker, star and the character
+      standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
+      `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)

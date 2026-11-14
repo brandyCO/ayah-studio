@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Launch screen (Android 12+ draws the launcher icon on it); matches drawable*/splash.png -->
-    <color name="splash_background">#07130F</color>
+    <!-- Launch screen (Android 12+ draws the launcher icon on it); the default icon's sky; drawable*/splash_icon.webp on it (scripts/make-character-icons.py --splash) -->
+    <color name="splash_background">#5B3FBF</color>
 </resources>
