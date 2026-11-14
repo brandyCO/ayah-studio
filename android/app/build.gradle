@@ -33,6 +33,12 @@ android {
             }
         }
     }
+    // Play build (release.yml sets FONT_PACK=1): mushaf pages 4–604 go in the fast-follow asset pack below, so the
+    // install from Play is ~25 MB and Play fetches the fonts right after it (src/data/fontPack.ts). Test APKs keep
+    // every page font inside, as before.
+    if (System.getenv('FONT_PACK') == '1') {
+        assetPacks = [':qcf_fonts']
+    }
     buildTypes {
         debug {
             if (keystorePath) signingConfig signingConfigs.app
@@ -58,6 +64,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation 'com.google.android.play:asset-delivery:2.2.2'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -53,6 +53,46 @@ jobs:
             fi
           done
           echo "::error::Could not dump the database."; exit 1
+      - name: Space left on the free plan
+        # Free plan: 500 MB database, 1 GB file storage. Past 400 MB / 800 MB an issue "Space: …" is opened for the
+        # owner (and closed again when back under); never stops the backup.
+        id: space
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          URL="postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres"
+          read -r DB FILES <<< "$(psql "$URL" -tAF ' ' -c "select pg_database_size(current_database()),
+            coalesce((select sum((metadata ->> 'size')::bigint) from storage.objects), 0)")"
+          DBM=$((DB / 1048576)); FM=$((FILES / 1048576))
+          echo "Database $DBM MB of 500 MB, stored files $FM MB of 1024 MB" | tee -a "$GITHUB_STEP_SUMMARY"
+          OVER=""
+          [ "$DBM" -ge 400 ] && OVER="database $DBM MB of 500 MB"
+          [ "$FM" -ge 800 ] && OVER="${OVER:+$OVER, }stored files $FM MB of 1 GB"
+          echo "over=$OVER" >> "$GITHUB_OUTPUT"
+          echo "db=$DBM" >> "$GITHUB_OUTPUT"; echo "files=$FM" >> "$GITHUB_OUTPUT"
+      - name: Tell the owner when space runs low
+        if: steps.space.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          OVER: ${{ steps.space.outputs.over }}
+          DB: ${{ steps.space.outputs.db }}
+          FILES: ${{ steps.space.outputs.files }}
+        with:
+          script: |
+            const over = process.env.OVER;
+            const { data } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'space' });
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            if (over && !data.length) {
+              await github.rest.issues.create({ ...context.repo, title: `Space: ${over}`, labels: ['space'], assignees: [context.repo.owner],
+                body: `The free Supabase plan is filling up: ${over}.\n\nNothing is lost yet. Before it is full, either move to Supabase Pro ($25/month: 8 GB database, 100 GB files) or ask Claude to look at what can be tidied.\n\nChecked by the nightly backup: ${run}\n\nThis issue closes itself when both are back under the line.` });
+            } else if (!over && data.length) {
+              for (const i of data) {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: `Back under the line: database ${process.env.DB} MB, stored files ${process.env.FILES} MB.` });
+                await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+              }
+            }
       - name: Stored files (voice clips)
         # Needs the service key: the repo secret SUPABASE_SERVICE_KEY, else it is asked from the Supabase management
         # API with SUPABASE_ACCESS_TOKEN. Without either the database backup still goes ahead and the run says why.

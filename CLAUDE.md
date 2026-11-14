@@ -759,6 +759,16 @@ Pro and a load test come later, when the owner decides to pay).
       database password, `key.txt` says which); `usage_add` takes no new words once a day has 3000; `tidy_db()` also removes
       friends' news > 30 days, challenges started > 90 days ago or never accepted in 30, duels > 8 weeks, gifts opened > a year
       (migration `20261114300000_round3_lighter.sql`, pgTAP `round3_lighter.test.sql` 12)
+- [x] Round 4 (owner "yes, as long as quality stays", 2026-11-14): voice-clip uploads count the files in Storage (40 a day each,
+      3000 a day in all; `harakat_can_upload`); friend streaks stored per pair up to 3 days ago (`rank_friend_streaks`,
+      `rank_streak_to()`; the same numbers as before) so `tidy_db()` keeps `rank_days` to 400 days (totals live in
+      `rank_players` / `rank_weeks`; every pair's streak stored and earned invites marked `ready` first); the nightly backup
+      checks space (an issue "Space: …" past 400 of 500 MB database / 800 MB of 1 GB files). **Play build**: mushaf pages
+      4–604 are the fast-follow asset pack `qcf_fonts` (`android/qcf_fonts`, `FontPackPlugin.java`, `scripts/font-pack.sh`,
+      `FONT_PACK=1` / `VITE_FONT_PACK=1` in release.yml; android.yml builds and checks it on every change), pages 1–3 stay in
+      the app; until the pack is in, a page waits on a "Preparing your mushaf" card (`src/ui/mushafPrep.ts`, progress, Wi-Fi →
+      "Download on mobile data") while that page alone comes from the site (`src/data/fontPack.ts`); test APKs keep every font
+      (migration `20261114400000_round4_storage_streaks.sql`, pgTAP `round4.test.sql` 16)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);

@@ -11,4 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_WEB_CLIENT_ID?: string;
   /** Sentry project DSN (src/errors.ts); unset → no error reports. */
   readonly VITE_SENTRY_DSN?: string;
+  /** '1' in the Play build: mushaf pages 4–604 come as a Play asset pack (src/data/fontPack.ts). */
+  readonly VITE_FONT_PACK?: string;
 }

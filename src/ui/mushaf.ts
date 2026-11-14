@@ -11,6 +11,7 @@ import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
+import { FONT_PACK, packWaiting } from '../data/fontPack';
 import { isNative } from '../native';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { h, toast } from './dom';
@@ -449,8 +450,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (!placeholders.has(p)) {
       // A skeleton of the page: 15 soft lines where the text will be, a light sweeping across them.
       const lines = Array.from({ length: 15 }, (_, i) => h('span', { class: 'skel-line', style: i === 14 ? 'width:58%' : '' }));
-      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
-        ...lines));
+      const el = h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
+        ...lines);
+      // Play build: the page's font still on its way in the asset pack → "Preparing your mushaf".
+      if (packWaiting(p)) void import('./mushafPrep').then((m) => { if (el.classList.contains('loading')) el.append(m.prepCard()); });
+      placeholders.set(p, el);
     }
     return placeholders.get(p)!;
   };
@@ -694,7 +698,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   window.addEventListener('keydown', onKey);
   window.addEventListener('resize', onResize);
 
-  await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
+  // Open on the real page, not its placeholder. In the Play build a page whose font is still in the asset pack opens
+  // on the preparing card at once instead of waiting.
+  const first = buildPage(page).catch(() => {});
+  await (FONT_PACK ? Promise.race([first, new Promise((r) => setTimeout(r, 500))]) : first);
   layout();
   replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});

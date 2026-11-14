@@ -383,6 +383,25 @@ body.mushaf-wide .mushaf-page > * { flex-shrink: 0; }
   transform: translateX(-100%); animation: skel-sweep 1.4s ease-in-out infinite; will-change: transform;
 }
 @keyframes skel-sweep { to { transform: translateX(100%); } }
+/* "Preparing your mushaf" (src/ui/mushafPrep.ts, Play build): a calm card over the page skeleton */
+.mp-prep { position: absolute; inset-inline: 10%; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; padding: 22px 18px 18px; border-radius: 22px; text-align: center;
+  background: color-mix(in srgb, var(--paper, #fff) 97%, transparent); color: var(--ink, #222);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--ink, #000) 12%, transparent); animation: mp-prep-in .5s ease-out both; }
+.mp-prep-book { width: 64px; height: 48px; fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.mp-prep-book .ln { stroke-width: 1.6; opacity: .55; stroke-dasharray: 18; animation: mp-prep-write 2.4s ease-in-out infinite; }
+.mp-prep-title { font-size: 1.15rem; font-weight: 800; }
+.mp-prep-sub { font-size: var(--fs-s, .9rem); color: var(--muted, #666); line-height: 1.4; }
+.mp-prep-bar { width: 100%; max-width: 220px; height: 6px; margin-top: 4px; border-radius: 99px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink, #888) 12%, transparent); }
+.mp-prep-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .6s ease; }
+.mp-prep.indeterminate .mp-prep-bar i { width: 35% !important; animation: mp-prep-slide 1.6s ease-in-out infinite; }
+.mp-prep-data { margin-top: 6px; }
+@keyframes mp-prep-in { from { opacity: 0; transform: translateY(calc(-50% + 8px)); } }
+@keyframes mp-prep-write { 0% { stroke-dashoffset: 18; } 50%, 100% { stroke-dashoffset: 0; } }
+@keyframes mp-prep-slide { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
+[dir="rtl"] .mp-prep.indeterminate .mp-prep-bar i, :root[dir="rtl"] .mp-prep.indeterminate .mp-prep-bar i { animation-direction: reverse; }
+@media (prefers-reduced-motion: reduce) { .mp-prep, .mp-prep-book .ln, .mp-prep.indeterminate .mp-prep-bar i { animation: none; } }
 @media (prefers-color-scheme: dark) { .mushaf-page.loading::after, .skel::after { background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.06) 50%, transparent 70%); } }
 @media (prefers-reduced-motion: reduce) { .mushaf-page.loading::after, .skel::after { animation: none; display: none; } }
 .player .spinner { border-color: color-mix(in srgb, var(--ink, #888) 18%, transparent); border-top-color: var(--accent); }
