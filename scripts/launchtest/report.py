@@ -28,7 +28,7 @@ for f in files:
     if 'files_errors' in m:
         fe = tot.setdefault('files_errors', [0, 0]); v = m['files_errors']
         fe[0] += v.get('passes', 0); fe[1] += v.get('passes', 0) + v.get('fails', 0)
-    vm = m.get('vus_max', {}).get('value') or m.get('vus', {}).get('max') or 0
+    vm = m.get('vus', {}).get('max') or 0
     tot['vus'] = tot.get('vus', 0) + vm
 
 print(f'## Launch test: {len(files)} of 4 runners, spike of {peak} virtual players\n')

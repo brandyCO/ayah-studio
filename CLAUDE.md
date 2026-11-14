@@ -721,6 +721,15 @@ Pro and a load test come later, when the owner decides to pay).
 - [x] Reel counter split into 16 shards (`20261031000000_scale_reel_counts.sql`, pgTAP `scale_reel_counts.test.sql`)
 - [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
 - [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
+- [x] Launch test on staging (owner "Yes", 2026-11-14): `.github/workflows/launchtest.yml` (manual; `scripts/launchtest/`): a
+      second free Supabase project (variable `STAGING_REF`, secrets `STAGING_DB_PASSWORD`, `STAGING_ACCESS_TOKEN`; refuses the
+      live ref) gets every migration and 10,000 seeded players, then 4 k6 runners ramp virtual players through whole journeys
+      (files from Cloudflare, sign-in / signed tokens, sync, Ranks, friends, rival, Learn, shop, polling; the proxy's pulses),
+      capped in bytes pulled (egress is shared with live); a `watch` job logs the database every 10 s; report table per call.
+      First result: the free plan's small server stalls at ~700 players open at once (~40–70 calls/s): requests time out
+      in front of an idle database (11 PostgREST connections, ≤ 8 active, no lock waits) and a second seed ran 17× slower,
+      i.e. the shared CPU's burst credits run out. The code itself does ~2,500 calls/s at 16 ms on a 4-core runner (load.yml),
+      so 10,000 at once needs Supabase Pro with dedicated compute (owner decides)
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
