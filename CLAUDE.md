@@ -2235,8 +2235,12 @@ duas/reflections section in Me.
       standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
       `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
       **Animated, drawn by Android** (owner 2026-11-14, "the animation didn't play"): on Android 12+ the icon is an
-      AnimatedVectorDrawable (`drawable-v31/splash_anim.xml`, 1 s: the marker pops in, the character springs up out of it,
-      the star spins in, two cheering hops with the shadow squeezing; `KEYS` in `make-character-icons.py`). Android draws
+      AnimatedVectorDrawable (`drawable-v31/splash_anim.xml`). **The character alone** (owner, same day: "animate the
+      character, not the icon"): no marker or star; 1 s, he pops up out of the ground (wow face, stretch, spring settle),
+      crouches, leaps with both arms up (star eyes, stretch on take-off, squash on landing, the head lagging) and waves
+      (happy face, head tilt). `scripts/splash_char.py` cuts the actor SVG into parts (body, arms, raised arms, waving arm,
+      head + expressions shown by scaleX 0/1) and samples each motion curve every 20 ms into keyframes (linear
+      objectAnimators), checks every frame stays inside the 2/3 circle, and renders a preview (`preview OUT.mp4 [slow]`). Android draws
       the launch screen in its own process and runs vector animations on the render thread, so app start-up can't make it
       stutter; the splash stays ≥ 1.05 s so it plays through. The art is converted by `scripts/svg_to_vd.py` (clip paths,
       gradients, transforms; `to_svg()` renders it back to compare with the original). Android 11 and older show the
