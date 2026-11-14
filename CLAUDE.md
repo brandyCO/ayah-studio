@@ -2259,7 +2259,7 @@ duas/reflections section in Me.
       a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
       "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
       a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
-      Read's bar: today's pages (ring + "1 of 5 pages today") and the streak are a slim row under the title (owner 2026-11-14: beside it they pushed the surah name out of sight), Noor's line once a day (`readNoorDay`), Today lines
+      Read's bar has no pages ring or streak (owner 2026-11-14: beside the title they pushed the surah name out of sight; a counted page already shows "3 / 5 pages today"), Noor's line once a day (`readNoorDay`), Today lines
       clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
       was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
       card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
