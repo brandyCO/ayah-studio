@@ -173,6 +173,13 @@ document.addEventListener('visibilitychange', markOpen);
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
 later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
 later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
+// Me and Learn are ready before their first tap (front-end review G12): fetched and parsed in a quiet moment
+// once the first screen is up, not on Data Saver.
+later(() => setTimeout(() => {
+  if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return;
+  const go = () => { void import('./ui/me').catch(() => {}); void import('./ui/learnPath').catch(() => {}); };
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
+}, 2500));
 // The onboarding's language screen reloads the app in the language picked; carry on where it was.
 try { if (sessionStorage.getItem('obResume')) void import('./ui/onboard').then((m) => setTimeout(() => m.openOnboarding(true), 500)); } catch { /* private */ }
 watchVitals(); // real-use speed (this device only, Device check)

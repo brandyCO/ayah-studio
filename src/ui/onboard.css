@@ -117,3 +117,4 @@ html.lite .ob-sky { display: none; }
 .h-other.ob-ic { background: #9aa3a0; }
 .s-heard .ob-opt { padding: 9px 12px; }
 .s-heard .ob-ic { width: 40px; height: 40px; border-radius: 12px; }
+.ob-safe { margin-top: auto; text-align: center; }

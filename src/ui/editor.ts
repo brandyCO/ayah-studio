@@ -33,7 +33,7 @@ import { markPanel, saveMark, savedMark } from './markPanel';
 import { bloom, bokeh, caustics, leak, MAX_TOUCHES, mist, motes, rain, ripple, snow, TOUCHES, type Touch } from '../engine/touches';
 import { markKeyAt, markPlaced } from '../engine/mark';
 import { attachTouch, drawGuides, drawSelection } from './studioTouch';
-import { breathOf, knownBreath } from '../engine/cinema';
+import { breathOf, knownBreath, OPEN } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, FOOTAGE, pacedMode, QUICK_MOTIONS, recommendVibe, STYLES, VIBES, type Vibe } from '../engine/styles';
 import { downloadHit, searchStock, stockEnabled, stockId, stockSources, type StockHit } from '../data/stock';
@@ -150,6 +150,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
 
   let alive = true;
   let tl: Timeline | null = null;
+  let parked = false;
+  let parkedAt: number | null = null;
   let audio: AudioBuffer | null = null;
   /** The recitation alone (before a nature sound), for the waveform and Cinematic breath. */
   let voice: AudioBuffer | null = null;
@@ -2165,6 +2167,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     spine.invalidate();
     if (t > tl.duration) t = 0;
+    // A reel opens showing itself (front-end review G3): at 0 s the Cinematic opening is still black and the ayah
+    // has not come in yet, so the paused playhead is parked once just after the first words appear.
+    if (!parked && t === 0) {
+      parked = true;
+      const ev = tl.ayat[0]?.events[0];
+      if (ev) { t = Math.min(Math.max(ev.start + 0.9, OPEN + 0.2), Math.max(ev.start, ev.end - 0.05), tl.duration); spine.reveal(t); parkedAt = t; }
+    }
     if (selection?.kind === 'scene' && selection.index >= tl.scenes.length) selection = null;
     dirty = true;
   }
@@ -2291,6 +2300,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     ac ??= new AudioContext();
     await ac.resume();
     if (t >= tl.duration - 0.05) t = 0;
+    // Still on the opening frame it was parked on (G3): the first play starts the reel from its beginning.
+    if (parkedAt !== null && t === parkedAt) t = 0;
+    parkedAt = null;
     src = ac.createBufferSource();
     src.buffer = audio;
     src.connect(ac.destination);

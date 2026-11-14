@@ -636,6 +636,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
     root.classList.toggle('ls-memory', p === 'memory');
     root.classList.toggle('ls-check', p === 'check');
+    // One next step at a time (front-end review G8): the player waits for the Listen step.
+    root.classList.toggle('ls-meaning', p === 'meaning');
     if (p !== 'memory') memExtras.replaceChildren();
   }
 
