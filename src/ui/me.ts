@@ -1053,7 +1053,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         tab('week', t('me.week')), tab('month', t('me.month')), tab('all', t('me.all'))),
       h('div', { class: 'me-tiles' }, ...shown),
       hidden ? h('p', { class: 'muted small me-tiles-more' }, fe('g2.more')) : '',
-      h('p', { class: 'muted small' }, last
+      // Round 3: no "compared with last week" before there is a last week to compare with.
+      h('p', { class: 'muted small' }, last && all.some(([k]) => (last[k] as number) > 0)
         ? (now.getDay() === 6 && last.litDays ? t('wk.monday', { pages: last.pages, dhikr: last.dhikr }) : t('wk.sub'))
         : t('me.honest', { time: timeLabel(pageSeconds()) })),
       empty ? '' : h('button', { class: 'chip ws-share', onclick: () => { haptic(8); void import('./weekStory').then((m) => m.shareStory()); } }, icon('share', 18), fe('ws.share')));
@@ -1118,7 +1119,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       page ? '' : newIconCard() ?? '');
     badgeBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
-        h('button', { class: 'chip', onclick: seeAll }, t('bd.all', { n: got, of: all.length }))),
+        h('button', { class: 'chip', onclick: seeAll }, got ? t('bd.all', { n: got, of: all.length }) : fe('g3.toEarn', { n: all.length }))),
       page === 'stats' ? h('div', { class: 'bdf-list' }, ...byFamily()) : h('div', { class: 'bd-row' }, ...[...earned, ...next].slice(0, 4).map(tile)));
     if (page === 'stats') badgeBox.append(iconCard());
   };
@@ -1315,7 +1316,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     paintAsk();
     root.append(
       h('header', { class: 'topbar' },
-        h('div', { class: 'brand' }, h('h1', {}, t('me.title')), h('p', { class: 'muted' }, t('me.sub'))),
+        h('div', { class: 'brand' }, h('h1', {}, t('me.title'))),
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),

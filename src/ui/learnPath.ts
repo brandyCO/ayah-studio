@@ -64,7 +64,7 @@ function scenery(): SVGSVGElement {
   s.setAttribute('class', 'lp-scenery'); s.setAttribute('aria-hidden', 'true');
   s.setAttribute('viewBox', '0 0 390 844'); s.setAttribute('preserveAspectRatio', 'xMidYMin slice');
   const tree = (x: number, y: number, r: number) => `<g transform="translate(${x} ${y})"><rect x="-2" y="-2" width="4" height="${r + 2}" rx="2" class="lp-trunk"/><circle cx="0" cy="${-r * 0.8}" r="${r}" class="lp-crown"/><circle cx="${-r * 0.35}" cy="${-r * 1.1}" r="${r * 0.5}" class="lp-crown-hi"/></g>`;
-  s.innerHTML = `<circle cx="318" cy="120" r="46" class="lp-sun-halo"/><circle cx="318" cy="120" r="30" class="lp-sun"/><circle cx="331" cy="111" r="26" class="lp-moon-cut"/>`
+  s.innerHTML = `<circle cx="358" cy="112" r="36" class="lp-sun-halo"/><circle cx="358" cy="112" r="23" class="lp-sun"/><circle cx="368" cy="105" r="20" class="lp-moon-cut"/>`
     + `<path d="M0 220 C70 185 120 198 180 216 C250 236 300 192 390 206 L390 844 L0 844 Z" class="lp-hill1"/>`
     + `<path d="M0 270 C90 242 160 260 230 276 C300 292 340 266 390 272 L390 844 L0 844 Z" class="lp-hill2"/>`
     + tree(40, 270, 10) + tree(352, 300, 12) + tree(24, 520, 12) + tree(366, 610, 10) + tree(30, 760, 11);
@@ -276,7 +276,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     day.setAttribute('aria-label', target ? lt('learn.dayAria', { n: done, of: target }) : lt('learn.dayNoneAria', { n: done }));
     const C = 2 * Math.PI * 21;
     day.replaceChildren(svg(`<circle cx="24" cy="24" r="21" class="lp-day-bg"/><circle cx="24" cy="24" r="21" class="lp-day-fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - f)}" transform="rotate(-90 24 24)"/>`, 52),
-      h('span', { class: 'lp-day-n' }, met ? svg(G.check, 22) : target ? `${done}/${target}` : String(done)));
+      h('span', { class: 'lp-day-n' }, met ? svg(G.check, 22) : target ? `${done}/${target}` : '+',
+        met ? '' : h('small', {}, lt(target ? 'learn.dayToday' : 'learn.dayGoal'))));
     (day.firstChild as SVGSVGElement).setAttribute('viewBox', '0 0 48 48');
   }
   function openDay() {

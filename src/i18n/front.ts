@@ -145,6 +145,7 @@ const en = {
   'g2.title': 'Your first flame',
   'g2.sub': 'is one page away. Read it today and it catches.',
   'g2.more': 'The rest fill in as you read, listen and memorise.',
+  'g3.toEarn': '{n} badges to earn',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -290,6 +291,7 @@ const ar: Partial<Record<FrontKey, string>> = {
   'g2.title': 'شعلتك الأولى',
   'g2.sub': 'على بُعد صفحة واحدة. اقرأها اليوم فتشتعل.',
   'g2.more': 'تمتلئ البقية كلما قرأت واستمعت وحفظت.',
+  'g3.toEarn': '{n} وسامًا تنتظرك',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

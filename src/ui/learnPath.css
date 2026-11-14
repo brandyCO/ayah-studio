@@ -191,7 +191,9 @@ html.lite .lp-start { animation: none; }
 .lp-day-fg { fill: none; stroke: #4caf2a; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset var(--dur-3) var(--ease-spring); }
 .lp-day.none .lp-day-fg { stroke: transparent; }
 .lp-day.none .lp-day-bg { stroke-dasharray: 4 5; }
-.lp-day-n { position: relative; font: 900 15px var(--ui-round); }
+.lp-day-n { position: relative; display: grid; justify-items: center; line-height: 1; font: 900 15px var(--ui-round); }
+.lp-day-n small { margin-top: 2px; font: 800 9.5px var(--ui-round); letter-spacing: .02em; text-transform: uppercase; opacity: .65; }
+.lp-day.none .lp-day-n { font-size: 20px; }
 .lp-day.met { background: var(--lp-gold); color: #fff; box-shadow: 0 4px 0 var(--lp-gold-edge), 0 0 22px #ffd77a99; }
 .lp-day.met .lp-day-bg, .lp-day.met .lp-day-fg { stroke: #ffffffaa; }
 .lp-cont {
@@ -301,7 +303,7 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 }
 
 /* F8: the first visit starts on the path, with a quiet line saying where */
-.lp-intro { display: grid; gap: 6px; justify-items: center; text-align: center; margin: 8px auto 4px; max-width: 320px;
+.lp-intro { display: grid; gap: 6px; justify-items: center; text-align: center; margin: 8px auto 4px; max-width: min(280px, calc(100% - 96px));
   padding: 10px 14px; border-radius: 16px; background: #ffffffd9; color: #1f2328; font-weight: 700; font-size: .92rem;
   box-shadow: 0 2px 10px #0001; }
 .lp-intro-links { display: flex; gap: 14px; }

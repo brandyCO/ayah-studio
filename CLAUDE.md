@@ -2147,6 +2147,11 @@ duas/reflections section in Me.
       was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
       card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
       repeats; Me and Learn fetched in a quiet moment after the first screen (not on Data Saver)
+      Round 3 (owner "yes to all", 2026-11-14): the Read bar's Today lines can be one row (`inline`: Today's ayah and Popular
+      with round ▶ / reel buttons, no translation preview); Learn's daily ring says "today" (or "+ goal" without a target);
+      the golden mushaf's unread juz are empty outlines; "115 badges to earn" before the first; no "compared with last week"
+      before there is a last week; Me's header without its subtitle; the lesson's tree explains itself on tap
+      (`learn.treeTip`); Learn's sun / moon sit beside the intro card, not behind it
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
