@@ -1,0 +1,152 @@
+# Launch test: thousands of virtual players using the app at once, on the STAGING copy (never the live project).
+# 1. prepare: applies every migration to staging, clears the last run's test players, seeds PLAYERS players the way
+#    the app makes them (scripts/loadtest/seed.sql), lets a few sign in with a password, writes league / player ids.
+# 2. k6 (4 runners): each ramps its share of virtual players to a launch spike (scripts/launchtest/journey.js):
+#    files from Cloudflare, sign-in or a signed token, sync, Ranks, friends, rival, Learn, the shop, polling.
+# 3. report: one table in the run summary (per call: average, 95 %, errors), the slowest database calls on staging,
+#    database size and the bytes pulled from Supabase (the free plan allows 5 GB a month for the whole account).
+# Needs: variable STAGING_REF, secrets STAGING_DB_PASSWORD and SUPABASE_ACCESS_TOKEN (the account token the deploy uses).
+name: Launch test (staging)
+on:
+  workflow_dispatch:
+    inputs:
+      peak:
+        description: Virtual players at the spike (all runners together)
+        default: '10000'
+      players:
+        description: Test players seeded on staging
+        default: '10000'
+      bytes_mb:
+        description: Most MB to pull from Supabase in all (free-plan egress is shared with the live app)
+        default: '1000'
+concurrency: { group: launchtest, cancel-in-progress: false }
+permissions: { contents: read }
+env:
+  REF: ${{ vars.STAGING_REF }}
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+  LIVE_REF: jposubjybzstfmnngews
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the settings
+        run: |
+          if [ -z "$REF" ] || [ -z "$STAGING_DB_PASSWORD" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Add the variable STAGING_REF and the secrets STAGING_DB_PASSWORD and SUPABASE_ACCESS_TOKEN."; exit 1; fi
+          if [ "$REF" = "$LIVE_REF" ]; then echo "::error::STAGING_REF is the live project. Refusing."; exit 1; fi
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.120.0 }
+      - name: Find the staging database
+        run: |
+          set -uo pipefail
+          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$REF/config/database/pooler" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['STAGING_DB_PASSWORD'].strip(), safe=''))")
+          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
+            url="postgresql://postgres.$REF:$PW@$h:5432/postgres"
+            if psql "$url" -Xqtc 'select 1' >/dev/null 2>&1; then echo "::add-mask::$url"; echo "DB=$url" >> "$GITHUB_ENV"; exit 0; fi
+          done
+          echo "::error::Could not reach the staging database. Check STAGING_DB_PASSWORD."; exit 1
+      - name: Apply every migration to staging
+        run: supabase db push --db-url "$DB" --include-all
+      - name: Email sign-in for test players (staging only)
+        run: |
+          curl -sf -X PATCH -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            "https://api.supabase.com/v1/projects/$REF/config/auth" \
+            -d '{"external_email_enabled":true,"mailer_autoconfirm":true,"disable_signup":true}' >/dev/null \
+            || echo "::warning::Could not switch on email sign-in; the virtual players will use signed tokens only."
+      - name: Clear the last run and seed the test players
+        run: |
+          PLAYERS=${{ inputs.players }}
+          LTPW=$(printf '%s' "$STAGING_DB_PASSWORD$GITHUB_RUN_ID" | sha256sum | cut -c1-24)
+          psql "$DB" -X -q -f scripts/launchtest/reset.sql
+          time psql "$DB" -X -q -v ON_ERROR_STOP=1 -v n="$PLAYERS" -v docs=10 -f scripts/loadtest/seed.sql
+          psql "$DB" -X -q -v pw="$LTPW" -v signins=25 -f scripts/launchtest/users.sql
+          psql "$DB" -X -qtA -c "select json_build_object(
+              'leagues', (select json_agg(distinct w.league) from public.rank_weeks w where w.league is not null and w.user_id::text like '00000000-0000-0000-0000-%'),
+              'pids', (select json_agg(p.pid) from public.rank_players p where p.user_id::text like '00000000-0000-0000-0000-%' and p.pid is not null))" > ids.json
+          python3 -c "import json; d=json.load(open('ids.json')); print(len(d['leagues']), 'leagues,', len(d['pids']), 'players')"
+          psql "$DB" -X -c "select pg_size_pretty(pg_database_size(current_database())) as database_size"
+          psql "$DB" -X -qc "select extensions.pg_stat_statements_reset()" 2>/dev/null || psql "$DB" -X -qc "select pg_stat_statements_reset()" || true
+      - uses: actions/upload-artifact@v4
+        with: { name: ids, path: ids.json, retention-days: 7 }
+
+  k6:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0, 1, 2, 3] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: ids, path: scripts/launchtest }
+      - uses: grafana/setup-k6-action@v1
+      - name: Keys of the staging project
+        run: |
+          set -euo pipefail
+          KEYS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$REF/api-keys")
+          ANON=$(echo "$KEYS" | python3 -c "import json,sys; print(next(k['api_key'] for k in json.load(sys.stdin) if k.get('name')=='anon'))")
+          SECRET=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$REF/postgrest" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('jwt_secret') or '')" || true)
+          echo "::add-mask::$ANON"; [ -n "$SECRET" ] && echo "::add-mask::$SECRET"
+          [ -n "$SECRET" ] || echo "::warning::No JWT secret from the API: every virtual player signs in with a password (rate limits apply)."
+          LTPW=$(printf '%s' "$STAGING_DB_PASSWORD$GITHUB_RUN_ID" | sha256sum | cut -c1-24)
+          echo "::add-mask::$LTPW"
+          { echo "SB_URL=https://$REF.supabase.co"; echo "SB_ANON=$ANON"; echo "SB_JWT_SECRET=$SECRET"; echo "SB_PW=$LTPW"; } >> "$GITHUB_ENV"
+      - name: Run the virtual players
+        env:
+          PLAYERS: ${{ inputs.players }}
+          FILES_FROM: ${{ vars.PIXABAY_PROXY }}
+        run: |
+          SHARE=$(( ${{ inputs.peak }} / 4 ))
+          FILES=$(echo "$FILES_FROM" | sed -E 's#^https://ayah-studio-pixabay\.([a-z0-9-]+\.workers\.dev)/?$#https://ayah-studio-files.\1#')
+          [ "$FILES" = "$FILES_FROM" ] && FILES=""
+          SIGNINS=$([ "${{ matrix.shard }}" = 0 ] && echo 25 || echo 0)
+          k6 run --quiet --summary-export summary.json \
+            -e PEAK="$SHARE" -e OFFSET=$(( ${{ matrix.shard }} * SHARE )) -e PLAYERS="$PLAYERS" -e SIGNINS="$SIGNINS" \
+            -e FILES="$FILES" -e BYTES=$(( ${{ inputs.bytes_mb }} * 250000 )) -e PROXY_RATE=5 -e IDS=./ids.json \
+            scripts/launchtest/journey.js | tail -80 || echo "k6 ended with $?"
+          mv summary.json summary-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'k6-${{ matrix.shard }}', path: 'summary-*.json', retention-days: 30 }
+
+  report:
+    needs: [prepare, k6]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'k6-*', path: out, merge-multiple: true }
+      - name: Results
+        run: |
+          python3 scripts/launchtest/report.py out ${{ inputs.peak }} >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
+      - name: The staging database after the test
+        run: |
+          set -uo pipefail
+          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$REF/config/database/pooler" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" || true)
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['STAGING_DB_PASSWORD'].strip(), safe=''))")
+          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com; do
+            url="postgresql://postgres.$REF:$PW@$h:5432/postgres"; echo "::add-mask::$url"
+            if psql "$url" -Xqtc 'select 1' >/dev/null 2>&1; then
+              {
+                echo; echo "### Slowest database calls on staging during the test"; echo; echo '```'
+                psql "$url" -X -P pager=off -c "select calls, round(mean_exec_time::numeric, 1) as avg_ms, round(max_exec_time::numeric) as max_ms,
+                  left(regexp_replace(query, '\s+', ' ', 'g'), 90) as call from extensions.pg_stat_statements
+                  where query ilike '%public.%' order by mean_exec_time * calls desc limit 15"
+                psql "$url" -X -P pager=off -c "select pg_size_pretty(pg_database_size(current_database())) as database_size,
+                  (select count(*) from pg_stat_activity) as connections_now"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+          done

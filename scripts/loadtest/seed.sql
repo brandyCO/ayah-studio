@@ -3,6 +3,10 @@
 -- has 13 earlier days, about 16 friends, some news with MashaAllahs, ~30 synced documents, and a weekly rival.
 -- Player i has the id 00000000-0000-0000-0000-{i as 12 digits}.
 \set ON_ERROR_STOP on
+\if :{?docs}
+\else
+  \set docs 30
+\endif
 select set_config('load.n', :'n', false);
 create or replace function pg_temp.uid(i int) returns uuid language sql immutable as
   $$ select ('00000000-0000-0000-0000-' || lpad(i::text, 12, '0'))::uuid $$;
@@ -53,7 +57,7 @@ insert into public.user_docs (user_id, kind, id, data, device_id, updated_at)
     case when k = 1 then 'journey:dev' || i when k = 2 then 'garden' when k = 3 then 'jm:dev' || i || ':pages' else 'kv:key' || k end,
     jsonb_build_object('v', repeat('x', 200 + (k * 37) % 900), 'at', extract(epoch from now())::bigint),
     'dev' || i, now() - (k * i % 1000) * interval '1 minute'
-  from generate_series(1, :n) i, generate_series(1, 30) k;
+  from generate_series(1, :n) i, generate_series(1, :docs) k;
 
 -- Learn: lessons passed today (flawless ones are claimed later), voice-check stats (a busy day: 20,000) and
 -- voice clips in Storage (3,000 today, the daily cap).
@@ -62,9 +66,14 @@ insert into public.follow_stats (install, stat, created_at)
   select 'seed' || (i % 4000), jsonb_build_object('engine', 'android', 'words', 40, 'untapped', 1, 'added', 0, 'unclear', 2),
     now() - (i % 1400) * interval '1 minute'
   from generate_series(1, 20000) i;
-insert into storage.objects (bucket_id, name, created_at)
-  select 'harakat-clips', pg_temp.uid(1 + (i * 7) % :n)::text || '/' || md5(i::text) || '.pcm', now() - (i % 1400) * interval '1 minute'
-  from generate_series(1, 3000) i;
+-- (A hosted copy may not let us write Storage's own table: then the clip check runs on an empty day.)
+do $$ begin
+  insert into storage.objects (bucket_id, name, created_at)
+    select 'harakat-clips', ('00000000-0000-0000-0000-' || lpad((1 + (i * 7) % current_setting('load.n')::int)::text, 12, '0'))
+      || '/' || md5(i::text) || '.pcm', now() - (i % 1400) * interval '1 minute'
+    from generate_series(1, 3000) i;
+exception when others then raise notice 'storage.objects not seeded: %', sqlerrm;
+end $$;
 -- Shop: unopened gifts between friends and a lamp wall of 3,000 lamps with Ameens.
 insert into public.rank_gifts (from_id, to_id, light)
   select pg_temp.uid(i), pg_temp.uid(((i + 36) % :n) + 1), 25 from generate_series(1, :n, 3) i;
