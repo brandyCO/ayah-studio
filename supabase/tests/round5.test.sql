@@ -35,15 +35,19 @@ select is(rank_league_pulse((select (m ->> 'l')::uuid from p1), current_date),
 create temp table l1 as select rank_league_pulse((select (m ->> 'l')::uuid from p1), current_date) v;
 grant all on l1 to authenticated;
 
--- Basim reads two more pages: Amal's league part and full pulse change, her own part does not.
-select rank_report(current_date, 4, 0, 0, 0, 'Basim');
+-- Basim earns more this week (a report within 5 s of the last is ignored, so the rows are changed directly):
+-- Amal's league part and full pulse change, her own part does not.
+reset role;
+update rank_weeks set score = score + 20 where user_id = 'bbbbbbbb-0000-0000-0000-000000000152';
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000151');
 select isnt(rank_league_pulse((select (m ->> 'l')::uuid from p1), current_date), (select v from l1), 'a member moving changes the league part');
 select is((rank_my_pulse(current_date) ->> 'p'), (select m ->> 'p' from p1), 'and not my own part');
 select isnt(rank_pulse(current_date), (select full_p from p1), 'as the full pulse changes');
 
--- Amal reads: her own part changes.
-select rank_report(current_date, 5, 0, 0, 0, 'Amal');
+-- Amal earns more: her own part changes.
+reset role;
+update rank_players set total = total + 20 where user_id = 'aaaaaaaa-0000-0000-0000-000000000151';
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000151');
 select isnt((rank_my_pulse(current_date) ->> 'p'), (select m ->> 'p' from p1), 'my own part changes with my points');
 
 -- The proxy (anon) gets the league part only.
