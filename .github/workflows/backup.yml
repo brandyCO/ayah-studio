@@ -54,12 +54,29 @@ jobs:
           done
           echo "::error::Could not dump the database."; exit 1
       - name: Stored files (voice clips)
+        # Needs the service key: the repo secret SUPABASE_SERVICE_KEY, else it is asked from the Supabase management
+        # API with SUPABASE_ACCESS_TOKEN. Without either the database backup still goes ahead and the run says why.
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          set -euo pipefail
-          SERVICE_KEY=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true" \
-            | python3 -c "import json,sys; print(next(k['api_key'] for k in json.load(sys.stdin) if k.get('name') == 'service_role'))")
+          set -uo pipefail
+          if [ -z "$SERVICE_KEY" ]; then
+            code=$(curl -s -o /tmp/keys.json -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true")
+            if [ "$code" = 200 ]; then
+              SERVICE_KEY=$(python3 -c "import json; print(next((k.get('api_key') or '' for k in json.load(open('/tmp/keys.json')) if k.get('name') == 'service_role'), ''))")
+            else
+              echo "Supabase management API answered $code."
+            fi
+            rm -f /tmp/keys.json
+          fi
+          if [ -z "$SERVICE_KEY" ]; then
+            echo "::warning::Stored files (voice clips) were not backed up: add the repo secret SUPABASE_SERVICE_KEY (Supabase → Project Settings → API keys → service_role)."
+            echo skipped > backup/files.txt
+            exit 0
+          fi
           echo "::add-mask::$SERVICE_KEY"
+          set -e
           PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
           SERVICE_KEY="$SERVICE_KEY" SUPABASE_URL="https://$PROJECT_REF.supabase.co" \
             bash scripts/db-backup.sh files "postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres" backup
