@@ -93,6 +93,52 @@ jobs:
                 await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
               }
             }
+      - name: Slowest database calls
+        # From pg_stat_statements (counted since the database last restarted): the 12 calls that took the most time in
+        # all, in the run summary. When one is slow on average (over 300 ms, at least 50 calls) an issue "Slow: …" is
+        # opened for the owner (closed again when none is), so an index can be added before the app feels slow.
+        # Only function names and the database's own query shapes ($1 for every value) are shown, never data.
+        id: slow
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          URL="postgresql://postgres.$PROJECT_REF:$PW@$(cat /tmp/dbhost):5432/postgres"
+          psql "$URL" -v ON_ERROR_STOP=1 -tA -F $'\t' -c "
+            select coalesce(substring(query from '\"public\"\\.\"([a-z0-9_]+)\"'), substring(query from 'public\\.([a-z0-9_]+)\\('),
+                     left(regexp_replace(query, '\\s+', ' ', 'g'), 90)),
+                   calls, round(mean_exec_time::numeric, 1), round((total_exec_time / 1000)::numeric, 1)
+            from extensions.pg_stat_statements s
+            where query not ilike '%pg_stat_statements%' and dbid = (select oid from pg_database where datname = current_database())
+            order by total_exec_time desc limit 12" > /tmp/slow.tsv
+          {
+            echo "### Slowest database calls"
+            echo "| Call | Calls | Average ms | Total s |"
+            echo "|---|---:|---:|---:|"
+            awk -F '\t' '{ gsub(/\|/, "/", $1); printf "| `%s` | %s | %s | %s |\n", $1, $2, $3, $4 }' /tmp/slow.tsv
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          SLOW=$(awk -F '\t' '$2 >= 50 && $3 > 300 { printf "%s%s (%s ms)", (n++ ? ", " : ""), $1, $3 }' /tmp/slow.tsv)
+          echo "slow=$SLOW" >> "$GITHUB_OUTPUT"
+      - name: Tell the owner when a call is slow
+        if: steps.slow.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          SLOW: ${{ steps.slow.outputs.slow }}
+        with:
+          script: |
+            const slow = process.env.SLOW;
+            const { data } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'slow' });
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            if (slow && !data.length) {
+              await github.rest.issues.create({ ...context.repo, title: `Slow: ${slow}`.slice(0, 200), labels: ['slow'], assignees: [context.repo.owner],
+                body: `Some database calls take over 300 ms on average: ${slow}.\n\nNothing is broken, but the app will feel slower as more people use it. Ask Claude to look at them (usually an index fixes it).\n\nThe full list is in the nightly backup's summary: ${run}\n\nThis issue closes itself when none is slow.` });
+            } else if (!slow && data.length) {
+              for (const i of data) {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: i.number, body: `No call is slow any more: ${run}` });
+                await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' });
+              }
+            }
       - name: Stored files (voice clips)
         # Needs the service key: the repo secret SUPABASE_SERVICE_KEY, else it is asked from the Supabase management
         # API with SUPABASE_ACCESS_TOKEN. Without either the database backup still goes ahead and the run says why.

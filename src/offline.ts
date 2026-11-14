@@ -4,6 +4,7 @@
 // src/data/audioCache.ts.
 import { isNative } from './native';
 import { unmetered } from './data/mushafDownload';
+import { FILES } from './net';
 
 const BASE = import.meta.env.BASE_URL;
 const DATA = ['meta.json', 'quran-uthmani.json', 'en-sahih.json', 'en-wbw.json', 'mushaf.json', 'word-map.json', 'divisions.json', 'adhkar.json', 'duas.json'];
@@ -15,7 +16,7 @@ export function setupOffline() {
   // Only for the built web app over http(s): not the dev server, and not the Android app (Capacitor),
   // whose files are on the device already.
   if (isNative() || !import.meta.env.PROD || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
-  navigator.serviceWorker.register(`${BASE}sw.js`).catch((e) => console.warn('Offline mode unavailable', e));
+  navigator.serviceWorker.register(`${BASE}sw.js${FILES ? `?files=${encodeURIComponent(FILES)}` : ''}`).catch((e) => console.warn('Offline mode unavailable', e));
   // Once per app version: afterwards everything is in the cache, and re-reading it on every launch
   // (the editor, the data files) only costs the phone time and memory.
   const build = `${__DATA_VERSION__}|${document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src ?? ''}`;

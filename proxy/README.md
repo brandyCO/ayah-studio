@@ -59,6 +59,7 @@ Cloudflare → the worker → Settings → Variables → add a **Text** variable
 | `popular` | true | no "Popular this week" and no reel counting |
 | `mushafDownload` | true | phones stop the background download of the whole mushaf |
 | `syncMinutes` | 1 | least minutes between two account syncs started by returning to the app (0–120) |
+| `leaguePulse` | true | Ranks asks the database for its league's fingerprint itself instead of through the proxy (`/lp`) |
 
 ## Growing past the free plans
 
