@@ -85,8 +85,10 @@ def load_parts(svg):
     eyes, x0rest = cut(xp['x0'], 'fg-eyes')
     hp = xp['x-happy']
     cheeks_nose = hp[:hp.index('<path d="M75 106.5')]
-    must = re.search(r'<path d="M82 121[^>]*/>', hp).group()
-    mouth = hp[hp.index('<clipPath id="fg21">'):]
+    brow = hp.index('<path d="M111 106.5')
+    brow = hp.index('/>', brow) + 2
+    last = hp.rindex('<clipPath')               # the mouth's clip; the moustache sits between
+    must, mouth = hp[brow:last], hp[last:]
     return dict(body=body, neck=neck, head=head, wow=xp['x-wow'], star=xp['x-star'], squint=hp,
                 sleepy=xp['x-sleepy'], calm=xp['x-calm'], proud=xp['x-proud'], x0rest=x0rest,
                 eyes=eyes, cheeks_nose=cheeks_nose, must=must, mouth=mouth)

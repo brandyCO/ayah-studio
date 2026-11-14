@@ -943,8 +943,8 @@ function brows(kind: number, ey: number, col: string, xp: Xp | null): string {
 }
 /** Mouths: 0 smile, 1 open grin, 2 soft, 3 cheeky; or an expression's. */
 function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): string {
-  const lip = beard ? LIPB : LIP;
-  const ring = (d: string) => beard ? `<path d="${d}" fill="none" stroke="${lip}" stroke-width="1.6"/>` : '';
+  const lip = LIP;
+  const ring = (_d: string) => '';
   // An open smile: a soft D with a little tongue, teeth only on a big grin.
   const open = (w: number, d: number, teeth: boolean) => {
     const o = `M${100 - w} ${my}Q100 ${my + 2} ${100 + w} ${my}Q${100 + w - 1} ${my + d} 100 ${my + d}Q${100 - w + 1} ${my + d} ${100 - w} ${my}Z`;
@@ -991,8 +991,12 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   s += open ? `<g class="fg-eyes">${e}</g>` : e;
   s += brows(f.brows || (xp === 'wow' ? 1 : 0), ey, col, xp);
   if (!niqab) {
-    // The moustache: fuller in the middle, its ends turning down into the beard at the corners of the mouth.
-    if (f.beard) s += `<path d="M82 ${ey + 17}Q84 ${ey + 10} 92 ${ey + 9.4}Q97 ${ey + 9} 100 ${ey + 11}Q103 ${ey + 9} 108 ${ey + 9.4}Q116 ${ey + 10} 118 ${ey + 17}Q112 ${ey + 14.4} 100 ${ey + 15}Q88 ${ey + 14.4} 82 ${ey + 17}Z" fill="${(f.age === 1 && f.hairC < 5 ? HAIR[5] : HAIR[f.hairC])[1]}"/>`;
+    // The moustache: two groomed halves parted under the nose, their ends turning down at the corners of the mouth.
+    if (f.beard) {
+      const [mb, md] = beardTone(f);
+      const half = (k: number) => `M100 ${ey + 11.6}Q${100 + k * 5} ${ey + 9.6} ${100 + k * 10} ${ey + 10.4}Q${100 + k * 15} ${ey + 11.4} ${100 + k * 16.5} ${ey + 15}Q${100 + k * 11.5} ${ey + 13.4} ${100 + k * 6} ${ey + 13.6}Q${100 + k * 2} ${ey + 13.8} 100 ${ey + 13.2}Z`;
+      s += S(half(-1) + half(1), mb, md, -1.2, -1.6);
+    }
     s += mouth(xp ?? f.mouth, ey + (f.beard ? 18 : 15), beard, young);
   }
   return s;
@@ -1076,23 +1080,46 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   return s;
 }
 
-/** Beards with texture: 1 short, 2 full, 3 long (owner 2026-11-14: "the beard is not properly shaped, properly put on
- *  his head"). Each grows from the sideburns under the hair, runs down in front of the ears along the jaw, leaves the
- *  cheeks clear above a soft cheek line that meets the moustache, and opens round the mouth; strands in the darker tone,
- *  a soft highlight. */
-function beardOf(f: Fig): string {
+/** A beard's two tones: the hair colour lifted a little towards warm brown, so even a black beard reads as hair, not a hole. */
+function beardTone(f: Fig): Pair {
   const hc = f.age === 1 && f.hairC < 5 ? HAIR[5] : HAIR[f.hairC];
-  // [outer side, chin bottom, cheek line inset]
-  const [o, low, ins] = f.beard === 1 ? [0.5, 144, 8] : f.beard === 2 ? [2.5, 153, 7] : [2.5, 176, 7];
-  const L = 56 - o, R = 144 + o;
-  const chin = f.beard === 3
-    ? `C${L + 2} 140 ${78} 170 100 ${low}C122 170 ${R - 2} 140 ${R} 108`
-    : `C${L + 1} 128 ${72} ${low} 100 ${low}C128 ${low} ${R - 1} 128 ${R} 108`;
-  const d = `M${L + 0.5} 86C${L} 96 ${L} 102 ${L} 108${chin}C${R} 102 ${R} 96 ${R - 0.5} 86`
-    + `L${144 - ins} 86C${144 - ins} 95 ${142 - ins} 104 ${132 - ins * .4} 110Q123 115 117 120Q100 135 83 120Q77 115 ${68 + ins * .4} 110`
-    + `C${58 + ins} 104 ${56 + ins} 95 ${56 + ins} 86Z`;
-  const strands = [70, 84, 100, 116, 130].map((x, i) => `<path d="M${x} ${128 + (i % 2) * 3}Q${x + (x < 100 ? -2 : 2)} ${(128 + low) / 2} ${x + (x - 100) * .12} ${low - 6 - Math.abs(x - 100) * .2}" stroke="${hc[1]}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".5"/>`).join('');
-  return S(d, hc[0], hc[1], -4, -4) + clipped(d, strands) + shine(`M64 ${112}Q68 ${low - 14} 84 ${low - 5}`, 2.4, 0.16);
+  const base = mix(hc[0], '#8a6248', f.hairC <= 1 ? .22 : .08);
+  return [base, mix(hc[1], base, .4)];
+}
+
+/** Beards redrawn (owner 2026-11-14: "the worst design of a man with beard"): groomed, following the jaw, never a mask.
+ *  1 trimmed: a neat band along the jaw and a short chin, the mouth and lower lip clear;
+ *  2 full: from the sideburns down a clean diagonal cheek line to the moustache, a rounded chin with a tufted edge;
+ *  3 long: the full beard falling to a soft point.
+ *  A lighter top tone, strands, a few light hairs. */
+function beardOf(f: Fig): string {
+  const [base, dark] = beardTone(f);
+  const lite = mix(base, '#ffffff', .16);
+  let s = '';
+  let d: string, low: number;
+  if (f.beard === 1) {
+    // Trimmed: inside the face's own outline, so the head keeps its shape; a thin band along the jaw (6 wide at the
+    // sideburns) and the chin under the lower lip.
+    low = 140;
+    d = 'M56.2 88V96C55.4 122 73.8 140.5 100 140.5C126.2 140.5 144.6 122 143.8 96V88'
+      + 'L138 88V98C138 116 124 130 110 133.4Q100 131.6 90 133.4C76 130 62 116 62 98V88Z';
+  } else {
+    // Full (2) or long (3): the cheek line runs from the sideburn to the corner of the mouth; a soft rounded or pointed end.
+    low = f.beard === 2 ? 151 : 172;
+    const tip = f.beard === 2
+      ? 'C57 136 76 151 100 151C124 151 143 136 144.8 108'
+      : 'C56 140 74 162 92 168Q100 174 108 168C126 162 144 140 144.8 108';
+    d = `M56 88C55.4 96 55.2 102 55.2 108${tip}C145 102 144.6 96 144 88`
+      + 'L138.5 88C138.5 100 133 110 123 116Q118.5 119 116 122Q108 133 100 133Q92 133 84 122Q81.5 119 77 116C67 110 61.5 100 61.5 88Z';
+  }
+  s += S(d, base, dark, -2.5, -3.5);
+  // Texture: a few long strands in the dark tone, light hairs catching the light from the top left.
+  const xs = f.beard === 1 ? [] : [72, 88, 100, 112, 128];
+  const strands = xs.map((x, i) => {
+    const y0 = 124 + (i % 2) * 4, y1 = low - 6 - Math.abs(x - 100) * .35;
+    return `<path d="M${x} ${y0}Q${x + (x - 100) * .08} ${(y0 + y1) / 2} ${x + (x - 100) * .14} ${y1}" stroke="${dark}" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".45"/>`;
+  }).join('') + (f.beard === 1 ? [[66, 112], [80, 128]] : [[66, 114], [80, 132], [92, 140]]).map(([x, y]) => `<path d="M${x} ${y}q-.8 4 .8 8" stroke="${lite}" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".6"/>`).join('');
+  return s + clipped(d, strands);
 }
 
 /** Hair behind the head (round 5): long, bun, afro, braids, ponytail. */
