@@ -38,7 +38,7 @@ set local role authenticated;
 select throws_ok('select public.tidy_db()', '42501', null, 'a player cannot run the tidy-up');
 reset role;
 
-select is(public.tidy_db(), '{"cheers": 1, "relights": 1, "friend_asks": 1, "reports": 1}'::jsonb, 'removes exactly the old short-lived rows');
+select is(public.tidy_db(), '{"cheers": 1, "relights": 1, "friend_asks": 1, "reports": 1, "feats": 0, "challenges": 0, "duels": 0, "gifts": 0}'::jsonb, 'removes exactly the old short-lived rows');
 select is((select count(*)::int from public.rank_cheers), 1, 'a recent cheer stays');
 select is((select count(*)::int from public.rank_challenges), 1, 'the challenge stays');
 select is((select array_agg(id) from public.relights), array['newrelight'], 'a live relight stays');
@@ -46,7 +46,7 @@ select is((select count(*)::int from public.rank_friend_asks), 1, 'a recent frie
 select is((select count(*)::int from public.problem_reports where status = 'new'), 1, 'an open report stays however old');
 select is((select count(*)::int from public.problem_reports where status = 'fixed'), 1, 'a recently fixed report stays');
 select is((select score from public.rank_days where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 30, 'earned day scores are never removed');
-select is(public.tidy_db(), '{"cheers": 0, "relights": 0, "friend_asks": 0, "reports": 0}'::jsonb, 'running again removes nothing more');
+select is(public.tidy_db(), '{"cheers": 0, "relights": 0, "friend_asks": 0, "reports": 0, "feats": 0, "challenges": 0, "duels": 0, "gifts": 0}'::jsonb, 'running again removes nothing more');
 create function pg_temp.scheduled() returns boolean language plpgsql as $$
 declare yes boolean;
 begin

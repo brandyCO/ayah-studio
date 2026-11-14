@@ -753,6 +753,12 @@ Pro and a load test come later, when the owner decides to pay).
       `ev:…`, `age:…` since install, `p:`, `l:`, first day again under `d0:`), no id; `usage_add()` adds 1 per word
       (migration `20261113400000_usage_counts.sql`, pgTAP `usage_counts.test.sql`); owner reads the views `usage_by_day` and
       `usage_first_day` in the Supabase SQL editor; off in the Kids space and with Me → ⚙ → App → Anonymous usage counts
+- [x] Round 3 (owner "Yes", 2026-11-14): minutes listened go to Ranks at most once a minute (other progress within seconds;
+      everything at once when the app is left or Ranks opens), "reading now" every 2 min (dot kept 4 min); the backup also
+      packs the Storage voice clips (`files.tar.enc`) and uses its own secret `BACKUP_KEY` (owner adds it; until then the
+      database password, `key.txt` says which); `usage_add` takes no new words once a day has 3000; `tidy_db()` also removes
+      friends' news > 30 days, challenges started > 90 days ago or never accepted in 30, duels > 8 weeks, gifts opened > a year
+      (migration `20261114300000_round3_lighter.sql`, pgTAP `round3_lighter.test.sql` 12)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
