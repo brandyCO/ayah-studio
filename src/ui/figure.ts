@@ -60,7 +60,7 @@ export function options(slot: Slot, f: Fig): number[] {
     case 'age': return [0, 1];
     case 'wrap': return f.head === 4 || f.head === 5 ? [0, 1, 2, 3] : [];
     case 'pattern': return PATTERNED.has(f.outfit) ? [0, 1, 2, 3, 4] : [];
-    case 'acc': return [0, 1, 2, 3, 4];
+    case 'acc': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   }
 }
 /** Outfits a pattern can go on (the earned robes and the champion's keep their own look). */
@@ -75,6 +75,7 @@ export const PRICE: Record<string, number> = { 'head:3': 150, 'outfit:1': 120, '
   'outfit:15': 120, 'pattern:4': 80, 'acc:1': 60,
   // Couture and new things to hold (2026-11-14).
   'outfit:17': 220, 'outfit:18': 200, 'outfit:19': 220, 'outfit:20': 160, 'outfit:21': 200, 'outfit:22': 240,
+  'acc:5': 140, 'acc:6': 160, 'acc:7': 150, 'acc:8': 110, 'acc:9': 170, 'acc:10': 90,
   'hold:12': 140, 'hold:13': 120, 'hold:14': 120, 'hold:15': 90, 'hold:16': 80, 'hold:17': 110 };
 export const PRIZE = 'outfit:6';
 /** Weekly prize pieces (owner request 2026-11-10): a league's top 3 win the week's piece, in turn, back after
@@ -408,6 +409,63 @@ function back(f: Fig): string {
 }
 /** What sits on the front (round 5): backpack straps, a siwak in a chest pocket. */
 function front(f: Fig): string {
+  // Worn decorations (owner request 2026-11-14, "decos ... both"): 5 pearls, 6 khatam brooch, 7 sash, 8 scarf,
+  // 9 crescent medallion, 10 jasmine corsage. All sit on the chest, clear of the arms.
+  const gold = '#f2c14e', goldD = '#a8740f', goldL = '#fff2b8';
+  const pearl = (x: number, y: number, r: number) => `<circle cx="${x.toFixed(1)}" cy="${(y + .5).toFixed(1)}" r="${r}" fill="#b9b2c8"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#fbf7ff"/><circle cx="${(x - r * .35).toFixed(1)}" cy="${(y - r * .35).toFixed(1)}" r="${(r * .35).toFixed(2)}" fill="#fff"/>`;
+  const qp = (t: number, a: number[], b: number[], c: number[]) => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * b[0] + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * b[1] + t * t * c[1]];
+  const star8 = (x: number, y: number, R: number, r: number) => 'M' + Array.from({ length: 16 }, (_, i) => { const a = (i / 16) * Math.PI * 2 - Math.PI / 2, k = i % 2 ? r : R; return `${(x + Math.cos(a) * k).toFixed(2)} ${(y + Math.sin(a) * k).toFixed(2)}`; }).join('L') + 'Z';
+  const worn = (): string => {
+    switch (f.acc) {
+      case 5: {
+        let s = '';
+        for (const [a, b, c, n, r] of [[[80, 150], [100, 170], [120, 150], 11, 2.1], [[76, 152], [100, 182], [124, 152], 13, 2.4]] as [number[], number[], number[], number, number][])
+          for (let i = 0; i <= n; i++) { const [x, y] = qp(i / n, a, b, c); s += pearl(x, y, r); }
+        return s + `<path d="M100 167l4 6l-4 9l-4 -9z" fill="${goldD}" transform="translate(.5 1)"/><path d="M100 167l4 6l-4 9l-4 -9z" fill="${gold}"/>` + pearl(100, 185, 3);
+      }
+      case 6: {
+        const x = 84, y = 170;
+        return `<path d="${star8(x, y + 1, 9, 6.6)}" fill="${goldD}"/><path d="${star8(x, y, 9, 6.6)}" fill="${gold}"/><path d="${star8(x, y, 6.6, 4.8)}" fill="none" stroke="${goldL}" stroke-width=".9"/>`
+          + `<circle cx="${x}" cy="${y}" r="3.8" fill="#127a5a"/><circle cx="${x}" cy="${y}" r="3" fill="#2fb38c"/><circle cx="${x - 1}" cy="${y - 1}" r="1" fill="#fff"/>`
+          + [0, 1, 2, 3].map((i) => { const a = (i / 4) * Math.PI * 2 + Math.PI / 4; return `<circle cx="${(x + Math.cos(a) * 8.6).toFixed(1)}" cy="${(y + Math.sin(a) * 8.6).toFixed(1)}" r="1.4" fill="#fbf7ff"/>`; }).join('');
+      }
+      case 7: {
+        const band = 'M62 154L72 148L142 206L136 216Z';
+        return `<path d="${band}" fill="#5e1424" transform="translate(1 1.5)"/><path d="${band}" fill="#a3203a"/><path d="M66 151L139 211" stroke="#c43a54" stroke-width="3" opacity=".7"/>`
+          + `<path d="M62 154L136 216M72 148L142 206" stroke="${gold}" stroke-width="1.8"/>`
+          + `<circle cx="104" cy="182" r="8.4" fill="${goldD}"/><circle cx="104" cy="181" r="8" fill="${gold}"/><path d="${star8(104, 181, 6, 4)}" fill="#a3203a"/><circle cx="104" cy="181" r="2.4" fill="${goldL}"/>`
+          + Array.from({ length: 5 }, (_, i) => `<path d="M${136 + i * 1.4} ${214 - i * 1.6}l-2 7" stroke="${gold}" stroke-width="1.2" stroke-linecap="round"/>`).join('');
+      }
+      case 8: {
+        // A woven pashmina round the neck, two ends hanging down the front with a paisley border and a fringe.
+        const c1 = '#c8743a', c2 = '#8e4a20';
+        const ring = 'M70 148Q100 136 130 148L128 160Q100 152 72 160Z';
+        const endL = 'M82 154L96 156L92 204H78Z', endR = 'M118 154L104 156L108 204H122Z';
+        const fr = (x0: number) => Array.from({ length: 6 }, (_, i) => `<path d="M${x0 + i * 2.6} 204v6" stroke="${c1}" stroke-width="1.2" stroke-linecap="round"/>`).join('');
+        const pat = (d: string) => clipped(d, Array.from({ length: 6 }, (_, i) => `<path d="M60 ${150 + i * 9}H140" stroke="${goldL}" stroke-width="1" opacity=".55"/><path d="M60 ${154 + i * 9}H140" stroke="${c2}" stroke-width="2" opacity=".5"/>`).join(''));
+        return S(endL, c1, c2, -1.5, -1.5) + pat(endL) + S(endR, c1, c2, -1.5, -1.5) + pat(endR) + fr(78.6) + fr(108.6)
+          + `<path d="M79 196H93M107 196H121" stroke="${gold}" stroke-width="2.4"/>` + S(ring, c1, c2, -1, -2) + pat(ring);
+      }
+      case 9: {
+        // A gold crescent and star medallion on a fine chain.
+        const m = 'M106 170a10 10 0 1 0 2 16a8 8 0 1 1 -2 -16z';
+        return `<path d="M80 150Q90 166 99 172M120 150Q112 164 104 170" stroke="${goldD}" stroke-width="1.6" fill="none" stroke-dasharray="1.6 1.2"/>`
+          + `<path d="${m}" fill="${goldD}" transform="translate(.6 1)"/><path d="${m}" fill="${gold}"/><path d="${star4(104, 179, 3.4)}" fill="${goldL}"/>`
+          + `<circle cx="101" cy="172" r="1.8" fill="${gold}"/>`;
+      }
+      case 10: {
+        // A jasmine corsage with two leaves and a pearl.
+        const x = 116, y = 168;
+        let s = `<path d="M${x - 2} ${y + 2}q-10 4 -12 12q9 -1 12 -12z" fill="#2f9a4a"/><path d="M${x + 2} ${y + 2}q10 2 13 10q-9 1 -13 -10z" fill="#3fae5a"/>`;
+        for (const [dx, dy, r] of [[0, -2, 5], [-6, 3, 4], [6, 3, 4], [0, 6, 3.6]]) s += [0, 1, 2, 3, 4].map((i) => { const a = (i / 5) * Math.PI * 2 - Math.PI / 2; return `<ellipse cx="${(x + dx + Math.cos(a) * r * .55).toFixed(1)}" cy="${(y + dy + Math.sin(a) * r * .55).toFixed(1)}" rx="${(r * .42).toFixed(1)}" ry="${(r * .3).toFixed(1)}" transform="rotate(${(i * 72).toFixed(0)} ${(x + dx + Math.cos(a) * r * .55).toFixed(1)} ${(y + dy + Math.sin(a) * r * .55).toFixed(1)})" fill="#fffdf6" stroke="#e8dfcc" stroke-width=".5"/>`; }).join('') + `<circle cx="${x + dx}" cy="${y + dy}" r="${(r * .2).toFixed(1)}" fill="#f2c14e"/>`;
+        return s + pearl(x + 9, y - 6, 1.8);
+      }
+    }
+    return '';
+  };
+  const w = worn();
+  // Under a hijab the chest pieces sit a little lower, below the cloth's drape.
+  if (w) return (f.head === 4 || f.head === 5) && f.acc !== 7 && f.acc !== 8 ? `<g transform="translate(0 16)">${w}</g>` : w;
   if (f.acc === 4) return [84, 116].map((x) => `<path d="M${x} 148V194" stroke="#b8501f" stroke-width="8" stroke-linecap="round"/><path d="M${x - 1} 148V192" stroke="#f0864a" stroke-width="4" stroke-linecap="round"/><rect x="${x - 5}" y="176" width="10" height="7" rx="2" fill="#ffd2a8"/>`).join('');
   if (f.acc === 3) {
     const c = sleeve(f);
