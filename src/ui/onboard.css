@@ -103,3 +103,17 @@ dialog.ob.out { animation: ob-out .3s ease-in forwards; }
   .ob-fill { transition: none; }
 }
 html.lite .ob-sky { display: none; }
+.ob-num { background: #12a594; font: 900 17px/1 var(--ui-round, system-ui); }
+.t-0 .ob-num { background: #9aa3a0; }
+.t-33 .ob-num, .t-100 .ob-num, .t-300 .ob-num, .t-1000 .ob-num { background: #f59f00; font-size: 15px; }
+.t-1000 .ob-num { font-size: 13px; }
+.h-instagram.ob-ic { background: linear-gradient(135deg, #f9a03f, #d6249f 55%, #6a3fd6); }
+.h-tiktok.ob-ic { background: #111; }
+.h-youtube.ob-ic { background: #e62117; }
+.h-friend.ob-ic { background: #ff6b4a; }
+.h-store.ob-ic { background: #12a594; }
+.h-masjid.ob-ic { background: #6c5ce7; }
+.h-search.ob-ic { background: #3b82f6; }
+.h-other.ob-ic { background: #9aa3a0; }
+.s-heard .ob-opt { padding: 9px 12px; }
+.s-heard .ob-ic { width: 40px; height: 40px; border-radius: 12px; }

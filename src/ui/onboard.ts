@@ -4,19 +4,27 @@
 // the answers below; one big Continue at the bottom. What brings you here → its answer → how much each day → the
 // first goal. Saves exactly what the old sheets saved (`whyHere`, the pace, `tailor()`).
 import './onboard.css';
-import { choosePace, goals, needsPace, type Pace } from '../data/goals';
+import { choosePace, goals, needsPace, setGoals } from '../data/goals';
+import { mark } from '../usage';
 import { fe, type FrontKey } from '../i18n/front';
-import { lang, LANGS, setLang, t, type Key } from '../i18n';
+import { lang, LANGS, setLang, t } from '../i18n';
 import { actor, myFigureCode, type Actor } from './actor';
 import { h, haptic } from './dom';
-import { DEFAULT, encode, normalize } from './figure';
+import { DEFAULT, encode, normalize, parse } from './figure';
 import { flame } from './flame';
 import { goalText } from './goalName';
 import { icon } from './icons';
 import { sfx } from './sfx';
-import { paceLine, saveWhy, tailor, WHY_IC, WHYS, type Why } from './firstSteps';
+import { saveWhy, tailor, WHY_IC, WHYS, type Why } from './firstSteps';
 
-type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pace' | 'done';
+type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'done';
+const PAGES = [1, 2, 5, 10, 20] as const;
+const PAGE_MIN: Record<number, number> = { 1: 2, 2: 3, 5: 8, 10: 15, 20: 30 };
+const TASBIH = [33, 100, 300, 1000, 0] as const;
+const TASBIH_MIN: Record<number, number> = { 33: 1, 100: 2, 300: 5, 1000: 15 };
+const HEARD = ['instagram', 'tiktok', 'youtube', 'friend', 'store', 'masjid', 'search', 'other'] as const;
+type Heard = (typeof HEARD)[number];
+const HEARD_IC: Record<Heard, string> = { instagram: 'film', tiktok: 'film', youtube: 'play', friend: 'users', store: 'download', masjid: 'moon', search: 'search', other: 'sparkle' };
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Shows the flow (once: nothing when both questions were answered before). `resumed`: back after the
@@ -28,9 +36,14 @@ export function openOnboarding(resumed = false) {
   const pace = needsPace();
   if (asked && !pace) return;
   if (document.querySelector('.ob')) return;
-  const screens: Screen[] = asked ? ['hi', 'pace', 'done'] : pace ? ['lang', 'hi', 'few', 'why', 'react', 'pace', 'done'] : ['lang', 'hi', 'why', 'react'];
+  const goalsPart: Screen[] = ['pages', 'pagesSay', 'tasbih', 'tasbihSay'];
+  const screens: Screen[] = asked ? ['hi', ...goalsPart, 'done']
+    : pace ? ['lang', 'hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', 'done']
+    : ['lang', 'hi', 'why', 'react', 'heard', 'heardSay'];
   const picked = new Set<Why>();
-  let chosen: Pace | null = null;
+  let pagesN: number | null = null;
+  let tasbihN: number | null = null;
+  let heard: Heard | null = null;
   let i = resumed && screens[0] === 'lang' ? 1 : 0;
   let tongue = lang();
   let typing = 0;
@@ -69,9 +82,21 @@ export function openOnboarding(resumed = false) {
     typing = window.setTimeout(next, 260);
   };
 
-  const who = (big: boolean) => {
-    const a = actor(`ob-actor${big ? ' big' : ''}`, code);
-    return a;
+  /** The character; `hold` puts something in its hands for this screen (2 the mushaf, 1 the masbaha). */
+  const who = (big: boolean, hold?: number) => {
+    const f = parse(code);
+    return actor(`ob-actor${big ? ' big' : ''}`, f && hold !== undefined ? encode(normalize({ ...f, hold })) : code);
+  };
+  /** One answer of several (a single choice): the row lights, the character hops. */
+  const single = <T,>(vals: readonly T[], cur: () => T | null, set: (v: T) => void, row: (v: T) => (Node | string)[], cls: (v: T) => string, a: Actor | null) => {
+    const opts = vals.map((v) => opt(cls(v), cur() === v, [...row(v), h('span', { class: 'ob-tick', 'aria-hidden': 'true' }, icon('check', 16))], () => {
+      set(v);
+      opts.forEach((o, k) => { const on = vals[k] === v; o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
+      go.disabled = false;
+      sfx.pop(1); a?.hop(0.3); haptic(8);
+    }));
+    go.disabled = cur() === null;
+    return h('div', { class: 'ob-list' }, ...opts);
   };
 
   const opt = (cls: string, on: boolean, kids: (Node | string)[], onclick: () => void) =>
@@ -81,10 +106,10 @@ export function openOnboarding(resumed = false) {
     const s = screens[i];
     bar.style.width = `${Math.round(((i + 1) / screens.length) * 100)}%`;
     back.style.visibility = i && !(resumed && i === 1) ? 'visible' : 'hidden';
-    skip.style.visibility = s === 'why' || s === 'pace' ? 'visible' : 'hidden';
+    skip.style.visibility = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' ? 'visible' : 'hidden';
     const bubble = h('p', { class: 'ob-say' });
-    const ask = s === 'why' || s === 'pace' || s === 'lang';
-    const a = who(!ask);
+    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'lang';
+    const a = who(!ask, s === 'pagesSay' ? 2 : s === 'tasbihSay' && tasbihN ? 1 : undefined);
     const body: HTMLElement[] = [];
     let line = '';
     let flameEl: HTMLElement | null = null;
@@ -121,23 +146,27 @@ export function openOnboarding(resumed = false) {
         });
         return b;
       })));
-    } else if (s === 'pace') {
-      line = t('fs.paceTitle');
-      const why = [...picked].length ? [...picked] : whyNow();
-      const rec: Pace = why.includes('memorise') ? 'steady' : 'gentle';
-      chosen ??= rec;
-      const opts = (['gentle', 'steady', 'devoted'] as Pace[]).map((p) => opt(`p-${p}`, p === chosen, [
-        h('span', { class: 'ob-txt' },
-          h('b', {}, t(`pace.${p}` as Key), p === rec ? h('span', { class: 'ob-rec' }, fe('ob.rec')) : ''),
-          h('small', {}, paceLine(p))),
-        h('span', { class: 'ob-tick', 'aria-hidden': 'true' }, icon('check', 16))], () => {
-        chosen = p;
-        opts.forEach((o, k) => { const on = k === ['gentle', 'steady', 'devoted'].indexOf(p); o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
-        sfx.pop(1); a?.hop(0.25); haptic(8);
-      }));
-      body.push(h('p', { class: 'ob-hint' }, fe('ob.paceHint')), h('div', { class: 'ob-list' }, ...opts));
-    } else if (s === 'done') {
-      line = t('fs.paceSet', { goal: goalText('pages', goals().pages) });
+    } else if (s === 'pages') {
+      line = fe('ob.pages');
+      pagesN ??= ([...picked].length ? [...picked] : whyNow()).includes('memorise') ? 2 : 1;
+      body.push(h('p', { class: 'ob-hint' }, fe('ob.pagesHint')), single(PAGES, () => pagesN, (v) => { pagesN = v; }, (v) => [
+        h('span', { class: 'ob-ic ob-num', 'aria-hidden': 'true' }, String(v)),
+        h('span', { class: 'ob-txt' }, h('b', {}, goalText('pages', v)), h('small', {}, fe('ob.min', { n: PAGE_MIN[v] })))], (v) => `n-${v}`, a));
+    } else if (s === 'pagesSay') line = fe(`ob.p${pagesN ?? 1}` as FrontKey);
+    else if (s === 'tasbih') {
+      line = fe('ob.tasbih');
+      body.push(h('p', { class: 'ob-hint' }, fe('ob.tasbihHint')), single(TASBIH, () => tasbihN, (v) => { tasbihN = v; }, (v) => [
+        h('span', { class: 'ob-ic ob-num', 'aria-hidden': 'true' }, v ? String(v) : '–'),
+        h('span', { class: 'ob-txt' }, h('b', {}, v ? fe('ob.times', { n: v }) : fe('ob.tasbihNone')), v ? h('small', {}, TASBIH_MIN[v] > 1 ? fe('ob.min', { n: TASBIH_MIN[v] }) : fe('ob.underMin')) : '')], (v) => `t-${v}`, a));
+    } else if (s === 'tasbihSay') line = fe(`ob.t${tasbihN ?? 0}` as FrontKey);
+    else if (s === 'heard') {
+      line = fe('ob.heard');
+      body.push(single(HEARD, () => heard, (v) => { heard = v; }, (v) => [
+        h('span', { class: `ob-ic h-${v}`, 'aria-hidden': 'true' }, icon(HEARD_IC[v], 22)),
+        h('span', { class: 'ob-txt' }, h('b', {}, fe(`ob.h.${v}` as FrontKey)))], (v) => `h-${v}`, a));
+    } else if (s === 'heardSay') line = fe(`ob.hs.${heard ?? 'other'}` as FrontKey);
+    else if (s === 'done') {
+      line = pagesN === null ? fe('ob.doneLater') : t('fs.paceSet', { goal: goalText('pages', goals().pages) });
       go.textContent = fe('ob.start');
       flameEl = h('div', { class: 'ob-flame', 'aria-hidden': 'true' }, flame(1, 76));
     }
@@ -157,11 +186,23 @@ export function openOnboarding(resumed = false) {
       a?.face('happy', 1200);
     } else say(bubble, line, a);
     if (s === 'hi') setTimeout(() => a?.wave(2400), 380);
-    else if (s === 'react') setTimeout(() => a?.cheer(1700), 420);
+    else if (s === 'react' || s === 'heardSay') setTimeout(() => a?.cheer(1700), 420);
+    else if (s === 'pagesSay') setTimeout(() => (pagesN ?? 1) >= 5 ? a?.cheer(2000) : (a?.nod(), a?.hop(0.6)), 420);
+    else if (s === 'tasbihSay') setTimeout(() => (tasbihN ?? 0) >= 300 ? a?.cheer(2000) : tasbihN ? a?.hop(0.6) : a?.nod(), 420);
     else if (s === 'done') setTimeout(() => { a?.cheer(2200); sfx.shimmer(); }, 420);
     else if (s === 'few') setTimeout(() => a?.nod(), 400);
   }
 
+  /** The daily goals from the answers: the nearest pace as a base, then the pages and the tasbih as said. */
+  const apply = () => {
+    if (pagesN === null) return;
+    choosePace(pagesN >= 5 ? 'devoted' : pagesN >= 2 ? 'steady' : 'gentle');
+    const g = goals();
+    g.pages = pagesN;
+    if (tasbihN !== null) g.dhikr = tasbihN ? { subhan: tasbihN } : {};
+    setGoals(g);
+    tailor(asked ? whyNow() : [...picked]);
+  };
   const whyNow = (): Why[] => { try { return JSON.parse(localStorage.getItem('whyHere') ?? '[]'); } catch { return []; } };
   let ending = false;
   const finish = () => {
@@ -180,7 +221,8 @@ export function openOnboarding(resumed = false) {
       return;
     }
     if (s === 'why') saveWhy([...picked]);
-    if (s === 'pace' && chosen) { choosePace(chosen); tailor(asked ? whyNow() : [...picked]); }
+    if (s === 'tasbihSay' || s === 'tasbih') apply();
+    if (s === 'heard' && heard) { try { localStorage.setItem('heardFrom', heard); } catch { /* private */ } mark(`ev:heard-${heard}`); }
     haptic(12);
     sfx.tick();
     if (i >= screens.length - 1) { finish(); return; }
@@ -193,7 +235,13 @@ export function openOnboarding(resumed = false) {
   skip.onclick = () => {
     const s = screens[i];
     if (s === 'why') { picked.clear(); saveWhy([]); i++; draw(1); return; }
-    finish(); // pace: "later", as before (Me asks again)
+    // Skipping a question also skips the character's answer to it.
+    if (s === 'pages') pagesN = null;
+    if (s === 'tasbih') { tasbihN = null; apply(); }
+    if (s === 'heard') heard = null;
+    i = Math.min(screens.length - 1, i + 2);
+    if (i === screens.length - 1 && screens[i] !== 'done') { finish(); return; }
+    draw(1);
   };
   // Android back / Esc steps back a screen; on the first it closes.
   d.addEventListener('cancel', (e) => { e.preventDefault(); if (canBack()) { i--; draw(-1); } else finish(); });
