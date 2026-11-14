@@ -5,7 +5,8 @@
 #    files from Cloudflare, sign-in or a signed token, sync, Ranks, friends, rival, Learn, the shop, polling.
 # 3. report: one table in the run summary (per call: average, 95 %, errors), the slowest database calls on staging,
 #    database size and the bytes pulled from Supabase (the free plan allows 5 GB a month for the whole account).
-# Needs: variable STAGING_REF, secrets STAGING_DB_PASSWORD and SUPABASE_ACCESS_TOKEN (the account token the deploy uses).
+# Needs: variable STAGING_REF, secrets STAGING_DB_PASSWORD and STAGING_ACCESS_TOKEN (a Supabase access token of the
+# account that owns staging; without it SUPABASE_ACCESS_TOKEN, the deploy token, is used).
 name: Launch test (staging)
 on:
   workflow_dispatch:
@@ -23,7 +24,8 @@ concurrency: { group: launchtest, cancel-in-progress: false }
 permissions: { contents: read }
 env:
   REF: ${{ vars.STAGING_REF }}
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  # The staging project may sit in another Supabase account or organization: its own token wins.
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
   STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
   LIVE_REF: jposubjybzstfmnngews
 jobs:

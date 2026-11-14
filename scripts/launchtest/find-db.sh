@@ -5,7 +5,7 @@ set -uo pipefail
 API=https://api.supabase.com/v1/projects/$REF
 code=$(curl -s -o /tmp/proj.json -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$API")
 if [ "$code" != 200 ]; then
-  echo "::error::The Supabase API answered $code for project STAGING_REF. Either STAGING_REF is not the staging project's id (Project settings → General → Project ID), or the staging project is in another Supabase organization than the one SUPABASE_ACCESS_TOKEN belongs to."
+  echo "::error::The Supabase API answered $code for project STAGING_REF. Either STAGING_REF is not the staging project's id (Project settings → General → Project ID), or the access token cannot see it: add a secret STAGING_ACCESS_TOKEN made at supabase.com/dashboard/account/tokens while signed in to the account that owns the staging project."
   exit 1
 fi
 REGION=$(python3 -c "import json; print(json.load(open('/tmp/proj.json')).get('region',''))")
