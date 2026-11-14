@@ -2234,6 +2234,13 @@ duas/reflections section in Me.
       **Kept simple, Duolingo style** (owner 2026-11-14): the splash is the default icon's marker, star and the character
       standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
       `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
+      **Animated, drawn by Android** (owner 2026-11-14, "the animation didn't play"): on Android 12+ the icon is an
+      AnimatedVectorDrawable (`drawable-v31/splash_anim.xml`, 1 s: the marker pops in, the character springs up out of it,
+      the star spins in, two cheering hops with the shadow squeezing; `KEYS` in `make-character-icons.py`). Android draws
+      the launch screen in its own process and runs vector animations on the render thread, so app start-up can't make it
+      stutter; the splash stays ≥ 1.05 s so it plays through. The art is converted by `scripts/svg_to_vd.py` (clip paths,
+      gradients, transforms; `to_svg()` renders it back to compare with the original). Android 11 and older show the
+      finished pose still (`drawable/splash_anim.xml` = `splash_icon.webp`)
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)
