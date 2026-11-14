@@ -8,7 +8,7 @@ Go to Actions, open "Play Store release" and click Run workflow. Type the versio
 
 - The run makes `app-release.aab`, signed with the app's own key (the repo secrets `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`). Play uses that key as the **upload key**: in the Play Console, keep "Let Google manage and protect your app signing key" (Play App Signing).
 - The version number is 20000 plus the run number. It always grows and is always higher than the test APKs.
-- All 604 mushaf page fonts are inside the bundle, so every page reads offline from install. The bundle stays under Play's 200 MB limit, and the run checks this.
+- Mushaf pages 1–3 are inside the app; pages 4–604 (~95 MB) are a fast-follow asset pack that Google Play downloads right after the install, so the install is ~25 MB. Until the pack is in, a page shows "Preparing your mushaf" (and comes from the site when online). The run checks 3 fonts in the app, 601 in the pack, and the 200 MB limit.
 - Download the bundle from the run's page: Artifacts → `ayah-studio-<version>-aab`.
 
 Google sign-in: Play re-signs the app with Google's key. In the Play Console, open Setup → App signing and copy the **SHA-1 of the app signing key**. In Google Cloud ("Ayah Studio" project → Credentials), add a second Android OAuth client with that SHA-1 and the package `com.brandyco.ayahstudio`. If you skip this, Google sign-in will not work in the store version. The test APK keeps working with the existing client.
