@@ -77,6 +77,38 @@ function charY(t: number) {
 const waveEnv = (t: number) => seg(t, WAVE, WAVE + 110) * (1 - seg(t, WAVE_END - 110, WAVE_END));
 const lookUp = (t: number) => eio(seg(t, FLY - 60, FLY + 70)) * (1 - eio(seg(t, HIT + 20, HIT + 140)));
 
+/** The big soft lights (glow, rays, flash) as small pictures the GPU only scales: as CSS gradients (the rays under a
+ *  mask) they were rastered at the phone's full pixel ratio, layers of 2000+ px a side, which a slow phone's GPU
+ *  could not move at 60 fps. Drawn once at `n` px, they look the same, being soft. */
+function baked(n: number, draw: (g: CanvasRenderingContext2D, r: number) => void) {
+  const c = h('canvas', { width: String(n), height: String(n) }) as HTMLCanvasElement;
+  const g = c.getContext('2d');
+  if (g) draw(g, n / 2);
+  return c;
+}
+const rgba = (hex: string, a: number, w = 0) => {
+  const v = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+  const ch = (x: number) => Math.round(x + (255 - x) * w);
+  return `rgba(${ch(v >> 16)},${ch((v >> 8) & 255)},${ch(v & 255)},${a})`;
+};
+const radial = (g: CanvasRenderingContext2D, r: number, stops: [number, string][]) => {
+  const gr = g.createRadialGradient(r, r, 0, r, r, r);
+  for (const [at, col] of stops) gr.addColorStop(at, col);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 2 * r, 2 * r);
+};
+const glowPic = (glow: string) => baked(256, (g, r) => radial(g, r, [[0, rgba(glow, 1, 0.3)], [0.45, rgba(glow, 0.45)], [1, rgba(glow, 0)]]));
+const flashPic = () => baked(256, (g, r) => radial(g, r, [[0, 'rgba(255,252,230,.95)'], [0.38, 'rgba(255,236,160,.45)'], [0.72, 'rgba(255,236,160,0)']]));
+const raysPic = () => baked(640, (g, r) => {
+  g.fillStyle = 'rgba(255,255,255,.5)';
+  for (let i = 0; i < 16; i++) {
+    const a = (i * 22.5 - 90) * Math.PI / 180;
+    g.beginPath(); g.moveTo(r, r); g.arc(r, r, r, a, a + 6 * Math.PI / 180); g.closePath(); g.fill();
+  }
+  g.globalCompositeOperation = 'destination-in';
+  radial(g, r, [[0, '#000'], [0.14, '#000'], [0.45, 'rgba(0,0,0,.5)'], [1, 'rgba(0,0,0,0)']]);
+});
+
 /** The head on a spring behind the body (follow-through): its offset from where the body would put it. */
 function headLag() {
   const K = (TAU * 4.2) ** 2, D = 2 * 0.3 * TAU * 4.2;
@@ -130,8 +162,8 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
   box.append(stage);
   const S = stage.getBoundingClientRect().width || 360, u = S / 512;
   const anims: Animation[] = [];
-  /** Samples `f` into keyframes (`fps` a second) for one element, over the whole show. */
-  const track = (el: Element, f: (t: number) => Pose, fps = 60) => {
+  /** Samples `f` into keyframes (`fps` a second; the compositor eases between them) for one element, over the whole show. 30 a second looks the same as 60 and halves the set-up on a slow phone. */
+  const track = (el: Element, f: (t: number) => Pose, fps = 30) => {
     const n = Math.max(2, Math.round(SHOW_MS / 1000 * fps)), kf: Keyframe[] = [];
     for (let i = 0; i <= n; i++) {
       const p = f(i * SHOW_MS / n), s = p.s ?? 1;
@@ -155,8 +187,12 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
   const breathe = (t: number) => 0.035 * Math.sin(TAU * t / 1900);
   const gathering = (t: number) => (t < LAUNCH ? eio(seg(t, GATHER, LAUNCH)) : 1 - spring(t, LAUNCH, 3.2, 0.28));
   const hitGlow = (t: number) => (t > HIT ? Math.exp(-(t - HIT) / 420) * seg(t, HIT, HIT + 50) : 0);
-  track(put('op-glow', 256, 250, 760), (t) => ({ s: 0.55 + 0.45 * eo3(seg(t, 60, 700)) + breathe(t) + 0.12 * hitGlow(t), o: 0.9 * seg(t, 60, 420) }), 30);
-  track(put('op-rays', 256, 244, 1200), (t) => ({
+  const glow = put('op-glow', 256, 250, 760);
+  glow.append(glowPic(c.glow));
+  track(glow, (t) => ({ s: 0.55 + 0.45 * eo3(seg(t, 60, 700)) + breathe(t) + 0.12 * hitGlow(t), o: 0.9 * seg(t, 60, 420) }), 30);
+  const rays = put('op-rays', 256, 244, 1200);
+  rays.append(raysPic());
+  track(rays, (t) => ({
     r: t * 0.011, s: 0.6 + 0.4 * eo3(seg(t, POP, 800)) + 0.08 * hitGlow(t),
     o: 0.3 * seg(t, 140, 700) + 0.14 * cl(gathering(t)) + 0.45 * hitGlow(t),
   }), 30);
@@ -227,7 +263,7 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
 
   // Twinkles: two round the marker as it lands, one marking where the star will land, two after.
   const twinkle = (x: number, y: number, size: number, from: number, len: number) =>
-    track(put('op-tw', x, y, size, whiteStar), (t) => { const p = seg(t, from, from + len); return { s: Math.sin(Math.PI * p), r: 90 * p, o: p > 0 && p < 1 ? 1 : 0 }; }, 40);
+    track(put('op-tw', x, y, size, whiteStar), (t) => { const p = seg(t, from, from + len); return { s: Math.sin(Math.PI * p), r: 90 * p, o: p > 0 && p < 1 ? 1 : 0 }; }, 30);
   twinkle(100, 104, 34, 300, 520); twinkle(446, 318, 26, 420, 520);
   twinkle(404, 92, 46, HINT, 230);
   twinkle(96, 96, 30, 2200, 560); twinkle(440, 304, 24, 2420, 560); twinkle(70, 300, 20, 2560, 500);
@@ -241,7 +277,7 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
       const age = t - LAUNCH - 20, life = 520; if (age <= 0) return { o: 0, s: 0 };
       const tau = age / 1000, d = (1 - Math.exp(-3.4 * tau)) / 3.4, p = age / life;
       return { x: Math.cos(ang) * sp * d, y: Math.sin(ang) * sp * d + 260 * tau * tau, s: 1 - p * p, o: p < 1 ? 1 - cl((p - 0.6) / 0.4) : 0 };
-    }, 40);
+    }, 30);
   }
 
   // The Light star: a trail of ghosts, the star itself, then a flash, a ring and a burst at the hit.
@@ -251,8 +287,10 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
       return { ...p, s: (p.s ?? 1) * (1 - 0.13 * k), sx: 1, sy: 1, o: t - 26 * k < FLY ? 0 : (0.55 - 0.13 * k) * (1 - seg(t, HIT, HIT + 90)) };
     });
   }
-  track(put('op-flash', 404, 92, 820), (t) => ({ s: 0.5 + 0.55 * eo3(seg(t, HIT, HIT + 480)), o: t < HIT ? 0 : 0.75 * seg(t, HIT, HIT + 45) * (1 - eo3(seg(t, HIT + 45, HIT + 520))) }), 40);
-  track(put('op-ring op-ring2', 404, 92, 150), (t) => ({ s: 0.25 + 2.7 * eo3(seg(t, HIT, HIT + 520)), o: t < HIT ? 0 : 0.95 * (1 - seg(t, HIT, HIT + 520)) ** 1.3 }), 40);
+  const flash = put('op-flash', 404, 92, 820);
+  flash.append(flashPic());
+  track(flash, (t) => ({ s: 0.5 + 0.55 * eo3(seg(t, HIT, HIT + 480)), o: t < HIT ? 0 : 0.75 * seg(t, HIT, HIT + 45) * (1 - eo3(seg(t, HIT + 45, HIT + 520))) }), 30);
+  track(put('op-ring op-ring2', 404, 92, 150), (t) => ({ s: 0.25 + 2.7 * eo3(seg(t, HIT, HIT + 520)), o: t < HIT ? 0 : 0.95 * (1 - seg(t, HIT, HIT + 520)) ** 1.3 }), 30);
   track(put('op-star', 404, 92, 78, goldStar('op-gold')), starAt);
   for (let i = 0; i < 20; i++) {
     const ang = (i / 20) * TAU + (rand() - 0.5) * 0.3, sp = 380 + rand() * 420, life = 620 + rand() * 360, spin = (rand() - 0.5) * 900;
@@ -262,7 +300,7 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
       const age = t - HIT; if (age <= 0) return { o: 0, s: 0 };
       const tau = age / 1000, d = (1 - Math.exp(-3.2 * tau)) / 3.2, p = age / life;
       return { x: Math.cos(ang) * sp * d, y: Math.sin(ang) * sp * d + 300 * tau * tau, r: spin * tau, s: Math.max(0, 1 - p * p), o: p < 1 ? 1 - cl((p - 0.65) / 0.35) : 0 };
-    }, 40);
+    }, 30);
   }
 
   // The name, popping in letter by letter with a chunky edge.
@@ -274,7 +312,7 @@ export function show(box: HTMLElement, c: OpColours, end: () => void, manual = f
     name.append(sp);
     if (ch === ' ') continue;
     const at = NAME + li++ * 34;
-    track(sp, (t) => { const q = spring(t, at, 2.5, 0.36); return { y: 40 * (1 - q), s: 0.3 + 0.7 * q, r: -12 * (1 - q), o: seg(t, at, at + 70) }; }, 40);
+    track(sp, (t) => { const q = spring(t, at, 2.5, 0.36); return { y: 40 * (1 - q), s: 0.3 + 0.7 * q, r: -12 * (1 - q), o: seg(t, at, at + 70) }; }, 30);
   }
 
   // The way out: the picture flies forward and the app shows through.

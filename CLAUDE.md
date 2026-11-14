@@ -2137,6 +2137,15 @@ duas/reflections section in Me.
       into Web Animations keyframes (transform / opacity, compositor), faces / poses / sounds (`SOUNDS`, sfx) follow
       the same clock, and `show(…, manual)` seeks any moment (frame-exact preview renders). Loading spinners are the
       gold Light star turning and twinkling (`.spinner`)
+      **Smooth on slow phones** (owner report 2026-11-14, "lagged so bad I didn't see anything"; "60 fps"): the show used to
+      start while the app was still building the first page and was skipped when its chunk came after 0.9 s. Now it waits
+      for the first page (`playOpening(firstScreen)`, ≤ 1.5 s of the gradient), the start-up extras, sync and sign-in wait
+      until it is over (`opening` promise in main.ts, ≤ 5.5 s), keyframes are sampled 30 a second (the compositor eases
+      between them) and the glow, rays and flash are small baked canvases instead of full-resolution CSS gradients under a
+      mask. 6× CPU: two short main-thread tasks during the show; motion is compositor-only
+      **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
+      applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
+      player icons off centre (left in English, right in Arabic)
 - [x] M26 Front-end review, round 2 (owner "build all", 2026-11-14; Claude Doc "Front end review, round 2", G1–G12): **Keep your
       flame safe** (signed out, once a flame was lit: a Google sign-in card under the streak, Later rests it 3 days, `safeLater`;
       a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,

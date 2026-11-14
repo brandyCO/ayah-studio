@@ -1,8 +1,9 @@
 // The opening (owner pick 2026-11-13, "the character arrives"): the app icon comes alive once per launch. This part
 // is in the first load and only puts up the launcher icon's gradient (out of the splash colour) at once; the show
-// itself — marker, character, the Light star, the name — is src/ui/openingShow.ts, its own chunk. It never delays
-// the app; a tap ends it; skipped with reduced motion and in old-phone mode (main.ts). If the show is not there
-// within 0.9 s the gradient just fades away.
+// itself — marker, character, the Light star, the name — is src/ui/openingShow.ts, its own chunk, started once the
+// first page is drawn and before the start-up extras run (main.ts), so on a slow phone it plays smoothly instead of
+// stuttering against the app's start (owner report 2026-11-14). A tap ends it; skipped with reduced motion and in
+// old-phone mode (main.ts).
 import { h } from './dom';
 import { themeId } from './theme';
 
@@ -29,22 +30,33 @@ export function openingBox(theme = themeId()) {
   return { box, colours: { top, bottom, glow, edge, face } };
 }
 
-export function playOpening() {
-  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const frames = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+/** Plays the opening over the app starting underneath. The show starts once `firstScreen` is up (at most 1.5 s
+ *  of the gradient alone), so it never fights the first page for the main thread on a slow phone; the gradient
+ *  just fades if the show cannot start within 3 s. Resolves when the opening is over (at most ~5.5 s), so main.ts
+ *  can hold the start-up extras until then. */
+export function playOpening(firstScreen: Promise<unknown> = Promise.resolve()): Promise<void> {
+  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
   const { box, colours } = openingBox();
-  let done = false;
+  let done = false, over = () => {};
+  const finished = new Promise<void>((r) => { over = r; });
   const end = () => {
     if (done) return;
     done = true;
     box.classList.add('gone');
-    setTimeout(() => box.remove(), 300);
+    setTimeout(() => { box.remove(); over(); }, 300);
   };
   box.addEventListener('click', end);
   document.body.append(box);
-  const t0 = performance.now(), late = window.setTimeout(end, 900);
-  import('./openingShow').then((m) => {
-    if (done || performance.now() - t0 > 900) return;
+  const late = window.setTimeout(end, 3000);
+  const show = import('./openingShow');
+  const up = Promise.race([firstScreen.catch(() => {}), wait(1500)]).then(frames);
+  Promise.all([show, up]).then(([m]) => {
+    if (done) return;
     clearTimeout(late);
     m.show(box, colours, end);
   }).catch(end);
+  return Promise.race([finished, wait(5500)]);
 }

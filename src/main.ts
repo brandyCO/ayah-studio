@@ -145,8 +145,11 @@ initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (launch) history.replaceState(null, '', lastRead());
-// A launch (not a shared link) opens with a light sweep across the logo (docs/light.md, L5).
-if (launch && !liteMode()) playOpening();
+// A launch (not a shared link) opens with the character arriving (src/ui/opening.ts) once the first page is up;
+// the start-up extras below wait until it is over, so they never make it stutter.
+let firstUp = () => {};
+const firstScreen = new Promise<void>((r) => { firstUp = r; });
+const opening = launch && !liteMode() ? playOpening(firstScreen) : Promise.resolve();
 
 window.addEventListener('hashchange', route);
 // Everything below the first screen waits until that screen is up (and the phone has a quiet moment),
@@ -160,11 +163,14 @@ const runLater = () => {
   for (const f of list ?? []) try { f(); } catch (e) { console.error(e); }
 };
 void initI18n().then(route).finally(() => {
-  if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
-  else setTimeout(runLater, 300);
+  firstUp();
+  void opening.then(() => {
+    if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
+    else setTimeout(runLater, 300);
+  });
 });
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
-setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
+later(() => setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 4000));
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();
@@ -187,12 +193,12 @@ if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidget
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
 setupOffline();
 // Problem reports made offline go out now (src/ui/report.ts).
-setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
+later(() => setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 3000));
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
-startSync();
+void opening.then(startSync); // after the opening on a launch, so it never stutters
 if (isNative()) later(() => void import('./ui/morning').then((m) => m.initDailyNative())); // widget + morning ayah (Android)
-void initAuth();
+void opening.then(initAuth);
 later(() => void import('./ui/circles').then((m) => m.resumePendingJoin())); // an invitation opened before signing in
 later(() => void import('./ui/relight').then((m) => m.resumePendingRelight())); // a friend's relight opened before signing in
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
