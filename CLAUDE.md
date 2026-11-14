@@ -730,6 +730,10 @@ Pro and a load test come later, when the owner decides to pay).
       in front of an idle database (11 PostgREST connections, ≤ 8 active, no lock waits) and a second seed ran 17× slower,
       i.e. the shared CPU's burst credits run out. The code itself does ~2,500 calls/s at 16 ms on a 4-core runner (load.yml),
       so 10,000 at once needs Supabase Pro with dedicated compute (owner decides)
+- [x] Busy alert (owner "Sure", 2026-11-14): `.github/workflows/busy.yml` every 10 min counts people at once on the live app
+      (signed-in accounts that reported to Ranks, were reading / listening or synced in the last 5 min) and database calls a
+      second (pg_stat_statements, 60 s apart); at 500 an issue "Busy: …" (label `busy`) is assigned to the owner, closed again
+      under 400. Signed-out people are not counted
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
