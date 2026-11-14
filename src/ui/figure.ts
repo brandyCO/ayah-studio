@@ -1098,19 +1098,19 @@ function beardOf(f: Fig): string {
   let s = '';
   let d: string, low: number;
   if (f.beard === 1) {
-    // Trimmed: inside the face's own outline, so the head keeps its shape; a thin band along the jaw (6 wide at the
-    // sideburns) and the chin under the lower lip.
+    // Trimmed: inside the face's own outline, so the head keeps its shape; a thin band along the jaw, starting at the
+    // middle of the ear (never above it) and the chin under the lower lip.
     low = 140;
-    d = 'M56.2 88V96C55.4 122 73.8 140.5 100 140.5C126.2 140.5 144.6 122 143.8 96V88'
-      + 'L138 88V98C138 116 124 130 110 133.4Q100 131.6 90 133.4C76 130 62 116 62 98V88Z';
+    d = 'M56 101C55.6 124 74 140.5 100 140.5C126 140.5 144.4 124 144 101'
+      + 'Q142.2 99 139.6 103C138.6 119 124 130 110 133.4Q100 131.6 90 133.4C76 130 61.4 119 60.4 103Q57.8 99 56 101Z';
   } else {
     // Full (2) or long (3): the cheek line runs from the sideburn to the corner of the mouth; a soft rounded or pointed end.
     low = f.beard === 2 ? 151 : 172;
     const tip = f.beard === 2
       ? 'C57 136 76 151 100 151C124 151 143 136 144.8 108'
       : 'C56 140 74 162 92 168Q100 174 108 168C126 162 144 140 144.8 108';
-    d = `M56 88C55.4 96 55.2 102 55.2 108${tip}C145 102 144.6 96 144 88`
-      + 'L138.5 88C138.5 100 133 110 123 116Q118.5 119 116 122Q108 133 100 133Q92 133 84 122Q81.5 119 77 116C67 110 61.5 100 61.5 88Z';
+    d = `M56 101C55.4 104 55.2 106 55.2 108${tip}C145 106 144.6 104 144 101`
+      + 'Q142 99 139.4 103C139 108 134 113 123 117Q118.5 119 116 122Q108 133 100 133Q92 133 84 122Q81.5 119 77 117C66 113 61 108 60.6 103Q58 99 56 101Z';
   }
   s += S(d, base, dark, -2.5, -3.5);
   // Texture: a few long strands in the dark tone, light hairs catching the light from the top left.
