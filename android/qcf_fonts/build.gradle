@@ -1,0 +1,11 @@
+// Mushaf page fonts 4–604 (~95 MB) as a fast-follow Play asset pack: Google Play downloads it right after the
+// app installs, so the first download stays small. Only built for the Play bundle (FONT_PACK=1, release.yml), which
+// moves the fonts into src/main/assets/qcf-v2/ first (git-ignored). The app finds them with FontPackPlugin.java.
+apply plugin: 'com.android.asset-pack'
+
+assetPack {
+    packName = "qcf_fonts"
+    dynamicDelivery {
+        deliveryType = "fast-follow"
+    }
+}

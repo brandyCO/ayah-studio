@@ -3,6 +3,7 @@
 // (public/fonts/qcf-v2/p{page}.woff2). The words' text is verified against the bundled Quran text.
 
 import { Capacitor } from '@capacitor/core';
+import { inPack, loadPackFont } from './fontPack';
 
 /** ["h", surah] header · ["b", surah] basmala · [[surah, ayah, "glyph glyph …"], ...] text line */
 export type MushafLine = ['h', number] | ['b', number] | [number, number, string][];
@@ -102,6 +103,8 @@ export async function keepPageFont(page: number): Promise<void> {
 
 export function loadPageFont(page: number): Promise<void> {
   if (!fonts.has(page)) {
+    // Play build: pages 4–604 come from the asset pack (or, until it is in, this page alone from our site).
+    if (inPack(page)) { fonts.set(page, loadPackFont(page, `qcf-p${page}`)); return fonts.get(page)!; }
     const p = new FontFace(`qcf-p${page}`, pageFontSource(page), { display: 'block' }).load()
       .then((f) => void document.fonts.add(f));
     p.catch(() => fonts.delete(page));

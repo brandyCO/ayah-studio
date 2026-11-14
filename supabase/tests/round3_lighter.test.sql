@@ -27,7 +27,7 @@ insert into rank_gifts (from_id, to_id, light, at, opened_at) values
   ('aaaaaaaa-0000-0000-0000-000000000091', 'bbbbbbbb-0000-0000-0000-000000000092', 50, now() - interval '400 days', null),
   ('aaaaaaaa-0000-0000-0000-000000000091', 'bbbbbbbb-0000-0000-0000-000000000092', 50, now() - interval '3 days', now() - interval '2 days');
 
-select is(tidy_db() - array['cheers', 'relights', 'friend_asks', 'reports'],
+select is(tidy_db() - array['cheers', 'relights', 'friend_asks', 'reports', 'days'],
   '{"feats": 1, "challenges": 2, "duels": 1, "gifts": 1}'::jsonb, 'takes the old rows only');
 select is((select count(*)::int from rank_feats where user_id = 'aaaaaaaa-0000-0000-0000-000000000091'), 1, 'this week''s news stays');
 select is((select array_agg(code order by code) from rank_challenges where a = 'aaaaaaaa-0000-0000-0000-000000000091'),
@@ -35,7 +35,7 @@ select is((select array_agg(code order by code) from rank_challenges where a = '
 select is((select count(*)::int from rank_duels where a = 'aaaaaaaa-0000-0000-0000-000000000091'), 1, 'last week''s duel stays');
 select is((select count(*)::int from rank_gifts where from_id = 'aaaaaaaa-0000-0000-0000-000000000091'), 2,
   'an unopened gift stays however old');
-select is(tidy_db() - array['cheers', 'relights', 'friend_asks', 'reports'],
+select is(tidy_db() - array['cheers', 'relights', 'friend_asks', 'reports', 'days'],
   '{"feats": 0, "challenges": 0, "duels": 0, "gifts": 0}'::jsonb, 'running again removes nothing');
 
 -- Usage: a day full of made-up words takes no new ones, but known words keep counting.
