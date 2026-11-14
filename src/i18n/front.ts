@@ -89,6 +89,20 @@ const en = {
   'why.nxDhikrSub': 'Subhan Allah, 33 times',
   'stop.here': 'You stopped here',
   'stop.listen': 'Listen on',
+  'ob.back': 'Back',
+  'ob.hi': 'Assalamu alaikum! I’m so glad you’re here.',
+  'ob.few': 'Two quick questions, and I’ll shape your first days around you.',
+  'ob.whyHint': 'Pick any that fit.',
+  'ob.read': 'A few pages a day, and a flame that keeps you going. I love it.',
+  'ob.memorise': 'Memorising! I’ll keep a short lesson ready for you every day.',
+  'ob.understand': 'Then we’ll read with the meaning beside every ayah.',
+  'ob.reels': 'You’ll make beautiful reels with a reciter, right on your phone.',
+  'ob.dhikr': 'Morning and evening adhkar, tasbih and du’as. I’ll walk with you through the day.',
+  'ob.many': 'Wonderful. We’ll make room for all of it, one step at a time.',
+  'ob.none': 'No problem. We’ll find what you love together.',
+  'ob.paceHint': 'Meeting any one goal lights your flame for the day. You can change it any time on Me.',
+  'ob.rec': 'Recommended',
+  'ob.start': 'Start reading',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -178,6 +192,20 @@ const ar: Partial<Record<FrontKey, string>> = {
   'why.nxDhikrSub': 'سبحان الله، 33 مرة',
   'stop.here': 'توقفت هنا',
   'stop.listen': 'تابع الاستماع',
+  'ob.back': 'رجوع',
+  'ob.hi': 'السلام عليكم! سعيد جدًا بوجودك هنا.',
+  'ob.few': 'سؤالان سريعان، وسأبني أيامك الأولى على ما يناسبك.',
+  'ob.whyHint': 'اختر كل ما يناسبك.',
+  'ob.read': 'صفحات قليلة كل يوم، وشعلة تبقيك مستمرًا. رائع!',
+  'ob.memorise': 'الحفظ! سأُبقي لك درسًا قصيرًا جاهزًا كل يوم.',
+  'ob.understand': 'إذن سنقرأ والمعنى بجانب كل آية.',
+  'ob.reels': 'ستصنع مقاطع جميلة بصوت قارئ، على هاتفك مباشرة.',
+  'ob.dhikr': 'أذكار الصباح والمساء والتسبيح والأدعية. سأرافقك طوال اليوم.',
+  'ob.many': 'رائع. سنجد مكانًا لكل ذلك، خطوة خطوة.',
+  'ob.none': 'لا بأس. سنكتشف ما تحبه معًا.',
+  'ob.paceHint': 'تحقيق أي هدف واحد يشعل شعلتك لذلك اليوم. يمكنك تغييره متى شئت من صفحة أنا.',
+  'ob.rec': 'مقترح',
+  'ob.start': 'ابدأ القراءة',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */
