@@ -779,6 +779,19 @@ Pro and a load test come later, when the owner decides to pay).
       each report) and `rank_league_pulse(lg, d)` through the proxy (`GET /lp`, kept 8 s per league, switch `leaguePulse`), so
       a league watching costs ~1 read every 8 s instead of one per player; any failure falls back to `rank_pulse`
       (migration `20261114500000_round5_league_pulse.sql`, pgTAP `round5.test.sql` 10)
+- [x] Round 6 (owner "Yes all 3", 2026-11-14): **the whole web app from Cloudflare** — pages.yml deploys the same build to
+      the `ayah-studio-files` worker (job `cloudflare`; files.yml is gone) with `version.json` (data version + build); the
+      service worker takes the built code, data, fonts and backgrounds from there (`fromEdge()` in `public/sw.js`; a file
+      asked for by version only when Cloudflare holds that version; the site when Cloudflare fails or lacks it); only the
+      page and sw.js come from GitHub Pages, which stays the address (sign-in, links and what phones keep are unchanged).
+      **Load test** (`.github/workflows/loadtest.yml`, `scripts/loadtest/`): a local copy seeded with 10,000 players the
+      way the app makes them, every call at scale sent by 40 at once and all mixed; table in the run summary; over the
+      budget (150 ms average) fails a database PR and opens an issue "Load: …" on the weekly run. **Friends and rival at the
+      edge**: `rank_my_social(d)` (my own part + public friend / rival ids, about once a minute) and `rank_player_pulse(pids,
+      d)` through the proxy (`GET /pp`, each player kept 8 s; private players 'x', followed through my own part); Ranks →
+      Friends, the MashaAllah toast, friend-streak moments and the duel page (now live, every 10 s) ask in full only when it
+      changed or once a minute (`socialPulse()`, switch `friendPulse`) (migration `20261114600000_round6_social_pulse.sql`,
+      pgTAP `round6.test.sql` 14)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);

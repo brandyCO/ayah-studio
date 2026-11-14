@@ -8,7 +8,7 @@ import { icon } from './icons';
 import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
@@ -339,8 +339,12 @@ function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | stri
 
 /** App open / return: friends who said MashaAllah since last time, as one toast. */
 export async function cheersArrived() {
+  // Only my own part of the friends' fingerprint holds the MashaAllahs on my news: unchanged = nothing new (round 6).
+  const pulse = await socialUnchanged('cheers', 'own');
+  if (pulse.same) return;
   let feats: Feats;
   try { feats = await featsFeed(true); } catch { return; }
+  markSocialSeen('cheers', pulse.p);
   let seen: Record<string, number> = {};
   let first = true;
   try { const raw = localStorage.getItem('featCheersSeen'); first = raw === null; seen = JSON.parse(raw ?? '{}') ?? {}; } catch { /* ignore */ }

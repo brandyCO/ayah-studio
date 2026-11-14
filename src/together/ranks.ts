@@ -102,6 +102,7 @@ export async function report(now = false): Promise<void> {
       if (v.flawless) await rpc('rank_flawless', { d: k, n: v.flawless }).catch(() => undefined);
       sent[k] = sig;
       ownPulse = null; // my own part of the league fingerprint has changed: ask again
+      ownSocial = null;
       if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
     // The lamp of Light by the name (sent when it changes).
@@ -212,7 +213,7 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
   return p;
 }
 const loading = new Map<string, Promise<unknown>>();
-export const dropCache = () => { for (const c of cache.values()) c.at = 0; };
+export const dropCache = () => { for (const c of cache.values()) c.at = 0; ownSocial = null; };
 /** Asks again for the kept answers `live` picks (what is on screen now); true when any of them changed. */
 export async function refreshCached(live: (key: string) => boolean): Promise<boolean> {
   let changed = false;
@@ -251,6 +252,42 @@ export async function rankPulse(): Promise<string | null> {
   } catch { /* the proxy did not answer: ask the database */ }
   return fullPulse();
 }
+// Round 6: the friends' and rival's fingerprint the same way. My own part (my row, my friend list, asks, MashaAllahs on my
+// news, my duel, and private friends / a private rival) from the database about once a minute and after each report or
+// friend action; each public friend's and the rival's own part through the edge proxy (GET /pp), which keeps every
+// player's answer 8 s, so a player watched by many friends costs about one read every 8 s. null = ask in full.
+let ownSocial: { p: string; f: string[]; r: string | null; d: string; u?: string; at: number } | null = null;
+export const forgetSocial = () => { ownSocial = null; };
+export async function socialPulse(only: 'all' | 'own' | 'rival' = 'all'): Promise<string | null> {
+  const d = rankDay();
+  if (!EDGE || !account() || !(await remoteConfig()).friendPulse) return null;
+  if (!ownSocial || ownSocial.d !== d || ownSocial.u !== account()?.id || Date.now() - ownSocial.at > 60_000) {
+    const m = await rpc<{ p: string; f: string[] | null; r: string | null } | null>('rank_my_social', { d }).catch(() => undefined);
+    if (!m) return null;
+    ownSocial = { p: m.p, f: (m.f ?? []).filter((x) => /^[0-9a-f]{10}$/.test(x)), r: m.r && /^[0-9a-f]{10}$/.test(m.r) ? m.r : null, d, u: account()?.id, at: Date.now() };
+  }
+  const pids = only === 'own' ? [] : only === 'rival' ? (ownSocial.r ? [ownSocial.r] : []) : [...new Set([...ownSocial.f, ...(ownSocial.r ? [ownSocial.r] : [])])].sort();
+  if (!pids.length) return ownSocial.p;
+  try {
+    const parts: string[] = [];
+    for (let i = 0; i < pids.length; i += 50) {
+      const r = await fetch(`${EDGE}/pp?p=${pids.slice(i, i + 50).join(',')}&d=${d}&i=${encodeURIComponent(installId())}`);
+      if (!r.ok) return null;
+      const m = ((await r.json()) as { p?: Record<string, string> }).p;
+      if (!m || typeof m !== 'object') return null;
+      for (const k of pids.slice(i, i + 50)) parts.push(`${k}=${m[k] ?? ''}`);
+    }
+    return `${ownSocial.p}:${parts.join(',')}`;
+  } catch { return null; }
+}
+// What each check last saw: unchanged since then = nothing new to fetch (memory only, so a fresh start asks in full).
+const socialSeen = new Map<string, string>();
+/** The fingerprint `tag` should compare with, or null when it must ask in full (no proxy, failure, or a change). */
+export async function socialUnchanged(tag: string, only: 'all' | 'own' | 'rival' = 'all'): Promise<{ same: boolean; p: string | null }> {
+  const p = await socialPulse(only).catch(() => null);
+  return { same: p !== null && socialSeen.get(tag) === p, p };
+}
+export const markSocialSeen = (tag: string, p: string | null) => { if (p) socialSeen.set(tag, p); };
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: rankDay() });
   if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }
@@ -559,6 +596,9 @@ export async function friendMoments(): Promise<void> {
   if (!account() || document.hidden || Date.now() - momentAt < 20_000) return;
   try { if (!localStorage.getItem('rankFigure')) return; } catch { return; }
   momentAt = Date.now();
+  // Nothing changed among my friends since the last look that had nothing left to show: no need to ask (round 6).
+  const pulse = await socialUnchanged('moments');
+  if (pulse.same) return;
   let data: Friends;
   try { data = await myFriends(true); } catch { return; }
   if (friendMilestoneDue(data.friends)) {
@@ -572,7 +612,7 @@ export async function friendMoments(): Promise<void> {
     if (!f.pid || !f.meToday || !f.themToday || f.streak < 1) return false;
     try { return !localStorage.getItem(`frUp:${today}:${f.pid}`); } catch { return false; }
   });
-  if (!kept.length) return;
+  if (!kept.length) { markSocialSeen('moments', pulse.p); return; }
   const m = await import('../ui/friends');
   await m.friendDayMoment(kept);
 }

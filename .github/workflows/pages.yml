@@ -46,3 +46,77 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The same build on Cloudflare (files/wrangler.toml): the app fetches its code, data, fonts and backgrounds from
+  # there, so GitHub Pages' ~100 GB a month is never reached. The Pages site stays the address people open and the
+  # fallback, so a failure here only costs bandwidth. Needs the repo secrets CLOUDFLARE_API_TOKEN and
+  # CLOUDFLARE_ACCOUNT_ID (the same as the edge proxy); without them it is skipped.
+  cloudflare:
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: files
+      cancel-in-progress: false
+    env:
+      CF_TOKEN_RAW: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_RAW: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CF_TOKEN_RAW != ''
+        with:
+          sparse-checkout: files
+      - uses: actions/setup-node@v4
+        if: env.CF_TOKEN_RAW != ''
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        if: env.CF_TOKEN_RAW != ''
+        with:
+          name: github-pages
+          path: /tmp/pages
+      - name: Tidy the Cloudflare secrets
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          token=$(printf %s "$CF_TOKEN_RAW" | tr -d '[:space:]')
+          account=$(printf %s "$CF_ACCOUNT_RAW" | tr -d '[:space:]')
+          echo "::add-mask::$token"
+          echo "::add-mask::$account"
+          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
+      - name: Unpack the build
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          mkdir -p files/site
+          tar -xf /tmp/pages/artifact.tar -C files/site
+          cp files/_headers files/site/_headers
+          n=$(find files/site -type f | wc -l)
+          echo "$n files, $(du -sh files/site | cut -f1)"
+          # Cloudflare's free plan takes up to 20,000 files in one version, 25 MB each.
+          test "$n" -lt 20000
+          test -z "$(find files/site -type f -size +24M)"
+          test -s files/site/version.json
+      - name: Deploy
+        if: env.CF_TOKEN_RAW != ''
+        working-directory: files
+        run: npx --yes wrangler@4 deploy 2>&1 | tee /tmp/deploy.log
+      - name: Check the copy answers with CORS and this build
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          url=$(grep -oE 'https://ayah-studio-files\.[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
+          test -n "$url"
+          want=$(cat files/site/version.json)
+          js=$(cd files/site && ls assets/*.js | head -1)
+          words=$(cd files/site && find data/words -name '*.json' | head -1)
+          for p in version.json fonts/qcf-v2/p50.woff2 "$words" "$js"; do
+            for i in 1 2 3 4 5 6; do
+              h=$(curl -sfI -H 'Origin: https://brandyco.github.io' "$url/$p" || true)
+              echo "$h" | grep -qi '^access-control-allow-origin: \*' && break
+              sleep 10
+            done
+            echo "$h" | grep -qi '^access-control-allow-origin: \*' || { echo "::error::$p did not answer with CORS"; echo "$h"; exit 1; }
+            echo "ok $p"
+          done
+          got=$(curl -sf "$url/version.json")
+          test "$got" = "$want" || { echo "::error::Cloudflare serves $got, this build is $want"; exit 1; }
+          echo "The app's files are served from $url ($got)" >> "$GITHUB_STEP_SUMMARY"
+

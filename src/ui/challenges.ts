@@ -8,7 +8,7 @@ import { account } from '../cloud/auth';
 import { icon } from './icons';
 import { clt, type ChallengeKey } from '../i18n/challenges';
 import {
-  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, teamWithFriend, claimDuel, myChallenges, myDuel,
+  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, teamWithFriend, claimDuel, myChallenges, myDuel, socialPulse,
   type Challenge, type ChallengeKind, type ChallengeResult, type DuelQuest, type DuelState, type Row,
 } from '../together/ranks';
 import { chestArt, chestTier } from './chest';
@@ -215,11 +215,24 @@ export async function openDuel(onChange?: () => void): Promise<void> {
   const stage = h('div', { class: 'du-stage' });
   const info = h('div', { class: 'du-info' });
   page.append(shut, h('p', { class: 'du-kick' }, clt('du.title')), stage, info);
-  page.addEventListener('close', () => { clearInterval(tick); page.remove(); onChange?.(); });
+  page.addEventListener('close', () => { clearInterval(tick); clearInterval(watch); page.remove(); onChange?.(); });
   window.addEventListener('hashchange', close, { once: true });
   document.body.append(page);
   page.showModal();
-  let tick = 0;
+  let tick = 0, watch = 0, seen: string | null = null, fullAt = Date.now();
+  // With a rival: the score moves while the page is open. Every 10 s the rival's and my own fingerprint (through the
+  // edge proxy, round 6); the duel is asked again only when one changed, or once a minute (also when there is no proxy).
+  const follow = () => {
+    if (watch) return;
+    watch = window.setInterval(async () => {
+      if (document.hidden || !page.open) return;
+      const p = await socialPulse('rival').catch(() => null);
+      if (p !== null && p === seen && Date.now() - fullAt < 60_000) return;
+      seen = p;
+      fullAt = Date.now();
+      await paint(true, false).catch(() => {});
+    }, 10_000);
+  };
 
   const paint = async (fresh: boolean, first: boolean) => {
     let st: DuelState;
@@ -269,6 +282,7 @@ export async function openDuel(onChange?: () => void): Promise<void> {
     void tickNow();
     clearInterval(tick);
     tick = window.setInterval(() => { if (!document.hidden) void tickNow(); }, 1000);
+    follow();
     const quest = (q: DuelQuest) => h('button', { class: `du-quest${q.done ? ' done' : ''}`, onclick: () => { haptic(8); close(); goDo(q.kind); } },
       h('span', { class: 'du-quest-ic', 'aria-hidden': 'true' }, icon(q.done ? 'check' : QUEST_IC[q.kind], 20)),
       h('span', { class: 'du-quest-t' }, questText(q), h('small', {}, '+30')), h('span', { class: 'du-quest-go', 'aria-hidden': 'true' }, '›'));
