@@ -129,11 +129,22 @@ def build(key='launch'):
             'assets': [], 'layers': layers}
 
 
+def slim(x):
+    """0.1 px is invisible at this size; fewer digits make the file faster to parse on the phone's first start."""
+    if isinstance(x, float):
+        return round(x, 1) if abs(x) >= 1 else round(x, 3)
+    if isinstance(x, list):
+        return [slim(v) for v in x]
+    if isinstance(x, dict):
+        return {k: slim(v) for k, v in x.items()}
+    return x
+
+
 def main():
     key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'launch'
     out = Path(sys.argv[sys.argv.index('--out') + 1]) if '--out' in sys.argv else OUT
     data = build(key)
-    out.write_text(json.dumps(data, separators=(',', ':')))
+    out.write_text(json.dumps(slim(data), separators=(',', ':')))
     print(out, out.stat().st_size, 'bytes,', data['op'], 'frames,', len(data['layers']), 'layers')
 
 

@@ -420,7 +420,7 @@ body.mushaf-wide .mushaf-page > * { flex-shrink: 0; }
 .mp-num { display: inline-flex; align-items: center; gap: 4px; }
 .crescent { display: inline-flex; color: #c9a14a; }
 .mushaf-bar { flex-wrap: wrap; }
-.today { flex-basis: 100%; display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.today { flex-basis: 100%; min-width: 0; display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .today-item {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--r-s);
   background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--text); text-align: start; text-decoration: none;
@@ -1001,7 +1001,7 @@ body[data-view="kids"] {
 .today-block { display: flex; flex-direction: column; }
 .today-actions { display: flex; gap: 6px; padding-block: 2px 6px; padding-inline-start: calc(1.2em + 18px); }
 .today-actions .chip { font-size: var(--fs-s); padding: 4px 10px; }
-.today-block.inline { flex-direction: row; align-items: center; gap: 6px; }
+.today-block.inline { flex-direction: row; align-items: center; gap: 6px; min-width: 0; }
 .today-block.inline .today-item { flex: 1; min-width: 0; }
 .today-block.inline .today-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .today-ico { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; padding: 0;
