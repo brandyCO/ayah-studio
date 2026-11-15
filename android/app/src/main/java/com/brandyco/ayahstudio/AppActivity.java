@@ -156,7 +156,7 @@ public class AppActivity extends BridgeActivity {
                     return;
                 }
                 layer.animate().alpha(0f).setDuration(250).setInterpolator(new DecelerateInterpolator())
-                    .withEndAction(this::removeCover).start();
+                    .withEndAction(AppActivity.this::removeCover).start();
             }
         }, 600);
     }
