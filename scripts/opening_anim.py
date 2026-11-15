@@ -93,18 +93,22 @@ def load_parts(svg):
                 eyes=eyes, cheeks_nose=cheeks_nose, must=must, mouth=mouth)
 
 
-def joy(P, blink, mouth_open):
-    """Open eyes + big smile, with a blink (1 open … 0 shut) and the mouth opening (1 = drawn)."""
+EYE_C, MOUTH_C, WOW_C = (100, 104), (100, 122), (100, 110)   # scale centres: eyes, mouth, the whole wow face
+
+
+def joy(P, blink, mouth_open, pop=1.0, mw=1.0):
+    """Open eyes + big smile, with a blink (1 open … 0 shut), the eyes popping wide (pop) and the mouth opening
+    (mouth_open tall, mw wide; 1 = drawn)."""
     by = max(0.06, blink)
     return (P['cheeks_nose'] +
-            f'<g transform="translate(0 104) scale(1 {by:.3f}) translate(0 -104)">{P["eyes"]}</g>' + P['must'] +
-            f'<g transform="translate(100 122) scale(1 {mouth_open:.3f}) translate(-100 -122)">{P["mouth"]}</g>')
+            f'<g transform="translate(100 104) scale({pop:.3f} {by * pop:.3f}) translate(-100 -104)">{P["eyes"]}</g>' + P['must'] +
+            f'<g transform="translate(100 122) scale({mw:.3f} {mouth_open:.3f}) translate(-100 -122)">{P["mouth"]}</g>')
 
 
-def open_face(P, blink):
+def open_face(P, blink, pop=1.0):
     """The plain face with blinkable eyes."""
     by = max(0.06, blink)
-    return P['x0rest'] + f'<g transform="translate(0 104) scale(1 {by:.3f}) translate(0 -104)">{P["eyes"]}</g>'
+    return P['x0rest'] + f'<g transform="translate(100 104) scale({pop:.3f} {by * pop:.3f}) translate(-100 -104)">{P["eyes"]}</g>'
 
 
 def bez(p0, c, p2, t):
@@ -315,6 +319,18 @@ class Hello:
 
     def behind(self, t, c):
         return ''
+
+    def eye_pop(self, t):
+        """Eyes popping wide (1 = as drawn)."""
+        return 1.0
+
+    def mouth_w(self, t):
+        return 1.0
+
+    stretch_k = 0.16            # stretch at full speed
+    sq_min = 0.6
+    head_k = 0.55               # how much the head squashes against the body
+    springs = dict(sq=(520.0, 13.0), head=(700.0, 16.0), tilt=(260.0, 12.0), lean=(160.0, 11.0), arm=(420.0, 17.0))
 
     def inbody(self, t, c):
         return ''
@@ -679,17 +695,140 @@ class Catch(Hello):
         return light_star(x, y, r, 200 + 30 * u, 0.7 + 0.4 * u)
 
 
-VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch)}
+class Duo(Catch):
+    """Catch the Light, cartoon-snappy (owner 2026-11-15: "the Duolingo animation style is best"): stiffer springs that
+    overshoot, deep anticipation crouches held a beat, hops that hang at the top and snap down, big squash and stretch,
+    eyes that pop wide, a mouth that opens wide in the cheer, and a little victory bounce at the end."""
+    key, title = 'duo', 'Catch the Light, snappy'
+    dur = 2.5
+    hops = [(0.04, 0.28, 24.0, False, 0), (1.00, 1.42, 60.0, True, 0), (1.80, 2.02, 22.0, False, 9)]
+    faces = [(0.0, 'joy'), (0.36, 'wow'), (1.20, 'squint'), (1.50, 'joy')]
+    blinks = (2.32,)
+    T_CATCH, T_BURST = 1.21, 1.52
+    stretch_k = 0.28
+    sq_min = 0.64
+    head_k = 0.45
+    springs = dict(sq=(1100.0, 26.0), head=(1300.0, 20.0), tilt=(600.0, 16.0), lean=(380.0, 15.0), arm=(1000.0, 26.0))
+
+    def height(self, t):
+        for a, b, h, _, _ in self.hops:
+            if a <= t <= b:
+                u = (t - a) / (b - a)
+                return h * (1 - abs(2 * u - 1) ** 2.4)        # quick up, hang at the top, snap down
+        return 0.0
+
+    def impulse(self, kind, big, sq, head, arms):
+        if kind == 'off':
+            sq.v += 10.0 if big else 6.0
+            head.v += 110.0 if big else 60.0
+            for s in arms.values():
+                s.v += 200.0 if big else 80.0
+        else:
+            sq.v -= 15.0 if big else 11.0
+            head.v += 170.0 if big else 130.0
+            for s in arms.values():
+                s.v -= 160.0 if big else 260.0
+
+    kicks = ((0.36, 'head', -160.0), (0.36, 'sq', 7.0))     # the double take when he sees the star
+
+    def pop(self, t):
+        return 0.0 if t < 0.02 else ease_out_back(seg(t, 0.02, 0.18), 2.0)
+
+    def eye_pop(self, t):
+        w = smooth(seg(t, 0.36, 0.42)) * (1 - smooth(seg(t, 0.95, 1.05)))
+        k = ease_out_back(seg(t, 0.36, 0.48), 4.0) if t < 0.48 else 1.0
+        cheer = math.sin(math.pi * seg(t, 1.52, 1.80))
+        return 1.0 + 0.30 * w * k + 0.12 * cheer
+
+    def mouth(self, t):
+        return 1.0 + 0.55 * math.sin(math.pi * seg(t, 1.50, 1.95)) + 0.25 * math.sin(math.pi * seg(t, 1.95, 2.25))
+
+    def mouth_w(self, t):
+        return 1.0 + 0.18 * math.sin(math.pi * seg(t, 1.50, 1.95))
+
+    def arm_targets(self, t):
+        if t < 0.26:
+            return 156.0, 156.0                         # ta-da
+        if t < 0.50:
+            return 14.0, 14.0
+        if t < 0.80:
+            return 14.0, 140.0                          # points up at it
+        if t < 1.00:
+            return 22.0, 22.0                           # wound down in the crouch
+        if t < 1.10:
+            return 110.0, 110.0                         # reaching on the way up
+        if t < self.T_BURST:
+            return -42.0, -42.0                         # cupped round the star
+        if t < 2.06:
+            return 156.0, 156.0                         # cheer, through the victory bounce
+        return 66.0, 66.0
+
+    def reach(self, t):
+        r = 1.0 - 0.53 * smooth(seg(t, 1.10, 1.21)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.06)))
+        return r, r
+
+    def bend_base(self, t, side):
+        return mixv(4.0 + 10.0 * smooth(seg(t, self.T_BURST, self.T_BURST + 0.1)), -16.0,
+                    smooth(seg(t, 1.10, 1.21)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.06))))
+
+    def crouch(self, t):
+        if 0.78 <= t < 1.00:
+            return -0.24 * smooth(seg(t, 0.78, 0.87))     # drop fast, hold the beat
+        if 1.66 <= t < 1.80:
+            return -0.18 * smooth(seg(t, 1.66, 1.76))
+        return 0.0
+
+    def head(self, t):
+        return -2.5 if 0.36 <= t < 1.15 else (2.0 if 1.21 <= t < 1.52 else 0.0)
+
+    def tilt(self, t):
+        if 0.40 <= t < 1.0:
+            return 9.0
+        if t >= 2.06:
+            return -7.0
+        return 0.0
+
+    def lean(self, t):
+        if 0.80 <= t < 1.0:
+            return 4.0
+        return -3.0 if t >= 2.06 else 0.0
+
+    def look(self, t):
+        u = smooth(seg(t, 0.36, 0.42)) * (1 - smooth(seg(t, 1.06, 1.18)))
+        return 2.5 * u, -4.0 * u
+
+    def star_pos(self, t, c):
+        p0 = (176.0, -36.0)
+        t0 = self.T_CATCH - 0.42
+        if t < t0:
+            return p0[0] + 3 * math.sin(2 * math.pi * 1.4 * t), p0[1] + 4 * math.sin(2 * math.pi * 1.1 * t)
+        end = c['map'](100, 180)
+        u = seg(t, t0, self.T_CATCH) ** 1.6
+        return bez(p0, (196.0, 50.0), end, u)
+
+    def front(self, t, c):
+        if t < self.T_CATCH and 0.26 <= t:
+            k = ease_out_back(seg(t, 0.26, 0.38), 3.0)
+            x, y = self.star_pos(t, c)
+            return light_star(x, y, 15 * k, 20 * math.sin(2 * math.pi * 0.8 * t) + 220 * seg(t, 0.80, 1.21),
+                              0.8 + 0.2 * math.sin(2 * math.pi * 2 * t))
+        if t < 0.26:
+            return ''
+        return super().front(t, c)
+
+
+VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch, Duo)}
 
 
 def simulate(V):
     dt = 1 / 1200
     n = int(V.dur * FPS) + 1
-    sq = Spring(0.0, k=520.0, c=13.0)        # squash: sy = 1 + sq + stretch
-    head = Spring(0.0, k=700.0, c=16.0)      # head lag (units, + down)
-    tilt = Spring(0.0, k=260.0, c=12.0)      # head tilt (deg)
-    lean = Spring(0.0, k=160.0, c=11.0)      # body lean (deg)
-    arms = {-1: Spring(10.0, k=420.0, c=17.0), 1: Spring(10.0, k=420.0, c=17.0)}
+    K = V.springs
+    sq = Spring(0.0, *K['sq'])               # squash: sy = 1 + sq + stretch
+    head = Spring(0.0, *K['head'])           # head lag (units, + down)
+    tilt = Spring(0.0, *K['tilt'])           # head tilt (deg)
+    lean = Spring(0.0, *K['lean'])           # body lean (deg)
+    arms = {-1: Spring(10.0, *K['arm']), 1: Spring(10.0, *K['arm'])}
     for s in arms.values():
         s.x = V.arms0
     events = {}
@@ -754,8 +893,8 @@ def frame(V, P, F, i, parts=False):
     s = V.pop(t)
     h = V.height(t)
     v = V.vel(t)
-    stretch = 0.16 * clamp(abs(v) / 420.0) if h > 0 else 0.0
-    sy = max(0.6, 1 + F['sq'] + stretch)
+    stretch = V.stretch_k * clamp(abs(v) / 420.0) if h > 0 else 0.0
+    sy = max(V.sq_min, 1 + F['sq'] + stretch)
     sx = sy ** -0.7
     fx, fy = FEET
     lean = F['lean']
@@ -774,7 +913,7 @@ def frame(V, P, F, i, parts=False):
         return x + fx, y + fy - h - fl
 
     c = dict(F=F, h=h, s=s, sx=sx, sy=sy, map=to_screen)
-    hsx, hsy = sx ** -0.55, sy ** -0.55
+    hsx, hsy = sx ** -V.head_k, sy ** -V.head_k
     hl = clamp(F['head'], -5.0, 6.0)
     head_tf = (f'translate(0 {hl:.2f}) rotate({F["tilt"]:.2f} 100 140) '
                f'translate(100 140) scale({hsx:.4f} {hsy:.4f}) translate(-100 -140)')
@@ -783,10 +922,13 @@ def frame(V, P, F, i, parts=False):
     for f, w in face_at(V, t):
         if f == 'star':
             f = 'joy'                         # no star eyes on a grown man (owner 2026-11-14)
+        pop = V.eye_pop(t)
         if f == 'joy':
-            g = joy(P, blink_at(V, t), V.mouth(t))
+            g = joy(P, blink_at(V, t), V.mouth(t), pop, V.mouth_w(t))
         elif f == 'open':
-            g = open_face(P, blink_at(V, t))
+            g = open_face(P, blink_at(V, t), pop)
+        elif f == 'wow' and pop != 1.0:
+            g = f'<g transform="translate({WOW_C[0]} {WOW_C[1]}) scale({pop:.3f}) translate({-WOW_C[0]} {-WOW_C[1]})">{P[f]}</g>'
         else:
             g = P[f]
         faces += f'<g opacity="{w:.3f}">{g}</g>'
@@ -837,6 +979,7 @@ def frame(V, P, F, i, parts=False):
             f = 'joy' if f == 'star' else f
             fw[f] = fw.get(f, 0.0) + w
         return dict(fw=fw, blink=max(0.06, blink_at(V, t)), mouth_open=V.mouth(t), look=(lx, ly),
+                    pop=V.eye_pop(t), mouth_w=V.mouth_w(t),
                     under=shadow + fx_layer, mid=V.inbody(t, c) + arm_l + arm_r, faces=faces, front=front,
                     root=dict(a=(fx, fy), p=(fx, fy - h - fl), r=lean, s=(s * sx, s * sy)),
                     head=dict(a=(100, 140), p=(100, 140 + hl), r=F['tilt'], s=(hsx, hsy)),
@@ -874,7 +1017,7 @@ def frames(key='hello'):
 
 def main():
     from PIL import Image
-    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'catch'
+    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'duo'
     with tempfile.TemporaryDirectory() as d:
         if '--preview' in sys.argv:
             out = sys.argv[sys.argv.index('--preview') + 1]

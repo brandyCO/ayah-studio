@@ -4,7 +4,7 @@ Same rig as scripts/opening_anim.py, but vector: the head, body and neck are dra
 transforms (root, head, neck), and what changes shape every frame (arms, faces, sparkles, the star) is a vector layer
 per frame. Writes android/app/src/main/res/raw/opening.json (lottie-android plays it in AppActivity).
 
-  python3 scripts/opening_lottie.py [--version catch] [--out PATH]
+  python3 scripts/opening_lottie.py [--version duo] [--out PATH]
 """
 import json
 import sys
@@ -56,7 +56,7 @@ def layer(ind, nm, ks, n, shapes=None, parent=None, ip=0, op=None):
     return L
 
 
-def build(key='catch'):
+def build(key='duo'):
     V = oa.VERSIONS[key]()
     P = oa.load_parts(oa.actor_svg())
     F = oa.simulate(V)
@@ -89,20 +89,24 @@ def build(key='catch'):
         return [round(p['fw'].get(name, 0.0) * 100, 2) for p in parts]
 
     def face_layer(nm, svg, opv, scale=None):
+        """scale: (centre, part → (sx, sy)) keyed per frame."""
         ks = dict(STATIC, o=anim(opv))
         if scale:
-            (ax, ay), key = scale
-            ks.update(a=st([ax, ay]), p=st([ax, ay]), s=anim([[100, r4(p[key] * 100)] for p in parts]))
+            (ax, ay), fn = scale
+            ks.update(a=st([ax, ay]), p=st([ax, ay]), s=anim([[r4(v * 100) for v in fn(p)] for p in parts]))
         return layer(next(ids), nm, ks, n, convert(svg), LOOK)
+    eyes = (oa.EYE_C, lambda p: (p['pop'], p['blink'] * p['pop']))
     for nm in names:
         o = op_of(nm)
         if nm == 'joy':
-            layers.append(face_layer('joy mouth', P['mouth'], o, ((100, 122), 'mouth_open')))
-            layers.append(face_layer('joy eyes', P['eyes'], o, ((0, 104), 'blink')))
+            layers.append(face_layer('joy mouth', P['mouth'], o, (oa.MOUTH_C, lambda p: (p['mouth_w'], p['mouth_open']))))
+            layers.append(face_layer('joy eyes', P['eyes'], o, eyes))
             layers.append(face_layer('joy', P['cheeks_nose'] + P['must'], o))
         elif nm == 'open':
-            layers.append(face_layer('open eyes', P['eyes'], o, ((0, 104), 'blink')))
+            layers.append(face_layer('open eyes', P['eyes'], o, eyes))
             layers.append(face_layer('open', P['x0rest'], o))
+        elif nm == 'wow':
+            layers.append(face_layer(nm, P[nm], o, (oa.WOW_C, lambda p: (p['pop'], p['pop']))))
         else:
             layers.append(face_layer(nm, P[nm], o))
     layers.append(layer(LOOK, 'look', dict(STATIC, p=anim([[r4(p['look'][0]), r4(p['look'][1])] for p in parts])), n, None, HEAD))
@@ -120,7 +124,7 @@ def build(key='catch'):
 
 
 def main():
-    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'catch'
+    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'duo'
     out = Path(sys.argv[sys.argv.index('--out') + 1]) if '--out' in sys.argv else OUT
     data = build(key)
     out.write_text(json.dumps(data, separators=(',', ':')))
