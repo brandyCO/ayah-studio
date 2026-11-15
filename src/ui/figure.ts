@@ -943,8 +943,8 @@ function brows(kind: number, ey: number, col: string, xp: Xp | null): string {
 }
 /** Mouths: 0 smile, 1 open grin, 2 soft, 3 cheeky; or an expression's. */
 function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): string {
-  const lip = beard ? LIPB : LIP;
-  const ring = (d: string) => beard ? `<path d="${d}" fill="none" stroke="${lip}" stroke-width="1.6"/>` : '';
+  const lip = LIP;
+  const ring = (_d: string) => '';
   // An open smile: a soft D with a little tongue, teeth only on a big grin.
   const open = (w: number, d: number, teeth: boolean) => {
     const o = `M${100 - w} ${my}Q100 ${my + 2} ${100 + w} ${my}Q${100 + w - 1} ${my + d} 100 ${my + d}Q${100 - w + 1} ${my + d} ${100 - w} ${my}Z`;
@@ -964,13 +964,14 @@ function mouth(kind: number | Xp, my: number, beard: boolean, young: boolean): s
 /** The face's features for one expression (null = the face as built). */
 function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   const sk = SKIN[f.skin];
-  const niqab = f.head === 5, beard = f.beard >= 2;
+  const niqab = f.head === 5, beard = f.beard >= 1;
   const older = f.age === 1, young = kid(f);
   const col = older ? '#b9bcc2' : HAIR[f.hairC][1];
   let s = '';
   // Cheeks: 0 as before (a blush without a beard), 1 none, 2 blush, 3 freckles, 4 both. Happy faces blush more.
   const cx = Math.min(27, fr - 12);
-  const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || xp === 'happy' || xp === 'proud' || xp === 'star';
+  // A grown man blushes only when he chose it (owner 2026-11-14: a man with a beard doesn't have blushes).
+  const blush = (f.cheeks === 0 && !f.beard) || f.cheeks === 2 || f.cheeks === 4 || (f.body !== MAN && (xp === 'happy' || xp === 'proud' || xp === 'star'));
   const pink = mix(sk[0], '#ff5a6e', .55);
   LID = sk[0];
   CALM = f.body === MAN;
@@ -990,7 +991,10 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
   s += open ? `<g class="fg-eyes">${e}</g>` : e;
   s += brows(f.brows || (xp === 'wow' ? 1 : 0), ey, col, xp);
   if (!niqab) {
-    if (f.beard) s += `<path d="M86 ${ey + 13}Q100 ${ey + 7} 114 ${ey + 13}Q108 ${ey + 16.4} 100 ${ey + 13.6}Q92 ${ey + 16.4} 86 ${ey + 13}Z" fill="${HAIR[f.hairC][1]}"/>`;
+    // The moustache, as in the app icon.
+    if (f.beard) {
+      s += `<path d="M86 ${ey + 14}Q100 ${ey + 8} 114 ${ey + 14}Q108 ${ey + 17} 100 ${ey + 14}Q92 ${ey + 17} 86 ${ey + 14}Z" fill="${HAIR[f.hairC][1]}"/>`;
+    }
     s += mouth(xp ?? f.mouth, ey + (f.beard ? 18 : 15), beard, young);
   }
   return s;
@@ -1074,15 +1078,17 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   return s;
 }
 
-/** Beards with texture: 1 short, 2 full, 3 long; strands in the darker tone, a soft highlight. */
+/** Beards as drawn in the app icon: 1 trimmed, 2 full, 3 long, in the hair colour. */
 function beardOf(f: Fig): string {
+  // As drawn in the app icon (owner, 2026-11-14: "make it like the original in the app icons").
   const hc = f.age === 1 && f.hairC < 5 ? HAIR[5] : HAIR[f.hairC];
   const d = f.beard === 1 ? 'M62 104Q64 140 100 144Q136 140 138 104Q130 122 116 122Q100 116 84 122Q70 122 62 104Z'
     : f.beard === 2 ? 'M58 98Q56 148 100 152Q144 148 142 98Q134 124 120 126Q100 118 80 126Q66 124 58 98Z'
       : 'M58 98Q54 166 100 176Q146 166 142 98Q134 124 120 126Q100 118 80 126Q66 124 58 98Z';
   const low = f.beard === 1 ? 140 : f.beard === 2 ? 148 : 170;
   const strands = [74, 86, 100, 114, 126].map((x, i) => `<path d="M${x} ${126 + (i % 2) * 3}Q${x + (x < 100 ? -2 : 2)} ${(126 + low) / 2} ${x + (x - 100) * .12} ${low - 6 - Math.abs(x - 100) * .2}" stroke="${hc[1]}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".55"/>`).join('');
-  return S(d, hc[0], hc[1], -4, -4) + clipped(d, strands) + shine(`M70 ${120}Q74 ${low - 12} 88 ${low - 4}`, 2.4, 0.16);
+  return S(d, hc[0], hc[1], -4, -4) + clipped(d, strands)
+    + `<path d="M70 120Q74 ${low - 12} 88 ${low - 4}" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".16"/>`;
 }
 
 /** Hair behind the head (round 5): long, bun, afro, braids, ponytail. */
@@ -1174,6 +1180,30 @@ function raised(f: Fig, which: 'up' | 'wave'): string {
   return down + `<g class="fg-wave-arm">${arm(134, 160, 160, 116, k)}${hand(162, 110)}</g>`;
 }
 
+/** The rig's joints (view-box units, before a kid's scaling): shoulder, elbow and wrist of each arm hanging at rest
+ *  (owner 2026-11-15, "Duolingo-style animations in the whole app"): the actor's arms in two pieces, upper arm and
+ *  forearm with the hand, each turned about its joint by the compositor (src/ui/rig.ts). Same place as hold 0's arms. */
+export function rigJoints(f: Fig): { l: [number, number][]; r: [number, number][] } {
+  const sit = f.pose === 1;
+  const l: [number, number][] = sit ? [[68, 160], [66, 182], [64, 204]] : [[66, 160], [62, 185], [58, 210]];
+  return { l, r: l.map(([x, y]) => [200 - x, y] as [number, number]) };
+}
+function rigArms(f: Fig): string {
+  const k = sleeve(f);
+  const sk = SKIN[f.skin];
+  const hand = withWatch(f, (x: number, y: number) => mitten(x, y, sk));
+  const J = rigJoints(f);
+  const side = (n: 'l' | 'r') => {
+    const [[sx, sy], [ex, ey], [wx, wy]] = J[n];
+    const hx = wx + (wx - ex) * .16, hy = wy + (wy - ey) * .16;
+    return `<g class="fg-ua fg-ua-${n}">${arm(sx, sy, ex, ey, k, 20)}</g><g class="fg-fa fg-fa-${n}">${arm(ex, ey, wx, wy, k, 18.5)}${hand(hx, hy)}</g>`;
+  };
+  // The joints as percentages of the 200 × 262 box (a kid's arms are scaled about its feet), for the HTML layers.
+  const m = kid(f) ? ([x, y]: [number, number]) => [100 + (x - 100) * .86, 248 + (y - 248) * .8] : ([x, y]: [number, number]) => [x, y];
+  const pc = (q: [number, number]) => { const [x, y] = m(q); return `${(x / 2).toFixed(2)}% ${(y / 2.62).toFixed(2)}%`; };
+  return `<g class="fg-rig" data-o="${[pc(J.l[0]), pc(J.l[1]), pc(J.r[0]), pc(J.r[1])].join(',')}">${side('l')}${side('r')}</g>`;
+}
+
 const kid = (f: Fig) => f.body === BOY || f.body === GIRL;
 /** The whole character, standing on the ground. `cls` adds classes to the moving group. */
 export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean; actor?: boolean; cheer?: boolean; xp?: Xp } = {}): string {
@@ -1181,7 +1211,7 @@ export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: bo
   // An actor (a character in a moment) also carries raised arms for a cheer and a wave, shown by class.
   // `cheer` draws the arms raised for good (a picture, e.g. the character card).
   const arms = o.actor ? `<g class="fg-arms">${holds(f)}</g>` : o.cheer ? raised(f, 'up') : holds(f);
-  const up = o.actor ? `<g class="fg-up">${raised(f, 'up')}</g><g class="fg-wv">${raised(f, 'wave')}</g>` : '';
+  const up = o.actor ? `<g class="fg-up">${raised(f, 'up')}</g><g class="fg-wv">${raised(f, 'wave')}</g>${rigArms(f)}` : '';
   const kidT = 'transform="translate(100 248) scale(.86 .8) translate(-100 -248)"';
   // An actor carries every expression (shown by class); a picture shows one (`xp`, else the face as built).
   const hd = head(f, o.actor ? { all: true } : { xp: o.xp ?? (o.cheer ? 'happy' : undefined) });

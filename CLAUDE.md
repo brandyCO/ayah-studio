@@ -1700,7 +1700,9 @@ duas/reflections section in Me.
       **Premium characters** (owner request 2026-11-14, "Duolingo premium quality … see the beauty of what they chose"; preview
       artifact QwsVtqPtNjE4AWkNMqkTNb): eyes are a white with a deep brown iris and catch lights (`glossy()`; grown-ups a skin
       lid, men calm with one small catch light, `CALM`), lips a natural skin tone for men and under beards (`LIP` / `LIPB`),
-      grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
+      beards that grow from the sideburns under the hair along the jaw, cheeks clear above a soft cheek line meeting a fuller
+      moustache, open round the mouth (`beardOf()`; owner 2026-11-14: "the beard is not properly shaped, properly put on his
+      head"), no blush on a grown man unless he chose it, grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
       temple shows (`hairFront()`), tapered sleeves with cuffs (`arm()`), mitten hands (`mitten()`), a new robe silhouette
       (rounded shoulders, waist, flare, curved hem) with shoes, a neck and the thobe's collar. New pieces for Light: couture
       outfits 17–22 (`couture()`: kaftan, tatreez thobe, sherwani, Omani dishdasha, kebaya, anarkali), held items 12–17
@@ -2158,6 +2160,15 @@ duas/reflections section in Me.
       lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
       mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
       and from 17:00 leans to look at a flame still waiting
+      **The rig** (owner 2026-11-15, "Duolingo style animations of characters in the whole app", calm: "too much jumping"):
+      every actor carries its arms in two pieces (`rigArms()` / `rigJoints()` in figure.ts: upper arm and forearm + hand, at
+      hold 0's place), which `layer()` puts on nested HTML layers turning about the shoulder and the elbow. `src/ui/rig.ts`
+      plays gestures — **wave**, **cheer** (arms up in a V, a small lift, no hops), **happy** (right answer: a bounce and a
+      nod), **encourage** (mistake: a calm tilt and an open hand, never sad), **proud** (rank up: hands on hips, chin up) —
+      as targets chased by springs (overshoot, follow-through), simulated once and played as Web Animations keyframes
+      (30 a second, compositor only); while one plays the drawn arms and what they hold step aside (`.fg-lay.rigging`).
+      `actor()`'s `wave` / `cheer` use it, plus `happy()`, `encourage()`, `proud()` (Learn verdicts, the Monday reveal, taps
+      on the character in the room, path, shop and Ranks). During a recitation only nods. Preview: Artifact "Character reactions"
       **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
       ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
       never held back
@@ -2234,13 +2245,25 @@ duas/reflections section in Me.
       **Kept simple, Duolingo style** (owner 2026-11-14): the splash is the default icon's marker, star and the character
       standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
       `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
-      **Animated, drawn by Android** (owner 2026-11-14, "the animation didn't play"): on Android 12+ the icon is an
-      AnimatedVectorDrawable (`drawable-v31/splash_anim.xml`, 1 s: the marker pops in, the character springs up out of it,
-      the star spins in, two cheering hops with the shadow squeezing; `KEYS` in `make-character-icons.py`). Android draws
-      the launch screen in its own process and runs vector animations on the render thread, so app start-up can't make it
-      stutter; the splash stays ≥ 1.05 s so it plays through. The art is converted by `scripts/svg_to_vd.py` (clip paths,
-      gradients, transforms; `to_svg()` renders it back to compare with the original). Android 11 and older show the
-      finished pose still (`drawable/splash_anim.xml` = `splash_icon.webp`)
+      **The character comes alive** (owner 2026-11-14: "animate the character, not the icon", "make a motion animation
+      that's premium"; the animated vector icon was too stiff, small and short): `scripts/opening_anim.py` rigs the default
+      character (sleeve arms bending along a curve and trailing their swing, mitten hands, squash and stretch round the
+      feet, a lagging, tilting head that squashes less, blinks, an opening mouth, faces changed in two frames; springs with
+      take-off / landing impulses give the overshoot and follow-through). Five versions (`VERSIONS`, `--version`): Hello,
+      Wake up, Du'a, Backflip and **Catch the Light** (owner pick 2026-11-14, the default; 2.6 s at 60 fps): pops up → a gold
+      Light star appears above, he looks up at it, wide-eyed, points → crouches and leaps → catches it in cupped hands at
+      the top of the jump → holds it up, glowing → it bursts into light, arms thrown up → lands in sparkles, arms open, and
+      holds. Adult faces only (no blush, no star eyes on a man); arms from the shoulders, the robe 86 % wide, like the app
+      icon (owner 2026-11-15). **Launch screen like Duolingo's** (owner 2026-11-15, "the opening style of Duolingo"): the app plays `Launch` — on the plain violet the character pops in gently and settles (no jumps: owner "too much jumping"), smiles and waves while the white "ayah studio" wordmark (Nunito 900 as a path, `text_path()`, a keyframed `marks` layer) fades up under him, ~1 s, then he holds until the app is ready; the view is wider (`vb`, `px` per version) so he sits small in the middle. Before that, `Duo` pushed the story pushed cartoon-snappy: stiffer springs that overshoot, a double take with the eyes popping wide (`eye_pop()`), a deep crouch held a beat, hops that hang at the top and snap down, stretch 0.28, a wide-open cheering mouth (`mouth_w()`) and a small victory bounce (2.5 s). **Played as a Lottie** (owner pick 2026-11-15): `scripts/opening_lottie.py` turns the rig into
+      `res/raw/opening.json` (~3.5 MB, ~0.45 MB in the APK) — head, body and neck drawn once and moved by keyframed
+      transforms, faces cross-faded by opacity (blink and mouth as scale keys), arms, sparkles and the star a vector layer per
+      frame; `scripts/svg2lottie.py` converts our SVG (clips resolved with shapely, so no masks). Previews: `--preview
+      OUT.mp4` / `--webp OUT.webp` in `opening_anim.py`. Android 9+: the system splash is the plain splash colour (a clear
+      icon, `drawable-v28/splash_anim.xml`) while `AppActivity` parses the Lottie off the main thread (≤ 1.2 s), then a
+      full-screen layer on the same colour plays it with lottie-android (hardware rendering, async updates); he holds his
+      last pose until the first screen is drawn (`LaunchPlugin.ready`, ≤ 7 s), then the layer fades out over 0.25 s.
+      Android 8 and older: the still splash picture
+      (`drawable/splash_anim.xml` = `splash_icon.webp`) until the first screen
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
       player icons off centre (left in English, right in Arabic)
@@ -2249,7 +2272,7 @@ duas/reflections section in Me.
       a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
       "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
       a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
-      Read's bar: the pages ring sits in the title row with the count inside, Noor's line once a day (`readNoorDay`), Today lines
+      Read's bar has no pages ring or streak (owner 2026-11-14: beside the title they pushed the surah name out of sight; a counted page already shows "3 / 5 pages today"), Noor's line once a day (`readNoorDay`), Today lines
       clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
       was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
       card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter

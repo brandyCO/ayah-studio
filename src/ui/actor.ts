@@ -9,6 +9,7 @@ import { FIG_CODE, encode, figureSvg, normalize, parse, type Xp } from './figure
 import { h } from './dom';
 import { reduced } from './juice';
 import { sfx } from './sfx';
+import { gesture, type Gesture } from './rig';
 import './figure.css';
 
 /** The character this device last saved (kept by setFigure in together/ranks.ts). */
@@ -48,11 +49,21 @@ export function layer(root: Element) {
   const up = copy('.fg-up, .fg-wv');
   up.querySelector('.fg-wave-arm')?.remove();
   const wave = copy('.fg-wave-arm');
-  svg.querySelectorAll('.fg-head, .fg-up, .fg-wv').forEach((e) => e.remove());
+  // The rig's arms (src/ui/rig.ts): each upper arm on a layer turning about the shoulder, its forearm on a layer
+  // inside it turning about the elbow, so the compositor bends the arm without repainting.
+  const o = svg.querySelector('.fg-rig')?.getAttribute('data-o')?.split(',') ?? [];
+  const rig = o.length === 4 ? h('span', { class: 'fg-rg' }, ...(['l', 'r'] as const).map((n, i) => {
+    const fa = h('span', { class: `fg-rfa fg-rfa-${n}` }, copy(`.fg-fa-${n}`));
+    fa.style.transformOrigin = o[i * 2 + 1];
+    const ua = h('span', { class: `fg-rua fg-rua-${n}` }, copy(`.fg-ua-${n}`), fa);
+    ua.style.transformOrigin = o[i * 2];
+    return ua;
+  })) : null;
+  svg.querySelectorAll('.fg-head, .fg-up, .fg-wv, .fg-rig').forEach((e) => e.remove());
   const lay = h('span', { class: `fg-lay${kidHead ? ' kid' : ''}` });
   const bb = h('span', { class: 'fg-bb' });
   svg.replaceWith(lay);
-  bb.append(svg, h('span', { class: 'fg-hd' }, head), h('span', { class: 'fg-pt' }, up), h('span', { class: 'fg-wa' }, wave));
+  bb.append(svg, ...(rig ? [rig] : []), h('span', { class: 'fg-hd' }, head), h('span', { class: 'fg-pt' }, up), h('span', { class: 'fg-wa' }, wave));
   lay.append(h('span', { class: 'fg-sh' }), h('span', { class: 'fg-mv' }, bb));
 }
 
@@ -152,6 +163,12 @@ export interface Actor {
   stretch(): void;
   /** Shows an expression for `ms` (with a face; null = back to the face as built). */
   face(xp: Xp | null, ms?: number): void;
+  /** A right answer: a quick bounce and a nod. */
+  happy(): void;
+  /** A mistake: a calm tilt and an open hand, never sad. */
+  encourage(): void;
+  /** Hands on the hips, chin up (a new league, a level). */
+  proud(): void;
 }
 
 /** How the character looks on Me at this moment of the day (owner idea 2026-11-10, "reacts to your day"):
@@ -210,11 +227,15 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
     clearTimeout(armsT);
     armsT = window.setTimeout(() => poseClass(el, c, false), ms);
   };
+  // The rig (rig.ts): arms that swing and bend, a body that squashes and settles; calm, one beat (owner 2026-11-15).
+  const rig = (g: Gesture) => !!el.querySelector('.fg-rg') && gesture(el, g, (xp, ms) => face(xp as Xp | null, ms)) > 0;
+  const quiet = () => document.documentElement.classList.contains('reciting');
   const api: Actor = {
     el,
     hop: (k = 0.5) => hop(el, 10 + 22 * k, 480 + 160 * k, false),
     cheer(ms = 1900) {
       if (reduced()) { poseClass(el, 'cheer', true); return; }
+      if (rig('cheer')) { sparkle(el, 10, 0.3); return; }
       pose('cheer', ms);
       hop(el, 34, 600, false, false);
       setTimeout(() => hop(el, 20, 500, false, false), 580);
@@ -222,8 +243,20 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
     },
     wave(ms = 2200) {
       if (reduced()) return;
+      if (!quiet() && rig('wave')) return;
       pose('waving', ms);
       nod(el, 3);
+    },
+    happy() {
+      if (quiet()) { nod(el, 3); return; }
+      if (!rig('happy')) { face('happy', 1200); hop(el, 12, 480, false); }
+    },
+    encourage() {
+      if (quiet() || !rig('encourage')) api.sink();
+    },
+    proud() {
+      if (quiet()) { nod(el, 3); return; }
+      if (!rig('proud')) { face('proud', 1800); hop(el, 14, 520, false); }
     },
     lean(dir) {
       const { act, tx } = parts(el);

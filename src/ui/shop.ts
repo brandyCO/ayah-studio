@@ -351,7 +351,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     if (code) {
       const { actor } = await import('./actor');
       const a = actor('sh-actor', code);
-      if (a) { counter.replaceChildren(a.el); if (!reduced()) setTimeout(() => a.wave(1400), 500); counter.onclick = () => a.hop(0.6); return; }
+      if (a) { counter.replaceChildren(a.el); if (!reduced()) setTimeout(() => a.wave(1400), 500); counter.onclick = () => a.happy(); return; }
     }
     counter.replaceChildren(h('span', { class: 'sh-noor' }));
   };

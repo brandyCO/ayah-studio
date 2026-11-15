@@ -94,11 +94,8 @@ export function noorLine(where: Where): HTMLElement {
 /** Put (or refresh) Noor's line as the last child of `box`; on Read, today's pages ring above it. */
 export function noorInto(box: Element, where: Where) {
   if (where === 'read') {
-    // Read's bar stays one row (front-end review G4): the pages ring sits beside the title, and Noor's line
-    // shows at most once a day, so a tap on the page hides as little of it as possible.
-    const strip = readStrip();
-    const was = box.querySelector(':scope > .read-goal');
-    if (was) was.replaceWith(strip); else (box.querySelector(':scope > .brand') ?? box.lastElementChild)?.after(strip);
+    // No pages ring or streak in Read's bar (owner 2026-11-14: it pushed the surah name out of sight, and a counted
+    // page already shows "3 / 5 pages today" at the bottom of the page). Noor's line shows at most once a day.
     const day = dayKey();
     let seen = '';
     try { seen = localStorage.getItem('readNoorDay') ?? ''; } catch { /* ignore */ }
@@ -111,27 +108,3 @@ export function noorInto(box: Element, where: Where) {
   box.append(noorLine(where));
 }
 
-const SVG = 'http://www.w3.org/2000/svg';
-const svg = (tag: string, a: Record<string, string | number>) => {
-  const e = document.createElementNS(SVG, tag);
-  for (const [k, v] of Object.entries(a)) e.setAttribute(k, String(v));
-  return e;
-};
-
-/** Read's bar: a ring for today's pages (against the pages goal) and the streak count. */
-function readStrip(): HTMLElement {
-  const p = (() => { try { return todayGoals().find((x) => x.kind === 'pages'); } catch { return undefined; } })();
-  let done = 0;
-  try { done = p ? p.done : readLogAll()[dayKey()]?.length ?? 0; } catch { /* ignore */ }
-  const s = (() => { try { return streak(); } catch { return null; } })();
-  const ring = svg('svg', { width: 34, height: 34, viewBox: '0 0 36 36', 'aria-hidden': 'true' });
-  const C = 2 * Math.PI * 14;
-  const f = p ? Math.min(1, p.done / p.target) : done ? 1 : 0;
-  ring.append(svg('circle', { cx: 18, cy: 18, r: 14, fill: 'none', stroke: 'rgba(255,255,255,.3)', 'stroke-width': 5 }),
-    svg('circle', { cx: 18, cy: 18, r: 14, fill: 'none', stroke: '#ffd43b', 'stroke-width': 5, 'stroke-linecap': 'round',
-      'stroke-dasharray': `${(C * f).toFixed(1)} ${C.toFixed(1)}`, transform: 'rotate(-90 18 18)', class: 'rg-fill', opacity: f ? 1 : 0 }));
-  const label = p ? say('ofPages', { n: p.done, of: p.target }) : say(done === 1 ? 'page1Today' : 'pagesToday', { n: done });
-  const short = p ? `${p.done}/${p.target}` : String(done);
-  return h('a', { class: 'read-goal', href: '#/me', 'aria-label': label, title: label }, ring, h('span', { class: 'rg-txt' }, short),
-    s && s.days > 0 ? h('span', { class: `rg-streak${s.litToday ? ' lit' : ''}`, 'aria-label': say('days', { n: s.days }) }, String(s.days)) : '');
-}

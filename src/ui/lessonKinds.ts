@@ -195,8 +195,8 @@ export function drills(c: KindCtx, done: (missed: number) => void, lamps?: Drill
     if (coach) {
       const c = coach;
       setTimeout(() => {
-        if (!ok) { c.sink(); return; }
-        if (streakRight >= 3 && streakRight % 3 === 0) { c.face('star', 1800); c.cheer(1500); } else { c.face('happy', 1200); c.hop(0.6); }
+        if (!ok) { c.encourage(); return; }
+        if (streakRight >= 3 && streakRight % 3 === 0) { c.face('star', 1800); c.cheer(1500); } else c.happy();
       }, 120);
     }
     foot.replaceChildren(
