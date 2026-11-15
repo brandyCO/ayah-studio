@@ -1,0 +1,7 @@
+11-15 12:15:50.941  5102  5102 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-15 12:15:50.957  5102  5102 I AndroidRuntime: Using default boot image
+11-15 12:15:50.957  5102  5102 I AndroidRuntime: Leaving lock profiling enabled
+11-15 12:15:51.203  5102  5102 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
+11-15 12:15:51.305  5102  5102 I AndroidRuntime: VM exiting with result code 0.
+11-15 12:15:55.006  5118  5149 I AyahOpening: parsed in 2122 ms, ok=true
+11-15 12:15:55.666  5118  5118 I AyahOpening: playing after 2782 ms
