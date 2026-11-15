@@ -61,8 +61,8 @@ VB = (-30, -78, 260, 340)          # figure units shown
 PX = 3.6                              # px per unit
 FEET = (100, 251)
 NECK = (100, 140)
-SHL = {-1: (75.0, 164.0), 1: (125.0, 164.0)}   # screen-left / screen-right shoulder
-ARM = 45.0
+SHL = {-1: (66.0, 160.0), 1: (134.0, 160.0)}   # screen-left / screen-right shoulder
+ARM = 52.0
 SLEEVE, SLEEVE_HI, CREASE = '#cfc6b4', '#f7f6f0', '#a19a8c'
 SKIN, SKIN_SH = '#e0a676', '#bf7c4f'
 GOLD = '#ffd34d'
@@ -270,6 +270,9 @@ class Hello:
         w = t - 1.56
         amp = 20.0 * (1 - smooth(seg(t, 1.95, 2.18)))
         return 12.0, 122.0 + amp * math.sin(2 * math.pi * 3.1 * w)
+
+    def bend_min(self, t):
+        return -99.0                              # elbows may bow inwards as the arm swings
 
     def reach(self, t):
         return 1.0, 1.0
@@ -570,11 +573,11 @@ class Catch(Hello):
 
     def arm_targets(self, t):
         if t < 0.28:
-            return 118.0, 118.0
+            return 150.0, 150.0
         if t < 0.55:
             return 14.0, 14.0
         if t < 0.80:
-            return 14.0, 70.0                          # right hand points up at it
+            return 14.0, 132.0                          # right hand points up at it
         if t < 1.02:
             return 36.0, 36.0
         if t < 1.16:
@@ -582,15 +585,18 @@ class Catch(Hello):
         if t < self.T_BURST:
             return -42.0, -42.0                        # cupped round the star
         if t < 1.95:
-            return 126.0, 126.0
+            return 152.0, 152.0
         return 64.0, 64.0
+
+    def bend_min(self, t):
+        return 6.0 if t >= self.T_BURST else -99.0   # the cheer swings out to the sides, never across the face
 
     def reach(self, t):
         r = 1.0 - 0.53 * smooth(seg(t, 1.14, 1.26)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.08)))
         return r, r
 
     def bend_base(self, t, side):
-        return mixv(4.0, -16.0, smooth(seg(t, 1.14, 1.26)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.08))))
+        return mixv(4.0 + 10.0 * smooth(seg(t, self.T_BURST, self.T_BURST + 0.1)), -16.0, smooth(seg(t, 1.14, 1.26)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.08))))
 
     def crouch(self, t):
         if 0.80 <= t < 1.02:
@@ -787,10 +793,10 @@ def frame(V, P, F, i):
         faces = f'<g transform="translate({lx:.2f} {ly:.2f})">{faces}</g>'
 
     def bend(om, base):
-        return base + clamp(-om * 0.022, -15.0, 15.0)
+        return max(V.bend_min(t), base + clamp(-om * 0.022, -15.0, 15.0))
     rl, rr = V.reach(t)
-    arm_l = arm_svg(-1, F['al'], bend(F['alv'], V.bend_base(t, -1)), f'l{i}', V.wrist(t, -1), rl)
-    arm_r = arm_svg(1, F['ar'], bend(F['arv'], V.bend_base(t, 1)), f'r{i}', V.wrist(t, 1), rr)
+    arm_l = arm_svg(-1, min(F['al'], 156.0), bend(F['alv'], V.bend_base(t, -1)), f'l{i}', V.wrist(t, -1), rl)
+    arm_r = arm_svg(1, min(F['ar'], 156.0), bend(F['arv'], V.bend_base(t, 1)), f'r{i}', V.wrist(t, 1), rr)
     sh_k = s * (1 - (h + fl) / 160)
     shadow = (f'<ellipse cx="{fx}" cy="{fy + 1}" rx="{58 * sh_k * sx:.2f}" ry="{8 * sh_k:.2f}" fill="#24135e" '
               f'opacity="{0.42 * clamp(sh_k):.3f}"/>')
