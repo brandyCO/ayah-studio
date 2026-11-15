@@ -1,0 +1,62 @@
+name: Launch check
+
+# Records the app's launch on an Android emulator (owner report 2026-11-15: an empty violet screen on the phone).
+# Builds the debug APK, cold-starts it twice on a 360 dp wide screen, and pushes the screen recordings, frame grabs
+# and the opening's log lines to the branch `ci-recordings` (artifact downloads need a GitHub sign-in).
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-1u7bur]
+    paths: [android/**, .github/workflows/launch-check.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run build
+      - run: rm -rf dist/data/words
+      - run: npx cap sync android
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Record the launch
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/launch-record.sh android/app/build/outputs/apk/debug/app-debug.apk rec
+      - name: Push the recordings
+        if: always()
+        run: |
+          [ -d rec ] || exit 0
+          git config user.name "launch-check"
+          git config user.email "launch-check@users.noreply.github.com"
+          d="rec-${GITHUB_SHA::8}"
+          mkdir -p "/tmp/out/$d" && cp -r rec/* "/tmp/out/$d/"
+          git fetch origin ci-recordings 2>/dev/null && git checkout -q -B ci-recordings origin/ci-recordings || git checkout -q --orphan ci-recordings
+          git rm -rfq . 2>/dev/null || true
+          rm -rf ./* && cp -r "/tmp/out/$d" .
+          git add "$d" && git commit -qm "Launch recording $d" && git push -q origin ci-recordings
