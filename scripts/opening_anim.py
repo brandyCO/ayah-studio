@@ -936,22 +936,21 @@ class Calm(Duo):
 
 
 class Launch(Hello):
-    """The launch screen, like Duolingo's own (owner 2026-11-15: "the opening style of Duolingo"): on the splash's plain
-    violet the character springs up from nothing with a squash and stretch, lands, blinks and gives a small wave while
-    "ayah studio" pops in under him. About a second, then he holds until the app is ready."""
+    """The launch screen, like Duolingo's own (owner 2026-11-15: "the opening style of Duolingo", then "too much
+    jumping"): on the splash's plain violet the character pops in gently and settles, smiles and gives a small wave while
+    "ayah studio" fades up under him. About a second, then he holds until the app is ready. No jumps."""
     key, title = 'launch', 'Launch screen'
     dur = 1.4
     vb = (-160, -64, 520, 435)
     px = 1.8
-    hops = [(0.06, 0.34, 28.0, False, 0)]
+    hops = []
     faces = [(0.0, 'joy')]
-    blinks = (0.62,)
-    arms0 = 20.0
+    blinks = (0.70,)
+    arms0 = 16.0
     ring = ()
-    stretch_k = 0.30
-    sq_min = 0.62
     head_k = 0.45
-    springs = dict(sq=(1000.0, 22.0), head=(1200.0, 20.0), tilt=(520.0, 16.0), lean=(340.0, 16.0), arm=(900.0, 26.0))
+    kicks = ((0.20, 'sq', -1.6), (0.20, 'head', 40.0))      # a small settle as the pop lands
+    springs = dict(sq=(700.0, 24.0), head=(800.0, 22.0), tilt=(300.0, 18.0), lean=(220.0, 18.0), arm=(500.0, 24.0))
     WORD = ('ayah studio', 62.0, 100.0, 330.0)
 
     @property
@@ -959,45 +958,36 @@ class Launch(Hello):
         return (('wordmark', f'<path d="{text_path(*self.WORD)}" fill="#fff"/>'),)
 
     def mark(self, name, t):
-        u = seg(t, 0.22, 0.50)
-        k = ease_out_back(u, 2.6) if u > 0 else 0.0
+        u = seg(t, 0.20, 0.48)
+        k = 0.9 + 0.1 * ease_out_back(u, 1.4)
         cx, cy = self.WORD[2], self.WORD[3] - 22
-        return dict(a=(cx, cy), p=(cx, cy + 16 * (1 - smooth(u))), s=(k, k), r=0.0, o=smooth(seg(t, 0.22, 0.32)))
+        return dict(a=(cx, cy), p=(cx, cy + 10 * (1 - smooth(u))), s=(k, k), r=0.0, o=smooth(u))
 
     def pop(self, t):
-        return 0.0 if t < 0.04 else ease_out_back(seg(t, 0.04, 0.22), 2.2)
-
-    def impulse(self, kind, big, sq, head, arms):
-        if kind == 'off':
-            sq.v += 6.0
-            head.v += 50.0
-        else:
-            sq.v -= 10.0
-            head.v += 140.0
-            for s in arms.values():
-                s.v -= 160.0
+        return 0.0 if t < 0.02 else ease_out_back(seg(t, 0.02, 0.26), 1.3)
 
     def arm_targets(self, t):
-        if t < 0.30:
-            return 70.0, 70.0                          # arms out as he springs up
-        if t < 0.46:
+        if t < 0.34:
             return 16.0, 16.0
         if t < 1.10:
-            w = t - 0.46
-            return 16.0, 128.0 + 18.0 * math.sin(2 * math.pi * 3.0 * w) * (1 - smooth(seg(t, 0.85, 1.10)))
-        return 16.0, 16.0 + 112.0 * (1 - smooth(seg(t, 1.10, 1.30)))
+            w = t - 0.34
+            return 16.0, 122.0 + 12.0 * math.sin(2 * math.pi * 2.4 * w) * (1 - smooth(seg(t, 0.85, 1.10)))
+        return 16.0, 16.0 + 106.0 * (1 - smooth(seg(t, 1.10, 1.34)))
 
     def bend_base(self, t, side):
-        return 4.0 + (12.0 if side == 1 and 0.46 <= t < 1.2 else 0.0)
+        return 4.0 + (12.0 if side == 1 and 0.34 <= t < 1.2 else 0.0)
 
     def tilt(self, t):
-        return -5.0 if 0.46 <= t < 1.15 else 0.0
+        return -4.0 if 0.34 <= t < 1.15 else 0.0
 
     def lean(self, t):
-        return -2.0 if 0.46 <= t < 1.15 else 0.0
+        return 0.0
+
+    def crouch(self, t):
+        return 0.0
 
     def mouth(self, t):
-        return 1.0 + 0.2 * math.sin(math.pi * seg(t, 0.36, 0.70))
+        return 1.0 + 0.15 * math.sin(math.pi * seg(t, 0.30, 0.70))
 
 
 VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch, Duo, Calm, Launch)}
