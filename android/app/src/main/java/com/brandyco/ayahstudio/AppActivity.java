@@ -96,7 +96,7 @@ public class AppActivity extends BridgeActivity {
                 Log.i("AyahOpening", "still picture after " + (SystemClock.uptimeMillis() - start) + " ms");
                 if (!animate) {
                     v.getView().animate().alpha(0f).setDuration(200)
-                        .setInterpolator(new DecelerateInterpolator()).withEndAction(v::remove).start();
+                        .setInterpolator(new DecelerateInterpolator()).withEndAction(() -> { v.remove(); plainBackground(); }).start();
                     return;
                 }
                 showStill(start);
@@ -132,9 +132,16 @@ public class AppActivity extends BridgeActivity {
                     return;
                 }
                 layer.animate().alpha(0f).setDuration(250).setInterpolator(new DecelerateInterpolator())
-                    .withEndAction(() -> decor.removeView(layer)).start();
+                    .withEndAction(() -> { decor.removeView(layer); plainBackground(); }).start();
             }
         }, 600);
+    }
+
+    /** The theme keeps the window in the splash colour while starting; afterwards the usual day / night colour. */
+    private void plainBackground() {
+        boolean night = (getResources().getConfiguration().uiMode
+            & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(night ? 0xff07130f : 0xffffffff));
     }
 
     private void playOpening(AnimatedImageDrawable pic, long start) {
@@ -174,6 +181,7 @@ public class AppActivity extends BridgeActivity {
                         pic.stop();
                         decor.removeView(layer);
                         opening = null;
+                        plainBackground();
                     }).start();
             }
         }, 40);

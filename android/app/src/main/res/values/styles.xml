@@ -13,6 +13,8 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- the splash colour until the opening is over (AppActivity resets it), so no white frame shows in between -->
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 
