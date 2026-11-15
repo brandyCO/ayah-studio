@@ -104,20 +104,44 @@ public class AppActivity extends BridgeActivity {
             v.remove(); // the layer, same colour, is already on top: no flash
         });
         super.onCreate(savedInstanceState);
+        if (animate) {
+            // On top from the first frame: between the system splash and the opening the (white) web view never shows.
+            ensureCover();
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (cover != null && !coverUsed) { removeCover(); }
+            }, MAX_OPENING + 1000);
+        }
+    }
+
+    private FrameLayout cover;
+    private boolean coverUsed;
+
+    private FrameLayout ensureCover() {
+        if (cover != null) return cover;
+        final ViewGroup decor = (ViewGroup) getWindow().getDecorView();
+        cover = new FrameLayout(this);
+        cover.setBackgroundColor(getResources().getColor(R.color.splash_background, getTheme()));
+        cover.setClickable(true);
+        decor.addView(cover, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        return cover;
+    }
+
+    private void removeCover() {
+        if (cover == null) return;
+        ((ViewGroup) getWindow().getDecorView()).removeView(cover);
+        cover = null;
+        plainBackground();
     }
 
     /** The still character (splash_icon) pops in on the splash colour, holds until the first screen, then fades. */
     private void showStill(long start) {
-        final ViewGroup decor = (ViewGroup) getWindow().getDecorView();
-        final FrameLayout layer = new FrameLayout(this);
-        layer.setBackgroundColor(getResources().getColor(R.color.splash_background, getTheme()));
-        layer.setClickable(true);
+        coverUsed = true;
+        final FrameLayout layer = ensureCover();
         final ImageView pic = new ImageView(this);
         pic.setImageResource(R.drawable.splash_icon);
         int size = (int) (288 * getResources().getDisplayMetrics().density);
         layer.addView(pic, new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
-        decor.addView(layer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT));
         pic.setScaleX(0.8f);
         pic.setScaleY(0.8f);
         pic.setAlpha(0f);
@@ -132,7 +156,7 @@ public class AppActivity extends BridgeActivity {
                     return;
                 }
                 layer.animate().alpha(0f).setDuration(250).setInterpolator(new DecelerateInterpolator())
-                    .withEndAction(() -> { decor.removeView(layer); plainBackground(); }).start();
+                    .withEndAction(this::removeCover).start();
             }
         }, 600);
     }
@@ -145,10 +169,8 @@ public class AppActivity extends BridgeActivity {
     }
 
     private void playOpening(AnimatedImageDrawable pic, long start) {
-        final ViewGroup decor = (ViewGroup) getWindow().getDecorView();
-        final FrameLayout layer = new FrameLayout(this);
-        layer.setBackgroundColor(getResources().getColor(R.color.splash_background, getTheme()));
-        layer.setClickable(true);
+        coverUsed = true;
+        final FrameLayout layer = ensureCover();
         final ImageView view = new ImageView(this);
         view.setScaleType(ImageView.ScaleType.FIT_CENTER);
         view.setImageDrawable(pic);
@@ -159,8 +181,6 @@ public class AppActivity extends BridgeActivity {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, (int) (w * ratio), Gravity.CENTER);
         layer.addView(view, lp);
         view.setTranslationY(-0.05f * m.heightPixels);
-        decor.addView(layer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT));
         final boolean[] played = { false };
         pic.registerAnimationCallback(new Animatable2.AnimationCallback() {
             @Override
@@ -179,9 +199,8 @@ public class AppActivity extends BridgeActivity {
                 layer.animate().alpha(0f).setDuration(250).setInterpolator(new DecelerateInterpolator())
                     .withEndAction(() -> {
                         pic.stop();
-                        decor.removeView(layer);
+                        removeCover();
                         opening = null;
-                        plainBackground();
                     }).start();
             }
         }, 40);
