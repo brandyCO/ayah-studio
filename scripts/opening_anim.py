@@ -111,6 +111,25 @@ def open_face(P, blink, pop=1.0):
     return P['x0rest'] + f'<g transform="translate(100 104) scale({pop:.3f} {by * pop:.3f}) translate(-100 -104)">{P["eyes"]}</g>'
 
 
+def text_path(text, size, cx, baseline, weight=900):
+    """Text as one SVG path in Nunito (the app's font) at this weight, centred on cx."""
+    from fontTools.ttLib import TTFont
+    from fontTools.varLib.instancer import instantiateVariableFont
+    from fontTools.pens.svgPathPen import SVGPathPen
+    from fontTools.pens.transformPen import TransformPen
+    f = instantiateVariableFont(TTFont(ROOT / 'public/fonts/Nunito-latin.woff2'), {'wght': weight})
+    gs, cmap, hmtx = f.getGlyphSet(), f.getBestCmap(), f['hmtx']
+    k = size / f['head'].unitsPerEm
+    width = sum(hmtx[cmap[ord(ch)]][0] for ch in text) * k
+    x = cx - width / 2
+    pen = SVGPathPen(gs)
+    for ch in text:
+        g = cmap[ord(ch)]
+        gs[g].draw(TransformPen(pen, (k, 0, 0, -k, x, baseline)))
+        x += hmtx[g][0] * k
+    return pen.getCommands()
+
+
 def bez(p0, c, p2, t):
     u = 1 - t
     return (u * u * p0[0] + 2 * u * t * c[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p2[1])
@@ -323,6 +342,13 @@ class Hello:
     def eye_pop(self, t):
         """Eyes popping wide (1 = as drawn)."""
         return 1.0
+
+    vb, px = VB, PX             # the units shown and px per unit
+    marks = ()                  # (name, svg) drawn apart from the figure, moved by mark(name, t)
+
+    def mark(self, name, t):
+        """{a, p, s, r, o} for a mark at time t."""
+        return dict(a=(0, 0), p=(0, 0), s=(1.0, 1.0), r=0.0, o=1.0)
 
     def mouth_w(self, t):
         return 1.0
@@ -817,7 +843,164 @@ class Duo(Catch):
         return super().front(t, c)
 
 
-VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch, Duo)}
+class Calm(Duo):
+    """The snappy style with one strong beat (owner 2026-11-15, "is it too much?"): pops up, sees the star, crouches,
+    leaps, catches it, lands with a squash as it bursts and holds the cheer. No double take, no victory bounce."""
+    key, title = 'calm', 'Catch the Light, one beat'
+    dur = 1.75
+    hops = [(0.03, 0.22, 18.0, False, 0), (0.58, 0.98, 56.0, True, 9)]
+    faces = [(0.0, 'joy'), (0.28, 'wow'), (0.80, 'squint'), (1.00, 'joy')]
+    blinks = (1.55,)
+    T_CATCH, T_BURST = 0.79, 1.00
+    springs = dict(sq=(1000.0, 26.0), head=(1200.0, 22.0), tilt=(520.0, 17.0), lean=(340.0, 16.0), arm=(900.0, 26.0))
+    kicks = ()
+
+    def impulse(self, kind, big, sq, head, arms):
+        if kind == 'land' and big:
+            sq.v -= 9.0
+            head.v += 120.0
+            for s in arms.values():
+                s.v -= 120.0
+        else:
+            super().impulse(kind, big, sq, head, arms)
+
+    def eye_pop(self, t):
+        return 1.0 + 0.10 * math.sin(math.pi * seg(t, 1.00, 1.30))
+
+    def mouth(self, t):
+        return 1.0 + 0.35 * math.sin(math.pi * seg(t, 1.00, 1.40))
+
+    def mouth_w(self, t):
+        return 1.0 + 0.10 * math.sin(math.pi * seg(t, 1.00, 1.40))
+
+    def arm_targets(self, t):
+        if t < 0.20:
+            return 130.0, 130.0
+        if t < 0.42:
+            return 14.0, 14.0
+        if t < 0.58:
+            return 24.0, 24.0                           # crouch
+        if t < 0.68:
+            return 110.0, 110.0
+        if t < self.T_BURST:
+            return -42.0, -42.0                         # cupped round the star
+        if t < 1.40:
+            return 152.0, 152.0                         # cheer
+        return 66.0, 66.0
+
+    def reach(self, t):
+        r = 1.0 - 0.53 * smooth(seg(t, 0.68, 0.79)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.06)))
+        return r, r
+
+    def bend_base(self, t, side):
+        return mixv(4.0 + 10.0 * smooth(seg(t, self.T_BURST, self.T_BURST + 0.1)), -16.0,
+                    smooth(seg(t, 0.68, 0.79)) * (1 - smooth(seg(t, self.T_BURST, self.T_BURST + 0.06))))
+
+    def crouch(self, t):
+        if 0.42 <= t < 0.58:
+            return -0.22 * smooth(seg(t, 0.42, 0.50))
+        return 0.0
+
+    def head(self, t):
+        return -2.0 if 0.28 <= t < 0.74 else (2.0 if 0.79 <= t < 1.0 else 0.0)
+
+    def tilt(self, t):
+        if 0.30 <= t < 0.58:
+            return 6.0
+        return -5.0 if t >= 1.40 else 0.0
+
+    def lean(self, t):
+        return -2.0 if t >= 1.40 else 0.0
+
+    def look(self, t):
+        u = smooth(seg(t, 0.28, 0.36)) * (1 - smooth(seg(t, 0.66, 0.76)))
+        return 2.5 * u, -3.5 * u
+
+    def star_pos(self, t, c):
+        p0 = (176.0, -36.0)
+        t0 = self.T_CATCH - 0.30
+        if t < t0:
+            return p0[0] + 3 * math.sin(2 * math.pi * 1.4 * t), p0[1] + 4 * math.sin(2 * math.pi * 1.1 * t)
+        u = seg(t, t0, self.T_CATCH) ** 1.6
+        return bez(p0, (196.0, 50.0), c['map'](100, 180), u)
+
+    def front(self, t, c):
+        if 0.16 <= t < self.T_CATCH:
+            k = ease_out_back(seg(t, 0.16, 0.28), 2.4)
+            x, y = self.star_pos(t, c)
+            return light_star(x, y, 15 * k, 20 * math.sin(2 * math.pi * 0.8 * t) + 200 * seg(t, 0.49, 0.79),
+                              0.8 + 0.2 * math.sin(2 * math.pi * 2 * t))
+        if t < 0.16:
+            return ''
+        return Catch.front(self, t, c)
+
+
+class Launch(Hello):
+    """The launch screen, like Duolingo's own (owner 2026-11-15: "the opening style of Duolingo"): on the splash's plain
+    violet the character springs up from nothing with a squash and stretch, lands, blinks and gives a small wave while
+    "ayah studio" pops in under him. About a second, then he holds until the app is ready."""
+    key, title = 'launch', 'Launch screen'
+    dur = 1.4
+    vb = (-160, -64, 520, 435)
+    px = 1.8
+    hops = [(0.06, 0.34, 28.0, False, 0)]
+    faces = [(0.0, 'joy')]
+    blinks = (0.62,)
+    arms0 = 20.0
+    ring = ()
+    stretch_k = 0.30
+    sq_min = 0.62
+    head_k = 0.45
+    springs = dict(sq=(1000.0, 22.0), head=(1200.0, 20.0), tilt=(520.0, 16.0), lean=(340.0, 16.0), arm=(900.0, 26.0))
+    WORD = ('ayah studio', 62.0, 100.0, 330.0)
+
+    @property
+    def marks(self):
+        return (('wordmark', f'<path d="{text_path(*self.WORD)}" fill="#fff"/>'),)
+
+    def mark(self, name, t):
+        u = seg(t, 0.22, 0.50)
+        k = ease_out_back(u, 2.6) if u > 0 else 0.0
+        cx, cy = self.WORD[2], self.WORD[3] - 22
+        return dict(a=(cx, cy), p=(cx, cy + 16 * (1 - smooth(u))), s=(k, k), r=0.0, o=smooth(seg(t, 0.22, 0.32)))
+
+    def pop(self, t):
+        return 0.0 if t < 0.04 else ease_out_back(seg(t, 0.04, 0.22), 2.2)
+
+    def impulse(self, kind, big, sq, head, arms):
+        if kind == 'off':
+            sq.v += 6.0
+            head.v += 50.0
+        else:
+            sq.v -= 10.0
+            head.v += 140.0
+            for s in arms.values():
+                s.v -= 160.0
+
+    def arm_targets(self, t):
+        if t < 0.30:
+            return 70.0, 70.0                          # arms out as he springs up
+        if t < 0.46:
+            return 16.0, 16.0
+        if t < 1.10:
+            w = t - 0.46
+            return 16.0, 128.0 + 18.0 * math.sin(2 * math.pi * 3.0 * w) * (1 - smooth(seg(t, 0.85, 1.10)))
+        return 16.0, 16.0 + 112.0 * (1 - smooth(seg(t, 1.10, 1.30)))
+
+    def bend_base(self, t, side):
+        return 4.0 + (12.0 if side == 1 and 0.46 <= t < 1.2 else 0.0)
+
+    def tilt(self, t):
+        return -5.0 if 0.46 <= t < 1.15 else 0.0
+
+    def lean(self, t):
+        return -2.0 if 0.46 <= t < 1.15 else 0.0
+
+    def mouth(self, t):
+        return 1.0 + 0.2 * math.sin(math.pi * seg(t, 0.36, 0.70))
+
+
+VERSIONS = {v.key: v for v in (Hello, Wake, Dua, Flip, Catch, Duo, Calm, Launch)}
 
 
 def simulate(V):
@@ -972,6 +1155,7 @@ def frame(V, P, F, i, parts=False):
                 if r > 0.3:
                     fx_layer += sparkle(x, y, r, 40 * du + j * 20, 1.0)
     front = V.front(t, c)
+    marks = {nm: V.mark(nm, t) for nm, _ in V.marks}
     if parts:
         assert not spin, 'spin is not exported to Lottie yet'
         fw = {}
@@ -979,7 +1163,7 @@ def frame(V, P, F, i, parts=False):
             f = 'joy' if f == 'star' else f
             fw[f] = fw.get(f, 0.0) + w
         return dict(fw=fw, blink=max(0.06, blink_at(V, t)), mouth_open=V.mouth(t), look=(lx, ly),
-                    pop=V.eye_pop(t), mouth_w=V.mouth_w(t),
+                    pop=V.eye_pop(t), mouth_w=V.mouth_w(t), marks=marks,
                     under=shadow + fx_layer, mid=V.inbody(t, c) + arm_l + arm_r, faces=faces, front=front,
                     root=dict(a=(fx, fy), p=(fx, fy - h - fl), r=lean, s=(s * sx, s * sy)),
                     head=dict(a=(100, 140), p=(100, 140 + hl), r=F['tilt'], s=(hsx, hsy)),
@@ -987,16 +1171,22 @@ def frame(V, P, F, i, parts=False):
     body = (f'<g transform="{root}">'
             f'<g transform="{neck_tf}">{P["neck"]}</g><g transform="translate(100 0) scale({BODY_W} 1) translate(-100 0)">{P["body"]}</g>{V.inbody(t, c)}{arm_l}{arm_r}'
             f'<g transform="{head_tf}">{P["head"]}{faces}</g></g>')
-    vx, vy, vw, vh = VB
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx} {vy} {vw} {vh}" width="{vw * PX}" '
-            f'height="{vh * PX}">{shadow}{fx_layer}{body}{front}</svg>')
+    mk = ''
+    for nm, svg in V.marks:
+        m = marks[nm]
+        mk += (f'<g opacity="{m["o"]:.3f}" transform="translate({m["p"][0]:.2f} {m["p"][1]:.2f}) rotate({m["r"]:.2f}) '
+               f'scale({m["s"][0]:.4f} {m["s"][1]:.4f}) translate({-m["a"][0]:.2f} {-m["a"][1]:.2f})">{svg}</g>')
+    vx, vy, vw, vh = V.vb
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx} {vy} {vw} {vh}" width="{vw * V.px}" '
+            f'height="{vh * V.px}">{shadow}{fx_layer}{body}{front}{mk}</svg>')
 
 
-def render(frames_svg, outdir, bg=None):
+def render(frames_svg, outdir, bg=None, key='catch'):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / 'frames.json').write_text(json.dumps(frames_svg))
-    vw, vh = VB[2] * PX, VB[3] * PX
+    V = VERSIONS[key]
+    vw, vh = round(V.vb[2] * V.px), round(V.vb[3] * V.px)
     js = f'''const {{ chromium }} = require('playwright'); const fs = require('fs');
 (async () => {{ const fr = JSON.parse(fs.readFileSync('{outdir}/frames.json'));
 const b = await chromium.launch(); const pg = await b.newPage({{ viewport: {{ width: {vw}, height: {vh} }} }});
@@ -1017,20 +1207,20 @@ def frames(key='hello'):
 
 def main():
     from PIL import Image
-    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'duo'
+    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'launch'
     with tempfile.TemporaryDirectory() as d:
         if '--preview' in sys.argv:
             out = sys.argv[sys.argv.index('--preview') + 1]
-            render(frames(key), d, SPLASH_BG)
+            render(frames(key), d, SPLASH_BG, key)
             subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{d}/f%04d.png',
-                            '-vf', 'tpad=stop_mode=clone:stop_duration=1,format=yuv420p', '-c:v', 'libx264',
+                            '-vf', 'crop=trunc(iw/2)*2:trunc(ih/2)*2,tpad=stop_mode=clone:stop_duration=1,format=yuv420p', '-c:v', 'libx264',
                             '-crf', '18', out], check=True)
             return
         if '--webp' not in sys.argv:
             sys.exit('use --preview OUT.mp4 or --webp OUT.webp (the app uses scripts/opening_lottie.py)')
         OUT = Path(sys.argv[sys.argv.index('--webp') + 1])
         svgs = frames(key)
-        render(svgs, d)
+        render(svgs, d, None, key)
         ims = [Image.open(f'{d}/f{i:04d}.png').convert('RGBA') for i in range(len(svgs))]
         # 60 fps in whole milliseconds: 17, 17, 16, …
         dur = [17 if i % 3 != 2 else 16 for i in range(len(ims))]

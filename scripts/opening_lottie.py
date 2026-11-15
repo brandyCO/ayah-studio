@@ -4,7 +4,7 @@ Same rig as scripts/opening_anim.py, but vector: the head, body and neck are dra
 transforms (root, head, neck), and what changes shape every frame (arms, faces, sparkles, the star) is a vector layer
 per frame. Writes android/app/src/main/res/raw/opening.json (lottie-android plays it in AppActivity).
 
-  python3 scripts/opening_lottie.py [--version duo] [--out PATH]
+  python3 scripts/opening_lottie.py [--version launch] [--out PATH]
 """
 import json
 import sys
@@ -56,14 +56,15 @@ def layer(ind, nm, ks, n, shapes=None, parent=None, ip=0, op=None):
     return L
 
 
-def build(key='duo'):
+def build(key='launch'):
     V = oa.VERSIONS[key]()
     P = oa.load_parts(oa.actor_svg())
     F = oa.simulate(V)
     parts = [oa.frame(V, P, f, i, parts=True) for i, f in enumerate(F)]
     n = len(parts)
-    vx, vy, vw, vh = oa.VB
-    W, H = round(vw * oa.PX), round(vh * oa.PX)
+    vx, vy, vw, vh = V.vb
+    PX = V.px
+    W, H = round(vw * PX), round(vh * PX)
     ids = iter(range(1, 100000))
     VIEW, RT, HEAD = next(ids), next(ids), next(ids)
     layers = []
@@ -80,7 +81,12 @@ def build(key='duo'):
                 out.append(layer(next(ids), f'{slot} {i}', STATIC, n, sh, parent, ip=i, op=j if j < n else n + 1))
             i = j
         return out
-    # top first: front, faces, head, arms, body, neck, under
+    # top first: marks, front, faces, head, arms, body, neck, under
+    for nm, svg in V.marks:
+        seq = [p['marks'][nm] for p in parts]
+        ks = tf(seq)
+        ks['o'] = anim([round(m['o'] * 100, 2) for m in seq])
+        layers.append(layer(next(ids), nm, ks, n, convert(svg), VIEW))
     layers += flip('front', VIEW)
     LOOK = next(ids)
     names = sorted({f for p in parts for f in p['fw']})
@@ -117,14 +123,14 @@ def build(key='duo'):
     layers.append(layer(next(ids), 'neck', tf([p['neck'] for p in parts]), n, convert(P['neck']), RT))
     layers += flip('under', VIEW)
     layers.append(layer(RT, 'root', tf([p['root'] for p in parts]), n, None, VIEW))
-    layers.append(layer(VIEW, 'view', {'o': st(100), 'a': st([0, 0]), 'p': st([-vx * oa.PX, -vy * oa.PX]),
-                                       's': st([oa.PX * 100, oa.PX * 100]), 'r': st(0)}, n))
+    layers.append(layer(VIEW, 'view', {'o': st(100), 'a': st([0, 0]), 'p': st([-vx * PX, -vy * PX]),
+                                       's': st([PX * 100, PX * 100]), 'r': st(0)}, n))
     return {'v': '5.7.4', 'fr': oa.FPS, 'ip': 0, 'op': n, 'w': W, 'h': H, 'nm': f'opening-{key}', 'ddd': 0,
             'assets': [], 'layers': layers}
 
 
 def main():
-    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'duo'
+    key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'launch'
     out = Path(sys.argv[sys.argv.index('--out') + 1]) if '--out' in sys.argv else OUT
     data = build(key)
     out.write_text(json.dumps(data, separators=(',', ':')))
