@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude/project-thread-1u7bur]
-    paths: [android/**, .github/workflows/launch-check.yml]
+    paths: [android/**, .github/workflows/launch-check.yml, scripts/launch-record.sh]
 
 permissions:
   contents: write
