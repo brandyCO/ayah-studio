@@ -11,9 +11,13 @@ adb install -r "$APK"
 adb shell settings put global window_animation_scale 1
 adb shell settings put global transition_animation_scale 1
 adb shell settings put global animator_duration_scale 1
-sleep 5
-for run in 1 2; do
+adb shell settings put global hide_error_dialogs 1   # the slow emulator's own "launcher isn't responding"
+sleep 60
+for run in 1 2 3; do
   adb shell am force-stop $PKG
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
+  adb shell input keyevent KEYCODE_HOME
+  sleep 8
   adb logcat -c
   adb shell "screenrecord --time-limit 12 --bit-rate 6000000 /sdcard/launch$run.mp4" &
   rec=$!
