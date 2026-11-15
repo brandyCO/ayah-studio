@@ -61,7 +61,8 @@ VB = (-30, -78, 260, 340)          # figure units shown
 PX = 3.6                              # px per unit
 FEET = (100, 251)
 NECK = (100, 140)
-SHL = {-1: (66.0, 160.0), 1: (134.0, 160.0)}   # screen-left / screen-right shoulder
+BODY_W = 0.86                         # the robe a little narrower than in the app, like the app icon (owner 2026-11-15)
+SHL = {-1: (100 - 34 * BODY_W, 160.0), 1: (100 + 34 * BODY_W, 160.0)}   # screen-left / screen-right shoulder
 ARM = 52.0
 SLEEVE, SLEEVE_HI, CREASE = '#cfc6b4', '#f7f6f0', '#a19a8c'
 SKIN, SKIN_SH = '#e0a676', '#bf7c4f'
@@ -781,6 +782,8 @@ def frame(V, P, F, i):
     neck_tf = f'translate(0 {hl * 0.5:.2f})'
     faces = ''
     for f, w in face_at(V, t):
+        if f == 'star':
+            f = 'joy'                         # no star eyes on a grown man (owner 2026-11-14)
         if f == 'joy':
             g = joy(P, blink_at(V, t), V.mouth(t))
         elif f == 'open':
@@ -828,7 +831,7 @@ def frame(V, P, F, i):
                 if r > 0.3:
                     fx_layer += sparkle(x, y, r, 40 * du + j * 20, 1.0)
     body = (f'<g transform="{root}">'
-            f'<g transform="{neck_tf}">{P["neck"]}</g>{P["body"]}{V.inbody(t, c)}{arm_l}{arm_r}'
+            f'<g transform="{neck_tf}">{P["neck"]}</g><g transform="translate(100 0) scale({BODY_W} 1) translate(-100 0)">{P["body"]}</g>{V.inbody(t, c)}{arm_l}{arm_r}'
             f'<g transform="{head_tf}">{P["head"]}{faces}</g></g>')
     vx, vy, vw, vh = VB
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx} {vy} {vw} {vh}" width="{vw * PX}" '
