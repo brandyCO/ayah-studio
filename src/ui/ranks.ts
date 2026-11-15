@@ -112,7 +112,7 @@ export function podium(rows: Row[]): HTMLElement | '' {
     if (a && r.xp != null) withLevel(a.el, levelOf(r.xp));
     const who = a ? a.el : h('span', { class: 'rk-pod-disc' }, avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, place === 1 ? 64 : 54, r.frame ?? 0));
     const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.name ?? rt('rk.private')} · ${num(r.score)}`,
-      onclick: () => { if (a) (r.me ? a.wave() : a.hop(0.6)); else hopFig(el, 12, 480, false); haptic(8); } },
+      onclick: () => { if (a) (r.me ? a.wave() : a.happy()); else hopFig(el, 12, 480, false); haptic(8); } },
       h('span', { class: 'rk-pod-who' }, place === 1 ? h('span', { class: 'rk-pod-beam', 'aria-hidden': 'true' }) : '', who),
       h('span', { class: 'rk-pod-name' }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
       h('span', { class: 'rk-pod-step' }, h('b', {}, String(place)), h('span', {}, ptsIcon(), num(r.score))));

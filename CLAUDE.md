@@ -2160,6 +2160,15 @@ duas/reflections section in Me.
       lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
       mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
       and from 17:00 leans to look at a flame still waiting
+      **The rig** (owner 2026-11-15, "Duolingo style animations of characters in the whole app", calm: "too much jumping"):
+      every actor carries its arms in two pieces (`rigArms()` / `rigJoints()` in figure.ts: upper arm and forearm + hand, at
+      hold 0's place), which `layer()` puts on nested HTML layers turning about the shoulder and the elbow. `src/ui/rig.ts`
+      plays gestures — **wave**, **cheer** (arms up in a V, a small lift, no hops), **happy** (right answer: a bounce and a
+      nod), **encourage** (mistake: a calm tilt and an open hand, never sad), **proud** (rank up: hands on hips, chin up) —
+      as targets chased by springs (overshoot, follow-through), simulated once and played as Web Animations keyframes
+      (30 a second, compositor only); while one plays the drawn arms and what they hold step aside (`.fg-lay.rigging`).
+      `actor()`'s `wave` / `cheer` use it, plus `happy()`, `encourage()`, `proud()` (Learn verdicts, the Monday reveal, taps
+      on the character in the room, path, shop and Ranks). During a recitation only nods. Preview: Artifact "Character reactions"
       **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
       ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
       never held back

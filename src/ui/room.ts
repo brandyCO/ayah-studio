@@ -122,7 +122,7 @@ function buildScene(visit?: Visit): Built | null {
   const cushion = h('span', { class: 'rm-cushion', 'aria-hidden': 'true' });
   const a: Actor | null = actor('rm-actor', sit);
   if (a) {
-    a.el.addEventListener('click', () => { haptic(6); sfx.tick(); a.hop(0.6); });
+    a.el.addEventListener('click', () => { haptic(6); sfx.tick(); a.happy(); });
     scene.append(cushion, a.el);
   }
   scene.append(top, low);

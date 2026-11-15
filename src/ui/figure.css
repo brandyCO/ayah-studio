@@ -152,6 +152,14 @@ html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: p
 /* The stacked copies (head, raised arms, waving arm) lie exactly over the body copy. */
 .fg-lay .fg-bb { position: relative; }
 .fg-lay .fg-hd, .fg-lay .fg-pt, .fg-lay .fg-wa { position: absolute; inset: 0; display: block; }
+/* The rig's arms (src/ui/rig.ts): shown while a gesture plays, in place of the drawn arms (and what they hold). */
+.fg .fg-rig { display: none; }
+.fg-lay .fg-rg, .fg-lay .fg-rua, .fg-lay .fg-rfa { position: absolute; inset: 0; display: block; }
+.fg-lay .fg-rg { visibility: hidden; }
+.fg-lay .fg-rg svg { display: block; width: 100%; height: auto; }
+.fg-lay .fg-rg .fg-rig { display: inline; }
+.fg-lay.rigging .fg-rg { visibility: visible; }
+.fg-lay.rigging svg.fg .fg-arms, .fg-lay.rigging .fg-pt, .fg-lay.rigging .fg-wa { display: none; }
 .fg-lay .fg-hd > svg, .fg-lay .fg-pt > svg, .fg-lay .fg-wa > svg { display: block; width: 100%; height: auto; }
 .fg-lay svg .fg-head, .fg-lay svg .fg-wave-arm { animation: none; }
 .fg-lay .fg-hd { transform-origin: 50% 57.25%; animation: fg-sway-l 7.4s ease-in-out infinite; }
