@@ -55,8 +55,8 @@ jobs:
           git config user.name "launch-check"
           git config user.email "launch-check@users.noreply.github.com"
           d="rec-${GITHUB_SHA::8}"
-          mkdir -p "/tmp/out/$d" && cp -r rec/* "/tmp/out/$d/"
-          git fetch origin ci-recordings:refs/remotes/origin/ci-recordings 2>/dev/null && git checkout -q -B ci-recordings origin/ci-recordings || git checkout -q --orphan ci-recordings
-          git rm -rfq . 2>/dev/null || true
-          rm -rf ./* && cp -r "/tmp/out/$d" .
-          git add "$d" && git commit -qm "Launch recording $d" && git push -q origin ci-recordings
+          git fetch origin ci-recordings:refs/remotes/origin/ci-recordings
+          git worktree add --detach /tmp/rec origin/ci-recordings
+          cd /tmp/rec && git rm -rqf --ignore-unmatch . && rm -rf rec-*
+          cp -r "$GITHUB_WORKSPACE/rec" "$d"
+          git add -A && git commit -qm "Launch recording $d" && git push -q origin HEAD:ci-recordings
