@@ -1,6 +1,10 @@
 package com.brandyco.ayahstudio;
 
 import android.content.Intent;
+import android.graphics.ImageDecoder;
+import android.graphics.drawable.Animatable2;
+import android.graphics.drawable.AnimatedImageDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -16,30 +20,23 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import androidx.core.splashscreen.SplashScreen;
-import com.airbnb.lottie.AsyncUpdates;
-import com.airbnb.lottie.LottieAnimationView;
-import com.airbnb.lottie.LottieComposition;
-import com.airbnb.lottie.LottieCompositionFactory;
-import com.airbnb.lottie.LottieResult;
-import com.airbnb.lottie.RenderMode;
 import com.getcapacitor.BridgeActivity;
 
 public class AppActivity extends BridgeActivity {
     static final String EXTRA_HASH = "ayahstudio.hash";
     private static String pendingHash = null;
-    /** The opening (owner 2026-11-14: "make a motion animation that's premium", and every web-drawn opening lagged,
-     *  because the WebView's GPU is busiest exactly while the app starts). Android 9+: the system splash is the plain
-     *  splash colour while res/raw/opening.json (scripts/opening_lottie.py: the rigged character as a vector Lottie,
-     *  owner pick 2026-11-15) is parsed off the main thread; then a full-screen layer on the same colour plays it with
-     *  lottie-android (hardware rendering, frames updated off the main thread), so the app starting underneath cannot
-     *  make it stutter. He holds his last pose until the first screen is drawn underneath (LaunchPlugin.ready), then
-     *  the layer fades out. Fix 2026-11-15 (owner's phone showed an empty violet screen): the file took longer than the
-     *  1.2 s it was given on a real phone's first start, and the fallback was a clear icon. Now it is given 4 s, and if it
-     *  still is not ready (or Android 8 and older) the still character pops in instead, so the screen is never empty. */
+    /** The opening (owner 2026-11-14: "make a motion animation that's premium"; every web-drawn opening lagged,
+     *  because the phone is busiest exactly while the app starts). Android 9+: res/raw/opening.webp, the rigged
+     *  character pre-rendered at 60 fps (scripts/opening_anim.py --webp), plays on a full-screen layer on the splash
+     *  colour as an AnimatedImageDrawable: its frames are decoded on a worker thread and drawn by the render thread, so
+     *  the app starting underneath cannot make it stutter, and it opens in milliseconds (the Lottie version took 1.5-3 s
+     *  to parse and stuttered on the owner's phone, 2026-11-15). He holds his last pose until the first screen is drawn
+     *  underneath (LaunchPlugin.ready), then the layer fades out. Not ready within 2.5 s, or Android 8 and older: the
+     *  still character instead, so the screen is never empty. */
     private static volatile boolean firstUp = false;
     static void firstScreen() { firstUp = true; }
-    private static final long WAIT_PICTURE = 4000, MAX_SPLASH = 6000, MAX_OPENING = 9000;
-    private volatile LottieComposition opening = null;
+    private static final long WAIT_PICTURE = 2500, MAX_SPLASH = 6000, MAX_OPENING = 9000;
+    private volatile AnimatedImageDrawable opening = null;
     private volatile boolean noPicture = false;
 
     /** The app address a widget tap asked for, once (DailyPlugin.takeLaunchHash). */
@@ -72,14 +69,13 @@ public class AppActivity extends BridgeActivity {
         if (animate) {
             new Thread(() -> {
                 try {
-                    LottieResult<LottieComposition> r = LottieCompositionFactory.fromRawResSync(this, R.raw.opening);
-                    if (r.getValue() != null) opening = r.getValue();
+                    Drawable d = ImageDecoder.decodeDrawable(ImageDecoder.createSource(getResources(), R.raw.opening));
+                    if (d instanceof AnimatedImageDrawable) opening = (AnimatedImageDrawable) d;
                     else noPicture = true;
-                    Log.i("AyahOpening", "parsed in " + (SystemClock.uptimeMillis() - start) + " ms, ok=" + (r.getValue() != null)
-                        + (r.getException() != null ? " " + r.getException() : ""));
+                    Log.i("AyahOpening", "ready in " + (SystemClock.uptimeMillis() - start) + " ms, ok=" + (opening != null));
                 } catch (Exception | OutOfMemoryError e) {
                     noPicture = true;
-                    Log.w("AyahOpening", "could not parse the opening", e);
+                    Log.w("AyahOpening", "could not open the opening", e);
                 }
             }, "opening").start();
         } else {
@@ -141,19 +137,17 @@ public class AppActivity extends BridgeActivity {
         }, 600);
     }
 
-    private void playOpening(LottieComposition pic, long start) {
+    private void playOpening(AnimatedImageDrawable pic, long start) {
         final ViewGroup decor = (ViewGroup) getWindow().getDecorView();
         final FrameLayout layer = new FrameLayout(this);
         layer.setBackgroundColor(getResources().getColor(R.color.splash_background, getTheme()));
         layer.setClickable(true);
-        final LottieAnimationView view = new LottieAnimationView(this);
+        final ImageView view = new ImageView(this);
         view.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        view.setRenderMode(RenderMode.HARDWARE);
-        view.setAsyncUpdates(AsyncUpdates.ENABLED);
-        view.setComposition(pic);
-        view.setRepeatCount(0);
+        view.setImageDrawable(pic);
+        pic.setRepeatCount(0); // once, then he holds the last frame
         DisplayMetrics m = getResources().getDisplayMetrics();
-        float ratio = (float) pic.getBounds().height() / Math.max(1, pic.getBounds().width());
+        float ratio = (float) pic.getIntrinsicHeight() / Math.max(1, pic.getIntrinsicWidth());
         int w = (int) Math.min(m.widthPixels * 0.94f, m.heightPixels * 0.66f / ratio);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, (int) (w * ratio), Gravity.CENTER);
         layer.addView(view, lp);
@@ -161,12 +155,11 @@ public class AppActivity extends BridgeActivity {
         decor.addView(layer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
         final boolean[] played = { false };
-        view.addAnimatorListener(new AnimatorListenerAdapter() {
+        pic.registerAnimationCallback(new Animatable2.AnimationCallback() {
             @Override
-            public void onAnimationEnd(Animator a) { played[0] = true; }
+            public void onAnimationEnd(Drawable d) { played[0] = true; }
         });
-        view.playAnimation();
-        // he holds his last pose until the first screen is drawn underneath, then the layer fades out
+        pic.start(); // decoded on a worker thread and drawn by the render thread: a busy app start cannot make it stutter
         final Handler h = new Handler(Looper.getMainLooper());
         h.postDelayed(new Runnable() {
             @Override
@@ -178,7 +171,7 @@ public class AppActivity extends BridgeActivity {
                 }
                 layer.animate().alpha(0f).setDuration(250).setInterpolator(new DecelerateInterpolator())
                     .withEndAction(() -> {
-                        view.cancelAnimation();
+                        pic.stop();
                         decor.removeView(layer);
                         opening = null;
                     }).start();

@@ -7,7 +7,9 @@ and lean are springs driven by targets and impulses (take-off, landing), so over
 physics. 2.25 s at 60 fps: pops out of the ground surprised with arms up → lands (squash, dust) → smiles, blinks →
 crouches → leaps with star eyes, arms up → lands in gold sparkles → waves, head tilted, and holds that pose.
 
-The app plays it as a vector Lottie made from this rig by scripts/opening_lottie.py (res/raw/opening.json, owner pick
+The app plays it as an animated WebP (--webp android/app/src/main/res/raw/opening.webp; since 2026-11-15 the Lottie stuttered
+and loaded slowly on the phone). The rig reads figure.ts from before the in-app arm rig (FIGURE_TS=… pointing at
+`git archive 6d490c12^ src`), as the rig's clip ids moved. Earlier: a vector Lottie by scripts/opening_lottie.py (owner pick
 2026-11-15). Here each frame is SVG rendered by Chromium, for previews:
 
   python3 scripts/opening_anim.py --webp OUT.webp      # an animated WebP with alpha
@@ -15,6 +17,7 @@ The app plays it as a vector Lottie made from this rig by scripts/opening_lottie
   --version hello | wake | dua | flip | catch           # which animation (VERSIONS; default catch, owner pick 2026-11-14)"""
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -32,7 +35,7 @@ process.stdout.write(figureSvg(normalize({ ...DEFAULT, face: 1 }), { still: true
 def actor_svg():
     with tempfile.TemporaryDirectory() as d:
         ts = Path(d) / 'dump.ts'
-        ts.write_text(DUMP % repr(str(ROOT / 'src' / 'ui' / 'figure.ts')))
+        ts.write_text(DUMP % repr(os.environ.get('FIGURE_TS') or str(ROOT / 'src' / 'ui' / 'figure.ts')))
         return subprocess.run(['node', '--experimental-strip-types', '--no-warnings', str(ts)],
                               check=True, capture_output=True, text=True).stdout
 
@@ -1207,7 +1210,7 @@ def main():
                             '-crf', '18', out], check=True)
             return
         if '--webp' not in sys.argv:
-            sys.exit('use --preview OUT.mp4 or --webp OUT.webp (the app uses scripts/opening_lottie.py)')
+            sys.exit('use --preview OUT.mp4 or --webp OUT.webp (the app plays res/raw/opening.webp)')
         OUT = Path(sys.argv[sys.argv.index('--webp') + 1])
         svgs = frames(key)
         render(svgs, d, None, key)
