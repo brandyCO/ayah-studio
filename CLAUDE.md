@@ -2244,12 +2244,16 @@ duas/reflections section in Me.
       Wake up, Du'a, Backflip and **Catch the Light** (owner pick 2026-11-14, the default; 2.6 s at 60 fps): pops up → a gold
       Light star appears above, he looks up at it, wide-eyed, points → crouches and leaps → catches it in cupped hands at
       the top of the jump → holds it up, glowing → it bursts into light, arms thrown up → lands in sparkles, arms open, and
-      holds. Adult faces only (no blush, no star eyes on a man). Frames are SVG rendered by Chromium, encoded as an animated
-      WebP with alpha (`res/raw/opening.webp`, ~5 MB; `--preview OUT.mp4` renders a video). Android 9+: the system splash is the plain
-      splash colour (a clear icon, `drawable-v28/splash_anim.xml`) while `AppActivity` decodes the picture off the main
-      thread (≤ 0.7 s), then a full-screen layer on the same colour plays it with `AnimatedImageDrawable` (its own decode
-      and render threads, so start-up can't make it stutter); he holds his last pose until the first screen is drawn
-      (`LaunchPlugin.ready`, ≤ 7 s), then the layer fades out over 0.25 s. Android 8 and older: the still splash picture
+      holds. Adult faces only (no blush, no star eyes on a man); arms from the shoulders, the robe 86 % wide, like the app
+      icon (owner 2026-11-15). **Played as a Lottie** (owner pick 2026-11-15): `scripts/opening_lottie.py` turns the rig into
+      `res/raw/opening.json` (~3.5 MB, ~0.45 MB in the APK) — head, body and neck drawn once and moved by keyframed
+      transforms, faces cross-faded by opacity (blink and mouth as scale keys), arms, sparkles and the star a vector layer per
+      frame; `scripts/svg2lottie.py` converts our SVG (clips resolved with shapely, so no masks). Previews: `--preview
+      OUT.mp4` / `--webp OUT.webp` in `opening_anim.py`. Android 9+: the system splash is the plain splash colour (a clear
+      icon, `drawable-v28/splash_anim.xml`) while `AppActivity` parses the Lottie off the main thread (≤ 1.2 s), then a
+      full-screen layer on the same colour plays it with lottie-android (hardware rendering, async updates); he holds his
+      last pose until the first screen is drawn (`LaunchPlugin.ready`, ≤ 7 s), then the layer fades out over 0.25 s.
+      Android 8 and older: the still splash picture
       (`drawable/splash_anim.xml` = `splash_icon.webp`) until the first screen
       **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
       applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and

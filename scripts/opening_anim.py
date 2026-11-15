@@ -7,11 +7,10 @@ and lean are springs driven by targets and impulses (take-off, landing), so over
 physics. 2.25 s at 60 fps: pops out of the ground surprised with arms up → lands (squash, dust) → smiles, blinks →
 crouches → leaps with star eyes, arms up → lands in gold sparkles → waves, head tilted, and holds that pose.
 
-Each frame is SVG rendered by Chromium (transparent), then encoded as an animated WebP with alpha into
-android/app/src/main/res/raw/opening.webp. AppActivity plays it with AnimatedImageDrawable (Android 9+), which decodes
-and draws on its own threads, full screen on the splash colour, so the app starting up can't make it stutter.
+The app plays it as a vector Lottie made from this rig by scripts/opening_lottie.py (res/raw/opening.json, owner pick
+2026-11-15). Here each frame is SVG rendered by Chromium, for previews:
 
-  python3 scripts/opening_anim.py            # writes res/raw/opening.webp
+  python3 scripts/opening_anim.py --webp OUT.webp      # an animated WebP with alpha
   python3 scripts/opening_anim.py --preview OUT.mp4   # a phone-screen video on the splash colour
   --version hello | wake | dua | flip | catch           # which animation (VERSIONS; default catch, owner pick 2026-11-14)"""
 import json
@@ -23,7 +22,6 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / 'android' / 'app' / 'src' / 'main' / 'res' / 'raw' / 'opening.webp'
 SPLASH_BG = '#5b3fbf'   # values/ic_launcher_background.xml splash_background
 
 DUMP = '''import { figureSvg, DEFAULT, normalize } from %s;
@@ -750,7 +748,8 @@ def blink_at(V, t):
     return v
 
 
-def frame(V, P, F, i):
+def frame(V, P, F, i, parts=False):
+    """One frame as SVG; with parts=True its pieces and transform numbers instead (for the Lottie export)."""
     t = F['t']
     s = V.pop(t)
     h = V.height(t)
@@ -830,12 +829,24 @@ def frame(V, P, F, i):
                 r = 9 * math.sin(math.pi * clamp(du)) * (1.0 if j % 2 else 0.7)
                 if r > 0.3:
                     fx_layer += sparkle(x, y, r, 40 * du + j * 20, 1.0)
+    front = V.front(t, c)
+    if parts:
+        assert not spin, 'spin is not exported to Lottie yet'
+        fw = {}
+        for f, w in face_at(V, t):
+            f = 'joy' if f == 'star' else f
+            fw[f] = fw.get(f, 0.0) + w
+        return dict(fw=fw, blink=max(0.06, blink_at(V, t)), mouth_open=V.mouth(t), look=(lx, ly),
+                    under=shadow + fx_layer, mid=V.inbody(t, c) + arm_l + arm_r, faces=faces, front=front,
+                    root=dict(a=(fx, fy), p=(fx, fy - h - fl), r=lean, s=(s * sx, s * sy)),
+                    head=dict(a=(100, 140), p=(100, 140 + hl), r=F['tilt'], s=(hsx, hsy)),
+                    neck=dict(a=(0, 0), p=(0, hl * 0.5), r=0.0, s=(1.0, 1.0)))
     body = (f'<g transform="{root}">'
             f'<g transform="{neck_tf}">{P["neck"]}</g><g transform="translate(100 0) scale({BODY_W} 1) translate(-100 0)">{P["body"]}</g>{V.inbody(t, c)}{arm_l}{arm_r}'
             f'<g transform="{head_tf}">{P["head"]}{faces}</g></g>')
     vx, vy, vw, vh = VB
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx} {vy} {vw} {vh}" width="{vw * PX}" '
-            f'height="{vh * PX}">{shadow}{fx_layer}{body}{V.front(t, c)}</svg>')
+            f'height="{vh * PX}">{shadow}{fx_layer}{body}{front}</svg>')
 
 
 def render(frames_svg, outdir, bg=None):
@@ -872,6 +883,9 @@ def main():
                             '-vf', 'tpad=stop_mode=clone:stop_duration=1,format=yuv420p', '-c:v', 'libx264',
                             '-crf', '18', out], check=True)
             return
+        if '--webp' not in sys.argv:
+            sys.exit('use --preview OUT.mp4 or --webp OUT.webp (the app uses scripts/opening_lottie.py)')
+        OUT = Path(sys.argv[sys.argv.index('--webp') + 1])
         svgs = frames(key)
         render(svgs, d)
         ims = [Image.open(f'{d}/f{i:04d}.png').convert('RGBA') for i in range(len(svgs))]

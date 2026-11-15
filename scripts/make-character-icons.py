@@ -543,12 +543,12 @@ def front_parts(top, bot, glow, edge, face):
     }
 
 # Android 9+ (API 28) shows the launch screen as the plain splash colour (a clear icon, drawable-v28/splash_anim.xml):
-# the character then comes alive in the app's own opening (scripts/opening_anim.py → res/raw/opening.webp, played by
+# the character then comes alive in the app's own opening (scripts/opening_lottie.py → res/raw/opening.json, played by
 # AppActivity). Older phones keep the still splash picture.
 def splash_anim(parts):
     (RES / 'drawable' / 'splash_anim.xml').write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n<!-- Android 8 and older: the still splash picture '
-        '(Android 9+ uses drawable-v28/splash_anim.xml, a clear icon, then res/raw/opening.webp) -->\n'
+        '(Android 9+ uses drawable-v28/splash_anim.xml, a clear icon, then res/raw/opening.json) -->\n'
         '<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/splash_icon"/>\n')
     out = RES / 'drawable-v28' / 'splash_anim.xml'
     out.parent.mkdir(parents=True, exist_ok=True)
