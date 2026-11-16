@@ -9,7 +9,7 @@ export const GOOGLE_WEB_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_WEB_CLIE
 
 /** Google OAuth iOS client ID (public), for "Sign in with Google" in the iPhone app (docs/ios.md). Without it the
  *  iPhone app offers Sign in with Apple only. Its reversed form is the app's URL scheme (set by the iOS build). */
-export const GOOGLE_IOS_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID || '';
+export const GOOGLE_IOS_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com';
 
 /** The public web app (GitHub Pages): links shared from the Android app point here. */
 export const PUBLIC_URL = 'https://brandyco.github.io/ayah-studio/';

@@ -28,8 +28,9 @@ service. Local notifications: iOS keeps the 64 soonest, so prayer alerts are set
 every start); prayer sounds `prayer_adhan.caf` (the adhan's first 29.5 s: iOS plays ≤ 30 s) and `prayer_chime.caf`.
 
 Sign-in: **Sign in with Apple** (App Store guideline 4.8) natively, then Supabase `signInWithIdToken` (provider
-`apple`, hashed nonce); Apple's name is saved to the account the first time. Google on the iPhone only when the repo
-variable `GOOGLE_IOS_CLIENT_ID` is set (its reversed id becomes the URL scheme in the build).
+`apple`, hashed nonce); Apple's name is saved to the account the first time. Google on the iPhone with the iOS client
+`674921848576-8oie…` (Google Cloud project "Ayah Studio"; default in `src/cloud/config.ts` and ios.yml, the repo variable
+`GOOGLE_IOS_CLIENT_ID` overrides it; its reversed id becomes the URL scheme in the build).
 
 Files kept by scripts (run again after changes):
 - `python3 scripts/make-character-icons.py --ios`: app icons + launch picture
@@ -56,7 +57,7 @@ Files kept by scripts (run again after changes):
 7. Run it: https://github.com/brandyCO/ayah-studio/actions/workflows/ios.yml → Run workflow. ~20 min later the build is
    in App Store Connect → the app → **TestFlight**: add yourself to an Internal Testing group, install **TestFlight**
    from the App Store on the iPhone, open the invite.
-8. Optional, Google sign-in on the iPhone: https://console.cloud.google.com/apis/credentials (project "Ayah Studio") →
+8. Done 2026-11-16 (iOS client in project "Ayah Studio", already in the code). For reference, Google sign-in on the iPhone: https://console.cloud.google.com/apis/credentials (project "Ayah Studio") →
    Create credentials → OAuth client ID → **iOS** → Bundle ID `com.brandyco.ayahstudio` → copy the client ID → GitHub
    variable `GOOGLE_IOS_CLIENT_ID`, and add it in Supabase → Google provider → Client IDs (after the web one,
    comma-separated).
