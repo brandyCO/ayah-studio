@@ -54,7 +54,7 @@ notifications** (Firebase Cloud Messaging is how Android delivers push; free, no
 | QR codes (wall) | `qrcode` (MIT) | |
 
 **Project (created 2026-10-08):** `jposubjybzstfmnngews`, region `ap-northeast-1`, Postgres 17,
-free plan. Site URL `https://brandyco.github.io/ayah-studio/`; redirect allow-list: that site,
+free plan. Site URL `https://ayah-studio.brandlift-888.workers.dev/` (was GitHub Pages until the repo went private); redirect allow-list: that site,
 `http://localhost:5173/**`, `http://localhost:4173/**`, `https://localhost/**` (the Android app).
 The publishable key and URL are in `src/cloud/config.ts` (public by design). The **secret /
 service-role key never goes into the app or the repo.**

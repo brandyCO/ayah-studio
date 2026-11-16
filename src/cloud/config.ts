@@ -11,5 +11,5 @@ export const GOOGLE_WEB_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_WEB_CLIE
  *  iPhone app offers Sign in with Apple only. Its reversed form is the app's URL scheme (set by the iOS build). */
 export const GOOGLE_IOS_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com';
 
-/** The public web app (GitHub Pages): links shared from the Android app point here. */
-export const PUBLIC_URL = 'https://brandyco.github.io/ayah-studio/';
+/** The public web app (Cloudflare, worker `ayah-studio`, deployed by pages.yml): links shared from the apps point here. */
+export const PUBLIC_URL = 'https://ayah-studio.brandlift-888.workers.dev/';

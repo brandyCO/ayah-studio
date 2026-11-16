@@ -3,11 +3,7 @@ name: Database rules
 # Row-level security tests (pgTAP) for supabase/migrations, run against a local Supabase database
 # started by the Supabase CLI in the runner — no access token, the live project is never touched.
 on:
-  push:
-    branches: [main]
-    paths: ['supabase/**', '.github/workflows/supabase.yml']
-  pull_request:
-    paths: ['supabase/**', '.github/workflows/supabase.yml']
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:
@@ -39,7 +35,7 @@ jobs:
   # applied ones are recorded in supabase_migrations.schema_migrations and skipped next time.
   deploy:
     needs: rls
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

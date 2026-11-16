@@ -99,7 +99,7 @@ PRIVATE BY DESIGN
 
 ## 3. App content (Policy → App content)
 
-- **Privacy policy:** https://brandyco.github.io/ayah-studio/privacy.html
+- **Privacy policy:** https://ayah-studio.brandlift-888.workers.dev/privacy.html
 - **Ads:** No ads.
 - **App access:** All features work without signing in, except Ranks, friends and sync. Choose "All or some functionality is restricted" and say that these need a Google account. Play's reviewers can sign in with any Google account, so no test login is needed.
 - **Target audience:** 13–15, 16–17, 18 and over. Do not tick the under-13 groups. The Kids space is used by a parent on their own phone. Ticking a child age group would put the app under the Families policy (see `docs/kids.md` §5). When asked "Could your app unintentionally appeal to children?", answer No, and explain that the Kids space is behind a parent gate and is used together with a parent.

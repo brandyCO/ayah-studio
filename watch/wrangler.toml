@@ -1,0 +1,16 @@
+# Free-plan watch (watch.js): how busy the app is (every 10 min) and how close the free plans are (every hour).
+# Deployed by .github/workflows/watch.yml, which also sets the secrets. Cloudflare's free plan: cron triggers and
+# waiting on fetches are free; the work itself is a few milliseconds of CPU.
+name = "ayah-studio-watch"
+main = "watch.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+[vars]
+PROJECT_REF = "jposubjybzstfmnngews"
+REPO = "brandyCO/ayah-studio"
+OWNER = "brandyCO"
+LINE = "500"
+
+[triggers]
+crons = ["3-59/10 * * * *", "17 * * * *"]

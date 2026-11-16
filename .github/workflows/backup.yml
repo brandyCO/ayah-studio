@@ -6,9 +6,9 @@
 # so a backup that would not restore fails loudly (and opens an issue). How to restore: docs/backup.md.
 name: Database backup
 on:
-  schedule:
-    - cron: '15 1 * * *'
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
+
 permissions:
   contents: read
   issues: write

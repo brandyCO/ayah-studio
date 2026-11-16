@@ -6,10 +6,7 @@ name: Load test
 # mixed (scripts/loadtest/run.sh). The table lands in the run's summary. A call averaging over the budget fails a pull
 # request that changes the database, and on the weekly run opens an issue "Load: …" (closed again when it passes).
 on:
-  pull_request:
-    paths: ['supabase/migrations/**', 'scripts/loadtest/**', '.github/workflows/loadtest.yml']
-  schedule:
-    - cron: '30 2 * * 0' # Sundays 02:30 UTC
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
     inputs:
       players: { description: 'Players', default: '10000' }

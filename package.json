@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/pack-words.mjs",
     "preview": "vite preview",
     "check": "node scripts/check-text-modes.mjs",
     "size": "node scripts/check-size.mjs",
