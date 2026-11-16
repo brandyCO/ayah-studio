@@ -749,8 +749,10 @@ Pro and a load test come later, when the owner decides to pay).
       also adds the address to Supabase Auth's redirect allow-list); `PUBLIC_URL`, og tags, privacy link, proxy
       `ALLOWED_ORIGINS` follow it. GitHub Pages deploys only while the repo is public. busy.yml + limits.yml move to the
       Cloudflare Worker `ayah-studio-watch` (`watch/`, crons every 10 min + hourly, Supabase Management API SQL, issues via
-      the secret `ALERTS_GITHUB_TOKEN`; `.github/workflows/watch.yml`, manual). Still to do: every workflow manual-only,
-      uptime.yml dropped (Sentry uptime), the owner flips the repo
+      the secret `ALERTS_GITHUB_TOKEN`; `.github/workflows/watch.yml`, manual). Every workflow is manual only
+      (`workflow_dispatch`; no push / PR / schedule; ask the owner before any run — after a merge: pages.yml to deploy the site,
+      supabase.yml when migrations changed, proxy.yml when `proxy/` changed); busy.yml, limits.yml and uptime.yml are gone
+      (Sentry uptime monitors replace uptime.yml; backup.yml runs only by hand). Still to do: the owner flips the repo
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings

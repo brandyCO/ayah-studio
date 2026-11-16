@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:

@@ -4,10 +4,8 @@ name: Launch check
 # Builds the debug APK, cold-starts it twice on a 360 dp wide screen, and pushes the screen recordings, frame grabs
 # and the opening's log lines to the branch `ci-recordings` (artifact downloads need a GitHub sign-in).
 on:
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
-  push:
-    branches: [claude/project-thread-1u7bur]
-    paths: [android/**, .github/workflows/launch-check.yml, scripts/launch-record.sh]
 
 permissions:
   contents: write

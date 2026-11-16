@@ -3,10 +3,8 @@ name: WebKit check
 # Opens the web app in WebKit as an iPhone (owner report 2026-11-16: a green screen on iPhones): the live site and
 # this branch's build. Logs and screenshots go to the branch `ci-recordings` as `webkit-<sha8>/`.
 on:
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
-  push:
-    branches: [claude/project-thread-1u7bur]
-    paths: [src/**, index.html, public/sw.js, vite.config.ts, .github/workflows/webkit-check.yml, scripts/webkit-check.mjs]
 
 permissions:
   contents: write

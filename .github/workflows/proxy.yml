@@ -6,9 +6,7 @@ name: Deploy edge proxy
 # pasted by hand (proxy/README.md). The API keys stay Cloudflare secrets and are never in the repo.
 
 on:
-  push:
-    branches: [main]
-    paths: ['proxy/**', '.github/workflows/proxy.yml']
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:
