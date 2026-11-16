@@ -7,7 +7,7 @@ Each icon is drawn as two parts: `back` (sky, rays, nebula, sparkles: full bleed
 star). Android adaptive layers: background = back on the 108 dp canvas (its 512 units = the 72 dp visible area,
 the base fill carried on under the parallax margin); foreground = front at 0.92 so it stays inside the 66 dp safe
 circle; one monochrome (marker outline + character + star) for Android 13 themed icons. Legacy 192 px square +
-round icons for Android 7, web previews in public/icons/, public/icon.svg + icon-180.png (sunset B), and the
+round icons for Android 7, web previews in public/icons/, public/icon.svg + icon-b-{180,192,512}.png, and the
 manifest's activity-aliases between the `theme icons` markers (AppIcons.java turns one on).
 
 Run: python3 scripts/make-character-icons.py   (Pillow, Node ≥ 22 for the figures, Chromium like make-icons.py)
@@ -569,7 +569,8 @@ def main():
         # main = the default theme's B, at every density (shortcuts and the splash use it too)
         big = make('main', b_icon(*THEME_B['emerald']), tmp, DENS_ALL)
         big.save(ROOT / 'resources' / 'icon-1024.png', optimize=True)
-        save(big, ROOT / 'public' / 'icon-180.png', 180, fmt='PNG')
+        for n in (180, 192, 512):  # web app icons (iPhone home screen, manifest); a new name makes phones fetch them again
+            save(big, ROOT / 'public' / f'icon-b-{n}.png', n, fmt='PNG')
         save(big, pub / 'theme-emerald.webp', 128, rx=28)
         UID[0] = 0
         (ROOT / 'public' / 'icon.svg').write_text(
