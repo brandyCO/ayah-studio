@@ -1975,3 +1975,7 @@ html.easy .tab-btn svg { width: 28px; height: 28px; }
   border-radius: 50%; color: #fff; background: #12a594; }
 .off-pill { display: inline-flex; align-items: center; gap: 3px; margin-inline-start: auto; padding: 1px 7px; border-radius: var(--r-pill);
   font-size: var(--fs-xs); font-weight: 700; color: var(--accent); background: color-mix(in srgb, #12a594 14%, transparent); }
+
+/* A tab's earlier screen shown while its fresh copy is built underneath (main.ts route()). */
+.screen-building { position: absolute; inset: 0 0 auto 0; visibility: hidden; pointer-events: none; }
+.screen-ghost { pointer-events: none; }
