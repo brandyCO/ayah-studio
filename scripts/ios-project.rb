@@ -13,11 +13,11 @@ def file_in(group, name)
   group.files.find { |f| f.path == name } || group.new_reference(name)
 end
 
-%w[AyahBridgeViewController.swift AppIconPlugin.swift MediaScanPlugin.swift ExportServicePlugin.swift SpeechPlugin.swift HapticPlugin.swift].each do |n|
+%w[AyahBridgeViewController.swift AppIconPlugin.swift MediaScanPlugin.swift ExportServicePlugin.swift SpeechPlugin.swift HapticPlugin.swift LaunchPlugin.swift].each do |n|
   ref = file_in(group, n)
   target.source_build_phase.add_file_reference(ref, true)
 end
-%w[prayer_adhan.caf prayer_chime.caf PrivacyInfo.xcprivacy].each do |n|
+%w[prayer_adhan.caf prayer_chime.caf PrivacyInfo.xcprivacy opening.webp].each do |n|
   ref = file_in(group, n)
   target.resources_build_phase.add_file_reference(ref, true)
 end
