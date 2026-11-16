@@ -1,0 +1,168 @@
+name: iPhone app
+
+# The Capacitor iPhone app (ios/, docs/ios.md), built on GitHub's macOS runners, so no Mac is needed.
+#  - simulator: every change. Builds the app for the iPhone simulator (no signing), starts it on a simulated iPhone
+#    and keeps two screenshots (Actions → this run → Artifacts → iphone-screenshots), so a broken iPhone build is
+#    seen at once.
+#  - testflight: main (and by hand) once the Apple account is set up: archives the app, signs it with the App Store
+#    Connect API key (Xcode makes and keeps the certificate and profile itself) and uploads it to App Store Connect,
+#    where it appears in TestFlight after Apple's processing (~10–30 min). Needs (Settings → Secrets and variables →
+#    Actions): secrets APP_STORE_CONNECT_KEY (the .p8 file's text), APP_STORE_CONNECT_KEY_ID,
+#    APP_STORE_CONNECT_ISSUER_ID; variable APPLE_TEAM_ID; optional variable GOOGLE_IOS_CLIENT_ID (Google sign-in
+#    on the iPhone; without it only Sign in with Apple is offered). Steps for the owner: docs/ios.md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - 'capacitor.config.ts'
+      - 'scripts/ios-project.rb'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
+          VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
+          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
+      # Like the APK: every mushaf page font ships in the app; the aligned word times are fetched when needed.
+      - run: rm -rf dist/data/words
+      - run: npx cap sync ios
+      - name: Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_[0-9]*.app | grep -iv beta | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build | tail -40
+      - name: Start it on a simulated iPhone
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          ios=[(k,v) for k,v in d.items() if 'iOS' in k]
+          ios.sort(key=lambda kv: [int(x) for x in kv[0].rsplit('iOS-',1)[1].split('-')])
+          for k,v in reversed(ios):
+              for dev in v:
+                  if dev['name'].startswith('iPhone') and 'Pro Max' not in dev['name'] and 'SE' not in dev['name']:
+                      print(dev['udid']); sys.exit()
+          ")
+          echo "Simulator $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          APP=$(ls -d "$RUNNER_TEMP"/dd/Build/Products/Debug-iphonesimulator/App.app)
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" com.brandyco.ayahstudio
+          mkdir -p shots
+          sleep 12; xcrun simctl io "$UDID" screenshot shots/1-launch.png
+          sleep 20; xcrun simctl io "$UDID" screenshot shots/2-after-30s.png
+          # still running (not crashed)?
+          xcrun simctl spawn "$UDID" launchctl list | grep -q com.brandyco.ayahstudio && echo "App is running" || { echo "::error::The app is not running on the simulator (crashed?)"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iphone-screenshots
+          path: shots/
+          if-no-files-found: ignore
+
+  testflight:
+    needs: simulator
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+      ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      TEAM: ${{ vars.APPLE_TEAM_ID }}
+      GOOGLE_IOS: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
+    steps:
+      - name: Apple account set up?
+        id: ready
+        run: |
+          if [ -n "$ASC_KEY" ] && [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER" ] && [ -n "$TEAM" ]; then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::TestFlight upload skipped: the Apple account secrets are not set yet (docs/ios.md)."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.ok
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.ok
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.ready.outputs.ok
+        run: npm ci
+      - if: steps.ready.outputs.ok
+        run: npm run build
+        env:
+          VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
+          VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
+          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
+      - if: steps.ready.outputs.ok
+        run: rm -rf dist/data/words && npx cap sync ios
+      - name: Archive, sign and upload to App Store Connect
+        if: steps.ready.outputs.ok
+        run: |
+          set -o pipefail
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_[0-9]*.app | grep -iv beta | sort -V | tail -1)"
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$ASC_KEY" > "$KEY"
+          KEY_ID=$(printf %s "$ASC_KEY_ID" | tr -d '[:space:]'); ISSUER=$(printf %s "$ASC_ISSUER" | tr -d '[:space:]'); TEAM=$(printf %s "$TEAM" | tr -d '[:space:]')
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER")
+          GOOGLE=()
+          if [ -n "$GOOGLE_IOS" ]; then
+            ID=$(printf %s "$GOOGLE_IOS" | tr -d '[:space:]')
+            GOOGLE=(GOOGLE_IOS_CLIENT_ID="$ID" GOOGLE_REVERSED_CLIENT_ID="com.googleusercontent.apps.${ID%.apps.googleusercontent.com}")
+          fi
+          # Build numbers only go up: the run number (plus 100, past any build uploaded by hand).
+          BUILD=$((GITHUB_RUN_NUMBER + 100))
+          VERSION=$(node -p "require('./package.json').iosVersion || '1.0.0'")
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            "${AUTH[@]}" DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD" MARKETING_VERSION="$VERSION" "${GOOGLE[@]}" archive | tail -60
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}" | tail -40
+          echo "Uploaded version $VERSION ($BUILD). It shows in App Store Connect → TestFlight after Apple's processing." | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$KEY"

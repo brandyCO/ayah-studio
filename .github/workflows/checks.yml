@@ -1,8 +1,8 @@
 name: Checks
 
 # Runs on every pull request before it is merged: type check + build, the first-load size budget,
-# the Quran text guard (every ayah present, reviewed copies unchanged) and the robot smoke test
-# (main screens open in English and Arabic with no errors, raw keys or sideways scrolling).
+# the Quran text guard (every ayah present, reviewed copies unchanged), every interface translation complete and the robot smoke test
+# (main screens open in six languages with no errors, raw keys or sideways scrolling).
 on:
   pull_request:
   push:
@@ -27,6 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/check-quran.mjs
+      - run: node scripts/check-i18n.mjs
       - run: npm run build
       - run: node scripts/check-size.mjs
       - name: Robot smoke test

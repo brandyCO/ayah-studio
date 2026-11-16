@@ -11,8 +11,9 @@ import { currentTranslation, translationInfo } from '../data/translations';
 import { tabBar } from './tabs';
 import { h, skeletonRows } from './dom';
 import { lastRead } from './prefs';
+import { listenReciterId, offlineSurahs } from '../data/offlineMarks';
 import { addSearch, clearRecentPages, clearSearches, recentPages, recentSearches } from '../data/history';
-import { errMsg, locale, surahName, t } from '../i18n';
+import { errMsg, locale, surahMeaning, surahName, t } from '../i18n';
 
 function ago(at: number) {
   const s = (Date.now() - at) / 1000;
@@ -138,13 +139,17 @@ export async function showSurahList(root: HTMLElement, focus = false): Promise<(
     }
   }
 
+  // Ready offline: surahs whose recitation (in the voice the Listen tab plays) is on this phone.
+  const rid = listenReciterId();
+  const offline = rid ? offlineSurahs(rid) : new Set<number>();
+  const offMark = () => h('span', { class: 'off-mark', title: t('list.offline'), 'aria-label': t('list.offline') }, icon('check', 12));
   const surahRow = (s: SurahMeta) =>
     h('li', {},
       h('a', { href: `#/s/${s.n}`, class: 'surah-row' },
         h('span', { class: 'surah-num' }, String(s.n)),
         h('span', { class: 'surah-names' },
-          h('strong', {}, s.en),
-          h('span', { class: 'muted' }, t('list.surahInfo', { tr: s.tr, n: s.ayahs }))),
+          h('strong', {}, s.en, offline.has(s.n) ? offMark() : ''),
+          h('span', { class: 'muted' }, t('list.surahInfo', { tr: surahMeaning(s), n: s.ayahs }))),
         h('span', { class: 'surah-ar', lang: 'ar', dir: 'rtl' }, s.ar)));
 
   /** A row that opens surah:ayah: badge, title, "Al-Baqara · 2:142 · Page 22". */

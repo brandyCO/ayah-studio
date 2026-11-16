@@ -1,6 +1,6 @@
 // Learn tab strings (the juz gardens and lessons), loaded with those screens so the app's first
 // download stays small. English is the source; Arabic falls back to it per key. Interface words only.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'learn.title': 'Learn',
@@ -206,6 +206,9 @@ const en = {
   'learn.knowTitle': 'Already know some?',
   'learn.lockedSub': 'Finish the steps before this one first.',
   'learn.more': 'More',
+  'learn.lessonOpts': 'Lesson options',
+  'learn.stages': 'Steps for this surah',
+  'learn.showAs': 'Show',
   'learn.newSub': 'Meaning, listen, repeat, then say it from memory.',
   'learn.pickSurah': 'Choose a surah',
   'learn.practise': 'Practise again',
@@ -275,6 +278,8 @@ const en = {
   'learn.daySet': 'Daily lessons',
   'learn.daySetSub': 'How many lessons a day? This is also your Learn goal on Me, with its own chest.',
   'learn.dayOff': 'No target',
+  'learn.dayToday': 'today',
+  'learn.dayGoal': 'goal',
   'learn.dayN': '{n} a day',
   'learn.streakAria': '{n} day streak',
   'learn.tasmiSub': 'The whole surah from memory. It grows the tree in full.',
@@ -282,6 +287,7 @@ const en = {
   'learn.treeGrown': 'Fully grown',
   'learn.treeGrownShort': 'Grown',
   'learn.treeOf': '{name} tree',
+  'learn.treeTip': 'Your {name} tree. It grows with every lesson you pass here.',
   'learn.unitOptions': '{name}: options',
   'learn.unitPart': 'SURAH {n} · PART {k} OF {of}',
   'learn.unitSub': 'Ayat {ayat} · {done} of {of} done',
@@ -311,13 +317,16 @@ const en = {
   'learn.followSkipped': 'Words skipped or said differently show in red. Keep going.',
   'learn.followEnd': 'You reached the end.',
   'learn.followQuiet': 'The microphone stopped after a quiet moment. Tap Follow my voice to go on.',
+  'learn.followLouder': 'I didn\'t quite hear that word. No mistake counted: say it a little louder.',
+  'learn.beta': 'Beta',
+  'learn.followReport': 'Voice heard me wrong? Tell us',
   'learn.followDenied': 'The microphone is off for Ayah Studio. Allow it in the phone settings.',
   'learn.followFailed': 'Speech recognition is not available on this device.',
   'learn.followNoArabic': "Your phone's speech recognition has no Arabic yet. Open the Google app (or Settings → Languages → Speech) and add Arabic for voice typing. The button is hidden on this phone for now and comes back in a few days to try again.",
   'learn.followFailedCode': 'Follow my voice could not start on this phone (code {code}), so its button is hidden here for now. You can still recite and check yourself.',
   'learn.micBusy': 'Another app is using the microphone. Close it and try again.',
-  'learn.followNote': 'Your phone turns your voice into text to follow along. Nothing is kept. Tap words it got wrong when the text shows.',
-  'learn.followNoteServer': 'Each part you recite is sent to our server, which follows the words and checks the harakat, then forgets it. Words said with another haraka get an orange wavy line. Nothing is kept. Tap words it got wrong when the text shows.',
+  'learn.followNote': 'Beta. Your phone turns your voice into text to follow along. No audio or text is kept, only counts of how many words it heard, to improve it. Tap words it got wrong when the text shows.',
+  'learn.followNoteServer': 'Beta. Each part you recite is sent to our server, which follows the words and checks the harakat, then forgets it. Words said with another haraka get an orange wavy line. No audio or text is kept, only counts of how many words it heard, to improve it. Tap words it got wrong when the text shows.',
   'learn.followLimit': 'That is today\'s hour of voice checking. It comes back tomorrow.',
   'learn.harakahN': '{n} with an orange line: the server heard another haraka. Untap one if you said it right.',
   'learn.helpTitle': 'Help improve the harakat check?',
@@ -620,6 +629,9 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.knowTitle': 'تحفظ بعض السور؟',
   'learn.lockedSub': 'أكمل الخطوات التي قبلها أولاً.',
   'learn.more': 'المزيد',
+  'learn.lessonOpts': 'خيارات الدرس',
+  'learn.stages': 'مراحل هذه السورة',
+  'learn.showAs': 'العرض',
   'learn.newSub': 'المعنى، ثم الاستماع، ثم الترديد، ثم التسميع من حفظك.',
   'learn.pickSurah': 'اختر سورة',
   'learn.practise': 'راجعه مرة أخرى',
@@ -686,6 +698,8 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.gatesTitle': 'بوابات الأجزاء',
   'learn.dayAria': '{n} من {of} دروس اليوم. غيّر الهدف اليومي',
   'learn.dayNoneAria': '{n} دروس اليوم. ضع هدفًا يوميًا',
+  'learn.dayToday': 'اليوم',
+  'learn.dayGoal': 'هدف',
   'learn.daySet': 'الدروس اليومية',
   'learn.daySetSub': 'كم درسًا في اليوم؟ هذا أيضًا هدف التعلّم في صفحتي، وله صندوقه.',
   'learn.dayOff': 'بلا هدف',
@@ -696,6 +710,7 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.treeGrown': 'نمت كاملة',
   'learn.treeGrownShort': 'نمت',
   'learn.treeOf': 'شجرة {name}',
+  'learn.treeTip': 'شجرة {name}. تكبر مع كل درس تجتازه هنا.',
   'learn.unitOptions': 'خيارات {name}',
   'learn.unitPart': 'السورة {n} · الجزء {k} من {of}',
   'learn.unitSub': 'الآيات {ayat} · {done} من {of}',
@@ -725,13 +740,16 @@ const ar: Partial<Record<LearnKey, string>> = {
   'learn.followSkipped': 'الكلمات المتروكة أو المقروءة بشكل مختلف تظهر بالأحمر. تابع.',
   'learn.followEnd': 'وصلت إلى النهاية.',
   'learn.followQuiet': 'توقّف الميكروفون بعد لحظة صمت. اضغط «تابع صوتي» لتكمل.',
+  'learn.followLouder': 'لم أسمع تلك الكلمة جيدًا. لم تُحسب خطأً: ارفع صوتك قليلًا.',
+  'learn.beta': 'تجريبي',
+  'learn.followReport': 'أخطأ في سماعي؟ أخبرنا',
   'learn.followDenied': 'الميكروفون مغلق لتطبيق Ayah Studio. اسمح به من إعدادات الهاتف.',
   'learn.followFailed': 'التعرّف على الكلام غير متاح على هذا الجهاز.',
   'learn.followNoArabic': 'لا تدعم خدمة التعرّف على الكلام في هاتفك العربية بعد. افتح تطبيق Google (أو الإعدادات ← اللغات ← الكلام) وأضف العربية للكتابة بالصوت. أُخفي الزر على هذا الهاتف الآن، ويعود بعد أيام ليحاول مجددًا.',
   'learn.followFailedCode': 'تعذّر بدء «تابع صوتي» على هذا الهاتف (الرمز {code})، فأُخفي زره هنا الآن. يمكنك أن تسمّع وتتحقق بنفسك.',
   'learn.micBusy': 'تطبيق آخر يستخدم الميكروفون. أغلقه وحاول مجددًا.',
-  'learn.followNote': 'يحوّل هاتفك صوتك إلى نص ليتابعك، ولا يُحفظ شيء. اضغط على الكلمات التي أخطأ فيها حين يظهر النص.',
-  'learn.followNoteServer': 'يُرسَل كل جزء تتلوه إلى خادمنا، فيتابع الكلمات ويتحقق من الحركات ثم يُنسى. الكلمة التي قيلت بحركة أخرى يظهر تحتها خط برتقالي متموّج. لا يُحفظ شيء. اضغط على الكلمات التي أخطأ فيها حين يظهر النص.',
+  'learn.followNote': 'ميزة تجريبية. يحوّل هاتفك صوتك إلى نص ليتابعك، ولا يُحفظ صوت ولا نص، بل أعداد الكلمات التي سمعها فقط لنحسّنه. اضغط على الكلمات التي أخطأ فيها حين يظهر النص.',
+  'learn.followNoteServer': 'ميزة تجريبية. يُرسَل كل جزء تتلوه إلى خادمنا، فيتابع الكلمات ويتحقق من الحركات ثم يُنسى. الكلمة التي قيلت بحركة أخرى يظهر تحتها خط برتقالي متموّج. لا يُحفظ صوت ولا نص، بل أعداد الكلمات التي سمعها فقط لنحسّنه. اضغط على الكلمات التي أخطأ فيها حين يظهر النص.',
   'learn.followLimit': 'انتهت ساعة اليوم من التحقق بالصوت. تعود غدًا.',
   'learn.harakahN': '{n} تحتها خط برتقالي: سمع الخادم حركة أخرى. ألغِ تحديدها إن كنت قلتها صحيحة.',
   'learn.helpTitle': 'هل تساعد في تحسين التحقق من الحركات؟',
@@ -832,6 +850,6 @@ const ar: Partial<Record<LearnKey, string>> = {
 
 /** A Learn string, with {name} placeholders filled from `vars` (numbers as written). */
 export function lt(key: LearnKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('learn', key)) ?? en[key];
+  return fill(s, vars);
 }

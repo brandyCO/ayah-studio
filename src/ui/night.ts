@@ -55,10 +55,11 @@ export async function openNight(src: NightSource) {
   const controls = h('div', { class: 'night-controls' },
     h('button', { class: 'icon-btn night-btn', 'aria-label': t('night.close'), onclick: (e: Event) => { e.stopPropagation(); close(); } }, icon('close', 22)),
     h('div', { class: 'night-spacer' }),
-    playBtn,
-    sleepRow);
+    playBtn);
+  // The sleep timer sits at the bottom, clear of the crescent high on the left.
+  const bottomCtl = h('div', { class: 'night-controls night-bottom' }, sleepRow);
   const asleepNote = h('div', { class: 'night-asleep' }, t('night.asleep'));
-  const root = h('div', { class: 'night is-flat', role: 'dialog', 'aria-label': t('night.open') }, canvas, breathEl, textLayer, dark, asleepNote, controls, measure);
+  const root = h('div', { class: 'night is-flat', role: 'dialog', 'aria-label': t('night.open') }, canvas, breathEl, textLayer, dark, asleepNote, controls, bottomCtl, measure);
   document.body.append(root);
   document.body.classList.add('night-open');
 
@@ -151,9 +152,11 @@ export async function openNight(src: NightSource) {
       el.classList.add('in');
       enEl.classList.toggle('scrolls', enEl.scrollHeight > enEl.clientHeight + 2);
     }));
+    // The next ayah comes in at once: the old one steps aside quickly instead of a long crossfade.
     if (old) {
+      old.el.classList.add('gone');
       old.el.classList.remove('in');
-      setTimeout(() => old.el.remove(), 1400);
+      setTimeout(() => old.el.remove(), 400);
     }
   }
 

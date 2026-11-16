@@ -8,6 +8,7 @@
 import { todayGoals } from '../data/goals';
 import { streak, todayRec } from '../data/journey';
 import { dayKey } from '../data/readLog';
+import { smartReminder } from '../data/usualTime';
 import { t } from '../i18n';
 import { isNative } from '../native';
 import { h, haptic } from './dom';
@@ -20,8 +21,8 @@ export interface NudgeSettings {
   riskAt: string;
   /** The weekly freeze kept the flame. */ freeze: boolean;
 }
-export const RISK_TIMES = ['18:00', '19:00', '20:00', '21:00', '22:00'] as const;
-const DEFAULTS: NudgeSettings = { goal: true, all: true, risk: true, riskAt: '21:00', freeze: true };
+export const RISK_TIMES = ['auto', '18:00', '19:00', '20:00', '21:00', '22:00'] as const;
+const DEFAULTS: NudgeSettings = { goal: true, all: true, risk: true, riskAt: 'auto', freeze: true };
 const CAP = 2;
 // (3400–3406: 3100–3149 are the prayer reminders, which cancel their own range.)
 const RISK_IDS = Array.from({ length: 7 }, (_, i) => 3400 + i);
@@ -83,6 +84,9 @@ export function checkNudges() {
   st.ids.push(...fresh.map((g) => g.id), ...(allNow ? ['all'] : []));
   if (fzMsg) write('nudgeFreeze', [...read<string[]>('nudgeFreeze', []), fz].slice(-8));
   if (first) { write('nudgeSaid', st); return; }
+  // Fewer, bigger moments: one goal met is a quiet tick on the Me tab, never a banner or a notification;
+  // the note is kept for every goal met and for the freeze.
+  if (msg && !allNow) { if (!document.hidden) tabTick(); msg = null; }
   const say = msg ?? fzMsg;
   if (!say) { write('nudgeSaid', st); return; }
   if (document.hidden) {
@@ -108,8 +112,20 @@ async function notifyNow(title: string, body: string) {
   } catch { /* an older build or notifications off */ }
 }
 
+/** A goal met: the Me tab gives a small check and a soft tap, nothing more. */
+function tabTick() {
+  const me = document.querySelector<HTMLElement>('.tab-btn.me');
+  if (!me || busyScreen()) return;
+  me.classList.remove('ticked');
+  void me.offsetWidth;
+  me.classList.add('ticked');
+  haptic(6);
+  setTimeout(() => me.classList.remove('ticked'), 1600);
+}
+
 /** The in-app note: slides down from the top, stays ~4 s, tap → Me. Never over a dialog. */
 export function banner(title: string, body: string) {
+  if (document.documentElement.classList.contains('calm')) return; // night calm: it waits on Me until morning
   document.querySelector('.nudge')?.remove();
   const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
     h('span', { class: 'nudge-spark', 'aria-hidden': 'true' }),
@@ -142,7 +158,8 @@ export async function scheduleRisk() {
     const k = streak();
     if (!s.risk || (k.best < 1 && k.days < 1)) return;
     if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
-    const [hh, mm] = s.riskAt.split(':').map(Number);
+    const smart = s.riskAt === 'auto' ? smartReminder() : null;
+    const [hh, mm] = smart ? [smart.h, smart.m] : s.riskAt.split(':').map(Number);
     const now = new Date();
     const lit = !!todayRec().f;
     const list = [];
@@ -153,7 +170,7 @@ export async function scheduleRisk() {
       list.push({
         id: RISK_IDS[i], smallIcon: 'ic_stat_crescent',
         title: days > 1 ? t('nudge.riskTitleN', { n: days }) : t('nudge.riskTitle'),
-        body: t('nudge.riskBody'),
+        body: t(smart?.learned ? 'nudge.riskBodyUsual' : 'nudge.riskBody'),
         schedule: { at, allowWhileIdle: true },
         extra: { hash: '#/me' },
       });

@@ -5,18 +5,19 @@
 // together full screen (powerUp.ts). Simple on purpose: no explaining needed beyond one line.
 import { account } from '../cloud/auth';
 import { icon } from './icons';
-import { ft } from '../i18n/friends';
+import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, answerFriend, friendMilestoneDue, askFriend, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
-  type Friend, type Friends, type Profile, type Row, type ShowKey,
+  SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
 import { avatar } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
-import { t } from '../i18n';
+import { surahName, t } from '../i18n';
+import { loadMeta, type SurahMeta } from '../data/quran';
 import { openAccount } from './account';
 import { flame } from './flame';
 import { h, haptic, toast } from './dom';
@@ -104,7 +105,9 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
       v === undefined ? '' : h('span', { class: `fr-stat s-${k}` }, h('b', {}, icon, num(v)), h('small', {}, label));
-    const stats = h('div', { class: 'fr-stats' },
+    // All-time XP first: it never resets (the level shows it anyway), so a new week's 0 never reads as XP lost.
+    const total = p.xp != null ? h('span', { class: 'fr-stat s-total' }, h('b', {}, ptsIcon(), num(p.xp)), h('small', {}, ft('fr.total'))) : '';
+    const stats = h('div', { class: 'fr-stats' }, total,
       stat('week', ft('fr.week'), p.week, ptsIcon()),
       stat('streak', ft('fr.flame'), p.streak, h('span', { class: 'fr-mini-flame' }, flame(1, 16, true))),
       stat('trophies', ft('fr.trophies'), p.trophies, icon('trophy', 16)),
@@ -132,7 +135,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     // Your own profile: choose what it shows (the stats above follow each switch).
     const mine = p.relation === 'me' ? (() => {
       let bits = myShow();
-      const keys: [ShowKey, string][] = [['week', ft('fr.week')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
+      const keys: [ShowKey, string][] = [['week', ft('fr.weekXp')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
       return h('div', { class: 'fr-mine' }, h('h3', {}, ft('fr.mine')), h('p', { class: 'muted small' }, ft('fr.mineSub')),
         h('div', { class: 'chips' }, ...keys.map(([k, label]) => {
           const b: HTMLButtonElement = h('button', { class: `chip${bits & SHOW[k] ? ' on' : ''}`, 'aria-pressed': String(!!(bits & SHOW[k])), onclick: () => {
@@ -249,7 +252,7 @@ function challenge(pid: string | null | undefined, name: string, after?: () => v
 
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
 export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
-  const data = await myFriends(fresh);
+  const [data, inv, feats, meta] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null), loadMeta().catch(() => null)]);
   friendsKept = data;
   void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
@@ -280,14 +283,104 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
+        f.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(f.live === 'listen' ? 'fn.listening' : 'fn.reading')) : '',
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });
   setTimeout(() => void friendMilestone(data.friends), 900);
-  return h('div', { class: 'fr-tab' }, asks,
+  return h('div', { class: 'fr-tab' }, asks, news(feats, meta),
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
+    inviteRewards(inv, onChange),
     invite,
     h('p', { class: 'muted small' }, ft('fr.help')));
+}
+
+/** A milestone in a few words ("30-day streak", "Finished Al-Mulk"). */
+export function featLabel(f: Feat, meta: SurahMeta[] | null): string {
+  if (f.kind === 'surah') { const m = meta?.[f.n - 1]; return ft('fn.surah', { name: m ? surahName(m) : String(f.n) }); }
+  return ft(`fn.${f.kind}` as FriendKey, { n: f.n });
+}
+const FEAT_IC: Record<Feat['kind'], string> = { streak: 'flame', level: 'star', surah: 'book', juz: 'book', khatm: 'trophy' };
+function ago(at: string) {
+  const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
+  return s < 60 ? ft('fn.now') : s < 3600 ? ft('fn.min', { n: Math.floor(s / 60) }) : s < 86400 ? ft('fn.h', { n: Math.floor(s / 3600) }) : ft('fn.d', { n: Math.floor(s / 86400) });
+}
+/** Friends' milestones of the week, each with one MashaAllah; then mine that friends cheered. */
+function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | string {
+  if (!feats || (!feats.friends.length && !feats.mine.length)) return '';
+  const rows = feats.friends.slice(0, 8).map((f) => {
+    const btn = h('button', { class: `chip fn-cheer${f.cheered ? ' on' : ''}`, disabled: !!f.cheered, 'aria-pressed': String(!!f.cheered) },
+      f.cheered ? ft('fn.cheered', { n: f.cheers ?? 1 }) : ft('fn.cheer'));
+    btn.onclick = () => {
+      haptic(14);
+      btn.disabled = true;
+      btn.classList.add('on', 'pop');
+      btn.textContent = ft('fn.cheered', { n: (f.cheers ?? 0) + 1 });
+      void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
+      void cheerFeat(f.id).then((n) => { btn.textContent = ft('fn.cheered', { n }); },
+        (e) => { btn.disabled = false; btn.classList.remove('on', 'pop'); btn.textContent = ft('fn.cheer'); toast((e as Error).message); });
+    };
+    return h('div', { class: `fn-row k-${f.kind}` },
+      avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.figure),
+      h('span', { class: 'fn-txt' }, h('b', {}, f.name ?? rt('rk.private')),
+        h('span', { class: 'fn-what' }, h('span', { class: 'fn-ic', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 14)), featLabel(f, meta), h('small', {}, ` · ${ago(f.at)}`))),
+      btn);
+  });
+  const mine = feats.mine.slice(0, 3).map((f) => {
+    const by = (f.by ?? []).map((n) => n || ft('fn.someone'));
+    return h('div', { class: 'fn-row fn-mine' }, h('span', { class: 'fn-ic big', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 18)),
+      h('span', { class: 'fn-txt' }, h('b', {}, featLabel(f, meta)),
+        h('span', { class: 'fn-what' }, by.length > 1 ? ft('fn.by2', { name: by[by.length - 1], n: by.length - 1 }) : ft('fn.by1', { name: by[0] ?? ft('fn.someone') }))));
+  });
+  return h('section', { class: 'fn-news' },
+    rows.length ? h('h3', {}, ft('fn.title')) : '', ...rows,
+    mine.length ? h('h3', {}, ft('fn.mine')) : '', ...mine);
+}
+
+/** App open / return: friends who said MashaAllah since last time, as one toast. */
+export async function cheersArrived() {
+  // Only my own part of the friends' fingerprint holds the MashaAllahs on my news: unchanged = nothing new (round 6).
+  const pulse = await socialUnchanged('cheers', 'own');
+  if (pulse.same) return;
+  let feats: Feats;
+  try { feats = await featsFeed(true); } catch { return; }
+  markSocialSeen('cheers', pulse.p);
+  let seen: Record<string, number> = {};
+  let first = true;
+  try { const raw = localStorage.getItem('featCheersSeen'); first = raw === null; seen = JSON.parse(raw ?? '{}') ?? {}; } catch { /* ignore */ }
+  const fresh = feats.mine.filter((f) => (f.by?.length ?? 0) > (seen[f.id] ?? 0));
+  const next: Record<string, number> = {};
+  for (const f of feats.mine) next[f.id] = f.by?.length ?? 0;
+  try { localStorage.setItem('featCheersSeen', JSON.stringify(next)); } catch { /* ignore */ }
+  if (first || !fresh.length || document.querySelector('.cel, dialog[open]')) return;
+  const f = fresh[0];
+  const meta = await loadMeta().catch(() => null);
+  const by = (f.by ?? []).slice(seen[f.id] ?? 0).map((n) => n || ft('fn.someone'));
+  haptic(12);
+  toast(by.length > 1 ? ft('fn.toastN', { n: by.length, what: featLabel(f, meta) }) : ft('fn.toast1', { name: by[0] ?? ft('fn.someone'), what: featLabel(f, meta) }));
+}
+
+/** Invite rewards waiting or on their way (each row once, until claimed). */
+function inviteRewards(inv: Invites | null, onChange: () => void): HTMLElement | string {
+  if (!inv) return '';
+  const row = (label: string, days: number, pid: string | null) => {
+    const ready = days >= inv.days;
+    const btn = ready ? h('button', { class: 'chip on', onclick: async (e: Event) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      try {
+        const n = await claimInvite(pid);
+        if (n) { haptic(20); toast(ft('fr.ivDone', { n })); }
+        onChange();
+      } catch (err) { b.disabled = false; toast((err as Error).message); }
+    } }, ft('fr.ivClaim', { n: inv.light })) : '';
+    return h('div', { class: 'fr-ask' }, h('span', { class: 'fr-ask-name' }, label), btn);
+  };
+  const rows: HTMLElement[] = [];
+  const by = inv.invitedBy;
+  if (by && !by.claimed) rows.push(row(ft('fr.ivBy', { name: by.name ?? ft('fr.ivSomeone'), n: by.days }), by.days, null));
+  if (inv.rewarded < inv.cap) for (const f of inv.friends) if (!f.claimed) rows.push(row(ft('fr.ivFriend', { name: f.name ?? ft('fr.ivSomeone'), n: f.days }), f.days, f.pid));
+  return rows.length ? h('section', { class: 'fr-asks' }, h('h3', {}, ft('fr.ivTitle')), ...rows) : '';
 }
 
 /** #/rf/{code}: a friend's invite. Signed in → become friends and open Friends; else who sent it and a sign-in. */

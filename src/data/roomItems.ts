@@ -60,6 +60,13 @@ export const ROOM_ITEMS: RoomItem[] = [
   { id: 'silk', slot: 'rug', r: 'legendary', price: 1200, limited: true },
   { id: 'medallion', slot: 'wall', r: 'legendary', price: 1000, limited: true },
   { id: 'brocade', slot: 'curtain', r: 'legendary', price: 1000, limited: true },
+  // Premium pieces (owner request 2026-11-14).
+  { id: 'orchid', slot: 'plant', r: 'rare', price: 180 },
+  { id: 'lemon', slot: 'plant', r: 'epic', price: 280 },
+  { id: 'kursi', slot: 'side', r: 'epic', price: 320 },
+  { id: 'lanterns', slot: 'side', r: 'epic', price: 260 },
+  { id: 'qandil', slot: 'hang', r: 'epic', price: 300 },
+  { id: 'damask', slot: 'curtain', r: 'rare', price: 190 },
   { id: 'ginger', slot: 'pet', r: 'rare', price: 200 },
   { id: 'tabby', slot: 'pet', r: 'rare', price: 200 },
   { id: 'snow', slot: 'pet', r: 'epic', price: 280 },
@@ -69,7 +76,10 @@ export const roomItem = (id: string) => ROOM_ITEMS.find((i) => i.id === id) ?? n
 
 /** The best league place won so far (from the prize pieces kept), or null. */
 const bestPlace = () => prizeWins().reduce<number | null>((b, w) => (b === null || w.place < b ? w.place : b), null);
+/** Everyone starts with these (F20): a sprout that grows with the streak and a kilim, so a new room is not bare. */
+export const STARTER: Partial<Record<Slot, string>> = { plant: 'sprout', rug: 'kilim' };
 export function ownsRoom(it: RoomItem): boolean {
+  if (STARTER[it.slot] === it.id) return true;
   if (it.win) { const b = bestPlace(); return b !== null && b <= it.win; }
   return shopHas(`rm:${it.id}`);
 }
@@ -86,14 +96,19 @@ export function roomLook(): Partial<Record<Slot, string>> {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}') as Partial<Record<Slot, string>>;
     const out: Partial<Record<Slot, string>> = {};
-    for (const s of SLOTS) { const it = v[s] ? roomItem(v[s]!) : null; if (it && it.slot === s && ownsRoom(it)) out[s] = it.id; }
+    for (const s of SLOTS) {
+      // A place never chosen holds its starter piece; '' means the user took it out.
+      const id = s in v ? v[s] : STARTER[s];
+      const it = id ? roomItem(id) : null;
+      if (it && it.slot === s && ownsRoom(it)) out[s] = it.id;
+    }
     return out;
   } catch { return {}; }
 }
 export function setRoomLook(slot: Slot, id: string | null) {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}') as Record<string, string>;
-    if (id) v[slot] = id; else delete v[slot];
+    v[slot] = id ?? '';
     localStorage.setItem(KEY, JSON.stringify(v));
   } catch { /* storage blocked */ }
   try { window.dispatchEvent(new Event('room-look')); } catch { /* ignore */ }

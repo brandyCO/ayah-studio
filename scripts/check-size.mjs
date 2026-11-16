@@ -13,9 +13,13 @@ import { gzipSync } from 'node:zlib';
 // localised references, channel names; the media picker strings and the server-message table load lazily).
 // 2026-11-12: raised to 143 for friend challenges + weekly rivals (142.2 KB: challenge / duel calls and the Challenges tab
 // on Me; their screens, strings and styles load on first use).
-// 2026-11-13: raised to 145 for 59 more recordings (144.1 KB: their entries in the reciter list, which the player and
-// pickers need at once).
-const BUDGET_KB = 145;
+// 2026-11-13: raised to 144.5 for one week everywhere (F9; 143.9 KB): the weekly goals count Islamic days and end at
+// Friday Maghrib, so the Maghrib / Islamic-day module (rankDay.ts, 1.5 KB) now loads with the goals instead of with Ranks.
+// 2026-11-14: raised to 130 for 30 interface languages (128.3 KB): the language system in i18n (+0.9 KB) and the
+// translation list with 14 more editions, so the default translation follows the interface language (+0.7 KB).
+// 2026-11-16: raised to 132 for 59 more recordings (131.6 KB: their entries in the reciter list, which the player and
+// the reciter pickers need at once).
+const BUDGET_KB = 132;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

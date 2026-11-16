@@ -1,0 +1,17 @@
+/* "You stopped here" (stopGlow.ts): a warm underlay that breathes twice, then rests and fades. */
+.mushaf-page .w.stop-here { border-radius: 6px; background: color-mix(in srgb, #f5b400 22%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #f5b400 14%, transparent); animation: stop-breathe 1.6s ease-in-out 2; }
+.mushaf-page .w.stop-here.stop-out { transition: background .8s ease, box-shadow .8s ease; background: transparent; box-shadow: none; animation: none; }
+@keyframes stop-breathe { 50% { background: color-mix(in srgb, #f5b400 38%, transparent); box-shadow: 0 0 14px 2px color-mix(in srgb, #f5b400 35%, transparent); } }
+.stop-pill { position: absolute; z-index: 6; inset-inline: 0; top: calc(10px + env(safe-area-inset-top)); margin: 0 auto; width: max-content; max-width: calc(100% - 32px);
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: var(--r-pill);
+  background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 0 24px color-mix(in srgb, #f5b400 30%, transparent);
+  animation: stop-in .5s var(--ease-spring) both; }
+.stop-pill.out { transition: opacity .5s ease, translate .5s ease; opacity: 0; translate: 0 -12px; }
+@keyframes stop-in { from { opacity: 0; translate: 0 -14px; scale: .92; } }
+.stop-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #f5b400; box-shadow: 0 0 10px #f5b400; }
+.stop-txt { display: flex; flex-direction: column; line-height: 1.2; font-size: var(--fs-s); min-width: 0; }
+.stop-txt span { color: var(--muted); font-size: var(--fs-xs); }
+.stop-go { display: inline-flex; align-items: center; gap: 4px; }
+.stop-x { width: 32px; height: 32px; }
+@media (prefers-reduced-motion: reduce) { .mushaf-page .w.stop-here, .stop-pill { animation: none; } }

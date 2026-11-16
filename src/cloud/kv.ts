@@ -20,7 +20,7 @@ const DEVICE = new Set([
   'deviceId', 'syncMeta', 'kvMeta', 'journeyOthers', 'remoteConfig', 'perfLog', 'fpsLog', 'liteMode', 'warmedUp', 'studioUsed', 'readerText',
   'lastPage', 'listenKept', 'favKept', 'kidsKept', 'favAnyNet', 'stockPages', 'popular', 'rankCache', 'circles',
   'mushafKept', 'mushafOk', 'mushafAsked', 'qcfDropped', 'reportQueue', 'rankFigureSent', 'rankRoomSent', 'rankSent', 'rankShowSent', 'rankXp',
-  'asrToday', 'prayerLocAt', 'exportQuality', 'pactMark', 'vitals', 'rankProfiles', 'lampWall',
+  'asrToday', 'prayerLocAt', 'exportQuality', 'pactMark', 'vitals', 'rankProfiles', 'lampWall', 'usage', 'usageOff',
   // Synced by their own documents (cloud/sync.ts).
   'prefsAt', 'draftsDeleted', 'bookmarks', 'journey', 'readLog', 'garden', 'goals', ...SYNCED_PREFS,
 ]);

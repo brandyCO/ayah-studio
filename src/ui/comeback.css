@@ -1,0 +1,47 @@
+/* ---------- Comeback welcome (src/ui/comeback.ts) ---------- */
+.comeback { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border: 0; padding: 0; overflow: hidden;
+  background: #ffd9a8; color: var(--text); display: none; }
+.comeback[open] { display: block; }
+.comeback::backdrop { background: #ffd9a8; }
+.cb-sky { position: absolute; inset: 0; opacity: 0; transition: opacity .6s ease;
+  background: linear-gradient(#7fc8d8 0%, #b9dfd6 30%, #ffe2b8 62%, #ffc98f 100%); }
+.comeback.up .cb-sky { opacity: 1; }
+/* Slow soft rays behind the character: one layer turned by the compositor. */
+.cb-rays { position: absolute; left: 50%; top: 34%; width: 160vmax; height: 160vmax; margin: -80vmax 0 0 -80vmax; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .26) 0deg 6deg, transparent 6deg 22.5deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0 4%, transparent 22%); mask-image: radial-gradient(circle, #000 0 4%, transparent 22%);
+  transition: opacity 1.2s ease .3s; }
+.comeback.up .cb-rays { opacity: 1; animation: cb-turn 60s linear infinite; }
+@keyframes cb-turn { to { rotate: 360deg; } }
+.cb-stage { position: absolute; left: 0; right: 0; top: max(6vh, env(safe-area-inset-top)); height: 40vh; display: grid; place-items: end center; }
+.cb-glow { position: absolute; left: 50%; bottom: 14%; width: 46vmin; height: 46vmin; margin-left: -23vmin; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .9) 0 22%, rgba(255, 244, 214, .55) 45%, transparent 70%); }
+.cb-hill { position: absolute; left: 50%; bottom: 0; width: 70vmin; height: 15%; margin-left: -35vmin; border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(#8fd17a, #5fb354); box-shadow: inset 0 6px 0 rgba(255, 255, 255, .35); translate: 0 100%; transition: translate .6s cubic-bezier(.2, .9, .3, 1.2) .2s; }
+.comeback.up .cb-hill { translate: 0 0; }
+.cb-actor { position: relative; z-index: 1; width: min(46vmin, 220px); height: min(46vmin, 220px); margin-bottom: 9%; }
+.cb-noor { position: relative !important; z-index: 1; margin-bottom: 18%; scale: 2.2; }
+.cb-card { position: absolute; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto;
+  padding: 22px 18px 14px; border-radius: 28px; background: var(--card, #fff); box-shadow: 0 6px 0 rgba(0, 0, 0, .08), 0 18px 40px -18px rgba(80, 40, 0, .45);
+  text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; }
+.cb-card.in { opacity: 1; }
+.cb-kicker { margin: 0; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; font-size: var(--fs-s); color: #e8890c; }
+.cb-title { margin: 0; font-size: clamp(24px, 7vw, 30px); font-weight: 900; line-height: 1.2; }
+.cb-body { margin: 0; color: var(--muted); line-height: 1.45; }
+.cb-kepts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0 6px; }
+.cb-kept { padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: var(--fs-s); }
+.cb-kept.k-light { background: #fff1c9; color: #8a5a00; }
+.cb-kept.k-badge { background: #e8e4ff; color: #4b3cc4; }
+.cb-kept.k-level { background: #dff5e7; color: #1d7a45; }
+/* The dialog takes focus on the card, so no ring shows on the button until the keyboard is used. */
+.cb-card:focus { outline: none; }
+.cb-go { width: 100%; max-width: 360px; font-size: 18px; padding: 15px 18px; margin-top: 4px; }
+.cb-sub { margin: 0; font-size: var(--fs-s); color: var(--muted); }
+.cb-later { margin-top: 2px; background: transparent; color: var(--text); box-shadow: none !important; }
+@media (prefers-color-scheme: dark) {
+  .cb-sky { background: linear-gradient(#1b2a52 0%, #3a3f74 35%, #a0617a 70%, #e79a6b 100%); }
+  .comeback, .comeback::backdrop { background: #3a3f74; }
+  .cb-hill { background: linear-gradient(#3f7a4a, #2c5c37); }
+  .cb-kept.k-light { background: #4a3a10; color: #ffd978; } .cb-kept.k-badge { background: #2e2a5a; color: #c9c2ff; } .cb-kept.k-level { background: #163a25; color: #8fe0ad; }
+}
+@media (prefers-reduced-motion: reduce) { .cb-sky, .cb-rays, .cb-hill { transition: none; } .comeback.up .cb-rays { animation: none; } }

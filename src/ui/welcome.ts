@@ -2,7 +2,9 @@
 // from the phone (Me → Settings → Language changes it) and the colours wait in Me → Settings. The reciter is
 // asked the first time something is played (`askReciterFirst()`): the full list, hear each one, then Listen.
 // `showWelcome()` (the old three steps) stays for Me → Settings → Tour.
-import { LANGS, lang, setLang, t } from '../i18n';
+import { mark } from '../usage';
+import { lang, setLang, t } from '../i18n';
+import { LANGS } from '../i18n/langs';
 import { DEFAULT_RECITER, RECITERS, groupRecordings, reciterPickerLabel, type Reciter } from '../data/reciters';
 import { recordingChips, reciterSearchBox } from './recordings';
 import { h, haptic } from './dom';
@@ -23,13 +25,14 @@ export function showWelcome(done?: () => void) {
   const close = () => {
     stopSample();
     markTourSeen();
+    mark('ev:welcome-done');
     overlay.classList.add('out');
     window.setTimeout(() => overlay.remove(), 400);
     done?.();
   };
-  const go = (k: number) => { stopSample(); i = Math.max(0, Math.min(2, k)); draw(); };
+  const go = (k: number) => { stopSample(); i = Math.max(0, Math.min(2, k)); mark(`ev:welcome-${i}`); draw(); };
 
-  const languageStep = () => h('div', { class: 'welcome-list' }, ...LANGS.map((l) => h('button', {
+  const languageStep = () => h('div', { class: 'welcome-list scroll' }, ...LANGS.map((l) => h('button', {
     class: `welcome-option${l.id === lang() ? ' on' : ''}`, lang: l.id, dir: l.dir, 'aria-pressed': String(l.id === lang()),
     onclick: () => {
       haptic();
@@ -37,7 +40,8 @@ export function showWelcome(done?: () => void) {
       try { sessionStorage.setItem(RESUME, '1'); } catch { /* ignore */ }
       setLang(l.id); // reloads in the new language
     },
-  }, h('span', { class: 'welcome-name' }, l.name), l.id === lang() ? icon('check', 20) : null)));
+  }, h('span', { class: 'welcome-name' }, l.name, l.id === 'en' ? '' : h('small', { class: 'muted', lang: 'en', dir: 'ltr' }, ` · ${l.en}`)),
+  l.id === lang() ? icon('check', 20) : null)));
 
   // The same full list as the player's reciter picker: one row per reciter, his recordings as chips
   // under the name, a search box on top.

@@ -1,0 +1,12 @@
+# A copy of the whole built web app served by Cloudflare, so the GitHub Pages site never runs into its monthly
+# bandwidth limit: the service worker (public/sw.js) and the Android app fetch the built code, data, fonts and
+# backgrounds from here and fall back to the Pages site. Assets only (no code): requests to static assets are free
+# and unlimited on Cloudflare's free plan (up to 20,000 files). Deployed by .github/workflows/pages.yml (job
+# "cloudflare"), which unpacks the same build the Pages site gets into site/ and adds _headers.
+name = "ayah-studio-files"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[assets]
+directory = "./site"
+not_found_handling = "none"

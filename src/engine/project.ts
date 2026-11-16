@@ -155,7 +155,8 @@ export const frameStyle = (p: Project): FrameStyle => ({
   enFont: p.enFont,
 });
 
-export const MAX_AYAT = 10;
+import { MAX_AYAT } from './limits';
+export { MAX_AYAT };
 export const INTRO = 3; // seconds an old intro card becomes (dropCards)
 export const OUTRO = 3; // seconds an old closing card becomes; the least an ending with lines gets
 export const PAUSES = [0, 0.5, 1, 2];

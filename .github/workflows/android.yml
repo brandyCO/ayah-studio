@@ -3,6 +3,8 @@ name: Android APK
 # Builds the Capacitor Android app (debug APK, sideloadable) as an artifact: Actions → this run →
 # Artifacts → ayah-studio-apk. Signed with the app's key from the repo secrets
 # ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD (when set), so updates install over the old app.
+# Every build of main is also published as a one tap download (owner request 2026-11-15):
+# https://github.com/brandyCO/ayah-studio/releases/download/apk-latest/ayah-studio.apk
 on:
   push:
     branches: [main]
@@ -19,6 +21,8 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
@@ -68,3 +72,45 @@ jobs:
           name: ayah-studio-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish as the latest APK download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/ayah-studio.apk"
+          notes="Latest build of main ($(git rev-parse --short HEAD), $(date -u +'%Y-%m-%d %H:%M UTC')). Test build for sideloading."
+          if gh release view apk-latest > /dev/null 2>&1; then
+            gh release edit apk-latest --notes "$notes" --prerelease
+          else
+            gh release create apk-latest --title "Latest APK" --notes "$notes" --prerelease --target "$GITHUB_SHA"
+          fi
+          gh release upload apk-latest "$RUNNER_TEMP/ayah-studio.apk" --clobber
+
+  # The Play bundle with the mushaf page fonts as a fast-follow asset pack (release.yml builds the signed one):
+  # built unsigned on every change, so the asset pack setup never breaks unnoticed.
+  play-bundle:
+    runs-on: ubuntu-latest
+    env:
+      FONT_PACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_FONT_PACK: '1'
+      - run: rm -rf dist/data/words
+      - run: bash scripts/font-pack.sh dist android/qcf_fonts/src/main/assets
+      - run: npx cap sync android
+      - run: ./gradlew bundleRelease --no-daemon
+        working-directory: android
+      - name: Check the bundle
+        run: bash scripts/font-pack.sh check android/app/build/outputs/bundle/release/app-release.aab | tee -a "$GITHUB_STEP_SUMMARY"

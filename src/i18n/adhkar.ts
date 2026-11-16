@@ -1,11 +1,12 @@
 // Adhkar session strings, loaded with that screen. English is the source; Arabic falls back to it
 // per key. Interface words only: the adhkar themselves come from public/data/adhkar.json.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'ak.titleS': 'Morning adhkar',
   'ak.titleM': 'Evening adhkar',
   'ak.of': '{n} of {of}',
+  'ak.howSay': 'How to say it',
   'ak.times': 'Say it {n} times',
   'ak.timesMany': 'Say it {n} times',
   'ak.once': 'Say it once',
@@ -105,6 +106,7 @@ const ar: Partial<Record<AdhkarKey, string>> = {
   'ak.titleS': 'أذكار الصباح',
   'ak.titleM': 'أذكار المساء',
   'ak.of': '{n} من {of}',
+  'ak.howSay': 'كيف تقوله',
   'ak.times': 'تُقال {n} مرات',
   'ak.timesMany': 'تُقال {n} مرة',
   'ak.once': 'تُقال مرة واحدة',
@@ -201,6 +203,6 @@ const ar: Partial<Record<AdhkarKey, string>> = {
 
 /** An adhkar string, with {name} placeholders filled from `vars`. */
 export function akt(key: AdhkarKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('adhkar', key)) ?? en[key];
+  return fill(s, vars);
 }

@@ -13,6 +13,7 @@ export async function maybeLevelUp(xp: number) {
   try { seen = Number(localStorage.getItem(SEEN)) || 0; localStorage.setItem(SEEN, String(Math.max(seen, level))); } catch { return; }
   // The first time (or an older level on this device): just remember it.
   if (!seen || level <= seen || busy) return;
+  if (level >= 2) void import('../together/ranks').then((m) => m.sendFeats(['level', level])).catch(() => {}); // friends can say MashaAllah
   const band = lookBand(level), was = lookBand(seen);
   const sub = band > was ? mt(`lv.b${band}` as MomentKey) : mt('lv.sub');
   if (!myFigureCode() || document.querySelector('.cel')) { toast(`${mt('lv.up')} · ${level}`); return; }

@@ -71,14 +71,14 @@ async function data(): Promise<WidgetData> {
   }
   const g = goals();
   const str = (k: string) => t(k as Key);
-  // This week and last week, day by day: the widget lays out Monday → Sunday itself, so a new day
+  // This week and last week, day by day: the widget lays out Saturday → Friday itself, so a new day
   // or a new week shows right even before the app opens again.
   const hist: Record<string, string> = {};
   for (const w of [...streak(new Date(Date.now() - 7 * 86_400_000)).week, ...s.week]) {
     if (w.state === 'lit' || w.state === 'frozen' || w.state === 'revived') hist[w.day] = w.state;
   }
   const narrow = new Intl.DateTimeFormat(locale(), { weekday: 'narrow' });
-  const letters = Array.from({ length: 7 }, (_, i) => narrow.format(new Date(2026, 0, 5 + i))); // 5 Jan 2026 is a Monday
+  const letters = Array.from({ length: 7 }, (_, i) => narrow.format(new Date(2026, 0, 3 + i))); // 3 Jan 2026 is a Saturday
   return {
     streak: { days: s.days, lit: s.litToday, today: dayKey(), weeks: s.weeks, freeze: s.freeze.free, week: s.week.map((w) => w.state), hist, best: s.best },
     theme: widgetTheme(),

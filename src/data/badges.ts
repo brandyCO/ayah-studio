@@ -4,6 +4,7 @@
 // the account, so they follow every device). Counts come from the synced journey (`totals`, `lifetime()`),
 // the Learn garden and page memory (synced as account data) and the Ranks answers kept on the device.
 // Names and goals: src/i18n/badges.ts (loaded with the screens that show them).
+import { account } from '../cloud/auth';
 import { badgeClaimed, earnBadges, earnedBadges, lifetime, streak, totals } from './journey';
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'emerald';
@@ -41,7 +42,7 @@ const strong = () => {
   }).length;
 };
 /** Ranks, from the answers kept on this device (src/together/ranks.ts `rankCache`). */
-const ranks = () => json('rankCache')?.v ?? {};
+const ranks = () => { const c = json('rankCache'); return c && c.who === account()?.id ? c.v ?? {} : {}; }; // this account's only
 const prizes = (): { place: number | null; tier: number }[] => (Array.isArray(ranks().prizes) ? ranks().prizes : []);
 /** Highest league reached (1 Star … 4 Sun), and 5 once a week was won in Sun. */
 const league = () => (prizes().some((p) => p.place === 1 && p.tier === 4) ? 5 : Math.max(0, ranks().status?.bestTier ?? 0, ...prizes().map((p) => p.tier)));

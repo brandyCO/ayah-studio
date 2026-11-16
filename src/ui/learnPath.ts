@@ -16,6 +16,8 @@ import { chest } from './chest';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { surahName, t } from '../i18n';
 import { lt, type LearnKey } from '../i18n/learn';
+import { fe } from '../i18n/front';
+import { practiceTarget } from '../data/practice';
 import { liteMode } from '../lite';
 import { h, haptic, toast } from './dom';
 import { drawDeco, drawTree, stageHeight, vignette } from './gardenArt';
@@ -48,6 +50,8 @@ const G = {
   mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   page: '<rect x="5" y="3" width="14" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
   twin: '<rect x="3" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><rect x="13" y="5" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M5.5 9.5h3M5.5 13h3M15.5 9.5h3M15.5 13h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  // A new lesson (F18): an open mushaf, so the path shows lessons, tasmi', pages and similar ayat apart.
+  lesson: '<path d="M2.5 6.2c3.3-1.6 6.4-1.3 8.7.7V20c-2.3-1.7-5.4-2-8.7-.6z" fill="currentColor"/><path d="M21.5 6.2c-3.3-1.6-6.4-1.3-8.7.7V20c2.3-1.7 5.4-2 8.7-.6z" fill="currentColor" opacity=".8"/>',
   book: '<path d="M4 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z M20 5h-4a2 2 0 0 0-2 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   dots: '<circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/>',
   tree: '<path d="M12 3c4 0 7 3 7 6.5 0 3-2.4 5.5-6 6V21h-2v-5.5c-3.6-.5-6-3-6-6C5 6 8 3 12 3z" fill="currentColor"/>',
@@ -60,7 +64,7 @@ function scenery(): SVGSVGElement {
   s.setAttribute('class', 'lp-scenery'); s.setAttribute('aria-hidden', 'true');
   s.setAttribute('viewBox', '0 0 390 844'); s.setAttribute('preserveAspectRatio', 'xMidYMin slice');
   const tree = (x: number, y: number, r: number) => `<g transform="translate(${x} ${y})"><rect x="-2" y="-2" width="4" height="${r + 2}" rx="2" class="lp-trunk"/><circle cx="0" cy="${-r * 0.8}" r="${r}" class="lp-crown"/><circle cx="${-r * 0.35}" cy="${-r * 1.1}" r="${r * 0.5}" class="lp-crown-hi"/></g>`;
-  s.innerHTML = `<circle cx="318" cy="120" r="46" class="lp-sun-halo"/><circle cx="318" cy="120" r="30" class="lp-sun"/>`
+  s.innerHTML = `<circle cx="358" cy="112" r="36" class="lp-sun-halo"/><circle cx="358" cy="112" r="23" class="lp-sun"/><circle cx="368" cy="105" r="20" class="lp-moon-cut"/>`
     + `<path d="M0 220 C70 185 120 198 180 216 C250 236 300 192 390 206 L390 844 L0 844 Z" class="lp-hill1"/>`
     + `<path d="M0 270 C90 242 160 260 230 276 C300 292 340 266 390 272 L390 844 L0 844 Z" class="lp-hill2"/>`
     + tree(40, 270, 10) + tree(352, 300, 12) + tree(24, 520, 12) + tree(366, 610, 10) + tree(30, 760, 11);
@@ -85,7 +89,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   const top = h('header', { class: 'lp-top' });
   const cont = h('button', { class: 'lp-cont', type: 'button' });
   const day = h('button', { class: 'lp-day', type: 'button', onclick: () => openDay() });
-  const dock = h('div', { class: 'lp-dock' }, day, cont);
+  const prac = h('a', { class: 'lp-prac', hidden: true });
+  const dock = h('div', { class: 'lp-dock' }, day, cont, prac);
   root.append(scenery(), top, list, dock, tabBar('learn'));
   let ctx: PathCtx = { rank: new Map(), similar };
   const units = (k: number, ord: number[], pos: number) => unitsOf(meta[ord[k] - 1], mushaf, k <= pos, ctx);
@@ -112,10 +117,10 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const label = stepLabel(st);
     hue = st.kind === 'page' ? 'teal' : st.kind === 'similar' ? 'violet' : st.kind === 'chest' ? 'amber' : hue;
     if (lead) next = { what: `${surahName(m)} · ${label}`, hue, run: () => runStep(st),
-      glyph: st.kind === 'page' ? G.page : st.kind === 'whole' ? G.mic : st.kind === 'similar' ? G.twin : G.star };
+      glyph: st.kind === 'page' ? G.page : st.kind === 'whole' ? G.mic : st.kind === 'similar' ? G.twin : G.lesson };
     if (st.kind === 'chest') return chestNode(st, i, m, label);
     const kind = st.kind;
-    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : st.kind === 'page' ? G.page : st.kind === 'similar' ? G.twin : G.star;
+    const glyph = st.state === 'done' ? G.check : st.kind === 'whole' ? G.mic : st.kind === 'page' ? G.page : st.kind === 'similar' ? G.twin : G.lesson;
     const btn = h('button', {
       class: `lp-node ${st.state} ${kind} hue-${hue}`, type: 'button',
       'aria-label': `${label} · ${surahName(m)} · ${lt(st.state === 'done' ? 'learn.stateDone' : st.state === 'current' ? 'learn.stateCurrent' : 'learn.stateLocked')}`,
@@ -271,7 +276,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     day.setAttribute('aria-label', target ? lt('learn.dayAria', { n: done, of: target }) : lt('learn.dayNoneAria', { n: done }));
     const C = 2 * Math.PI * 21;
     day.replaceChildren(svg(`<circle cx="24" cy="24" r="21" class="lp-day-bg"/><circle cx="24" cy="24" r="21" class="lp-day-fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - f)}" transform="rotate(-90 24 24)"/>`, 52),
-      h('span', { class: 'lp-day-n' }, met ? svg(G.check, 22) : target ? `${done}/${target}` : String(done)));
+      h('span', { class: 'lp-day-n' }, met ? svg(G.check, 22) : target ? `${done}/${target}` : '+',
+        met ? '' : h('small', {}, lt(target ? 'learn.dayToday' : 'learn.dayGoal'))));
     (day.firstChild as SVGSVGElement).setAttribute('viewBox', '0 0 48 48');
   }
   function openDay() {
@@ -306,7 +312,8 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'lp-kicker' }, kicker),
         h('h2', {}, surahName(m)),
         h('span', { class: 'lp-banner-sub' }, lt('learn.unitSub', { ayat, done, of: u.steps.length }))),
-      h('span', { class: 'lp-banner-ar', lang: 'ar', dir: 'rtl' }, m.ar),
+      // In the Arabic interface the title already is the Arabic name: it shows once (front-end review G7).
+      surahName(m) === m.ar || document.documentElement.lang === 'ar' ? '' : h('span', { class: 'lp-banner-ar', lang: 'ar', dir: 'rtl' }, m.ar),
       h('button', { class: 'lp-banner-btn', type: 'button', 'aria-label': lt('learn.unitOptions', { name: surahName(m) }), onclick: () => openUnit(m) }, svg(G.dots, 22)));
     const steps: HTMLElement[] = [];
     let i = 0;
@@ -367,7 +374,21 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   }
 
   /** The bottom Continue button: always the next thing to do (a review first, then the current step). */
+  /** Practice: about three minutes on the words that slip most, or the page that most needs a revision. */
+  function paintPrac() {
+    const p = practiceTarget();
+    prac.hidden = !p;
+    if (!p) return;
+    const what = p.kind === 'page' ? fe('pr.page', { p: p.p }) : fe('pr.words', { n: p.n, name: surahName(meta[p.s - 1]) });
+    prac.setAttribute('href', p.href);
+    prac.setAttribute('aria-label', fe('pr.btnAria', { what }));
+    prac.title = what;
+    prac.replaceChildren(svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/>', 24), h('span', {}, fe('pr.btn')));
+    prac.onclick = () => haptic();
+  }
+
   function paintCont() {
+    paintPrac();
     dock.hidden = !next;
     if (!next) return;
     const { what, hue, glyph, run } = next;

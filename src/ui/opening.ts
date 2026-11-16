@@ -1,42 +1,21 @@
-// The opening (owner request 2026-11-02, "drawn as if someone's drawing it"): once per launch, on the
-// launch colour that continues the Android splash, the app's mark is drawn line by line in the chosen
-// theme's colours — the two squares of the end-of-ayah rosette traced one after the other with a bright
-// pen tip, then the inner ring, then the light at its centre is lit and blooms, the name rises in, and the
-// whole picture fades into the app (≈ 3.2 s). The drawing runs in a worker on an OffscreenCanvas
-// (src/ui/openingWorker.ts), so the app starting up underneath cannot make it stutter; the name and the
-// fade are transform/opacity CSS animations, which the compositor runs. It never delays the app; a tap
-// ends it; skipped with reduced motion and in old-phone mode (main.ts).
-import { h } from './dom';
-import { themeById, themeId } from './theme';
-import { runOpening, type OpeningColours } from './openingArt';
+// The opening. Every opening drawn by the web page (a light sweep, then "the character arrives" with ~70 and later
+// 8 moving layers) lagged on the owner's phone (2026-11-14): while the app starts, the WebView's GPU is busy drawing
+// the first page, so even compositor-only animations stutter. So the app now opens with Android's own splash: the
+// launcher icon (the user's character in the ayah marker) on the splash colour, kept on screen until the first page
+// is drawn underneath, then leaving with a native animation (the icon swells and fades, the splash fades;
+// AppActivity.java). On the web the browser shows the page at once: nothing to play.
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
-const CSS_PX = 200; // the canvas (room for the glow)
-const MARK_PX = 132; // the mark's 512 units
+const Launch = registerPlugin<{ ready(): Promise<void> }>('Launch');
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const frames = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-export function playOpening() {
-  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const x = themeById(themeId());
-  const colours: OpeningColours = { line: x.accentDark, ring: x.fill[x.fill.length - 1] };
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const canvas = h('canvas', { class: 'op-mark', width: Math.round(CSS_PX * dpr), height: Math.round(CSS_PX * dpr) }) as HTMLCanvasElement;
-  const name = h('div', { class: 'op-name' }, ...[...'ayah studio'].map((c, i) =>
-    h('span', { style: `--i:${i}` }, c === ' ' ? ' ' : c)));
-  name.style.setProperty('--op-name', `linear-gradient(90deg, ${x.neon.join(', ')})`);
-  const box = h('div', { class: 'app-opening', 'aria-hidden': 'true' }, h('div', { class: 'op-stage' }, canvas, name));
-  let worker: Worker | null = null;
-  const end = () => { box.remove(); worker?.terminate(); worker = null; };
-  box.addEventListener('click', end);
-  box.addEventListener('animationend', (e) => { if (e.target === box) end(); });
-  document.body.append(box);
-  const start = performance.timeOrigin + performance.now();
-  try {
-    if (!('transferControlToOffscreen' in canvas)) throw new Error('no OffscreenCanvas');
-    worker = new Worker(new URL('./openingWorker.ts', import.meta.url), { type: 'module' });
-    const off = canvas.transferControlToOffscreen();
-    worker.postMessage({ canvas: off, css: CSS_PX, mark: MARK_PX, dpr, colours, start }, [off]);
-  } catch {
-    worker = null;
-    runOpening(canvas, CSS_PX, MARK_PX, dpr, colours, start);
-  }
-  setTimeout(end, 3600); // whatever happens, never longer
+/** Tells the app the first screen is up (at most 3.5 s after start), so the native splash leaves. Resolves once
+ *  the splash's exit animation is over, so main.ts can hold the start-up extras until then. */
+export function playOpening(firstScreen: Promise<unknown> = Promise.resolve()): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return Promise.resolve();
+  return Promise.race([firstScreen.catch(() => {}), wait(3500)])
+    .then(frames)
+    .then(() => Launch.ready().catch(() => {}))
+    .then(() => wait(220));
 }

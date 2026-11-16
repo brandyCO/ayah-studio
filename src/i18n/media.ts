@@ -1,6 +1,6 @@
 // Media picker strings (Scenes → Add / Change), loaded with the studio so the first download stays
 // small. English is the source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'media.search': 'Search',
@@ -73,6 +73,6 @@ const ar: Partial<Record<MediaKey, string>> = {
 
 /** A media picker string, with {name} placeholders filled from `vars`. */
 export function mdt(key: MediaKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('media', key)) ?? en[key];
+  return fill(s, vars);
 }

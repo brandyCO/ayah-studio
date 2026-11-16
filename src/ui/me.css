@@ -27,7 +27,7 @@
 .me-h { font-weight: 900; font-size: var(--fs-h2); }
 .me-card { border: 0; border-radius: 22px; box-shadow: 0 4px 0 var(--line); }
 .goal.k-pages, .goal.k-surahs { --gc: #12a594; } .goal.k-listen { --gc: #2f7fd6; } .goal.k-memorise, .goal.k-lessons { --gc: #4caf2a; }
-.goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; }
+.goal.k-dhikr { --gc: #ff6b4a; } .goal.k-adhkar { --gc: #6c5ce7; } .goal.k-reels { --gc: #e8590c; } .goal.k-custom { --gc: #f59f00; } .goal.k-duas { --gc: #d98a00; } .goal.k-nights { --gc: #4c5fd5; } /* G5: these two had no colour, so their button was invisible */
 .goal[class*='k-'] { margin-bottom: 10px; padding: 10px 12px; border-radius: 18px;
   background: color-mix(in srgb, var(--gc) 11%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--gc) 26%, var(--card)); }
 .goal[class*='k-'] .goal-txt b { font: 800 var(--fs-l) var(--ui-round); }
@@ -271,7 +271,20 @@
 
 /* Unlockable app icons (src/ui/appIcons.ts). */
 .aic { margin-top: 18px; }
-.aic > p { margin: 0 2px 10px; }
+.aic-fold > p { margin: 10px 2px; }
+/* Folded sections on Stats & badges: a row with a peek and a chevron that turns when open. */
+:is(.bdf-fold, .aic-fold) > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; padding: 12px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--card, var(--bg)) 70%, var(--line)); }
+:is(.bdf-fold, .aic-fold) > summary::-webkit-details-marker { display: none; }
+:is(.bdf-fold, .aic-fold)[open] > summary { margin-bottom: 8px; }
+.bdf-fold { margin-bottom: 8px; }
+.bdf-fold > summary .bdf-group { margin: 0; flex: 1; min-width: 0; }
+.bdf-peek { display: inline-flex; }
+.bdf-peek > * + * { margin-inline-start: -6px; }
+.fold-chev { display: inline-grid; color: var(--muted); transition: rotate var(--dur-2, .2s); }
+details[open] > summary .fold-chev { rotate: 180deg; }
+.aic-now .aic-img { width: 40px; height: 40px; border-radius: 10px; }
+.aic-title { font-size: var(--fs-m, 16px); font-weight: 900; }
 .aic-opt { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; margin-bottom: 8px; background: color-mix(in srgb, var(--card, var(--bg)) 70%, var(--line)); }
 .aic-opt.on { box-shadow: 0 0 0 2px var(--accent) inset; }
 .aic-pic { position: relative; flex: none; width: 60px; height: 60px; }
@@ -407,3 +420,70 @@
 .bdf-more > summary { cursor: pointer; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); font-weight: 800; text-align: center; list-style: none; }
 .bdf-more > summary::-webkit-details-marker { display: none; }
 .bdf-more[open] > summary { margin-bottom: 8px; }
+/* "More goals (n)" under the first three. */
+.goals-more { display: block; margin: 4px auto 0; }
+
+/* One clear next step (Me): kicker, the step with its icon, one big button. */
+.me-next { --nc: #12a594; display: flex; flex-direction: column; gap: 10px; }
+.me-next.nx-adhkar { --nc: #6c5ce7; } .me-next.nx-listen { --nc: #2f7fd6; } .me-next.nx-dhikr { --nc: #ff6b4a; }
+.me-next:is(.nx-lessons, .nx-memorise) { --nc: #4caf2a; } .me-next.nx-reels { --nc: #e8590c; } .me-next:is(.nx-duas, .nx-nights) { --nc: #6c5ce7; }
+.me-next.nx-done { --nc: #f59f00; }
+.nx-kicker { margin: 0; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--nc); }
+.nx-row { display: flex; align-items: center; gap: 12px; }
+.nx-ic { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  background: var(--nc); box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); }
+.nx-me { width: 60px; height: 60px; border-radius: 50%; background: none; box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); position: relative; }
+.nx-me > svg { display: block; border-radius: 50%; }
+.nx-badge { position: absolute; inset-inline-end: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--nc); color: #fff; border: 2.5px solid var(--card); }
+.nx-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nx-txt b { font-size: 18px; font-weight: 900; line-height: 1.25; }
+.nx-bar { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--nc) 16%, transparent); overflow: hidden; margin-top: 3px; }
+.nx-bar i { display: block; height: 100%; border-radius: inherit; background: var(--nc); }
+.nx-go { width: 100%; font-size: 17px; padding: 14px; }
+.nx-go.quiet { background: color-mix(in srgb, var(--nc) 16%, var(--card)); color: color-mix(in srgb, var(--nc) 70%, var(--text)); box-shadow: 0 3px 0 color-mix(in srgb, var(--nc) 30%, transparent); }
+.nx-foot { align-self: center; border: 0; background: none; padding: 2px 6px; cursor: pointer; font: inherit; font-size: var(--fs-s); }
+/* "Your week is ready" (Friday Maghrib → Sunday) and Stats' Share my week. */
+.ws-card { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px;
+  background: linear-gradient(135deg, #2b2472, #6c4fc6 60%, #e0819a); color: #fff; }
+.ws-card .muted { color: rgba(255, 255, 255, .8); }
+.ws-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255, 255, 255, .16); color: #ffd36b; }
+.ws-txt { display: flex; flex-direction: column; gap: 2px; padding-inline-end: 30px; }
+.ws-txt b { font-size: 18px; font-weight: 900; }
+.ws-card .primary { grid-column: 1 / -1; width: 100%; }
+.ws-x { position: absolute; top: 8px; inset-inline-end: 8px; width: 34px; height: 34px; background: rgba(255, 255, 255, .14); border: 0; color: #fff; }
+.ws-share { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }
+
+/* A daily goal's quiet tick: "+n ✦" rises from its chest and fades. */
+.goal-tick { position: fixed; z-index: 60; translate: -50% 0; pointer-events: none; font-weight: 900; font-size: 17px;
+  color: var(--rw-2, #f59f00); text-shadow: 0 1px 0 var(--card); animation: goal-tick 1.2s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes goal-tick { 0% { opacity: 0; transform: translateY(6px) scale(.7); } 18% { opacity: 1; transform: translateY(-6px) scale(1.12); }
+  35% { transform: translateY(-12px) scale(1); } 100% { opacity: 0; transform: translateY(-46px); } }
+@media (prefers-reduced-motion: reduce) { .goal-tick { animation: none; opacity: 1; } }
+
+/* Quieter Me: the extra cards held back for another visit. */
+:is(.ws-card, .aic-new, .snc, .me-ask, .wg-hint)[hidden] { display: none !important; }
+
+/* The streak's next target: the next fire day, with the way there */
+.me-chip.me-fire { display: inline-grid; gap: 3px; padding-block: 5px 6px; font-weight: 800; }
+.me-fire-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+.me-fire-bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #ffb703, #ff6b2c); }
+
+/* The first flame, not lit yet (front-end review G2): the flame waits, dimmed, with a light breathing round it. */
+.me-flame.waiting > .flame { opacity: .6; }
+.me-flame-aura { position: absolute; left: 50%; top: 54%; width: 128px; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 214, 120, .75) 0%, rgba(255, 170, 60, .28) 42%, transparent 70%);
+  animation: me-aura 2.6s ease-in-out infinite; }
+@keyframes me-aura { 0%, 100% { opacity: .45; scale: .86; } 50% { opacity: 1; scale: 1.06; } }
+.me-count.me-first b { font-size: clamp(22px, 6.4vw, 27px); margin-top: 6px; line-height: 1.15; text-align: center; text-wrap: balance; }
+@media (prefers-reduced-motion: reduce) { .me-flame-aura { animation: none; opacity: .8; } }
+
+/* Keep your flame safe (front-end review G1). */
+.me-safe { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; }
+.me-safe-ic { position: relative; display: grid; place-items: center; width: 60px; height: 64px; border-radius: 18px; background: color-mix(in srgb, #f59f00 14%, var(--card)); }
+.me-safe-lock { position: absolute; inset-inline-end: -4px; bottom: -4px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--brand-fill, var(--accent)); color: #fff; box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, #000); }
+.me-safe-txt h2 { margin: 0 0 2px; font: 900 var(--fs-l, 17px)/1.25 var(--ui-round, system-ui); }
+.me-safe-txt p { margin: 0; color: color-mix(in srgb, var(--text) 70%, transparent); font-size: var(--fs-s, 14px); line-height: 1.4; }
+.me-safe-row { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.me-safe-row .google-btn { flex: 1; }

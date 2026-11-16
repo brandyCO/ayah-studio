@@ -26,6 +26,8 @@ const studio = {
   'ed.highlight-on': 'Light each word',
   'ed.off': 'Off',
   'ed.highlight-note': 'The word being recited changes colour, timed from the reciter\'s own words.',
+  'ed.untimed': 'This reciter has no word timings, so the whole ayah shows at once (never guessed).',
+  'ed.pickTimed': 'Choose a reciter with word timings',
   'ed.highlight-needs-timings': 'This recitation has no word timings, so words can\'t be lit (never guessed).',
   'ed.touches': 'Touches',
   'ed.touches-max': 'Up to {n} touches at once',

@@ -1,6 +1,6 @@
 // Strings for the lamp wall (src/ui/lampWall.ts), loaded with it. English is the source; Arabic falls back per key.
 // The du'as are the wording of Sahih Muslim 963 and 920, with him / her as the user picks.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'lw.title': 'Lamp wall',
@@ -83,8 +83,8 @@ const ar: Partial<Record<LampKey, string>> = {
 };
 
 export function lwt(key: LampKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('lampWall', key)) ?? en[key];
+  return fill(s, vars);
 }
 
 /** The four du'as (Sahih Muslim 963 and 920), for him or for her. Arabic is the hadith's own wording. */

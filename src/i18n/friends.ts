@@ -1,6 +1,6 @@
 // Strings for friends on Ranks (profiles, friend streaks), loaded with them. English is the source; Arabic falls back
 // to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'fr.tab': 'Friends',
@@ -19,8 +19,14 @@ const en = {
   'fr.asked': '{name} wants to be friends',
   'fr.asks': 'Waiting for you',
   'fr.invite': 'Invite a friend',
-  'fr.inviteSub': 'Share your link: whoever opens it becomes your friend.',
+  'fr.inviteSub': 'Share your link. A new friend who joins with it: you both get 50 Light after their 3rd day.',
   'fr.inviteText': 'Be my friend on Ayah Studio and keep a friend streak with me',
+  'fr.ivTitle': 'Light for inviting',
+  'fr.ivBy': '{name} invited you: {n} of 3 days',
+  'fr.ivFriend': '{name} joined with your link: {n} of 3 days',
+  'fr.ivSomeone': 'A friend',
+  'fr.ivClaim': 'Claim {n} Light',
+  'fr.ivDone': '+{n} Light',
   'fr.empty': 'No friends yet. Tap someone in your league, or share your link.',
   'fr.streak': '{n} day friend streak',
   'fr.streak0': 'No friend streak yet',
@@ -30,7 +36,9 @@ const en = {
   'fr.neither': 'Earn XP today, both of you, to light it',
   'fr.help': 'A day counts when you both earn XP. Miss a day and it starts again.',
   'fr.visit': 'Visit room',
-  'fr.week': 'XP this week',
+  'fr.week': 'This week',
+  'fr.total': 'XP in all',
+  'fr.weekXp': 'XP this week',
   'fr.flame': 'Flame streak',
   'fr.trophies': 'Trophies',
   'fr.pages': 'Pages this week',
@@ -49,6 +57,26 @@ const en = {
   'fr.yours': 'This is your own link. Share it with a friend.',
   'fr.open': 'Open Friends',
   'fr.levelNext': '{n} XP to the next level',
+  'fn.title': 'Friends’ news',
+  'fn.streak': '{n}-day streak',
+  'fn.level': 'Reached level {n}',
+  'fn.surah': 'Finished {name}',
+  'fn.juz': 'Finished Juz {n}',
+  'fn.khatm': 'Completed a Khatm',
+  'fn.cheer': 'MashaAllah',
+  'fn.cheered': 'MashaAllah · {n}',
+  'fn.mine': 'Your news',
+  'fn.by1': '{name} said MashaAllah',
+  'fn.by2': '{name} and {n} more said MashaAllah',
+  'fn.toast1': '{name} said MashaAllah: {what}',
+  'fn.toastN': '{n} friends said MashaAllah: {what}',
+  'fn.someone': 'A friend',
+  'fn.now': 'now',
+  'fn.min': '{n} min',
+  'fn.h': '{n} h',
+  'fn.d': '{n} d',
+  'fn.reading': 'Reading now',
+  'fn.listening': 'Listening now',
 };
 export type FriendKey = keyof typeof en;
 const ar: Partial<Record<FriendKey, string>> = {
@@ -68,7 +96,6 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.asked': '{name} يريد أن تكونا صديقين',
   'fr.asks': 'بانتظارك',
   'fr.invite': 'ادعُ صديقًا',
-  'fr.inviteSub': 'شارك رابطك: من يفتحه يصبح صديقك.',
   'fr.inviteText': 'كن صديقي على Ayah Studio ولنحافظ معًا على سلسلة الصحبة',
   'fr.empty': 'لا أصدقاء بعد. انقر على أحد في دوريك، أو شارك رابطك.',
   'fr.streak': 'سلسلة صحبة {n} يوم',
@@ -79,7 +106,9 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.neither': 'اكسبا خبرة اليوم كلاكما لتشتعل',
   'fr.help': 'يُحسب اليوم حين تكسبان الخبرة كلاكما. وإن فات يوم تبدأ من جديد.',
   'fr.visit': 'زيارة الغرفة',
-  'fr.week': 'خبرة هذا الأسبوع',
+  'fr.week': 'هذا الأسبوع',
+  'fr.total': 'الخبرة كلها',
+  'fr.weekXp': 'خبرة هذا الأسبوع',
   'fr.flame': 'سلسلة الشعلة',
   'fr.trophies': 'الكؤوس',
   'fr.pages': 'صفحات هذا الأسبوع',
@@ -89,6 +118,13 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.mineSub': 'اختر ما يظهر في ملفك لمن في دوريك.',
   'fr.you2': 'أنت',
   'fr.linkBad': 'رابط الصداقة هذا لم يعد يعمل.',
+  'fr.inviteSub': 'شارك رابطك. صديق جديد ينضم به: تحصلان كلاكما على 50 نورًا بعد يومه الثالث.',
+  'fr.ivTitle': 'نور الدعوة',
+  'fr.ivBy': 'دعاك {name}: {n} من 3 أيام',
+  'fr.ivFriend': 'انضم {name} برابطك: {n} من 3 أيام',
+  'fr.ivSomeone': 'صديق',
+  'fr.ivClaim': 'استلم {n} نورًا',
+  'fr.ivDone': '+{n} نور',
   'fr.linkTitle': '{name} يدعوك لتكونا صديقين',
   'fr.linkSub': 'حافظا على سلسلة الصحبة: كل يوم تكسبان فيه الخبرة كلاكما، تتوهج شخصيتاكما معًا.',
   'fr.linkJoin': 'لنكن صديقين',
@@ -98,9 +134,29 @@ const ar: Partial<Record<FriendKey, string>> = {
   'fr.yours': 'هذا رابطك أنت. شاركه مع صديق.',
   'fr.open': 'افتح الأصدقاء',
   'fr.levelNext': '{n} خبرة للمستوى التالي',
+  'fn.title': 'أخبار الأصدقاء',
+  'fn.streak': 'سلسلة {n} يومًا',
+  'fn.level': 'بلغ المستوى {n}',
+  'fn.surah': 'ختم سورة {name}',
+  'fn.juz': 'ختم الجزء {n}',
+  'fn.khatm': 'ختم القرآن',
+  'fn.cheer': 'ما شاء الله',
+  'fn.cheered': 'ما شاء الله · {n}',
+  'fn.mine': 'أخبارك',
+  'fn.by1': 'قال {name}: ما شاء الله',
+  'fn.by2': 'قال {name} و{n} آخرون: ما شاء الله',
+  'fn.toast1': 'قال {name}: ما شاء الله، {what}',
+  'fn.toastN': 'قال {n} من أصدقائك: ما شاء الله، {what}',
+  'fn.someone': 'صديق',
+  'fn.now': 'الآن',
+  'fn.min': '{n} د',
+  'fn.h': '{n} س',
+  'fn.d': '{n} ي',
+  'fn.reading': 'يقرأ الآن',
+  'fn.listening': 'يستمع الآن',
 };
 
 export function ft(key: FriendKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('friends', key)) ?? en[key];
+  return fill(s, vars);
 }

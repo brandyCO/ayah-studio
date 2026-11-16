@@ -44,7 +44,7 @@ export function todayCard(): HTMLElement {
   return box;
 }
 
-function openPicker() {
+export function openPicker() {
   const cur = currentPlan()?.id;
   const d = h('dialog', { class: 'sheet bottom' },
     h('div', { class: 'sheet-head' }, h('h2', {}, t('jr.pick')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),

@@ -121,7 +121,8 @@
 .ls-title { flex: 1; min-width: 0; text-align: center; }
 .ls-title h1 { margin: 0; font-size: var(--fs-h3); }
 .ls-ref { margin: 2px 0 0; font-size: var(--fs-s); color: var(--muted); }
-.ls-tree { flex: none; width: 56px; height: 56px; }
+.ls-tree { flex: none; width: 56px; height: 56px; padding: 0; border: 0; background: none; cursor: pointer; }
+.ls-tree:active { scale: .92; }
 .ls-steps { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 6px 0; }
 .ls-steps li { padding: 4px 12px; border-radius: 99px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); background: var(--line); }
 .ls-steps li.on { background: var(--brand-fill); color: #fff; }
@@ -316,6 +317,11 @@
 .lk-foot.good { background: var(--good-bg); color: var(--good); }
 .lk-foot.bad { background: var(--bad-bg); color: var(--bad); }
 .lk-verdict { display: grid; gap: 2px; }
+/* The user's character beside the verdict, reacting to the answer. */
+.lk-foot.with-coach { flex-wrap: nowrap; }
+.lk-foot.with-coach .lk-verdict { flex: 1; min-width: 0; }
+.lk-coach-box { flex: none; position: relative; width: 58px; height: 74px; align-self: flex-end; margin-block: -18px -6px; }
+.lk-coach-box .lk-coach { position: absolute; inset: 0; width: 100%; height: 100%; }
 .lk-verdict strong { font-size: var(--fs-h3, 20px); }
 .lk-answer .lk-ar { font-size: 26px; }
 .lk-orderans { display: grid; gap: 2px; }
@@ -413,7 +419,7 @@
 .tv-top .icon-btn { color: #eef4f0; background: rgba(255,255,255,.1); }
 .tv-title { text-align: center; display: grid; }
 .tv-title h1 { margin: 0; font-size: 20px; font-family: var(--ui-round, inherit); font-weight: 900; }
-.tv-title span { font-family: 'SuraNames', 'AmiriQuran', serif; opacity: .8; }
+.tv-title span { font-family: 'AmiriQuran', serif; opacity: .8; }
 .tv-card { position: absolute; inset: auto 12px calc(12px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; display: grid; gap: 8px; padding: 14px; border-radius: 20px; background: rgba(12,20,17,.72); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
 .tv-note { margin: 0; font-weight: 700; text-align: center; }
 .tv-row { display: flex; gap: 8px; }
@@ -435,8 +441,11 @@
 .ts-mic { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: .6; }
 .ts-follow.live { color: var(--accent); border-color: var(--accent); }
 .ts-follow.live .ts-mic { opacity: 1; animation: ts-listen 1.4s ease-in-out infinite; }
+.ts-follow .beta-pill { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.ts-misheard { opacity: .85; }
 @keyframes ts-listen { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
 @media (prefers-reduced-motion: reduce) { .lw.heard, .ts-follow.live .ts-mic { animation: none; } }
+.lw.unclear, .ls-page .lw.unclear { text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 6px; text-decoration-thickness: 2px; }
 .lw.wrong, .ls-page .lw.wrong { color: #d4383d; text-decoration: underline wavy #d4383d; text-underline-offset: 6px; text-decoration-thickness: 1.5px; }
 .lw.harakah, .ls-page .lw.harakah { color: inherit; text-decoration: underline wavy #e08a00; text-underline-offset: 6px; text-decoration-thickness: 2px; }
 /* "Help improve the harakat check?" (asked once at a check) */
@@ -640,3 +649,15 @@ html.lite .ls-noor i { animation: none; }
 .lk-fix .lk-continue { width: min(100%, 320px); margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .lamp .lf, .lamp.dimming::after, .lamp.dimming .lamp-art, .lk-fixw { animation: none !important; } }
 .lesson:has(.lk-drill .lamp-out) .ls-actions { display: none; }
+/* One slim bar for a new lesson's five parts (Meaning · Listen · Practise · Exercises · From memory). */
+.ls-phases { width: min(100%, 300px); gap: 5px; }
+.ls-phases span { flex: 1; height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--text) 12%, transparent); transition: background var(--dur-3); }
+.ls-phases span.past { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.ls-phases span.on { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent); }
+.ls-ph-now { color: var(--accent); font-weight: 800; }
+.ls-ph-now::before { content: ' · '; color: var(--muted); font-weight: 600; }
+.ls-more-btn { font-size: 22px; font-weight: 900; line-height: 1; }
+.ls-more .ls-steps { justify-content: flex-start; margin: 0 0 6px; }
+.ls-more .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ls-rec-row small { margin-inline-start: auto; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-meaning .ls-tools { display: none; }

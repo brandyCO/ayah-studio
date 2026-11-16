@@ -1,0 +1,97 @@
+name: Load test
+
+# How the database holds up with many players at once (owner request 2026-11-14, round 6): a local copy of the database
+# (every migration, no live data, the live project is never touched) is seeded with 10,000 players the way the app makes
+# them (scripts/loadtest/seed.sql), then every call the app makes at scale is sent by 40 players at once, and all of them
+# mixed (scripts/loadtest/run.sh). The table lands in the run's summary. A call averaging over the budget fails a pull
+# request that changes the database, and on the weekly run opens an issue "Load: …" (closed again when it passes).
+on:
+  pull_request:
+    paths: ['supabase/migrations/**', 'scripts/loadtest/**', '.github/workflows/loadtest.yml']
+  schedule:
+    - cron: '30 2 * * 0' # Sundays 02:30 UTC
+  workflow_dispatch:
+    inputs:
+      players: { description: 'Players', default: '10000' }
+      clients: { description: 'Players at once', default: '40' }
+      seconds: { description: 'Seconds per call', default: '20' }
+      budget: { description: 'Budget per call (average ms)', default: '150' }
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: loadtest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DB: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      N: ${{ inputs.players || '10000' }}
+      C: ${{ inputs.clients || '40' }}
+      T: ${{ inputs.seconds || '20' }}
+      BUDGET: ${{ inputs.budget || '150' }}
+      OUT: /tmp/loadtest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - run: supabase db start
+      - name: Tools
+        run: command -v pgbench || ls /usr/lib/postgresql/*/bin/pgbench || (sudo apt-get update -q && sudo apt-get install -yq postgresql-contrib)
+      - name: Seed players
+        run: time psql "$DB" -X -q -v ON_ERROR_STOP=1 -v n="$N" -f scripts/loadtest/seed.sql
+      - name: Load
+        id: load
+        run: |
+          set +e
+          scripts/loadtest/run.sh "$DB" "$N" "$C" "$T" "$BUDGET"
+          code=$?
+          cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s "$OUT/over.txt" ]; then echo "over=$(paste -sd, "$OUT/over.txt")" >> "$GITHUB_OUTPUT"; fi
+          exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: loadtest
+          path: |
+            /tmp/loadtest/report.md
+            /tmp/loadtest/results.json
+          retention-days: 30
+      - name: Over budget on a pull request
+        if: github.event_name == 'pull_request' && steps.load.outputs.over != ''
+        run: |
+          echo "::error::Slower than the budget ($BUDGET ms on average): ${{ steps.load.outputs.over }}"
+          exit 1
+      - name: Weekly issue
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          OVER: ${{ steps.load.outputs.over }}
+          OUTCOME: ${{ steps.load.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('/tmp/loadtest/report.md') ? fs.readFileSync('/tmp/loadtest/report.md', 'utf8') : '';
+            const bad = process.env.OVER || (process.env.OUTCOME !== 'success' ? 'the run failed' : '');
+            const { owner, repo } = context.repo;
+            const open = (await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: 'load', per_page: 10 })).data;
+            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            if (bad) {
+              const body = `The load test with ${process.env.N} players found calls slower than ${process.env.BUDGET} ms on average: ${bad}.\n\n${report}\n\nRun: ${run}`;
+              if (open.length) await github.rest.issues.createComment({ owner, repo, issue_number: open[0].number, body });
+              else await github.rest.issues.create({ owner, repo, title: `Load: ${bad}`.slice(0, 120), body, labels: ['load'], assignees: [owner] }).catch(() =>
+                github.rest.issues.create({ owner, repo, title: `Load: ${bad}`.slice(0, 120), body, labels: ['load'] }));
+            } else {
+              for (const i of open) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: i.number, body: `Back within the budget.\n\n${report}\n\nRun: ${run}` });
+                await github.rest.issues.update({ owner, repo, issue_number: i.number, state: 'closed' });
+              }
+            }
+      - if: always()
+        run: supabase stop --no-backup

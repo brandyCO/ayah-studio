@@ -26,6 +26,22 @@ export const EDITIONS = [
   ['ru.kuliev', 'ru', 'Русский', 'Russian', 'Elmir Kuliev'],
   ['hi.hindi', 'hi', 'हिन्दी', 'Hindi', 'Suhel Farooq Khan & Saifur Rahman Nadwi'],
   ['sw.barwani', 'sw', 'Kiswahili', 'Swahili', 'Ali Muhsin Al-Barwani'],
+  // 2026-11-14 (interface in 30 languages): a published translation for each new interface language that Tanzil has
+  // with a named translator (Japanese and Korean are listed there without one, so they are left out).
+  ['fa.fooladvand', 'fa', 'فارسی', 'Persian', 'Mohammad Mahdi Fooladvand'],
+  ['ps.abdulwali', 'ps', 'پښتو', 'Pashto', 'Abdul Wali'],
+  ['uz.sodik', 'uz', 'Oʻzbekcha', 'Uzbek', 'Muhammad Sodik Muhammad Yusuf'],
+  ['az.musayev', 'az', 'Azərbaycanca', 'Azerbaijani', 'Alikhan Musayev'],
+  ['bs.korkut', 'bs', 'Bosanski', 'Bosnian', 'Besim Korkut'],
+  ['sq.ahmeti', 'sq', 'Shqip', 'Albanian', 'Sherif Ahmeti'],
+  ['pt.elhayek', 'pt', 'Português', 'Portuguese', 'Samir El-Hayek'],
+  ['it.piccardo', 'it', 'Italiano', 'Italian', 'Hamza Roberto Piccardo'],
+  ['nl.siregar', 'nl', 'Nederlands', 'Dutch', 'Sofian S. Siregar'],
+  ['ha.gumi', 'ha', 'Hausa', 'Hausa', 'Abubakar Mahmoud Gumi'],
+  ['so.abduh', 'so', 'Soomaali', 'Somali', 'Mahmud Muhammad Abduh'],
+  ['ta.tamil', 'ta', 'தமிழ்', 'Tamil', 'Jan Trust Foundation'],
+  ['ml.abdulhameed', 'ml', 'മലയാളം', 'Malayalam', 'Cheriyamundam Abdul Hameed & Kunhi Mohammed Parappoor'],
+  ['zh.jian', 'zh', '中文', 'Chinese', 'Ma Jian'],
 ];
 
 function assert(cond, msg) {

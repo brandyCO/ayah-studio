@@ -1,0 +1,20 @@
+{
+ "noor": {
+  "lit": "Your flame is lit for today. See you tomorrow.",
+  "pages1": "One more page and today is lit.",
+  "pagesN": "{n} more pages and today is lit.",
+  "oneGoal": "Meet one goal to light today’s flame.",
+  "readDone": "Today’s pages are done. Keep going if you like.",
+  "readTime": "Each page counts after {t} on screen.",
+  "reel": "Your reel counts for today’s goal.",
+  "share": "Share an ayah you love with someone today.",
+  "dry1": "A tree is thirsty. One recitation waters it.",
+  "dryN": "{n} trees are thirsty. One recitation waters each.",
+  "plant": "Plant a seed, and it grows as you memorise.",
+  "grow": "Your garden is growing. Come back tomorrow to water it.",
+  "ofPages": "{n} of {of} pages today",
+  "pagesToday": "{n} pages today",
+  "page1Today": "1 page today",
+  "days": "{n}-day streak"
+ }
+}

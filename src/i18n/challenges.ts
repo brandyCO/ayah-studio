@@ -1,6 +1,6 @@
 // Strings for friend challenges and the weekly duel (src/ui/challenges.ts), loaded with them. English is the source;
 // Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'cl.tab': 'Challenges',
@@ -48,6 +48,9 @@ const en = {
   'cl.duelPill': 'Rival this week: {name} · {me}–{them}',
   'du.title': "This week's rival",
   'du.offTitle': 'Weekly rival',
+  'du.finding': 'Finding your rival…',
+  'du.findingToast': 'Still looking for a reader close to you. You will see your rival here as soon as you are paired.',
+  'du.paired': 'Your rival this week: {name}',
   'du.waiting': 'Looking for a rival as close to you as possible…',
   'du.waitSub': 'Everyone in Ranks has a weekly rival. You are paired as soon as another reader is free, and your duel quests start then.',
   'du.quests': "Today's duel quests · +30 each",
@@ -62,6 +65,19 @@ const en = {
   'du.vs': 'vs',
   'du.today': 'Today ends in',
   'du.week': 'Duel ends in',
+  'tq.race': 'Race',
+  'tq.team': 'Together',
+  'tq.pickTitle': 'Team up with {name}',
+  'tq.pickSub': '7 days from the day they say yes. Reach one goal together and you both open the big chest.',
+  'tq.goal': 'Goal together: {n} {u}',
+  'tq.sent': 'Team quest sent to {name}',
+  'tq.incoming': '{name} wants to team up',
+  'tq.left': '{n} {u} to go together',
+  'tq.reached': 'You reached it together, MashaAllah!',
+  'tq.short': 'You got {n} of {goal} together',
+  'tq.you': 'You {n}',
+  'tq.them': '{name} {n}',
+  'tq.title': 'Team quest',
 };
 export type ChallengeKey = keyof typeof en;
 const ar: Partial<Record<ChallengeKey, string>> = {
@@ -110,6 +126,9 @@ const ar: Partial<Record<ChallengeKey, string>> = {
   'cl.duelPill': 'منافس الأسبوع: {name} · {me}–{them}',
   'du.title': 'منافس هذا الأسبوع',
   'du.offTitle': 'منافس أسبوعي',
+  'du.finding': 'نبحث عن منافسك…',
+  'du.findingToast': 'ما زلنا نبحث عن قارئ قريب منك. سيظهر منافسك هنا حالما تُقرن به.',
+  'du.paired': 'منافسك هذا الأسبوع: {name}',
   'du.waiting': 'نبحث عن أقرب منافس لك…',
   'du.waitSub': 'لكل من في الترتيب منافس أسبوعي. تُقرن بمنافس حالما يتفرغ قارئ آخر، وتبدأ مهام المنافسة عندها.',
   'du.quests': 'مهام المنافسة اليوم · +30 لكل منها',
@@ -124,9 +143,22 @@ const ar: Partial<Record<ChallengeKey, string>> = {
   'du.vs': 'ضد',
   'du.today': 'ينتهي اليوم بعد',
   'du.week': 'تنتهي المنافسة بعد',
+  'tq.race': 'سباق',
+  'tq.team': 'معًا',
+  'tq.pickTitle': 'كوّن فريقًا مع {name}',
+  'tq.pickSub': '7 أيام من يوم موافقته. بلغا هدفًا واحدًا معًا وافتحا الصندوق الكبير كلاكما.',
+  'tq.goal': 'الهدف معًا: {n} {u}',
+  'tq.sent': 'أُرسلت مهمة الفريق إلى {name}',
+  'tq.incoming': '{name} يريد أن تعملا معًا',
+  'tq.left': 'بقي {n} {u} معًا',
+  'tq.reached': 'بلغتماه معًا، ما شاء الله!',
+  'tq.short': 'جمعتما {n} من {goal}',
+  'tq.you': 'أنت {n}',
+  'tq.them': '{name} {n}',
+  'tq.title': 'مهمة فريق',
 };
 
 export function clt(key: ChallengeKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('challenges', key)) ?? en[key];
+  return fill(s, vars);
 }

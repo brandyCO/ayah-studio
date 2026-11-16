@@ -1,11 +1,12 @@
 // Ranks strings, loaded with the Ranks screen so the app's first download stays small.
 // English is the source; Arabic falls back to it per key.
-import { lang } from './index';
+import { fill, lang, tr } from './index';
 
 const en = {
   'rk.title': "Ranks",
   'rk.sub': "Read, listen and make reels together",
   'rk.outTitle': "Climb the ranks",
+  'rk.outLine': "Join a league of 15 readers this week. Only what the app checks itself counts.",
   'rk.outSub': "Sign in with Google to join this week’s league, the global board and boards with your family and friends. Only what the app checks itself counts: pages read for their full time, recitation really played, surahs finished and reels made.",
   'rk.signIn': "Sign in with Google",
   'rk.how': "How XP works",
@@ -355,6 +356,8 @@ const en = {
   'fb.hold.9': "Ramadan fanous",
   'fb.hold.10': "Suhoor drum",
   'fb.hold.11': "Iftar dates",
+  'fb.hold.12': "Mabkhara", 'fb.hold.13': "Dallah", 'fb.hold.14': "Moroccan tea", 'fb.hold.15': "Roses", 'fb.hold.16': "Eid gift", 'fb.hold.17': "Rosewater",
+  'fb.outfit.17': "Kaftan", 'fb.outfit.18': "Tatreez thobe", 'fb.outfit.19': "Sherwani", 'fb.outfit.20': "Omani dishdasha", 'fb.outfit.21': "Kebaya", 'fb.outfit.22': "Anarkali",
   'fb.tab.eyes': "Eyes",
   'fb.tab.brows': "Brows",
   'fb.tab.mouth': "Smile",
@@ -370,7 +373,7 @@ const en = {
   'fb.age.0': "Young", 'fb.age.1': "Older",
   'fb.wrap.0': "Classic", 'fb.wrap.1': "Khimar", 'fb.wrap.2': "Shayla", 'fb.wrap.3': "Wrapped",
   'fb.pattern.0': "Plain", 'fb.pattern.1': "Embroidered trim", 'fb.pattern.2': "Stripes", 'fb.pattern.3': "Ikat", 'fb.pattern.4': "Zellige stars",
-  'fb.acc.0': "None", 'fb.acc.1': "Watch", 'fb.acc.2': "Prayer mat", 'fb.acc.3': "Siwak", 'fb.acc.4': "Backpack",
+  'fb.acc.0': "None", 'fb.acc.1': "Watch", 'fb.acc.2': "Prayer mat", 'fb.acc.3': "Siwak", 'fb.acc.4': "Backpack", 'fb.acc.5': "Pearls", 'fb.acc.6': "Khatam brooch", 'fb.acc.7': "Sash", 'fb.acc.8': "Pashmina", 'fb.acc.9': "Crescent medallion", 'fb.acc.10': "Jasmine corsage",
   'fb.hair.6': "Fade", 'fb.hair.7': "Wavy", 'fb.hair.8': "Side part", 'fb.hair.9': "Afro", 'fb.hair.10': "Braids", 'fb.hair.11': "Ponytail",
   'fb.head.7': "Peci",
   'fb.outfit.12': "Djellaba", 'fb.outfit.13': "Shalwar kameez", 'fb.outfit.14': "Baju koko", 'fb.outfit.15': "Boubou", 'fb.outfit.16': "Baju kurung",
@@ -406,7 +409,7 @@ const en = {
   'rs.sub': "Light buys pieces for your room; they stay yours. The metal lanterns are won by finishing a league week in the top 3.",
   'rs.plant': "Plant", 'rs.side': "Corner", 'rs.rug': "Rug", 'rs.curtain': "Curtains", 'rs.hang': "Lantern",
   'rs.none': "None", 'rs.default': "Classic",
-  'rs.i.fern': "Fern", 'rs.i.palm': "Date palm", 'rs.i.jasmine': "Jasmine", 'rs.i.olive': "Olive tree",
+  'rs.i.fern': "Fern", 'rs.i.palm': "Date palm", 'rs.i.jasmine': "Jasmine", 'rs.i.olive': "Olive tree", 'rs.i.orchid': "White orchid", 'rs.i.lemon': "Lemon tree", 'rs.i.kursi': "Damascene kursi", 'rs.i.lanterns': "Three lanterns", 'rs.i.qandil': "Mamluk glass lamp", 'rs.i.damask': "Emerald damask",
   'rs.i.dates': "Basket of dates", 'rs.i.tea': "Tea table", 'rs.i.rehal': "Mushaf stand", 'rs.i.incense': "Incense burner",
   'rs.i.kilim': "Sand kilim", 'rs.i.prayer': "Prayer rug", 'rs.i.persian': "Blue Persian", 'rs.i.royal': "Royal rug",
   'rs.i.sheer': "Sheer curtains", 'rs.i.velvet': "Velvet curtains",
@@ -433,7 +436,8 @@ const en = {
   'room.share': "Share",
   'room.sub': "{n} trophies on your shelf. Tap your character to say hello",
   'room.subEmpty': "Finish a week in your league's top 3 and its trophy stands here",
-  'room.emptyCups': "Trophies go here",
+  'room.emptyCups': "Top 3 in your league puts a trophy here",
+  'room.emptyBadges': "Read 10 pages and your first badge stands here",
   'cc.kicker': "My character",
   'cc.streak': "{n}-day streak",
   'cc.pieces': "{n} wardrobe pieces",
@@ -524,6 +528,8 @@ const ar: Partial<Record<RankKey, string>> = {
   'fb.hold.9': "فانوس رمضان",
   'fb.hold.10': "طبلة السحور",
   'fb.hold.11': "تمر الإفطار",
+  'fb.hold.12': "مبخرة", 'fb.hold.13': "دلة", 'fb.hold.14': "شاي مغربي", 'fb.hold.15': "ورود", 'fb.hold.16': "عيدية", 'fb.hold.17': "مرش ماء الورد",
+  'fb.outfit.17': "قفطان", 'fb.outfit.18': "ثوب مطرز", 'fb.outfit.19': "شيرواني", 'fb.outfit.20': "دشداشة عمانية", 'fb.outfit.21': "كبايا", 'fb.outfit.22': "أناركلي",
   'fb.tab.eyes': "العينان",
   'fb.tab.brows': "الحاجبان",
   'fb.tab.mouth': "الابتسامة",
@@ -539,7 +545,7 @@ const ar: Partial<Record<RankKey, string>> = {
   'fb.age.0': "شاب", 'fb.age.1': "أكبر سنًّا",
   'fb.wrap.0': "كلاسيكي", 'fb.wrap.1': "خمار", 'fb.wrap.2': "شيلة", 'fb.wrap.3': "ملفوف",
   'fb.pattern.0': "سادة", 'fb.pattern.1': "تطريز", 'fb.pattern.2': "مخطّط", 'fb.pattern.3': "إيكات", 'fb.pattern.4': "نجوم الزليج",
-  'fb.acc.0': "بلا", 'fb.acc.1': "ساعة", 'fb.acc.2': "سجادة صلاة", 'fb.acc.3': "سواك", 'fb.acc.4': "حقيبة ظهر",
+  'fb.acc.0': "بلا", 'fb.acc.1': "ساعة", 'fb.acc.2': "سجادة صلاة", 'fb.acc.3': "سواك", 'fb.acc.4': "حقيبة ظهر", 'fb.acc.5': "لؤلؤ", 'fb.acc.6': "بروش خاتم", 'fb.acc.7': "وشاح", 'fb.acc.8': "باشمينا", 'fb.acc.9': "ميدالية هلال", 'fb.acc.10': "زهرة ياسمين",
   'fb.hair.6': "قصير جدًّا", 'fb.hair.7': "مموّج", 'fb.hair.8': "فرق جانبي", 'fb.hair.9': "أفرو", 'fb.hair.10': "ضفيرتان", 'fb.hair.11': "ذيل حصان",
   'fb.head.7': "بيجي",
   'fb.outfit.12': "جلابة", 'fb.outfit.13': "شلوار قميص", 'fb.outfit.14': "باجو كوكو", 'fb.outfit.15': "بوبو", 'fb.outfit.16': "باجو كورونغ",
@@ -575,7 +581,7 @@ const ar: Partial<Record<RankKey, string>> = {
   'rs.sub': "تشتري بالنور قطعًا لغرفتك وتبقى لك. أما الفوانيس المعدنية فتُربح بإنهاء أسبوع الدوري بين أول ثلاثة.",
   'rs.plant': "نبتة", 'rs.side': "الزاوية", 'rs.rug': "سجادة", 'rs.curtain': "ستائر", 'rs.hang': "فانوس",
   'rs.none': "بلا", 'rs.default': "الكلاسيكية",
-  'rs.i.fern': "سرخس", 'rs.i.palm': "نخلة", 'rs.i.jasmine': "ياسمين", 'rs.i.olive': "شجرة زيتون",
+  'rs.i.fern': "سرخس", 'rs.i.palm': "نخلة", 'rs.i.jasmine': "ياسمين", 'rs.i.olive': "شجرة زيتون", 'rs.i.orchid': "أوركيد أبيض", 'rs.i.lemon': "شجرة ليمون", 'rs.i.kursi': "كرسي دمشقي", 'rs.i.lanterns': "ثلاثة فوانيس", 'rs.i.qandil': "قنديل مملوكي", 'rs.i.damask': "دمشقي زمردي",
   'rs.i.dates': "سلة تمر", 'rs.i.tea': "طاولة شاي", 'rs.i.rehal': "حامل المصحف", 'rs.i.incense': "مبخرة",
   'rs.i.kilim': "كليم رملي", 'rs.i.prayer': "سجادة صلاة", 'rs.i.persian': "سجادة فارسية زرقاء", 'rs.i.royal': "سجادة ملكية",
   'rs.i.sheer': "ستائر شفافة", 'rs.i.velvet': "ستائر مخملية",
@@ -602,7 +608,8 @@ const ar: Partial<Record<RankKey, string>> = {
   'room.share': "مشاركة",
   'room.sub': "{n} كؤوس على رفّك. اضغط على شخصيتك لتحيّيها",
   'room.subEmpty': "أنهِ أسبوعًا بين أول ثلاثة في دوريك وتقف كأسه هنا",
-  'room.emptyCups': "هنا تقف الكؤوس",
+  'room.emptyCups': "أنهِ الأسبوع بين أول ثلاثة لتقف كأسك هنا",
+  'room.emptyBadges': "اقرأ 10 صفحات ويقف أول وسام لك هنا",
   'cc.kicker': "شخصيتي",
   'cc.streak': "سلسلة {n} يومًا",
   'cc.pieces': "{n} قطع في الخزانة",
@@ -619,6 +626,7 @@ const ar: Partial<Record<RankKey, string>> = {
   'rk.title': "الترتيب",
   'rk.sub': "اقرأ واستمع واصنع المقاطع مع غيرك",
   'rk.outTitle': "اصعد في الترتيب",
+  'rk.outLine': "انضم إلى دوري من 15 قارئًا هذا الأسبوع. لا يُحسب إلا ما يتحقق منه التطبيق بنفسه.",
   'rk.outSub': "سجّل الدخول بحساب Google لتنضم إلى دوري هذا الأسبوع والترتيب العام ولوحات مع عائلتك وأصدقائك. لا يُحسب إلا ما يتحقق منه التطبيق بنفسه: صفحات قُرئت وقتها الكامل، وتلاوة شُغّلت فعلًا، وسور أُتمّت، ومقاطع صُنعت.",
   'rk.signIn': "تسجيل الدخول بحساب Google",
   'rk.how': "كيف تُحسب الخبرة",
@@ -895,6 +903,6 @@ const ar: Partial<Record<RankKey, string>> = {
 
 /** A Ranks string, with {name} placeholders filled from `vars`. */
 export function rt(key: RankKey, vars?: Record<string, string | number>): string {
-  const s = (lang() === 'ar' ? ar[key] : undefined) ?? en[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  const s = (lang() === 'ar' ? ar[key] : tr('ranks', key)) ?? en[key];
+  return fill(s, vars);
 }

@@ -6,12 +6,13 @@
 import { account, onAccount } from '../cloud/auth';
 import { supabase } from '../cloud/supabase';
 import { localMsg } from '../i18n';
-import { addDays, allDays, claimGoal, streak } from '../data/journey';
+import { addDays, allDays, claimGoal, earnedBadges, streak, todayRec } from '../data/journey';
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
-import { isFriendFireDay } from '../data/fireDays';
-import { islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
+import { EDGE, installId, remoteConfig } from '../net';
+import { isFireDay, isFriendFireDay } from '../data/fireDays';
+import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const sb = await supabase();
@@ -56,21 +57,24 @@ export const rankName = () => { try { return localStorage.getItem('rankName') ||
 // waits out the gap itself instead of sending it and wrongly marking the numbers as sent.
 const GAP = 5_200;
 let lastAt = 0;
-function totals(k: string) {
-  const d = allDays()[k];
-  // Adhkar sessions said in full (morning, evening, the du'a moments) and dhikr counted: kept for friend challenges and
-  // duels, never in the league score; the server limits how fast they may grow.
-  const adhkar = (d?.ad ? 1 : 0) + (d?.am ? 1 : 0) + (d?.dm?.length ?? 0);
-  const dhikr = Object.values(d?.dk ?? {}).reduce((a, b) => a + (b > 0 ? b : 0), 0);
-  return { pages: readLogAll()[k]?.length ?? 0, listen: Math.floor(d?.l ?? 0), surahs: d?.s?.length ?? 0, reels: d?.r ?? 0, lessons: d?.ls ?? 0, flawless: d?.lf ?? 0, adhkar, dhikr };
-}
+const totals = dayTotals;
 let timer = 0;
 let busy = false;
 export function reportSoon(delay = 2_500) {
   if (!account() || timer) return;
   timer = window.setTimeout(() => { timer = 0; void report(); }, delay);
 }
-export async function report(): Promise<void> {
+const LISTEN_GAP = 60_000;
+let listenAt = 0;
+/** Two report signatures (id:pages:listen:…) that differ only in the minutes listened. */
+const sameButListen = (a: string | undefined, b: string) => {
+  if (!a) return false;
+  const x = a.split(':'), y = b.split(':');
+  x[2] = y[2] = '';
+  return x.join(':') === y.join(':');
+};
+/** `now`: send everything at once (the app is being left). */
+export async function report(now = false): Promise<void> {
   if (!account() || busy) return;
   busy = true;
   try {
@@ -85,11 +89,20 @@ export async function report(): Promise<void> {
       const v = islamicTotals(k, totals) as ReturnType<typeof totals>;
       const sig = `${account()!.id}:${v.pages}:${v.listen}:${v.surahs}:${v.reels}:${v.lessons}:${v.flawless}:${v.adhkar}:${v.dhikr}`;
       if (sent[k] === sig || (k !== today && !v.pages && !v.listen && !v.surahs && !v.reels && !v.lessons && !v.adhkar && !v.dhikr)) continue;
+      // Only the minutes listened moved: sent at most once a minute (the player adds them every 15 s), unless the
+      // app is being left. Pages, lessons and the rest still go within seconds (round 3: ~4× fewer writes).
+      if (!now && k === today && sameButListen(sent[k], sig) && Date.now() - listenAt < LISTEN_GAP) {
+        reportSoon(LISTEN_GAP - (Date.now() - listenAt) + 200);
+        continue;
+      }
+      if (k === today) listenAt = Date.now();
       lastAt = Date.now();
       await rpc('rank_report', { d: k, pages: v.pages, listen: v.listen, surahs: v.surahs, reels: v.reels, my_name: rankName(), lessons: v.lessons, adhkar: v.adhkar, dhikr: v.dhikr, week_end: weekEndAt().toISOString(), utc_off: utcOff() });
       // Flawless lessons: 10 extra XP each (rank_flawless; an older server without it is skipped).
       if (v.flawless) await rpc('rank_flawless', { d: k, n: v.flawless }).catch(() => undefined);
       sent[k] = sig;
+      ownPulse = null; // my own part of the league fingerprint has changed: ask again
+      ownSocial = null;
       if (k === today) setTimeout(() => void friendMoments(), 1500);
     }
     // The lamp of Light by the name (sent when it changes).
@@ -111,10 +124,24 @@ export function watchRanks() {
   watchMaghrib(totals);
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
+  window.addEventListener('journey-changed', () => featsSoon());
+  // Reading now: every 2 minutes while the mushaf is open or a recitation plays (friends see the dot for 4), and at
+  // once when it changes between reading and listening. Checked every 30 s, sent only when needed (round 3).
+  let liveK: string | null = null;
+  let liveAt = 0;
+  setInterval(() => {
+    if (!account() || document.hidden) return;
+    const b = document.body.classList;
+    const k = b.contains('listening') || b.contains('listening-away') ? 'listen' : b.contains('mushaf-mode') ? 'read' : null;
+    if (!k) { liveK = null; return; }
+    if (k === liveK && Date.now() - liveAt < 120_000) return;
+    liveK = k; liveAt = Date.now();
+    void rpc('rank_live', { k }).catch(() => {});
+  }, 30_000);
   window.addEventListener('readlog-changed', soon);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(); }
-    if (!document.hidden) setTimeout(() => void friendMoments(), 2500);
+    if (document.hidden && timer) { clearTimeout(timer); timer = 0; void report(true); }
+    if (!document.hidden) { setTimeout(() => void friendMoments(), 2500); setTimeout(() => void cheersSoon(), 6000); }
   });
   onAccount((a) => {
     kept = null;
@@ -124,6 +151,8 @@ export function watchRanks() {
     if (!a) return;
     reportSoon(3000);
     setTimeout(() => void friendMoments(), 4000);
+    setTimeout(() => void cheersSoon(), 7000);
+    featsSoon();
     // A board invite opened before signing in: Ranks joins it.
     try { if ((sessionStorage.getItem('pendingBoard') || sessionStorage.getItem('pendingChallenge')) && location.hash !== '#/ranks') location.hash = '#/ranks'; } catch { /* ignore */ }
     void scheduleLeagueNote();
@@ -184,7 +213,7 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
   return p;
 }
 const loading = new Map<string, Promise<unknown>>();
-export const dropCache = () => { for (const c of cache.values()) c.at = 0; };
+export const dropCache = () => { for (const c of cache.values()) c.at = 0; ownSocial = null; };
 /** Asks again for the kept answers `live` picks (what is on screen now); true when any of them changed. */
 export async function refreshCached(live: (key: string) => boolean): Promise<boolean> {
   let changed = false;
@@ -200,6 +229,65 @@ export async function refreshCached(live: (key: string) => boolean): Promise<boo
   return changed;
 }
 
+/** One short fingerprint of everything the league screen shows (null on an older server: then everything is asked). */
+const fullPulse = () => rpc<string | null>('rank_pulse', { d: rankDay() }).catch(() => null);
+// Round 5: the fingerprint in two parts. My own part (and which league) from the database about once a minute and
+// after each report; the league's part through the edge proxy, which answers a whole league from one read every 8 s.
+// Any failure (no proxy, switched off, offline, an older server) falls back to the full pulse, so nothing is missed.
+let ownPulse: { p: string; l: string | null; d: string; u?: string; at: number } | null = null;
+export async function rankPulse(): Promise<string | null> {
+  const d = rankDay();
+  if (!EDGE || !(await remoteConfig()).leaguePulse) return fullPulse();
+  if (!ownPulse || ownPulse.d !== d || ownPulse.u !== account()?.id || Date.now() - ownPulse.at > 60_000) {
+    const m = await rpc<{ p: string; l: string | null } | null>('rank_my_pulse', { d }).catch(() => undefined);
+    if (m === undefined) return fullPulse();
+    if (m === null) return null;
+    ownPulse = { ...m, d, u: account()?.id, at: Date.now() };
+  }
+  if (!ownPulse.l) return ownPulse.p;
+  try {
+    const r = await fetch(`${EDGE}/lp?l=${encodeURIComponent(ownPulse.l)}&d=${d}&i=${encodeURIComponent(installId())}`);
+    const lp = r.ok ? ((await r.json()) as { p?: string | null }).p : undefined;
+    if (typeof lp === 'string') return `${ownPulse.p}:${lp}`;
+  } catch { /* the proxy did not answer: ask the database */ }
+  return fullPulse();
+}
+// Round 6: the friends' and rival's fingerprint the same way. My own part (my row, my friend list, asks, MashaAllahs on my
+// news, my duel, and private friends / a private rival) from the database about once a minute and after each report or
+// friend action; each public friend's and the rival's own part through the edge proxy (GET /pp), which keeps every
+// player's answer 8 s, so a player watched by many friends costs about one read every 8 s. null = ask in full.
+let ownSocial: { p: string; f: string[]; r: string | null; d: string; u?: string; at: number } | null = null;
+export const forgetSocial = () => { ownSocial = null; };
+export async function socialPulse(only: 'all' | 'own' | 'rival' = 'all'): Promise<string | null> {
+  const d = rankDay();
+  if (!EDGE || !account() || !(await remoteConfig()).friendPulse) return null;
+  if (!ownSocial || ownSocial.d !== d || ownSocial.u !== account()?.id || Date.now() - ownSocial.at > 60_000) {
+    const m = await rpc<{ p: string; f: string[] | null; r: string | null } | null>('rank_my_social', { d }).catch(() => undefined);
+    if (!m) return null;
+    ownSocial = { p: m.p, f: (m.f ?? []).filter((x) => /^[0-9a-f]{10}$/.test(x)), r: m.r && /^[0-9a-f]{10}$/.test(m.r) ? m.r : null, d, u: account()?.id, at: Date.now() };
+  }
+  const pids = only === 'own' ? [] : only === 'rival' ? (ownSocial.r ? [ownSocial.r] : []) : [...new Set([...ownSocial.f, ...(ownSocial.r ? [ownSocial.r] : [])])].sort();
+  if (!pids.length) return ownSocial.p;
+  try {
+    const parts: string[] = [];
+    for (let i = 0; i < pids.length; i += 50) {
+      const r = await fetch(`${EDGE}/pp?p=${pids.slice(i, i + 50).join(',')}&d=${d}&i=${encodeURIComponent(installId())}`);
+      if (!r.ok) return null;
+      const m = ((await r.json()) as { p?: Record<string, string> }).p;
+      if (!m || typeof m !== 'object') return null;
+      for (const k of pids.slice(i, i + 50)) parts.push(`${k}=${m[k] ?? ''}`);
+    }
+    return `${ownSocial.p}:${parts.join(',')}`;
+  } catch { return null; }
+}
+// What each check last saw: unchanged since then = nothing new to fetch (memory only, so a fresh start asks in full).
+const socialSeen = new Map<string, string>();
+/** The fingerprint `tag` should compare with, or null when it must ask in full (no proxy, failure, or a change). */
+export async function socialUnchanged(tag: string, only: 'all' | 'own' | 'rival' = 'all'): Promise<{ same: boolean; p: string | null }> {
+  const p = await socialPulse(only).catch(() => null);
+  return { same: p !== null && socialSeen.get(tag) === p, p };
+}
+export const markSocialSeen = (tag: string, p: string | null) => { if (p) socialSeen.set(tag, p); };
 export const rankStatus = (fresh = false) => cached('status', async () => {
   const s = await rpc<Status | null>('rank_status', { d: rankDay() });
   if (s) { setMyXp(s.total); s.figure = await myFigure(); await sendLocalFigure(); void sendRoom(); void sendProfile(); }
@@ -298,7 +386,10 @@ export interface Challenge {
   id: string; code: string | null; start: string | null; end: string | null; waiting: boolean; expired: boolean;
   day: number | null; over: boolean; claimed: boolean; me: number | null; them: number | null; friend: Row | null;
   kind?: ChallengeKind; asked?: boolean; incoming?: boolean;
+  /** A team quest: both work towards this shared goal instead of racing. */
+  goal?: number | null;
 }
+export type ChallengeResult = { result: 'won' | 'tie' | 'lost' | 'reached' | 'short'; light: number };
 export const myChallenges = (fresh = false) => cached('challenges', () => rpc<Challenge[]>('rank_my_challenges', { d: rankDay() }), fresh);
 export async function createChallenge(kind: ChallengeKind = 'read'): Promise<{ id: string; code: string }> {
   await report();
@@ -314,8 +405,15 @@ export async function acceptChallenge(code: string): Promise<string> {
 }
 /** Challenges a friend straight away (no link); it waits for their yes. */
 export async function challengeFriend(pid: string, kind: ChallengeKind): Promise<string> {
-  await report();
+  void report().catch(() => {}); // never holds the challenge up (it can wait ~5 s between reports)
   const id = await rpc<string>('rank_challenge_friend', { who: pid, k: kind });
+  dropCache();
+  return id;
+}
+/** A team quest with a friend: one shared goal for the 7 days; it waits for their yes. */
+export async function teamWithFriend(pid: string, kind: ChallengeKind, goal: number): Promise<string> {
+  void report().catch(() => {}); // never holds the challenge up (it can wait ~5 s between reports)
+  const id = await rpc<string>('rank_challenge_team', { who: pid, k: kind, g: goal });
   dropCache();
   return id;
 }
@@ -342,8 +440,8 @@ export async function sendCheer(ch: string, kind: number): Promise<number> {
   return n;
 }
 /** Claims a finished challenge's Light once (winner 100, tie 60, otherwise 30). */
-export async function claimChallenge(c: Challenge): Promise<{ result: 'won' | 'tie' | 'lost'; light: number } | null> {
-  const r = await rpc<{ result: 'won' | 'tie' | 'lost'; light: number } | null>('rank_challenge_claim', { ch: c.id });
+export async function claimChallenge(c: Challenge): Promise<ChallengeResult | null> {
+  const r = await rpc<ChallengeResult | null>('rank_challenge_claim', { ch: c.id });
   dropCache();
   if (r) claimGoal(`ch:${c.id}`, r.light);
   return r;
@@ -479,7 +577,7 @@ export interface Profile extends Omit<Row, 'score'> {
   relation: 'me' | 'friend' | 'sent' | 'asked' | 'none'; show: number; bestTier: number;
   week?: number; streak?: number; trophies?: number; pages?: number; listen?: number; friend?: FriendStreak;
 }
-export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number }
+export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number; live?: 'read' | 'listen' | null }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
 
 /** A friend streak that reached a milestone and was not shown on this device yet (`frMs:{pid}:{n}`). */
@@ -498,6 +596,9 @@ export async function friendMoments(): Promise<void> {
   if (!account() || document.hidden || Date.now() - momentAt < 20_000) return;
   try { if (!localStorage.getItem('rankFigure')) return; } catch { return; }
   momentAt = Date.now();
+  // Nothing changed among my friends since the last look that had nothing left to show: no need to ask (round 6).
+  const pulse = await socialUnchanged('moments');
+  if (pulse.same) return;
   let data: Friends;
   try { data = await myFriends(true); } catch { return; }
   if (friendMilestoneDue(data.friends)) {
@@ -511,7 +612,7 @@ export async function friendMoments(): Promise<void> {
     if (!f.pid || !f.meToday || !f.themToday || f.streak < 1) return false;
     try { return !localStorage.getItem(`frUp:${today}:${f.pid}`); } catch { return false; }
   });
-  if (!kept.length) return;
+  if (!kept.length) { markSocialSeen('moments', pulse.p); return; }
   const m = await import('../ui/friends');
   await m.friendDayMoment(kept);
 }
@@ -604,6 +705,18 @@ export const friendInvite = () => rpc<string>('rank_friend_invite');
 export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
 export const friendInvitePreview = (code: string) =>
   rpc<{ name: string; avatar: number; frame: number; figure: string | null; tier: number; mine: boolean; friend: boolean } | null>('rank_friend_invite_preview', { code: code.toLowerCase() });
+// --- invite rewards (marketing plan 2026-11-13): a new player joining with your link; after their 3rd day with points you both claim 50 Light once ---
+export interface InviteRow { name: string | null; days: number; claimed: boolean }
+export interface Invites { light: number; days: number; cap: number; rewarded: number; invitedBy: InviteRow | null; friends: (InviteRow & { pid: string })[] }
+export const myInvites = (fresh = false) => cached('invites', () => rpc<Invites>('rank_my_invites'), fresh);
+/** Claims once: pid = the friend you invited, null = your own reward for being invited. */
+export async function claimInvite(pid: string | null): Promise<number> {
+  const r = await rpc<{ light: number; id: string } | null>('rank_claim_invite', { who: pid });
+  dropCache();
+  if (!r) return 0;
+  claimGoal(`iv:${r.id}`, r.light);
+  return r.light;
+}
 export async function joinFriend(code: string) { const r = await rpc<Row>('rank_friend_join', { code: code.toLowerCase() }); dropCache(); return r; }
 /** What your profile shows (kept on this device too) and your flame streak, sent when either changed. */
 const SHOWN = 'rankShow';
@@ -618,4 +731,62 @@ export async function sendProfile(show = myShow(), force = false) {
     localStorage.setItem(SHOWN, String(show));
     localStorage.setItem('rankShowSent', sig);
   } catch { /* not playing yet, or offline: next time */ }
+}
+
+// --- friends' milestones (supabase/migrations/20261114200000_friend_feats.sql) ---
+// A streak fire day, a new level, a surah or juz finished, a Khatm: shared with friends the day it happens, so they
+// can say MashaAllah with one tap. Each is sent once (localStorage `featSent`, the day's keys); offline it waits.
+export type FeatKind = 'streak' | 'level' | 'surah' | 'juz' | 'khatm';
+export interface Feat { id: number; kind: FeatKind; n: number; at: string; cheers?: number; cheered?: boolean; by?: string[] }
+export type FriendFeat = Feat & Row;
+export interface Feats { friends: FriendFeat[]; mine: Feat[] }
+const FEAT_SENT = 'featSent';
+const sentKeys = (): { day: string; k: string[] } => {
+  try { const v = JSON.parse(localStorage.getItem(FEAT_SENT) ?? 'null'); if (v?.day === dayKey() && Array.isArray(v.k)) return v; } catch { /* ignore */ }
+  return { day: dayKey(), k: [] };
+};
+let featTimer = 0;
+const featsSoon = () => { if (!account() || featTimer) return; featTimer = window.setTimeout(() => { featTimer = 0; void sendFeats(); }, 4000); };
+let featBusy = false;
+/** The milestones reached today, from the journey (all devices) and this device's level. */
+function todaysFeats(): [FeatKind, number][] {
+  const out: [FeatKind, number][] = [];
+  const st = streak();
+  if (st.litToday && st.days >= 3 && isFireDay(st.days)) out.push(['streak', st.days]);
+  const r = todayRec();
+  for (const n of r.s ?? []) out.push(['surah', n]);
+  for (const n of r.j ?? []) out.push(['juz', n]);
+  if (earnedBadges()['pages-2'] === dayKey()) out.push(['khatm', 1]);
+  return out;
+}
+/** Shares one milestone now (a level up, levelUp.ts) or the day's from the journey. */
+export async function sendFeats(extra?: [FeatKind, number]) {
+  if (!account() || featBusy) return;
+  featBusy = true;
+  try {
+    const sent = sentKeys();
+    for (const [kind, n] of [...todaysFeats(), ...(extra ? [extra] : [])]) {
+      const k = `${kind}:${n}`;
+      if (sent.k.includes(k)) continue;
+      try { await rpc('rank_feat', { kind, n }); } catch { break; } // offline / not in the ranks yet: next change tries again
+      sent.k.push(k);
+      try { localStorage.setItem(FEAT_SENT, JSON.stringify(sent)); } catch { /* ignore */ }
+    }
+  } finally { featBusy = false; }
+}
+export const featsFeed = (fresh = false) => cached('feats', () => rpc<Feats>('rank_feats_feed'), fresh);
+export async function cheerFeat(id: number): Promise<number> {
+  const n = await rpc<number>('rank_feat_cheer', { id });
+  const c = cache.get('feats');
+  if (c) { const f = (c.v as Feats).friends.find((x) => x.id === id); if (f) { f.cheered = true; f.cheers = n; } }
+  return n;
+}
+let cheersAt = 0;
+/** Friends who said MashaAllah to my milestones since last time (one toast; at most every 2 min). */
+async function cheersSoon() {
+  if (!account() || document.hidden || Date.now() - cheersAt < 120_000) return;
+  cheersAt = Date.now();
+  // Gestures from friends in a challenge: kept with the Ranks answers, so the bell can list the new ones (src/ui/inbox.ts).
+  void myCheers(true).then(() => myChallenges(true)).catch(() => {});
+  await (await import('../ui/friends')).cheersArrived();
 }

@@ -1,6 +1,6 @@
 // Badge names and goals (src/data/badges.ts), loaded with the screens that show them so the first load does
 // not grow. English is the source; Arabic falls back to it per key. `{n}` is the badge's number.
-import { lang } from './index';
+import { fill, lang, locale, tr } from './index';
 import type { BadgeDef } from '../data/badges';
 
 const en = {
@@ -30,22 +30,22 @@ const en = {
   'f.wins': 'Weeks won', 'n.wins': 'Finish a week at #1 in your league, {n} times',
   'f.reels': 'Reels made', 'n.reels': 'Make {n} reels',
   'f.shares': 'Ayat shared', 'n.shares': 'Share ayat {n} times (copy them or share a reel)',
-  'icons': 'App icons', 'iconsSub': 'Ten icons to win, each stranger and brighter than the last: grow your level, or win them sooner with badges and in Ranks',
+  'icons': 'App icons', 'iconsSub': 'Ten icons to win, each stranger and brighter than the last: grow your level, or win them sooner with Diamond badges',
   'ic.theme': 'Theme icon', 'ic.themeSub': 'Follows your theme colours',
   'ic.crystal': 'Crystal', 'ic.molten': 'Molten gold', 'ic.garden': 'Emerald garden', 'ic.pearl': 'Ocean pearl', 'ic.borealis': 'Aurora',
   'ic.galaxy': 'Nebula', 'ic.starlight': 'Liquid starlight', 'ic.prism': 'Prism', 'ic.gate': 'Cosmic gate', 'ic.light': 'Pure light',
-  'ic.crystalHow': 'Reach level 5, or earn a Silver badge',
-  'ic.moltenHow': 'Reach level 10, or earn a Gold badge',
-  'ic.gardenHow': 'Reach level 15, earn a Platinum badge, or finish a week in a league’s top 3',
-  'ic.pearlHow': 'Reach level 20, or finish 3 weeks in a league’s top 3',
-  'ic.borealisHow': 'Reach level 25, earn a Diamond badge, or win a week at #1',
-  'ic.galaxyHow': 'Reach level 30, or win 3 weeks at #1',
-  'ic.starlightHow': 'Reach level 35, or earn 3 Diamond badges',
-  'ic.prismHow': 'Reach level 40, earn 5 Diamond badges, or win a week in the Fath Makkah league',
-  'ic.gateHow': 'Reach level 45, or win 10 weeks at #1',
-  'ic.lightHow': 'Reach level 50, or win 20 weeks at #1',
+  'ic.crystalHow': 'Reach level 5',
+  'ic.moltenHow': 'Reach level 10',
+  'ic.gardenHow': 'Reach level 15',
+  'ic.pearlHow': 'Reach level 20',
+  'ic.borealisHow': 'Reach level 25, or earn 2 Diamond badges',
+  'ic.galaxyHow': 'Reach level 30, or earn 3 Diamond badges',
+  'ic.starlightHow': 'Reach level 35, or earn 4 Diamond badges',
+  'ic.prismHow': 'Reach level 40, or earn 5 Diamond badges',
+  'ic.gateHow': 'Reach level 45, or earn 7 Diamond badges',
+  'ic.lightHow': 'Reach level 50, or earn 10 Diamond badges',
   'ic.tier': 'Tier {n} of 10', 'ic.level': 'Level {n} of {m}',
-  'ic.use': 'Use', 'ic.inUse': 'In use', 'ic.locked': 'Locked', 'ic.set': 'Your new icon shows when you leave the app',
+  'ic.use': 'Use', 'ic.inUse': 'In use', 'ic.locked': 'Locked', 'ic.set': 'Your new icon shows when you leave the app', 'ic.setIos': 'Your new icon is on your home screen',
   'ic.web': 'Shows as this tab’s icon here, and on your home screen in the Android app',
   'ic.new': 'New app icon', 'ic.newSub': '{name} is yours. Wear it on your home screen',
   'step': 'Next: {tier}', 'all': 'Every tier earned', 'more': '{n} more to discover',
@@ -78,31 +78,30 @@ const ar: Partial<Record<BadgeKey, string>> = {
   'f.wins': 'أسابيع فزت بها', 'n.wins': 'أنهِ أسبوعًا في المركز الأول في دوريك {n} مرة',
   'f.reels': 'مقاطع صنعتها', 'n.reels': 'اصنع {n} مقطعًا',
   'f.shares': 'آيات شاركتها', 'n.shares': 'شارك آيات {n} مرة (انسخها أو شارك مقطعًا)',
-  'icons': 'أيقونات التطبيق', 'iconsSub': 'عشر أيقونات تربحها، كل واحدة أغرب وأبهى من التي قبلها: ارفع مستواك، أو اربحها أسرع بالأوسمة وفي الترتيب',
+  'icons': 'أيقونات التطبيق', 'iconsSub': 'عشر أيقونات تربحها، كل واحدة أغرب وأبهى من التي قبلها: ارفع مستواك، أو اربحها أسرع بالأوسمة الماسية',
   'ic.theme': 'أيقونة السمة', 'ic.themeSub': 'تتبع ألوان سمتك',
   'ic.crystal': 'البلّور', 'ic.molten': 'الذهب المنصهر', 'ic.garden': 'الحديقة الزمردية', 'ic.pearl': 'لؤلؤ المحيط', 'ic.borealis': 'الشفق القطبي',
   'ic.galaxy': 'السديم', 'ic.starlight': 'ضوء النجوم السائل', 'ic.prism': 'المنشور', 'ic.gate': 'البوابة الكونية', 'ic.light': 'النور الخالص',
-  'ic.crystalHow': 'ابلغ المستوى 5، أو احصل على وسام فضي',
-  'ic.moltenHow': 'ابلغ المستوى 10، أو احصل على وسام ذهبي',
-  'ic.gardenHow': 'ابلغ المستوى 15، أو احصل على وسام بلاتيني، أو أنهِ أسبوعًا ضمن الثلاثة الأوائل في دوري',
-  'ic.pearlHow': 'ابلغ المستوى 20، أو أنهِ 3 أسابيع ضمن الثلاثة الأوائل في دوري',
-  'ic.borealisHow': 'ابلغ المستوى 25، أو احصل على وسام ماسي، أو فز بأسبوع في المركز الأول',
-  'ic.galaxyHow': 'ابلغ المستوى 30، أو فز بـ 3 أسابيع في المركز الأول',
-  'ic.starlightHow': 'ابلغ المستوى 35، أو احصل على 3 أوسمة ماسية',
-  'ic.prismHow': 'ابلغ المستوى 40، أو احصل على 5 أوسمة ماسية، أو فز بأسبوع في دوري فتح مكة',
-  'ic.gateHow': 'ابلغ المستوى 45، أو فز بـ 10 أسابيع في المركز الأول',
-  'ic.lightHow': 'ابلغ المستوى 50، أو فز بـ 20 أسبوعًا في المركز الأول',
+  'ic.crystalHow': 'ابلغ المستوى 5',
+  'ic.moltenHow': 'ابلغ المستوى 10',
+  'ic.gardenHow': 'ابلغ المستوى 15',
+  'ic.pearlHow': 'ابلغ المستوى 20',
+  'ic.borealisHow': 'ابلغ المستوى 25، أو احصل على وسامين ماسيين',
+  'ic.galaxyHow': 'ابلغ المستوى 30، أو احصل على 3 أوسمة ماسية',
+  'ic.starlightHow': 'ابلغ المستوى 35، أو احصل على 4 أوسمة ماسية',
+  'ic.prismHow': 'ابلغ المستوى 40، أو احصل على 5 أوسمة ماسية',
+  'ic.gateHow': 'ابلغ المستوى 45، أو احصل على 7 أوسمة ماسية',
+  'ic.lightHow': 'ابلغ المستوى 50، أو احصل على 10 أوسمة ماسية',
   'ic.tier': 'الدرجة {n} من 10', 'ic.level': 'المستوى {n} من {m}',
-  'ic.use': 'استخدمها', 'ic.inUse': 'مستخدمة', 'ic.locked': 'مقفلة', 'ic.set': 'تظهر أيقونتك الجديدة عند خروجك من التطبيق',
+  'ic.use': 'استخدمها', 'ic.inUse': 'مستخدمة', 'ic.locked': 'مقفلة', 'ic.set': 'تظهر أيقونتك الجديدة عند خروجك من التطبيق', 'ic.setIos': 'أيقونتك الجديدة على شاشتك الرئيسية الآن',
   'ic.web': 'تظهر هنا كأيقونة هذه الصفحة، وعلى شاشتك الرئيسية في تطبيق أندرويد',
   'ic.new': 'أيقونة جديدة للتطبيق', 'ic.newSub': '{name} لك الآن. ضعها على شاشتك الرئيسية',
   'step': 'التالي: {tier}', 'all': 'حصلت على كل المستويات', 'more': '{n} أوسمة أخرى تنتظر اكتشافها',
 };
 
 export function bt(k: BadgeKey, vars?: Record<string, string | number>): string {
-  let s = (lang() === 'ar' ? ar[k] : undefined) ?? en[k];
-  if (vars) for (const [a, v] of Object.entries(vars)) s = s.replaceAll(`{${a}}`, String(typeof v === 'number' ? v.toLocaleString(lang() === 'ar' ? 'ar-u-nu-latn' : 'en') : v));
-  return s;
+  const s = (lang() === 'ar' ? ar[k] : tr('badges', k)) ?? en[k];
+  return fill(s, vars, (v) => String(typeof v === 'number' ? v.toLocaleString(locale() ?? 'en') : v));
 }
 /** "Pages read · Gold" */
 export const badgeName = (b: Pick<BadgeDef, 'fam' | 'step'>) => `${bt(`f.${b.fam}` as BadgeKey)} · ${bt(`t${b.step}` as BadgeKey)}`;

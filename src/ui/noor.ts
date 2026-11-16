@@ -2,7 +2,7 @@
 // Read, Me, Create and Learn. The line follows what is true right now (goals, the flame, the garden);
 // it never guilts and never says anything about the religion itself. Loaded with each screen.
 import './noor.css';
-import { lang } from '../i18n';
+import { lang, locale, tr } from '../i18n';
 import { todayGoals } from '../data/goals';
 import { pageSeconds, streak } from '../data/journey';
 import { started, thirstyTrees, trees } from '../data/garden';
@@ -47,12 +47,14 @@ const ar: Record<Key, string> = {
   days: 'سلسلة {n} أيام',
 };
 const say = (k: Key, vars: Record<string, string | number> = {}) =>
-  ((lang() === 'ar' ? ar[k] : en[k]) ?? en[k]).replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? ''));
+  ((lang() === 'ar' ? ar[k] : tr('noor', k)) ?? en[k]).replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? ''));
 
 const minutes = (sec: number) => {
   const m = sec / 60;
   const n = Number.isInteger(m) ? String(m) : `${Math.floor(m)}½`;
-  return lang() === 'ar' ? `${n} ${m <= 1 ? 'دقيقة' : 'دقائق'}` : `${n} ${m <= 1 ? 'minute' : 'minutes'}`;
+  if (lang() === 'ar') return `${n} ${m <= 1 ? 'دقيقة' : 'دقائق'}`;
+  if (lang() === 'en') return `${n} ${m <= 1 ? 'minute' : 'minutes'}`;
+  return new Intl.NumberFormat(locale(), { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(m);
 };
 
 export type Where = 'me' | 'read' | 'create' | 'learn';
@@ -92,9 +94,13 @@ export function noorLine(where: Where): HTMLElement {
 /** Put (or refresh) Noor's line as the last child of `box`; on Read, today's pages ring above it. */
 export function noorInto(box: Element, where: Where) {
   if (where === 'read') {
-    const strip = readStrip();
-    const was = box.querySelector(':scope > .read-goal');
-    if (was) was.replaceWith(strip); else box.append(strip);
+    // No pages ring or streak in Read's bar (owner 2026-11-14: it pushed the surah name out of sight, and a counted
+    // page already shows "3 / 5 pages today" at the bottom of the page). Noor's line shows at most once a day.
+    const day = dayKey();
+    let seen = '';
+    try { seen = localStorage.getItem('readNoorDay') ?? ''; } catch { /* ignore */ }
+    if (seen === day) { box.querySelector(':scope > .noor-line')?.remove(); return; }
+    try { localStorage.setItem('readNoorDay', day); } catch { /* ignore */ }
   }
   const old = box.querySelector(':scope > .noor-line');
   const text = noorText(where);
@@ -102,26 +108,3 @@ export function noorInto(box: Element, where: Where) {
   box.append(noorLine(where));
 }
 
-const SVG = 'http://www.w3.org/2000/svg';
-const svg = (tag: string, a: Record<string, string | number>) => {
-  const e = document.createElementNS(SVG, tag);
-  for (const [k, v] of Object.entries(a)) e.setAttribute(k, String(v));
-  return e;
-};
-
-/** Read's bar: a ring for today's pages (against the pages goal) and the streak count. */
-function readStrip(): HTMLElement {
-  const p = (() => { try { return todayGoals().find((x) => x.kind === 'pages'); } catch { return undefined; } })();
-  let done = 0;
-  try { done = p ? p.done : readLogAll()[dayKey()]?.length ?? 0; } catch { /* ignore */ }
-  const s = (() => { try { return streak(); } catch { return null; } })();
-  const ring = svg('svg', { width: 34, height: 34, viewBox: '0 0 36 36', 'aria-hidden': 'true' });
-  const C = 2 * Math.PI * 14;
-  const f = p ? Math.min(1, p.done / p.target) : done ? 1 : 0;
-  ring.append(svg('circle', { cx: 18, cy: 18, r: 14, fill: 'none', stroke: 'rgba(255,255,255,.3)', 'stroke-width': 5 }),
-    svg('circle', { cx: 18, cy: 18, r: 14, fill: 'none', stroke: '#ffd43b', 'stroke-width': 5, 'stroke-linecap': 'round',
-      'stroke-dasharray': `${(C * f).toFixed(1)} ${C.toFixed(1)}`, transform: 'rotate(-90 18 18)', class: 'rg-fill', opacity: f ? 1 : 0 }));
-  const label = p ? say('ofPages', { n: p.done, of: p.target }) : say(done === 1 ? 'page1Today' : 'pagesToday', { n: done });
-  return h('div', { class: 'read-goal' }, ring, h('span', { class: 'rg-txt' }, label),
-    s && s.days > 0 ? h('a', { class: `rg-streak${s.litToday ? ' lit' : ''}`, href: '#/me', 'aria-label': say('days', { n: s.days }) }, String(s.days)) : '');
-}

@@ -24,11 +24,12 @@ import { showReader } from './ui/reader';
 import { initAuth } from './cloud/auth';
 import { startSync } from './cloud/sync';
 import { setupOffline } from './offline';
-import { isNative } from './native';
+import { isIOS, isNative } from './native';
 import { initI18n, t } from './i18n';
 import { applyTheme } from './ui/theme';
-import { applyLite, liteMode } from './lite';
+import { applyLite } from './lite';
 import { initErrors } from './errors';
+import { initUsage, markRoute } from './usage';
 import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
@@ -38,6 +39,10 @@ import { quietPlayer } from './ui/player';
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
 let routeId = 0;
+/** Tab screens kept as a picture for their next open (route()); a few minutes at most, dropped on an account change. */
+const TAB_ROOTS = new Set(['me', 'ranks', 'learn']);
+const GHOST_MS = 10 * 60_000;
+const ghosts = new Map<string, { el: HTMLElement; at: number }>();
 
 async function route() {
   const id = ++routeId;
@@ -51,16 +56,31 @@ async function route() {
     return void route();
   }
   if (view === 'kids') clearPass();
+  markRoute(location.hash); // anonymous screen counts (src/usage.ts)
   // Listening carries on across screens, but not into the studio (its own sound) or the Kids space.
   if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
-  app.replaceChildren(screen);
+  // Tabs feel instant (owner 2026-11-16, "ultra fast like Duolingo"): the screen of a tab left earlier stays as a
+  // still picture (inert) while its fresh copy is built underneath, then the two swap — no blank or skeleton between.
+  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost)');
+  if (prev?.dataset.tab) ghosts.set(prev.dataset.tab, { el: prev, at: Date.now() });
+  const tabKey = TAB_ROOTS.has(view) && !a ? view : '';
+  if (tabKey) screen.dataset.tab = tabKey;
+  const ghost = tabKey ? ghosts.get(tabKey) : undefined;
+  if (ghost && Date.now() - ghost.at < GHOST_MS) {
+    ghosts.delete(tabKey);
+    ghost.el.classList.add('screen-ghost');
+    ghost.el.inert = true;
+    screen.classList.add('screen-building');
+    app.replaceChildren(ghost.el, screen);
+  } else app.replaceChildren(screen);
+  const unGhost = () => { if (id !== routeId) return; app.querySelector(':scope > .screen-ghost')?.remove(); screen.classList.remove('screen-building'); };
   sweepListeners(); // listeners of the screen just left
   document.body.dataset.view = view || 'home';
   window.scrollTo(0, 0);
   // A screen that takes a moment (data, fonts) shows a skeleton of itself instead of a blank page,
   // only when it is not ready within 120 ms (no flash on a fast open). The studio has its own.
-  const skel = view === 'reel' ? null : skeleton(view === 's' && readerMode() === 'mushaf' ? 'page' : 'list');
+  const skel = view === 'reel' || screen.classList.contains('screen-building') ? null : skeleton(view === 's' && readerMode() === 'mushaf' ? 'page' : 'list');
   const skelTimer = skel ? window.setTimeout(() => { if (id === routeId) app.append(skel); }, 120) : 0;
   const dropSkel = () => { clearTimeout(skelTimer); skel?.remove(); };
   try {
@@ -118,10 +138,12 @@ async function route() {
       c = await showSurahList(screen, view === 'search');
     }
     dropSkel();
+    unGhost();
     if (id === routeId) cleanup = c;
     else c();
   } catch (e) {
     dropSkel();
+    unGhost();
     if (id !== routeId) return;
     console.error(e);
     screen.replaceChildren(h('div', { class: 'error' },
@@ -138,12 +160,16 @@ async function route() {
 const launch = !location.hash || location.hash === '#' || location.hash === '#/';
 applyTheme(); // the user's brand gradient, before the first screen
 applyLite(); // old-phone mode: heavy decorations off (src/lite.ts)
+try { document.documentElement.classList.toggle('easy', localStorage.getItem('easyMode') === 'on'); } catch { /* storage blocked */ } // easy mode: bigger text and buttons
 initErrors(); // crash reports, only when a Sentry DSN is set (src/errors.ts)
 window.addEventListener('prefs-synced', () => applyTheme()); // picked on another device
 if (kidsOn()) { if (!location.hash.startsWith('#/kids')) history.replaceState(null, '', '#/kids'); }
 else if (launch) history.replaceState(null, '', lastRead());
-// A launch (not a shared link) opens with a light sweep across the logo (docs/light.md, L5).
-if (launch && !liteMode()) playOpening();
+// In the app the system splash (the launcher icon) stays until the first screen is drawn, then leaves with a
+// native animation (src/ui/opening.ts, AppActivity.java); the start-up extras below wait until it has gone.
+let firstUp = () => {};
+const firstScreen = new Promise<void>((r) => { firstUp = r; });
+const opening = playOpening(firstScreen);
 
 window.addEventListener('hashchange', route);
 // Everything below the first screen waits until that screen is up (and the phone has a quiet moment),
@@ -157,28 +183,47 @@ const runLater = () => {
   for (const f of list ?? []) try { f(); } catch (e) { console.error(e); }
 };
 void initI18n().then(route).finally(() => {
-  if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
-  else setTimeout(runLater, 300);
+  firstUp();
+  void opening.then(() => {
+    if ('requestIdleCallback' in window) requestIdleCallback(runLater, { timeout: 1500 });
+    else setTimeout(runLater, 300);
+  });
 });
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
-setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 6000);
+later(() => setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 4000));
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();
 document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
+later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
+later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
+// Me and Learn are ready before their first tap (front-end review G12): fetched and parsed in a quiet moment
+// once the first screen is up, not on Data Saver.
+later(() => setTimeout(() => {
+  if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return;
+  const go = () => {
+    void import('./ui/me').catch(() => {});
+    void import('./ui/learnPath').catch(() => {});
+    setTimeout(() => void import('./ui/ranks').catch(() => {}), 600); // Ranks too, a moment later
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
+}, 2500));
+// The onboarding's language screen reloads the app in the language picked; carry on where it was.
+try { if (sessionStorage.getItem('obResume')) void import('./ui/onboard').then((m) => setTimeout(() => m.openOnboarding(true), 500)); } catch { /* private */ }
 watchVitals(); // real-use speed (this device only, Device check)
+if (isIOS()) void import('./iosHaptics').then((m) => m.installIosHaptics()); // taps felt on the iPhone too
 if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidgets())); // streak, tasbih, prayer widgets
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
 setupOffline();
 // Problem reports made offline go out now (src/ui/report.ts).
-setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 5000);
+later(() => setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 3000));
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
-startSync();
+void opening.then(startSync); // after the opening on a launch, so it never stutters
 if (isNative()) later(() => void import('./ui/morning').then((m) => m.initDailyNative())); // widget + morning ayah (Android)
-void initAuth();
+void opening.then(initAuth);
 later(() => void import('./ui/circles').then((m) => m.resumePendingJoin())); // an invitation opened before signing in
 later(() => void import('./ui/relight').then((m) => m.resumePendingRelight())); // a friend's relight opened before signing in
 // A friend relit the flame: cover the missed days (when an ask was made in the last 3 days).
@@ -188,6 +233,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && !a
 setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
 later(() => void import('./together/ranks').then((m) => m.watchRanks()));
+later(() => void import('./cloud/auth').then(({ onAccount }) => { let who: string | undefined; onAccount((x) => { if (x?.id !== who) ghosts.clear(); who = x?.id; }); }));
 // Web: ask the browser to keep this site's storage (streak, Light, goals) instead of clearing it
 // when space runs low or, on iPhone Safari, after 7 days away. Asked once the user has earned
 // something, so Firefox's question never comes before there is anything to keep.

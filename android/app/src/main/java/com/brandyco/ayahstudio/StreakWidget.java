@@ -61,9 +61,9 @@ public class StreakWidget extends AppWidgetProvider {
         else status = WidgetStore.str(data, "openToday", "Meet a goal today to keep it");
         int tier = !lit && days == 0 ? 0 : days >= 30 ? 3 : days >= 7 ? 2 : 1;
 
-        // This week, Monday first.
+        // This week, Saturday first (one week everywhere, Saturday → Friday like Ranks).
         Calendar cal = Calendar.getInstance();
-        int back = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7; // days since Monday
+        int back = cal.get(Calendar.DAY_OF_WEEK) % 7; // days since Saturday (Saturday = 7)
         cal.add(Calendar.DAY_OF_MONTH, -back);
         String[] states = new String[7];
         for (int i = 0; i < 7; i++) {
@@ -75,7 +75,7 @@ public class StreakWidget extends AppWidgetProvider {
             else states[i] = cmp < 0 ? "missed" : "future";
             cal.add(Calendar.DAY_OF_MONTH, 1);
         }
-        String[] letters = WidgetStore.str(data, "letters", "M|T|W|T|F|S|S").split("\\|");
+        String[] letters = WidgetStore.str(data, "letters", "S|S|M|T|W|T|F").split("\\|");
 
         float d = WidgetArt.density(c);
         android.graphics.Bitmap flame = WidgetArt.flame(pal, tier, tier > 0 && !lit, Math.round(48 * d));

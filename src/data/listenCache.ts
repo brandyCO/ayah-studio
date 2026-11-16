@@ -6,10 +6,11 @@
 import { forgetKept } from './keptAudio';
 
 export const LISTEN_CACHE = 'listen-audio';
-const KEY = 'listenKept'; // url → [bytes, last played (ms)]
+const KEY = 'listenKept'; // url → [bytes, last played (ms), 'reciter:surah' for a whole-surah file]
+const TAGS = new Map<string, string>();
 const LIMIT = 800e6;
 
-type Index = Record<string, [number, number]>;
+type Index = Record<string, [number, number, string?]>;
 const read = (): Index => {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}');
@@ -37,7 +38,8 @@ const queue: string[] = [];
 let running = false;
 
 /** Keep `url` on this device (in the background, one file at a time). Safe to call often. */
-export function keepListened(url: string) {
+export function keepListened(url: string, tag?: string) {
+  if (tag) TAGS.set(url, tag);
   if (typeof caches === 'undefined' || !url.startsWith('http') || read()[url] || queue.includes(url)) return;
   queue.push(url);
   if (!running) void run();
@@ -60,7 +62,8 @@ async function run() {
         const cache = await caches.open(LISTEN_CACHE);
         await cache.put(url, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(blob.size) } }));
         const ix = read();
-        ix[url] = [blob.size, Date.now()];
+        const tag = TAGS.get(url);
+        ix[url] = tag ? [blob.size, Date.now(), tag] : [blob.size, Date.now()];
         write(ix);
         await trim(cache);
       } catch { /* offline, storage full or refused: tried again the next time it plays */ }

@@ -1,0 +1,31 @@
+{
+ "msg": {
+  "Search failed": "Search failed",
+  "Could not load the tafsir": "Could not load the tafsir",
+  "Mushaf data is out of date — please reload the page": "Mushaf data is out of date — please reload the page",
+  "paused": "paused",
+  "Failed to fetch": "Failed to fetch",
+  "Load failed": "Load failed",
+  "NetworkError when attempting to fetch resource.": "NetworkError when attempting to fetch resource.",
+  "Network request failed": "Network request failed",
+  "TypeError: Failed to fetch": "TypeError: Failed to fetch",
+  "@play": "Could not play the recitation",
+  "@noRec": "No verified recording of surah {1} for {2}",
+  "@recChanged": "The recording of surah {1} changed since it was checked",
+  "@dlRecitation": "Could not download the recitation",
+  "@load": "Could not load it. Check your internet connection",
+  "@videoMax": "Videos up to {1} MB, please",
+  "@notMedia": "{1}: not an image or a video",
+  "@search": "Search failed, try again",
+  "@download": "Download failed, try again",
+  "@busy": "{1} is busy right now. Try a collection, the other library, or again in a moment",
+  "@notSetUp": "{1} is not set up yet",
+  "@libDown": "The library is not answering right now, try again in a moment",
+  "@scenes": "Up to {1} scenes",
+  "@downloads": "Up to {1} downloads at a time. Wait for one to finish",
+  "@session": "Your sign-in has expired. Please sign in again",
+  "@rate": "Too many requests, try again in a moment",
+  "@offline": "No internet connection, try again",
+  "@generic": "Could not do that right now, try again"
+ }
+}

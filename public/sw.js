@@ -14,6 +14,40 @@ const MAX_APP_FILES = 80;
 const MAX_PAGE_FONTS = 700; // mushaf page fonts (~150 KB each): all 604 are kept (the app downloads the whole mushaf)
 const MAX_NET = 120; // recitation timings answers
 const SCOPE = new URL(self.registration.scope);
+// The site's files (built code, data, fonts, backgrounds) are fetched from Cloudflare (sw.js?files=…, see
+// src/net.ts FILES; the whole build is deployed there by pages.yml) and kept under their own address on this
+// site, so a copy kept before is found either way; the site itself answers when Cloudflare does not. Only the
+// page (index.html) and this worker always come from the site. A file asked for by version (?v=…) is taken from
+// Cloudflare only when Cloudflare holds that version (version.json), so a deploy in progress never mixes them.
+const FILES = (() => { try { const u = new URL(new URL(self.location.href).searchParams.get('files') || ''); return u.protocol === 'https:' ? u.href.replace(/\/+$/, '') : ''; } catch { return ''; } })();
+const EDGE_PATH = (path) => /^(assets|data|fonts|backgrounds)\//.test(path);
+let edgeVersion = null; // { p: Promise<Set of versions Cloudflare holds>, at, ok }
+function edgeHas(v) {
+  if (!edgeVersion || Date.now() - edgeVersion.at > (edgeVersion.ok ? 300_000 : 30_000)) {
+    const e = { at: Date.now(), ok: false, p: null };
+    e.p = fetch(`${FILES}/version.json`, { mode: 'cors', credentials: 'omit', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { const s = new Set([j?.data, j?.build].filter((x) => typeof x === 'string' && x)); e.ok = s.size > 0; return s; })
+      .catch(() => new Set()); // unreachable: the site answers
+    edgeVersion = e;
+  }
+  return edgeVersion.p.then((s) => s.has(v));
+}
+/** The file from Cloudflare (null when it cannot give this exact file), else nothing. */
+// Safari (every iPhone browser is WebKit) refuses what we pass on from Cloudflare ("access control checks", found
+// with scripts/webkit-check.mjs 2026-11-16), so it takes everything from the site itself.
+const WEBKIT = /AppleWebKit/.test(self.navigator.userAgent) && !/Chrome|Chromium|Android/.test(self.navigator.userAgent);
+async function fromEdge(path, url, priority) {
+  if (!FILES || WEBKIT || !EDGE_PATH(path)) return null;
+  const v = url.searchParams.get('v');
+  if (v && !(await edgeHas(v))) return null;
+  try {
+    const r = await fetch(`${FILES}/${path}${url.search}`, { mode: 'cors', credentials: 'omit', priority });
+    // Handed on as our own response: Safari refuses a Cloudflare (cross-origin) response given to the page's own
+    // requests ("access control checks"), and a stored copy then keeps the site's address.
+    return r.ok && r.status === 200 ? new Response(r.body, { status: 200, statusText: 'OK', headers: r.headers }) : null;
+  } catch { return null; }
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -24,8 +58,12 @@ self.addEventListener('install', (event) => {
       if (res.ok) {
         const html = await res.clone().text();
         await cache.put(SCOPE.href, res);
-        const files = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css|woff2))"/g)].map((m) => new URL(m[1], SCOPE).href);
-        await Promise.all(files.map((u) => cache.add(u).catch(() => {})));
+        const files = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css|woff2))"/g)].map((m) => new URL(m[1], SCOPE));
+        await Promise.all(files.map(async (u) => {
+          const path = u.pathname.startsWith(SCOPE.pathname) ? u.pathname.slice(SCOPE.pathname.length) : '';
+          const res = (u.origin === SCOPE.origin && await fromEdge(path, u)) || await fetch(u);
+          if (res.ok && res.status === 200) await cache.put(u.href, res);
+        }).map((p) => p.catch(() => {})));
       }
     } catch {
       /* offline during install: the files are cached as they are used */
@@ -76,7 +114,8 @@ async function cacheFirst(name, req, onePerPath = false) {
   const cache = await caches.open(name);
   const hit = await cache.match(req);
   if (hit) return hit;
-  const res = await fetch(req);
+  const url = new URL(req.url);
+  const res = (await fromEdge(url.pathname.slice(SCOPE.pathname.length), url, req.priority)) ?? await fetch(req);
   if (res.ok && res.status === 200) {
     const copy = res.clone();
     void (async () => {
@@ -115,7 +154,8 @@ async function rangeFromCache(req, name) {
   let res = await cache.match(key);
   if (!res) {
     try {
-      res = await fetch(key);
+      const url = new URL(req.url);
+      res = (await fromEdge(url.pathname.slice(SCOPE.pathname.length), url)) ?? await fetch(key);
     } catch {
       return fetch(req);
     }

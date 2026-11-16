@@ -1,7 +1,7 @@
 // "Choose ayat" (front-end review F16): a small picker (surah, from, to) that goes straight into the
 // studio, instead of a hint to go and long-press in the mushaf. Selecting in the mushaf stays one tap away.
 import { loadMeta } from '../data/quran';
-import { MAX_AYAT } from '../engine/project';
+import { MAX_AYAT } from '../engine/limits';
 import './picker.css';
 import { surahName, t } from '../i18n';
 import { h, haptic } from './dom';

@@ -7,6 +7,7 @@
 | `SuraNames.woff2` | Surah-name calligraphy font (text "001"…"114" renders the name) | Quran.com frontend repository (`public/fonts/quran/surah-names/v1/sura_names.woff2`) | As above (King Fahd Complex calligraphy, redistributed by Quran.com) |
 | `bismillah.svg` | Bismillah calligraphy shown above surahs in the mushaf view | Quran.com frontend repository (`public/bismillah.svg`) | Redistributed as used by Quran.com |
 | `Nunito-latin.woff2`, `Nunito-latin-ext.woff2` | Nunito SemiBold (600), Latin subsets — the rounder translation font of the kid-friendly reel moods (never used for Arabic) | The Nunito Project (https://github.com/googlefonts/nunito), via `@fontsource/nunito` 5.3.0 | SIL Open Font License 1.1 — see `Nunito-OFL.txt` |
+| `NotoSansArabic-Regular.woff2`, `NotoSansArabic-Bold.woff2` | Noto Sans Arabic, Arabic blocks only (subset with fontTools) — the Arabic interface text (never the Quran text) | The Noto Project (https://github.com/notofonts/arabic), from Ubuntu `fonts-noto-core` 20201225 | SIL Open Font License 1.1 — see `NotoSansArabic-OFL.txt` |
 | `AmiriQuran.woff2` | Amiri Quran (Arabic subset) | The Amiri Project (https://github.com/aliftype/amiri), via `@fontsource/amiri-quran` 5.3.0 | SIL Open Font License 1.1 — see `AmiriQuran-OFL.txt` |
 
 The mushaf reading view draws pages with the QCF V2 fonts from glyph codes in

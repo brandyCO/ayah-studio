@@ -10,3 +10,7 @@ android/app/build/
 android/.gradle/
 src-tauri/target/
 __pycache__/
+
+# translation work files (merged into src/i18n/locales by scripts/i18n-merge.mjs)
+scripts/i18n/work/
+scripts/i18n/extra/

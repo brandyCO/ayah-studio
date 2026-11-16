@@ -16,12 +16,21 @@
 <body>
 <main>
   <h1>Privacy</h1>
-  <p class="muted">Ayah Studio · last updated 8 October 2026</p>
+  <p class="muted">Ayah Studio · last updated 13 November 2026</p>
 
   <h2>Without an account</h2>
   <p>Everything stays on your device: your bookmarks, reflections, the pages you read (for your sky), settings, reel drafts, the photos and videos you add,
   and the recitations kept for offline use. Nothing is sent to us. Exported videos are saved on your device
-  and only shared where you choose to share them.</p>
+  and only shared where you choose to share them. The only things sent without an account are the anonymous
+  counts described under "Anonymous counts" below, which say nothing about who you are.</p>
+
+  <h2>Anonymous counts</h2>
+  <p>To see which parts of the app are used and where new users stop, the app sends a short list of words once a
+  day, for example "opened Learn", "a page was read", "a reel was exported", "installed 7–13 days ago", "Android",
+  "Arabic". Our database only adds one to that day's count of each word. Nothing else is sent with it: no install
+  id, no account, no time of day, nothing you typed or read, and your address is not stored. Counts are kept
+  400 days. Nothing is counted in the Kids space. Me → ⚙ → App → Anonymous usage counts turns it off.
+  When you export a reel, the reciter and the ayah range are counted the same way, for "Popular this week".</p>
 
   <h2>If you sign in with Google</h2>
   <p>Signing in is optional. It keeps the following the same on your devices, stored with
@@ -75,7 +84,8 @@
   surahs finished and reels made, with the name and drawn avatar you choose, are sent so leagues and
   boards can be shown; "Keep my reading between me and Allah" hides your name and keeps you off the
   global board. Dhikr, adhkar, du'a and Light are never sent for ranking. A friend challenge stores who
-  is in it and when it started. A bedtime pact stores who is in it, when it started and which of its
+  is in it and when it started. If you join Ranks through a friend's invite link within your first week, we store
+  who invited you and when, so each of you can claim Light once after your third day. A bedtime pact stores who is in it, when it started and which of its
   seven nights each member marked as kept; members see each other's name, avatar and crescents. A lamp on
   the lamp wall stores the first name you write, him or her, the du'a you picked, its size and when it was
   lit; every signed-in player can see it, and your own name only if you chose to show it. Who said Ameen
@@ -108,14 +118,17 @@
 
   <h2>Your choices</h2>
   <ul>
-    <li><b>Export:</b> ☰ → Account → Export my data gives you everything stored with your account as a file.</li>
-    <li><b>Delete:</b> ☰ → Account → Delete account removes your account and all data synced to it at once.
+    <li><b>Export:</b> Me → ⚙ → App → Account → Export my data gives you everything stored with your account as a file.</li>
+    <li><b>Delete:</b> Me → ⚙ → App → Account → Delete account removes your account and all data synced to it at once.
       The copy on your device stays until you remove the app or clear its data.</li>
     <li><b>Sign out</b> at any time; the app keeps working on your device.</li>
   </ul>
 
   <h2>Other services the app uses</h2>
   <ul>
+    <li><b>Crash reports:</b> when the app hits an error, a report goes to Sentry (servers in the EU) so we can fix
+      it: the error, the app version and the device or browser type. It never includes your account, notes,
+      drafts, recordings or what you read, and no screen recordings.</li>
     <li>Recitations, word timings and text data come from Quran.com (QDC) and everyayah.com; your device
       downloads them directly.</li>
     <li>When you search the free background library, your search goes to Pixabay (or Pexels) through our
@@ -128,7 +141,12 @@
       recogniser is not used: each part you recite (a few seconds, cut at a pause) is sent to our own server on
       Google Cloud with the words of the passage. The server follows the words and checks the harakat in memory,
       answers, and forgets it: no audio or text is stored or logged. It is limited to one hour of recitation a
-      day per account.</li>
+      day per account.
+      While Follow my voice is in beta, each recitation you check sends one row of counts to our database: which
+      recogniser was used, the Android version and phone model (or the browser), how many words it heard, marked
+      as passed over or unclear, and how many you corrected. No audio, no recognised text and no account id, only
+      the app's random install id; kept 180 days. "Voice heard me wrong? Tell us" sends a problem report with the
+      same counts and the positions of the words involved.</li>
     <li><b>Help improve the harakat check</b> (off unless you turn it on; never in the Kids space): when it is on,
       a short clip (up to 3 seconds: a word the check flagged, or now and then one it did not, with the words
       next to it) and your answer at the check are kept with your account so that the teachers who review them
@@ -136,6 +154,20 @@
       At most 40 clips a day. Me → ⚙ → Help improve the harakat check turns it off or deletes every clip you
       shared; deleting your account deletes them too. Their words and labels are in Export my data.</li>
   </ul>
+
+  <h2 id="delete">Delete your Ayah Studio account</h2>
+  <p>Ayah Studio (by brandyCO) lets you delete your account and its data yourself, from the app or from this website, without
+  writing to anyone:</p>
+  <ol>
+    <li>Open the app, or this website: <a href="https://brandyco.github.io/ayah-studio/#/me/settings">brandyco.github.io/ayah-studio</a>.</li>
+    <li>Sign in with the same Google account.</li>
+    <li>Go to Me → ⚙ → App → Account → <b>Delete account</b> and confirm.</li>
+  </ol>
+  <p><b>Deleted at once:</b> your account, everything synced to it (progress, streak, goals, Light, bookmarks, reflections,
+  drafts, settings), your Ranks profile, points, friends, boards and challenges, and your voice clips if you shared any.
+  <b>Kept:</b> only anonymous counts that were never linked to you (reels made per ayah, daily screen counts), and copies in
+  the encrypted nightly backups, which are deleted after 30 days. If you cannot sign in any more, open an issue at the
+  address below and we will help.</p>
 
   <h2>Contact</h2>
   <p>Questions or requests: open an issue at

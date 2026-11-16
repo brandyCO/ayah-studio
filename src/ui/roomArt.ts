@@ -25,6 +25,8 @@ const pot = (c1: string, c2: string, rim: string) => {
 
 function plant(id: string, still: boolean): string {
   if (id === 'sprout') return sprout(still);
+  if (id === 'orchid') return orchid(still);
+  if (id === 'lemon') return lemon(still);
   const sway = still ? '' : '<animateTransform attributeName="transform" type="rotate" values="-1.2 21 160;1.2 21 160;-1.2 21 160" dur="6s" repeatCount="indefinite"/>';
   if (id === 'fern') {
     const fr = [-150, -128, -106, -90, -72, -52, -30].map((a, i) => two(leaf(21, 160, 30 + (i % 3) * 6, a, 0.22), '#6fcf74', '#3f9f52', -1, -1)).join('');
@@ -74,6 +76,8 @@ const steam = (x: number, y: number, night: boolean, still: boolean, n = 2) => s
   + `<animate attributeName="opacity" values="0;.6;0" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 3;0 -5" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/></path>`).join('');
 
 function side(id: string, night: boolean, still: boolean): string {
+  if (id === 'kursi') return kursi(night);
+  if (id === 'lanterns') return lanterns(night, still);
   if (id === 'fountain') {
     // Legendary (2026-11-12): a small zellige fountain, water falling from its top bowl into the basin.
     const basin = 'M236 176Q274 164 312 176V186Q274 196 236 186Z', rim2 = 'M236 176Q274 164 312 176Q274 186 236 176Z';
@@ -225,6 +229,7 @@ export function rugTop(id: string | undefined): string {
 }
 
 function curtain(id: string): string {
+  if (id === 'damask') return damask();
   if (id === 'brocade') {
     // Legendary (2026-11-12): midnight brocade with gold stars, a gold valance and tassels.
     const L = 'M16 17H42Q34 56 40 106H16Z', R = 'M112 17H86Q94 56 88 106H112Z';
@@ -262,6 +267,7 @@ function curtain(id: string): string {
 }
 
 function hang(id: string, night: boolean, still: boolean): string {
+  if (id === 'qandil') return qandil(night, still);
   if (id === 'chandelier') {
     // Legendary (2026-11-12): a gold chandelier of two rings, its small lamps lit, crystal drops below.
     const x = 111, G1 = '#ffd25e', G2 = '#e09a1f', GD = '#8a5a12';
@@ -295,6 +301,77 @@ function hang(id: string, night: boolean, still: boolean): string {
     ${two(foot, m1, m2, -.6, -.6)}${star}${glint}`;
 }
 
+/** Room pieces of 2026-11-14 (owner: "decos ... both", premium): an orchid, a lemon tree, a Damascene kursi with the
+ *  mushaf, a trio of floor lanterns, a Mamluk glass lamp and emerald damask curtains. */
+function orchid(still: boolean): string {
+  const sway = still ? '' : '<animateTransform attributeName="transform" type="rotate" values="-1 21 160;1 21 160;-1 21 160" dur="7s" repeatCount="indefinite"/>';
+  const leaves = two(leaf(21, 160, 22, -160, 0.3), '#3f9a5a', '#2a7442', -1, -1) + two(leaf(21, 160, 20, -20, 0.3), '#3f9a5a', '#2a7442', -1, -1) + two(leaf(21, 158, 16, -120, 0.3), '#4fb06a', '#2f8a4a', -1, -1);
+  const stem = '<path d="M22 158Q18 128 26 112Q32 104 38 108" stroke="#5a7a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  const fl = (x: number, y: number, k: number) => {
+    const p = [0, 72, 144, 216, 288].map((a) => two(leaf(x, y, 6.4 * k, a - 90, 0.62), '#ffffff', '#ead9f2', -.4, -.4)).join('');
+    return `${p}<path d="${circlePath(x, y + .6, 2 * k)}" fill="#c2508a"/><path d="${circlePath(x, y, 1 * k)}" fill="#ffd25e"/>`;
+  };
+  return `<g>${leaves}${stem}${fl(26, 112, 1)}${fl(34, 106, .9)}${fl(20, 124, .95)}${fl(40, 112, .7)}${sway}</g>${pot('#e0b04a', '#a8772a', '#f2c94c')}<path d="M10 175H32" stroke="#a8772a" stroke-width="1.2" stroke-dasharray="2 2"/>`;
+}
+function lemon(still: boolean): string {
+  const sway = still ? '' : '<animateTransform attributeName="transform" type="rotate" values="-1 21 160;1 21 160;-1 21 160" dur="6.5s" repeatCount="indefinite"/>';
+  const trunk = 'M19 162Q18 146 21 128L24 128Q23 146 24 162Z';
+  const crown = [[21, 112, 15], [8, 122, 10], [34, 120, 11], [14, 102, 10], [30, 100, 10]].map(([x, y, r]) => two(circlePath(x, y, r), '#4fae5a', '#2f8a42', -1.5, -1.5)).join('');
+  const shines = [[16, 106], [26, 98], [8, 118]].map(([x, y]) => two(leaf(x, y, 6, -40, 0.4), '#7ed67a', '#5fb86a', -.4, -.4)).join('');
+  const fruit = [[12, 124], [28, 112], [34, 126], [18, 100], [24, 120], [6, 112]].map(([x, y]) => `${two(`M${x - 3} ${y}a3 3.6 0 1 0 6 0a3 3.6 0 1 0 -6 0z`, '#ffd93a', '#e0aa12', -.8, -.8)}<path d="${circlePath(x - .9, y - 1.4, .9)}" fill="#fff6c0"/>`).join('');
+  const blossom = [[30, 104], [10, 130]].map(([x, y]) => `<path d="${starPath(x, y, 2.6, 1.1, 5)}" fill="#fff"/>`).join('');
+  const body = 'M9 165H33L30 186H12Z', lip = 'M6 160H36V167H6Z';
+  let tiles = '';
+  for (let x = 13; x < 31; x += 6) tiles += `<path d="${starPath(x + 1, 176, 2.6, 1.2, 8)}" fill="#fff6e4"/>`;
+  return `<g>${two(trunk, '#9a7a5a', '#735638')}${crown}${shines}${fruit}${blossom}${sway}</g>${edge(body, '#123a5a', 2)}${two(body, '#2f7ab8', '#1f5a8a')}${tiles}${edge(lip, '#123a5a', 2)}${two(lip, '#4f9ad8', '#2f7ab8', 0, -1.5)}`;
+}
+function kursi(night: boolean): string {
+  // A Damascene kursi: an X stand of dark walnut inlaid with mother-of-pearl stars, the mushaf resting on it in a
+  // green velvet cover with a gold medallion.
+  const L = 'M250 188L282 142L290 146L258 192Z', R = 'M298 188L266 142L258 146L290 192Z';
+  const inlay = (d: string) => `${edge(d, '#1e120a', 2)}${two(d, '#5a3a24', '#3a2414', -1, -1)}`;
+  const pearls = [[262, 172], [270, 160], [286, 172], [278, 160], [274, 166]].map(([x, y]) => `<path d="${starPath(x, y, 3, 1.3, 8)}" fill="#f4eefc"/><path d="${circlePath(x, y, .8)}" fill="#c8e6ff"/>`).join('');
+  const book = 'M246 146Q260 136 274 144Q288 136 302 146L300 154Q288 146 274 152Q260 146 248 154Z';
+  const glow = night ? '<circle cx="274" cy="140" r="26" fill="url(#rmglow)"/>' : '';
+  return `${glow}${inlay(L)}${inlay(R)}${pearls}<path d="M256 186L292 186" stroke="#c9a24a" stroke-width="1.2" stroke-dasharray="2 2"/>
+    ${edge(book, '#0b3a26', 2)}${two(book, '#1f8a5a', '#136e46', 0, -1)}<path d="M250 146Q261 139 273 145M275 145Q287 139 298 146" stroke="#fff6e0" stroke-width="2.6" fill="none"/>
+    <path d="M274 144V151" stroke="#d4a22a" stroke-width="1.4"/><path d="${starPath(260, 149, 3, 1.4, 8)}${starPath(288, 149, 3, 1.4, 8)}" fill="#f2c94c"/>
+    <path d="M272 152L274 162L276 152" stroke="#c0473a" stroke-width="1.6" fill="none"/>`;
+}
+function lanterns(night: boolean, still: boolean): string {
+  // Three pierced brass floor lanterns of different heights, lit inside; at night their patterns throw light.
+  const one = (x: number, h: number, i: number) => {
+    const top = 188 - h, body = `M${x - 8} ${top + 8}H${x + 8}L${x + 6} 184H${x - 6}Z`, cap = `M${x - 9} ${top + 8}Q${x} ${top - 6} ${x + 9} ${top + 8}Z`;
+    const holes = Array.from({ length: Math.floor((h - 14) / 7) }, (_, k) => `<path d="${starPath(x, top + 15 + k * 7, 2.4, 1, 8)}" fill="#fff0b8"/>`).join('');
+    const flick = still ? '' : `<animate attributeName="opacity" values=".55;.9;.6;.85;.55" dur="${2.6 + i * .5}s" repeatCount="indefinite"/>`;
+    return `<circle cx="${x}" cy="${top + h / 2}" r="${night ? 20 : 12}" fill="url(#rmglow)">${flick}</circle>${edge(body, '#6a4212', 2)}${two(body, '#e0a83a', '#b07a1f', -1, -1)}${holes}
+      ${edge(cap, '#6a4212', 1.5)}${two(cap, '#f2c94c', '#cf9f22', -.6, -.6)}<path d="M${x} ${top - 4}V${top - 9}" stroke="#cf9f22" stroke-width="1.6"/><path d="${circlePath(x, top - 10, 1.6)}" fill="#f2c94c"/>
+      <path d="M${x - 7} 184H${x + 7}" stroke="#8a5a12" stroke-width="2.4" stroke-linecap="round"/>`;
+  };
+  return `${night ? '<ellipse cx="274" cy="190" rx="46" ry="6" fill="#ffd27a" opacity=".35"/>' : ''}${one(252, 44, 0)}${one(296, 36, 1)}${one(274, 56, 2)}`;
+}
+function qandil(night: boolean, still: boolean): string {
+  // A Mamluk mosque lamp: enamelled glass with a flared neck, blue and red bands, gold, three chains to a brass cap.
+  const x = 111;
+  const body = `M${x - 9} 22Q${x - 12} 32 ${x - 6} 38H${x + 6}Q${x + 12} 32 ${x + 9} 22Z`, neck = `M${x - 9} 22L${x - 11} 12H${x + 11}L${x + 9} 22Z`;
+  const glow = `<circle cx="${x}" cy="28" r="${night ? 24 : 14}" fill="url(#rmglow)">${still ? '' : '<animate attributeName="opacity" values=".75;1;.75" dur="3.4s" repeatCount="indefinite"/>'}</circle>`;
+  return `<path d="M${x} 0V5M${x} 5L${x - 9} 12M${x} 5V12M${x} 5L${x + 9} 12" stroke="#a8740f" stroke-width="1"/><path d="${circlePath(x, 5, 1.8)}" fill="#f2c94c"/>${glow}
+    <path d="${neck}" fill="#e9f3ff" opacity=".85"/><path d="M${x - 10} 14H${x + 10}" stroke="#2f5fc4" stroke-width="2.6"/><path d="M${x - 9.6} 18H${x + 9.6}" stroke="#f2c94c" stroke-width="1.2"/>
+    <path d="${body}" fill="#e9f3ff" opacity=".9"/><path d="M${x - 10.5} 27H${x + 10.5}" stroke="#2f5fc4" stroke-width="3"/>
+    ${[-6, 0, 6].map((d) => `<path d="${circlePath(x + d, 27, 1.6)}" fill="#d0283e"/>`).join('')}<path d="M${x - 9} 32H${x + 9}" stroke="#f2c94c" stroke-width="1.2"/>
+    <path d="M${x - 2} 33h4l-1 3h-2z" fill="#ffb24a"/><path d="M${x} 29c1 1.4 1.2 2.4 0 3.4c-1.2 -1 -1 -2 0 -3.4z" fill="#ff8a1e"/>
+    <path d="M${x - 4} 38H${x + 4}L${x + 2} 42H${x - 2}Z" fill="#cf9f22"/>${shine(`M${x - 7} 24Q${x - 9} 30 ${x - 5} 35`, 1.2, .7)}`;
+}
+function damask(): string {
+  const L = 'M16 17H42Q34 56 40 106H16Z', R = 'M112 17H86Q94 56 88 106H112Z';
+  const motif = (x: number, y: number) => `<path d="M${x} ${y - 5}q4 3 0 5q-4 2 0 5q4 -3 0 -5q-4 -2 0 -5z" fill="#d9b35a" opacity=".85"/><path d="M${x - 3} ${y}h6" stroke="#d9b35a" stroke-width="1"/>`;
+  const ms = [[24, 30], [32, 46], [24, 62], [32, 78], [26, 94], [104, 30], [96, 46], [104, 62], [96, 78], [102, 94]].map(([x, y]) => motif(x, y)).join('');
+  const tie = (x: number) => `<path d="M${x - 8} 68Q${x} 64 ${x + 8} 68" stroke="#f2c94c" stroke-width="2.4" fill="none"/><path d="M${x + 6} 68V76" stroke="#cf9f22" stroke-width="1.2"/>${two(`M${x + 3} 76H${x + 9}L${x + 8} 86H${x + 4}Z`, '#ffd25e', '#cf9f22', -.4, -.4)}`;
+  const val = 'M10 13H118V30Q64 40 10 30Z';
+  return `${edge(L, '#062a1e', 2)}${two(L, '#11704f', '#0a5038')}${edge(R, '#062a1e', 2)}${two(R, '#11704f', '#0a5038')}${ms}${tie(30)}${tie(98)}
+    <path d="M8 13H120" stroke="#8a5a12" stroke-width="3.4" stroke-linecap="round"/>${edge(val, '#062a1e', 2)}${two(val, '#14845e', '#0a5038', 0, -1.5)}
+    <path d="M12 29Q64 39 116 29" stroke="#f2c94c" stroke-width="1.8" fill="none"/>${[20, 36, 52, 76, 92, 108].map((x) => `<path d="${starPath(x, 20, 2.8, 1.2, 8)}" fill="#f2c94c"/>`).join('')}`;
+}
 /** A piece in its place. */
 export function itemArt(id: string, slot: Slot, night: boolean, still: boolean): string {
   if (slot === 'wall') return wallArt(id, night);

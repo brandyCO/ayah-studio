@@ -27,7 +27,7 @@ export function pathBuddy(list: HTMLElement) {
     // Beside a step it stands on the side away from the path's sway, so it never covers the next node.
     const x = parseFloat((at.closest('.lp-step') as HTMLElement | null)?.style.getPropertyValue('--x') ?? '0') || 0;
     a.el.classList.add(x > 0 ? 'left' : 'right');
-    a.el.addEventListener('click', (e) => { e.stopPropagation(); a.hop(0.6); sfx.tick(); });
+    a.el.addEventListener('click', (e) => { e.stopPropagation(); a.happy(); sfx.tick(); });
     at.append(a.el);
     cur = { el: at, a };
     if (reduced()) return;

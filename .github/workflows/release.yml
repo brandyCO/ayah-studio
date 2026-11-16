@@ -1,0 +1,80 @@
+name: Play Store release
+
+# Builds the signed Android App Bundle (.aab) to upload to Google Play (Play Console → Production or
+# Internal testing → Create new release → upload). Run it from Actions → Play Store release → Run workflow.
+# Signed with the app's key (repo secrets ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD), which Play
+# uses as the upload key. The version number is 20000 + this workflow's run number, so it is always higher
+# than any test APK and grows with every release. Store listing texts and answers: docs/play-store.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version name shown in the store (e.g. 1.0.0)
+        required: true
+        default: 1.0.0
+
+permissions:
+  contents: read
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_VERSION_NAME: ${{ inputs.version }}
+      # Mushaf pages 4–604 as a fast-follow Play asset pack (android/qcf_fonts, src/data/fontPack.ts): ~25 MB install.
+      FONT_PACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
+          VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
+          VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
+          VITE_FONT_PACK: '1'
+      - run: node scripts/check-quran.mjs
+      # Word times are fetched by the app when a reel needs them (as in the test APK).
+      - name: Leave the aligned word times out of the bundle
+        run: rm -rf dist/data/words
+      # Pages 1–3 stay in the app; 4–604 go into the fast-follow asset pack, which Play downloads right after the install.
+      - name: Mushaf page fonts 4–604 into the Play asset pack
+        run: bash scripts/font-pack.sh dist android/qcf_fonts/src/main/assets
+      - run: npx cap sync android
+      - name: Signing key
+        env:
+          PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "::error::The repo secret ANDROID_KEYSTORE_BASE64 is missing."; exit 1; fi
+          printf %s "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/app.keystore"
+          PW=$(printf %s "$PW" | tr -d '[:space:]')
+          keytool -list -keystore "$RUNNER_TEMP/app.keystore" -storetype PKCS12 -storepass "$PW" -alias ayahstudio > /dev/null
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/app.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_CODE=$((20000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - run: ./gradlew bundleRelease --no-daemon
+        working-directory: android
+      - name: Check the bundle
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$AAB" | tail -1
+          ls -l "$AAB"
+          SIZE=$(stat -c %s "$AAB")
+          if [ "$SIZE" -gt 200000000 ]; then echo "::error::The bundle is over Play's 200 MB limit."; exit 1; fi
+          bash scripts/font-pack.sh check "$AAB" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Version $ANDROID_VERSION_NAME ($ANDROID_VERSION_CODE), $((SIZE / 1048576)) MB" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ayah-studio-${{ inputs.version }}-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 90

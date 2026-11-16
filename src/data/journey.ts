@@ -10,12 +10,14 @@
 //
 // Streak: a day is lit when one of the day's goals is met (a counted page always counts; with no
 // goals set, opening the app is enough; see rewards.ts). A missed day is covered by the week's free freeze
-// (one per calendar week, Monday first, used by itself), and one extra freeze every 30 days covers a
+// (one per week, Saturday first, used by itself), and one extra freeze every 30 days covers a
 // second missed day in a week (owner decision 2026-10-31). When the missed days cannot all be
 // covered, the flame goes out; `lost` keeps what was lost for a friend to relight it (later).
+import { noteFlameTime } from './usualTime';
 import { dayKey, readLog, readLogAll, setOtherLogs } from './readLog';
 import type { Mushaf } from './mushaf';
 import { touchPref } from '../ui/prefs';
+import { mark } from '../usage';
 
 const KEY = 'journey';
 const KEEP_DAYS = 400;
@@ -161,6 +163,7 @@ export const todayRec = (now = new Date()): Readonly<DayRec> => view().days[dayK
 export const totals = (): Readonly<Totals> => view().totals;
 /** Distinct pages ever counted (on all the user's devices). */
 export const pagesEver = () => Object.keys(view().pageLast).length;
+export const pageLast = (): Readonly<Record<number, number>> => view().pageLast;
 /** The page was counted as read at or after `ms`. */
 export const pageReadSince = (page: number, ms: number) => (view().pageLast[page] ?? 0) >= ms;
 export const earnedBadges = (): Readonly<Record<string, string>> => view().badges;
@@ -180,6 +183,7 @@ export const badgeClaimed = (id: string) => !!view().claimed[id];
 export function claimGoal(id: string, light = 0, now = new Date()) {
   const d = today(now);
   if (d.cl?.includes(id)) return;
+  mark('ev:claim');
   d.cl = [...(d.cl ?? []), id];
   if (light > 0) d.n = { ...d.n, [id]: Math.round(light) };
   save();
@@ -200,8 +204,8 @@ export const allDays = (): Readonly<Record<string, Readonly<DayRec>>> => view().
 // --- days and weeks ---
 const parse = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 export const addDays = (k: string, n: number) => { const d = parse(k); d.setDate(d.getDate() + n); return dayKey(d); };
-/** The Monday of the week holding day `k`. */
-export const weekOf = (k: string) => { const d = parse(k); return addDays(k, -((d.getDay() + 6) % 7)); };
+/** The Saturday of the week holding day `k`: one week everywhere, Saturday → Friday like Ranks (owner decision 2026-11-13). */
+export const weekOf = (k: string) => { const d = parse(k); return addDays(k, -((d.getDay() + 1) % 7)); };
 
 function covered(s = view()): Set<string> {
   const out = new Set(s.frozen.concat(s.revived));
@@ -271,6 +275,7 @@ export function lightFlame(now = new Date()): boolean {
   if (s.days[k]?.f) return false;
   settle(s, k);
   today(now).f = 1;
+  noteFlameTime(now);
   ver++;
   s.best = Math.max(s.best, streakOn(k, covered()));
   save();
@@ -295,7 +300,7 @@ export interface Streak {
   freeze: { free: boolean; day?: string };
   /** The extra freeze (one every 30 days): ready, or the day it is ready again. */
   extra: { free: boolean; next?: string };
-  /** Monday → Sunday of this week: lit, frozen, revived, today (not yet), or missed / to come. */
+  /** Saturday → Friday of this week: lit, frozen, revived, today (not yet), or missed / to come. */
   week: { day: string; state: 'lit' | 'frozen' | 'revived' | 'today' | 'missed' | 'future' }[];
   lost?: { n: number; days: string[] };
 }
@@ -368,6 +373,7 @@ function surahPages(m: Mushaf) {
 
 /** A page was read (open for the reading time). Call after logging it in the reading log. */
 export function countPage(m: Mushaf, page: number, now = new Date()) {
+  mark('ev:page');
   const s = load();
   const { pages, onPage, juz } = surahPages(m);
   const [ay, ...surahs] = onPage.get(page) ?? [0];
@@ -416,6 +422,7 @@ export function addMemorised(n: number, now = new Date()) {
 
 /** A Learn lesson or tasmi' was passed today (counted for goals, quests and Ranks). */
 export function addLesson(now = new Date()) {
+  mark('ev:lesson');
   const d = today(now);
   d.ls = (d.ls ?? 0) + 1;
   save();
@@ -461,6 +468,7 @@ export function markGoalsMet(now = new Date()) {
 
 /** Seconds of recitation listened to. */
 export function addListen(sec: number, now = new Date()) {
+  if (sec > 0) mark('ev:listen');
   if (!(sec > 0)) return;
   const d = today(now);
   d.l = Math.round(((d.l ?? 0) + sec) * 10) / 10;
@@ -516,6 +524,7 @@ export function lifetime(): Readonly<Record<string, number>> {
 
 /** A reel was exported. */
 export function reelMade(now = new Date()) {
+  mark('ev:export');
   const d = today(now);
   d.r = (d.r ?? 0) + 1;
   load().totals.reels++;
@@ -525,7 +534,7 @@ export function reelMade(now = new Date()) {
 export type Period = 'week' | 'month' | 'all';
 export interface Stats extends Totals { surahList: number[]; goalDays: number; litDays: number; light: number }
 
-/** Stats for this week (from Monday), this month, or all time on this device. */
+/** Stats for this week (from Saturday), this month, or all time on this device. */
 let allMemo: { ver: number; v: Stats } | null = null;
 export function stats(period: Period, now = new Date()): Stats {
   const s = view();

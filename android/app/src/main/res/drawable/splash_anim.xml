@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8 and older: the still splash picture (Android 9+ uses drawable-v28/splash_anim.xml, a clear icon, then res/raw/opening.json) -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/splash_icon"/>

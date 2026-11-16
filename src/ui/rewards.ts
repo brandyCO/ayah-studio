@@ -50,6 +50,16 @@ export function watchRewards() {
   const dawn = () => void import('../data/duas').then((m) => { if (m.dawnDue()) void import('./dawn').then((d) => d.showDawn()); });
   setTimeout(dawn, 1800);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(dawn, 900); });
+  // Back after three days or more: a warm welcome and one page back in (src/ui/comeback.ts). Signed in, it waits for
+  // the account's days to arrive, so a day read on another phone counts.
+  const comeback = () => void import('../cloud/sync').then(async (sy) => {
+    if (sy.firstSyncPending() || (sy.syncStatus().state !== 'off' && !sy.syncStatus().at)) return;
+    const m = await import('./comeback');
+    if (m.comebackDue()) void m.showComeback();
+  });
+  setTimeout(comeback, 2600);
+  void import('../cloud/sync').then((sy) => sy.onSyncStatus((st) => { if (st.state === 'ok') setTimeout(comeback, 600); }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(comeback, 1400); });
   // Du'a notes on: a soft banner after each adhan / salah while the app is open (src/ui/prayerAlerts.ts).
   try { if (/"(duas|salah)":true/.test(localStorage.getItem('prayerAlerts') ?? '')) void import('./prayerAlerts').then((m) => m.watchDuaBanners()); } catch { /* ignore */ }
 }

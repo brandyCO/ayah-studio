@@ -88,9 +88,10 @@ export async function showKidsSurah(root: HTMLElement, n: number): Promise<() =>
 
   function paintChips() {
     const k = kidsSettings();
-    speedBtn.textContent = k.speed === 1 ? t('kids.normalSpeed') : t('kids.slow');
+    // F32: a drawn icon and a small label say what each button sets (speed · normal, repeat · once).
+    speedBtn.replaceChildren(icon('clock', 22), h('span', { class: 'kc-t' }, h('small', {}, t('kids.speedK')), h('b', {}, k.speed === 1 ? t('kids.normal') : t('kids.slow'))));
     speedBtn.setAttribute('aria-label', k.speed === 1 ? t('kids.speedNormalAria') : t('kids.speedSlowAria'));
-    repBtn.textContent = k.repeats === 1 ? t('kids.once') : t('kids.thrice');
+    repBtn.replaceChildren(icon('restart', 22), h('span', { class: 'kc-t' }, h('small', {}, t('kids.repeatK')), h('b', {}, k.repeats === 1 ? t('kids.once') : t('kids.thrice'))));
     repBtn.setAttribute('aria-label', k.repeats === 1 ? t('kids.onceAria') : t('kids.thriceAria'));
   }
 

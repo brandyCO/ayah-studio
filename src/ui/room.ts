@@ -116,12 +116,13 @@ function buildScene(visit?: Visit): Built | null {
   const order = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 } as const;
   const got = visit ? [] : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
   const low = h('div', { class: 'rm-shelf low' }, ...got.map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
+  if (!got.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
   // The character on its cushion: reading by day, its lantern at night.
   const sit = encode(normalize({ ...f, pose: 1, hold: night ? 5 : f.hold === 0 || f.hold === 1 ? 2 : f.hold }));
   const cushion = h('span', { class: 'rm-cushion', 'aria-hidden': 'true' });
   const a: Actor | null = actor('rm-actor', sit);
   if (a) {
-    a.el.addEventListener('click', () => { haptic(6); sfx.tick(); a.hop(0.6); });
+    a.el.addEventListener('click', () => { haptic(6); sfx.tick(); a.happy(); });
     scene.append(cushion, a.el);
   }
   scene.append(top, low);
@@ -195,7 +196,8 @@ export function roomScreen(edit: () => void, top: HTMLElement): HTMLElement | nu
     top,
     stage,
     h('div', { class: 'rm-dock' },
-      h('p', { class: 'rm-full-sub small' }, b.cups ? rt('room.sub', { n: b.cups }) : rt('room.subEmpty')),
+      // The empty shelf already says how to fill it: the dock repeats nothing (front-end review G10).
+      b.cups ? h('p', { class: 'rm-full-sub small' }, rt('room.sub', { n: b.cups })) : '',
       slots,
       h('div', { class: 'rm-dock-main' },
         h('button', { class: 'primary brand-btn rm-shop-b', type: 'button', onclick: () => shop() }, `✦ ${rt('rs.shop')}`),

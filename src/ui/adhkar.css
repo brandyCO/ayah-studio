@@ -92,3 +92,15 @@
 .adhkar.du-sleep .ak-dot.done { background: #c9b98a; border-color: #c9b98a; }
 .adhkar.du-sleep .primary { background: rgba(201,185,138,.2); color: #efe7cc; box-shadow: none; }
 .ak-moon { width: 84px; height: 84px; border-radius: 50%; box-shadow: inset -22px 8px 0 0 #e9dfb8; filter: drop-shadow(0 0 18px rgba(233, 223, 184, .35)); }
+
+/* F30: a long session's dots become one thin bar of segments; long book notes fold behind "How to say it". */
+.ak-dots.bar { flex-wrap: nowrap; gap: 2px; padding: 4px 6px 6px; }
+.ak-dots.bar .ak-dot { flex: 1; width: auto; height: 6px; min-width: 0; border-radius: 3px; border: 0; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ak-dots.bar .ak-dot.done { background: var(--accent); }
+.ak-dots.bar .ak-dot.cur { transform: none; background: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 0 1.5px var(--accent); }
+.ak-how { border-radius: 12px; background: color-mix(in srgb, var(--accent) 7%, transparent); padding: 8px 12px; font-size: var(--fs-s); }
+.ak-how summary { cursor: pointer; text-align: center; color: var(--accent); font-weight: 800; list-style: none; }
+.ak-how summary::-webkit-details-marker { display: none; }
+.ak-how summary::after { content: ' ▾'; }
+.ak-how[open] summary::after { content: ' ▴'; }
+.ak-how p { margin: 8px 0 2px; line-height: 1.55; text-align: start; }

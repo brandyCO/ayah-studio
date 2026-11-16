@@ -1,6 +1,7 @@
 // Mushaf reading view: a full-screen Madinah mushaf page (King Fahd Complex QCF V2 fonts, 15 lines,
 // exactly as printed). Swipe to turn pages. Tap the page to drop down the title bar with the menu;
 // long-press / drag to select ayat for a reel.
+import { suraName } from './suraName';
 import { bookmarks, removeBookmark, toggleBookmark } from '../data/bookmarks';
 import { icon } from './icons';
 import { draftHash, listDrafts } from '../data/drafts';
@@ -10,6 +11,7 @@ import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
 import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
 import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
+import { FONT_PACK, packWaiting } from '../data/fontPack';
 import { isNative } from '../native';
 import { lastWritten, loadReflections, reflectionAt, reflections } from '../data/reflections';
 import { h, toast } from './dom';
@@ -29,6 +31,7 @@ const openReflections = (...a: Parameters<typeof import('./reflections').openRef
 import { account } from '../cloud/auth';
 import { logPageRead } from '../data/readLog';
 import { countPage, pageSeconds, todayRec } from '../data/journey';
+import { noteStop, stopOn } from '../data/stopped';
 import { markRamadanRead, noteAyah, ramadanData, ramadanNow } from '../data/ramadan';
 // The family circles screens load on first use.
 const openCircle = (id: string) => import('./circles').then((m) => m.openCircle(id));
@@ -52,15 +55,11 @@ const DAY = 86_400_000;
 let listenHere: ((s: number, a: number) => void) | null = null;
 registerToday(async () => {
   const [meta, d] = await Promise.all([loadMeta(), todaysAyah()]);
-  const info = translationInfo(currentTranslation());
-  const tr = await surahTranslation(d.s, info.id).catch(() => null);
-  const text = tr ? tr.slice(d.from - 1, d.to).join(' ') : d.en;
   return [{
-    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`,
-    sub: tr ? { text, lang: info.lang, dir: info.dir } : { text, lang: 'en', dir: 'ltr' },
+    icon: 'sparkle', text: t('today.ayah', { ref: uiRef(meta[d.s - 1], d.from, d.to) }), href: `#/s/${d.s}/${d.from}`, inline: true,
     actions: [
-      { label: t('today.listen'), onClick: () => listenHere?.(d.s, d.from) },
-      { label: t('today.reel'), href: `#/reel/${d.s}/${d.from}-${d.to}` },
+      { label: t('today.listen'), icon: 'play', onClick: () => listenHere?.(d.s, d.from) },
+      { label: t('today.reel'), icon: 'film', href: `#/reel/${d.s}/${d.from}-${d.to}` },
     ],
   }];
 });
@@ -70,8 +69,8 @@ registerToday(async () => {
   const a = p.ayat[0];
   if (!a) return [];
   return [{
-    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`,
-    actions: [{ label: t('today.popularReel'), href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
+    icon: '✦', text: t(a.trending ? 'today.trending' : 'today.popular', { ref: uiRef(meta[a.surah - 1], a.from, a.to) }), href: `#/s/${a.surah}/${a.from}`, inline: true,
+    actions: [{ label: t('today.popularReel'), icon: 'film', href: `#/reel/${a.surah}/${a.from}-${a.to}` }],
   }];
 });
 registerToday(async () => {
@@ -169,6 +168,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const detachPlayer = attachPlayer({
     onPosition: (pos) => {
       if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
+      // Where listening stops is where to pick up next time (kept as the ayah changes).
+      if (pos && pos.a > 0 && (pos.s !== playing?.s || pos.a !== playing?.a)) noteStop(pos.s, pos.a, mushaf.pageOf(pos.s, pos.a), 'listen');
       playing = pos;
       if (pos && !panning && !animating) {
         const target = mushaf.wordPage(pos.s, Math.max(1, pos.a), pos.w ?? 1); // a = 0: the Bismillah before ayah 1
@@ -261,8 +262,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       if (document.hidden) return;
       seen++;
       if (seen === 20 && ramadan) markRamadanRead(p);
+      if (seen === 20 && !playing) { const f = firstAyahOnPage(); noteStop(f.s, f.a, p, 'read'); }
       if (seen >= need) {
         clearInterval(readTimer);
+        if (!playing) { const l = lastAyahOnPage(); noteStop(l.s, l.a, p, 'read'); }
         if (logPageRead(p)) {
           const was = todayRec();
           const [s0, j0] = [was.s?.length ?? 0, was.j?.length ?? 0];
@@ -348,7 +351,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (l[0] === 'h') {
       lineSurah = Number(l[1]);
       return h('div', { class: 'mp-line mp-surah' },
-        h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0'))));
+        h('div', { class: 'surah-frame' }, suraName(Number(l[1]))));
     }
     if (l[0] === 'b') {
       const el = h('div', { class: 'mp-line mp-basmala', 'data-s': String(lineSurah) });
@@ -447,8 +450,11 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (!placeholders.has(p)) {
       // A skeleton of the page: 15 soft lines where the text will be, a light sweeping across them.
       const lines = Array.from({ length: 15 }, (_, i) => h('span', { class: 'skel-line', style: i === 14 ? 'width:58%' : '' }));
-      placeholders.set(p, h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
-        ...lines));
+      const el = h('div', { class: 'mushaf-page loading', 'data-page': String(p), 'aria-busy': 'true', 'aria-label': t('common.page', { n: p }) },
+        ...lines);
+      // Play build: the page's font still on its way in the asset pack → "Preparing your mushaf".
+      if (packWaiting(p)) void import('./mushafPrep').then((m) => { if (el.classList.contains('loading')) el.append(m.prepCard()); });
+      placeholders.set(p, el);
     }
     return placeholders.get(p)!;
   };
@@ -486,6 +492,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       sel.repaint();
       paintPlaying();
       pulseNotes();
+      checkStop();
     };
     attach();
     header();
@@ -495,7 +502,9 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // (~150 KB each; the Android app has them all already).
     const ahead = [page + 2, page + 3, page - 2, page - 3, page + 4, page + 5, page + 6, page - 4, page - 5, page - 6, page + 7, page + 8, page + 9, page + 10];
     const far = isNative() || unmetered() ? ahead : ahead.slice(0, 4);
-    void loadPageFont(page).catch(() => {}).finally(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); });
+    // The far ones wait a moment after this page's font, so the first page's header and interface fonts are not
+    // slowed by ten page fonts downloading at once.
+    void loadPageFont(page).catch(() => {}).finally(() => window.setTimeout(() => { if (id === renderId) for (const p of far) if (valid(p)) void loadPageFont(p).catch(() => {}); }, 700));
     // Prepare the pages two away while idle: built, put in the strip out of sight and fitted, one
     // at a time, so the flip after next lands without any layout work (it used to fit the new
     // neighbour in the frame right after the landing, ~60 ms on a mid-range phone).
@@ -626,6 +635,26 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       h('div', { class: 'sheet-scroll' }, ...items), h('p', { class: 'muted small', dir: 'auto' }, info.translator));
   }
 
+  /** The last ayah that begins on the current page (or the one it continues). */
+  function lastAyahOnPage(): { s: number; a: number } {
+    const segs = mushaf.pages[page - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
+    const seg = [...segs].reverse().find((x) => mushaf.segStart.get(x) === 1) ?? segs[segs.length - 1];
+    return seg ? { s: seg[0], a: seg[1] } : { s: n, a: 1 };
+  }
+  // "You stopped here": once, on the first page shown, when it holds the place left after a break.
+  let stopChecked = false;
+  function checkStop() {
+    const el = built.get(page);
+    if (stopChecked || !el?.dataset.fit) return;
+    stopChecked = true;
+    const st = stopOn(page);
+    if (!st || player.active()) return;
+    window.setTimeout(() => {
+      if (mount !== mounts || !el.isConnected) return;
+      void import('./stopGlow').then((m) => m.showStop(area, el, meta, st, (s, a) => playHere(s, a))).catch(() => {});
+    }, 600);
+  }
+
   /** The first ayah that begins on the current page (or the one continuing onto it). */
   function firstAyahOnPage(): { s: number; a: number } {
     const segs = mushaf.pages[page - 1].lines.filter((l) => l[0] !== 'h' && l[0] !== 'b').flat() as Seg[];
@@ -669,7 +698,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   window.addEventListener('keydown', onKey);
   window.addEventListener('resize', onResize);
 
-  await buildPage(page).catch(() => {}); // open on the real page, not its placeholder
+  // Open on the real page, not its placeholder. In the Play build a page whose font is still in the asset pack opens
+  // on the preparing card at once instead of waiting.
+  const first = buildPage(page).catch(() => {});
+  await (FONT_PACK ? Promise.race([first, new Promise((r) => setTimeout(r, 500))]) : first);
   layout();
   replayPosition(); // listening from another screen: back on the page being recited
   void loadPageFont(page).then(() => requestAnimationFrame(() => perfLaunch('mushaf page')), () => {});

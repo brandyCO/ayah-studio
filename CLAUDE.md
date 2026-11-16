@@ -110,7 +110,7 @@ Engine edge cases:
 | Layer | Choice |
 |---|---|
 | App | TypeScript + Vite, plain DOM/canvas (no heavy UI framework unless clearly needed) |
-| Android (and iOS later) | Capacitor (`@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`) |
+| Android + iPhone | Capacitor (`@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`); iPhone: `ios/`, docs/ios.md |
 | Windows/macOS | Tauri (WebView2 on Windows = Chromium, so WebCodecs works); tray icon for reminders |
 | Web test build | GitHub Pages, auto-deployed from `main` by `.github/workflows/pages.yml` |
 | Video export | WebCodecs `VideoEncoder` (H.264) + `AudioEncoder` (AAC) → **Mediabunny** MP4 muxer |
@@ -700,8 +700,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       the path is remembered per browser version (localStorage `exportPath`, `knownPath()`). `voiceOnset()` measures
       only the 4.5 s it looks at; Cinematic's breath is measured once the studio is idle (`knownBreath()`, and before
       an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
-- [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
-      `SENTRY_DSN`; then mention it on the privacy page
+- [x] Error reports (`src/errors.ts`, Sentry, lazy-loaded): on since 2026-11-16 (the owner's DSN, EU region, is the
+      default in `errors.ts`; the repo variable `SENTRY_DSN` overrides it); privacy page → Other services → Crash reports
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
@@ -721,6 +721,27 @@ Pro and a load test come later, when the owner decides to pay).
 - [x] Reel counter split into 16 shards (`20261031000000_scale_reel_counts.sql`, pgTAP `scale_reel_counts.test.sql`)
 - [ ] Owner: Cloudflare API token + account id as repo secrets, run "Deploy edge proxy"; `SENTRY_DSN`
 - [ ] Later (paid / bigger steps): Workers Paid, Cloudflare Pages + R2 hosting (+ domain), Supabase Pro, k6 load test
+- [x] Launch test on staging (owner "Yes", 2026-11-14): `.github/workflows/launchtest.yml` (manual; `scripts/launchtest/`): a
+      second free Supabase project (variable `STAGING_REF`, secrets `STAGING_DB_PASSWORD`, `STAGING_ACCESS_TOKEN`; refuses the
+      live ref) gets every migration and 10,000 seeded players, then 4 k6 runners ramp virtual players through whole journeys
+      (files from Cloudflare, sign-in / signed tokens, sync, Ranks, friends, rival, Learn, shop, polling; the proxy's pulses),
+      capped in bytes pulled (egress is shared with live); a `watch` job logs the database every 10 s; report table per call.
+      First result: the free plan's small server stalls at ~700 players open at once (~40–70 calls/s): requests time out
+      in front of an idle database (11 PostgREST connections, ≤ 8 active, no lock waits) and a second seed ran 17× slower,
+      i.e. the shared CPU's burst credits run out. The code itself does ~2,500 calls/s at 16 ms on a 4-core runner (load.yml),
+      so 10,000 at once needs Supabase Pro with dedicated compute (owner decides)
+- [x] Busy alert (owner "Sure", 2026-11-14): `.github/workflows/busy.yml` every 10 min counts people at once on the live app
+      (signed-in accounts that reported to Ranks, were reading / listening or synced in the last 5 min) and database calls a
+      second (pg_stat_statements, 60 s apart); at 500 an issue "Busy: …" (label `busy`) is assigned to the owner, closed again
+      under 400. Signed-out people are not counted
+- [x] Free plan limits watch (owner request 2026-11-16, "notice me when the numbers are close to the limit"):
+      `.github/workflows/limits.yml` every hour reads the Supabase database (500 MB), stored files (1 GB), connections
+      (`max_connections`), egress this month (5 GB; Management API usage endpoint, when it answers) and Cloudflare Workers
+      requests today (100,000, GraphQL analytics with the proxy's token); one issue per limit (label `limit`, assigned to
+      the owner) at 70 %, a mention at 90 %, closed under 60 %. `scale` input multiplies readings for a test. Egress is
+      estimated from the last 24 h of gateway logs (`edge_logs` × days in the month) and needs a token with "Analytics logs:
+      read" as the secret `SUPABASE_LOGS_TOKEN` (the deploy token lacks it; first run 2026-11-16: database 15.6 MB, files 0,
+      15 of 60 connections, 101 Workers requests)
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
@@ -740,6 +761,58 @@ Pro and a load test come later, when the owner decides to pay).
       bucket `harakat-clips` (`src/cloud/clipFiles.ts`, `harakat_clip_add_file`; own folder only, teachers read all;
       files removed with Forget my clips and account deletion); older clips keep their `audio` and still play
       (migration `20261113100000_harakat_clips_storage.sql`, pgTAP 29)
+- [x] Round 2 (owner "yes all 7", 2026-11-13, PR #258): rivals paired by a job every 5 min (`rank_pair_duels()`, one pass by
+      clock band, league, 14-day average; a waiter meets the next to wait), Ranks polls a pulse (`rank_pulse`, one md5) and
+      refreshes only on change, Hall of fame cached 10 min, per-surah SuraNames fonts (`public/fonts/suras/`,
+      `scripts/make-sura-fonts.py`, 1.3 KB each), the page font + Me / Learn chunks preloaded per route (`routePreloads()` in
+      `vite.config.ts`), the recitation code out of first load (122 KB). Migration `20261113300000_rank_scale.sql`, pgTAP 15
+- [x] Daily database backup (`.github/workflows/backup.yml`, `scripts/db-backup.sh`): public + auth dumped at 01:15 UTC,
+      encrypted with the database password, restored into an empty Postgres 17 and checked row for row, kept 30 days as an
+      artifact; a failure opens an issue. Uptime (`.github/workflows/uptime.yml`, every 10 min): Pages, Auth, database, edge
+      proxy → an issue "Down: …" assigned to the owner, closed when back. Restore steps: `docs/backup.md`
+- [x] Anonymous usage counts (`src/usage.ts`): each day a phone sends a list of words once each (screens `v:…`, actions
+      `ev:…`, `age:…` since install, `p:`, `l:`, first day again under `d0:`), no id; `usage_add()` adds 1 per word
+      (migration `20261113400000_usage_counts.sql`, pgTAP `usage_counts.test.sql`); owner reads the views `usage_by_day` and
+      `usage_first_day` in the Supabase SQL editor; off in the Kids space and with Me → ⚙ → App → Anonymous usage counts
+- [x] Round 3 (owner "Yes", 2026-11-14): minutes listened go to Ranks at most once a minute (other progress within seconds;
+      everything at once when the app is left or Ranks opens), "reading now" every 2 min (dot kept 4 min); the backup also
+      packs the Storage voice clips (`files.tar.enc`) and uses its own secret `BACKUP_KEY` (owner adds it; until then the
+      database password, `key.txt` says which); `usage_add` takes no new words once a day has 3000; `tidy_db()` also removes
+      friends' news > 30 days, challenges started > 90 days ago or never accepted in 30, duels > 8 weeks, gifts opened > a year
+      (migration `20261114300000_round3_lighter.sql`, pgTAP `round3_lighter.test.sql` 12)
+- [x] Round 4 (owner "yes, as long as quality stays", 2026-11-14): voice-clip uploads count the files in Storage (40 a day each,
+      3000 a day in all; `harakat_can_upload`); friend streaks stored per pair up to 3 days ago (`rank_friend_streaks`,
+      `rank_streak_to()`; the same numbers as before) so `tidy_db()` keeps `rank_days` to 400 days (totals live in
+      `rank_players` / `rank_weeks`; every pair's streak stored and earned invites marked `ready` first); the nightly backup
+      checks space (an issue "Space: …" past 400 of 500 MB database / 800 MB of 1 GB files). **Play build**: mushaf pages
+      4–604 are the fast-follow asset pack `qcf_fonts` (`android/qcf_fonts`, `FontPackPlugin.java`, `scripts/font-pack.sh`,
+      `FONT_PACK=1` / `VITE_FONT_PACK=1` in release.yml; android.yml builds and checks it on every change), pages 1–3 stay in
+      the app; until the pack is in, a page waits on a "Preparing your mushaf" card (`src/ui/mushafPrep.ts`, progress, Wi-Fi →
+      "Download on mobile data") while that page alone comes from the site (`src/data/fontPack.ts`); test APKs keep every font
+      (migration `20261114400000_round4_storage_streaks.sql`, pgTAP `round4.test.sql` 16)
+- [x] Round 5 (owner "yes to all 3", 2026-11-14): the mushaf page fonts and word timings come from Cloudflare (worker
+      `ayah-studio-files`, static assets only: free, no bandwidth limit; `files/`, deployed by `.github/workflows/files.yml`
+      with the proxy's Cloudflare secrets), so GitHub Pages' ~100 GB a month is never reached; `FILES` in `src/net.ts` (beside
+      the proxy's workers.dev address, or `VITE_FILES_URL`), used by the service worker (`sw.js?files=…`: fetched there, kept
+      under the site's own address, the site when Cloudflare fails), the Play pack's site fallback and the app's word files.
+      The nightly backup lists the slowest database calls (`pg_stat_statements`) and opens an issue "Slow: …" for one over
+      300 ms on average. Ranks' fingerprint in two parts: `rank_my_pulse(d)` (own row + league id, about once a minute and after
+      each report) and `rank_league_pulse(lg, d)` through the proxy (`GET /lp`, kept 8 s per league, switch `leaguePulse`), so
+      a league watching costs ~1 read every 8 s instead of one per player; any failure falls back to `rank_pulse`
+      (migration `20261114500000_round5_league_pulse.sql`, pgTAP `round5.test.sql` 10)
+- [x] Round 6 (owner "Yes all 3", 2026-11-14): **the whole web app from Cloudflare** — pages.yml deploys the same build to
+      the `ayah-studio-files` worker (job `cloudflare`; files.yml is gone) with `version.json` (data version + build); the
+      service worker takes the built code, data, fonts and backgrounds from there (`fromEdge()` in `public/sw.js`; a file
+      asked for by version only when Cloudflare holds that version; the site when Cloudflare fails or lacks it); only the
+      page and sw.js come from GitHub Pages, which stays the address (sign-in, links and what phones keep are unchanged).
+      **Load test** (`.github/workflows/loadtest.yml`, `scripts/loadtest/`): a local copy seeded with 10,000 players the
+      way the app makes them, every call at scale sent by 40 at once and all mixed; table in the run summary; over the
+      budget (150 ms average) fails a database PR and opens an issue "Load: …" on the weekly run. **Friends and rival at the
+      edge**: `rank_my_social(d)` (my own part + public friend / rival ids, about once a minute) and `rank_player_pulse(pids,
+      d)` through the proxy (`GET /pp`, each player kept 8 s; private players 'x', followed through my own part); Ranks →
+      Friends, the MashaAllah toast, friend-streak moments and the duel page (now live, every 10 s) ask in full only when it
+      changed or once a minute (`socialPulse()`, switch `friendPulse`); the first load test found friends' news at ~360 ms, now read from the friends' own milestones (migration `20261114600000_round6_social_pulse.sql`,
+      pgTAP `round6.test.sql` 14)
 
 ### Phase 1c — app packaging
 Capacitor Android build + Tauri Windows build (GitHub Actions; APK/installer as artifacts);
@@ -818,6 +891,14 @@ save to gallery / share sheet; offline audio cache; settings.
       kept in IndexedDB `timings` (network first, newest 60) by `src/data/qdc.ts`; audio as on the web
 - [ ] Android app tested by the owner on their phone (not verifiable in the cloud container: no
       Android SDK/device; only the CI build is checked)
+- [x] iPhone app (owner request 2026-11-16, thread "Build the iPhone app"; **docs/ios.md**): `ios/` (Capacitor 8, SPM,
+      iPhone only, iOS 16.4+), built and started on a simulator by `.github/workflows/ios.yml` on every change, uploaded to
+      TestFlight from main once the owner's App Store Connect secrets exist. Swift plugins with the Android names
+      (`AppIcon` alternate icons for themes + tiers, `MediaScan` → Photos, `ExportService`, `Speech` → SFSpeechRecognizer,
+      `Haptic` → `navigator.vibrate`); Sign in with Apple (`signIn('apple')`, guideline 4.8), Google there with
+      `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
+      on the iPhone (WidgetKit later). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
+- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; WidgetKit widgets
 - [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice
@@ -848,7 +929,7 @@ cloud. Build in this order:
       RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
       `src/cloud/{config,supabase,auth,sync}.ts` + `src/ui/account.ts` (☰ → Account) +
       `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
-      Google provider on (owner's OAuth web client `178803855692-hqbv…` in Google Cloud project
+      Google provider on (owner's OAuth web client `674921848576-e00g…` (moved 2026-11-16 from project "Make") in Google Cloud project
       "Ayah Studio"; secret only in Supabase; web sign-in checked to reach Google's page).
       RLS tests: `supabase/tests/*.test.sql` (pgTAP), run by `.github/workflows/supabase.yml` with the
       Supabase CLI against a local database (`supabase db start` + `supabase test db`, no token).
@@ -1109,6 +1190,36 @@ tafsir only from published, credited editions; UI strings only are translated by
       the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
       start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
       "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
+      **30 interface languages** (owner request 2026-11-14, "it should be in all languages"): English, Arabic + Urdu,
+      Indonesian, Bengali, Turkish, Persian, French, Malay, Hindi, Russian, Spanish, German, Portuguese, Swahili, Hausa,
+      Somali, Pashto, Uzbek, Azerbaijani, Bosnian, Albanian, Kurdish (Sorani), Tamil, Malayalam, Chinese, Italian, Dutch,
+      Japanese, Korean. Source: `scripts/i18n-source.mjs` collects every English string (en.ts, enStudio.ts, each lazy
+      module's `en`, Noor's lines, the engine's effect/mood/theme names `scripts/i18n/engine-en.json`, server messages
+      `scripts/i18n/messages-en.json` (`@`-keys = templates for the patterns in `src/i18n/more.ts`), and `extra-en.json`:
+      level labels, avatar/frame names, Android shortcut labels, the 114 surah-name meanings) into `scripts/i18n/en.json`
+      (by module). Each language is one lazy bundle `src/i18n/locales/{id}.json` (same modules; loaded at start with
+      `src/i18n/more.ts`: ICU plurals `{n, plural, one {…} few {…} other {…}}`, messages). Arabic keeps its own
+      dictionaries (ar.ts, arMessages.ts, each module's `ar`). Lookups: `t()` (core + studio + engine merged into `dict`),
+      each module's own function → `tr(module, key)` → English; `fill()` fills placeholders and plurals. Device language
+      picked on first start (`deviceLang()`: first of the phone's languages offered; `in` → Indonesian, Dari → Persian);
+      onboarding's first screen lists every language (the phone's first, two columns, asked "Which language?" in the
+      phone's language + English), also the welcome and Me → ⚙ → Language (names in `src/i18n/langs.ts`). RTL for Arabic,
+      Urdu, Persian, Pashto, Kurdish (`dir()`; arrows and swipes follow `dir()`, not Arabic); surah names in Arabic for
+      those five (`surahName()`), surah meanings translated (`surahMeaning()`); `html[data-script]` (Cyrillic, Indic, CJK
+      use the phone's font instead of Nunito, Indic scripts a taller line); numbers and dates in the language's locale with
+      Western digits (`locale()`, `intlLoc()`). Server / network messages: known ones translated (`msg` module), an unknown
+      one in a non-Latin language becomes "could not do that, try again". Ayah translations: 14 more published Tanzil
+      editions (fa.fooladvand, ps.abdulwali, uz.sodik, az.musayev, bs.korkut, sq.ahmeti, pt.elhayek, it.piccardo,
+      nl.siregar, ha.gumi, so.abduh, ta.tamil, ml.abdulhameed, zh.jian); the default translation follows the interface
+      language (Japanese, Korean, Kurdish: none with a named translator / complete text yet → Saheeh International).
+      Android shortcut labels per language (`scripts/make-android-strings.mjs` → `res/values-{lang}`). Translations were
+      written by the build session from `scripts/i18n/GUIDE.md` (rules: placeholders, Allah stays Allah, each language's
+      own Islamic terms, Light = the language's word for light, league names as each language knows the events); a native
+      speaker should read each before a big launch in that country.
+      **Adding English strings**: run `node scripts/i18n-source.mjs`, then translate the new keys for every language
+      (`node scripts/check-i18n.mjs --strict` lists what is missing; `scripts/i18n/parts/` + `scripts/i18n-merge.mjs {id}`
+      for a big batch). Until then the app shows English for them; the PR check (`check-i18n.mjs`, in checks.yml) fails
+      only on a broken translation (placeholders, plurals). Smoke test: English, Arabic, Urdu, Russian, Chinese, French
 - [x] G2 Ayah of the day: curated list (`public/data/daily.json`), Today card + "Make today's reel",
       optional morning notification (Android), Android home-screen widget
       (built 2026-10-09: 147 references by `scripts/make-daily.mjs` (criteria in the script; refs checked,
@@ -1602,6 +1713,17 @@ duas/reflections section in Me.
       shown from above in the tiles (`rugTop()`), carved arches with lamps, cedar panels with stars under a brass rail, veined
       marble, an embroidered pouf; the kurta's vest edged in gold with paisleys, the embroidered abaya with a vine of flowers,
       a jewelled collar and a band of diamonds; the freeze a cut crystal
+      **Premium characters** (owner request 2026-11-14, "Duolingo premium quality … see the beauty of what they chose"; preview
+      artifact QwsVtqPtNjE4AWkNMqkTNb): eyes are a white with a deep brown iris and catch lights (`glossy()`; grown-ups a skin
+      lid, men calm with one small catch light, `CALM`), lips a natural skin tone for men and under beards (`LIP` / `LIPB`),
+      beards that grow from the sideburns under the hair along the jaw, cheeks clear above a soft cheek line meeting a fuller
+      moustache, open round the mouth (`beardOf()`; owner 2026-11-14: "the beard is not properly shaped, properly put on his
+      head"), no blush on a grown man unless he chose it, grown-ups a nose, no white plastic streaks (`shine()` is empty), hair over a skull cap that follows the face so no
+      temple shows (`hairFront()`), tapered sleeves with cuffs (`arm()`), mitten hands (`mitten()`), a new robe silhouette
+      (rounded shoulders, waist, flare, curved hem) with shoes, a neck and the thobe's collar. New pieces for Light: couture
+      outfits 17–22 (`couture()`: kaftan, tatreez thobe, sherwani, Omani dishdasha, kebaya, anarkali), held items 12–17
+      (mabkhara, dallah, Moroccan tea, roses, Eid gift, rosewater), worn decorations `acc` 5–10 (pearls, khatam brooch, sash,
+      pashmina, crescent medallion, jasmine; lower under a hijab) and room pieces orchid, lemon, kursi, lanterns, qandil, damask
       **Your character in the moments** (owner request 2026-11-10): `src/ui/actor.ts` (`actor()`: the builder's figure from
       `rankFigure` with raised arms for `cheer` / `wave`, plus `hop`, `nod`, `glance`, `sparkle`) stands beside the chest (leans in,
       hops on each tap, cheers when it opens), in the streak moment, in the Monday reveal (cheers up, nods when staying, settles when
@@ -2012,6 +2134,170 @@ duas/reflections section in Me.
       `rank_lamp_light` / `_wall` / `_ameen` / `_remove` / `_report`), pgTAP `lamp_wall.test.sql` (18). The **week card**
       (`rankRecap.ts`, shown from the player's Friday Maghrib) now has the character cheering beside the league's emblem, the
       lamp of Light and the streak
+- [ ] M25 Front-end review, round 1 (owner approved every item 2026-11-13; Claude Doc "Front end review, round 1", F1–F47),
+      shipped in parts (PRs #240 onwards). Part 6: Ranks league on the first screen (compact hero with the podium inside,
+      an example league when signed out), rival search shown as "Finding your rival…", rooms start with a sprout + kilim
+      (`STARTER` in `roomItems.ts`), empty shelves say how to fill them, lesson steps on the path show an open mushaf.
+      Part 7: adhkar sessions with > 9 items show one segmented bar, long notes fold under "How to say it"; Kids chips
+      with icons and labels, larger Arabic, unlit lanterns keep an ember; lessons: one slim bar for the five parts (the
+      part named beside the goal), New / Link / Whole surah, view, meanings and the reciter under ⋯ (the app's own reciter
+      sheet: recordings as chips, samples, search), the reference once; studio: a reciter without word timings shows one
+      line + "Choose a reciter with word timings" instead of disabled options; Night listening: the next ayah comes in at
+      once (0.5 s), the sleep timer moved to the bottom, clear of the crescent. **One week everywhere** (F9): `weekOf()`
+      in `journey.ts` starts on Saturday (streak row, free freeze, weeks in a row, "this week" stats, the streak widget
+      laid out Saturday → Friday natively); weekly goals count Islamic days of the ranked week (`weekTotals()` in
+      `rankDay.ts`, shared `dayTotals()` with Ranks, Maghrib snapshots kept 9 days) and reset at the user's Friday
+      Maghrib (`resetsAt().week = weekEndAt()`); first-load budget 144.5 KB. Still to do: the rest of the list
+      **Comeback welcome** (owner go-ahead 2026-11-13, `src/ui/comeback.ts` + `.css`, strings `src/i18n/front.ts` `fe()`): the first
+      time the app opens after ≥ 3 days away (`daysAway()`, journey days with `o`; signed in, only after the account's sync), once
+      per return (`comebackSeen`): the character drops onto a hill and waves, "It's so good to see you", what is kept (Light,
+      badges, level), one button "Read one page" (lights today's flame); no days counted, no lost streak. **Next up** on Me: one
+      card with the single most useful step (light today's flame → the adhkar whose time it is → today's journey portion → the
+      goal closest to done → all met: Listen), one big button; replaces Noor's line and the journey card (journey in its footer)
+      **My week story card** (`src/ui/weekStory.ts`): a 9:16 PNG of the week that ended at Friday Maghrib (character cheering
+      beside the streak flame, up to four tiles: pages, minutes, adhkar, surahs / lessons / dhikr, never a 0; the seven days lit;
+      "Read with me on Ayah Studio"; inside the story safe area y 250–1650), shared with the app link; Me shows "Your week is
+      ready" from Friday Maghrib through Sunday once a week (`weekStorySeen`), Stats has Share my week any time (this week so far)
+      **Invite a friend, both get Light** (owner decision 2026-11-13, marketing plan): a player new to Ranks (≤ 7 days) who
+      joins through a friend's link (`rank_friend_join`) is recorded once in `rank_invites` (migration
+      `20261114000000_invite_rewards.sql`, pgTAP `invite_rewards.test.sql`); after the invitee's 3rd day with points each side
+      claims 50 Light once (`rank_my_invites()`, `rank_claim_invite(pid | null)` → `claimGoal('iv:…')`; an inviter is
+      rewarded for ≤ 20 friends). Friends tab: "Light for inviting" rows (n of 3 days, Claim). The week story card shares the
+      signed-in player's invite link (`storyLink()`), else the app link
+      **Reminder at your usual time** (`src/data/usualTime.ts`): the time the flame is lit each day is kept (localStorage
+      `flameTimes`, 30 days, synced); the evening reminder's new default **Your usual time** (`riskAt: 'auto'`) comes 45 min
+      after the median of the last 3 weeks (≥ 4 days; after-midnight readers → 22:00), on the quarter hour, 07:00–22:00, only
+      while the flame is unlit, "You usually read by now…"; 21:00 until it is learned. Fixed hours stay in Me → ⚙ → Goal notes
+      **Fewer, bigger moments**: one daily goal's chest opens with a quiet tick in place (it squashes, "+n ✦" rises, its Light
+      flies to the counter; `quietChest()` in me.ts) and a goal met elsewhere gives the Me tab a small check (`tabTick()`,
+      no banner or notification); full-screen moments stay for every goal met, the week's chests, a ×2 surprise, Al-Kahf,
+      badges, the harvest, streak fire days and finished surahs. Next up shows the user's own bust (`bustMarkup`)
+      **The character reacts**: in Learn exercises the user's own character stands beside the verdict (`coachFor()` in
+      lessonKinds.ts): a happy hop for a right answer, a star face and a cheer for every 3 in a row, a calm sink for a
+      mistake (never a frown); on Me it shows a proud face once reading lit today's flame, calm when the flame went out,
+      and from 17:00 leans to look at a flame still waiting
+      **The rig** (owner 2026-11-15, "Duolingo style animations of characters in the whole app", calm: "too much jumping"):
+      every actor carries its arms in two pieces (`rigArms()` / `rigJoints()` in figure.ts: upper arm and forearm + hand, at
+      hold 0's place), which `layer()` puts on nested HTML layers turning about the shoulder and the elbow. `src/ui/rig.ts`
+      plays gestures — **wave**, **cheer** (arms up in a V, a small lift, no hops), **happy** (right answer: a bounce and a
+      nod), **encourage** (mistake: a calm tilt and an open hand, never sad), **proud** (rank up: hands on hips, chin up) —
+      as targets chased by springs (overshoot, follow-through), simulated once and played as Web Animations keyframes
+      (30 a second, compositor only); while one plays the drawn arms and what they hold step aside (`.fg-lay.rigging`).
+      `actor()`'s `wave` / `cheer` use it, plus `happy()`, `encourage()`, `proud()` (Learn verdicts, the Monday reveal, taps
+      on the character in the room, path, shop and Ranks). During a recitation only nods. Preview: Artifact "Character reactions"
+      **Quieter Me**: of the extra cards that come and go (week story, new app icon, the season ahead, the du'a-notes
+      ask, the widget hint) only the first in that order shows on a visit (`quietExtras()` in me.ts); a live Ramadan card is
+      never held back
+      **Ranks opens on your place**: the first time the league shows on a visit, the list scrolls so your row sits mid-screen
+      with the players around you, even when last (`openOnMe()` in ranks.ts)
+      **Arabic interface font** (F23): Android's Roboto has no Arabic, so the Quran-marks face (AmiriQuran over the whole
+      Arabic block) used to draw every Arabic interface word in calligraphy while bold headings fell to the system font.
+      Now `ArabicUI` = Noto Sans Arabic 400 / 700 (OFL, Arabic blocks only, ~70 KB each, `public/fonts/NotoSansArabic-*`,
+      fetched only when Arabic interface text shows) sits before it in the body stack and in `--ui-round`; iOS and Windows
+      keep their own Arabic system font. The Quran text keeps its own fonts
+      **Practice** (`src/data/practice.ts`): an orange ⚡ Practice button beside Continue on the Learn path, shown when
+      something slips: the surah with the most weak words (`learnWeak`, `weakCounts()`) among those started →
+      `#/learn/{s}/practice` = the lesson's exercises on the ≤ 4 ayat holding most of them (`practiceRange()`), no lamps,
+      no reciting; else the due page held least firmly → `#/learn/page/P`. The first practice of a day adds 10 Light
+      (`pr:{day}`) and every practice a lamp back; the end offers the next thing to practise. Strings `pr.*` in `front.ts`
+      **Streak target**: a chip on Me's streak card "On fire in n days · day m" with a bar from the last fire day to the next
+      (`fireChip()` in me.ts, `isFireDay()`). **Team quests** (migration `20261114100000_team_quests.sql`, pgTAP
+      `team_quests.test.sql` 10): the challenge picker has Race / Together; Together sends `rank_challenge_team(who, k, g)` with
+      a shared goal for the 7 days (`TEAM_GOAL`: 70 pages, 2000 dhikr, 14 adhkar, 210 min, 14 lessons, 1400 XP); one bar in
+      two shades (`teamCard()` in challenges.ts, also on Ranks); the chest gives each 100 Light when reached, else 30
+      **Golden mushaf** (`src/ui/shelf.ts`, Me → Stats): the 30 juz as books on two shelves, each spine filling with gold
+      as its pages are counted (`pageLast()`), a juz read through shines; tap → its first page not read yet. **Night calm**
+      (`src/data/nightCalm.ts`, `html.calm`): from Isha to Fajr (prayer settings, kept in `calmTimes`; else 21:00 → 04:30)
+      reward sounds rest, goal banners wait, the tab bar and Learn dock soften, and Next up offers the bedtime du'a once the
+      flame is lit. **Big text and buttons** (Me → ⚙ → App, `html.easy`, localStorage `easyMode`): larger `--fs-*` and
+      `--tap` tokens, chips, buttons, menu rows and tab icons
+      **What brings you here?** (since 2026-11-14 a full-page conversation, `openOnboarding()` in `src/ui/onboard.ts` + `onboard.css`, lazy: the user's own character — else the default one — speaks in a bubble word by word, its mouth and head moving; screens language (English / العربية, asked in both; a different pick reloads the app in it and the flow resumes at hello, sessionStorage `obResume`) → hello → two questions → what brings you here (pick any) → its answer → how many pages a day (1/2/5/10/20, minutes shown) → its own answer for each (holding a mushaf) → how much tasbih a day (33/100/300/1000/not now) → its own answer (holding the masbaha) → where did you hear about us (localStorage `heardFrom`, usage count `ev:heard-{source}`) → its own answer → the first goal with a flame; goals = the nearest pace as a base, then the pages and tasbih as answered, then `tailor()`; progress bar, back / Android back steps back, Skip on the questions; after the tour, once; localStorage `whyHere`,
+      synced): Read more / Memorise / Understand the meaning / Share ayat as reels / Remember Allah, any number; the pace sheet
+      then recommends Steady for memorising, and the chosen pace leans towards the picks (`tailor()`: memorise → 1 ayah + 1 lesson
+      a day, reels → 1 a week, dhikr → adhkar + 3 du'a lanterns); with every goal met, Next up offers the next lesson / reading
+      with the meaning / a reel / a round of tasbih instead of Listen. **You stopped here** (`src/data/stopped.ts`, localStorage
+      `stoppedAt`, synced): the ayah being recited when listening ended, or on a page read in silence its first ayah (20 s) or
+      last one (page counted); after a 20 min break the mushaf opening on that page glows the ayah twice and shows a pill
+      "You stopped here · ref" (+ Listen on after listening), once (`src/ui/stopGlow.ts` + `.css`, lazy)
+      **Friends' news + MashaAllah** (migration `20261114200000_friend_feats.sql`, pgTAP `friend_feats.test.sql` 15): the app
+      shares a milestone the day it happens (`sendFeats()` in `together/ranks.ts`, on journey changes and level ups, each once,
+      localStorage `featSent`): a streak fire day, a level, a surah or juz finished, a Khatm (`rank_feat`, ≤ 12 a day, none for
+      a private player). Ranks → Friends shows the week's (`rank_feats_feed`) with one **MashaAllah** each (`rank_feat_cheer`,
+      once, friends only), and "Your news" with who said it; new ones come as one toast on open / return (`cheersArrived()`,
+      `featCheersSeen`). No text anywhere. **Reading now**: once a minute while the mushaf is open or a recitation plays
+      (`rank_live`, `rank_players.live_at` / `live_kind`), friends' cards show a live dot "Reading now" / "Listening now" for 3 min
+      **Ready offline marks** (`src/data/offlineMarks.ts`, reads `favKept` + `listenKept` directly): the surah list marks
+      (teal check) surahs whose recitation in the Listen voice (`reelReciter`) is on the phone, from a favourite's download or a
+      whole-surah file kept after listening (`keepListened(url, 'reciter:surah')` tags it); the player's reciter picker shows
+      "Offline" beside reciters whose recording of this surah is kept
+      **Opening: the character arrives** (owner pick 2026-11-13; rebuilt the same day after "not premium like Duolingo"):
+      the app icon comes alive. `src/ui/opening.ts` (first load) only shows the icon gradient out of the splash colour;
+      the show is `src/ui/openingShow.ts` + `opening.css` (own chunk; none if it is not there by 0.9 s): the marker pops
+      in with a shockwave, shivers and gathers light, the character leaps out of it (stretch, wow face, head on a spring),
+      drops back in with a squash, waves over the rim, looks up as the Light star swoops in on an arc with a trail and
+      lands at the icon's place (flash, ring, burst of stars), cheers with star eyes and two hops, "ayah studio" pops in
+      letter by letter, then everything flies forward into the app (3.2 s). Every motion is a function of time sampled
+      into Web Animations keyframes (transform / opacity, compositor), faces / poses / sounds (`SOUNDS`, sfx) follow
+      the same clock, and `show(…, manual)` seeks any moment (frame-exact preview renders). Loading spinners are the
+      gold Light star turning and twinkling (`.spinner`)
+      **Smooth on slow phones** (owner report 2026-11-14, "lagged so bad I didn't see anything"; "60 fps"): the show used to
+      start while the app was still building the first page and was skipped when its chunk came after 0.9 s. Now it waits
+      for the first page (`playOpening(firstScreen)`, ≤ 1.5 s of the gradient), the start-up extras, sync and sign-in wait
+      until it is over (`opening` promise in main.ts, ≤ 5.5 s), keyframes are sampled 30 a second (the compositor eases
+      between them) and the glow, rays and flash are small baked canvases instead of full-resolution CSS gradients under a
+      mask. 6× CPU: two short main-thread tasks during the show; motion is compositor-only
+      Still lagging on the phone → **simpler show** (2026-11-14): 2 s, eight moving layers (was ~70): the marker pops in,
+      the character springs up out of it waving (happy face and waving pose set before the first frame: a class change
+      mid-show repaints every layer of the character), the gold star lands with one small soft flash while it hops, the
+      name rises in as one piece, fly-out. No filters, rays, motes, rings, bursts or per-letter name; the overlay fades
+      only in its last 0.28 s (an opacity animation on it for the whole show made the GPU redraw the full screen every
+      frame). Set-up at 6× CPU ~400 → ~55 ms
+      Still lagging → **native splash instead** (2026-11-14): while the app starts, the WebView's GPU is busy drawing the
+      first page, so any opening drawn by the page stutters on a weak phone. The web show is gone (`openingShow.ts`,
+      `opening.css`, `.app-opening` removed); in the app Android's own splash (the launcher icon on `splash_background`,
+      core-splashscreen in `AppActivity.java`) stays until the first screen is drawn (`playOpening()` → `LaunchPlugin.ready`,
+      ≤ 3.5 s; the splash itself lets go after 4 s), then leaves with a native animation (icon swells and fades, splash
+      fades, ~0.4 s). The web build shows the page at once
+      **Kept simple, Duolingo style** (owner 2026-11-14): the splash is the default icon's marker, star and the character
+      standing whole, on one solid colour (`splash_background` #5B3FBF, the icon's sky; `drawable-*/splash_icon.webp` by
+      `scripts/make-character-icons.py --splash`, fitted inside Android's 2/3 icon circle), then a plain 0.2 s fade
+      **The character comes alive** (owner 2026-11-14: "animate the character, not the icon", "make a motion animation
+      that's premium"; the animated vector icon was too stiff, small and short): `scripts/opening_anim.py` rigs the default
+      character (sleeve arms bending along a curve and trailing their swing, mitten hands, squash and stretch round the
+      feet, a lagging, tilting head that squashes less, blinks, an opening mouth, faces changed in two frames; springs with
+      take-off / landing impulses give the overshoot and follow-through). Five versions (`VERSIONS`, `--version`): Hello,
+      Wake up, Du'a, Backflip and **Catch the Light** (owner pick 2026-11-14, the default; 2.6 s at 60 fps): pops up → a gold
+      Light star appears above, he looks up at it, wide-eyed, points → crouches and leaps → catches it in cupped hands at
+      the top of the jump → holds it up, glowing → it bursts into light, arms thrown up → lands in sparkles, arms open, and
+      holds. Adult faces only (no blush, no star eyes on a man); arms from the shoulders, the robe 86 % wide, like the app
+      icon (owner 2026-11-15). **Launch screen like Duolingo's** (owner 2026-11-15, "the opening style of Duolingo"): the app plays `Launch` — on the plain violet the character pops in gently and settles (no jumps: owner "too much jumping"), smiles and waves while the white "ayah studio" wordmark (Nunito 900 as a path, `text_path()`, a keyframed `marks` layer) fades up under him, ~1 s, then he holds until the app is ready; the view is wider (`vb`, `px` per version) so he sits small in the middle. Before that, `Duo` pushed the story pushed cartoon-snappy: stiffer springs that overshoot, a double take with the eyes popping wide (`eye_pop()`), a deep crouch held a beat, hops that hang at the top and snap down, stretch 0.28, a wide-open cheering mouth (`mouth_w()`) and a small victory bounce (2.5 s). **Played as a Lottie** (owner pick 2026-11-15): `scripts/opening_lottie.py` turns the rig into
+      (replaced 2026-11-15 the same day: on the owner's phone the Lottie took 1.5-3 s to parse — a blank violet screen — and stuttered while the app started; now `res/raw/opening.webp`, the same rig pre-rendered at 60 fps, 0.5 MB, played as an `AnimatedImageDrawable` decoded off the main thread and drawn by the render thread; `.github/workflows/launch-check.yml` records cold starts on an emulator into the branch `ci-recordings`) `res/raw/opening.json` (~3.5 MB, ~0.45 MB in the APK) — head, body and neck drawn once and moved by keyframed
+      transforms, faces cross-faded by opacity (blink and mouth as scale keys), arms, sparkles and the star a vector layer per
+      frame; `scripts/svg2lottie.py` converts our SVG (clips resolved with shapely, so no masks). Previews: `--preview
+      OUT.mp4` / `--webp OUT.webp` in `opening_anim.py`. Android 9+: the system splash is the plain splash colour (a clear
+      icon, `drawable-v28/splash_anim.xml`) while `AppActivity` parses the Lottie off the main thread (≤ 1.2 s), then a
+      full-screen layer on the same colour plays it with lottie-android (hardware rendering, async updates); he holds his
+      last pose until the first screen is drawn (`LaunchPlugin.ready`, ≤ 7 s), then the layer fades out over 0.25 s.
+      Android 8 and older: the still splash picture
+      (`drawable/splash_anim.xml` = `splash_icon.webp`) until the first screen
+      **Icons centred** (owner report 2026-11-14): the icon-before-text gap (`margin-inline-end` on a leading svg) no longer
+      applies inside icon-only buttons (`.icon-btn`, `.today-ico`, `.ob-tick`, …), which pushed the headphones, search and
+      player icons off centre (left in English, right in Arabic)
+- [x] M26 Front-end review, round 2 (owner "build all", 2026-11-14; Claude Doc "Front end review, round 2", G1–G12): **Keep your
+      flame safe** (signed out, once a flame was lit: a Google sign-in card under the streak, Later rests it 3 days, `safeLater`;
+      a quiet line on the onboarding's last screen); **first flame** (never lit: the flame waits dimmed with a breathing light,
+      "Your first flame is one page away"; Stats shows pages and listening and the rest only once there is something to count);
+      a new reel opens **parked just after the first words** (at 0 s Cinematic is still black; the first Play starts from 0);
+      Read's bar has no pages ring or streak (owner 2026-11-14: beside the title they pushed the surah name out of sight; a counted page already shows "3 / 5 pages today"), Noor's line once a day (`readNoorDay`), Today lines
+      clamped to two lines; Me's every-goal chest after the goals, du'a lanterns / bedtime rows have their colour (their button
+      was invisible); Learn: "Path" label kept above 360 px, lamps shown as 5/5, the Arabic banner name once, night crescent and
+      card; the lesson's player hidden in the Meaning step; the room's trophy hint once; week letters Sa Su Mo… where one letter
+      repeats; Me and Learn fetched in a quiet moment after the first screen (not on Data Saver)
+      Round 3 (owner "yes to all", 2026-11-14): the Read bar's Today lines can be one row (`inline`: Today's ayah and Popular
+      with round ▶ / reel buttons, no translation preview); Learn's daily ring says "today" (or "+ goal" without a target);
+      the golden mushaf's unread juz are empty outlines; "115 badges to earn" before the first; no "compared with last week"
+      before there is a last week; Me's header without its subtitle; the lesson's tree explains itself on tap
+      (`learn.treeTip`); Learn's sun / moon sit beside the intro card, not behind it
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
@@ -2141,6 +2427,26 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       < 0.75) are marked apart (`wrong`, red wavy underline). Optimised: Android 13+ is told the next words
       (`EXTRA_BIASING_STRINGS`, `hintsFrom()`: plain phrases in everyday spelling), only changed words repaint,
       the microphone stops after 20 s with nothing heard. A recogniser hears words, not harakat.
+      **Repeats and quiet words** (owner report 2026-11-13, "it thinks I continued but I was repeating the words of the
+      ayah because I lost my breath"; "a word said in a low voice is marked wrong"): `follow()` sees a reciter going back
+      up to 12 words (`BACK`; said clearly: short words exactly, others ≥ 0.75) and keeps the place — nothing skipped or
+      counted, and words passed over before that are said again count as said (`again`); a tie with the text's own
+      repetition stays forward (Ar-Rahman's refrain, دكا دكا). Three outcomes: said; **wrong** only for a clearly
+      different word (≥ 3 letters, < 0.5 alike) in a word's place; **unclear** (dotted underline, never a slip or
+      pre-marked missed, a soft "say it a little louder" at most every 25 s) for a word heard partly or a single word
+      the phone did not catch between two it did; a run of words passed over stays skipped. A short word heard where
+      the look-ahead jumped counts as said. Recorded parts for the server are brought to ≈ −20 dBFS (≤ 8×). Simulated
+      breath repeats over 400 random ranges: words wrongly marked 836 → 0; 2115 clean ranges across the Quran followed
+      exactly; `server/harakat/follow.py` kept identical (1200 cases).
+      **Beta** (owner decision 2026-11-13, a ~20-person beta before everyone): the button carries a Beta pill;
+      each checked recitation sends one row of counts (`src/ui/followBeta.ts` → `follow_stat()`, table
+      `follow_stats`, no audio / text / account, install id only, 180 days): recogniser (`android-device`,
+      `android`, `web`, `server`; `followUse()` in `follow.ts`), OS + model or browser, words heard / passed over /
+      wrong / unclear, `untapped` (phone said passed over, reciter disagreed) and `added` (phone heard it, reciter
+      marked it missed). The owner reads the view `follow_beta` (per recogniser: recitations, phones,
+      `phone_right_pct`, `unclear_pct`, failures). The check screen has "Voice heard me wrong? Tell us" → problem
+      report kind `follow` with the counts and word positions. Migration `20261113200000_follow_beta.sql`, pgTAP
+      `follow_beta.test.sql` (9)
       **Harakat check on our server** (owner decision 2026-11-10, "only on the server"): `server/harakat` (Python,
       onnxruntime; Docker image with the 4-bit ONNX of the Quran CTC model `mostafanewir70/quran-recitation-ctc-onnx`,
       pinned + SHA-256, Apache-2.0). With the repo variable `HARAKAT_URL` set and the learner signed in, Follow my voice

@@ -13,6 +13,10 @@
 //   GET /popular                                  →  Supabase popular_this_week(), cached 10 min
 //   POST /reel?i=<install id>  (text/plain JSON {r, s, a, b}) →  Supabase record_reel(), rate-limited
 //   GET /config                                   →  remote switches for the app (variable FLAGS)
+//   GET /lp?l=<league id>&d=<day>[&i=<install id>] →  { p } Supabase rank_league_pulse(), kept 8 s per league, so a
+//                                                    league of players watching Ranks costs about one database read
+//   GET /pp?p=<pid,pid…>&d=<day>[&i=<install id>] → { p: {pid: md5} } Supabase rank_player_pulse(), each player kept
+//                                                    8 s, for friends' cards, news and the weekly rival
 //
 // Built to hold a very large crowd on free plans and to grow by adding bindings, no code change:
 // - Searches are cached in this data center (Cache API) and, with a KV namespace bound as STOCK_KV,
@@ -32,6 +36,7 @@
 const PER_PAGE = 30;
 const DAY = 86400;
 const POPULAR_TTL = 600; // s
+const LEAGUE_TTL = 8; // s: the app looks every 8 s while Ranks is open
 
 /** Curated calm collections: tuned searches (nature/abstract, no people). */
 const COLLECTIONS = {
@@ -213,6 +218,9 @@ export default {
       return reply(200, body, { 'Cache-Control': `public, max-age=${POPULAR_TTL}` });
     }
 
+    if (url.pathname === '/lp') return leaguePulse(url, env, ctx, reply, limited, flags);
+    if (url.pathname === '/pp') return playerPulse(url, env, ctx, reply, limited, flags);
+
     if (url.pathname === '/sources') {
       return reply(200, {
         pixabay: flags.stock && !!env.PIXABAY_KEY,
@@ -287,6 +295,57 @@ async function warm(env) {
       /* busy or failing: that search is fetched on demand instead */
     }
   }
+}
+
+/** A league's fingerprint (rank_league_pulse), the same for all its members: one read per league every 8 s. */
+async function leaguePulse(url, env, ctx, reply, limited, flags) {
+  if (flags.leaguePulse === false || !env.SUPABASE_URL || !env.SUPABASE_KEY) return reply(404, { error: 'off' });
+  const l = url.searchParams.get('l') ?? '';
+  const d = url.searchParams.get('d') ?? '';
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(l) || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return reply(400, { error: 'bad league' });
+  const key = new Request(`https://edge-proxy.cache/lp/${l}/${d}`);
+  const hit = await caches.default.match(key);
+  if (hit) return reply(200, await hit.text(), { 'Cache-Control': 'no-store' });
+  // Only a miss reaches the database; a phone asks every 8 s, so 30 a minute is far more than it needs.
+  if (await limited('lp', 30)) return reply(429, { error: 'slow down' });
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/rank_league_pulse`, {
+    method: 'POST', headers: { apikey: env.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ lg: l, d }),
+  }).catch(() => null);
+  if (!r?.ok) return reply(502, { error: 'league unavailable' });
+  const body = JSON.stringify({ p: await r.json() });
+  ctx.waitUntil(caches.default.put(key, new Response(body, { headers: { 'Cache-Control': `public, max-age=${LEAGUE_TTL}` } })));
+  return reply(200, body, { 'Cache-Control': 'no-store' });
+}
+
+/** Players' fingerprints (round 6): one short md5 per public player, for friends' cards, news and the weekly rival.
+ *  Each player's answer is kept 8 s on its own, so a player many friends watch costs about one read every 8 s;
+ *  the ids not kept yet go to the database in one call. */
+async function playerPulse(url, env, ctx, reply, limited, flags) {
+  if (flags.friendPulse === false || !env.SUPABASE_URL || !env.SUPABASE_KEY) return reply(404, { error: 'off' });
+  const d = url.searchParams.get('d') ?? '';
+  const pids = [...new Set((url.searchParams.get('p') ?? '').split(',').filter(Boolean))];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !pids.length || pids.length > 50 || pids.some((x) => !/^[0-9a-f]{10}$/.test(x))) return reply(400, { error: 'bad players' });
+  const key = (pid) => new Request(`https://edge-proxy.cache/pp/${pid}/${d}`);
+  const out = {};
+  const miss = [];
+  await Promise.all(pids.map(async (pid) => {
+    const hit = await caches.default.match(key(pid));
+    if (hit) out[pid] = await hit.text(); else miss.push(pid);
+  }));
+  if (miss.length) {
+    if (await limited('pp', 30)) return reply(429, { error: 'slow down' });
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/rank_player_pulse`, {
+      method: 'POST', headers: { apikey: env.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ pids: miss, d }),
+    }).catch(() => null);
+    if (!r?.ok) return reply(502, { error: 'players unavailable' });
+    const got = await r.json();
+    for (const pid of miss) {
+      const v = typeof got?.[pid] === 'string' ? got[pid] : ''; // '' = no such player (kept too, so a wrong id costs nothing)
+      out[pid] = v;
+      ctx.waitUntil(caches.default.put(key(pid), new Response(v, { headers: { 'Cache-Control': `public, max-age=${LEAGUE_TTL}` } })));
+    }
+  }
+  return reply(200, JSON.stringify({ p: out }), { 'Cache-Control': 'no-store' });
 }
 
 /** The anonymous reel counter, through the edge so nobody can call the database thousands of times. */

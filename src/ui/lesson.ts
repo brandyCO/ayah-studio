@@ -13,16 +13,24 @@
 // The text is the bundled Quran text, split only at its spaces and never changed (rule 1); hidden words
 // keep their place. The reference is always on screen (rule 2). Words are lit only from the reciter's
 // word timings (rule 8). Tap a word: its Quran.com meaning and, where timed, its sound.
+import { suraName } from './suraName';
 import './learn.css';
 import {
   LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
-import { addFlawless, addLesson, addMemorised, claimGoal } from '../data/journey';
+import { addFlawless, addLesson, addMemorised, claimGoal, goalClaimed } from '../data/journey';
+import { practiceRange, practiceTarget } from '../data/practice';
+import { fe } from '../i18n/front';
+
+const PRACTICE_LIGHT = 10; // the first practice of a day
 import { dimLamp, earnLamp, lamps, markFlawless } from '../data/learnLamps';
 import { dayKey } from '../data/readLog';
 import { loadMeta, loadWordMap, surahText, surahTranslation, surahWordMeanings } from '../data/quran';
-import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, reciterCredit, timedReciterById } from '../data/reciters';
+import { TIMED_RECITERS, DEFAULT_RECITER, everyayahUrl, groupRecordings, reciterCredit, reciterPickerLabel, timedReciterById, type Reciter } from '../data/reciters';
+import { favouritesFirst } from '../data/reciterDownload';
+import { recordingChips, reciterSearchBox } from './recordings';
+import { sampleButton, stopSample } from './voiceSample';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { displayWords, parseSpans, validSegments, wordTimings, type WordTiming } from '../engine/words';
 import { surahName, t, uiRef } from '../i18n';
@@ -33,7 +41,8 @@ import { lampRow, lampsOut, spentLabel } from './learnLamps';
 import { Recorder, keepRecording, recKey, recording, similarIn, similarSheet } from './tasmi';
 import { ClipJar, helpCard, helpChoice } from './harakatClips';
 import { kidsOn } from '../data/kids';
-import { followFailKey, followChecksHarakat, followSupported, startFollow, type Follower } from './follow';
+import { followFailKey, followChecksHarakat, followSupported, followUse, resetFollowUse, startFollow, type Follower } from './follow';
+import { reportFollow, sendFollowStat, type FollowOutcome } from './followBeta';
 import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follow';
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
@@ -67,6 +76,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   ensureTree(s, pathChunk());
   const quick = mode === 'tasmi';
   let reviewOnly = mode === 'review';
+  const practice = mode === 'practice'; // a few minutes on the weak words (Learn → Practice); free, no lamps
   const [meta, arabic, trans, meanings, wordMap] = await Promise.all([
     loadMeta(), surahText(s), surahTranslation(s).catch(() => [] as string[]),
     surahWordMeanings(s).catch(() => [] as string[]), loadWordMap().catch(() => ({} as Record<string, string>))]);
@@ -86,6 +96,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   let practising = false; // reciting what was learned again: passing it lights a lamp
   async function plan(after?: Step): Promise<void> {
     const tr = tree(s)!;
+    if (practice && !after) { step = 'link'; range = practiceRange(s, m.ayahs); return; }
     if (quick && !after && !tr.full) { step = 'whole'; range = [1, m.ayahs]; return; }
     if (reviewOnly && !after && tr.learned > 0) { reviewOnly = false; practising = true; if (tr.full) { step = 'water'; range = [1, m.ayahs]; } else { step = 'link'; range = [1, tr.learned]; } return; }
     if (after === 'new' && range[0] > 1) { step = 'link'; range = [1, tr.learned]; return; }
@@ -114,11 +125,46 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const repBtn = h('button', { class: 'chip', onclick: () => { const v = pref('learnReps', ['1', '3', '5'], '3'); setPref('learnReps', v === '1' ? '3' : v === '3' ? '5' : '1'); paintChips(); } });
   const viewBtn = h('button', { class: 'chip', onclick: () => { setPref('lessonView', pageView() ? 'ayat' : 'page'); paintChips(); paintText(); } });
   const meaningBtn = h('button', { class: 'chip', onclick: () => { setPref('learnMeaning', showMeaning() ? 'off' : 'on'); paintChips(); paintText(); } });
-  const reciterSel = h('select', { class: 'ls-reciter', 'aria-label': lt('learn.reciter'), onchange: () => { setPref('learnReciter', reciterSel.value); audios = null; stopAll(); } },
-    ...TIMED_RECITERS.map((r) => h('option', { value: String(r.id), selected: r.id === learnReciter() }, reciterCredit(r))));
   const memExtras = h('div', { class: 'ls-memextra' });
-  const tools = h('div', { class: 'ls-tools' }, memExtras, playBtn, speedBtn, repBtn, viewBtn, meaningBtn, reciterSel);
-  const art = h('span', { class: 'ls-tree' });
+  const tools = h('div', { class: 'ls-tools' }, memExtras, playBtn, speedBtn, repBtn);
+  // ⋯: where this lesson sits in the surah (New → Link → Whole), the page / ayat view, meanings and the reciter.
+  const moreBtn = h('button', { class: 'icon-btn ls-more-btn', type: 'button', 'aria-label': lt('learn.lessonOpts'), onclick: () => openMore() }, '⋯');
+  function openMore() {
+    const tr = h('button', { class: 'menu-item ls-rec-row', type: 'button', onclick: () => { d.close(); pickLessonReciter(); } },
+      h('span', { class: 'mi-ic' }, icon('voice', 20)), h('span', {}, lt('learn.reciter')), h('small', { class: 'muted' }, reciterCredit(timedReciterById(learnReciter()))));
+    const d = h('dialog', { class: 'sheet bottom ls-more' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, lt('learn.lessonOpts')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      h('p', { class: 'pl-sec' }, lt('learn.stages')), stepsEl,
+      h('p', { class: 'pl-sec' }, lt('learn.showAs')), h('div', { class: 'chips' }, viewBtn, meaningBtn),
+      h('div', { class: 'menu' }, tr));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+  /** The app's own reciter picker: one row per reciter (recordings as chips), a voice sample, search; reciters with word timings only. */
+  function pickLessonReciter() {
+    const now = learnReciter();
+    const choose = (r: Reciter) => { d.close(); if (r.id === now) return; setPref('learnReciter', String(r.id)); audios = null; stopAll(); };
+    const list = h('div', { class: 'menu' }, ...groupRecordings(favouritesFirst(TIMED_RECITERS)).map((g) => {
+      const r = g.find((x) => x.id === now) ?? g[0];
+      return h('div', { class: 'rec-group' },
+        h('button', { class: `menu-item${g.some((x) => x.id === now) ? ' on' : ''}`, onclick: () => choose(r) },
+          h('span', {}, g.length > 1 ? r.name : reciterPickerLabel(r)), sampleButton(r)),
+        recordingChips(g, now, choose));
+    }));
+    const search = reciterSearchBox(list, t('ed.reciter-search'));
+    const d = h('dialog', { class: 'sheet bottom reciter-sheet' },
+      h('div', { class: 'sheet-head' }, h('h2', {}, lt('learn.reciter')), h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: () => d.close() }, '✕')),
+      search, list);
+    d.addEventListener('close', () => { stopSample(); d.remove(); });
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.append(d);
+    d.showModal();
+  }
+  // Round 3: the tree in the corner says what it is (it grows with each lesson passed in this surah).
+  const treeTip = lt('learn.treeTip', { name: surahName(m) });
+  const art = h('button', { class: 'ls-tree', type: 'button', title: treeTip, 'aria-label': treeTip, onclick: () => { haptic(6); toast(treeTip); } });
   // Focus page: the page fills the screen between two thin margins; the tools come up only when asked.
   const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
   const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
@@ -126,8 +172,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     h('header', { class: 'ls-head' },
       h('a', { class: 'icon-btn back-btn', href: '#/learn', 'aria-label': lt('learn.backToPath') }, icon('back', 22)),
       h('div', { class: 'ls-title' }, h('h1', {}, surahName(m)), ref),
-      noorBtn, focusBtn, art),
-    stepsEl, phaseEl,
+      noorBtn, focusBtn, moreBtn, art),
+    phaseEl,
     h('main', { class: 'ls-main' }, textEl, pop), trEl,
     h('div', { class: 'ls-turn' }, ring, status),
     actions, tools, doneEl);
@@ -158,6 +204,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const jar = new ClipJar(); // clips for "Help improve the harakat check" (src/ui/harakatClips.ts)
   let fwText = new Map<string, string>();
   let sayP = new Set<string>(), skipP = new Set<string>(), wrongP = new Set<string>();
+  // heard only partly or not caught (said quietly): shown, never counted as a slip
+  const unclearS = new Set<string>(); let unclearP = new Set<string>(); let louderAt = 0;
   const voiced = (k: string) => said.has(k) || sayP.has(k);
   const passed = (k: string) => skip.has(k) || skipP.has(k);
   const wordEls = new Map<string, HTMLElement>();
@@ -206,9 +254,11 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     meaningBtn.setAttribute('aria-pressed', String(showMeaning()));
   }
   function paintHead() {
-    ref.textContent = uiRef(m, range[0], range[1]);
+    // The surah's name is the title just above, so the line under it names only the ayat.
+    ref.textContent = range[0] === range[1] ? `${s}:${range[0]}` : `${s}:${range[0]}–${range[1]}`;
     const tr = tree(s)!;
     art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
+    if (practice) { stepsEl.replaceChildren(h('li', { class: 'on', 'aria-current': 'step' }, fe('pr.btn'))); return; }
     const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
     stepsEl.replaceChildren(...list.map(([id, k]) => h('li', { class: id === step ? 'on' : '' , 'aria-current': id === step ? 'step' : false }, lt(k))));
   }
@@ -225,6 +275,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     return `${hid ? ' hid' : ''}${hid && phase === 'memory' && weak.has(k) ? ' hint' : ''}`
       + `${(phase === 'memory' || phase === 'check') && helped.has(k) ? ' helped' : ''}${phase === 'check' && missed.has(k) ? ' missed' : ''}`
       + `${phase === 'memory' && voiced(k) ? ' heard' : ''}${phase === 'memory' && passed(k) ? (wrongS.has(k) || wrongP.has(k) ? ' wrong' : ' skipped') : ''}`
+      + `${phase === 'memory' && !passed(k) && (unclearS.has(k) || unclearP.has(k)) ? ' unclear' : ''}`
       + `${phase === 'memory' && hkS.has(k) ? ' harakah' : ''}`;
   };
   /** Display-word index for a mushaf word position (1-based), or -1 for the end-of-ayah number. */
@@ -250,7 +301,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         if (l[0] === 'h') {
           headSurah = Number(l[1]);
           el.append(h('div', { class: `mp-line mp-surah${headSurah === s && range[0] === 1 ? '' : ' dim'}` },
-            h('div', { class: 'surah-frame' }, h('span', { class: 'surah-name' }, String(l[1]).padStart(3, '0')))));
+            h('div', { class: 'surah-frame' }, suraName(Number(l[1])))));
           continue;
         }
         if (l[0] === 'b') {
@@ -363,11 +414,15 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const n = range[1] - range[0] + 1;
     const phases: [Phase, LearnKey][] = step === 'new'
       ? [['meaning', 'learn.phMeaning'], ['listen', 'learn.phListen'], ['practice', 'learn.phPractice'], ['drill', 'learn.phDrill'], ['memory', 'learn.phMemory']] : [];
+    // One slim bar for the five parts of a new lesson; the part now is named beside the goal.
+    const cur = phases.findIndex(([p]) => p === phase || (p === 'memory' && phase === 'check'));
     phaseEl.replaceChildren(
-      h('span', { class: 'ls-goal' }, lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n })),
-      phases.length ? h('span', { class: 'ls-phases' }, ...phases.map(([p, k], i) => h('span', { class: p === phase || (p === 'memory' && phase === 'check') ? 'on' : '' }, `${i + 1} ${lt(k)}`))) : '');
+      h('span', { class: 'ls-goal' }, practice ? fe('pr.goal') : lt(step === 'new' && n === 1 ? 'learn.goal.new1' : `learn.goal.${step}` as LearnKey, { n }),
+        cur >= 0 ? h('span', { class: 'ls-ph-now' }, lt(phases[cur][1])) : ''),
+      phases.length ? h('span', { class: 'ls-phases', role: 'progressbar', 'aria-valuemin': '1', 'aria-valuemax': String(phases.length), 'aria-valuenow': String(cur + 1), 'aria-valuetext': cur >= 0 ? lt(phases[cur][1]) : '' },
+        ...phases.map(([p, k], i) => h('span', { class: i === cur ? 'on' : i < cur ? 'past' : '', title: lt(k) }))) : '');
     if (phase === 'meaning') actions.replaceChildren(primary(lt('learn.toListen'), () => go('listen')));
-    else if (phase === 'drill') actions.replaceChildren(b(lt('learn.skipDrill'), () => go('memory')));
+    else if (phase === 'drill') actions.replaceChildren(practice ? '' : b(lt('learn.skipDrill'), () => go('memory')));
     else if (phase === 'listen') actions.replaceChildren(primary(playing ? lt('learn.listening') : lt('learn.listenRounds', { n: reps() }), () => void listen(true)), b(lt('learn.skipToPractice'), () => go('practice')));
     else if (phase === 'practice') actions.replaceChildren(
       b(lt(level === 0 ? 'learn.hideSome' : level === 1 ? 'learn.hideAll' : 'learn.showAll'), () => { level = (level + 1) % 3; peeked.clear(); refreshHidden(); paintActions(); }),
@@ -377,7 +432,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
         h('span', { class: 'ts-dot', 'aria-hidden': 'true' }), lt(rec.on ? 'learn.recording' : 'learn.record')) : '';
       const slips = new Set([...helped, ...skip, ...skipP]).size;
       const folBtn = canFollow ? h('button', { class: `chip ts-follow${follower ? ' live' : ''}`, 'aria-pressed': String(!!follower), onclick: () => void toggleFollow() },
-        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow')) : '';
+        h('span', { class: 'ts-mic', 'aria-hidden': 'true' }), lt(follower ? 'learn.following' : 'learn.follow'), h('span', { class: 'beta-pill' }, lt('learn.beta'))) : '';
       // Focus page: only the voice, the next-word prompt and Show the text sit under the page; the rest is with the tools.
       const extra = [follower ? '' : recBtn, step === 'new' ? b(lt('learn.practiseFirst'), () => go('practice')) : ''];
       const focus = root.classList.contains('ls-focus');
@@ -390,14 +445,18 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
       let all = 0;
       for (let a = range[0]; a <= range[1]; a++) all += words[a - 1].length;
       const verdict = total === 0 ? 2 : total <= Math.max(2, Math.round(all * 0.05)) ? 1 : 0;
+      const outcome = (v?: number): FollowOutcome => ({ mode: 'lesson', ref: `${s}:${range[0]}-${range[1]}`, words: all, said, skipped: skip,
+        wrong: wrongS, unclear: unclearS, missed, helped: helped.size, verdict: v });
       const pick = (k: number, label: string, on: (el: HTMLButtonElement) => void) => {
-        const el: HTMLButtonElement = k === verdict ? primary(label, () => on(el)) : b(label, () => on(el));
+        const go = () => { sendFollowStat(outcome(k)); on(el); };
+        const el: HTMLButtonElement = k === verdict ? primary(label, go) : b(label, go);
         return el;
       };
       const ab = h('div', { class: 'ts-ab' },
         recUrl ? h('button', { class: 'chip', onclick: () => playMine() }, '▶ ', lt('learn.playMine')) : '',
         h('button', { class: 'chip', onclick: () => { mine.pause(); void listen(); } }, '▶ ', lt('learn.playSheikh')),
-        simCount ? h('button', { class: 'chip ts-simbtn', onclick: () => void similarSheet(s, range[0], range[1]) }, lt('learn.simN', { n: simCount })) : '');
+        simCount ? h('button', { class: 'chip ts-simbtn', onclick: () => void similarSheet(s, range[0], range[1]) }, lt('learn.simN', { n: simCount })) : '',
+        followUse() ? h('button', { class: 'chip ts-misheard', onclick: () => reportFollow(outcome()) }, lt('learn.followReport')) : '');
       actions.replaceChildren(
         h('p', { class: 'ls-hint' }, lt('learn.tapMissed')),
         h('p', { class: 'ls-hint ts-sum' }, total ? lt('learn.slipsN', { n: total }) : lt('learn.noSlips')),
@@ -473,27 +532,36 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     for (const k of sayP) said.add(k);
     for (const k of skipP) skip.add(k);
     for (const k of wrongP) wrongS.add(k);
-    sayP = new Set(); skipP = new Set(); wrongP = new Set();
+    for (const k of unclearP) unclearS.add(k);
+    sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
   }
   let lastSaid = '', lastSig = '';
   function heard(text: string, final: boolean) {
     if (!follower || phase !== 'memory') return;
     const r = follow(fw, fBase, text);
-    const touched = new Set([...sayP, ...skipP]);
-    sayP = new Set(r.said.map((x) => fw[x].key));
+    const touched = new Set([...sayP, ...skipP, ...unclearP]);
+    unclearP = new Set(r.unclear.map((x) => fw[x].key));
+    sayP = new Set([...r.said.map((x) => fw[x].key), ...unclearP]);
     wrongP = new Set(r.wrong.map((x) => fw[x].key));
     skipP = new Set([...r.skipped.map((x) => fw[x].key), ...wrongP]);
+    // said again after a breath: a word passed over or heard unclearly before now counts as said
+    for (const x of r.again) {
+      const k = fw[x].key;
+      if (skip.has(k) || wrongS.has(k) || unclearS.has(k)) { skip.delete(k); wrongS.delete(k); unclearS.delete(k); said.add(k); touched.add(k); }
+    }
     if (final) {
       for (const k of sayP) said.add(k);
       for (const k of skipP) skip.add(k);
       for (const k of wrongP) wrongS.add(k);
+      if (unclearP.size && Date.now() - louderAt > 25_000) { louderAt = Date.now(); toast(lt('learn.followLouder')); }
+      for (const k of unclearP) unclearS.add(k);
       for (const k of hkNext) { said.add(k); skip.add(k); wrongS.add(k); hkS.add(k); }
-      sayP = new Set(); skipP = new Set(); wrongP = new Set();
+      sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set();
       fBase = r.cursor;
     }
     for (const k of hkNext) touched.add(k);
     hkNext = [];
-    for (const k of [...sayP, ...skipP, ...r.said.map((x) => fw[x].key), ...r.skipped.map((x) => fw[x].key), ...r.wrong.map((x) => fw[x].key)]) touched.add(k);
+    for (const k of [...sayP, ...skipP, ...r.said.map((x) => fw[x].key), ...r.skipped.map((x) => fw[x].key), ...r.wrong.map((x) => fw[x].key), ...r.unclear.map((x) => fw[x].key)]) touched.add(k);
     refreshKeys(touched);
     const at = r.said.length ? fw[r.said[r.said.length - 1]].key : '';
     if (at && at !== lastSaid) {
@@ -551,7 +619,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     if (p === 'memory' && phase !== 'check') {
       helped.clear(); shown.clear(); missed.clear();
       jar.clear();
-      said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); lastSaid = '';
+      said.clear(); skip.clear(); wrongS.clear(); hkS.clear(); unclearS.clear(); sayP = new Set(); skipP = new Set(); wrongP = new Set(); unclearP = new Set(); lastSaid = '';
+      resetFollowUse();
       weak = new Set(weakWords(s, range[0], range[1]).map(([a, i]) => `${a}:${i}`));
       if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = ''; }
       void recording(recKey(s, range[0], range[1])).then((b) => { if (b && !recUrl && phase !== 'memory') { recUrl = URL.createObjectURL(b); paintActions(); } });
@@ -560,7 +629,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     phase = p;
     pop.hidden = true;
     peeked.clear();
-    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? drills(kindCtx(), (n) => { drillMissed = n; go('memory'); }, drillLamps()) : null;
+    kindEl = p === 'meaning' ? meaningCards(kindCtx()) : p === 'drill' ? (practice ? drills(kindCtx(), (n) => void practiceDone(n)) : drills(kindCtx(), (n) => { drillMissed = n; go('memory'); }, drillLamps())) : null;
     if (root.classList.contains('ls-focus') && !reduced()) textEl.animate([{ opacity: 0.25, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 420, easing: 'ease-out' });
     textEl.scrollTop = 0;
     if ((p === 'memory' || p === 'check') && !pageView()) textEl.scrollTop = 0;
@@ -569,6 +638,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     status.textContent = p === 'memory' ? lt('learn.reciteNow') : '';
     root.classList.toggle('ls-memory', p === 'memory');
     root.classList.toggle('ls-check', p === 'check');
+    // One next step at a time (front-end review G8): the player waits for the Listen step.
+    root.classList.toggle('ls-meaning', p === 'meaning');
     if (p !== 'memory') memExtras.replaceChildren();
   }
 
@@ -590,7 +661,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   }
   function rest() {
     stopAll();
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
     status.textContent = '';
     doneEl.hidden = false;
     paintHead();
@@ -605,12 +676,12 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     doneEl.hidden = true;
     t0 = performance.now(); away = 0; hidAt = document.hidden ? t0 : 0;
     drillMissed = -1;
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = false;
     level = 0;
     simCount = 0;
     void similarIn(s, range[0], range[1]).then((l) => { simCount = l.length; if (phase === 'check') paintActions(); });
     paintHead();
-    go(step === 'new' ? 'meaning' : 'memory');
+    go(practice ? 'drill' : step === 'new' ? 'meaning' : 'memory');
   }
 
   // --- recitation ---
@@ -914,8 +985,31 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     void showDone(after, was);
   }
 
+  /** Practice finished: a small chest once a day, a lamp back, then what to practise next. */
+  async function practiceDone(wrong: number) {
+    stopAll();
+    const today = dayKey(new Date());
+    const light = goalClaimed(`pr:${today}`) ? 0 : PRACTICE_LIGHT;
+    if (light) claimGoal(`pr:${today}`, light);
+    const earned = earnLamp();
+    const stats: MomentStat[] = [{ text: lt('learn.timeLearn', { t: spentLabel(spent()) }), icon: 'time' }];
+    if (earned) stats.push({ text: lt('learn.lampEarned'), icon: 'lamp' });
+    await celebrate({ kind: wrong ? 'lantern' : 'star', kicker: fe('pr.done'), title: uiRef(m, range[0], range[1]), sub: fe(wrong ? 'pr.doneSub' : 'pr.doneClean'), stats }, actions.firstElementChild, light);
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    status.textContent = '';
+    doneEl.hidden = false;
+    paintHead();
+    const nx = practiceTarget(s);
+    doneEl.replaceChildren(
+      h('h2', {}, fe('pr.doneTitle')),
+      h('p', { class: 'muted' }, fe('pr.doneMore')),
+      h('div', { class: 'ls-done-actions' },
+        h('a', { class: nx ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToPath')),
+        nx ? h('a', { class: 'primary brand-btn', href: nx.href }, fe(nx.kind === 'page' ? 'pr.nextPage' : 'pr.nextWords', nx.kind === 'page' ? { p: nx.p } : { name: surahName(meta[nx.s - 1]) })) : ''));
+  }
+
   async function showDone(tr: Readonly<Tree>, was: Step) {
-    for (const el of [stepsEl, phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
+    for (const el of [phaseEl, textEl.parentElement!, actions, tools]) (el as HTMLElement).hidden = true;
     status.textContent = '';
     doneEl.hidden = false;
     paintHead();
