@@ -1,0 +1,162 @@
+# Free-plan limits watch (owner request 2026-11-16: "notice me when the numbers are close to the limit to upgrade").
+# Every hour this reads how much of each free plan is used and opens one issue per limit, assigned to the owner
+# (GitHub emails him and notifies his phone), at 70 % ("Limit: … 72 %"), says so again at 90 %, and closes it once
+# back under 60 %. Read only; no data leaves the runner except the numbers in the run summary.
+#   Supabase free: database 500 MB, stored files 1 GB, egress 5 GB a month, database connections (max_connections).
+#   Cloudflare Workers free: 100,000 requests a day (UTC), all workers together.
+#   People at once (~700 on the free server) is watched every 10 minutes by busy.yml.
+name: Free plan limits
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: 'Multiply every reading (for a test, e.g. 100)'
+        default: '1'
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: limits
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CF_TOKEN_RAW: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_RAW: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT_REF: jposubjybzstfmnngews
+      SCALE: ${{ inputs.scale || '1' }}
+    steps:
+      - name: Supabase database, files and connections
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          HOSTS=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/config/database/pooler" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(' '.join(dict.fromkeys(x['db_host'] for x in d if x.get('db_host'))))" 2>/dev/null || true)
+          PW=$(python3 -c "import os,urllib.parse; print(urllib.parse.quote(os.environ['DB_PASSWORD'].strip(), safe=''))")
+          URL=""
+          for h in $HOSTS aws-1-ap-northeast-1.pooler.supabase.com aws-0-ap-northeast-1.pooler.supabase.com; do
+            if psql "postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres" -tAc 'select 1' > /dev/null 2>&1; then
+              URL="postgresql://postgres.$PROJECT_REF:$PW@$h:5432/postgres"; break
+            fi
+          done
+          [ -n "$URL" ] || { echo "::warning::Could not reach the database."; exit 0; }
+          read -r DB FILES CONNS MAXC <<< "$(psql "$URL" -tAF ' ' -c "select pg_database_size(current_database()),
+            coalesce((select sum((metadata ->> 'size')::bigint) from storage.objects), 0),
+            (select count(*) from pg_stat_activity),
+            current_setting('max_connections')::int")"
+          python3 - "$DB" "$FILES" "$CONNS" "$MAXC" <<'EOF'
+          import json, sys
+          db, files, conns, maxc = (int(x) for x in sys.argv[1:5])
+          MB = 1048576
+          rows = [
+            {"key": "supabase-db", "name": "Supabase database", "used": db / MB, "limit": 500, "unit": "MB"},
+            {"key": "supabase-files", "name": "Supabase stored files", "used": files / MB, "limit": 1024, "unit": "MB"},
+            {"key": "supabase-conns", "name": "Supabase database connections", "used": conns, "limit": maxc, "unit": "connections"},
+          ]
+          with open("/tmp/readings.jsonl", "a") as f:
+            for r in rows: f.write(json.dumps(r) + "\n")
+          EOF
+      - name: Supabase egress this month
+        # The Management API's usage endpoint; when it is not available the run says so in its summary.
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          CODE=$(curl -s -o /tmp/usage.json -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/usage" || echo 000)
+          echo "Supabase usage endpoint answered $CODE" >> "$GITHUB_STEP_SUMMARY"
+          [ "$CODE" = 200 ] || { echo "::warning::Supabase usage endpoint answered $CODE"; head -c 400 /tmp/usage.json; exit 0; }
+          python3 - <<'EOF'
+          import json
+          d = json.load(open("/tmp/usage.json"))
+          print(json.dumps(d)[:1500])
+          # Find an egress figure in bytes or GB wherever the answer keeps it.
+          def walk(x, path=""):
+            if isinstance(x, dict):
+              for k, v in x.items(): yield from walk(v, f"{path}.{k}")
+            elif isinstance(x, list):
+              for i, v in enumerate(x): yield from walk(v, f"{path}[{i}]")
+            else:
+              yield path, x
+          egress = None
+          for p, v in walk(d):
+            if "egress" in p.lower() and isinstance(v, (int, float)) and "limit" not in p.lower():
+              egress = v / 1e9 if v > 1e5 else v
+              break
+          if egress is not None:
+            with open("/tmp/readings.jsonl", "a") as f:
+              f.write(json.dumps({"key": "supabase-egress", "name": "Supabase egress this month", "used": egress, "limit": 5, "unit": "GB"}) + "\n")
+          EOF
+      - name: Cloudflare Workers requests today
+        if: env.CF_TOKEN_RAW != ''
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          TOKEN=$(printf %s "$CF_TOKEN_RAW" | tr -d '[:space:]'); ACCOUNT=$(printf %s "$CF_ACCOUNT_RAW" | tr -d '[:space:]')
+          echo "::add-mask::$TOKEN"; echo "::add-mask::$ACCOUNT"
+          START=$(date -u +%Y-%m-%dT00:00:00Z); END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BODY=$(python3 -c "import json,sys; print(json.dumps({'query': 'query(\$a:String!,\$s:Time!,\$e:Time!){viewer{accounts(filter:{accountTag:\$a}){workersInvocationsAdaptive(limit:1000,filter:{datetime_geq:\$s,datetime_leq:\$e}){sum{requests} dimensions{scriptName}}}}}', 'variables': {'a': sys.argv[1], 's': sys.argv[2], 'e': sys.argv[3]}}))" "$ACCOUNT" "$START" "$END")
+          curl -s -X POST https://api.cloudflare.com/client/v4/graphql -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' -d "$BODY" > /tmp/cf.json
+          python3 - <<'EOF'
+          import json
+          d = json.load(open("/tmp/cf.json"))
+          if d.get("errors"):
+            print("::warning::Cloudflare analytics: " + "; ".join(e.get("message", "") for e in d["errors"])[:300])
+            raise SystemExit(0)
+          rows = d["data"]["viewer"]["accounts"][0]["workersInvocationsAdaptive"]
+          per = {}
+          for r in rows: per[r["dimensions"]["scriptName"]] = per.get(r["dimensions"]["scriptName"], 0) + r["sum"]["requests"]
+          print("Workers requests today:", per)
+          with open("/tmp/readings.jsonl", "a") as f:
+            f.write(json.dumps({"key": "cf-workers", "name": "Cloudflare Workers requests today", "used": sum(per.values()), "limit": 100000, "unit": "requests", "note": ", ".join(f"{k} {v}" for k, v in sorted(per.items()))}) + "\n")
+          EOF
+      - name: Tell the owner
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const scale = Number(process.env.SCALE || 1);
+            const rows = fs.existsSync('/tmp/readings.jsonl')
+              ? fs.readFileSync('/tmp/readings.jsonl', 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) : [];
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const fmt = (n) => n >= 100 ? Math.round(n).toLocaleString('en') : n.toFixed(1);
+            const lines = ['| Limit | Used | Free plan | % |', '|---|---|---|---|'];
+            const { data: open } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'limit', per_page: 50 });
+            const UPGRADE = {
+              'supabase-db': 'Supabase Pro ($25/month) gives an 8 GB database.',
+              'supabase-files': 'Supabase Pro ($25/month) gives 100 GB of files.',
+              'supabase-egress': 'Supabase Pro ($25/month) gives 250 GB of egress a month. Past 5 GB the free project is limited until the month ends.',
+              'supabase-conns': 'Supabase Pro with Small compute or larger gives more connections.',
+              'cf-workers': 'Cloudflare Workers Paid ($5/month) gives 10 million requests a month. Past 100,000 a day the proxy answers errors until 00:00 UTC (the app falls back where it can).',
+            };
+            for (const r of rows) {
+              const used = r.used * scale, pct = Math.round(used / r.limit * 100);
+              lines.push(`| ${r.name} | ${fmt(used)} ${r.unit} | ${fmt(r.limit)} ${r.unit} | ${pct} % |`);
+              const tag = `Limit: ${r.name}`;
+              const issue = open.find((i) => i.title.startsWith(tag));
+              const now = `${fmt(used)} of ${fmt(r.limit)} ${r.unit} (${pct} %)${r.note ? ` · ${r.note}` : ''}`;
+              if (pct >= 70 && !issue) {
+                await github.rest.issues.create({ ...context.repo, title: `${tag} ${pct} %`, labels: ['limit'], assignees: [context.repo.owner],
+                  body: `${r.name} is at ${now}.\n\nNothing has stopped yet. ${UPGRADE[r.key] || ''}\n\nCheck: ${run}\n\nThis issue says so again at 90 % and closes itself once back under 60 %.` });
+              } else if (issue) {
+                const was = Number((issue.title.match(/(\d+) %$/) || [])[1] || 0);
+                if (pct < 60) {
+                  await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number, body: `Back under: ${now}.` });
+                  await github.rest.issues.update({ ...context.repo, issue_number: issue.number, state: 'closed', state_reason: 'completed' });
+                } else if (pct >= 90 && was < 90) {
+                  await github.rest.issues.update({ ...context.repo, issue_number: issue.number, title: `${tag} ${pct} %` });
+                  await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number,
+                    body: `@${context.repo.owner} now ${now}: time to upgrade. ${UPGRADE[r.key] || ''}\n\n${run}` });
+                } else if (pct - was >= 5 || was - pct >= 5) {
+                  await github.rest.issues.update({ ...context.repo, issue_number: issue.number, title: `${tag} ${pct} %` });
+                }
+              }
+            }
+            await core.summary.addRaw(rows.length ? lines.join('\n') : 'No readings (see the steps above).').write();
