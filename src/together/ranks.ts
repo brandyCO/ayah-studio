@@ -786,5 +786,7 @@ let cheersAt = 0;
 async function cheersSoon() {
   if (!account() || document.hidden || Date.now() - cheersAt < 120_000) return;
   cheersAt = Date.now();
+  // Gestures from friends in a challenge: kept with the Ranks answers, so the bell can list the new ones (src/ui/inbox.ts).
+  void myCheers(true).then(() => myChallenges(true)).catch(() => {});
   await (await import('../ui/friends')).cheersArrived();
 }
