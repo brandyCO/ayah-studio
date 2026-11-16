@@ -135,7 +135,7 @@
 .rkm-stage.go .rkm-up, .rkm-stage.go .rkm-down { opacity: 1; transition: opacity .2s .45s; }
 .rkm-duo { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin-top: 14px; }
 .rkm-duo .fg-actor { position: relative; width: 92px; animation: fg-actor-in .5s cubic-bezier(.3, 1.5, .5, 1) .5s both; }
-.rkm-duo .fg-actor:first-child svg { transform: scaleX(-1); }
+.rkm-duo .fg-actor:first-child > :is(.fg-lay, svg) { transform: scaleX(-1); } /* the whole figure, so arms turn about their own shoulders */
 .rkm.still .rkm-row:not(.me) { transform: translateY(var(--row)); }
 .rkm.still .rkm-row.me { transform: translateY(calc(var(--row) * var(--k) * -1)); }
 .rkm.still .rkm-up, .rkm.still .rkm-down { opacity: 1; }
@@ -328,7 +328,7 @@
 .rk-duo { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 2px 0 4px; }
 .rk-duo-side { display: grid; justify-items: center; }
 .rk-duo .fg-actor { position: relative; width: 70px; margin-bottom: -6px; }
-.rk-duo .fg-actor.theirs svg { transform: scaleX(-1); }
+.rk-duo .fg-actor.theirs > :is(.fg-lay, svg) { transform: scaleX(-1); } /* the whole figure (not each layer), so a waving arm stays on its shoulder */
 .rk-duo-step { width: 74px; height: var(--h); border-radius: 10px 10px 4px 4px; background: color-mix(in srgb, var(--rw-n2, #6c5ce7) 30%, var(--card));
   box-shadow: 0 3px 0 color-mix(in srgb, var(--rw-n3, #4a3cb8) 40%, var(--card)); transition: height .6s cubic-bezier(.3, 1.4, .5, 1); }
 .rk-duo-vs { align-self: center; font: 900 14px var(--ui-round, system-ui); color: var(--muted); }
