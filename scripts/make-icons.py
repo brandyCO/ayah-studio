@@ -5,7 +5,7 @@ one turned 45°, drawn as a thin teal line, with a fine ring inside), on a deep 
 text in the logo. (Before: the "sound a", 2026-10-08.)
 
 Writes resources/ (logo SVGs + splash) and the splash PNGs under android/app/src/main/res. Since 2026-11-13 the
-launcher icons (main, one per theme, ten unlockable tiers), icon-1024.png and public/icon.svg + icon-180.png come
+launcher icons (main, one per theme, ten unlockable tiers), icon-1024.png and public/icon.svg + icon-b-*.png come
 from scripts/make-character-icons.py (the character inside the ayah marker), which uses this file's helpers.
 Run: python3 scripts/make-icons.py  (needs Pillow and Chromium: the Playwright Chromium in
 /opt/pw-browsers or $CHROME; the wordmark uses the system font "Inter Display")
@@ -172,7 +172,7 @@ def main():
     (res / 'splash.svg').write_text(splash_svg(1284, 2778) + '\n')
 
     render(splash_svg(1284, 2778), 1284, 2778, res / 'splash.png')
-    # The launcher icons, icon-1024.png and public/icon.svg + icon-180.png: scripts/make-character-icons.py.
+    # The launcher icons, icon-1024.png and public/icon.svg + icon-b-*.png: scripts/make-character-icons.py.
 
     # Splash PNGs for Android < 12 (12+ shows the launcher icon on @color/splash_background).
     for p in sorted(RES.glob('drawable*/splash.png')):
