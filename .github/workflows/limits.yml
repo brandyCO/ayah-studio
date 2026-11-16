@@ -2,7 +2,8 @@
 # Every hour this reads how much of each free plan is used and opens one issue per limit, assigned to the owner
 # (GitHub emails him and notifies his phone), at 70 % ("Limit: … 72 %"), says so again at 90 %, and closes it once
 # back under 60 %. Read only; no data leaves the runner except the numbers in the run summary.
-#   Supabase free: database 500 MB, stored files 1 GB, egress 5 GB a month, database connections (max_connections).
+#   Supabase free: database 500 MB, stored files 1 GB, egress 5 GB a month (pace estimated from the last 24 hours of
+#   gateway logs), database connections (max_connections).
 #   Cloudflare Workers free: 100,000 requests a day (UTC), all workers together.
 #   People at once (~700 on the free server) is watched every 10 minutes by busy.yml.
 name: Free plan limits
@@ -63,36 +64,32 @@ jobs:
           with open("/tmp/readings.jsonl", "a") as f:
             for r in rows: f.write(json.dumps(r) + "\n")
           EOF
-      - name: Supabase egress this month
-        # The Management API's usage endpoint; when it is not available the run says so in its summary.
+      - name: Supabase egress (estimate from the last 24 hours)
+        # The Management API has no egress figure, so this adds up the bytes the API gateway sent in the last 24 hours
+        # (edge_logs: database API, sign-in, file downloads) and reads it as the month's pace: last day × days in the
+        # month. The free plan keeps logs for one day, which is what this needs.
         continue-on-error: true
         run: |
           set -uo pipefail
-          CODE=$(curl -s -o /tmp/usage.json -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$PROJECT_REF/usage" || echo 000)
-          echo "Supabase usage endpoint answered $CODE" >> "$GITHUB_STEP_SUMMARY"
-          [ "$CODE" = 200 ] || { echo "::warning::Supabase usage endpoint answered $CODE"; head -c 400 /tmp/usage.json; exit 0; }
-          python3 - <<'EOF'
-          import json
-          d = json.load(open("/tmp/usage.json"))
-          print(json.dumps(d)[:1500])
-          # Find an egress figure in bytes or GB wherever the answer keeps it.
-          def walk(x, path=""):
-            if isinstance(x, dict):
-              for k, v in x.items(): yield from walk(v, f"{path}.{k}")
-            elif isinstance(x, list):
-              for i, v in enumerate(x): yield from walk(v, f"{path}[{i}]")
-            else:
-              yield path, x
-          egress = None
-          for p, v in walk(d):
-            if "egress" in p.lower() and isinstance(v, (int, float)) and "limit" not in p.lower():
-              egress = v / 1e9 if v > 1e5 else v
-              break
-          if egress is not None:
-            with open("/tmp/readings.jsonl", "a") as f:
-              f.write(json.dumps({"key": "supabase-egress", "name": "Supabase egress this month", "used": egress, "limit": 5, "unit": "GB"}) + "\n")
-          EOF
+          S=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ); E=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SQL="select count(*) as n, sum(cast(h.content_length as int64)) as b from edge_logs cross join unnest(metadata) as m cross join unnest(m.response) as r cross join unnest(r.headers) as h"
+          curl -s -G -o /tmp/egress.json -w '%{http_code}\n' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/analytics/endpoints/logs.all" \
+            --data-urlencode "sql=$SQL" --data-urlencode "iso_timestamp_start=$S" --data-urlencode "iso_timestamp_end=$E"
+          head -c 600 /tmp/egress.json; echo
+          python3 - <<'PY'
+          import json, calendar, datetime
+          d = json.load(open("/tmp/egress.json"))
+          rows = d.get("result") or []
+          if d.get("error") or not rows:
+            print("::warning::Supabase egress estimate not available: " + json.dumps(d.get("error"))[:300]); raise SystemExit(0)
+          day = (rows[0].get("b") or 0) / 1e9
+          now = datetime.datetime.utcnow()
+          month = day * calendar.monthrange(now.year, now.month)[1]
+          with open("/tmp/readings.jsonl", "a") as f:
+            f.write(json.dumps({"key": "supabase-egress", "name": "Supabase egress pace this month", "used": month, "limit": 5, "unit": "GB",
+              "note": f"{day:.2f} GB in the last 24 h, {rows[0].get('n', 0)} requests"}) + "\n")
+          PY
       - name: Cloudflare Workers requests today
         if: env.CF_TOKEN_RAW != ''
         continue-on-error: true
@@ -159,4 +156,5 @@ jobs:
                 }
               }
             }
+            console.log(lines.join('\n'));
             await core.summary.addRaw(rows.length ? lines.join('\n') : 'No readings (see the steps above).').write();
