@@ -15,7 +15,7 @@ import { badgeName } from '../i18n/badges';
 import { goalLabel } from './goalName';
 import { h, haptic } from './dom';
 
-interface Item { icon: string; title: string; sub?: string; go: () => void }
+interface Item { icon: string; title: string; sub?: string; go: () => void; gesture?: { kind: number; name: string } }
 
 const toMe = () => {
   try { sessionStorage.setItem('meFocus', 'claim'); } catch { /* private window */ }
@@ -37,6 +37,26 @@ function rankWaiting(): { prizes: { week: string }[]; challenges: number } {
   } catch { return { prizes: [], challenges: 0 }; }
 }
 
+/** Gestures a friend sent in a challenge (Salam, MashaAllah…) not seen yet, from the Ranks answers kept on this device.
+ *  Seen = shown on the challenge card (src/ui/cheers.ts, `rkCheerSeen`) or opened from the bell. */
+function gesturesWaiting(): { ch: string; kind: number; at: string; name: string }[] {
+  try {
+    const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null');
+    if (!v || v.who !== account()?.id || !Array.isArray(v.v?.cheers)) return [];
+    const seen = JSON.parse(localStorage.getItem('rkCheerSeen') || '{}') as Record<string, string>;
+    const chs: { id: string; friend?: { name?: string | null } | null }[] = Array.isArray(v.v?.challenges) ? v.v.challenges : [];
+    const week = Date.now() - 7 * 864e5;
+    return (v.v.cheers as { ch: string; kind: number; at: string; mine: boolean }[])
+      .filter((c) => !c.mine && Date.parse(c.at) > week && (seen[c.ch] ?? '') < c.at)
+      .sort((a, b) => (a.at < b.at ? 1 : -1))
+      .filter((c, i, all) => all.findIndex((x) => x.ch === c.ch) === i) // the newest per friend
+      .map((c) => ({ ...c, name: chs.find((x) => x.id === c.ch)?.friend?.name ?? '' }));
+  } catch { return []; }
+}
+function seeGesture(ch: string, at: string) {
+  try { const s = JSON.parse(localStorage.getItem('rkCheerSeen') || '{}'); s[ch] = at; localStorage.setItem('rkCheerSeen', JSON.stringify(s)); } catch { /* ignore */ }
+}
+
 /** Gifts from friends counted when Me last asked (src/together/lightGifts.ts, kept per account). */
 function giftsWaitingHere(): number {
   try { const v = JSON.parse(localStorage.getItem('giftsWaiting') ?? 'null'); return v && v.who === account()?.id ? Math.min(20, v.n | 0) : 0; } catch { return 0; }
@@ -55,6 +75,7 @@ function localItems(): Item[] {
     const r = rankWaiting();
     for (const p of r.prizes) out.push({ icon: 'trophy', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
     for (let i = 0; i < r.challenges; i++) out.push({ icon: 'swords', title: mpt('mp.inChallenge'), go: toChallenges });
+    for (const g of gesturesWaiting()) out.push({ icon: 'hands', title: g.name, gesture: { kind: g.kind, name: g.name }, go: () => { seeGesture(g.ch, g.at); toChallenges(); } });
     for (let i = 0; i < giftsWaitingHere(); i++) out.push({ icon: 'gift', title: mpt('mp.gift.kicker'), go: () => { location.hash = '#/me'; } });
   }
   return out;
@@ -108,7 +129,12 @@ export async function openInbox() {
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   document.body.append(d);
   d.showModal();
-  const items = localItems();
+  let items = localItems();
+  if (items.some((it) => it.gesture)) {
+    // A gesture's words come with the Ranks strings (loaded only when there is one).
+    const { rt } = await import('../i18n/ranks');
+    items = items.map((it) => (it.gesture ? { ...it, title: it.gesture.name ? rt('rk.gFrom', { name: it.gesture.name, g: rt(`rk.g${it.gesture.kind}` as never) }) : rt(`rk.g${it.gesture.kind}` as never) } : it));
+  }
   paint(items);
   // Pacts are not kept on the device: ask once, quietly, and add their chests.
   if (account()) {

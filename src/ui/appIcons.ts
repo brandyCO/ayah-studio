@@ -1,5 +1,5 @@
 // Unlockable app icons (owner decision 2026-11-13): ten tiers of the main icon — the character inside the ayah marker —
-// from Crystal to Pure light (src/data/iconTiers.ts), each won by XP level or sooner by badges and Ranks weeks, then
+// from Crystal to Pure light (src/data/iconTiers.ts), each won by XP level or sooner by Diamond badges, then
 // worn on the home screen instead of the theme's icon (Android: activity-aliases .IconCrystal … .IconLight, switched
 // like the theme icons — AppIcons.java; web: the tab icon). They replaced Rare Sapphire / Legendary Gold / Mythic
 // Celestial (an old pick moves to the tier won the same way). The choice is localStorage `appIconPick` (follows the
@@ -12,25 +12,24 @@ import { bt, type BadgeKey } from '../i18n/badges';
 import { h, haptic, toast } from './dom';
 import { refreshAppIcon, themeIconUrl } from './theme';
 import { Capacitor } from '@capacitor/core';
-import { account } from '../cloud/auth';
 
 export const APP_ICONS = ICON_TIERS;
 export type AppIconId = IconTier;
 
-/** How each tier is won: a level, or sooner `badge` = [badge step (1 Silver … 4 Diamond), how many at that step or
- *  above], `top3` weeks in a league's top 3, `first` weeks at #1, `fath` a week at #1 in the top league. */
-interface Rule { level: number; badge?: [number, number]; top3?: number; first?: number; fath?: boolean }
+/** How each tier is won (owner decision 2026-11-16): a level, or sooner `diamonds` Diamond badges. League wins no
+ *  longer unlock icons. */
+interface Rule { level: number; diamonds?: number }
 export const RULES: Record<IconTier, Rule> = {
-  crystal: { level: 5, badge: [1, 1] },
-  molten: { level: 10, badge: [2, 1] },
-  garden: { level: 15, badge: [3, 1], top3: 1 },
-  pearl: { level: 20, top3: 3 },
-  borealis: { level: 25, badge: [4, 1], first: 1 },
-  galaxy: { level: 30, first: 3 },
-  starlight: { level: 35, badge: [4, 3] },
-  prism: { level: 40, badge: [4, 5], fath: true },
-  gate: { level: 45, first: 10 },
-  light: { level: 50, first: 20 },
+  crystal: { level: 5 },
+  molten: { level: 10 },
+  garden: { level: 15 },
+  pearl: { level: 20 },
+  borealis: { level: 25, diamonds: 2 },
+  galaxy: { level: 30, diamonds: 3 },
+  starlight: { level: 35, diamonds: 4 },
+  prism: { level: 40, diamonds: 5 },
+  gate: { level: 45, diamonds: 7 },
+  light: { level: 50, diamonds: 10 },
 };
 /** Each tier's colour, for its glow in the lists. */
 export const TIER_GLOW: Record<IconTier, string> = {
@@ -39,21 +38,15 @@ export const TIER_GLOW: Record<IconTier, string> = {
 };
 
 const json = (k: string): any => { try { return JSON.parse(localStorage.getItem(k) ?? 'null'); } catch { return null; } };
-// Only the signed-in account's Ranks answers: another account's #1 weeks never unlock icons here.
-const prizes = (): { place: number | null; tier: number }[] => { const c = json('rankCache'); const p = c && c.who === account()?.id ? c.v?.prizes : null; return Array.isArray(p) ? p : []; };
 
 /** Which icons are won. */
 export function unlockedIcons(): Set<AppIconId> {
-  const got = badgeStates().filter((b) => b.earned);
-  const atStep = (s: number) => got.filter((b) => b.def.step >= s).length;
-  const p = prizes(), top3 = p.filter((x) => x.place).length, first = p.filter((x) => x.place === 1).length;
-  const fath = p.some((x) => x.place === 1 && x.tier === 4);
+  const diamonds = badgeStates().filter((b) => b.earned && b.def.step >= 4).length;
   const level = levelOf(myXp());
   const out = new Set<AppIconId>();
   for (const id of ICON_TIERS) {
     const r = RULES[id];
-    if (level >= r.level || (r.badge && atStep(r.badge[0]) >= r.badge[1]) || (r.top3 && top3 >= r.top3)
-      || (r.first && first >= r.first) || (r.fath && fath)) out.add(id);
+    if (level >= r.level || (r.diamonds && diamonds >= r.diamonds)) out.add(id);
   }
   return out;
 }
