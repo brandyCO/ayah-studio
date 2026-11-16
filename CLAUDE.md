@@ -700,8 +700,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       the path is remembered per browser version (localStorage `exportPath`, `knownPath()`). `voiceOnset()` measures
       only the 4.5 s it looks at; Cinematic's breath is measured once the studio is idle (`knownBreath()`, and before
       an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
-- [ ] Error reports (`src/errors.ts`, Sentry, lazy-loaded): off until the owner sets the repo variable
-      `SENTRY_DSN`; then mention it on the privacy page
+- [x] Error reports (`src/errors.ts`, Sentry, lazy-loaded): on since 2026-11-16 (the owner's DSN, EU region, is the
+      default in `errors.ts`; the repo variable `SENTRY_DSN` overrides it); privacy page → Other services → Crash reports
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
