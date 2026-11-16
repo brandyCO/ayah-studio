@@ -40,7 +40,9 @@ async function fromEdge(path, url, priority) {
   if (v && !(await edgeHas(v))) return null;
   try {
     const r = await fetch(`${FILES}/${path}${url.search}`, { mode: 'cors', credentials: 'omit', priority });
-    return r.ok && r.status === 200 ? r : null;
+    // Handed on as our own response: Safari refuses a Cloudflare (cross-origin) response given to the page's own
+    // requests ("access control checks"), and a stored copy then keeps the site's address.
+    return r.ok && r.status === 200 ? new Response(r.body, { status: 200, statusText: 'OK', headers: r.headers }) : null;
   } catch { return null; }
 }
 

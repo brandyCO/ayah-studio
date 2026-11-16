@@ -1,0 +1,41 @@
+name: WebKit check
+
+# Opens the web app in WebKit as an iPhone (owner report 2026-11-16: a green screen on iPhones): the live site and
+# this branch's build. Logs and screenshots go to the branch `ci-recordings` as `webkit-<sha8>/`.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-1u7bur]
+    paths: [src/**, index.html, public/sw.js, vite.config.ts, .github/workflows/webkit-check.yml, scripts/webkit-check.mjs]
+
+permissions:
+  contents: write
+
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps webkit
+      - run: npm run build
+      - name: Live site
+        run: node scripts/webkit-check.mjs https://brandyco.github.io/ayah-studio/ out/live || true
+      - name: This build
+        run: |
+          npx vite preview --port 4173 &
+          sleep 4
+          node scripts/webkit-check.mjs http://localhost:4173/ out/build || true
+      - name: Push to ci-recordings
+        run: |
+          SHA=$(git rev-parse --short=8 HEAD)
+          git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
+          git fetch origin +refs/heads/ci-recordings:refs/remotes/origin/ci-recordings || true
+          if git rev-parse -q --verify origin/ci-recordings >/dev/null; then git worktree add /tmp/rec origin/ci-recordings; else git worktree add --orphan -b tmp-rec /tmp/rec; fi
+          mkdir -p /tmp/rec/webkit-$SHA && cp -r out/* /tmp/rec/webkit-$SHA/
+          cd /tmp/rec && git add -A && git commit -qm "WebKit check $SHA" && git push origin HEAD:ci-recordings
