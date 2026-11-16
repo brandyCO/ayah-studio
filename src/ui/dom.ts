@@ -24,6 +24,20 @@ export function toast(msg: string) {
     document.body.append(el);
   }
   el.textContent = errMsg(msg); // never English in the Arabic interface
+  // Over an open modal dialog (a friend's profile, a sheet) a toast in the page sits under it, unseen: put it in the top
+  // layer as a popover, shown again each time so it lands above the newest dialog.
+  if ('showPopover' in el) {
+    if (!el.popover) el.popover = 'manual';
+    try {
+      if (el.matches(':popover-open')) el.hidePopover();
+      el.classList.remove('show');
+      el.showPopover();
+      void el.offsetWidth; // start the slide-in from above
+    } catch { /* ignore */ }
+  } else {
+    const top = [...document.querySelectorAll('dialog[open]')].pop(); // older WebViews: inside the dialog on top
+    (top ?? document.body).append(el);
+  }
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => el!.classList.remove('show'), 2200);
