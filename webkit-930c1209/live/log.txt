@@ -1,0 +1,868 @@
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/seasonCard-DnRRRAXn.js Load request cancelled
+[dark-iPhone13] PAGEERROR TypeError: Importing a module script failed.
+Unhandled Promise Rejection: TypeError: Importing a module script failed.
+    at s (https://brandyco.github.io/ayah-studio/assets/preload-helper-BaNbYf_w.js:1:1288)
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/seasonCard-B1AWfJIR.js Load request cancelled
+[dark-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/seasonCard-B1AWfJIR.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/season-BVpX542J.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/season-DlNPnzvb.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/noor-M9fcWtx9.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/inbox-C8QhVHPi.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/learnPath-DoJObzNi.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/streakMoment-DsvbSMqs.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/appIcons-Dzc2QanM.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/learnLamps-BnMI7uvv.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/lightChip-BHbt8rUI.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/morning-Dm6qieMZ.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/favourite-wvhRjicx.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/chest-DAOp2IGA.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/firstSteps-q7SUasIW.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/me-C7AWe4YK.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/mushafOffline-BfUXbum9.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/prayerAlerts-D6bBRU0H.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/widgetsPage-BEO0sE-Y.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/widgets-Cr62KHeM.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/juice-DYiBtyNQ.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/actor-aPcGZWP_.js Load request cancelled
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/comeback-B8pYzDFq.js Load request cancelled
+[dark-iPhone13] PAGEERROR TypeError: Importing a module script failed.
+Unhandled Promise Rejection: TypeError: Importing a module script failed.
+    at s (https://brandyco.github.io/ayah-studio/assets/preload-helper-BaNbYf_w.js:1:1288)
+[dark-iPhone13] console.error Failed to load resource: the server responded with a status of 404 (Not Found)
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/assets/reciterDownload-BtT2gzrR.js Load request cancelled
+[dark-iPhone13] PAGEERROR TypeError: Importing a module script failed.
+Unhandled Promise Rejection: TypeError: Importing a module script failed.
+    at s (https://brandyco.github.io/ayah-studio/assets/preload-helper-BaNbYf_w.js:1:1288)
+[dark-iPhone13] text: 1. Al-Faatiha Juz 1 · Page 1 001 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆ ﱇ ﱈ ﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ 002 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆﱇ ﱈﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ ﱥ ﱦ ﱧﱨ ﱩ ﱪ ﱫ ﱬ 1 ✕ 
+[dark-iPhone13] FAILED https://brandyco.github.io/ayah-studio/fonts/suras/s035.woff2 Load request cancelled
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s036.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s036.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s037.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s037.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s038.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s038.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s039.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s039.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s040.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s040.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s041.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s041.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s042.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s042.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s043.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s043.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-BA_ffMh0.js:6:27318)
+[dark-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/garden-ClNVjCRL.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/juice-Zog8Ji-l.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/sfx-gIOpU2ET.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/adhkar-DTtAHYx_.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/chest-e2-dKOZc.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flat-CNWvrrnr.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badge-JslURgeR.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badges-DSGEmko2.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/moments-D1IveCgd.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/front-mpkVLF05.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/favourite-JxVaL2z4.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/lightChip-CBdgjaYb.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mePages-Dq6_v210.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/inbox-tZRIgjro.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/wardrobe-DwAjI-2I.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/figure-BbIOzyKo.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mushafOffline-DSuASByh.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/appIcons-Cbs2cIdU.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/langs-D4GiNJQ0.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/streakMoment-KsFECnFG.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/fps-B8KK4QDi.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flatFire-DFtQnMh5.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgets-Cok9KTEp.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/prayerAlerts-DGcouQo6.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgetsPage-CDxUG3_B.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/morning-CVZVxAVD.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/firstSteps-CrMGk-Qz.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learn-BnwbhhnM.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Bw2NSAUt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Dz4yb4Zt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/gardenArt-Bpv9B504.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/noor-Bt0qZjUw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[dark-iPhoneSE] text: 1. Al-Faatiha Juz 1 · Page 1 001 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆ ﱇ ﱈ ﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ 002 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆﱇ ﱈﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ ﱥ ﱦ ﱧﱨ ﱩ ﱪ ﱫ ﱬ 1 ✕ 
+[dark-iPhoneSE] FAILED https://brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 Load request cancelled
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[dark-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/me-B7HywgKS.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/garden-ClNVjCRL.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/juice-Zog8Ji-l.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/sfx-gIOpU2ET.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/adhkar-DTtAHYx_.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/chest-e2-dKOZc.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flat-CNWvrrnr.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badge-JslURgeR.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badges-DSGEmko2.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/moments-D1IveCgd.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/front-mpkVLF05.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/favourite-JxVaL2z4.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/lightChip-CBdgjaYb.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mePages-Dq6_v210.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/inbox-tZRIgjro.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/wardrobe-DwAjI-2I.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/figure-BbIOzyKo.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mushafOffline-DSuASByh.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/appIcons-Cbs2cIdU.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/langs-D4GiNJQ0.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/streakMoment-KsFECnFG.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/fps-B8KK4QDi.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flatFire-DFtQnMh5.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgets-Cok9KTEp.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/prayerAlerts-DGcouQo6.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgetsPage-CDxUG3_B.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/morning-CVZVxAVD.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/firstSteps-CrMGk-Qz.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnPath-Bc5ZAmBk.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learn-BnwbhhnM.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Bw2NSAUt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Dz4yb4Zt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/gardenArt-Bpv9B504.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/assets/noor-Bt0qZjUw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhone13] text: 1. Al-Faatiha Juz 1 · Page 1 001 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆ ﱇ ﱈ ﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ 002 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆﱇ ﱈﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ ﱥ ﱦ ﱧﱨ ﱩ ﱪ ﱫ ﱬ 1 ✕ 
+[light-iPhone13] FAILED https://brandyco.github.io/ayah-studio/fonts/suras/s042.woff2 Load request cancelled
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s043.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s043.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhone13] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/me-B7HywgKS.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/garden-ClNVjCRL.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/juice-Zog8Ji-l.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/sfx-gIOpU2ET.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/adhkar-DTtAHYx_.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/chest-e2-dKOZc.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flat-CNWvrrnr.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badge-JslURgeR.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/badges-DSGEmko2.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/moments-D1IveCgd.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/front-mpkVLF05.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/favourite-JxVaL2z4.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/lightChip-CBdgjaYb.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mePages-Dq6_v210.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/inbox-tZRIgjro.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/wardrobe-DwAjI-2I.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/figure-BbIOzyKo.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/mushafOffline-DSuASByh.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/appIcons-Cbs2cIdU.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/langs-D4GiNJQ0.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/streakMoment-KsFECnFG.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/fps-B8KK4QDi.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/flatFire-DFtQnMh5.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgets-Cok9KTEp.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/prayerAlerts-DGcouQo6.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/widgetsPage-CDxUG3_B.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/morning-CVZVxAVD.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/firstSteps-CrMGk-Qz.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnPath-Bc5ZAmBk.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learn-BnwbhhnM.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Bw2NSAUt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/learnLamps-Dz4yb4Zt.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/gardenArt-Bpv9B504.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/assets/noor-Bt0qZjUw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
+[light-iPhoneSE] text: 1. Al-Faatiha Juz 1 · Page 1 001 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆ ﱇ ﱈ ﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ 002 ﱁ ﱂ ﱃ ﱄ ﱅ ﱆﱇ ﱈﱉ ﱊ ﱋ ﱌ ﱍ ﱎ ﱏ ﱐ ﱑ ﱒ ﱓ ﱔ ﱕ ﱖ ﱗ ﱘ ﱙ ﱚ ﱛ ﱜ ﱝ ﱞ ﱟ ﱠ ﱡ ﱢ ﱣ ﱤ ﱥ ﱦ ﱧﱨ ﱩ ﱪ ﱫ ﱬ 1 ✕ 
+[light-iPhoneSE] FAILED https://brandyco.github.io/ayah-studio/fonts/suras/s043.woff2 Load request cancelled
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s044.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s045.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s046.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s047.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s048.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s049.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s050.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s051.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s052.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s053.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s054.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s055.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s056.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s057.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s058.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s059.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s060.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s061.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s062.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s063.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s064.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s065.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s066.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s067.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s068.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s069.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s070.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s071.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s072.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s073.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s074.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s075.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s076.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s077.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s078.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s079.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s080.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s081.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s082.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s083.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s084.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s085.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s086.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s087.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s088.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s089.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s090.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s091.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s092.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s093.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s094.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s095.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s096.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s097.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s098.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s099.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s100.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s101.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s102.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s103.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s104.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s105.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s106.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s107.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s108.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s109.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s110.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s111.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s112.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s113.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] PAGEERROR /brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+Fetch API cannot load https://brandyco.github.io/ayah-studio/fonts/suras/s114.woff2 due to access control checks.
+    at Yt (https://brandyco.github.io/ayah-studio/assets/index-C8bU8iqS.js:6:27318)
+[light-iPhoneSE] console.warning The resource https://brandyco.github.io/ayah-studio/data/mushaf.json?v=e42b35318ece was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing.
