@@ -743,6 +743,15 @@ Pro and a load test come later, when the owner decides to pay).
       read" as the secret `SUPABASE_LOGS_TOKEN` (the deploy token lacks it; first run 2026-11-16: database 15.6 MB, files 0,
       15 of 60 connections, 101 Workers requests)
 
+- [ ] Private repo at $0 (owner request 2026-11-16, "make it private but with no downtime"; rules: no GitHub run and no
+      merge without his OK): the web app's address moves to Cloudflare, `https://ayah-studio.brandlift-888.workers.dev/`
+      (static worker `ayah-studio`, the same build as `ayah-studio-files`, deployed by pages.yml's `cloudflare` job, which
+      also adds the address to Supabase Auth's redirect allow-list); `PUBLIC_URL`, og tags, privacy link, proxy
+      `ALLOWED_ORIGINS` follow it. GitHub Pages deploys only while the repo is public. busy.yml + limits.yml move to the
+      Cloudflare Worker `ayah-studio-watch` (`watch/`, crons every 10 min + hourly, Supabase Management API SQL, issues via
+      the secret `ALERTS_GITHUB_TOKEN`; `.github/workflows/watch.yml`, manual). Still to do: every workflow manual-only,
+      uptime.yml dropped (Sentry uptime), the owner flips the repo
+
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
       (`src/i18n/enStudio.ts`) and reflections lazy, sw.js network wait 0.8 s, warm-up of the studio only on Wi-Fi

@@ -49,7 +49,7 @@ Not in it: the reel videos (never uploaded).
 
 | Check | What |
 |---|---|
-| Web app | `https://brandyco.github.io/ayah-studio/` answers with the app |
+| Web app | `https://ayah-studio.brandlift-888.workers.dev/` answers with the app |
 | Sign-in | Supabase Auth health |
 | Database | a public read-only function (`relight_preview`) answers |
 | Edge proxy | `/config` on the Cloudflare worker (when the repo variable `PIXABAY_PROXY` is set) |

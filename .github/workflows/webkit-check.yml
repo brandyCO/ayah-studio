@@ -25,7 +25,7 @@ jobs:
       - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps webkit
       - run: npm run build
       - name: Live site
-        run: node scripts/webkit-check.mjs https://brandyco.github.io/ayah-studio/ out/live || true
+        run: node scripts/webkit-check.mjs https://ayah-studio.brandlift-888.workers.dev/ out/live || true
       - name: This build
         run: |
           npx vite preview --port 4173 &
