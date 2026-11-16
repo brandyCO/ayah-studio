@@ -1,0 +1,4 @@
+/* Premium icons (src/ui/richIcon.ts) */
+.rich-ic { display: inline-grid; place-items: center; flex: none; line-height: 0; }
+.rich-ic > svg, .rich-ic > span { margin: 0 !important; }
+.rich-ic > .flame { width: auto; }

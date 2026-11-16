@@ -734,3 +734,5 @@ export function quietPlayer(stop = false) {
   if (!shared?.active()) return;
   if (stop) shared.stop(); else shared.pause();
 }
+// Screens loaded later (Learn lessons, page memory) pause the bar with this event instead of importing the player.
+window.addEventListener('player-quiet', () => quietPlayer());

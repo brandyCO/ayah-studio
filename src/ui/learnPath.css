@@ -6,6 +6,7 @@
   position: relative; max-width: 560px; margin: 0 auto; padding: 0 16px; min-height: 100dvh; color: var(--lp-ink);
   background: linear-gradient(180deg, #fff3dc 0%, #fdf6e8 18%, #e9f6ee 55%, #dcefe3 100%);
   font-family: var(--ui-round); isolation: isolate;
+  overflow-x: clip; /* a step's card near the edge never widens the page (it used to squeeze the tab bar) */
 }
 .lp-scenery { position: absolute; inset: 0 0 auto; width: 100%; height: 100dvh; z-index: -1; pointer-events: none; }
 .lp-sun-halo { fill: #ffe3a3; } .lp-sun { fill: #ffd57a; }

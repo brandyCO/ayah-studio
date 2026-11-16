@@ -1276,6 +1276,8 @@ body.listening-away .pl-follow { display: inline-flex !important; color: var(--a
 body.listening-away .player.show { bottom: calc(72px + env(safe-area-inset-bottom)); }
 body.listening-away .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
 body.listening-away:not(:has(.tabbar)) .player.show { bottom: max(10px, env(safe-area-inset-bottom)); }
+/* Learn lessons and page memory have their own recitation and their buttons at the bottom: the bar waits, paused, until they close. */
+body:has(.learn.lesson, .pm-drill) .player { display: none; }
 body.tabs-up .rf-hint { opacity: 0; }
 
 /* Me sheet: grouped menu */

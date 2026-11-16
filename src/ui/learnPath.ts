@@ -166,6 +166,13 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     }
   }
 
+  /** Moves a step's card sideways so it stays inside the screen (a step on the path's outer bend pushed it off the edge). */
+  function keepInView(el: HTMLElement) {
+    const r = el.getBoundingClientRect(), vw = document.documentElement.clientWidth, m = 12;
+    const dx = r.left < m ? m - r.left : r.right > vw - m ? vw - m - r.right : 0;
+    if (dx) el.style.translate = `${Math.round(dx)}px 0`;
+  }
+
   function openPop(at: HTMLElement, st: PathStep, label: string, m: SurahMeta, hue: string) {
     haptic();
     const same = pop && pop.dataset.for === `${st.s}:${st.range[0]}:${st.kind}`;
@@ -182,6 +189,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     pop = h('div', { class: `lp-pop ${st.state} hue-${hue}`, role: 'dialog', 'aria-label': label, 'data-for': `${st.s}:${st.range[0]}:${st.kind}` },
       h('b', {}, label), h('span', { class: 'lp-pop-sub' }, st.kind === 'page' ? surahName(m) : `${surahName(m)} · ${m.n}:${st.range[0]}${st.range[1] > st.range[0] ? `–${st.range[1]}` : ''}`), ...body);
     at.parentElement!.append(pop);
+    keepInView(pop);
     (pop.querySelector('button') as HTMLElement | null)?.focus({ preventScroll: true });
   }
 
@@ -237,6 +245,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
             : [h('p', {}, lt('learn.gateSub')), h('span', { class: 'lp-pop-sub' }, `${lt('learn.gatePage', { p })} · +${GATE_LIGHT} ✦`),
               h('button', { class: 'lp-btn hue-violet', type: 'button', onclick: () => startGate(j, p) }, lt('learn.gateStart'))]));
       btn.parentElement!.append(pop);
+      keepInView(pop);
       (pop.querySelector('button, a') as HTMLElement | null)?.focus({ preventScroll: true });
     } }, pic);
     wrap.append(

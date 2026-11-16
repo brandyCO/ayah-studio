@@ -2,6 +2,7 @@
 // dhikr, morning adhkar), today's prayer times, honest stats (this week against last week, month, all
 // time), milestone badges, My library. Its settings (reading time per page, prayer method and lock
 // screen, dhikr reminders) live on #/me/settings, with the way on to the app's menu.
+import { richIcon } from './richIcon';
 import { levelLabel, levelOf, myXp } from '../data/xp';
 import { icon } from './icons';
 const iconOf = icon;
@@ -809,7 +810,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   let nextSig = '';
   // The user's own character beside the step (their face, outfit and background), the step's sign on a badge.
   const nextFace = (ic: string) => {
-    const plain = h('span', { class: 'nx-ic', 'aria-hidden': 'true' }, icon(ic, 26));
+    const plain = h('span', { class: 'nx-ic', 'aria-hidden': 'true' }, richIcon(ic, 38));
     let code: string | null = null;
     try { code = localStorage.getItem('rankFigure'); } catch { /* private */ }
     if (code) void import('./figure').then(({ parse, bustMarkup }) => {
@@ -817,7 +818,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       if (!f || !plain.isConnected && !plain.parentNode) return;
       plain.className = 'nx-ic nx-me';
       plain.innerHTML = `<svg viewBox="1 1 38 38" width="60" height="60">${bustMarkup(f, 19)}</svg>`;
-      plain.append(h('span', { class: 'nx-badge' }, icon(ic, 15)));
+      plain.append(h('span', { class: 'nx-badge' }, richIcon(ic, 28)));
     });
     return plain;
   };

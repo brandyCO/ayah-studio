@@ -101,11 +101,9 @@ dialog.fr-page::backdrop { background: transparent; }
 .fn-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fn-what { display: flex; align-items: center; gap: 5px; font-size: var(--fs-s); flex-wrap: wrap; }
 .fn-what small { color: var(--muted); }
-.fn-ic { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #12a594; flex: none; }
-.fn-ic.big { width: 40px; height: 40px; border-radius: 12px; }
-.k-streak .fn-ic, .fn-mine .fn-ic { background: #ff6b4a; }
-.k-level .fn-ic { background: #6c5ce7; }
-.k-khatm .fn-ic { background: #f59f00; }
+.fn-ic { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; }
+.fn-ic.big { width: 44px; height: 44px; }
+
 .fn-cheer { flex: none; font-weight: 700; }
 .fn-cheer.on { background: color-mix(in srgb, #f59f00 18%, var(--card)); border-color: #f59f00; color: inherit; opacity: 1; }
 .fn-cheer.pop { animation: fn-pop .45s var(--ease-spring); }
