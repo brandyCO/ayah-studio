@@ -734,6 +734,11 @@ Pro and a load test come later, when the owner decides to pay).
       (signed-in accounts that reported to Ranks, were reading / listening or synced in the last 5 min) and database calls a
       second (pg_stat_statements, 60 s apart); at 500 an issue "Busy: …" (label `busy`) is assigned to the owner, closed again
       under 400. Signed-out people are not counted
+- [x] Free plan limits watch (owner request 2026-11-16, "notice me when the numbers are close to the limit"):
+      `.github/workflows/limits.yml` every hour reads the Supabase database (500 MB), stored files (1 GB), connections
+      (`max_connections`), egress this month (5 GB; Management API usage endpoint, when it answers) and Cloudflare Workers
+      requests today (100,000, GraphQL analytics with the proxy's token); one issue per limit (label `limit`, assigned to
+      the owner) at 70 %, a mention at 90 %, closed under 60 %. `scale` input multiplies readings for a test
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
