@@ -152,6 +152,11 @@ jobs:
           # The archive is left unsigned: signing it the automatic way needs a development profile, which Apple
           # only makes for a team with a registered iPhone. The export below signs it for the App Store
           # (distribution certificate + App Store profile, made by Xcode through the API key; no device needed).
+          # An unsigned app carries no entitlements, and the export keeps only what the app was signed with, so the
+          # archived app is first signed ad hoc with ours (Sign in with Apple).
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          codesign --force --sign - --entitlements ios/App/App/App.entitlements --timestamp=none "$APP"
+          codesign -d --entitlements - --xml "$APP" | grep -q applesignin
           for DEST in export upload; do
           cat > "$RUNNER_TEMP/export.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
