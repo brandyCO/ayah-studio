@@ -9,7 +9,7 @@ Quran.com recordings have their timings and audio for all 114 surahs; word files
 Run by .github/workflows/reciter-health.yml (the build container cannot reach Quran.com / archive.org).
 Usage: python3 scripts/reciter-health.py problems.json   (exit 1 when anything is wrong)
 """
-import re, json, os, ssl, sys, urllib.request, urllib.error, concurrent.futures as cf
+import re, json, os, time, ssl, sys, urllib.request, urllib.error, concurrent.futures as cf
 R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src=open(R+'/src/data/reciters.ts').read()
 CA=os.environ.get('CA_BUNDLE')
@@ -28,6 +28,7 @@ def head(url):
             return e.code,-1,None
         except Exception as e:
             if i==2: return 0,-1,str(e)
+            time.sleep(5)
 def rng(s):
     out=[]
     for p in s.split(','):
@@ -68,6 +69,9 @@ for r in recs:
         for s,a in [(1,1),(2,286),(36,83),(78,40),(114,6)]:
             jobs.append((r,(s,a),f"https://everyayah.com/data/{r['ea']}/{s:03d}{a:03d}.mp3",None))
 print(len(jobs),'files to check')
+# Ayat Quran.com gives no word times for and our aligner could not hear clearly either (qdc-audit "unclear",
+# 2026-11-16): the app shows them without a lit word and offers only Ayah mode in reels (rule 8, never guess).
+KNOWN_GAPS={173:('1:1',),4:('26:110','37:66','37:100'),5:('89:1',)}
 def qdc(r,s):
     u=f"https://api.qurancdn.com/api/qdc/audio/reciters/{r['id']}/audio_files?chapter={s}&segments=true"
     for i in range(3):
@@ -86,7 +90,8 @@ def qdc(r,s):
     noseg=[v['verse_key'] for v in vt if not v.get('segments') and not (fix.get(v['verse_key'].split(':')[1]) or {}).get('w')]
     st,ln,loc=head(f['audio_url'])
     if st!=200: return (r['id'],r['name'],f'HTTP {st} {loc or ""}',s,f['audio_url'])
-    if noseg and not (r['id']==173 and noseg==['1:1']): return (r['id'],r['name'],f'no word timings {noseg[:5]}',s,u)
+    noseg=[k for k in noseg if k not in KNOWN_GAPS.get(r['id'],())]
+    if noseg: return (r['id'],r['name'],f'no word timings {noseg[:5]}',s,u)
     return None
 def run(j):
     r,s,url,size=j
