@@ -22,6 +22,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Ayah Studio" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // Start-up errors are kept so the rescue below can show them (owner report 2026-11-16: an empty green screen on iPhone).
+      window.__bootErrors = [];
+      window.addEventListener('error', function (e) { var t = e.target; if (t && t !== window && (t.src || t.href)) { window.__bootErrors.push('could not load ' + (t.src || t.href).split('/').pop()); return; } window.__bootErrors.push((e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '')); }, true);
+      window.addEventListener('unhandledrejection', function (e) { var r = e.reason; window.__bootErrors.push('promise: ' + (r && (r.message || r)) ); });
+    </script>
     <style>
       /* Fonts live in public/fonts (see LICENSES.md); relative URLs work on Pages, Capacitor and Tauri. */
       @font-face { font-family: 'UthmanicHafs'; src: url('./fonts/UthmanicHafs.woff2') format('woff2'); font-display: block; }
@@ -65,5 +71,33 @@
   <body>
     <div id="app"></div>
     <script type="module" src="./src/main.ts"></script>
+    <script>
+      // Boot rescue: if nothing has been drawn after 9 s (a stale offline copy, a script that failed to load), clear the
+      // service worker and its caches and load once more; if that did not help either, say so with a Reload button and
+      // the error, instead of leaving an empty screen.
+      (function () {
+        var app = document.getElementById('app');
+        setTimeout(function () {
+          if (!app || app.childElementCount > 0 || document.querySelector('dialog[open]')) { try { sessionStorage.removeItem('bootRescue'); } catch (e) {} return; }
+          var tried = false;
+          try { tried = sessionStorage.getItem('bootRescue') === '1'; sessionStorage.setItem('bootRescue', '1'); } catch (e) {}
+          if (!tried) {
+            var jobs = [];
+            try { if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+            try { if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+            Promise.all(jobs).then(function () { location.reload(); }, function () { location.reload(); });
+            return;
+          }
+          var errs = (window.__bootErrors || []).slice(0, 4).join('\n');
+          app.innerHTML = '<div style="font:16px/1.5 system-ui,sans-serif;padding:48px 24px;text-align:center;color:inherit">'
+            + '<p style="font-size:20px;font-weight:700;margin:0 0 8px">Ayah Studio could not start</p>'
+            + '<p style="margin:0 0 20px;opacity:.75">Please check your connection and try again.</p>'
+            + '<button style="font:inherit;font-weight:700;padding:12px 28px;border-radius:999px;border:0;background:#0f8273;color:#fff">Reload</button>'
+            + '<pre style="white-space:pre-wrap;text-align:left;font-size:12px;opacity:.6;margin-top:28px"></pre></div>';
+          app.querySelector('pre').textContent = errs;
+          app.querySelector('button').onclick = function () { try { sessionStorage.removeItem('bootRescue'); } catch (e) {} location.reload(); };
+        }, 9000);
+      })();
+    </script>
   </body>
 </html>
