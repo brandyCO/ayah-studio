@@ -47,7 +47,7 @@ jobs:
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
-          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
       # Like the APK: every mushaf page font ships in the app; the aligned word times are fetched when needed.
       - run: rm -rf dist/data/words
       - run: npx cap sync ios
@@ -101,7 +101,7 @@ jobs:
       ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       TEAM: ${{ vars.APPLE_TEAM_ID }}
-      GOOGLE_IOS: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
+      GOOGLE_IOS: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
     steps:
       - name: Apple account set up?
         id: ready
@@ -126,7 +126,7 @@ jobs:
           VITE_PIXABAY_PROXY: ${{ vars.PIXABAY_PROXY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
-          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          VITE_GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
       - if: steps.ready.outputs.ok
         run: rm -rf dist/data/words && npx cap sync ios
       - name: Archive, sign and upload to App Store Connect
