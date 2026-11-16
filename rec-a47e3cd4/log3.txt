@@ -1,7 +1,0 @@
-11-15 17:15:58.159  6727  6727 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-11-15 17:15:58.165  6727  6727 I AndroidRuntime: Using default boot image
-11-15 17:15:58.165  6727  6727 I AndroidRuntime: Leaving lock profiling enabled
-11-15 17:15:58.307  6727  6727 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
-11-15 17:15:58.406  6727  6727 I AndroidRuntime: VM exiting with result code 0.
-11-15 17:15:59.682  6742  6768 I AyahOpening: ready in 8 ms, ok=true
-11-15 17:16:00.706  6742  6742 I AyahOpening: playing after 1033 ms
