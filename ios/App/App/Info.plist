@@ -76,6 +76,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ayah Studio uses your approximate location to work out prayer times and Ramadan iftar times.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Ayah Studio uses your approximate location to work out prayer times and Ramadan iftar times. It only asks while you use the app.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ayah Studio listens while you recite, to follow your recitation and check it. Nothing is recorded or kept unless you choose to.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
