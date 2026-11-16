@@ -1324,6 +1324,10 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
       prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
+      // Send feedback (owner request 2026-11-16): always there, from the first day
+      h('button', { class: 'me-door d-feedback', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
+        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon('feedback', 24)),
+        h('span', { class: 'me-door-txt' }, h('b', {}, fe('fb.door')), h('span', { class: 'muted small' }, fe('fb.doorSub')))),
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
@@ -1498,6 +1502,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', 'aria-pressed': String(usageOn()), title: t('set.usageHelp'), onclick: () => { setUsageOn(!usageOn()); paint(); } }, icon('target', 18), t(usageOn() ? 'set.usageOn' : 'set.usageOff')),
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
+          h('button', { class: 'menu-item', onclick: () => void import('./feedback').then((m) => m.openFeedback()) }, icon('feedback', 18), fe('fb.door')),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
     };
     if (sub) { body.replaceChildren(...groups[sub]()); return; }

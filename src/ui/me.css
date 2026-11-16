@@ -133,7 +133,7 @@
   background: color-mix(in srgb, var(--dc) 12%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--dc) 30%, var(--card));
   color: var(--text); text-decoration: none; transition: transform .12s, box-shadow .12s; }
 .me-door:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--dc) 30%, var(--card)); }
-.me-door.d-room { --dc: #6c5ce7; } .me-door.d-prayer { --dc: #12a594; } .me-door.d-stats { --dc: #f59f00; } .me-door.d-library { --dc: #ff6b4a; }
+.me-door.d-room { --dc: #6c5ce7; } .me-door.d-prayer { --dc: #12a594; } .me-door.d-stats { --dc: #f59f00; } .me-door.d-library { --dc: #ff6b4a; } .me-door.d-feedback { --dc: #12a594; width: 100%; min-height: 60px; margin-bottom: 14px; text-align: start; border: 0; font: inherit; cursor: pointer; }
 .me-door-ic { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 14px; font-size: 22px;
   background: var(--dc); box-shadow: 0 3px 0 color-mix(in srgb, var(--dc) 65%, #000); }
 .me-door-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

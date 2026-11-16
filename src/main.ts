@@ -218,6 +218,7 @@ if (isNative()) later(() => void import('./ui/widgets').then((m) => m.initWidget
 if (isNative()) later(() => void import('./ui/nudges').then((m) => m.initNudges())); // the evening flame reminder
 setupOffline();
 // Problem reports made offline go out now (src/ui/report.ts).
+later(() => setTimeout(() => { try { if (localStorage.getItem('feedbackQueue')) void import('./ui/feedback').then((m) => m.flushFeedback()); } catch { /* ignore */ } }, 4000));
 later(() => setTimeout(() => { try { if (localStorage.getItem('reportQueue')) void import('./ui/report').then((m) => m.flushReports()); } catch { /* ignore */ } }, 3000));
 // Accounts are optional: restore a sign-in made on this device (or finish one coming back from
 // Google), then keep bookmarks, settings and drafts in sync with the account.
