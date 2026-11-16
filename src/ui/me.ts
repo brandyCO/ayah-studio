@@ -1324,10 +1324,6 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
       prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
-      // Send feedback (owner request 2026-11-16): always there, from the first day
-      h('button', { class: 'me-door d-feedback', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
-        h('span', { class: 'me-door-ic', 'aria-hidden': 'true' }, icon('feedback', 24)),
-        h('span', { class: 'me-door-txt' }, h('b', {}, fe('fb.door')), h('span', { class: 'muted small' }, fe('fb.doorSub')))),
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
@@ -1515,7 +1511,12 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
       row('prayer', 'mosque', t('set.rowPrayer'), t('set.rowPrayerSub')),
       row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
       row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
-      row('app', 'gear', t('set.app'), t('set.rowApp'))));
+      row('app', 'gear', t('set.app'), t('set.rowApp')),
+      // Send feedback (owner request 2026-11-16): its own row in settings
+      h('button', { class: 'set-row set-fb', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
+        h('span', { class: 'set-row-ic s-feedback', 'aria-hidden': 'true' }, icon('feedback', 22)),
+        h('span', { class: 'set-row-txt' }, h('b', {}, fe('fb.door')), h('span', { class: 'muted small' }, fe('fb.doorSub'))),
+        icon('right', 18))));
   };
   const subTitle: Record<SetPage, () => string> = {
     reading: () => t('set.reading'), prayer: () => t('set.rowPrayer'), notes: () => t('set.rowNotes'), quran: () => t('menu.gYours'), app: () => t('set.app'),

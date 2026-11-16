@@ -133,7 +133,7 @@
   background: color-mix(in srgb, var(--dc) 12%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--dc) 30%, var(--card));
   color: var(--text); text-decoration: none; transition: transform .12s, box-shadow .12s; }
 .me-door:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--dc) 30%, var(--card)); }
-.me-door.d-room { --dc: #6c5ce7; } .me-door.d-prayer { --dc: #12a594; } .me-door.d-stats { --dc: #f59f00; } .me-door.d-library { --dc: #ff6b4a; } .me-door.d-feedback { --dc: #12a594; width: 100%; min-height: 60px; margin-bottom: 14px; text-align: start; border: 0; font: inherit; cursor: pointer; }
+.me-door.d-room { --dc: #6c5ce7; } .me-door.d-prayer { --dc: #12a594; } .me-door.d-stats { --dc: #f59f00; } .me-door.d-library { --dc: #ff6b4a; }
 .me-door-ic { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 14px; font-size: 22px;
   background: var(--dc); box-shadow: 0 3px 0 color-mix(in srgb, var(--dc) 65%, #000); }
 .me-door-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -389,6 +389,7 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .set-rows { display: grid; gap: 2px; padding: 8px; }
 .set-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 14px; color: var(--text); text-decoration: none; }
 .set-row:active { background: var(--sel); }
+.set-row.set-fb { width: 100%; border: 0; background: none; font: inherit; text-align: start; cursor: pointer; }
 .set-row-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
 .set-row-txt b { font-size: 1.02rem; }
 .set-row > svg:last-child { opacity: .45; flex: none; }
@@ -399,6 +400,7 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .set-row-ic.s-notes { background: #f59f00; }
 .set-row-ic.s-quran { background: #6c5ce7; }
 .set-row-ic.s-app { background: #667085; }
+.set-row-ic.s-feedback { background: #ff6b4a; }
 
 /* F21: Library as cards */
 .lib-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }

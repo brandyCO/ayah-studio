@@ -2309,7 +2309,7 @@ duas/reflections section in Me.
       the golden mushaf's unread juz are empty outlines; "115 badges to earn" before the first; no "compared with last week"
       before there is a last week; Me's header without its subtitle; the lesson's tree explains itself on tap
       (`learn.treeTip`); Learn's sun / moon sit beside the intro card, not behind it
-- [x] M27 Send feedback (owner request 2026-11-16): a row at the bottom of Me (from day one) and Me → ⚙ → App open
+- [x] M27 Send feedback (owner request 2026-11-16): its own row on Me → ⚙ settings (owner: "should be in settings", not on Me) and Me → ⚙ → App open
       `src/ui/feedback.ts` (+ `feedback.css`, lazy): what it is about (Idea / Something's wrong / Something I love / Other),
       a message (≤ 2000), an optional screenshot from the gallery (shrunk to ≤ 1600 px JPEG) and an optional email for a
       reply → Sentry User Feedback (`captureFeedback`, tags: kind, platform, lang, build, screen, device; `sentry()` in
