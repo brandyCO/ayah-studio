@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:
@@ -32,13 +31,16 @@ jobs:
           VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
       - run: node scripts/check-size.mjs # speed budget: first-load JS + CSS
+      # GitHub Pages only while the repo is public (a private repo on the free plan has no Pages site).
       - uses: actions/configure-pages@v5
+        if: ${{ !github.event.repository.private }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
     needs: build
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -47,10 +49,13 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-  # The same build on Cloudflare (files/wrangler.toml): the app fetches its code, data, fonts and backgrounds from
-  # there, so GitHub Pages' ~100 GB a month is never reached. The Pages site stays the address people open and the
-  # fallback, so a failure here only costs bandwidth. Needs the repo secrets CLOUDFLARE_API_TOKEN and
-  # CLOUDFLARE_ACCOUNT_ID (the same as the edge proxy); without them it is skipped.
+  # The same build on Cloudflare (files/wrangler.toml), as two static workers with the same files:
+  #  - `ayah-studio`: the web app's address (https://ayah-studio.<account>.workers.dev/, src/cloud/config.ts PUBLIC_URL),
+  #    which replaces GitHub Pages once the repo is private;
+  #  - `ayah-studio-files`: where the service worker and the apps fetch code, data, fonts and backgrounds (src/net.ts FILES).
+  # Static files on Cloudflare's free plan are free and unlimited. Needs the repo secrets CLOUDFLARE_API_TOKEN and
+  # CLOUDFLARE_ACCOUNT_ID (the same as the edge proxy); without them it is skipped. With SUPABASE_ACCESS_TOKEN it also
+  # makes sure Supabase Auth sends Google sign-ins back to the new address (adds it to the redirect allow-list).
   cloudflare:
     needs: build
     runs-on: ubuntu-latest
@@ -60,6 +65,7 @@ jobs:
     env:
       CF_TOKEN_RAW: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT_RAW: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         if: env.CF_TOKEN_RAW != ''
@@ -98,7 +104,10 @@ jobs:
       - name: Deploy
         if: env.CF_TOKEN_RAW != ''
         working-directory: files
-        run: npx --yes wrangler@4 deploy 2>&1 | tee /tmp/deploy.log
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4 deploy 2>&1 | tee /tmp/deploy.log
+          npx --yes wrangler@4 deploy --name ayah-studio 2>&1 | tee /tmp/deploy-site.log
       - name: Check the copy answers with CORS and this build
         if: env.CF_TOKEN_RAW != ''
         run: |
@@ -109,7 +118,7 @@ jobs:
           words=$(cd files/site && find data/words -name '*.json' | head -1)
           for p in version.json fonts/qcf-v2/p50.woff2 "$words" "$js"; do
             for i in 1 2 3 4 5 6; do
-              h=$(curl -sfI -H 'Origin: https://brandyco.github.io' "$url/$p" || true)
+              h=$(curl -sfI -H 'Origin: https://ayah-studio.brandlift-888.workers.dev' "$url/$p" || true)
               echo "$h" | grep -qi '^access-control-allow-origin: \*' && break
               sleep 10
             done
@@ -119,4 +128,26 @@ jobs:
           got=$(curl -sf "$url/version.json")
           test "$got" = "$want" || { echo "::error::Cloudflare serves $got, this build is $want"; exit 1; }
           echo "The app's files are served from $url ($got)" >> "$GITHUB_STEP_SUMMARY"
-
+      - name: Check the web app's address
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          site=$(grep -oE 'https://ayah-studio\.[a-z0-9-]+\.workers\.dev' /tmp/deploy-site.log | head -1)
+          test -n "$site" || { echo "::error::No address in the deploy log"; exit 1; }
+          echo "SITE=$site" >> "$GITHUB_ENV"
+          want=$(cat files/site/version.json)
+          for i in 1 2 3 4 5 6; do got=$(curl -sf "$site/version.json" || true); [ "$got" = "$want" ] && break; sleep 10; done
+          test "$got" = "$want" || { echo "::error::$site serves $got, this build is $want"; exit 1; }
+          curl -sf "$site/" | grep -q '<title>Ayah Studio</title>' || { echo "::error::$site/ is not the app"; exit 1; }
+          curl -sf "$site/privacy.html" | grep -q 'id="delete"' || { echo "::error::$site/privacy.html missing"; exit 1; }
+          curl -sf "$site/sw.js" > /dev/null || { echo "::error::$site/sw.js missing"; exit 1; }
+          grep -q "$site/" files/site/assets/*.js || echo "::warning::The build's PUBLIC_URL is not $site/ (src/cloud/config.ts)"
+          echo "The web app is live at $site/" >> "$GITHUB_STEP_SUMMARY"
+      - name: Let Google sign-ins come back to the new address
+        if: env.CF_TOKEN_RAW != '' && env.SB_TOKEN != ''
+        run: |
+          api=https://api.supabase.com/v1/projects/jposubjybzstfmnngews/config/auth
+          list=$(curl -sf -H "Authorization: Bearer $SB_TOKEN" "$api" | jq -r '.uri_allow_list // ""')
+          case ",$list," in *",$SITE/**,"*) echo "Already allowed: $SITE/**"; exit 0;; esac
+          new=$(printf '%s' "${list:+$list,}$SITE/**")
+          jq -n --arg l "$new" '{uri_allow_list: $l}' | curl -sf -X PATCH -H "Authorization: Bearer $SB_TOKEN" -H 'Content-Type: application/json' -d @- "$api" > /dev/null
+          echo "Supabase Auth now also allows $SITE/**" >> "$GITHUB_STEP_SUMMARY"

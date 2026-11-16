@@ -6,9 +6,7 @@ name: Android APK
 # Every build of main is also published as a one tap download (owner request 2026-11-15):
 # https://github.com/brandyCO/ayah-studio/releases/download/apk-latest/ayah-studio.apk
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:
@@ -73,7 +71,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish as the latest APK download
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

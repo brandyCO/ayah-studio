@@ -4,9 +4,7 @@ name: Checks
 # the Quran text guard (every ayah present, reviewed copies unchanged), every interface translation complete and the robot smoke test
 # (main screens open in six languages with no errors, raw keys or sideways scrolling).
 on:
-  pull_request:
-  push:
-    branches: [main]
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:

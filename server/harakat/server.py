@@ -8,7 +8,7 @@ from harakat import Model, check
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://jposubjybzstfmnngews.supabase.co')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_Su6KSbkC7LHqqLwoKbrj6w_aevj2aY9')
-ORIGINS = set(filter(None, os.environ.get('ORIGINS', 'https://brandyco.github.io,https://localhost,capacitor://localhost,http://localhost:5173,http://localhost:4173').split(',')))
+ORIGINS = set(filter(None, os.environ.get('ORIGINS', 'https://ayah-studio.brandlift-888.workers.dev,https://brandyco.github.io,https://localhost,capacitor://localhost,http://localhost:5173,http://localhost:4173').split(',')))
 MAX_SECONDS_DAY = float(os.environ.get('MAX_SECONDS_DAY', '3600'))
 AUTH_OFF = os.environ.get('AUTH_OFF') == '1'  # local tests only
 

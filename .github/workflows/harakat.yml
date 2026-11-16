@@ -7,9 +7,7 @@ name: Deploy harakat server
 # skipped. Steps for the owner: server/harakat/README.md. The model is baked into the image.
 
 on:
-  push:
-    branches: [main]
-    paths: ['server/harakat/**', '.github/workflows/harakat.yml']
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:

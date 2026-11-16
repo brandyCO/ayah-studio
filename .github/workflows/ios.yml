@@ -11,17 +11,7 @@ name: iPhone app
 #    APP_STORE_CONNECT_ISSUER_ID; variable APPLE_TEAM_ID; optional variable GOOGLE_IOS_CLIENT_ID (Google sign-in
 #    on the iPhone; without it only Sign in with Apple is offered). Steps for the owner: docs/ios.md.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    paths:
-      - 'ios/**'
-      - 'src/**'
-      - 'public/**'
-      - 'package*.json'
-      - 'capacitor.config.ts'
-      - 'scripts/ios-project.rb'
-      - '.github/workflows/ios.yml'
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
 
 permissions:

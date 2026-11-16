@@ -45,16 +45,7 @@ Not in it: the reel videos (never uploaded).
 
 ## Uptime alerts
 
-`.github/workflows/uptime.yml` checks every 10 minutes, from GitHub:
+Sentry's uptime monitors (website and Supabase Auth health, every 5 minutes) email the owner when something is
+down. The old `uptime.yml` workflow is gone (every workflow is manual only since the repo became private).
 
-| Check | What |
-|---|---|
-| Web app | `https://brandyco.github.io/ayah-studio/` answers with the app |
-| Sign-in | Supabase Auth health |
-| Database | a public read-only function (`relight_preview`) answers |
-| Edge proxy | `/config` on the Cloudflare worker (when the repo variable `PIXABAY_PROXY` is set) |
-
-Each check is tried three times, 30 s apart. If one is still down, an issue "Down: …" is opened and assigned to
-the owner, which GitHub sends by e-mail and to the GitHub phone app. When everything answers again it is closed
-with the time it came back. GitHub runs scheduled checks on a best-effort basis, so an alert can come a few
-minutes late.
+The backup workflow (`backup.yml`) also runs only by hand now: ask the owner before running it.

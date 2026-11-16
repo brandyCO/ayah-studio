@@ -63,4 +63,4 @@ Files kept by scripts (run again after changes):
    comma-separated).
 9. Before submitting for review: screenshots (6.9" iPhone, 1320×2868), App Privacy answers (email + user ID for the
    account, crash data, anonymous usage: none used for tracking), privacy policy URL
-   https://brandyco.github.io/ayah-studio/privacy.html, age rating, and a reviewer note that sign-in is optional.
+   https://ayah-studio.brandlift-888.workers.dev/privacy.html, age rating, and a reviewer note that sign-in is optional.

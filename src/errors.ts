@@ -15,7 +15,7 @@ export function initErrors() {
     Sentry.init({
       dsn: DSN,
       release: __DATA_VERSION__,
-      environment: location.protocol === 'https:' && location.hostname.endsWith('github.io') ? 'web' : 'app',
+      environment: location.protocol === 'https:' && /(github\.io|workers\.dev)$/.test(location.hostname) ? 'web' : 'app',
       // No user details, cookies, headers, query strings or bodies.
       dataCollection: { userInfo: false, cookies: false, httpHeaders: false, httpBodies: [], urlQueryParams: false },
       tracesSampleRate: 0,

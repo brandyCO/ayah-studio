@@ -3,14 +3,9 @@
 # Quran.com or archive.org). Run by hand, or when reciter data changes. Results as an artifact.
 name: Reciter health
 on:
+  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
   workflow_dispatch:
-  push:
-    paths:
-      - src/data/reciters.ts
-      - public/data/mp3quran/**
-      - public/data/basmala.json
-      - scripts/reciter-health.py
-      - .github/workflows/reciter-health.yml
+
 permissions:
   contents: read
 jobs:
