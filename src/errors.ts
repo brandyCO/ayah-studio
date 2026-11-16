@@ -3,7 +3,9 @@
 // downloaded. Reports carry the error, the app version and the device/browser, never the user's
 // account, notes, drafts, cookies or request details (dataCollection off), and no session replays.
 
-const DSN: string = import.meta.env.VITE_SENTRY_DSN || '';
+// The DSN only lets the app send reports to the project; it is safe in a public repo (owner, 2026-11-16).
+const DSN: string = import.meta.env.VITE_SENTRY_DSN ||
+  'https://0c7a568f8a96fd268c7029a23457701f@o4512439928553472.ingest.de.sentry.io/4512439952932944';
 
 export const errorReportsOn = () => !!DSN;
 
