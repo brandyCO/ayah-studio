@@ -7,7 +7,7 @@ body[data-view='season'] { background: #0f0a2c; }
   min-height: 100dvh; padding: 0 16px 120px; color: var(--sn-ink); font-family: var(--ui-round);
   background: radial-gradient(120% 50% at 50% 0%, #2a1f6e 0%, transparent 70%), linear-gradient(180deg, #160f45 0%, #0f0a2c 40%, #0b0822 100%);
 }
-.sn-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 0 6px;
+.sn-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 0 6px;
   background: linear-gradient(#160f45 70%, transparent); font-weight: 800; font-size: var(--fs-l); }
 .sn-back { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #ffffff1f; display: grid; place-items: center; color: #fff; font: 900 26px/1 var(--ui-round); cursor: pointer; }
 

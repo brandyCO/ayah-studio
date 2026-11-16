@@ -78,7 +78,7 @@ button { font: inherit; color: inherit; }
 .topbar {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 12px;
-  margin: 0 calc(-1 * var(--sp-4)); padding: 10px var(--sp-4);
+  margin: 0 calc(-1 * var(--sp-4)); padding: calc(10px + env(safe-area-inset-top)) var(--sp-4) 10px; /* under the iPhone's status bar / notch */
   background: var(--bg); /* solid: content scrolling under it never shows through (F31) */
   border-bottom: 1px solid var(--line);
 }
@@ -503,6 +503,7 @@ body[data-view="reel"] {
 .screen-reel { max-width: none; padding: 0; }
 .studio {
   height: 100vh; height: 100dvh; display: grid;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* iPhone notch + home bar */
   touch-action: pan-x pan-y; /* no browser pinch-zoom here: it would blur the preview (the timeline has its own zoom) */
   grid-template-columns: 100%;
   grid-template-rows: auto minmax(0, 1fr) auto var(--bottom-h);
