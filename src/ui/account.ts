@@ -2,7 +2,7 @@
 // the sync state; export or delete the account's data. Everything works without signing in.
 import { errMsg, locale, t } from '../i18n';
 import { icon } from './icons';
-import { account, deleteAccount, onAccount, signIn, signInAvailable, signOut } from '../cloud/auth';
+import { account, appleSignInAvailable, deleteAccount, googleSignInAvailable, onAccount, signIn, signInAvailable, signOut, type SignInWith } from '../cloud/auth';
 import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/sync';
 import { supabase } from '../cloud/supabase';
 import { bookmarkRecords } from '../data/bookmarks';
@@ -41,6 +41,23 @@ export function openAccount() {
   d.addEventListener('click', (e) => { if (e.target === d) close(); });
   let statusLine: HTMLElement | null = null;
 
+  /** Apple's button (iPhone app, first) or Google's. On the web the page goes to Google and comes back. */
+  function signInButton(how: SignInWith): HTMLElement {
+    return h('button', { class: how === 'apple' ? 'apple-btn' : 'primary google-btn', type: 'button', onclick: async (e: Event) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.disabled = true;
+      try {
+        await signIn(how);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // 1001: the person closed Apple's sheet
+        if (!/cancel|1001/i.test(msg)) toast(t('acc.signInFailed', { msg: errMsg(err) }));
+      } finally {
+        btn.disabled = false;
+      }
+    } }, how === 'apple' ? appleLogo() : '', t(how === 'apple' ? 'acc.apple' : 'acc.google'));
+  }
+
   function draw() {
     const a = account();
     if (!a) {
@@ -49,18 +66,9 @@ export function openAccount() {
         h('p', {}, t('acc.why')),
         h('p', { class: 'muted small' }, t('acc.without')),
         signInAvailable()
-          ? h('button', { class: 'primary google-btn', onclick: async (e: Event) => {
-            const btn = e.currentTarget as HTMLButtonElement;
-            btn.disabled = true;
-            try {
-              await signIn(); // on the web the page goes to Google and comes back
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              if (!/cancel/i.test(msg)) toast(t('acc.signInFailed', { msg: errMsg(err) }));
-            } finally {
-              btn.disabled = false;
-            }
-          } }, t('acc.google'))
+          ? h('div', { class: 'signin-btns' },
+            appleSignInAvailable() ? signInButton('apple') : '',
+            googleSignInAvailable() ? signInButton('google') : '')
           : h('p', { class: 'muted small' }, t('acc.soon')),
         h('p', { class: 'muted small' }, h('a', { href: `${import.meta.env.BASE_URL}privacy.html`, target: '_blank', rel: 'noopener' }, t('acc.privacy'))));
       return;
@@ -157,4 +165,15 @@ async function exportData() {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   h('a', { href: url, download: name }).click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Apple's logo for the Sign in with Apple button. */
+function appleLogo(): SVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 814 1000');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M788 341c-6 4-108 62-108 190 0 148 130 200 134 202-1 3-21 72-69 142-43 62-88 124-156 124s-86-40-165-40c-77 0-104 41-167 41s-106-57-156-128C43 790 0 670 0 556 0 373 119 276 236 276c62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 93zM554 170c29-35 50-83 50-131 0-7-1-14-2-19-48 2-104 32-138 71-27 30-52 78-52 127 0 7 1 15 2 17 3 1 8 1 13 1 43 0 97-29 127-66z');
+  svg.append(path);
+  return svg;
 }

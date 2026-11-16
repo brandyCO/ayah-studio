@@ -110,7 +110,7 @@ Engine edge cases:
 | Layer | Choice |
 |---|---|
 | App | TypeScript + Vite, plain DOM/canvas (no heavy UI framework unless clearly needed) |
-| Android (and iOS later) | Capacitor (`@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`) |
+| Android + iPhone | Capacitor (`@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`); iPhone: `ios/`, docs/ios.md |
 | Windows/macOS | Tauri (WebView2 on Windows = Chromium, so WebCodecs works); tray icon for reminders |
 | Web test build | GitHub Pages, auto-deployed from `main` by `.github/workflows/pages.yml` |
 | Video export | WebCodecs `VideoEncoder` (H.264) + `AudioEncoder` (AAC) → **Mediabunny** MP4 muxer |
@@ -891,6 +891,14 @@ save to gallery / share sheet; offline audio cache; settings.
       kept in IndexedDB `timings` (network first, newest 60) by `src/data/qdc.ts`; audio as on the web
 - [ ] Android app tested by the owner on their phone (not verifiable in the cloud container: no
       Android SDK/device; only the CI build is checked)
+- [x] iPhone app (owner request 2026-11-16, thread "Build the iPhone app"; **docs/ios.md**): `ios/` (Capacitor 8, SPM,
+      iPhone only, iOS 16.4+), built and started on a simulator by `.github/workflows/ios.yml` on every change, uploaded to
+      TestFlight from main once the owner's App Store Connect secrets exist. Swift plugins with the Android names
+      (`AppIcon` alternate icons for themes + tiers, `MediaScan` → Photos, `ExportService`, `Speech` → SFSpeechRecognizer,
+      `Haptic` → `navigator.vibrate`); Sign in with Apple (`signIn('apple')`, guideline 4.8), Google there with
+      `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
+      on the iPhone (WidgetKit later). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
+- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; WidgetKit widgets
 - [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice

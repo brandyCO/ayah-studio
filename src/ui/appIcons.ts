@@ -60,7 +60,7 @@ function wear(id: AppIconId | '') {
   try { if (id) localStorage.setItem('appIconPick', id); else localStorage.removeItem('appIconPick'); } catch { /* ignore */ }
   refreshAppIcon();
   haptic();
-  toast(Capacitor.isNativePlatform() ? bt('ic.set') : bt('ic.web'));
+  toast(Capacitor.getPlatform() === 'ios' ? bt('ic.setIos') : Capacitor.isNativePlatform() ? bt('ic.set') : bt('ic.web'));
 }
 
 const SEEN = 'appIconsSeen';

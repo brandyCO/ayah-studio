@@ -1,4 +1,4 @@
-// The Android app (Capacitor): saving and sharing an exported video. In the WebView `<a download>`
+// The phone apps (Capacitor, Android and iPhone): saving and sharing an exported video. In the WebView `<a download>`
 // and navigator.share do nothing, so the file is written with @capacitor/filesystem (in pieces, never
 // one huge string) to the public Movies folder, where the gallery shows it, and shared by its URI.
 // The plugins are loaded only inside the app; the web build never downloads them.
@@ -7,6 +7,13 @@ import { PUBLIC_URL } from './cloud/config';
 import { t } from './i18n';
 
 export const isNative = () => Capacitor.isNativePlatform();
+/** The iPhone app (ios/, docs/ios.md). */
+export const isIOS = () => Capacitor.getPlatform() === 'ios';
+/** 'android' | 'ios' | 'web', for reports and usage counts. */
+export const platform = () => Capacitor.getPlatform();
+/** Whether this app build has one of our own native plugins (the iPhone has no widgets, Play font pack or
+ *  Android media service; those parts hide or skip themselves). */
+export const hasPlugin = (name: string) => isNative() && Capacitor.isPluginAvailable(name);
 
 /** Our own small native plugin (android/…/MediaScanPlugin.java): adds a written file to the gallery now. */
 const MediaScan = registerPlugin<{ scan(o: { path: string; mime: string }): Promise<void> }>('MediaScan');
@@ -28,9 +35,11 @@ export interface SavedFile {
   where: string;
 }
 
-/** Writes the video to Movies/Ayah Studio (else Documents/Ayah Studio, else the app's own folder). */
+/** Writes the video to Movies/Ayah Studio (else Documents/Ayah Studio, else the app's own folder). iPhone: to the
+ *  app's Documents/Ayah Studio (the Files app shows it), then copied into Photos (ios/App/App/MediaScanPlugin.swift). */
 export async function saveVideo(blob: Blob, name: string, onProgress?: (f: number) => void): Promise<SavedFile> {
   const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  if (isIOS()) return saveVideoIOS(blob, name, onProgress);
   // Android 10 and older need the storage permission for the public folders (11+ doesn't).
   try {
     const p = await Filesystem.checkPermissions();
@@ -65,6 +74,31 @@ export async function saveVideo(blob: Blob, name: string, onProgress?: (f: numbe
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+async function writeChunks(blob: Blob, directory: import('@capacitor/filesystem').Directory, path: string, onProgress?: (f: number) => void) {
+  const { Filesystem } = await import('@capacitor/filesystem');
+  for (let at = 0; at < blob.size || at === 0; at += CHUNK) {
+    const data = await base64(blob.slice(at, at + CHUNK));
+    if (at === 0) await Filesystem.writeFile({ directory, path, data, recursive: true });
+    else await Filesystem.appendFile({ directory, path, data });
+    onProgress?.(Math.min(1, (at + CHUNK) / blob.size));
+  }
+  return (await Filesystem.getUri({ directory, path })).uri;
+}
+
+async function saveVideoIOS(blob: Blob, name: string, onProgress?: (f: number) => void): Promise<SavedFile> {
+  const { Directory } = await import('@capacitor/filesystem');
+  const uri = await writeChunks(blob, Directory.Documents, `Ayah Studio/${name}`, onProgress);
+  const mime = blob.type.split(';')[0] || 'video/mp4';
+  try {
+    await MediaScan.scan({ path: uri, mime });
+    return { uri, where: t('ios.photos') };
+  } catch (e) {
+    // Photos access refused: the file is still in Files → On My iPhone → Ayah Studio, and Share works.
+    console.warn('Not added to Photos', e);
+    return { uri, where: t('ios.files') };
+  }
 }
 
 /** Opens the Android share sheet (Instagram, TikTok, WhatsApp …) for a saved file. */
@@ -113,7 +147,7 @@ export interface ExportGuard {
  * Elsewhere (web) it does nothing.
  */
 export function exportGuard(title: string, cancel: string, onCancel: () => void): ExportGuard {
-  if (!isNative()) return { progress() {}, stop() {} };
+  if (!hasPlugin('ExportService')) return { progress() {}, stop() {} };
   let last = -1;
   let stopped = false;
   guards++;
@@ -152,13 +186,15 @@ let playbackListener: Promise<unknown> | null = null;
  */
 export const listenGuard = {
   show(title: string, text: string, playing: boolean, labels: string[], onButton: (b: 'prev' | 'toggle' | 'next' | 'stop') => void) {
-    if (!isNative()) return;
+    // iPhone: the recitation keeps playing by itself (background audio, AppDelegate.swift) with the page's
+    // Media Session on the lock screen, so there is no service to start.
+    if (!hasPlugin('PlaybackService')) return;
     playbackListener ??= PlaybackService.addListener('button', (e) => listenGuard.onButton?.(e.b)).catch(() => null);
     listenGuard.onButton = onButton;
     void PlaybackService.show({ title, text, playing, labels, channel: t('notif.listenChannel') }).catch(() => {});
   },
   hide() {
-    if (!isNative()) return;
+    if (!hasPlugin('PlaybackService')) return;
     listenGuard.onButton = null;
     void PlaybackService.hide().catch(() => {});
   },

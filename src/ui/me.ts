@@ -48,7 +48,7 @@ import { currentTranslation, setTranslation, translationInfo } from '../data/tra
 import { accountLabel } from './account';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
-import { isNative } from '../native';
+import { isIOS, isNative, hasPlugin } from '../native';
 import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
 import { account, onAccount, signIn, signInAvailable } from '../cloud/auth';
@@ -1235,6 +1235,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           const btn = e.currentTarget as HTMLButtonElement;
           btn.disabled = true;
           haptic(8);
+          // iPhone: the account sheet, where Sign in with Apple stands beside Google (guideline 4.8)
+          if (isIOS()) { btn.disabled = false; openAccount(); return; }
           try { await signIn(); } catch (err) {
             if (!/cancel/i.test(err instanceof Error ? err.message : String(err))) openAccount();
           } finally { btn.disabled = false; }
@@ -1457,7 +1459,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
             class: `chip${ps.hanafi === hanafi ? ' on' : ''}`, 'aria-pressed': String(ps.hanafi === hanafi),
             onclick: () => setPrayerSettings({ ...prayerSettings(), hanafi }),
           }, t(hanafi ? 'pr.hanafi' : 'pr.standard')))),
-        isNative() ? h('button', {
+        hasPlugin('Widgets') ? h('button', {
           class: `menu-item${ps.lockScreen ? ' on' : ''}`, 'aria-pressed': String(ps.lockScreen),
           onclick: async () => {
             const on = !prayerSettings().lockScreen;
@@ -1468,7 +1470,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
         h('p', { class: 'muted small' }, t('pr.privacy'))),
       alertsSection()],
       notes: () => [nudgeSection(),
-        h('p', { class: 'muted small' }, t('wg.setHelp')),
+        hasPlugin('Widgets') || !isNative() ? h('p', { class: 'muted small' }, t('wg.setHelp')) : '',
       isNative() ? section(t('rem.label'),
         chips(REMINDER_TIMES, (x) => rem.includes(x), (tm) => timeFmt.format(new Date(2026, 0, 1, Number(tm.slice(0, 2)), Number(tm.slice(3)))),
           async (tm) => {
@@ -1477,9 +1479,10 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           })) : '',
       isNative() ? h('section', { class: 'me-card menu' },
         h('button', { class: 'menu-item', onclick: () => void import('./morning').then((m) => m.openMorning()) }, icon('sparkle', 18), t('morning.title'))) : '',
-      section(t('wg.title'),
+      // iPhone: no home-screen widgets yet (they need a WidgetKit extension), so the entry is left out there.
+      hasPlugin('Widgets') || !isNative() ? section(t('wg.title'),
         h('p', { class: 'muted small' }, t('wg.setHelp')),
-        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, icon('widget', 18), t('wg.open'))))],
+        h('div', { class: 'menu' }, h('a', { class: 'menu-item', href: '#/me/widgets' }, icon('widget', 18), t('wg.open')))) : ''],
       quran: () => [section(t('menu.gYours'),
         h('div', { class: 'menu' },
           h('button', { class: 'menu-item', onclick: () => goMushaf('ramadan') }, icon('crescent', 18), t('menu.ramadan')),

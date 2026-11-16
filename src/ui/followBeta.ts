@@ -6,7 +6,7 @@
 // (kind 'follow') with the same counts and the word positions involved.
 import { SUPABASE_KEY, SUPABASE_URL } from '../cloud/config';
 import { installId } from '../net';
-import { isNative } from '../native';
+import { isNative, platform } from '../native';
 import { followUse, resetFollowUse, type FollowUse } from './follow';
 import { openReport, type ReportContext } from './report';
 
@@ -38,7 +38,7 @@ function counts(o: FollowOutcome, u: FollowUse) {
   for (const k of o.skipped) if (!o.missed.has(k)) untapped++;   // the phone said "passed over", the reciter said no
   for (const k of o.missed) if (o.said.has(k)) added++;          // the phone heard it, the reciter says it was missed
   return {
-    v: 1, mode: o.mode, ref: o.ref.slice(0, 20), engine: u.engine || '?', way: u.way, app: isNative() ? 'android' : 'web',
+    v: 1, mode: o.mode, ref: o.ref.slice(0, 20), engine: u.engine || '?', way: u.way, app: platform(),
     os: osOf(), browser: isNative() ? undefined : browserOf(), build: __BUILD__, lang: document.documentElement.lang,
     words: o.words, said: o.said.size, skipped: o.skipped.size, wrong: o.wrong.size, unclear: o.unclear.size,
     missed: o.missed.size, untapped, added, helped: o.helped, verdict: o.verdict,

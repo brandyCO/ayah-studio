@@ -133,7 +133,7 @@ export async function startFollow(on: FollowHandlers): Promise<Follower | null> 
       if (!alive) return;
       try {
         const r = await Speech.start({ lang: 'ar-SA', hints: on.hints?.() ?? [] });
-        u.engine = r.onDevice ? 'android-device' : 'android'; u.way = String(r.way ?? '').slice(0, 80);
+        u.engine = `${Capacitor.getPlatform()}${r.onDevice ? '-device' : ''}`; u.way = String(r.way ?? '').slice(0, 80);
       }
       catch (e) { lastCode = lastCode || -1; finish(String((e as { code?: string })?.code ?? e).includes('denied') ? 'denied' : 'failed'); }
     };

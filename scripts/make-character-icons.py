@@ -592,5 +592,56 @@ def main():
     print('done')
 
 
+IOS = ROOT / 'ios' / 'App' / 'App' / 'Assets.xcassets'
+
+def ios_set(name, img):
+    """One iPhone app icon set: a single opaque 1024 px picture (Xcode makes every size from it)."""
+    d = IOS / f'{name}.appiconset'
+    for old in d.glob('*.png'):
+        old.unlink()
+    d.mkdir(parents=True, exist_ok=True)
+    img.convert('RGB').save(d / 'AppIcon-1024.png', optimize=True)
+    (d / 'Contents.json').write_text('{\n  "images" : [\n    {\n      "filename" : "AppIcon-1024.png",\n      "idiom" : "universal",\n'
+                                     '      "platform" : "ios",\n      "size" : "1024x1024"\n    }\n  ],\n'
+                                     '  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n')
+
+def ios():
+    """iPhone (ios/App): the main icon (the default theme's B) as AppIcon, every other theme and the ten tiers as
+    alternate icons AppIcon-{id} (UIApplication.setAlternateIconName, ios/App/App/AppIconPlugin.swift; the names are
+    listed in the target's ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES), and the launch picture: the icon's front
+    alone on the splash colour, like Android's splash."""
+    figures()
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        def full(art, name):
+            UID[0] = 0
+            out = tmp / f'{name}.png'
+            mi.render(mi.svg(512, 512, DEFS + art.replace(FRONT, '').replace(BK0, '').replace(BK1, '')), 1024, 1024, out)
+            return Image.open(out)
+        ios_set('AppIcon', full(b_icon(*THEME_B['emerald']), 'main'))
+        for tid in list(THEME_B)[1:]:
+            ios_set(f'AppIcon-{tid}', full(b_icon(*THEME_B[tid]), tid))
+            print('ios theme', tid)
+        for tid, fn in TIERS:
+            ios_set(f'AppIcon-{tid}', full(fn(), tid))
+            print('ios tier', tid)
+        UID[0] = 0
+        top, bot, glow, edge, face = THEME_B['emerald']
+        pt = front_parts(top, bot, glow, edge, face)
+        p = tmp / 'front.png'
+        mi.render(mi.svg(512, 512, DEFS + pt['marker'] + pt['shadow'] + pt['man'] + pt['star']), 1024, 1024, p, transparent=True)
+        front = Image.open(p).convert('RGBA').resize((600, 600), Image.LANCZOS)
+        can = Image.new('RGBA', (2732, 2732), SPLASH_BG)
+        can.alpha_composite(front, ((2732 - 600) // 2, (2732 - 600) // 2 - 30))
+        sd = IOS / 'Splash.imageset'
+        for old in sd.glob('*.png'):
+            old.unlink()
+        can.convert('RGB').save(sd / 'splash-2732x2732.png', optimize=True)
+        (sd / 'Contents.json').write_text('{\n  "images" : [\n    {\n      "filename" : "splash-2732x2732.png",\n'
+                                          '      "idiom" : "universal"\n    }\n  ],\n  "info" : {\n    "author" : "xcode",\n'
+                                          '    "version" : 1\n  }\n}\n')
+    print('ios done')
+
+
 if __name__ == '__main__':
-    splash() if '--splash' in sys.argv else main()
+    splash() if '--splash' in sys.argv else ios() if '--ios' in sys.argv else main()

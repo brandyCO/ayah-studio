@@ -14,7 +14,7 @@
 // of waiting in the phone's list (`watchDuaBanners`, web too). localStorage `prayerAlerts`.
 import { PRAYERS, prayerDay, prayerSettings, setPrayerSettings, type PrayerName } from '../data/prayer';
 import { locale, t, type Key } from '../i18n';
-import { isNative } from '../native';
+import { isIOS, isNative } from '../native';
 import { todayRec } from '../data/journey';
 import { akt, type AdhkarKey } from '../i18n/adhkar';
 
@@ -144,7 +144,10 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
   const now = Date.now();
   const list = [];
   const d0 = new Date();
-  for (let day = 0; day < DAYS; day++) {
+  // iPhone: iOS keeps only the 64 soonest notifications of an app, so prayers are set 3 days ahead there (set again
+  // whenever the app opens) and the morning ayah, dhikr and Ramadan notes keep their places.
+  const days = isIOS() ? 3 : DAYS;
+  for (let day = 0; day < days; day++) {
     const times = await prayerDay(new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + day), ps);
     if (!times) break;
     for (const [k, name] of ALERT_PRAYERS.entries()) {
@@ -183,6 +186,9 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
         body: t('pa.body', { name: pn, time: fmt.format(time) }),
         smallIcon: 'ic_stat_crescent',
         channelId: `prayer_${a.sound}`,
+        // iPhone has no channels: the sound goes with each notification (ios/App/App/*.caf, ≤ 30 s, so the whole
+        // adhan becomes its opening there; 'quiet' = no sound).
+        ...(isIOS() ? iosSound(a.sound) : {}),
         schedule: { at: new Date(at), allowWhileIdle: true },
         isExactNotification: exact,
         extra: { hash: '#/me' },
@@ -191,6 +197,13 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
   }
   if (list.length) await LocalNotifications.schedule({ notifications: list });
   return true;
+}
+
+function iosSound(s: AlertSound): { sound?: string } {
+  if (s === 'adhan' || s === 'adhanFull') return { sound: 'prayer_adhan.caf' };
+  if (s === 'chime') return { sound: 'prayer_chime.caf' };
+  // a name iOS does not find plays the phone's own notification sound; none at all = quiet
+  return s === 'default' ? { sound: 'default' } : {};
 }
 
 /** Travel: a fresh location (rounded as always) when the phone already allows it, at most every 6 h. */
