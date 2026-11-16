@@ -348,6 +348,7 @@ export async function cheersArrived() {
   if (pulse.same) return;
   let feats: Feats;
   try { feats = await featsFeed(true); } catch { return; }
+  if (!feats?.mine) return;
   markSocialSeen('cheers', pulse.p);
   let seen: Record<string, number> = {};
   let first = true;
