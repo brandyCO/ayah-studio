@@ -182,7 +182,7 @@ export const RECITERS: Reciter[] = [
   { id: 1125, name: 'Rami Al-Deais', short: 'Al-Deais', qdc: false, mp3quran: { read: 'rami-duais', surahs: '1-114' }, words: '1-114' },
   { id: 1126, name: 'Hazza Al-Balushi', short: 'Al-Balushi', qdc: false, mp3quran: { read: 'hazza-balushi', surahs: '1,6,8,12-15,17-22,25,29-32,34-47,49-57,61,63,67-114' }, words: '1,6,8,12-15,17-22,25,29-32,34-47,49-57,61,63,67-114' },
   { id: 1127, name: 'Khalifa Al-Tunaiji', short: 'Tunaiji (2)', recording: 'Murattal 2', qdc: false, mp3quran: { read: 'khalifa-tunaiji', surahs: '1-114' }, words: '1-114' },
-  { id: 1128, name: 'Salman Al-Otaibi', short: 'Al-Otaibi', qdc: false, mp3quran: { read: 'salman-otaibi', surahs: '1-2,10-11,14,19,25,32,36,38,52,55-56,58-59,61-64,66-114' }, words: '1-2,10-11,14,19,25,32,36,38,52,55-56,58-59,61-64,66-114' },
+  { id: 1128, name: 'Salman Al-Otaibi', short: 'Al-Otaibi', qdc: false, mp3quran: { read: 'salman-otaibi', surahs: '1-2,10-11,19,25,32,36,38,52,55-56,58-59,61-64,66-114' }, words: '1-2,10-11,19,25,32,36,38,52,55-56,58-59,61-64,66-114' },
   { id: 1129, name: 'Mohammad Refaat', short: 'Refaat', qdc: false, mp3quran: { read: 'muhammad-refaat', surahs: '11,48,54,73,76,79,81,85-87,89,96,98,100' }, words: '11,48,54,73,76,79,81,85-87,89,96,98,100' },
   { id: 1130, name: 'Abdullah Al-Mousa', short: 'Al-Mousa (Muallim)', style: 'Muallim', qdc: false, mp3quran: { read: 'abdullah-mousa-r2', surahs: '1,79-91,93-94,96-97,99-114' }, words: '1,79-91,93-94,96-97,99-114' },
   { id: 1131, name: 'Abdullah Al-Mousa', short: 'Al-Mousa', qdc: false, mp3quran: { read: 'abdullah-mousa', surahs: '1-114' }, words: '1-114' },
