@@ -929,7 +929,7 @@ cloud. Build in this order:
       RLS tested live; auth: site URL + redirects set, email sign-up off, anonymous off;
       `src/cloud/{config,supabase,auth,sync}.ts` + `src/ui/account.ts` (☰ → Account) +
       `public/privacy.html`; Android: `@capgo/capacitor-social-login`, Facebook SDK excluded.
-      Google provider on (owner's OAuth web client `178803855692-hqbv…` in Google Cloud project
+      Google provider on (owner's OAuth web client `674921848576-e00g…` (moved 2026-11-16 from project "Make") in Google Cloud project
       "Ayah Studio"; secret only in Supabase; web sign-in checked to reach Google's page).
       RLS tests: `supabase/tests/*.test.sql` (pgTAP), run by `.github/workflows/supabase.yml` with the
       Supabase CLI against a local database (`supabase db start` + `supabase test db`, no token).
