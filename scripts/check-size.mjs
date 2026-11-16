@@ -17,7 +17,9 @@ import { gzipSync } from 'node:zlib';
 // Friday Maghrib, so the Maghrib / Islamic-day module (rankDay.ts, 1.5 KB) now loads with the goals instead of with Ranks.
 // 2026-11-14: raised to 130 for 30 interface languages (128.3 KB): the language system in i18n (+0.9 KB) and the
 // translation list with 14 more editions, so the default translation follows the interface language (+0.7 KB).
-const BUDGET_KB = 130;
+// 2026-11-16: raised to 132 for 59 more recordings (131.6 KB: their entries in the reciter list, which the player and
+// the reciter pickers need at once).
+const BUDGET_KB = 132;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

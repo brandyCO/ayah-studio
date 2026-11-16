@@ -1,0 +1,28 @@
+# Reciter health check (owner request 2026-11-16, "check the reciters"): every recording's audio, timings,
+# word files and Bismillah data (scripts/reciter-health.py), from GitHub (the build container cannot reach
+# Quran.com or archive.org). Run by hand, or when reciter data changes. Results as an artifact.
+name: Reciter health
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - src/data/reciters.ts
+      - public/data/mp3quran/**
+      - public/data/basmala.json
+      - scripts/reciter-health.py
+      - .github/workflows/reciter-health.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every recording
+        run: python3 scripts/reciter-health.py problems.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reciter-health
+          path: problems.json

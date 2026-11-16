@@ -434,7 +434,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `scripts/new-recordings.json`: 187 more mp3quran Hafs recordings, aligned in batches (`only = new:N`; a run
       restarts itself until every surah has a result, then checks the openings and starts the next batch). Owner
       decision 2026-11-09: add every new one, skip copies (same ayah lengths in Ya-Sin to ~20 ms). Batch 1: 53 added (ids
-      1051–1103, migration `20261109000000_more_recordings_batch1.sql`), 7 copies left out. Surah-finished card waits until the recitation leaves the surah
+      1051–1103, migration `20261109000000_more_recordings_batch1.sql`), 7 copies left out. Batch 2: 59 added (ids 1104–1162, migration `20261113200000_more_recordings_batch2.sql`; a-rushdi-almusshaf-al-mo-lim = Ayman Sowaid 1023, left out); the copy check now compares the spoken span of each Ya-Sin ayah (everyayah: first word to last word of each file), another surah where Ya-Sin did not align. Surah-finished card waits until the recitation leaves the surah
       **Listen anywhere** (owner request 2026-11-02): one player for the whole app (`sharedPlayer()` in
       `src/ui/player.ts`); the mushaf attaches to it (`attachPlayer()`: page tracking, lit words) and on any other
       screen (Me: claims, tasbih; surah list; drafts) the bar sits above the tab bar (`body.listening-away`) with
