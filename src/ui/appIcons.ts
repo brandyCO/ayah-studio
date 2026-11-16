@@ -12,6 +12,7 @@ import { bt, type BadgeKey } from '../i18n/badges';
 import { h, haptic, toast } from './dom';
 import { refreshAppIcon, themeIconUrl } from './theme';
 import { Capacitor } from '@capacitor/core';
+import { account } from '../cloud/auth';
 
 export const APP_ICONS = ICON_TIERS;
 export type AppIconId = IconTier;
@@ -38,7 +39,8 @@ export const TIER_GLOW: Record<IconTier, string> = {
 };
 
 const json = (k: string): any => { try { return JSON.parse(localStorage.getItem(k) ?? 'null'); } catch { return null; } };
-const prizes = (): { place: number | null; tier: number }[] => { const p = json('rankCache')?.v?.prizes; return Array.isArray(p) ? p : []; };
+// Only the signed-in account's Ranks answers: another account's #1 weeks never unlock icons here.
+const prizes = (): { place: number | null; tier: number }[] => { const c = json('rankCache'); const p = c && c.who === account()?.id ? c.v?.prizes : null; return Array.isArray(p) ? p : []; };
 
 /** Which icons are won. */
 export function unlockedIcons(): Set<AppIconId> {
