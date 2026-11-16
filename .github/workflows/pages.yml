@@ -138,7 +138,8 @@ jobs:
           for i in 1 2 3 4 5 6; do got=$(curl -sf "$site/version.json" || true); [ "$got" = "$want" ] && break; sleep 10; done
           test "$got" = "$want" || { echo "::error::$site serves $got, this build is $want"; exit 1; }
           curl -sf "$site/" | grep -q '<title>Ayah Studio</title>' || { echo "::error::$site/ is not the app"; exit 1; }
-          curl -sf "$site/privacy.html" | grep -q 'id="delete"' || { echo "::error::$site/privacy.html missing"; exit 1; }
+          # Cloudflare answers /privacy.html with a redirect to /privacy (html_handling auto-trailing-slash), so follow it.
+          curl -sfL "$site/privacy.html" | grep -q 'id="delete"' || { echo "::error::$site/privacy.html missing"; exit 1; }
           curl -sf "$site/sw.js" > /dev/null || { echo "::error::$site/sw.js missing"; exit 1; }
           grep -q "$site/" files/site/assets/*.js || echo "::warning::The build's PUBLIC_URL is not $site/ (src/cloud/config.ts)"
           echo "The web app is live at $site/" >> "$GITHUB_STEP_SUMMARY"
