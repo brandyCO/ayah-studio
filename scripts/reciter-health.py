@@ -80,7 +80,10 @@ def qdc(r,s):
     if not f: return (r['id'],r['name'],'no audio file',s,u)
     vt=f.get('verse_timings') or []
     if not vt: return (r['id'],r['name'],'no verse timings',s,u)
-    noseg=[v['verse_key'] for v in vt if not v.get('segments')]
+    fx=f"{R}/public/data/qdc-fix/{r['id']}/{s:03d}.json"
+    fix=json.load(open(fx)) if os.path.exists(fx) else {}
+    # An ayah Quran.com left without word times is fine when our timing audit (qdc-fix) times its words.
+    noseg=[v['verse_key'] for v in vt if not v.get('segments') and not (fix.get(v['verse_key'].split(':')[1]) or {}).get('w')]
     st,ln,loc=head(f['audio_url'])
     if st!=200: return (r['id'],r['name'],f'HTTP {st} {loc or ""}',s,f['audio_url'])
     if noseg and not (r['id']==173 and noseg==['1:1']): return (r['id'],r['name'],f'no word timings {noseg[:5]}',s,u)
@@ -104,5 +107,6 @@ json.dump(probs,open(sys.argv[1],'w'),indent=0,default=str)
 print(len(probs),'problems')
 from collections import Counter
 print(Counter((p[0],p[1],str(p[2])[:20]) for p in probs).most_common(60))
+for p in probs: print(*p)
 
 sys.exit(1 if probs else 0)
