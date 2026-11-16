@@ -390,7 +390,7 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       that pass: heard clearly, every word timed in order, no word but the last > 3 s and no silence > 2.5 s
       inside the ayah — repetitions would stretch a word), the mp3quran cuts and `words: '…'` in `reciters.ts`.
       Checked against Quran.com's word times for Alafasy (same recording, 8 surahs): median 0.04 s, 90 % within
-      0.17 s. App: `src/data/alignedWords.ts`; mp3quran timings get `segments`; everyayah reels plan words per
+      0.17 s. App: `src/data/alignedWords.ts`; the build packs the surah files by juz (`scripts/pack-words.mjs` after `vite build`: `data/words/{key}/p{FFF}.json`, the surahs whose ayah 1 lies in one juz, `WORD_PACKS`; 2026-11-16, ~5,300 files instead of ~21,000 so the site stays under Cloudflare's 20,000; the dev server reads the surah files); mp3quran timings get `segments`; everyayah reels plan words per
       ayah file (`planClipReel(…, words)`); a reel is word-timed only when every ayah has words (rule 8).
       Aligner details: free audio (star) costs 1 nat a frame (stray audio before ayah 1 is no longer taken for
       it); what precedes ayah 1 (basmala / isti'adha) is heard by a read-back (`opening()`), not chosen by score;
