@@ -49,9 +49,10 @@ export function mark(key: string) {
   let day = s.days[d];
   if (!day) {
     day = s.days[d] = { k: [], s: [] };
-    const native = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+    const cap = (window as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
+    const plat = cap?.getPlatform?.() === 'ios' ? 'ios' : cap?.getPlatform?.() === 'android' ? 'android' : 'web';
     const lang = (document.documentElement.lang || 'en').slice(0, 2).toLowerCase();
-    day.k.push(ageKey(s.since, d), `p:${native ? 'android' : 'web'}`, `l:${/^[a-z]{2}$/.test(lang) ? lang : 'xx'}`);
+    day.k.push(ageKey(s.since, d), `p:${plat}`, `l:${/^[a-z]{2}$/.test(lang) ? lang : 'xx'}`);
   }
   const add = (k: string) => { if (!day!.k.includes(k)) { day!.k.push(k); dirty = true; } };
   add(key);

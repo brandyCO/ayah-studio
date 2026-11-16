@@ -2,6 +2,7 @@
   "name": "ayah-studio",
   "private": true,
   "version": "0.0.1",
+  "iosVersion": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,6 +25,7 @@
     "@capacitor/core": "^8.5.3",
     "@capacitor/filesystem": "^8.1.4",
     "@capacitor/geolocation": "8.2.3",
+    "@capacitor/ios": "^8.5.3",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.3",
     "@capgo/capacitor-social-login": "^8.5.14",

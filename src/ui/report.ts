@@ -5,7 +5,7 @@
 // and goes out when the app is online again. The owner reads them in the Supabase dashboard.
 import { SUPABASE_KEY, SUPABASE_URL } from '../cloud/config';
 import { installId } from '../net';
-import { isNative } from '../native';
+import { isNative, platform } from '../native';
 import { t } from '../i18n';
 import { h, toast } from './dom';
 
@@ -23,7 +23,7 @@ const QUEUE = 'reportQueue';
 const base = (): ReportContext => ({
   screen: location.hash.slice(0, 60) || '#/',
   build: __BUILD__,
-  app: isNative() ? 'android' : 'web',
+  app: platform(),
   ua: navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 140),
   lang: document.documentElement.lang,
   vw: innerWidth, vh: innerHeight,

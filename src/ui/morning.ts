@@ -7,7 +7,7 @@ import { loadMeta, surahText, surahTranslation } from '../data/quran';
 import { loadDaily, pick } from '../data/daily';
 import { currentTranslation, translationInfo } from '../data/translations';
 import { lang, t, uiRef } from '../i18n';
-import { isNative } from '../native';
+import { hasPlugin, isNative } from '../native';
 import { h, toast } from './dom';
 
 const Daily = registerPlugin<{
@@ -81,7 +81,7 @@ export function dailyWidgetLang(): DailyLang {
 }
 export function setDailyWidgetLang(v: DailyLang) {
   try { localStorage.setItem('dailyWidgetLang', v); } catch { /* ignore */ }
-  if (isNative()) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e));
+  if (hasPlugin('Daily')) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e));
 }
 
 const AR_DAYS = 21; // Arabic pictures are made for the next three weeks; the app renews them on start
@@ -159,7 +159,7 @@ export async function initDailyNative() {
     const hash = e.notification.extra?.hash;
     if (typeof hash === 'string' && hash.startsWith('#/s/')) location.hash = hash;
   });
-  const sync = () => { void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e)); void scheduleMorning().catch(() => {}); };
+  const sync = () => { if (hasPlugin('Daily')) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e)); void scheduleMorning().catch(() => {}); };
   sync();
   window.addEventListener('translation-changed', sync);
 }

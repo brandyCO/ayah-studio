@@ -49,7 +49,7 @@ import { ayahLength, planSeries } from '../engine/series';
 import { qdcSurah } from '../data/qdc';
 import { liteMode } from '../lite';
 import { perfRecord, perfStart } from '../perf';
-import { exportGuard, isNative, saveVideo, shareableLink, shareFile, shareFiles, type SavedFile } from '../native';
+import { exportGuard, isIOS, isNative, saveVideo, shareableLink, shareFile, shareFiles, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
 import { h, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
@@ -2594,7 +2594,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     overlay.hidden = false;
     progressRow.hidden = false;
     result.hidden = true;
-    shareExtras.replaceChildren(trustLine(), captionBlock());
+    shareExtras.replaceChildren(trustLine(), isIOS() ? h('p', { class: 'muted small' }, ui('ios.keepOpen')) : '', captionBlock());
     void askToNotify();
     const ctrl = exporting;
     // Android: a foreground service keeps the export going when the user leaves the app.

@@ -7,5 +7,9 @@ export const SUPABASE_KEY: string = import.meta.env.VITE_SUPABASE_KEY || 'sb_pub
 /** Google OAuth web client ID (public; the client secret lives only in Supabase). */
 export const GOOGLE_WEB_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID || '178803855692-hqbv3391cn2v71o9ba9jh2hkbs8s20bb.apps.googleusercontent.com';
 
+/** Google OAuth iOS client ID (public), for "Sign in with Google" in the iPhone app (docs/ios.md). Without it the
+ *  iPhone app offers Sign in with Apple only. Its reversed form is the app's URL scheme (set by the iOS build). */
+export const GOOGLE_IOS_CLIENT_ID: string = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID || '';
+
 /** The public web app (GitHub Pages): links shared from the Android app point here. */
 export const PUBLIC_URL = 'https://brandyco.github.io/ayah-studio/';

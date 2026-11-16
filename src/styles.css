@@ -436,6 +436,13 @@ body.mushaf-wide .mushaf-page > * { flex-shrink: 0; }
 .acc-who { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
 .acc-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--sel); font-weight: 700; }
 .google-btn { width: 100%; padding: 12px; font-size: var(--fs-l); }
+/* Sign in with Apple (iPhone app): Apple's own look, black on light screens, white on dark; Apple's logo and
+   the same size as the other sign-in button (App Store guideline 4.8, Human Interface Guidelines) */
+.apple-btn { width: 100%; padding: 12px; font-size: var(--fs-l); display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #000; color: #fff; border: 0; border-radius: 12px; font-weight: 600; }
+.apple-btn svg { width: 18px; height: 18px; fill: currentColor; margin-block-start: -3px; }
+@media (prefers-color-scheme: dark) { .apple-btn { background: #fff; color: #000; } }
+.signin-btns { display: grid; gap: 10px; }
 .menu-item.danger, .primary.danger { color: #c62828; }
 .primary.danger { background: #c62828; color: #fff; border-color: transparent; }
 @media (prefers-color-scheme: dark) { .menu-item.danger { color: #ff7b7b; } }
