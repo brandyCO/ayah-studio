@@ -19,7 +19,8 @@ import { gzipSync } from 'node:zlib';
 // translation list with 14 more editions, so the default translation follows the interface language (+0.7 KB).
 // 2026-11-16: raised to 132 for 59 more recordings (131.6 KB: their entries in the reciter list, which the player and
 // the reciter pickers need at once).
-const BUDGET_KB = 132;
+// 2026-11-16: raised to 134 for 49 more (batch 3, 133.0 KB).
+const BUDGET_KB = 134;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;
