@@ -23,18 +23,20 @@ jobs:
           set -u
           SB=https://jposubjybzstfmnngews.supabase.co
           KEY=sb_publishable_Su6KSbkC7LHqqLwoKbrj6w_aevj2aY9
-          probe() { # name, command
+          probe() { # name, command, URL to show the answer of when down
             for i in 1 2 3; do
               if eval "$2" > /dev/null 2>&1; then echo "$1: up"; return 0; fi
               sleep 30
             done
             echo "$1: DOWN"; echo "$1" >> down.txt
+            [ -n "${3:-}" ] && curl -s -o /tmp/body -H 'Origin: https://brandyco.github.io' -w "  last answer: HTTP %{http_code} in %{time_total} s\n" --max-time 20 "$3" || true
+            [ -s /tmp/body ] && head -c 300 /tmp/body | tr -d '\n' | sed 's/^/  /' && echo || true
           }
           : > down.txt
           probe "Web app (GitHub Pages)" "curl -sf --max-time 20 https://brandyco.github.io/ayah-studio/ | grep -q 'Ayah Studio'"
           probe "Sign-in (Supabase Auth)" "curl -sf --max-time 20 -H 'apikey: $KEY' $SB/auth/v1/health"
           probe "Database (Supabase)" "curl -sf --max-time 20 -X POST -H 'apikey: $KEY' -H 'content-type: application/json' -d '{\"code\":\"uptimecheck\"}' $SB/rest/v1/rpc/relight_preview"
-          if [ -n "$PROXY" ]; then probe "Edge proxy (Cloudflare)" "curl -sf --max-time 20 ${PROXY%/}/config"; fi
+          if [ -n "$PROXY" ]; then probe "Edge proxy (Cloudflare)" "curl -sf --max-time 20 -H 'Origin: https://brandyco.github.io' ${PROXY%/}/config" "${PROXY%/}/config"; fi
           echo "down=$(paste -sd ', ' down.txt)" >> "$GITHUB_OUTPUT"
       - name: Open or close the alert
         uses: actions/github-script@v7
