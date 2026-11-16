@@ -405,14 +405,14 @@ export async function acceptChallenge(code: string): Promise<string> {
 }
 /** Challenges a friend straight away (no link); it waits for their yes. */
 export async function challengeFriend(pid: string, kind: ChallengeKind): Promise<string> {
-  await report();
+  void report().catch(() => {}); // never holds the challenge up (it can wait ~5 s between reports)
   const id = await rpc<string>('rank_challenge_friend', { who: pid, k: kind });
   dropCache();
   return id;
 }
 /** A team quest with a friend: one shared goal for the 7 days; it waits for their yes. */
 export async function teamWithFriend(pid: string, kind: ChallengeKind, goal: number): Promise<string> {
-  await report();
+  void report().catch(() => {}); // never holds the challenge up (it can wait ~5 s between reports)
   const id = await rpc<string>('rank_challenge_team', { who: pid, k: kind, g: goal });
   dropCache();
   return id;

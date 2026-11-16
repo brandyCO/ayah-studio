@@ -308,6 +308,7 @@ button { font: inherit; color: inherit; }
   box-shadow: var(--shadow); transition: transform .2s; max-width: calc(100% - 32px);
 }
 .toast.show { transform: translate(-50%, 0); }
+.toast[popover] { inset: auto; top: 16px; left: 50%; margin: 0; border: 0; height: auto; overflow: visible; }
 .error { padding: 40px 0; text-align: center; }
 
 /* topbar chip (view toggle) */
