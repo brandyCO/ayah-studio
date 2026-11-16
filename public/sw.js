@@ -34,8 +34,11 @@ function edgeHas(v) {
   return edgeVersion.p.then((s) => s.has(v));
 }
 /** The file from Cloudflare (null when it cannot give this exact file), else nothing. */
+// Safari (every iPhone browser is WebKit) refuses what we pass on from Cloudflare ("access control checks", found
+// with scripts/webkit-check.mjs 2026-11-16), so it takes everything from the site itself.
+const WEBKIT = /AppleWebKit/.test(self.navigator.userAgent) && !/Chrome|Chromium|Android/.test(self.navigator.userAgent);
 async function fromEdge(path, url, priority) {
-  if (!FILES || !EDGE_PATH(path)) return null;
+  if (!FILES || WEBKIT || !EDGE_PATH(path)) return null;
   const v = url.searchParams.get('v');
   if (v && !(await edgeHas(v))) return null;
   try {
