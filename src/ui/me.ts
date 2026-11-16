@@ -85,7 +85,7 @@ let goalTab: GoalTab = (() => { try { const v = localStorage.getItem('meGoalTab'
 /** A friend challenge waits for an answer or a chest, from the Ranks answers kept on this device (no network). */
 const challengeWaiting = () => {
   try {
-    const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null')?.v?.challenges as { incoming?: boolean; over?: boolean; claimed?: boolean; start?: string | null }[] | undefined;
+    const c = JSON.parse(localStorage.getItem('rankCache') ?? 'null'); const v = (c?.who === account()?.id ? c?.v?.challenges : undefined) as { incoming?: boolean; over?: boolean; claimed?: boolean; start?: string | null }[] | undefined;
     return !!v?.some((c) => c.incoming || (c.over && !c.claimed && c.start));
   } catch { return false; }
 };
