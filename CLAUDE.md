@@ -738,7 +738,10 @@ Pro and a load test come later, when the owner decides to pay).
       `.github/workflows/limits.yml` every hour reads the Supabase database (500 MB), stored files (1 GB), connections
       (`max_connections`), egress this month (5 GB; Management API usage endpoint, when it answers) and Cloudflare Workers
       requests today (100,000, GraphQL analytics with the proxy's token); one issue per limit (label `limit`, assigned to
-      the owner) at 70 %, a mention at 90 %, closed under 60 %. `scale` input multiplies readings for a test
+      the owner) at 70 %, a mention at 90 %, closed under 60 %. `scale` input multiplies readings for a test. Egress is
+      estimated from the last 24 h of gateway logs (`edge_logs` × days in the month) and needs a token with "Analytics logs:
+      read" as the secret `SUPABASE_LOGS_TOKEN` (the deploy token lacks it; first run 2026-11-16: database 15.6 MB, files 0,
+      15 of 60 connections, 101 Workers requests)
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings

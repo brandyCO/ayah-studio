@@ -68,7 +68,11 @@ jobs:
         # The Management API has no egress figure, so this adds up the bytes the API gateway sent in the last 24 hours
         # (edge_logs: database API, sign-in, file downloads) and reads it as the month's pace: last day × days in the
         # month. The free plan keeps logs for one day, which is what this needs.
+        # Needs a Supabase access token allowed to read the logs ("Analytics logs: read"): the secret SUPABASE_LOGS_TOKEN,
+        # else the deploy token is tried (which may lack that permission; the run then says so and skips egress).
         continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_LOGS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -uo pipefail
           S=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ); E=$(date -u +%Y-%m-%dT%H:%M:%SZ)
