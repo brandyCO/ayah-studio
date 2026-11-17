@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayah Studio · Support</title>
+<meta name="description" content="Get help with Ayah Studio: answers to common questions and a form that reaches us directly.">
+<link rel="icon" href="./support-icon.webp">
+<style>
+  @font-face { font-family: 'Nunito'; src: url('./fonts/Nunito-latin.woff2') format('woff2'); font-weight: 200 1000; font-display: swap; }
+  @font-face { font-family: 'ArabicUI'; src: url('./fonts/NotoSansArabic-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+  @font-face { font-family: 'ArabicUI'; src: url('./fonts/NotoSansArabic-Bold.woff2') format('woff2'); font-weight: 700 1000; font-display: swap; unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+  :root {
+    --bg: #07130f; --bg2: #0b2019; --card: rgba(255,255,255,.055); --line: rgba(255,255,255,.1);
+    --text: #eef5f2; --muted: #9db3ab; --accent: #3dd1ad; --brand: linear-gradient(135deg, #05573d, #0f8273);
+    --warm: #ffd98a; --err: #ff8a7a; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; color: var(--text); font: 16px/1.55 'Nunito', 'ArabicUI', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(900px 520px at 50% -80px, rgba(61,209,173,.22), transparent 70%), linear-gradient(180deg, var(--bg2), var(--bg) 60%); background-attachment: fixed; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 56px; }
+  .top { display: flex; justify-content: flex-end; }
+  .lang { background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+  header { text-align: center; padding: 8px 0 22px; }
+  header img { width: 84px; height: 84px; border-radius: 22%; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  h1 { font-size: 30px; font-weight: 900; margin: 14px 0 4px; letter-spacing: -.3px; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lead { color: var(--muted); margin: 0; font-size: 17px; }
+  h2 { font-size: 19px; font-weight: 900; margin: 30px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+  details { border-bottom: 1px solid var(--line); padding: 12px 2px; }
+  details:last-child { border-bottom: 0; }
+  summary { cursor: pointer; font-weight: 800; list-style: none; display: flex; gap: 10px; justify-content: space-between; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; color: var(--accent); font-weight: 900; }
+  details[open] summary::after { content: '–'; }
+  details p { margin: 8px 0 2px; color: var(--muted); }
+  a { color: var(--accent); }
+  label { display: block; font-weight: 800; margin: 16px 0 6px; }
+  label small { color: var(--muted); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--brand); border-color: transparent; color: #fff; box-shadow: 0 0 18px rgba(61,209,173,.25); }
+  input, textarea { width: 100%; background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: 14px; color: var(--text); font: inherit; padding: 12px 14px; }
+  input:focus, textarea:focus, .chip:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  textarea { min-height: 150px; resize: vertical; }
+  .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .send { margin-top: 20px; width: 100%; border: 0; border-radius: 16px; padding: 15px; font: inherit; font-size: 17px; font-weight: 900; color: #fff;
+    background: var(--brand); box-shadow: 0 5px 0 #03392a, 0 0 24px rgba(61,209,173,.25); cursor: pointer; }
+  .send:active { transform: translateY(3px); box-shadow: 0 2px 0 #03392a; }
+  .send:disabled { opacity: .6; cursor: default; }
+  .note { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  .msg { margin-top: 14px; font-weight: 700; }
+  .msg.err { color: var(--err); }
+  .done { text-align: center; padding: 26px 10px; }
+  .done .tick { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center; background: var(--brand); font-size: 32px; box-shadow: 0 0 30px rgba(61,209,173,.35); }
+  .done h3 { font-size: 22px; font-weight: 900; margin: 0 0 6px; }
+  .done p { color: var(--muted); margin: 0 0 16px; }
+  .again { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 8px 16px; font: inherit; font-weight: 800; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 34px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><button class="lang" id="lang" type="button">العربية</button></div>
+  <header>
+    <img src="./support-icon.webp" alt="" width="84" height="84">
+    <h1 data-t="title">Ayah Studio <em>Support</em></h1>
+    <p class="lead" data-t="lead">We read every message. Write to us and we'll get back to you, in shaa Allah.</p>
+  </header>
+
+  <h2 data-t="faqTitle">Quick answers</h2>
+  <div class="card">
+    <details><summary data-t="q1">Do I need an account?</summary><p data-t="a1">No. Everything works without one. Signing in with Apple or Google only keeps your progress the same on all your devices and lets you join weekly leagues.</p></details>
+    <details><summary data-t="q2">My progress doesn't show on my other phone</summary><p data-t="a2">Sign in with the same account on both, then open Me and pull down to sync. Progress is never deleted; it is joined from all your devices.</p></details>
+    <details><summary data-t="q3">How do I listen without internet?</summary><p data-t="a3">Tap the star beside a reciter and choose what to download. Surahs you have listened to before are also kept on the phone.</p></details>
+    <details><summary data-t="q4">How do I make a reel?</summary><p data-t="a4">Open a surah, long-press an ayah (drag to select more), then tap "Turn into reel". Export saves a 9:16 video with the recitation synced to the words.</p></details>
+    <details><summary data-t="q5">How do I delete my account?</summary><p><span data-t="a5">Me → ⚙ → Account → Delete account. Everything linked to you is removed.</span> <a href="./privacy.html#delete" data-t="a5link">More details</a></p></details>
+  </div>
+
+  <h2 data-t="formTitle">Send us a message</h2>
+  <div class="card">
+    <form id="form" novalidate>
+      <label id="kindLabel" data-t="kind">What is it about?</label>
+      <div class="chips" role="group" aria-labelledby="kindLabel" id="kinds">
+        <button type="button" class="chip" data-k="problem" aria-pressed="true" data-t="k_problem">Something's wrong</button>
+        <button type="button" class="chip" data-k="question" aria-pressed="false" data-t="k_question">A question</button>
+        <button type="button" class="chip" data-k="idea" aria-pressed="false" data-t="k_idea">An idea</button>
+        <button type="button" class="chip" data-k="account" aria-pressed="false" data-t="k_account">My account</button>
+        <button type="button" class="chip" data-k="other" aria-pressed="false" data-t="k_other">Other</button>
+      </div>
+      <label for="text" data-t="message">Your message</label>
+      <textarea id="text" maxlength="4000" required data-ph="messagePh" placeholder="Tell us what happened, on which screen, and what you expected."></textarea>
+      <label for="email"><span data-t="email">Your email</span> <small data-t="emailHint">(so we can reply)</small></label>
+      <input id="email" type="email" autocomplete="email" maxlength="200" required placeholder="you@example.com">
+      <label for="name"><span data-t="name">Your name</span> <small data-t="optional">(optional)</small></label>
+      <input id="name" type="text" autocomplete="name" maxlength="80">
+      <div class="hp" aria-hidden="true"><label>Website <input id="site" tabindex="-1" autocomplete="off"></label></div>
+      <button class="send" id="send" type="submit" data-t="send">Send</button>
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      <p class="note" data-t="note">We only use your email to answer you. Your device type is sent with the message to help us fix problems.</p>
+    </form>
+    <div class="done" id="done" hidden>
+      <div class="tick" aria-hidden="true">✓</div>
+      <h3 data-t="thanks">JazakAllahu khayran!</h3>
+      <p data-t="thanksText">Your message reached us. We'll reply to your email soon.</p>
+      <button type="button" class="again" id="again" data-t="again">Send another</button>
+    </div>
+  </div>
+
+  <footer><a href="./privacy.html" data-t="privacy">Privacy</a> · Ayah Studio</footer>
+</main>
+<script>
+(() => {
+  // Messages go to the app's Sentry project as User Feedback (the same place as the in-app "Send feedback"),
+  // which emails the owner. The DSN only allows sending; it is the same public key the app ships with.
+  const DSN = 'https://0c7a568f8a96fd268c7029a23457701f@o4512439928553472.ingest.de.sentry.io/4512439952932944';
+  const AR = {
+    title: 'دعم <em>Ayah Studio</em>', lead: 'نقرأ كل رسالة. اكتب لنا وسنرد عليك إن شاء الله.',
+    faqTitle: 'إجابات سريعة',
+    q1: 'هل أحتاج إلى حساب؟', a1: 'لا. كل شيء يعمل بدون حساب. تسجيل الدخول بـ Apple أو Google يحفظ تقدّمك على كل أجهزتك ويتيح لك الدخول في الدوريات الأسبوعية.',
+    q2: 'تقدّمي لا يظهر على هاتفي الآخر', a2: 'سجّل الدخول بالحساب نفسه على الجهازين، ثم افتح «أنا» واسحب للأسفل للمزامنة. لا يُحذف أي تقدّم، بل يُجمع من كل أجهزتك.',
+    q3: 'كيف أستمع بدون إنترنت؟', a3: 'اضغط النجمة بجانب القارئ واختر ما تريد تنزيله. السور التي استمعت إليها من قبل تبقى أيضاً على الهاتف.',
+    q4: 'كيف أصنع ريلز؟', a4: 'افتح سورة، واضغط مطولاً على آية (واسحب لتحديد المزيد)، ثم اضغط «حوّلها إلى ريل». التصدير يحفظ فيديو 9:16 والتلاوة متزامنة مع الكلمات.',
+    q5: 'كيف أحذف حسابي؟', a5: 'أنا ← ⚙ ← الحساب ← حذف الحساب. يُحذف كل ما يرتبط بك.', a5link: 'تفاصيل أكثر',
+    formTitle: 'أرسل لنا رسالة', kind: 'عمّ تريد أن تكتب؟',
+    k_problem: 'هناك مشكلة', k_question: 'سؤال', k_idea: 'فكرة', k_account: 'حسابي', k_other: 'غير ذلك',
+    message: 'رسالتك', messagePh: 'أخبرنا بما حدث، وفي أي شاشة، وما الذي توقعته.',
+    email: 'بريدك الإلكتروني', emailHint: '(لنرد عليك)', name: 'اسمك', optional: '(اختياري)',
+    send: 'إرسال', sending: 'جارٍ الإرسال…',
+    note: 'نستخدم بريدك فقط للرد عليك. يُرسل نوع جهازك مع الرسالة لمساعدتنا على حل المشكلات.',
+    needText: 'اكتب رسالتك أولاً.', needEmail: 'أدخل بريداً إلكترونياً صحيحاً لنتمكن من الرد.',
+    failed: 'تعذّر الإرسال. تحقق من اتصالك وحاول مرة أخرى؛ رسالتك ما زالت هنا.',
+    thanks: 'جزاك الله خيراً!', thanksText: 'وصلتنا رسالتك. سنرد على بريدك قريباً.', again: 'أرسل رسالة أخرى', privacy: 'الخصوصية',
+  };
+  const EN = { sending: 'Sending…', needText: 'Please write your message first.', needEmail: 'Please enter a valid email so we can reply.',
+    failed: "Couldn't send. Check your connection and try again; your message is still here." };
+  const $ = (id) => document.getElementById(id);
+  const orig = {};
+  document.querySelectorAll('[data-t]').forEach((el) => { orig[el.dataset.t] = el.innerHTML; });
+  orig.messagePh = $('text').placeholder;
+  let lang = 'en';
+  const t = (k) => (lang === 'ar' ? AR[k] : EN[k] || orig[k]);
+  function setLang(l) {
+    lang = l;
+    document.documentElement.lang = l; document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+    document.querySelectorAll('[data-t]').forEach((el) => { el.innerHTML = l === 'ar' ? AR[el.dataset.t] : orig[el.dataset.t]; });
+    $('text').placeholder = t('messagePh');
+    $('lang').textContent = l === 'ar' ? 'English' : 'العربية';
+    document.title = l === 'ar' ? 'الدعم · Ayah Studio' : 'Ayah Studio · Support';
+    try { localStorage.setItem('supportLang', l); } catch {}
+  }
+  let saved = null; try { saved = localStorage.getItem('supportLang'); } catch {}
+  const q = new URLSearchParams(location.search).get('lang');
+  setLang(q === 'ar' || q === 'en' ? q : saved || ((navigator.language || '').startsWith('ar') ? 'ar' : 'en'));
+  $('lang').onclick = () => setLang(lang === 'ar' ? 'en' : 'ar');
+
+  let kind = 'problem';
+  $('kinds').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    kind = b.dataset.k;
+    document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+  });
+
+  const hex = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');
+  function device() {
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
+    if (/Android/.test(ua)) return 'Android';
+    if (/Windows/.test(ua)) return 'Windows';
+    if (/Mac OS X/.test(ua)) return 'Mac';
+    return 'Other';
+  }
+  async function send(text, email, name) {
+    const m = DSN.match(/^https:\/\/([^@]+)@([^/]+)\/(\d+)$/);
+    const url = `https://${m[2]}/api/${m[3]}/envelope/?sentry_key=${m[1]}&sentry_version=7&sentry_client=ayah-support/1`;
+    const id = hex(16), now = new Date();
+    const event = {
+      event_id: id, type: 'feedback', timestamp: now.getTime() / 1000, platform: 'javascript', level: 'info',
+      tags: { kind, source: 'support-page', lang, platform: device() },
+      contexts: { feedback: { message: `[Support · ${kind}] ${text}`, contact_email: email, name: name || undefined, url: location.href, source: 'support-page' } },
+      request: { url: location.href, headers: { 'User-Agent': navigator.userAgent } },
+    };
+    const body = [JSON.stringify({ event_id: id, sent_at: now.toISOString(), dsn: DSN }), JSON.stringify({ type: 'feedback' }), JSON.stringify(event)].join('\n');
+    const r = await fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
+    if (!r.ok) throw new Error(String(r.status));
+  }
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg'); msg.className = 'msg'; msg.textContent = '';
+    const text = $('text').value.trim(), email = $('email').value.trim(), name = $('name').value.trim();
+    if ($('site').value) { $('form').hidden = true; $('done').hidden = false; return; } // a bot filled the hidden field
+    if (!text) { msg.className = 'msg err'; msg.textContent = t('needText'); $('text').focus(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = 'msg err'; msg.textContent = t('needEmail'); $('email').focus(); return; }
+    const btn = $('send'); btn.disabled = true; btn.textContent = t('sending');
+    try {
+      await send(text, email, name);
+      $('form').hidden = true; $('done').hidden = false; $('text').value = '';
+    } catch {
+      msg.className = 'msg err'; msg.textContent = t('failed');
+    } finally { btn.disabled = false; btn.textContent = t('send'); }
+  });
+  $('again').onclick = () => { $('done').hidden = true; $('form').hidden = false; $('text').focus(); };
+})();
+</script>
+</body>
+</html>
