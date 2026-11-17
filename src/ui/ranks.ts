@@ -276,6 +276,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       head.replaceChildren(h('div', { class: 'rk-me me-card' }, h('p', {}, rt('rk.notYet')), howBtn()));
       return;
     }
+    // What the old card showed stays until its replacement is ready: the podium and the VS badge move over.
+    const keptPod = head.querySelector<HTMLElement>('.rk-hero .rk-podium');
+    keptBadge = head.querySelector<HTMLElement>('.rk-hero .du-badge');
     topActs.replaceChildren(
       infoBtn(),
       bell,
@@ -294,6 +297,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
             pts(s.week, false), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
         isRankFriday() ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
       strip(s)) : '');
+    keptBadge = null;
+    const newHero = head.querySelector('.rk-hero');
+    if (keptPod && newHero) newHero.insertBefore(keptPod, newHero.querySelector('.du-badge'));
     heroPodium();
     if (fromKept) return;
     void paintPrizes(s, fresh);
@@ -302,18 +308,28 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   const kindNames: Record<string, string> = {};
   void import('../i18n/challenges').then((m) => { for (const k of ['pages', 'listen', 'lessons', 'adhkar', 'dhikr'] as const) kindNames[k] = m.clt(`cl.k.${k}`); });
   // The league card opens the weekly rival full screen (owner 2026-11-12); a "VS" badge with the rival's face says so.
-  let duelLabel = '';
+  let duelLabel = '', keptBadge: HTMLElement | null = null;
   void import('../i18n/challenges').then((m) => { duelLabel = m.clt('du.title'); });
+  /** Back from a full screen (the duel): ask again quietly and repaint only what changed, never a blank-and-back. */
+  function softRefresh() {
+    void refreshCached(onScreen).catch(() => false).then(() => paint(false));
+  }
   function heroTap(el: HTMLElement): HTMLElement {
     const open = (e: Event) => {
       if ((e.target as Element).closest('.rk-hero-pts, .rk-pod')) return;
       haptic(10);
       if (el.querySelector('.du-badge.searching:not(.ready)')) { void import('../i18n/challenges').then((m) => toast(m.clt('du.findingToast'))); return; }
-      void import('./challenges').then((m) => m.openDuel(() => void paint(true)));
+      void import('./challenges').then((m) => m.openDuel(() => softRefresh()));
     };
     el.addEventListener('click', open);
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
-    void import('./challenges').then((m) => m.duelBadge()).then((b) => { if (el.isConnected || !el.querySelector('.du-badge')) el.append(b); });
+    // A repaint keeps the badge on screen and swaps in the new one only once it is filled and different (no blink).
+    if (keptBadge) el.append(keptBadge);
+    void import('./challenges').then((m) => m.duelBadge(!!keptBadge)).then((b) => {
+      const cur = el.querySelector('.du-badge');
+      if (!cur) el.append(b);
+      else if (cur.outerHTML !== b.outerHTML) cur.replaceWith(b);
+    });
     return el;
   }
   /** The league's top 3 stand in the hero (F33). */
@@ -321,9 +337,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   function heroPodium() {
     const hero = head.querySelector('.rk-hero');
     if (!hero || !leaguePlayers) return;
-    hero.querySelector('.rk-podium')?.remove();
+    // The same three, places, points and looks: the podium on screen stays as it is (rebuilding it made it blink).
+    const key = JSON.stringify(leaguePlayers.slice(0, 3).map((r) => [r.pid, r.score, r.name, r.private, r.figure, r.avatar, r.frame, r.tier, r.xp, r.me]));
+    const old = hero.querySelector<HTMLElement>('.rk-podium');
+    if (old?.dataset.k === key) return;
+    old?.remove();
     const p = podium(leaguePlayers);
     if (!p) return;
+    p.dataset.k = key;
     p.classList.add('in-hero');
     hero.insertBefore(p, hero.querySelector('.du-badge'));
   }

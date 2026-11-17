@@ -88,6 +88,7 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   const places = async () => ayahPlaces(mushaf, s);
   const basmalaSvg = fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()).catch(() => '');
   root.classList.add('learn', 'lesson');
+  if (document.body.classList.contains('listening-away')) window.dispatchEvent(new Event('player-quiet')); // its own recitation; the bar comes back, paused, after
 
   // --- which step today ---
   let step: Step = 'new';

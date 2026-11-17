@@ -12,7 +12,7 @@ import {
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
-import { avatar } from './rankAvatars';
+import { avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
@@ -20,6 +20,7 @@ import { surahName, t } from '../i18n';
 import { loadMeta, type SurahMeta } from '../data/quran';
 import { openAccount } from './account';
 import { flame } from './flame';
+import { richIcon, levelIcon } from './richIcon';
 import { h, haptic, toast } from './dom';
 import { tabBar } from './tabs';
 import { levelLabel, levelOf, levelProgress, myXp } from '../data/xp';
@@ -301,6 +302,9 @@ export function featLabel(f: Feat, meta: SurahMeta[] | null): string {
   return ft(`fn.${f.kind}` as FriendKey, { n: f.n });
 }
 const FEAT_IC: Record<Feat['kind'], string> = { streak: 'flame', level: 'star', surah: 'book', juz: 'book', khatm: 'trophy' };
+/** A milestone's premium icon: the theme's own streak flame, a level shield with its number, the mushaf, a trophy. */
+const featArt = (f: Feat, size: number): HTMLElement => f.kind === 'level' ? levelIcon(f.n, size)
+  : f.kind === 'khatm' ? h('span', { class: 'rich-ic' }, trophy(1, size)) : richIcon(FEAT_IC[f.kind], size);
 function ago(at: string) {
   const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
   return s < 60 ? ft('fn.now') : s < 3600 ? ft('fn.min', { n: Math.floor(s / 60) }) : s < 86400 ? ft('fn.h', { n: Math.floor(s / 3600) }) : ft('fn.d', { n: Math.floor(s / 86400) });
@@ -323,12 +327,12 @@ function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | stri
     return h('div', { class: `fn-row k-${f.kind}` },
       avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.figure),
       h('span', { class: 'fn-txt' }, h('b', {}, f.name ?? rt('rk.private')),
-        h('span', { class: 'fn-what' }, h('span', { class: 'fn-ic', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 14)), featLabel(f, meta), h('small', {}, ` · ${ago(f.at)}`))),
+        h('span', { class: 'fn-what' }, h('span', { class: 'fn-ic', 'aria-hidden': 'true' }, featArt(f, 22)), featLabel(f, meta), h('small', {}, ` · ${ago(f.at)}`))),
       btn);
   });
   const mine = feats.mine.slice(0, 3).map((f) => {
     const by = (f.by ?? []).map((n) => n || ft('fn.someone'));
-    return h('div', { class: 'fn-row fn-mine' }, h('span', { class: 'fn-ic big', 'aria-hidden': 'true' }, icon(FEAT_IC[f.kind], 18)),
+    return h('div', { class: 'fn-row fn-mine' }, h('span', { class: 'fn-ic big', 'aria-hidden': 'true' }, featArt(f, 40)),
       h('span', { class: 'fn-txt' }, h('b', {}, featLabel(f, meta)),
         h('span', { class: 'fn-what' }, by.length > 1 ? ft('fn.by2', { name: by[by.length - 1], n: by.length - 1 }) : ft('fn.by1', { name: by[0] ?? ft('fn.someone') }))));
   });
@@ -344,6 +348,7 @@ export async function cheersArrived() {
   if (pulse.same) return;
   let feats: Feats;
   try { feats = await featsFeed(true); } catch { return; }
+  if (!feats?.mine) return;
   markSocialSeen('cheers', pulse.p);
   let seen: Record<string, number> = {};
   let first = true;

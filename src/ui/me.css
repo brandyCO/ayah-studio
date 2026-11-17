@@ -389,6 +389,7 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .set-rows { display: grid; gap: 2px; padding: 8px; }
 .set-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 14px; color: var(--text); text-decoration: none; }
 .set-row:active { background: var(--sel); }
+.set-row.set-fb { width: 100%; border: 0; background: none; font: inherit; text-align: start; cursor: pointer; }
 .set-row-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
 .set-row-txt b { font-size: 1.02rem; }
 .set-row > svg:last-child { opacity: .45; flex: none; }
@@ -399,6 +400,7 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .set-row-ic.s-notes { background: #f59f00; }
 .set-row-ic.s-quran { background: #6c5ce7; }
 .set-row-ic.s-app { background: #667085; }
+.set-row-ic.s-feedback { background: #ff6b4a; }
 
 /* F21: Library as cards */
 .lib-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
@@ -431,11 +433,11 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .nx-kicker { margin: 0; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--nc); }
 .nx-row { display: flex; align-items: center; gap: 12px; }
 .nx-ic { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff;
-  background: var(--nc); box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); }
+  background: color-mix(in srgb, var(--nc) 16%, var(--card)); box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 30%, var(--card)); }
 .nx-me { width: 60px; height: 60px; border-radius: 50%; background: none; box-shadow: 0 4px 0 color-mix(in srgb, var(--nc) 62%, #000); position: relative; }
 .nx-me > svg { display: block; border-radius: 50%; }
-.nx-badge { position: absolute; inset-inline-end: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--nc); color: #fff; border: 2.5px solid var(--card); }
+.nx-badge { position: absolute; inset-inline-end: -8px; bottom: -6px; width: 28px; height: 28px; display: grid; place-items: center;
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.3)); }
 .nx-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .nx-txt b { font-size: 18px; font-weight: 900; line-height: 1.25; }
 .nx-bar { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--nc) 16%, transparent); overflow: hidden; margin-top: 3px; }

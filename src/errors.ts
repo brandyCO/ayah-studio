@@ -9,27 +9,40 @@ const DSN: string = import.meta.env.VITE_SENTRY_DSN ||
 
 export const errorReportsOn = () => !!DSN;
 
-export function initErrors() {
-  if (!DSN || !import.meta.env.PROD) return;
-  const start = () => void import('@sentry/browser').then((Sentry) => {
+type SentryMod = typeof import('@sentry/browser');
+let loading: Promise<SentryMod | null> | null = null;
+
+/** Sentry, loaded and set up once (crash reports and the Send feedback sheet share it); null without a DSN or offline. */
+export function sentry(): Promise<SentryMod | null> {
+  if (!DSN) return Promise.resolve(null);
+  return loading ??= import('@sentry/browser').then((Sentry) => {
     Sentry.init({
       dsn: DSN,
       release: __DATA_VERSION__,
-      environment: location.protocol === 'https:' && /(github\.io|workers\.dev)$/.test(location.hostname) ? 'web' : 'app',
+      environment: !import.meta.env.PROD ? 'dev'
+        : location.protocol === 'https:' && /(github\.io|workers\.dev)$/.test(location.hostname) ? 'web' : 'app',
       // No user details, cookies, headers, query strings or bodies.
       dataCollection: { userInfo: false, cookies: false, httpHeaders: false, httpBodies: [], urlQueryParams: false },
       tracesSampleRate: 0,
       // A share of the error reports is plenty to see a problem, and keeps a large crowd within the
-      // free plan. VITE_SENTRY_RATE (0–1) changes it; default 0.25.
+      // free plan. VITE_SENTRY_RATE (0–1) changes it; default 0.25. (Feedback is never sampled.)
       sampleRate: Math.min(1, Math.max(0, Number(import.meta.env.VITE_SENTRY_RATE) || 0.25)),
-      // Addresses can hold a draft id or a page: keep only the screen ("#/reel", "#/s").
+      // Addresses can hold a draft id or a page: keep only the screen ("#/reel", "#/s"). No crash reports
+      // from a dev server (feedback sent while testing still goes out).
       beforeSend(event) {
+        if (!import.meta.env.PROD) return null;
         if (event.request?.url) event.request.url = event.request.url.replace(/#\/([a-z]+).*/, '#/$1');
         return event;
       },
       beforeBreadcrumb: (b) => (b.category === 'navigation' || b.category === 'ui.click' ? null : b),
     });
-  }).catch(() => { /* offline: no reports this time */ });
+    return Sentry;
+  }).catch(() => { loading = null; return null; /* offline: no reports this time */ });
+}
+
+export function initErrors() {
+  if (!DSN || !import.meta.env.PROD) return;
+  const start = () => void sentry();
   // After the first screen, so it never slows the start.
   if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 5000 });
   else setTimeout(start, 3000);

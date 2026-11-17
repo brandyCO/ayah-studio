@@ -177,6 +177,7 @@ export async function showPageDrill(root: HTMLElement, pArg: string): Promise<()
   const data = await pageData(mushaf, p);
   const next = p < mod.PAGE_COUNT ? await pageData(mushaf, p + 1) : null;
   root.classList.add('learn', 'lp', 'pm', 'pm-drill');
+  if (document.body.classList.contains('listening-away')) window.dispatchEvent(new Event('player-quiet')); // its own recitation; the bar comes back, paused, after
   let mode: Mode = (sessionStorage.getItem('pmMode') as Mode) || 'starts';
   if (!['starts', 'quiz', 'recite'].includes(mode)) mode = 'starts';
 

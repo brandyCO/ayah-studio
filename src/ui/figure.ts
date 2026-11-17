@@ -1170,14 +1170,29 @@ function hairFront(f: Fig, hc: Pair): string {
   return s + `<path d="M68 68Q78 54 100 51Q118 50 128 56Q110 55 96 58Q80 62 68 68Z" fill="${mix(hc[0], '#ffffff', .22)}" opacity=".7"/>`;
 }
 
-/** Arms raised for a cheer (both up) or a wave (one up, swinging at the shoulder); drawn only for actors. */
+/** Arms raised for a cheer (both up) or a wave (one up, swinging at the shoulder); drawn only for actors. Drawn from the
+ *  rig's own joints at the rig's peak angles (src/ui/rig.ts: cheer 132° / −4°, wave 98° / 48°), so a still or quiet pose
+ *  is the same arm as the moving one, rooted at the shoulder (owner 2026-11-16: the old straight arms looked detached). */
 function raised(f: Fig, which: 'up' | 'wave'): string {
   const k = sleeve(f);
   const sk = SKIN[f.skin];
-  const hand = withWatch(f, (x: number, y: number) => mitten(x, y, sk, true), 1);
-  if (which === 'up') return arm(66, 160, 46, 112, k) + arm(134, 160, 154, 112, k) + hand(44, 106) + hand(156, 106);
-  const down = f.pose === 1 ? arm(68, 160, 64, 204, k) + hand(62, 208) : arm(66, 160, 58, 210, k) + hand(57, 214);
-  return down + `<g class="fg-wave-arm">${arm(134, 160, 160, 116, k)}${hand(162, 110)}</g>`;
+  // The watch sits on the left wrist (drawn first): above the hand when it hangs, below it when raised.
+  const watch = withWatch(f, (x: number, y: number) => mitten(x, y, sk, which === 'up'), which === 'up' ? 1 : -1);
+  const hand = (x: number, y: number, up: boolean, n: 'l' | 'r') => n === 'l' ? watch(x, y) : mitten(x, y, sk, up);
+  const J = rigJoints(f);
+  const turn = ([ox, oy]: [number, number], [x, y]: [number, number], deg: number): [number, number] => {
+    const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), dx = x - ox, dy = y - oy;
+    return [ox + dx * c - dy * s, oy + dx * s + dy * c];
+  };
+  const bent = (n: 'l' | 'r', ua: number, fa: number) => {
+    const m = n === 'l' ? 1 : -1;
+    const [S0, E0, W0] = J[n];
+    const E = turn(S0, E0, m * ua), W = turn(E, turn(S0, W0, m * ua), m * fa);
+    const hx = W[0] + (W[0] - E[0]) * .16, hy = W[1] + (W[1] - E[1]) * .16;
+    return arm(S0[0], S0[1], E[0], E[1], k, 20) + arm(E[0], E[1], W[0], W[1], k, 18.5) + hand(hx, hy, W[1] < E[1], n);
+  };
+  if (which === 'up') return bent('l', 132, -4) + bent('r', 132, -4);
+  return bent('l', 0, 0) + `<g class="fg-wave-arm">${bent('r', 98, 48)}</g>`;
 }
 
 /** The rig's joints (view-box units, before a kid's scaling): shoulder, elbow and wrist of each arm hanging at rest

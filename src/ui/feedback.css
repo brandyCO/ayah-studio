@@ -1,0 +1,27 @@
+/* Send feedback sheet (src/ui/feedback.ts), loaded with it. */
+.fb-sheet { max-width: 560px; }
+.fb-sheet .fb-intro { margin: 0 0 14px; line-height: 1.4; }
+.fb-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.fb-kind { --kc: #12a594; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--kc) 22%, var(--line, transparent)); background: var(--card);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--kc) 28%, var(--card)); color: var(--text); text-align: start;
+  font: 800 var(--fs-s, 15px) var(--ui-round); cursor: pointer; transition: transform var(--dur-1, .12s), box-shadow var(--dur-1, .12s), background var(--dur-2, .2s); }
+.fb-kind:active { transform: translateY(3px); box-shadow: 0 0 0 color-mix(in srgb, var(--kc) 28%, var(--card)); }
+.fb-kind.on { border-color: var(--kc); background: color-mix(in srgb, var(--kc) 12%, var(--card)); }
+.fb-kind.k-idea { --kc: #f59f00; } .fb-kind.k-problem { --kc: #ff6b4a; } .fb-kind.k-love { --kc: #e64980; } .fb-kind.k-other { --kc: #6c5ce7; }
+.fb-kind-ic { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 12px;
+  background: color-mix(in srgb, var(--kc) 16%, transparent); color: var(--kc); }
+.fb-kind.on .fb-kind-ic { background: var(--kc); color: #fff; }
+.fb-write { position: relative; }
+.fb-text { width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px; font: inherit; line-height: 1.45; padding-bottom: 26px; }
+.fb-count { position: absolute; inset-inline-end: 12px; bottom: 8px; pointer-events: none; }
+.fb-shot { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.fb-add { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; border: 2px dashed color-mix(in srgb, var(--text) 22%, transparent);
+  background: none; color: var(--text); font: 700 var(--fs-s, 15px) var(--ui-round); cursor: pointer; }
+.fb-add-ic { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.fb-thumb { width: 64px; height: 96px; object-fit: cover; border-radius: 12px; box-shadow: 0 2px 10px rgb(0 0 0 / .18); }
+.fb-shot-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.fb-email { width: 100%; box-sizing: border-box; }
+.fb-sheet .fb-with { margin: 10px 0 14px; line-height: 1.4; }
+.fb-send { min-width: 140px; }
+@media (max-width: 340px) { .fb-kinds { grid-template-columns: 1fr; } }

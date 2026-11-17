@@ -97,6 +97,7 @@ const P: Record<string, string> = {
   crescent: '<path d="M15.5 3.8a8.5 8.5 0 1 0 4.7 12.7A7 7 0 0 1 15.5 3.8z"/>',
   puzzle: '<path d="M5 8.5h3.5a2 2 0 1 1 4 0H16v3.5a2 2 0 1 1 0 4V20H5v-3.5a2 2 0 1 0 0-4z"/>',
   download: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/>',
+  feedback: '<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8.5 9h7M8.5 12.5h4.5"/>',
   reply: '<path d="M10 6 4 12l6 6"/><path d="M4 12h9a7 7 0 0 1 7 7"/>',
   letters: '<path d="M3.5 18 8 6l4.5 12M5.2 13.5h5.6"/><path d="M15 10.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM18 9.5V18"/>',
 };

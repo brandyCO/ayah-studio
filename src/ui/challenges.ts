@@ -178,10 +178,12 @@ const clock = (ms: number, days = false) => {
 };
 
 /** The small "VS" badge on the league card: your rival's face once you have one, else crossed swords. */
-export async function duelBadge(): Promise<HTMLElement> {
+/** The VS badge on Ranks' league card. `filled` waits for the duel, so a repaint can swap a finished badge in place of
+ *  the one on screen (owner 2026-11-16: the badge used to blank and come back, a flicker, on every repaint). */
+export async function duelBadge(filled = false): Promise<HTMLElement> {
   const label = h('span', { class: 'du-badge-t' }, clt('du.offTitle'));
   const b = h('span', { class: 'du-badge', 'aria-hidden': 'true' }, h('span', { class: 'du-badge-ic' }, icon('swords', 22)), label);
-  void myDuel().then((st) => {
+  const fill = myDuel().then((st) => {
     const d = st.duel;
     // F44: while nobody is free, a small "Finding your rival" line instead of a full screen; once paired, a toast says who.
     let was = '';
@@ -201,6 +203,7 @@ export async function duelBadge(): Promise<HTMLElement> {
     }
     if (st.last) b.classList.add('ready');
   }).catch(() => {});
+  if (filled) await fill;
   return b;
 }
 
