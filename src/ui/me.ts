@@ -50,6 +50,7 @@ import { accountLabel } from './account';
 import { METHODS, PRAYERS, locatePrayer, prayerDay, prayerSettings, setPrayerSettings, type Method } from '../data/prayer';
 import { REMINDER_TIMES, allowNotifications, dhikrReminders, setDhikrReminders } from './widgets';
 import { isIOS, isNative, hasPlugin } from '../native';
+import { PUBLIC_URL } from '../cloud/config';
 import { ALERT_PRAYERS, BEFORE, SOUNDS, anyAlert, askExact, exactAllowed, prayerAlerts, previewSound, setPrayerAlerts } from './prayerAlerts';
 import { widgetHint } from './widgetsPage';
 import { account, onAccount, signIn, signInAvailable } from '../cloud/auth';
@@ -68,6 +69,9 @@ import { smartReminder } from '../data/usualTime';
 import { chest } from './chest';
 import { mpt } from '../i18n/mePages';
 import { inboxBell } from './inbox';
+
+/** The support page (FAQ + contact form): the live site from the app, this site on the web. */
+const supportUrl = () => `${isNative() ? PUBLIC_URL : import.meta.env.BASE_URL}support.html?lang=${lang() === 'ar' ? 'ar' : 'en'}`;
 
 const minutes = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -1500,6 +1504,7 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
           h('button', { class: 'menu-item', onclick: () => void import('./feedback').then((m) => m.openFeedback()) }, icon('feedback', 18), fe('fb.door')),
+          h('a', { class: 'menu-item', href: supportUrl(), target: '_blank', rel: 'noopener' }, icon('help', 18), fe('fb.help')),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
     };
     if (sub) { body.replaceChildren(...groups[sub]()); return; }
@@ -1517,6 +1522,11 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
       h('button', { class: 'set-row set-fb', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
         h('span', { class: 'set-row-ic s-feedback', 'aria-hidden': 'true' }, icon('feedback', 22)),
         h('span', { class: 'set-row-txt' }, h('b', {}, fe('fb.door')), h('span', { class: 'muted small' }, fe('fb.doorSub'))),
+        icon('right', 18)),
+      // Help & support (owner request 2026-11-17): the support page (FAQ + a form to Sentry), opened in the browser
+      h('a', { class: 'set-row set-help', href: supportUrl(), target: '_blank', rel: 'noopener' },
+        h('span', { class: 'set-row-ic s-help', 'aria-hidden': 'true' }, icon('help', 22)),
+        h('span', { class: 'set-row-txt' }, h('b', {}, fe('fb.help')), h('span', { class: 'muted small' }, fe('fb.helpSub'))),
         icon('right', 18))));
   };
   const subTitle: Record<SetPage, () => string> = {
