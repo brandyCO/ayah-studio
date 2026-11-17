@@ -170,7 +170,8 @@ const keptAll = () => {
   if (kept) return kept;
   try {
     const v = JSON.parse(localStorage.getItem(STORE) ?? 'null');
-    kept = v && v.who === account()?.id && typeof v.v === 'object' ? v.v : {};
+    // A cleared copy (`v: null`, written after an account change) counts as empty: `typeof null` is 'object'.
+    kept = v && v.who === account()?.id && v.v && typeof v.v === 'object' ? v.v : {};
   } catch { kept = {}; }
   return kept!;
 };
@@ -179,7 +180,7 @@ const keep = (key: string, v: unknown) => {
   keptAll()[key] = v;
   clearTimeout(keepTimer);
   keepTimer = window.setTimeout(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept })); } catch { /* full */ }
+    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept ?? {} })); } catch { /* full */ }
     // The inbox bell counts prizes and challenge chests from these (src/ui/inbox.ts).
     window.dispatchEvent(new Event('rank-cache'));
   }, 400);
