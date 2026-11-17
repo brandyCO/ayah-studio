@@ -401,6 +401,7 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .set-row-ic.s-quran { background: #6c5ce7; }
 .set-row-ic.s-app { background: #667085; }
 .set-row-ic.s-feedback { background: #ff6b4a; }
+.set-row-ic.s-help { background: #3b82f6; }
 
 /* F21: Library as cards */
 .lib-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
