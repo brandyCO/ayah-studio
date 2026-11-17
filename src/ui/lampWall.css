@@ -10,7 +10,7 @@
     radial-gradient(2px 2px at 81% 22%, #fff9 50%, #0000 51%), radial-gradient(1px 1px at 92% 6%, #fff8 50%, #0000 51%),
     radial-gradient(1px 1px at 7% 40%, #fff6 50%, #0000 51%), radial-gradient(1.5px 1.5px at 71% 38%, #fff7 50%, #0000 51%),
     radial-gradient(60% 40% at 50% 100%, #ff9a5a22, #0000 70%); }
-.lw-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+.lw-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
   background: linear-gradient(#070b24f2 60%, #070b2400); }
 .lw-top h1 { flex: 1; margin: 0; text-align: center; font: 1000 22px var(--ui-round, inherit); letter-spacing: .2px; }
 .lw-page .lw-back { color: #fff6e6; background: #ffffff1a; border: 1px solid #ffffff33; box-shadow: none; font-size: 28px; }

@@ -147,14 +147,23 @@ jobs:
           VERSION=$(node -p "require('./package.json').iosVersion || '1.0.0'")
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            "${AUTH[@]}" DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGNING_ALLOWED=NO \
             CURRENT_PROJECT_VERSION="$BUILD" MARKETING_VERSION="$VERSION" "${GOOGLE[@]}" archive | tail -60
+          # The archive is left unsigned: signing it the automatic way needs a development profile, which Apple
+          # only makes for a team with a registered iPhone. The export below signs it for the App Store
+          # (distribution certificate + App Store profile, made by Xcode through the API key; no device needed).
+          # An unsigned app carries no entitlements, and the export keeps only what the app was signed with, so the
+          # archived app is first signed ad hoc with ours (Sign in with Apple).
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          codesign --force --sign - --entitlements ios/App/App/App.entitlements --timestamp=none "$APP"
+          codesign -d --entitlements - --xml "$APP" | grep -q applesignin
+          for DEST in export upload; do
           cat > "$RUNNER_TEMP/export.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>$DEST</string>
             <key>teamID</key><string>$TEAM</string>
             <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
@@ -162,6 +171,14 @@ jobs:
           </dict></plist>
           EOF
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
-            -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}" | tail -40
+            -exportPath "$RUNNER_TEMP/$DEST" "${AUTH[@]}" | tail -40
+          if [ "$DEST" = export ]; then
+            # Check the signed app before it goes to Apple: Sign in with Apple must be in its entitlements.
+            (cd "$RUNNER_TEMP/export" && rm -rf Payload && unzip -q ./*.ipa)
+            codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app" > "$RUNNER_TEMP/ent.plist" 2>/dev/null || true
+            plutil -p "$RUNNER_TEMP/ent.plist" || true
+            grep -q applesignin "$RUNNER_TEMP/ent.plist" || { echo "::error::The signed app lacks the Sign in with Apple entitlement"; exit 1; }
+          fi
+          done
           echo "Uploaded version $VERSION ($BUILD). It shows in App Store Connect → TestFlight after Apple's processing." | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$KEY"
