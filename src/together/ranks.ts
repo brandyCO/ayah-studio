@@ -30,7 +30,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, flawless: 10, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; figure?: string | null; room?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; blocked?: boolean; figure?: string | null; room?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -170,7 +170,8 @@ const keptAll = () => {
   if (kept) return kept;
   try {
     const v = JSON.parse(localStorage.getItem(STORE) ?? 'null');
-    kept = v && v.who === account()?.id && typeof v.v === 'object' ? v.v : {};
+    // A cleared copy (`v: null`, written after an account change) counts as empty: `typeof null` is 'object'.
+    kept = v && v.who === account()?.id && v.v && typeof v.v === 'object' ? v.v : {};
   } catch { kept = {}; }
   return kept!;
 };
@@ -179,7 +180,7 @@ const keep = (key: string, v: unknown) => {
   keptAll()[key] = v;
   clearTimeout(keepTimer);
   keepTimer = window.setTimeout(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept })); } catch { /* full */ }
+    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept ?? {} })); } catch { /* full */ }
     // The inbox bell counts prizes and challenge chests from these (src/ui/inbox.ts).
     window.dispatchEvent(new Event('rank-cache'));
   }, 400);
@@ -701,6 +702,13 @@ export async function askFriend(pid: string): Promise<'sent' | 'friend'> {
 }
 export async function answerFriend(pid: string, ok: boolean) { await rpc('rank_friend_answer', { who: pid, ok }); dropCache(); }
 export async function removeFriend(pid: string) { await rpc('rank_friend_remove', { who: pid }); dropCache(); }
+// --- report and block (App Store guideline 1.2, owner 2026-11-18): a blocked player shows to you only as "Blocked player",
+// their friendship ends and nothing passes between you; reports go to a table only the owner reads ---
+export type ReportWhy = 'name' | 'character' | 'spam' | 'other';
+export async function blockPlayer(pid: string) { await rpc('rank_block', { who: pid }); dropCache(); }
+export async function unblockPlayer(pid: string) { await rpc('rank_unblock', { who: pid }); dropCache(); }
+export const myBlocks = () => rpc<{ pid: string; name: string | null; at: string }[]>('rank_my_blocks');
+export const reportPlayer = (pid: string, why: ReportWhy, note: string) => rpc<void>('rank_report_player', { who: pid, why, note: note.trim() || null });
 export const friendInvite = () => rpc<string>('rank_friend_invite');
 export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
 export const friendInvitePreview = (code: string) =>

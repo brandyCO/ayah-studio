@@ -1504,6 +1504,8 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
           h('button', { class: 'menu-item', onclick: () => void import('./harakatClips').then((m) => m.openHelpSheet()) }, icon('mic', 18), t('set.harakatHelp')),
           h('button', { class: 'menu-item', onclick: () => goMushaf('tour') }, icon('sparkle', 18), t('menu.tour')),
           h('button', { class: 'menu-item', onclick: () => void import('./feedback').then((m) => m.openFeedback()) }, icon('feedback', 18), fe('fb.door')),
+          // Report and block (App Store guideline 1.2): the players you blocked on Ranks, each with Unblock.
+          account() ? h('button', { class: 'menu-item', onclick: () => void import('./friends').then((m) => m.openBlocked()) }, icon('lock', 18), fe('fb.blocked')) : '',
           h('a', { class: 'menu-item', href: supportUrl(), target: '_blank', rel: 'noopener' }, icon('help', 18), fe('fb.help')),
           h('button', { class: 'menu-item', onclick: () => void import('./report').then((m) => m.openReport()) }, icon('flag', 18), t('set.report'))))],
     };

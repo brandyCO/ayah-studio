@@ -2315,6 +2315,13 @@ duas/reflections section in Me.
       reply → Sentry User Feedback (`captureFeedback`, tags: kind, platform, lang, build, screen, device; `sentry()` in
       `src/errors.ts` shared with crash reports, never sampled); offline it waits in localStorage `feedbackQueue` and is
       sent when online. Strings `fb.*` in `src/i18n/front.ts`, all 30 languages; privacy page updated
+- [x] M28 Report and block players (owner request 2026-11-18, App Store guideline 1.2): profile ⋯ → **Report player** (offensive
+      name / character, spam or cheating, something else + an optional note) and **Block player**; a blocked player shows to the
+      blocker only as "Blocked player" on every board, podium and profile (`rank_face`), the friendship, asks, unstarted
+      challenges and unopened gifts end, and table triggers refuse anything more between the two either way (asks, friends,
+      gifts, challenges, gestures, MashaAllahs). Me → ⚙ → App → **Blocked players** (unblock). Reports are kept where only the
+      owner reads them (view `rank_player_reports_v` in the SQL editor); a name 3 players report within 30 days becomes "Reader".
+      Migration `20261118000000_rank_block_report.sql`, pgTAP `rank_block_report.test.sql` (22)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
