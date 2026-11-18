@@ -483,6 +483,7 @@ body.has-selbar .player.show { transform: translate(-50%, 160%); } /* the select
   border: 0; border-radius: var(--r-s); background: none; text-align: start; text-decoration: none; font-size: var(--fs-l); cursor: pointer;
 }
 .menu-item:hover { background: var(--sel); }
+a.menu-item { color: inherit; }
 .go-page .search { flex: 1; padding: 9px 12px; }
 .sheet-scroll { max-height: 50vh; overflow: auto; }
 
