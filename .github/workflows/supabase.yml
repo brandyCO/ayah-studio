@@ -21,6 +21,11 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
+      # Two migrations with one version number stop the local database and every deploy (2026-11-18).
+      - name: Each migration has its own version
+        run: |
+          dup=$(ls supabase/migrations/*.sql | sed 's#.*/##' | cut -d_ -f1 | sort | uniq -d)
+          [ -z "$dup" ] || { echo "::error::Migrations share a version: $dup"; exit 1; }
       # Postgres only (applies supabase/migrations), then supabase/tests/*.sql with pg_prove.
       - run: supabase db start
       - run: supabase test db
