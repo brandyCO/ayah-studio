@@ -125,3 +125,51 @@ dialog.fr-page::backdrop { background: transparent; }
 .primary.fr-block-go { background: #d64545; border-color: #a83232; color: #fff; }
 .fr-blocked-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
 .fr-blocked-row span { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Profiles like Duolingo (owner 2026-11-18): the player in their own room, flag, followers · following, badges. */
+.flag-img { display: inline-block; vertical-align: -0.12em; margin-inline-end: 6px; border-radius: 3px; object-fit: cover; flex: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg, #000) 14%, transparent); }
+.fr-stage .fr-room { display: block; width: 100%; padding: 0; border: 0; background: none; border-radius: 22px; overflow: hidden; cursor: pointer; }
+.fr-stage .fr-room .rm-scene { border-radius: 22px; box-shadow: none; }
+.fr-stage:has(.fr-room) { padding: 0; background: none; }
+.fr-who h3 { display: inline-flex; align-items: center; gap: 0; }
+.fr-counts { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.fr-count { display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 6px 14px; border: 0; border-radius: 14px; font: inherit; color: inherit;
+  background: var(--chip, color-mix(in srgb, var(--fg, #000) 5%, transparent)); cursor: pointer; }
+.fr-count b { font-size: 18px; font-weight: 900; }
+.fr-count small { color: var(--muted); font-size: var(--fs-xs); }
+.fr-back-pill { padding: 4px 10px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 800; color: var(--rk, #6c5ce7);
+  background: color-mix(in srgb, var(--rk, #6c5ce7) 12%, transparent); }
+.fr-follow { min-width: 160px; }
+.fr-following { font-weight: 800; }
+.fr-add svg { margin-inline-end: 4px; }
+.fr-shelf { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fr-shelf h3 { margin: 4px 0 0; font-size: var(--fs-s); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.fr-shelf h3 small { text-transform: none; letter-spacing: 0; }
+.fr-shelf-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px 12px; border-radius: 18px;
+  background: linear-gradient(to bottom, transparent 62%, color-mix(in srgb, #8a5a2b 22%, transparent) 62%, color-mix(in srgb, #8a5a2b 22%, transparent) 70%, transparent 70%); }
+.fr-shelf.off { opacity: .35; }
+.fr-flag-btn { display: inline-flex; align-items: center; gap: 2px; }
+.fr-follow-list { display: flex; flex-direction: column; }
+.fr-follow-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
+.fr-follow-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.fr-follow-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-drop { width: 36px; height: 36px; font-size: 14px; color: var(--muted); }
+/* The flag picker. */
+.flag-search { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 4px 0 8px; border-radius: 14px; border: 2px solid var(--line, rgba(0,0,0,.12));
+  background: var(--card, transparent); color: inherit; font: inherit; }
+.flag-list { display: flex; flex-direction: column; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
+.flag-row { display: flex; align-items: center; gap: 4px; padding: 10px 6px; border: 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.06)); background: none;
+  font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.flag-row.on { font-weight: 900; color: var(--rk, #6c5ce7); }
+.flag-row .flag-img { margin-inline-end: 10px; }
+.flag-none { display: inline-block; width: 24px; height: 18px; margin-inline-end: 10px; border-radius: 3px; border: 2px dashed var(--line, rgba(0,0,0,.2)); box-sizing: border-box; }
+.flag-tick { margin-inline-start: auto; }
+
+/* Following (not friends) on the Friends tab */
+.fr-following { display: grid; gap: 6px; margin: 14px 0; }
+.fr-follow-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); text-align: start; width: 100%; }
+.fr-follow-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.fr-follow-txt b { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-follow-xp { font-weight: 800; color: #6c5ce7; font-size: .9rem; white-space: nowrap; }
+.fr-new-followers .fr-follow-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: start; color: inherit; }

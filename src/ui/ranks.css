@@ -486,3 +486,12 @@ html[lang="ar"] .rk-hero.compact .rk-hero-sub { white-space: normal; }
 .rk-sample p { margin: 0; }
 .rk-sample-list { text-align: start; }
 .rk-sample-list .rk-name { flex: 1; }
+/* A player's flag beside their name (src/ui/flag.ts). */
+.rk-name .flag-img, .rk-pod-name .flag-img { display: inline-block; vertical-align: -0.1em; margin-inline-end: 5px; border-radius: 2px; object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg, #000) 14%, transparent); }
+
+/* Swipe between the three tabs: the one on screen in the flow; the others beside it in a window as tall as the screen
+   (clipped, so they add nothing to the page), shown only while a swipe moves them */
+.rk-swipe { position: relative; overflow-x: clip; touch-action: pan-y; }
+.rk-strip { position: relative; will-change: translate; }
+.rk-pane:not(.cur) { position: absolute; top: 0; inset-inline: 0; height: 100lvh; overflow: clip; contain: strict; }

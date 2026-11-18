@@ -2,6 +2,7 @@
 // level; the top 3 move up a tier, the bottom 3 down), the global board (this week / all time), and
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
+import { flagImg } from './flag';
 import { account, onAccount } from '../cloud/auth';
 import { icon } from './icons';
 const iconOf = icon;
@@ -114,7 +115,7 @@ export function podium(rows: Row[]): HTMLElement | '' {
     const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private')} · ${num(r.score)}`,
       onclick: () => { if (a) (r.me ? a.wave() : a.happy()); else hopFig(el, 12, 480, false); haptic(8); } },
       h('span', { class: 'rk-pod-who' }, place === 1 ? h('span', { class: 'rk-pod-beam', 'aria-hidden': 'true' }) : '', who),
-      h('span', { class: 'rk-pod-name' }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
+      h('span', { class: 'rk-pod-name' }, r.private || r.blocked ? '' : flagImg(r.flag, 11), r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
       h('span', { class: 'rk-pod-step' }, h('b', {}, String(place)), h('span', {}, ptsIcon(), num(r.score))));
     return { el, a };
   };
@@ -169,7 +170,7 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private || r.blocked ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.blocked ? null : r.figure),
-      h('span', { class: `rk-name${r.private || r.blocked ? ' muted' : ''}` }, r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      h('span', { class: `rk-name${r.private || r.blocked ? ' muted' : ''}` }, r.private || r.blocked ? '' : flagImg(r.flag, 12), r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));
@@ -177,9 +178,14 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
   return h('ol', { class: 'rk-list' }, ...items);
 }
 
+type PaneView = 'league' | 'friends' | 'global';
+const VIEWS: PaneView[] = ['league', 'friends', 'global'];
+interface Pane { el: HTMLElement; inn: HTMLElement; head: HTMLElement; body: HTMLElement; o: number; t: number; y: number; painted: boolean; stale: boolean }
+
 export async function showRanks(root: HTMLElement): Promise<() => void> {
   setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
-  let view: View = (() => { try { return (sessionStorage.getItem('rankView') as View) || 'league'; } catch { return 'league'; } })();
+  // Three tabs (owner 2026-11-18): League · Friends · Global; My boards and challenges sit inside Friends.
+  let view: View = (() => { try { const v = (sessionStorage.getItem('rankView') as View) || 'league'; return v === 'boards' ? 'friends' : v; } catch { return 'league'; } })();
   let allTime = false;
   let hall = false;
   let metric: Metric = 'all';
@@ -187,14 +193,29 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     ...METRICS.map((m) => h('button', { class: `chip${metric === m ? ' on' : ''}`, 'aria-pressed': String(metric === m),
       onclick: () => { metric = m; haptic(); void paint(); } }, rt(`rk.m.${m}` as RankKey))));
   let openBoard: Board | null = null;
-  const head = h('section', { class: 'rk-head' });
   const tabs = h('div', { class: 'tabs rk-tabs', role: 'tablist' });
-  const body = h('section', { class: 'rk-body' });
+  // Swipe between League · Friends · Global (owner 2026-11-18): each tab has its own pane, built ahead and kept, side by
+  // side like the mushaf pages; a swipe only slides them (nothing loads mid-swipe), the fresh answers come in quietly after.
+  const mkPane = (v: PaneView): Pane => {
+    const hd = h('section', { class: 'rk-head' });
+    const bd = h('section', { class: 'rk-body' }, h('p', { class: 'muted' }, rt('rk.loading')));
+    const inn = h('div', { class: 'rk-in' }, hd, bd);
+    return { el: h('div', { class: 'rk-pane', 'data-v': v }, inn), inn, head: hd, body: bd, o: 0, t: 0, y: 0, painted: false, stale: false };
+  };
+  const panes: Record<PaneView, Pane> = { league: mkPane('league'), friends: mkPane('friends'), global: mkPane('global') };
+  const key = (v: View): PaneView => (v === 'boards' ? 'friends' : v);
+  let shown: PaneView = key(view);
+  let head = panes[shown].head;
+  let body = panes[shown].body;
   const ends = h('span', { class: 'rk-ends muted small' });
 
   const tab = (v: View, label: string) => h('button', {
-    class: `tab${v === view ? ' on' : ''}`, role: 'tab', 'aria-selected': String(v === view),
-    onclick: () => { view = v; openBoard = null; metric = 'all'; haptic(); try { sessionStorage.setItem('rankView', v); } catch { /* ignore */ } paint(); },
+    class: `tab${key(v) === shown ? ' on' : ''}`, role: 'tab', 'aria-selected': String(key(v) === shown),
+    onclick: () => {
+      haptic();
+      if (key(v) !== shown) { void slideTo(key(v)); return; }
+      if (openBoard || metric !== 'all') { openBoard = null; metric = 'all'; void paint(); } // the tab again: back to its list
+    },
   }, label);
 
   // Your avatar stays in the top bar even before the ranks load (signed out, or not counted yet): the character
@@ -647,9 +668,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('p', { class: 'muted small' }, rt('rk.leagueNote', { up: LEAGUE.up, down: LEAGUE.down })));
       // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
       void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
-    } else if (view === 'friends') {
+    } else if (view === 'friends' && !openBoard) {
       const m = await import('./friends');
-      body.replaceChildren(await m.friendsTab(fresh, () => void paint(true)));
+      const [tab, boards] = await Promise.all([m.friendsTab(fresh, () => void paint(true), key(view) !== shown), boardsSection(fresh)]);
+      body.replaceChildren(tab, ...boards);
     } else if (view === 'global') {
       const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; void paint(); } }, label);
       const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, icon('trophy', 18), rt('rk.hall'));
@@ -687,10 +709,13 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
             if (!confirm(b.mine ? rt('rk.deleteQ') : rt('rk.leaveQ'))) return;
             try { await leaveBoard(b.id); openBoard = null; void paint(true); } catch (e) { toast((e as Error).message); }
           } }, b.mine ? rt('rk.delete') : rt('rk.leave'))));
-    } else {
+    }
+  }
+
+  async function boardsSection(fresh: boolean): Promise<Node[]> {
       const [boards, chs] = await Promise.all([myBoards(fresh), myChallenges(fresh).catch(() => [] as Challenge[])]);
       const code = h('input', { class: 'search', maxlength: 8, placeholder: rt('rk.codePh'), 'aria-label': rt('rk.join'), autocapitalize: 'off' });
-      body.replaceChildren(
+      return [
         challengeBox(chs),
         h('h2', { class: 'me-h' }, rt('rk.boards')),
         boards.length ? h('div', { class: 'menu rk-boards' }, ...boards.map((b) => h('button', { class: 'menu-item', onclick: () => { openBoard = b; metric = 'all'; void paint(); } },
@@ -700,8 +725,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('div', { class: 'rk-join' }, code, h('button', { class: 'chip', onclick: async () => {
           if (code.value.trim().length !== 8) { code.focus(); return; }
           try { await joinBoard(code.value); toast(rt('rk.joined')); void paint(true); } catch (e) { toast((e as Error).message); }
-        } }, rt('rk.join'))));
-    }
+        } }, rt('rk.join')))];
   }
 
   /** The board's shared goal: pages read together this week; the owner sets it. */
@@ -875,8 +899,37 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const by = at - want;
     if (sc) sc.scrollBy({ top: by, behavior: 'auto' }); else window.scrollBy({ top: by, behavior: 'auto' });
   }
-  const paintTabs = () => tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')), tab('boards', rt('rk.tBoards')));
-  async function paint(fresh = false) {
+  const paintTabs = () => tabs.replaceChildren(tab('league', rt('rk.tLeague')), tab('friends', friendsLabel), tab('global', rt('rk.tGlobal')));
+  // Paints run one after another (a pane built ahead borrows `view`, `head` and `body` while it is painted).
+  let chain: Promise<void> = Promise.resolve();
+  let queued: Promise<void> | null = null, qFresh = false;
+  const enqueue = (fn: () => Promise<void> | void) => (chain = chain.then(fn).catch(() => {}));
+  function paint(fresh = false): Promise<void> {
+    qFresh ||= fresh;
+    if (queued) return queued;
+    return (queued = enqueue(() => { const f = qFresh; qFresh = false; queued = null; return paintNow(f); }));
+  }
+  const bind = (v: View) => { view = v; head = panes[key(v)].head; body = panes[key(v)].body; };
+  /** The other tabs' panes built from what this device kept (no network), or fetched once when nothing is kept. */
+  function warmPanes() {
+    for (const v of VIEWS) {
+      if (v === shown || panes[v].painted) continue;
+      enqueue(async () => {
+        if (panes[v].painted || v === shown || !account()) return;
+        const back = view;
+        bind(v);
+        const was = fromKept;
+        fromKept = true;
+        try {
+          panes[v].stale = true;
+          try { await staleFirst(async () => { await paintHead(false); await paintBody(false); }); }
+          catch (e) { if (!(e instanceof StaleMiss)) throw e; panes[v].stale = false; await paintHead(false); await paintBody(false); }
+          panes[v].painted = true;
+        } catch { /* painted when shown */ } finally { fromKept = was; bind(back); }
+      });
+    }
+  }
+  async function paintNow(fresh = false) {
     const id = ++paintId;
     if (!account()) { signedOut(); return; }
     paintTabs();
@@ -887,6 +940,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       await paintHead(fresh);
       if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);
+      panes[key(view)].painted = true;
+      panes[key(view)].stale = fromKept;
       showGain();
       openOnMe();
     } catch (e) {
@@ -899,27 +954,146 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (!account()) { signedOut(); return; }
     fromKept = true;
     try { await staleFirst(() => paint(false)); } finally { fromKept = false; }
+    warmPanes(); // the other tabs from what is kept, before the fresh answers
     await paint(true);
+    warmPanes();
+  }
+
+  // --- the swipe ---
+  let swipeOff: AbortController | null = null;
+  const paneStrip = h('div', { class: 'rk-strip' }, ...VIEWS.map((v) => panes[v].el));
+  const swipe = h('div', { class: 'rk-swipe' }, paneStrip);
+  const sign = () => (document.documentElement.dir === 'rtl' ? -1 : 1);
+  const swipeTop = () => swipe.getBoundingClientRect().top + scrollY;
+  let W = 0, ci = 0;
+  /** The pane on screen is in the flow; the others are hidden from screen readers (written only on a change). */
+  // (No `inert`: it is inherited, so toggling it restyled every row at the end of each slide; the others sit off screen.)
+  const mark = (el: HTMLElement, cur: boolean) => {
+    if (el.classList.contains('cur') === cur) return;
+    el.classList.toggle('cur', cur);
+    el.setAttribute('aria-hidden', String(!cur));
+  };
+  /** Gets the panes ready to move (layout read once): the others sit beside this one at their own scroll place, in a
+   *  window as tall as the screen, so they add nothing to the page and moving them is the compositor's work only. */
+  function arrange(_near: PaneView[]) {
+    W = swipe.clientWidth || innerWidth;
+    ci = VIEWS.indexOf(shown);
+    const o = scrollY - swipeTop();
+    panes[shown].o = o;
+    // Where each other tab will stand (`t`, its scroll into the pane): with the header in view, level with this one;
+    // scrolled down, where it was left, or its top just under the bar when it was at its top.
+    const bar = root.querySelector<HTMLElement>('.rk-top')?.offsetHeight ?? 0;
+    for (const v of VIEWS) {
+      const p = panes[v], cur = v === shown;
+      mark(p.el, cur);
+      p.t = cur || o <= 0 ? o : p.o > 0 ? p.o : -bar;
+      p.y = cur ? 0 : Math.max(0, o);
+      p.el.style.translate = cur ? '' : `${(VIEWS.indexOf(v) - ci) * W * sign()}px ${p.y}px`;
+      p.inn.style.translate = cur ? '' : `0 ${o - p.y - p.t}px`;
+    }
+  }
+  /** Moves the panes by `dx`: one translate on the strip holding them (no layout, no restyle of what is inside). */
+  let lastMs = -1;
+  function move(dx: number, ms = 0) {
+    if (ms !== lastMs) { paneStrip.style.transition = ms ? `translate ${ms}ms cubic-bezier(.22,.8,.24,1)` : 'none'; lastMs = ms; }
+    paneStrip.style.translate = dx ? `${dx}px 0` : '';
+  }
+  const rest = () => move(0);
+  let busy = false, refreshT = 0;
+  /** Slides from the tab on screen to `to` (a tap on a tab, or a swipe let go past its point) and makes it the one shown. */
+  async function slideTo(to: PaneView, from = 0) {
+    if (busy || to === shown) return;
+    busy = true;
+    if (!from) { arrange([to]); move(0); }
+    const d = VIEWS.indexOf(to) - VIEWS.indexOf(shown);
+    const ms = Math.round(Math.max(150, 300 * (1 - Math.abs(from) / W)));
+    await new Promise((r) => requestAnimationFrame(r));
+    move(-d * W * sign(), ms);
+    await new Promise((r) => setTimeout(r, ms + 20));
+    const top = swipeTop();
+    shown = to;
+    for (const v of VIEWS) { panes[v].inn.style.translate = ''; mark(panes[v].el, v === shown); }
+    rest();
+    window.scrollTo(0, top + panes[to].t);
+    arrange([]); // the others wait beside it again, already drawn
+    paintTabs();
+    try { sessionStorage.setItem('rankView', to); } catch { /* ignore */ }
+    busy = false;
+    enqueue(() => { bind(to); });
+    if (to === 'friends') void import('./friends').then((m) => m.friendsShown());
+    // Fresh answers once the slide has settled: painted in place, and only when something changed.
+    clearTimeout(refreshT);
+    refreshT = window.setTimeout(() => {
+      if (shown !== to) return;
+      if (panes[to].stale || !panes[to].painted) void paint();
+      else void refreshCached(onScreen).catch(() => false).then((ch) => { if (ch && shown === to) void paint(); });
+      warmPanes();
+    }, 450);
+  }
+  {
+    let x0 = 0, y0 = 0, t0 = 0, dx = 0, id = -1, axis: '' | 'x' | 'y' = '', moved = false;
+    const next = (d: number): PaneView | null => VIEWS[VIEWS.indexOf(shown) + ((d < 0) !== (sign() < 0) ? 1 : -1)] ?? null;
+    const skip = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.chips, input, textarea, .rk-podium, .topbar, .tabbar, dialog, [data-noswipe]');
+    swipeOff = new AbortController();
+    const sig = { signal: swipeOff.signal };
+    document.addEventListener('pointerdown', (e) => {
+      if (!root.isConnected || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
+      id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; axis = ''; moved = false;
+    }, sig);
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== id) return;
+      const ddx = e.clientX - x0, ddy = e.clientY - y0;
+      if (!axis) {
+        if (Math.abs(ddx) < 10 && Math.abs(ddy) < 10) return;
+        axis = Math.abs(ddx) > Math.abs(ddy) * 1.2 ? 'x' : 'y';
+        if (axis === 'x') { x0 = e.clientX; t0 = performance.now(); arrange(VIEWS.filter((v) => v !== shown)); }
+      }
+      if (axis !== 'x') return;
+      moved = true;
+      const raw = e.clientX - x0;
+      dx = next(raw) ? raw : raw / 4; // resistance at the first and last tab
+      move(dx);
+    }, sig);
+    const end = (e: PointerEvent) => {
+      if (e.pointerId !== id) return;
+      id = -1;
+      if (axis !== 'x') return;
+      setTimeout(() => { moved = false; }, 60); // only the click that ends this swipe is swallowed
+      const fling = Math.abs(dx) / Math.max(1, performance.now() - t0) > 0.45;
+      const to = next(dx);
+      if (to && e.type !== 'pointercancel' && (Math.abs(dx) > W * 0.22 || (fling && Math.abs(dx) > 30))) { haptic(8); void slideTo(to, dx); return; }
+      move(0, 240);
+      setTimeout(() => { if (!busy && id < 0) rest(); }, 260);
+    };
+    document.addEventListener('pointerup', end, sig);
+    document.addEventListener('pointercancel', end, sig);
+    document.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, { capture: true, signal: swipeOff.signal });
+    // The whole screen takes the swipe, also below a short list (the page itself stays scrollable up and down).
+    root.style.touchAction = 'pan-y';
+    document.documentElement.style.touchAction = 'pan-y';
+    swipeOff.signal.addEventListener('abort', () => { document.documentElement.style.touchAction = ''; });
+    arrange([]);
   }
 
   root.append(
     h('header', { class: 'topbar rk-top' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title'))), topActs),
-    tabs, head, momentBox, body, tabBar('ranks'));
+    tabs, momentBox, swipe, tabBar('ranks'));
+  const showFriends = () => { shown = 'friends'; bind('friends'); arrange([]); };
   // A board invite opened before signing in: join it now.
   const pending = (() => { try { return sessionStorage.getItem(PENDING); } catch { return null; } })();
   if (pending && account()) {
     try { sessionStorage.removeItem(PENDING); } catch { /* ignore */ }
-    try { await joinBoard(pending); view = 'boards'; toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
+    try { await joinBoard(pending); showFriends(); toast(rt('rk.joined')); } catch (e) { toast((e as Error).message); }
   }
   // Its strings load beside the league (not before it): the tab is named as soon as they arrive.
   let friendsLabel = '';
   void import('../i18n/friends').then((m) => { friendsLabel = m.ft('fr.tab'); if (tabs.childElementCount) paintTabs(); });
   const pendingFr = (() => { try { return sessionStorage.getItem('pendingFriend'); } catch { return null; } })();
-  if (pendingFr && account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) view = 'friends'; });
+  if (pendingFr && account()) await import('./friends').then(async (m) => { if (await m.takePendingFriend()) showFriends(); });
   const pendingCh = (() => { try { return sessionStorage.getItem(PENDING_CH); } catch { return null; } })();
   if (pendingCh && account()) {
     try { sessionStorage.removeItem(PENDING_CH); } catch { /* ignore */ }
-    try { await acceptChallenge(pendingCh); view = 'boards'; toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
+    try { await acceptChallenge(pendingCh); showFriends(); toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
   }
   void open();
   const off = onAccount(() => void paint(true));
@@ -927,7 +1101,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
   // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
   const onScreen = (k: string) => k === 'status' || (view === 'league' ? k === 'league'
-    : view === 'friends' ? k === 'friends' || k === 'feats'
+    : view === 'friends' && !openBoard ? k === 'friends' || k === 'feats' || k === 'follows' || k === 'boards' || k === 'challenges' || k === 'cheers'
       : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
         : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
   let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();
@@ -954,7 +1128,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Back from another app or a sheet, or a tab switched: look again soon.
   const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
   document.addEventListener('visibilitychange', wake);
-  return () => { stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
+  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */
@@ -965,7 +1139,7 @@ export async function showBoardInvite(root: HTMLElement, code: string): Promise<
   if (!p) { box.replaceChildren(h('p', {}, rt('rk.badInvite'))); return () => {}; }
   const go = async () => {
     try { await joinBoard(code); } catch (e) { toast((e as Error).message); return; }
-    try { sessionStorage.setItem('rankView', 'boards'); } catch { /* ignore */ }
+    try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ }
     location.hash = '#/ranks';
   };
   box.replaceChildren(
@@ -984,7 +1158,7 @@ export async function showChallengeInvite(root: HTMLElement, code: string): Prom
   root.append(h('header', { class: 'topbar' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title')))), box, tabBar('ranks'));
   const p = await challengePreview(code).catch(() => null);
   if (!p) { box.replaceChildren(h('p', {}, rt('rk.chBad'))); return () => {}; }
-  const open = () => { try { sessionStorage.setItem('rankView', 'boards'); } catch { /* ignore */ } location.hash = '#/ranks'; };
+  const open = () => { try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ } location.hash = '#/ranks'; };
   const go = async () => {
     try { await acceptChallenge(code); } catch (e) { toast((e as Error).message); return; }
     open();

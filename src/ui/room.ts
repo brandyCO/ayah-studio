@@ -6,7 +6,7 @@
 import { actor, myFigureCode, type Actor } from './actor';
 import { encode, normalize, parse, WARDROBE } from './figure';
 import { circlePath, edge, mix, shine, starPath, two } from './flat';
-import { badgeStates } from '../data/badges';
+import { BADGES, badgeStates } from '../data/badges';
 import { prizeWins } from '../data/garden';
 import { streak } from '../data/journey';
 import { ownsPiece } from '../data/wardrobe';
@@ -91,7 +91,8 @@ type Built = { scene: HTMLElement; draw: () => void; sit: string; code: string; 
 
 /** The room itself (back, shelves, the character on its cushion), or null without a character. */
 /** A friend's room seen on a visit (round 5): their character, their room code (roomItems.ts). */
-export interface Visit { figure: string | null; room: string | null }
+/** Someone else's room: their character, room code and (from their profile) best badges. */
+export interface Visit { figure: string | null; room: string | null; badges?: string[]; best?: number }
 function buildScene(visit?: Visit): Built | null {
   const code = visit ? visit.figure : myFigureCode();
   const f = parse(code);
@@ -100,7 +101,7 @@ function buildScene(visit?: Visit): Built | null {
   const look = visit ? theirs?.look ?? {} : null;
   const sky = skyOf(new Date().getHours());
   const night = sky === 'night';
-  const best = visit ? theirs?.best ?? 0 : Math.max(streak().best, streak().days);
+  const best = visit ? theirs?.best || visit.best || 0 : Math.max(streak().best, streak().days);
   const legendary = !visit && Object.entries(WARDROBE).some(([id, p]) => p.r === 'legendary' && ownsPiece(id));
   const scene = h('div', { class: `rm-scene sky-${sky}` });
   const draw = () => {
@@ -114,7 +115,7 @@ function buildScene(visit?: Visit): Built | null {
   const top = h('div', { class: 'rm-shelf top' }, ...wins.map((w) => h('span', { class: `rm-cup p${w.place}`, title: w.week ? `#${w.place} · ${w.week}` : `#${w.place}` }, trophy(w.place, 30))));
   if (!wins.length && !visit) top.append(h('span', { class: 'rm-empty' }, rt('room.emptyCups')));
   const order = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 } as const;
-  const got = visit ? [] : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
+  const got = visit ? (visit.badges ?? []).map((id) => BADGES.find((b) => b.id === id)).filter((d) => !!d).slice(0, 4).map((def) => ({ def: def! })) : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
   const low = h('div', { class: 'rm-shelf low' }, ...got.map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
   if (!got.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
   // The character on its cushion: reading by day, its lantern at night.
@@ -216,6 +217,9 @@ export function roomScreen(edit: () => void, top: HTMLElement): HTMLElement | nu
 
 /** A friend's room, view only (round 5): opened from their row on the boards. Their character sits in it and waves;
  *  a tap makes them hop. Nothing can be changed. */
+/** A room scene to place in another page (the profile's header): yours with no `v`, else someone else's. */
+export function roomStage(v?: Visit): HTMLElement | null { return buildScene(v)?.scene ?? null; }
+
 export function openVisit(v: Visit & { name: string | null }) {
   const b = buildScene(v);
   if (!b) return;

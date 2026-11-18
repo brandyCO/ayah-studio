@@ -30,7 +30,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, flawless: 10, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; blocked?: boolean; figure?: string | null; room?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; blocked?: boolean; figure?: string | null; room?: string | null; flag?: string | null }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -570,14 +570,17 @@ export function lastWeekLocal(weekStart: string) {
 
 // --- friends (owner request 2026-11-11; supabase/migrations/20261111400000_rank_friends.sql) ---
 /** What a profile shows (bits, as on the server): this week's points, the flame streak, trophies, pages, listening. */
-export const SHOW = { week: 1, streak: 2, trophies: 4, pages: 8, listen: 16 } as const;
+export const SHOW = { week: 1, streak: 2, trophies: 4, pages: 8, listen: 16, badges: 32 } as const;
 export type ShowKey = keyof typeof SHOW;
 /** Two friends' streak: the days in a row both earned points, and whether each has today. */
 export interface FriendStreak { streak: number; meToday: boolean; themToday: boolean }
 export interface Profile extends Omit<Row, 'score'> {
   relation: 'me' | 'friend' | 'sent' | 'asked' | 'none'; show: number; bestTier: number;
   week?: number; streak?: number; trophies?: number; pages?: number; listen?: number; friend?: FriendStreak;
+  /** Following (2026-11-18): you follow them (`on`), they follow you (`back`), and their counts. */
+  follow?: FollowState; badges?: { top: string[]; n: number }; cups?: number[];
 }
+export interface FollowState { on: boolean; back: boolean; followers: number; following: number }
 export interface Friend extends Omit<Row, 'score'>, FriendStreak { since: string; week: number; live?: 'read' | 'listen' | null }
 export interface Friends { friends: Friend[]; asks: Omit<Row, 'score'>[]; sent: string[] }
 
@@ -709,6 +712,35 @@ export async function blockPlayer(pid: string) { await rpc('rank_block', { who: 
 export async function unblockPlayer(pid: string) { await rpc('rank_unblock', { who: pid }); dropCache(); }
 export const myBlocks = () => rpc<{ pid: string; name: string | null; at: string }[]>('rank_my_blocks');
 export const reportPlayer = (pid: string, why: ReportWhy, note: string) => rpc<void>('rank_report_player', { who: pid, why, note: note.trim() || null });
+// --- following and flags (owner 2026-11-18, supabase/migrations/20261118100000_rank_follow_flag.sql): one tap, no request;
+// friends (asked and accepted) still keep streaks, challenges and gifts. The flag is a country the player picks. ---
+export interface Follower extends Omit<Row, 'score'> { at: string; on: boolean }
+export interface Followed extends Omit<Row, 'score'> { week: number; live?: 'read' | 'listen' | null; friend: boolean }
+export interface Follows { following: Followed[]; followers: Follower[]; nFollowers: number; nFollowing: number }
+export const myFollows = (fresh = false) => cached('follows', () => rpc<Follows>('rank_my_follows', { d: rankDay() }), fresh);
+export async function followPlayer(pid: string) { await rpc('rank_follow', { who: pid }); dropCache(); }
+export async function unfollowPlayer(pid: string) { await rpc('rank_unfollow', { who: pid }); dropCache(); }
+export async function dropFollower(pid: string) { await rpc('rank_drop_follower', { who: pid }); dropCache(); }
+export const followList = (pid: string, kind: 'followers' | 'following') => rpc<Follower[]>('rank_follow_list', { who: pid, kind });
+const FLAG = 'rankFlag';
+/** The flag this player picked ('' = none), kept on this device too. */
+export const myFlag = (): string => { try { return localStorage.getItem(FLAG) ?? ''; } catch { return ''; } };
+export async function setFlag(code: string) {
+  await rpc('rank_set_flag', { code: code || null });
+  try { localStorage.setItem(FLAG, code); } catch { /* ignore */ }
+  dropCache();
+}
+/** New followers not seen yet (for the bell): those who followed after the last look at the Friends tab. */
+const FSEEN = 'followSeen';
+export const newFollowers = (f: Follows | null | undefined): Follower[] => {
+  let seen = '';
+  try { seen = localStorage.getItem(FSEEN) ?? ''; } catch { /* ignore */ }
+  return (f?.followers ?? []).filter((x) => !x.on && x.at > seen);
+};
+export const markFollowersSeen = (f: Follows | null | undefined) => {
+  const top = f?.followers?.[0]?.at;
+  if (top) try { localStorage.setItem(FSEEN, top); } catch { /* ignore */ }
+};
 export const friendInvite = () => rpc<string>('rank_friend_invite');
 export const friendInviteLink = (code: string) => shareableLink(`#/rf/${code}`);
 export const friendInvitePreview = (code: string) =>
@@ -728,7 +760,7 @@ export async function claimInvite(pid: string | null): Promise<number> {
 export async function joinFriend(code: string) { const r = await rpc<Row>('rank_friend_join', { code: code.toLowerCase() }); dropCache(); return r; }
 /** What your profile shows (kept on this device too) and your flame streak, sent when either changed. */
 const SHOWN = 'rankShow';
-export const myShow = (): number => { try { const v = Number(localStorage.getItem(SHOWN)); return Number.isInteger(v) && v >= 0 && v <= 31 && localStorage.getItem(SHOWN) !== null ? v : 7; } catch { return 7; } };
+export const myShow = (): number => { try { const v = Number(localStorage.getItem(SHOWN)); return Number.isInteger(v) && v >= 0 && v <= 63 && localStorage.getItem(SHOWN) !== null ? v : 39; } catch { return 39; } };
 export async function sendProfile(show = myShow(), force = false) {
   if (!account()) return;
   try {
@@ -739,6 +771,21 @@ export async function sendProfile(show = myShow(), force = false) {
     localStorage.setItem(SHOWN, String(show));
     localStorage.setItem('rankShowSent', sig);
   } catch { /* not playing yet, or offline: next time */ }
+  void sendBadges();
+}
+/** The best badges earned (at most 6, rarest first) and how many in all, for the profile others see. */
+async function sendBadges() {
+  try {
+    const { badgeStates } = await import('../data/badges');
+    const order: Record<string, number> = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 };
+    const got = badgeStates().filter((b) => b.earned);
+    const top = got.sort((a, b) => (order[a.def.tier] ?? 9) - (order[b.def.tier] ?? 9) || String(b.earned).localeCompare(String(a.earned)))
+      .slice(0, 6).map((b) => b.def.id).filter((id) => /^[a-z][a-z0-9]{1,15}-[0-4]$/.test(id));
+    const sig = `${top.join(',')}:${got.length}`;
+    if (localStorage.getItem('rankBadgesSent') === sig) return;
+    await rpc('rank_set_badges', { top, n: Math.min(500, Math.max(got.length, top.length)) });
+    localStorage.setItem('rankBadgesSent', sig);
+  } catch { /* next time */ }
 }
 
 // --- friends' milestones (supabase/migrations/20261114200000_friend_feats.sql) ---

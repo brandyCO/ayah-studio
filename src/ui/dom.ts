@@ -12,7 +12,10 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
     else if (k in el && k !== 'list') (el as unknown as Record<string, unknown>)[k] = v;
     else el.setAttribute(k, v === true ? '' : String(v));
   }
-  for (const c of children) if (c !== null && c !== undefined && c !== false) el.append(c);
+  const kids = children.filter((c) => c !== null && c !== undefined && c !== false) as (Node | string)[];
+  for (const c of kids) el.append(c);
+  // An icon alone in its box (a round button, a tile) is centred there: styles.css gives it no label gap.
+  if (kids.length === 1 && kids[0] instanceof SVGElement) el.dataset.ico = '';
   return el;
 }
 
