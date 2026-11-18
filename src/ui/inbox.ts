@@ -53,6 +53,17 @@ function gesturesWaiting(): { ch: string; kind: number; at: string; name: string
       .map((c) => ({ ...c, name: chs.find((x) => x.id === c.ch)?.friend?.name ?? '' }));
   } catch { return []; }
 }
+/** New followers (not followed back, after the last look at Ranks → Friends), from the Ranks answers kept on this device. */
+function followersWaiting(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem('rankCache') ?? 'null');
+    if (!v || v.who !== account()?.id || !Array.isArray(v.v?.follows?.followers)) return [];
+    const seen = localStorage.getItem('followSeen') ?? '';
+    return (v.v.follows.followers as { name?: string | null; at: string; on?: boolean }[])
+      .filter((f) => !f.on && f.at > seen).map((f) => f.name ?? '');
+  } catch { return []; }
+}
+const toFriends = () => { try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ } location.hash = '#/ranks'; };
 function seeGesture(ch: string, at: string) {
   try { const s = JSON.parse(localStorage.getItem('rkCheerSeen') || '{}'); s[ch] = at; localStorage.setItem('rkCheerSeen', JSON.stringify(s)); } catch { /* ignore */ }
 }
@@ -76,6 +87,8 @@ function localItems(): Item[] {
     for (const p of r.prizes) out.push({ icon: 'trophy', title: mpt('mp.inPrize'), sub: mpt('mp.inPrizeSub', { week: p.week }), go: toRanks });
     for (let i = 0; i < r.challenges; i++) out.push({ icon: 'swords', title: mpt('mp.inChallenge'), go: toChallenges });
     for (const g of gesturesWaiting()) out.push({ icon: 'hands', title: g.name, gesture: { kind: g.kind, name: g.name }, go: () => { seeGesture(g.ch, g.at); toChallenges(); } });
+    const fol = followersWaiting();
+    if (fol.length) out.push({ icon: 'users', title: fol.length > 1 ? mpt('mp.inFollowN', { n: fol.length }) : mpt('mp.inFollow1', { name: fol[0] || mpt('mp.inSomeone') }), go: toFriends });
     for (let i = 0; i < giftsWaitingHere(); i++) out.push({ icon: 'gift', title: mpt('mp.gift.kicker'), go: () => { location.hash = '#/me'; } });
   }
   return out;

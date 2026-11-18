@@ -9,7 +9,7 @@ import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
   SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
-  blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy,
+  blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy, followPlayer, unfollowPlayer, followList, dropFollower, myFlag, setFlag, myFollows, newFollowers, markFollowersSeen, type Follower, type Follows,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
@@ -27,6 +27,9 @@ import { tabBar } from './tabs';
 import { levelLabel, levelOf, levelProgress, myXp } from '../data/xp';
 import { withLevel } from './levelLook';
 import { dayKey } from '../data/readLog';
+import { BADGES } from '../data/badges';
+import { badgeArt } from './badge';
+import { countryName, flagImg, pickFlag } from './flag';
 import './friends.css';
 
 const num = (n: number) => n.toLocaleString();
@@ -89,7 +92,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
-  more.onclick = () => playerMenu(pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
+  let unfriend: (() => void) | null = null;
+  more.onclick = () => playerMenu(unfriend, pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
   let pairSig = '';
   const paint = () => {
     if (prof?.blocked) {
@@ -109,14 +113,24 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const p = prof;
     const name = p.name ?? rt('rk.private');
     const f = p.friend;
-    const on = !!f && f.meToday && f.themToday;
-    // The characters are drawn once and kept while nothing about them changed (their animations keep running).
-    const sig = JSON.stringify([p.relation === 'me', p.figure, myFigureCode(), on, f?.streak ?? 0, p.xp ?? null]);
+    const mineP = p.relation === 'me';
+    // The header: the player in their own room (owner 2026-11-18), drawn once and kept while nothing about it changed.
+    const sig = JSON.stringify([mineP, p.figure, mineP ? myFigureCode() : '', p.room ?? null, p.badges?.top ?? [], p.xp ?? null]);
     if (sig !== pairSig) {
       pairSig = sig;
-      stage.replaceChildren(p.relation === 'me' ? h('div', { class: 'fr-solo' }, pairSolo(p)) : pair(myFigureCode(), p, false, f?.streak ?? 0, 116));
+      stage.replaceChildren(h('div', { class: 'fr-solo' }, pairSolo(p)));
+      const fig = mineP ? myFigureCode() : p.figure;
+      if (fig && !p.private) void import('./room').then((m) => {
+        if (pairSig !== sig || !d.isConnected) return;
+        const scene = m.roomStage(mineP ? undefined : { figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top, best: p.streak });
+        if (!scene) return;
+        const room = h('button', { class: 'fr-room', 'aria-label': ft('fr.visit'), onclick: () => {
+          if (mineP) { close(); location.hash = '#/me/room'; } else m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top });
+        } }, scene);
+        stage.replaceChildren(room);
+      });
     }
-    title.textContent = p.relation === 'me' ? ft('fr.mine') : name;
+    title.textContent = mineP ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
       v === undefined ? '' : h('span', { class: `fr-stat s-${k}` }, h('b', {}, icon, num(v)), h('small', {}, label));
     // All-time XP first: it never resets (the level shows it anyway), so a new week's 0 never reads as XP lost.
@@ -135,43 +149,79 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       paint();
       void fn().then((r) => { after?.(r); onChange(); return refresh(); }).catch((e) => { toast((e as Error).message); prof = { ...p, relation: was }; paint(); });
     };
-    const main: Node[] = !known ? [h('span', { class: 'fr-acts-wait', 'aria-hidden': 'true' })]
-      : p.relation === 'none' ? [h('button', { class: 'primary brand-btn fr-add', onclick: () => act('sent', () => askFriend(pid), (r) => toast(r === 'friend' ? ft('fr.joined') : ft('fr.sent'))) }, `＋ ${ft('fr.add')}`)]
+    // Follow: one tap, no request (owner 2026-11-18). Friends (asked and accepted) is the closer bond beside it.
+    const fw = p.follow;
+    const follow = (on: boolean) => {
+      if (!fw) return;
+      haptic(on ? 14 : 8);
+      const was = p;
+      prof = { ...p, follow: { ...fw, on, followers: Math.max(0, fw.followers + (on ? 1 : -1)) } };
+      paint();
+      if (on) void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
+      void (on ? followPlayer(pid) : unfollowPlayer(pid)).then(() => { onChange(); return refresh(); })
+        .catch((e) => { toast((e as Error).message); prof = was; paint(); });
+    };
+    const followBtn = !known || mineP || !fw ? ''
+      : fw.on ? h('button', { class: 'chip fr-following', 'aria-pressed': 'true', onclick: () => follow(false) }, `✓ ${ft('fr.followingBtn')}`)
+        : h('button', { class: 'primary brand-btn fr-follow', 'aria-pressed': 'false', onclick: () => follow(true) }, fw.back ? ft('fr.followBack') : `＋ ${ft('fr.follow')}`);
+    const friendBtns: Node[] = !known ? [h('span', { class: 'fr-acts-wait', 'aria-hidden': 'true' })]
+      : p.relation === 'none' ? [h('button', { class: 'chip fr-add', onclick: () => act('sent', () => askFriend(pid), (r) => toast(r === 'friend' ? ft('fr.joined') : ft('fr.sent'))) }, icon('heart', 16), ft('fr.add'))]
         : p.relation === 'sent' ? [h('button', { class: 'chip', onclick: () => act('none', () => removeFriend(pid)) }, `${ft('fr.sent')} · ${ft('fr.cancel')}`)]
           : p.relation === 'asked' ? [h('button', { class: 'primary brand-btn', onclick: () => act('friend', () => answerFriend(pid, true), () => toast(ft('fr.joined'))) }, ft('fr.accept')),
             h('button', { class: 'chip', onclick: () => act('none', () => answerFriend(pid, false)) }, ft('fr.decline'))]
             : p.relation === 'friend' ? [h('span', { class: 'fr-badge' }, `✓ ${ft('fr.friends')}`),
-              h('button', { class: 'primary brand-btn fr-ch', onclick: () => challenge(pid, name, onChange) }, icon('swords', 18), chLabel),
+              h('button', { class: 'chip fr-ch', onclick: () => challenge(pid, name, onChange) }, icon('swords', 18), chLabel),
               h('button', { class: 'chip fr-gift', onclick: () => void import('./giftSend').then((m) => m.openGiftSheet(pid, name)) }, icon('gift', 18), ft('fr.gift'))] : [];
-    const actions = p.relation === 'me' ? '' : h('div', { class: 'fr-acts' }, ...main,
-      known && p.room && !p.private ? h('button', { class: 'chip', onclick: () => { close(); void import('./room').then((m) => m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null })); } }, ft('fr.visit')) : '',
-      known && p.relation === 'friend' ? h('button', { class: 'chip fr-remove', onclick: () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } }, ft('fr.remove')) : '');
-    // Your own profile: choose what it shows (the stats above follow each switch).
-    const mine = p.relation === 'me' ? (() => {
+    const actions = mineP ? '' : h('div', { class: 'fr-acts' }, followBtn, ...friendBtns);
+    // Remove friend lives in ⋯ (less on the page).
+    unfriend = known && p.relation === 'friend' ? () => { if (confirm(ft('fr.removeAsk', { name }))) act('none', () => removeFriend(pid)); } : null;
+    // Followers · Following, like Duolingo: tap a count for the list.
+    const counts = fw ? h('div', { class: 'fr-counts' },
+      h('button', { class: 'fr-count', onclick: () => openFollowList(pid, 'followers', name, onChange) }, h('b', {}, num(fw.followers)), h('small', {}, ft('fr.followers'))),
+      h('button', { class: 'fr-count', onclick: () => openFollowList(pid, 'following', name, onChange) }, h('b', {}, num(fw.following)), h('small', {}, ft('fr.followingN'))),
+      !mineP && fw.back ? h('span', { class: 'fr-back-pill' }, ft('fr.followsYou')) : '') : '';
+    // Badges they earned (the rarest first), and their trophies.
+    const defs = (p.badges?.top ?? []).map((id) => BADGES.find((x) => x.id === id)).filter((x): x is NonNullable<typeof x> => !!x);
+    const badges = defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
+      h('h3', {}, ft('fr.badges'), p.badges && p.badges.n > defs.length ? h('small', {}, ` · ${ft('fr.badgesN', { n: p.badges.n })}`) : ''),
+      defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
+    const cups = p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
+      h('div', { class: 'fr-shelf-row' }, ...p.cups.map((place) => h('span', { class: `fr-cup p${place}`, title: `#${place}` }, trophy(place, 34))))) : '';
+    // Your own profile: your flag, and what it shows (the stats above follow each switch).
+    const mine = mineP ? (() => {
       let bits = myShow();
-      const keys: [ShowKey, string][] = [['week', ft('fr.weekXp')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')]];
-      return h('div', { class: 'fr-mine' }, h('h3', {}, ft('fr.mine')), h('p', { class: 'muted small' }, ft('fr.mineSub')),
+      const keys: [ShowKey, string][] = [['week', ft('fr.weekXp')], ['streak', ft('fr.flame')], ['trophies', ft('fr.trophies')], ['pages', ft('fr.pages')], ['listen', ft('fr.listen')], ['badges', ft('fr.badges')]];
+      const code = p.flag ?? myFlag();
+      const flagBtn = h('button', { class: 'chip fr-flag-btn', onclick: () => pickFlag(code ?? '', { title: ft('fr.flagPick'), sub: ft('fr.flagSub'), none: ft('fr.flagNone'), search: ft('fr.flagSearch') },
+        async (c) => { await setFlag(c); prof = { ...p, flag: c || null }; paint(); onChange(); }) },
+        code ? flagImg(code, 16) : icon('flag', 16), code ? countryName(code) : ft('fr.flagAdd'));
+      return h('div', { class: 'fr-mine' }, h('h3', {}, ft('fr.edit')),
+        h('div', { class: 'chips' }, flagBtn),
+        h('p', { class: 'muted small' }, ft('fr.mineSub')),
         h('div', { class: 'chips' }, ...keys.map(([k, label]) => {
           const b: HTMLButtonElement = h('button', { class: `chip${bits & SHOW[k] ? ' on' : ''}`, 'aria-pressed': String(!!(bits & SHOW[k])), onclick: () => {
             bits ^= SHOW[k];
             b.classList.toggle('on', !!(bits & SHOW[k]));
             b.setAttribute('aria-pressed', String(!!(bits & SHOW[k])));
             stats.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & SHOW[k]));
+            info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & SHOW[k]));
             haptic(6);
             void sendProfile(bits, true);
           } }, label);
           return b;
         })));
     })() : '';
-    if (p.relation === 'me') { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) stats.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
     info.replaceChildren(
-      h('div', { class: 'fr-who' }, h('h3', {}, p.relation === 'me' ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
+      h('div', { class: 'fr-who' }, h('h3', {}, p.private ? '' : flagImg(p.flag, 18), mineP ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
+      counts,
       p.xp != null ? levelLine(p.xp) : '',
       p.private ? '' : lampLine(p.lamp),
+      actions,
       f ? streakLine(f, name) : '',
       stats.childElementCount ? stats : '',
-      actions, mine,
-      f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : '');
+      badges, cups, mine,
+      f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
+    if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
   };
   const refresh = async () => {
     try {
@@ -189,11 +239,37 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   d.showModal();
   void refresh();
 }
+/** Followers or Following of a player: a sheet of rows (tap → that profile), with Follow / Remove on your own. */
+function openFollowList(pid: string, kind: 'followers' | 'following', name: string, onChange: () => void) {
+  const box = h('div', { class: 'fr-follow-list' }, h('p', { class: 'muted' }, rt('rk.loading')));
+  const d = sheet(kind === 'followers' ? ft('fr.followers') : ft('fr.followingN'), box);
+  void followList(pid, kind).then((rows) => {
+    if (!d.isConnected) return;
+    if (!rows.length) { box.replaceChildren(h('p', { class: 'muted' }, kind === 'followers' ? ft('fr.noFollowers', { name }) : ft('fr.noFollowing', { name }))); return; }
+    const mineList = peekProfile(pid)?.relation === 'me';
+    box.replaceChildren(...rows.map((r) => {
+      const me = r.me;
+      const btn = me || !r.pid ? '' : r.on
+        ? h('button', { class: 'chip', onclick: (e: Event) => { const b = e.currentTarget as HTMLButtonElement; b.disabled = true; void unfollowPlayer(r.pid!).then(() => { r.on = false; b.replaceWith(h('span', { class: 'muted small' }, '')); onChange(); }, (er) => { b.disabled = false; toast((er as Error).message); }); } }, `✓ ${ft('fr.followingBtn')}`)
+        : h('button', { class: 'chip on', onclick: (e: Event) => { const b = e.currentTarget as HTMLButtonElement; b.disabled = true; haptic(12); void followPlayer(r.pid!).then(() => { b.textContent = `✓ ${ft('fr.followingBtn')}`; b.classList.remove('on'); onChange(); }, (er) => { b.disabled = false; toast((er as Error).message); }); } }, kind === 'followers' && mineList ? ft('fr.followBack') : ft('fr.follow'));
+      const drop = mineList && kind === 'followers' && r.pid ? h('button', { class: 'icon-btn fr-drop', 'aria-label': ft('fr.removeFollower'), title: ft('fr.removeFollower'), onclick: (e: Event) => {
+        const row = (e.currentTarget as HTMLElement).closest('.fr-follow-row');
+        void dropFollower(r.pid!).then(() => { row?.remove(); onChange(); }, (er) => toast((er as Error).message));
+      } }, '✕') : '';
+      return h('div', { class: 'fr-follow-row' },
+        h('button', { class: 'fr-follow-who', onclick: () => { d.close(); void openProfile({ ...r, score: 0 }, onChange); } },
+          avatar(r.avatar ?? 0, r.tier ?? 0, 40, r.frame ?? 0, r.figure), h('b', {}, flagImg(r.flag, 13), r.name ?? rt('rk.private'))),
+        btn, drop);
+    }));
+  }, (e) => box.replaceChildren(h('p', { class: 'muted' }, (e as Error).message)));
+}
+
 /** ⋯ on a profile: report the player, block (or unblock) them. */
-function playerMenu(pid: string, name: string | null, blocked: boolean, onBlocked: () => void, onUnblocked: () => void) {
+function playerMenu(unfriend: (() => void) | null, pid: string, name: string | null, blocked: boolean, onBlocked: () => void, onUnblocked: () => void) {
   const who = name ?? ft('fr.thisPlayer');
   const d = sheet(who,
     h('div', { class: 'menu' },
+      unfriend ? h('button', { class: 'menu-item', onclick: () => { d.close(); unfriend(); } }, icon('close', 18), ft('fr.remove')) : '',
       h('button', { class: 'menu-item', onclick: () => { d.close(); openReport(pid, name, onBlocked); } }, icon('flag', 18), ft('fr.report')),
       blocked
         ? h('button', { class: 'menu-item', onclick: () => { d.close(); void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onUnblocked(); }).catch((e) => toast((e as Error).message)); } }, icon('lock', 18), ft('fr.unblock'))
@@ -328,8 +404,15 @@ function challenge(pid: string | null | undefined, name: string, after?: () => v
 }
 
 /** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
-export async function friendsTab(fresh: boolean, onChange: () => void): Promise<HTMLElement> {
-  const [data, inv, feats, meta] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null), loadMeta().catch(() => null)]);
+/** The Friends tab came on screen (it was built ahead): its new followers count as seen, a friend moment may play. */
+export function friendsShown() {
+  void myFollows().then(markFollowersSeen, () => {});
+  if (friendsKept) setTimeout(() => void friendMilestone(friendsKept!.friends), 600);
+}
+/** `hidden`: built ahead beside another tab, so nothing is marked seen and no moment plays yet. */
+export async function friendsTab(fresh: boolean, onChange: () => void, hidden = false): Promise<HTMLElement> {
+  const [data, inv, feats, meta, follows] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null),
+    loadMeta().catch(() => null), myFollows(fresh).catch(() => null)]);
   friendsKept = data;
   void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
@@ -359,17 +442,56 @@ export async function friendsTab(fresh: boolean, onChange: () => void): Promise<
     const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, icon('swords', 18), chLabel);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
       h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
-      h('span', { class: 'fr-card-txt' }, h('b', {}, name, f.private ? '' : lampPill(f.lamp)),
+      h('span', { class: 'fr-card-txt' }, h('b', {}, f.private ? '' : flagImg(f.flag, 13), name, f.private ? '' : lampPill(f.lamp)),
         f.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(f.live === 'listen' ? 'fn.listening' : 'fn.reading')) : '',
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
         h('small', {}, on ? ft('fr.both') : f.themToday ? ft('fr.you') : f.meToday ? ft('fr.them', { name }) : ft('fr.neither')))));
   });
-  setTimeout(() => void friendMilestone(data.friends), 900);
-  return h('div', { class: 'fr-tab' }, asks, news(feats, meta),
+  if (!hidden) setTimeout(() => void friendMilestone(data.friends), 900);
+  const fresh2 = newFollowers(follows);
+  if (!hidden) markFollowersSeen(follows);
+  return h('div', { class: 'fr-tab' }, asks, newFollowersSection(fresh2, onChange), news(feats, meta),
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
+    followingSection(follows, onChange),
     inviteRewards(inv, onChange),
     invite,
     h('p', { class: 'muted small' }, ft('fr.help')));
+}
+
+/** Who followed you lately (not followed back yet), each with Follow back. */
+function newFollowersSection(list: Follower[], onChange: () => void): HTMLElement | string {
+  if (!list.length) return '';
+  return h('section', { class: 'fr-asks fr-new-followers' }, h('h3', {}, ft('fr.newFollowers')),
+    ...list.slice(0, 6).map((f) => {
+      const btn = h('button', { class: 'chip on' }, ft('fr.followBack'));
+      btn.onclick = () => {
+        haptic(10);
+        btn.disabled = true;
+        btn.classList.remove('on');
+        btn.textContent = ft('fr.followingBtn');
+        void followPlayer(f.pid!).then(onChange, (e) => { btn.disabled = false; btn.classList.add('on'); btn.textContent = ft('fr.followBack'); toast((e as Error).message); });
+      };
+      const name = f.name ?? rt('rk.private');
+      return h('div', { class: 'fr-ask' },
+        h('button', { class: 'fr-follow-who', onclick: () => void openProfile({ ...f, score: 0 } as Row, onChange) },
+          avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.figure),
+          h('span', { class: 'fr-ask-name' }, f.private ? '' : flagImg(f.flag, 13), ft('fr.followedYou', { name }))),
+        btn);
+    }));
+}
+/** People you follow who are not your friends: this week's XP and whether they are reading now. */
+function followingSection(f: Follows | null, onChange: () => void): HTMLElement | string {
+  const list = (f?.following ?? []).filter((x) => !x.friend);
+  if (!list.length) return '';
+  return h('section', { class: 'fr-following' }, h('h3', {}, ft('fr.followingTitle')),
+    ...list.slice(0, 30).map((x) => {
+      const name = x.name ?? rt('rk.private');
+      return h('button', { class: 'fr-follow-row', onclick: () => void openProfile({ ...x, score: x.week } as Row, onChange) },
+        avatar(x.private ? null : x.avatar ?? 0, x.tier ?? 0, 40, x.frame ?? 0, x.figure),
+        h('span', { class: 'fr-follow-txt' }, h('b', {}, x.private ? '' : flagImg(x.flag, 13), name),
+          x.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(x.live === 'listen' ? 'fn.listening' : 'fn.reading')) : ''),
+        h('span', { class: 'fr-follow-xp' }, `${x.week} ${rt('rk.ptsShort')}`));
+    }));
 }
 
 /** A milestone in a few words ("30-day streak", "Finished Al-Mulk"). */
@@ -500,4 +622,5 @@ export async function takePendingFriend(): Promise<boolean> {
 export function warmFriends(leaguePids: (string | null | undefined)[]) {
   void preloadProfiles(leaguePids);
   void myFriends().then((f) => { friendsKept = f; void preloadProfiles(f.friends.map((x) => x.pid)); }).catch(() => {});
+  void myFollows().catch(() => {}); // kept on the device, so the bell can say who followed you
 }

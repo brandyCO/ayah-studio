@@ -2322,6 +2322,21 @@ duas/reflections section in Me.
       gifts, challenges, gestures, MashaAllahs). Me → ⚙ → App → **Blocked players** (unblock). Reports are kept where only the
       owner reads them (view `rank_player_reports_v` in the SQL editor); a name 3 players report within 30 days becomes "Reader".
       Migration `20261118000000_rank_block_report.sql`, pgTAP `rank_block_report.test.sql` (22)
+- [x] M29 Follow, flags and the profile page (owner pick "A" 2026-11-18, plan artifact "App structure plan"): Ranks keeps its
+      name, tabs **League · Friends · Global** (My boards and challenges inside Friends). **Follow** is one tap, no request
+      (`rank_follow` / `rank_unfollow` / `rank_drop_follower`, ≤ 50 a day, ≤ 2000; refused when blocked or private; friends
+      follow each other); **Add friend** stays apart (ask + accept: friend streak, challenges, gifts). **Flags**: a country the
+      player picks (`src/ui/flag.ts`, 249 ISO codes, `public/flags/` flag-icons MIT, names from `Intl.DisplayNames`; never from
+      a location), shown beside names on boards, podium, friend cards and profiles (`rank_face.flag`). **Profile** (tap a player):
+      the character standing in their own room (`roomStage()`), flag, Followers / Following lists, Follows you, level, lamp,
+      Follow + friend buttons (Remove friend under ⋯), friend streak, stats, badge shelf (rarest 6 sent by `rank_set_badges`,
+      show bit 32) and trophies; own profile → Edit profile (flag, what to show). Friends tab: New followers (Follow back) and
+      Following (not friends: week XP, reading now); the bell says who followed you (`followSeen`). **Swipe** between the three
+      tabs (also a tap): each tab is its own pane, built ahead from what the device kept (`warmPanes()`) and kept side by side;
+      a swipe moves only the strip holding them (one translate), the others wait off screen in a clipped window as tall as the
+      screen at their own scroll place; past 22 % or a fling it slides on, fresh answers repaint in place only when changed.
+      4× CPU: worst frame ~50 ms (no `inert`/visibility toggles: inherited, they restyled every row). Global stays the top 100 +
+      your place. Migration `20261118100000_rank_follow_flag.sql`, pgTAP `rank_follow_flag.test.sql` (34)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
