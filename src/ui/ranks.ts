@@ -107,11 +107,11 @@ export function podium(rows: Row[]): HTMLElement | '' {
   let first = true;
   try { first = localStorage.getItem('rkPodium') !== today; localStorage.setItem('rkPodium', today); } catch { /* ignore */ }
   const spot = (r: Row, place: number) => {
-    const code = r.private ? null : r.figure ?? null;
+    const code = r.private || r.blocked ? null : r.figure ?? null;
     const a = code ? actor('rk-pod-fig', code) : null;
     if (a && r.xp != null) withLevel(a.el, levelOf(r.xp));
     const who = a ? a.el : h('span', { class: 'rk-pod-disc' }, avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, place === 1 ? 64 : 54, r.frame ?? 0));
-    const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.name ?? rt('rk.private')} · ${num(r.score)}`,
+    const el = h('button', { class: `rk-pod p${place}${r.me ? ' me' : ''}`, 'aria-label': `#${place} ${r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private')} · ${num(r.score)}`,
       onclick: () => { if (a) (r.me ? a.wave() : a.happy()); else hopFig(el, 12, 480, false); haptic(8); } },
       h('span', { class: 'rk-pod-who' }, place === 1 ? h('span', { class: 'rk-pod-beam', 'aria-hidden': 'true' }) : '', who),
       h('span', { class: 'rk-pod-name' }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : ''),
@@ -164,12 +164,12 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
     // A tap opens the player's profile (friends, 2026-11-11; their room is visited from there). Private players have none.
     const visit = !!r.pid && (r.me || !r.private);
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${danger ? ' danger' : ''}${visit ? ' visit' : ''}`,
-      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.name ?? rt('rk.private'),
+      ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'),
         onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
-      avatar(r.private ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.figure),
-      h('span', { class: `rk-name${r.private ? ' muted' : ''}` }, r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
+      avatar(r.private || r.blocked ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.blocked ? null : r.figure),
+      h('span', { class: `rk-name${r.private || r.blocked ? ' muted' : ''}` }, r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'), r.me ? h('span', { class: 'rk-you' }, rt('rk.you')) : '', lampPill(r.lamp), lvPill(r.xp), moved(r.move), r.tier !== undefined && !zones ? h('span', { class: 'rk-mini muted small' }, ` · ${tierName(r.tier)}`) : '',
         r.me && meNote ? h('small', { class: 'rk-note' }, meNote) : ''),
       up || down ? h('span', { class: `rk-dir ${up ? 'up' : 'down'}`, title: rt(up ? 'rk.zoneUp' : 'rk.zoneDown') }, up ? '▲' : '▼') : '',
       h('span', { class: 'rk-score' }, metric === 'all' ? ptsIcon() : '', num(r.score), metric === 'listen' ? h('span', { class: 'rk-unit muted small' }, ` ${rt('rk.min')}`) : '')));

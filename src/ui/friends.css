@@ -116,3 +116,12 @@ dialog.fr-page::backdrop { background: transparent; }
   animation: fr-live 1.8s ease-out infinite; }
 @keyframes fr-live { to { box-shadow: 0 0 0 8px transparent; } }
 @media (prefers-reduced-motion: reduce) { .fr-live i { animation: none; } }
+/* Report / Block (App Store guideline 1.2). */
+.fr-page-top .fr-more { margin-inline-start: auto; font-size: 22px; font-weight: 900; }
+.fr-why { flex-wrap: wrap; margin: 4px 0 10px; }
+.fr-report-note { display: block; width: 100%; box-sizing: border-box; min-height: 84px; padding: 10px 12px; border-radius: 14px;
+  border: 2px solid var(--line, rgba(0,0,0,.12)); background: var(--card, transparent); color: inherit; font: inherit; resize: vertical; margin-bottom: 12px; }
+.fr-report-note + .primary { display: block; width: 100%; }
+.primary.fr-block-go { background: #d64545; border-color: #a83232; color: #fff; }
+.fr-blocked-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
+.fr-blocked-row span { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

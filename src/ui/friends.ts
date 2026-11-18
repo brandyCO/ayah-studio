@@ -9,12 +9,13 @@ import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
   SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
 } from '../together/ranks';
 import { myFigureCode, actor } from './actor';
 import { avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
-import { ptsIcon, share, tierBadge } from './ranks';
+import { ptsIcon, share, sheet, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
 import { surahName, t } from '../i18n';
 import { loadMeta, type SurahMeta } from '../data/quran';
@@ -74,7 +75,9 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title), h('div', { class: 'fr-page-body' }, stage, info));
+  // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
+  const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, stage, info));
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
@@ -86,8 +89,18 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
+  more.onclick = () => playerMenu(pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
   let pairSig = '';
   const paint = () => {
+    if (prof?.blocked) {
+      // Blocked: nothing of theirs shows, only the way back.
+      pairSig = '';
+      title.textContent = ft('fr.blockedName');
+      stage.replaceChildren(pairSolo({ ...fromRow(row), private: true, figure: null }));
+      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.blocked')),
+        h('button', { class: 'chip', onclick: () => void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onChange(); return refresh(); }).catch((e) => toast((e as Error).message)) }, ft('fr.unblock')));
+      return;
+    }
     if (!prof) {
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true }));
       info.replaceChildren(h('p', { class: 'muted' }, ft('fr.private')));
@@ -176,6 +189,69 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   d.showModal();
   void refresh();
 }
+/** ⋯ on a profile: report the player, block (or unblock) them. */
+function playerMenu(pid: string, name: string | null, blocked: boolean, onBlocked: () => void, onUnblocked: () => void) {
+  const who = name ?? ft('fr.thisPlayer');
+  const d = sheet(who,
+    h('div', { class: 'menu' },
+      h('button', { class: 'menu-item', onclick: () => { d.close(); openReport(pid, name, onBlocked); } }, icon('flag', 18), ft('fr.report')),
+      blocked
+        ? h('button', { class: 'menu-item', onclick: () => { d.close(); void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onUnblocked(); }).catch((e) => toast((e as Error).message)); } }, icon('lock', 18), ft('fr.unblock'))
+        : h('button', { class: 'menu-item fr-block', onclick: () => { d.close(); askBlock(pid, who, onBlocked); } }, icon('lock', 18), ft('fr.block'))));
+}
+function askBlock(pid: string, who: string, onBlocked: () => void) {
+  const go: HTMLButtonElement = h('button', { class: 'primary fr-block-go' }, icon('lock', 18), ft('fr.block'));
+  const d = sheet(ft('fr.block'), h('p', { class: 'muted' }, ft('fr.blockAsk', { name: who })),
+    h('div', { class: 'fr-acts' }, h('button', { class: 'chip', onclick: () => d.close() }, t('common.cancel')), go));
+  go.onclick = () => {
+    go.disabled = true;
+    haptic(10);
+    void blockPlayer(pid).then(() => { d.close(); toast(ft('fr.blockedToast')); onBlocked(); })
+      .catch((e) => { go.disabled = false; toast((e as Error).message); });
+  };
+}
+/** Report a player: a reason from four, a note if wanted; then the choice to block them too. */
+function openReport(pid: string, name: string | null, onBlocked: () => void) {
+  let why: ReportWhy | null = null;
+  const reasons: ReportWhy[] = ['name', 'character', 'spam', 'other'];
+  const send: HTMLButtonElement = h('button', { class: 'primary brand-btn', disabled: true }, ft('fr.reportSend'));
+  const chips = reasons.map((r) => {
+    const b: HTMLButtonElement = h('button', { class: 'chip', 'aria-pressed': 'false', onclick: () => {
+      why = r;
+      for (const c of chips) { c.classList.toggle('on', c === b); c.setAttribute('aria-pressed', String(c === b)); }
+      send.disabled = false;
+    } }, ft(`fr.why.${r}` as FriendKey));
+    return b;
+  });
+  const note: HTMLTextAreaElement = h('textarea', { class: 'fr-report-note', maxlength: 500, rows: 3, placeholder: ft('fr.reportNote') });
+  const d = sheet(ft('fr.reportTitle'), h('p', { class: 'muted small' }, ft('fr.reportSub')), h('div', { class: 'chips fr-why' }, ...chips), note, send);
+  send.onclick = () => {
+    if (!why) return;
+    send.disabled = true;
+    void reportPlayer(pid, why, note.value).then(() => {
+      d.replaceChildren(h('div', { class: 'sheet-head' }, h('h2', {}, ft('fr.reportThanks'))),
+        h('p', { class: 'muted' }, ft('fr.reportNext')),
+        h('div', { class: 'fr-acts' },
+          h('button', { class: 'chip fr-block', onclick: () => { d.close(); askBlock(pid, name ?? ft('fr.thisPlayer'), onBlocked); } }, icon('lock', 18), ft('fr.alsoBlock')),
+          h('button', { class: 'primary brand-btn', onclick: () => d.close() }, t('common.close'))));
+    }).catch((e) => { send.disabled = false; toast((e as Error).message); });
+  };
+}
+
+/** Me → Settings → App → Blocked players: everyone you blocked, each with Unblock. */
+export async function openBlocked() {
+  const box = h('div', { class: 'fr-blocked-list' }, h('p', { class: 'muted' }, rt('rk.loading')));
+  sheet(ft('fr.blockedList'), box);
+  const fill = async () => {
+    let rows: { pid: string; name: string | null }[];
+    try { rows = account() ? await myBlocks() : []; } catch (e) { box.replaceChildren(h('p', { class: 'muted' }, (e as Error).message)); return; }
+    box.replaceChildren(...(rows.length ? rows.map((r) => h('div', { class: 'fr-blocked-row' }, h('span', {}, r.name ?? ft('fr.thisPlayer')),
+      h('button', { class: 'chip', onclick: () => void unblockPlayer(r.pid).then(() => { toast(ft('fr.unblocked')); return fill(); }).catch((e) => toast((e as Error).message)) }, ft('fr.unblock'))))
+      : [h('p', { class: 'muted' }, ft('fr.blockedNone'))]));
+  };
+  await fill();
+}
+
 /** "Level 12" with a bar to the next level. */
 function levelLine(xp: number) {
   const { level, p, need } = levelProgress(xp);
