@@ -128,6 +128,39 @@ function simulate(s: Script): Record<Ch, number[]> {
 const cache = new Map<Gesture, Record<Ch, number[]>>();
 const playing = new WeakMap<Element, { anims: Animation[]; t: number }>();
 
+type Frames = Record<'ual' | 'fal' | 'uar' | 'far' | 'mv' | 'hn' | 'sh', Keyframe[]>;
+const framed = new Map<Gesture, Frames>();
+/** A gesture's keyframes, written once (building ~500 of them in the tap that bursts a chest cost a slow phone ~40 ms). */
+function frames(name: Gesture, F: Record<Ch, number[]>): Frames {
+  let k = framed.get(name);
+  if (k) return k;
+  const n = F.sq.length;
+  const fr = (f: (i: number) => Keyframe) => Array.from({ length: n }, (_, i) => f(i));
+  const pct = (u: number, of: number) => `${(u / of * 100).toFixed(3)}%`;
+  // Left arm (screen left) turns clockwise to swing out, the right one the other way.
+  k = {
+    ual: fr((i) => ({ transform: `rotate(${F.ual[i].toFixed(2)}deg)` })),
+    fal: fr((i) => ({ transform: `rotate(${F.fal[i].toFixed(2)}deg)` })),
+    uar: fr((i) => ({ transform: `rotate(${(-F.uar[i]).toFixed(2)}deg)` })),
+    far: fr((i) => ({ transform: `rotate(${(-F.far[i]).toFixed(2)}deg)` })),
+    mv: fr((i) => {
+      const sy = 1 + F.sq[i], sx = 1 / Math.sqrt(Math.max(0.5, sy));
+      return { transform: `translateY(${pct(-F.lift[i], 262)}) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` };
+    }),
+    hn: fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` })),
+    sh: fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` })),
+  };
+  framed.set(name, k);
+  return k;
+}
+
+/** Works a gesture out ahead of time (while nothing else is happening), so playing it later costs almost nothing. */
+export function warmGesture(name: Gesture) {
+  const F = cache.get(name) ?? simulate(SCRIPTS[name]());
+  cache.set(name, F);
+  frames(name, F);
+}
+
 /** Plays a gesture on a layered character (`root` holds `.fg-lay`). Returns its length in ms (0 when nothing moved). */
 export function gesture(root: Element, name: Gesture, face?: (xp: string | null, ms: number) => void): number {
   const lay = root.querySelector('.fg-lay');
@@ -144,24 +177,18 @@ export function gesture(root: Element, name: Gesture, face?: (xp: string | null,
   const play = (el: HTMLElement | null, frames: Keyframe[]) => {
     if (el) { own(el); anims.push(el.animate(frames, { duration: ms, easing: 'linear' })); }
   };
-  const n = F.sq.length;
-  const fr = <T extends Keyframe>(f: (i: number) => T) => Array.from({ length: n }, (_, i) => f(i));
-  const pct = (u: number, of: number) => `${(u / of * 100).toFixed(3)}%`;
+  const k = frames(name, F);
   if (s.arms) {
-    // Left arm (screen left) turns clockwise to swing out, the right one the other way.
-    play(q('.fg-rua-l'), fr((i) => ({ transform: `rotate(${F.ual[i].toFixed(2)}deg)` })));
-    play(q('.fg-rfa-l'), fr((i) => ({ transform: `rotate(${F.fal[i].toFixed(2)}deg)` })));
-    play(q('.fg-rua-r'), fr((i) => ({ transform: `rotate(${(-F.uar[i]).toFixed(2)}deg)` })));
-    play(q('.fg-rfa-r'), fr((i) => ({ transform: `rotate(${(-F.far[i]).toFixed(2)}deg)` })));
+    play(q('.fg-rua-l'), k.ual);
+    play(q('.fg-rfa-l'), k.fal);
+    play(q('.fg-rua-r'), k.uar);
+    play(q('.fg-rfa-r'), k.far);
     lay.classList.add('rigging');
   }
-  play(q('.fg-mv'), fr((i) => {
-    const sy = 1 + F.sq[i], sx = 1 / Math.sqrt(Math.max(0.5, sy));
-    return { transform: `translateY(${pct(-F.lift[i], 262)}) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` };
-  }));
+  play(q('.fg-mv'), k.mv);
   // The head on its own layer inside its idle sway; a squashed body squashes the head less.
-  play(q('.fg-hn'), fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` })));
-  play(lay.querySelector<HTMLElement>(':scope > .fg-sh > i'), fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` })));
+  play(q('.fg-hn'), k.hn);
+  play(lay.querySelector<HTMLElement>(':scope > .fg-sh > i'), k.sh);
   if (s.face && face) face(s.face, ms * 0.85);
   const t = window.setTimeout(() => { lay.classList.remove('rigging'); playing.delete(root); }, ms);
   playing.set(root, { anims, t });

@@ -2377,6 +2377,15 @@ duas/reflections section in Me.
       (`overscroll-behavior-y: none`, `OVER_SCROLL_NEVER` in `AppActivity`) and `src/ui/stretch.ts` stretches only the screen's
       scrolling parts from the edge pulled past (fixed / sticky bars stay), springing back on release. Welcome to your league
       uses the engine (`drop`, `rise`, `stagger`)
+      **Slowest-phone pass** (owner 2026-11-19, "ready for the slowest phone"): no class on a moment restyles all of it (no
+      `*` / `:not()`-only selectors keyed on `.go` / `.revealed` / `.fg-off`; the paused loops are named by class), the page
+      behind is skipped by a class on each of its own elements (`cel-off`, was `html.cel-cover body > …`, a whole-document
+      restyle), `holdPage` pauses only the moves the engine knows (no `document.getAnimations()`), the stage's parts
+      (chest, character, Noor) join one per task while the seed flies (`cel-wait`), boxes are read once before anything
+      moves (canvas, stage, chest at rest, prize cards), `--crack` is set only on the seam and mouth, the sound engine and
+      the cheer's keyframes (`warmGesture()` in `rig.ts`) are made ready in the gaps; the lantern moment no longer sways the
+      whole screen (`.cel-lantern` was also the moment's kind class). Chest at 6× CPU: long tasks 5 (50–150 ms) → 0–1
+      (≤ 66 ms), worst frame 100–150 → 50 ms, script 547 → ~340 ms, style ~1300 → ~950 ms over 9 s
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

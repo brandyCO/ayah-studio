@@ -55,7 +55,9 @@
    frame (the waiting chest's cost on slow phones). */
 .cel-loot-it:not(.in) .cel-orb { animation: none; }
 /* The words and the button wait until everything is out of the chest */
-.cel-chest:not(.revealed) :is(.cel-text, .cel-text *, .cel-ok) { visibility: hidden; animation: none !important; }
+/* Named by class, never `.cel-text *`: a universal part made each class change on the moment restyle all of it
+   (the character's ~300 SVG nodes), ~70 ms on a slow phone. */
+.cel-chest:not(.revealed) :is(.cel-text, .cel-kicker, .cel-text h2, .cel-sub, .cel-stats, .cel-ok) { visibility: hidden; animation: none !important; }
 .cel-chest .cel-kicker { animation-delay: 0s; } .cel-chest .cel-text h2 { animation-delay: .08s; }
 .cel-chest .cel-sub { animation-delay: .2s; } .cel-chest .cel-ok { animation-delay: .35s; }
 .cel-chest-box.open { animation: cel-chest-pop .5s cubic-bezier(.2, 1.6, .4, 1) both !important; }

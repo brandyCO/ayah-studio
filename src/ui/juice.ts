@@ -51,6 +51,8 @@ export function springValues(o: SpringOpts = {}): number[] {
 // element over never asks the browser for its animations: getAnimations() and getComputedStyle() bring every style on
 // the page up to date first (20-40 ms at a time on a slow phone, measured in the chest's taps).
 const mine = new WeakMap<Element, Set<Animation>>();
+/** Every scripted move still playing (for `holdPage`: document.getAnimations() would restyle the whole page). */
+const running = new Set<Animation>();
 if (typeof Element !== 'undefined' && !(Element.prototype.animate as { noted?: boolean }).noted) {
   const native = Element.prototype.animate;
   const noted = function (this: Element, k: Keyframe[] | PropertyIndexedKeyframes | null, o?: number | KeyframeAnimationOptions) {
@@ -58,6 +60,9 @@ if (typeof Element !== 'undefined' && !(Element.prototype.animate as { noted?: b
     let set = mine.get(this);
     if (!set) mine.set(this, set = new Set());
     set.add(a);
+    running.add(a);
+    a.addEventListener('finish', () => running.delete(a));
+    a.addEventListener('cancel', () => running.delete(a));
     const fill = typeof o === 'object' ? o.fill : undefined;
     // A move that holds its last frame (fill forwards / both) still shows, so it stays noted until it is cancelled.
     if (fill !== 'forwards' && fill !== 'both') a.addEventListener('finish', () => set!.delete(a));
@@ -227,34 +232,35 @@ export function noor(cls = ''): Noor {
  *  moment's opaque sky has faded in: not styled, laid out or drawn, its CSS animations stop, its size is kept), so
  *  a phone only draws the moment. Animations started from script on the page are paused. Released as the moment
  *  starts to fade out. Counted, so two moments in a row hand over cleanly. */
-let held = 0, coverT = 0;
+let held = 0, coverT = 0, covered: Element[] = [];
+// Each element of the page is skipped by a class of its own: a class on <html> with `body > :not(.cel)` made the
+// browser restyle the whole document twice (~90 ms on a slow phone, once covering and once uncovering).
+const cover = () => {
+  for (const c of document.body.children)
+    if (!c.classList.contains('cel') && !c.classList.contains('lt-fly-layer')) { c.classList.add('cel-off'); covered.push(c); }
+};
 /** Shows the page behind a moment again before the moment ends (while it stands still): its restyle happens then. */
 export function uncover() {
   clearTimeout(coverT);
-  const root = document.documentElement;
-  if (!root.classList.contains('cel-cover')) return;
-  root.classList.remove('cel-cover');
+  if (!covered.length) return;
+  for (const c of covered) c.classList.remove('cel-off');
+  covered = [];
   for (const a of paused) try { a.play(); } catch { /* removed meanwhile */ }
   paused = [];
 }
 let paused: Animation[] = [];
 export function holdPage(on: boolean) {
   held = Math.max(0, held + (on ? 1 : -1));
-  const root = document.documentElement;
   clearTimeout(coverT);
   // Once the sky covers the screen (not in the moment's first frames, which are busy enough).
   if (held > 0) coverT = window.setTimeout(() => {
-    if (held <= 0 || root.classList.contains('cel-cover')) return;
-    for (const a of document.getAnimations()) {
+    if (held <= 0 || covered.length) return;
+    for (const a of running) {
       const el = (a.effect as KeyframeEffect | null)?.target;
-      if (a.playState !== 'running' || !el || a instanceof CSSAnimation || a instanceof CSSTransition || el.closest('.cel, .lt-fly-layer')) continue;
+      if (a.playState !== 'running' || !el || el.closest('.cel, .lt-fly-layer')) continue;
       a.pause(); paused.push(a);
     }
-    root.classList.add('cel-cover');
+    cover();
   }, 340);
-  else {
-    root.classList.remove('cel-cover');
-    for (const a of paused) try { a.play(); } catch { /* removed meanwhile */ }
-    paused = [];
-  }
+  else uncover();
 }

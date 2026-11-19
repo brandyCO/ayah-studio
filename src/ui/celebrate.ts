@@ -29,7 +29,8 @@ import './celebrate.css';
 import { actor as makeActor } from './actor';
 import { edge, freezeArt, svgOf, two } from './flat';
 import { bump, combo, drop, holdPage, uncover, noor as makeNoor, own, popIn, squash, takeOver, tick as tickNum } from './juice';
-import { sfx } from './sfx';
+import { sfx, warmSounds } from './sfx';
+import { warmGesture } from './rig';
 import { mt, type MomentKey } from '../i18n/moments';
 import { fpsStart } from '../fps';
 
@@ -446,13 +447,14 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       }, 260);
     };
     const lootTimers: number[] = [];
-    const canvasBox = () => canvas.getBoundingClientRect();
+    let kb: DOMRect | null = null, sb: DOMRect | null = null, cb: DOMRect | null = null;
+    const canvasBox = () => kb ??= canvas.getBoundingClientRect();
     const reveal = () => {
       if (revealed) return;
       revealed = true;
       revealedAt = performance.now();
       lootTimers.forEach(clearTimeout);
-      lootCards.forEach((c) => { c.getAnimations().forEach((a) => a.finish()); c.classList.add('in', 'landed'); });
+      lootCards.forEach((c) => { own(c); c.classList.add('in', 'landed'); });
       if (lootLight) (lootLight as HTMLElement).textContent = `+${(loot.find((l) => l.kind === 'light') as { n: number }).n}`;
       el.classList.add('revealed');
       fx?.motes(true);
@@ -467,7 +469,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     const land = (i: number) => {
       const c = lootCards[i];
       c.classList.add('landed');
-      const r = c.getBoundingClientRect(), k = canvasBox();
+      const r = cardAt[i] ?? c.getBoundingClientRect(), k = canvasBox();
       fx?.burst(r.left + r.width / 2 - k.left, r.top + 32 - k.top, 22 + tier * 4, 0.55);
       squash(c.querySelector('.cel-loot-art')!, 0.3);
       const l = loot[i];
@@ -482,13 +484,16 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       if (l.kind === 'light') countUp(lootLight, l.n);
     };
     const GAP = roll ? 420 : 650;
+    let cardAt: DOMRect[] = [];
     const pour = () => {
       // One prize after another: out of the chest's mouth in an arc, landing on its card.
-      const s = stage.getBoundingClientRect();
+      // Every box read once, before anything moves (read per prize, each one restyled the moment).
+      const s = sb ?? stage.getBoundingClientRect();
+      cardAt = lootCards.map((c) => c.getBoundingClientRect());
       const mx = s.left + s.width / 2, my = s.top + s.height * 0.42;
       lootCards.forEach((c, i) => lootTimers.push(window.setTimeout(() => {
         c.classList.add('in');
-        const r = c.getBoundingClientRect();
+        const r = cardAt[i];
         const dx = mx - (r.left + r.width / 2), dy = my - (r.top + r.height / 2);
         c.animate([
           { transform: `translate(${dx}px, ${dy}px) scale(.15)`, opacity: 0 },
@@ -502,8 +507,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       lootTimers.push(window.setTimeout(reveal, lootCards.length * GAP + (roll ? 300 : 500)));
     };
     const openChest = () => {
-      const b = chestBox!.getBoundingClientRect(), k = canvasBox();
-      jolt!.getAnimations().forEach((a) => a.cancel());
+      const b = cb ??= chestBox!.getBoundingClientRect(), k = canvasBox();
+      own(jolt!);
       // Released from the crouch: it stretches up, then wobbles and settles.
       squash(jolt!, -0.3, { stiffness: 300, damping: 10 });
       sfx.open(epic, tier);
@@ -548,6 +553,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     const art = jolt?.querySelector<HTMLElement>('.ck-art');
     const lid = jolt?.querySelector<SVGElement>('.ck-lid');
     const mouth = jolt?.querySelector<SVGElement>('.ck-mouth');
+    const crackOn = [epic ? chestBox : null, mouth, jolt?.querySelector<SVGElement>('.cel-crack .seam')].filter((n): n is HTMLDivElement | SVGElement => !!n);
     const beam = stage.querySelector<HTMLElement>('.cel-chest-beam');
     // Almost: the lid flies up, light floods out, and it slams shut again.
     // Positions are read in the tap before anything changes (a read after a change makes the phone redo every style).
@@ -577,13 +583,16 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         squash(jolt!, 0.32, { stiffness: 420, damping: 12 });
         own(stage);
         stage.animate([{ translate: '0 0' }, { translate: '-4px 2px' }, { translate: '3px -1px' }, { translate: '-1px 0' }, { translate: '0 0' }], { duration: 240 });
-        const b2 = chestBox!.getBoundingClientRect(), k2 = canvasBox();
+        const b2 = cb ??= chestBox!.getBoundingClientRect(), k2 = canvasBox();
         fx?.burst(b2.left + b2.width / 2 - k2.left, b2.bottom - b2.height * 0.14 - k2.top, 14, 0.4);
         el.classList.remove('almost');
       });
     };
     const tapChest = (x: number | null, y: number | null) => {
       if (isOpen) return;
+      // Where the chest has got to, read first, while nothing has changed since the last frame (read after the
+      // changes below, it made the browser restyle the moment mid-tap).
+      const pose0 = takeOver(jolt!);
       taps++;
       const now = performance.now();
       // Uneven: some taps crack it a lot, some barely; quick taps in a row a little more.
@@ -603,7 +612,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       if (taps === 1) me?.lean(1); else me?.hop(0.25 + 0.35 * p);
       nr?.glow(p);
       if (taps === 1) el.classList.add('tapped');
-      const b = chestBox!.getBoundingClientRect(), k = canvasBox();
+      const b = cb ??= chestBox!.getBoundingClientRect(), k = canvasBox();
       const on = x != null && y != null && x > b.left && x < b.right && y > b.top && y < b.bottom;
       fx?.burst((on ? x! : b.left + b.width / 2) - k.left, (on ? y! : b.top + b.height * 0.45) - k.top, 12 + Math.round(p * 30), 0.45 + p * 0.4);
       // It pushes back harder as it gives way: a bigger jolt and a quicker rebound.
@@ -611,7 +620,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const side = Math.random() < 0.5 ? -1 : 1;
       // From wherever the last jolt has got to, so a quick tap never jumps (and one move at a time on the layer).
       jolt!.animate([
-        { transform: takeOver(jolt!) },
+        { transform: pose0 },
         { transform: 'translateY(5px) scale(1.1, .88)', offset: 0.14 },
         { transform: `translateY(${-10 - p * 16}px) rotate(${-a * side}deg) scale(.95, 1.07)`, offset: 0.4 },
         { transform: `translateY(-3px) rotate(${a * 0.8 * side}deg)`, offset: 0.62 },
@@ -622,13 +631,15 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       if (!doAlmost) lid?.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `0 ${((-2 - p * 7) / 0.76).toFixed(2)}%`, rotate: `${-2 - p * 5}deg`, offset: 0.4 }, { translate: '0 0', rotate: '0deg' }], { duration: 420 });
       const lit = done ? paths.length : Math.min(paths.length - 1, Math.ceil(p * paths.length));
       paths.forEach((q, i) => q.classList.toggle('on', i < lit));
-      stage.style.setProperty('--crack', String(p));
+      // Only on what reads it: set on the stage, the change restyled every node of the character too.
+      for (const n of crackOn) n.style.setProperty('--crack', String(p));
       if (doAlmost) { almost(b, k); strain(); return; }
       if (!done) { setHint(p >= 0.62 ? 'cel.tapNear' : 'cel.tapMore'); strain(); return; }
       clearTimeout(strainT);
       // Anticipation: it crouches, gathering itself, for a breath before it bursts.
       isOpen = true;
-      const pose = takeOver(jolt!);
+      own(jolt!);
+      const pose = pose0;
       // A rare prize: the light gathers in slow motion first (the screen dims, the seam blazes, a swell rises).
       const hold = epic ? 560 + epic * 220 : 170;
       if (epic) { el.classList.add('charging'); sfx.rare(hold); }
@@ -653,50 +664,73 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     });
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', close);
+    // Read before the moment is added: the page's layout is still clean, so this costs nothing.
+    const r = still ? undefined : from?.getBoundingClientRect();
+    // The stage's parts (the chest, the character: ~450 drawn nodes) come in one at a time while the seed of light
+    // flies, which the graphics chip moves on its own: on a slow phone the moment no longer opens with one long
+    // stall of styling and laying out everything at once.
+    const parts = still ? [] : [...stage.children];
+    for (const c of parts) { c.classList.add('cel-wait'); c.remove(); }
     document.body.append(el);
     holdPage(true);
     if (still && isChest) lootCards.forEach((c) => c.classList.add('in', 'landed'));
-    (isChest && !still ? hit! : ok).focus({ preventScroll: true });
-    if (still) return;
+    if (still) { (isChest ? hit! : ok).focus({ preventScroll: true }); return; }
 
     // 1. A seed of light: the Claim button lifts, becomes a glowing orb and flies to the centre,
     //    gathers itself (anticipation) and bursts — then the moment unfolds from that burst.
-    const box = stage.getBoundingClientRect();
-    const cx = box.left + box.width / 2;
-    const cy = box.top + box.height / 2;
-    const seed = h('span', { class: 'cel-seed', 'aria-hidden': 'true' });
-    stage.append(seed);
-    const r = from?.getBoundingClientRect();
     const has = !!(r && r.width);
-    const dx = has ? r!.left + r!.width / 2 - cx : 0;
-    const dy = has ? r!.top + r!.height / 2 - cy : 40;
     const FLY = (has ? 560 : 360) * (roll ? 0.65 : 1);
     const T = FLY + (roll ? 300 : 420);
-    seed.animate([
-      { transform: has ? `translate(${dx}px, ${dy}px) scale(${r!.width / 48}, ${r!.height / 48})` : `translate(0, ${dy}px) scale(.2)`, opacity: 0.9, offset: 0 },
-      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - (has ? 70 : 0)}px) scale(.8)`, opacity: 1, offset: (FLY * 0.55) / T },
-      { transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: FLY / T },
-      { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + (roll ? 200 : 300)) / T },
-      { transform: 'translate(0, 0) scale(2.6)', filter: 'brightness(2)', opacity: 0, offset: 1 },
-    ], { duration: T, easing: 'cubic-bezier(.3, 0, .2, 1)', fill: 'forwards' }).finished.then(() => seed.remove(), () => {});
+    // The first layout of the moment happens in the next frame, not in the tap that claimed it (on a slow phone the
+    // two together were one long stall). The boxes read there are kept, so no later beat has to ask for them again.
+    requestAnimationFrame(() => {
+      if (done) return;
+      const box = stage.getBoundingClientRect();
+      kb = canvas.getBoundingClientRect();
+      sb = box;
+      fx = sparks(canvas, sparkColors);
+      if (!isChest) ok.focus({ preventScroll: true });
+      const cx = box.left + box.width / 2;
+      const cy = box.top + box.height / 2;
+      const seed = h('span', { class: 'cel-seed', 'aria-hidden': 'true' });
+      stage.append(seed);
+      const dx = has ? r!.left + r!.width / 2 - cx : 0;
+      const dy = has ? r!.top + r!.height / 2 - cy : 40;
+      seed.animate([
+        { transform: has ? `translate(${dx}px, ${dy}px) scale(${r!.width / 48}, ${r!.height / 48})` : `translate(0, ${dy}px) scale(.2)`, opacity: 0.9, offset: 0 },
+        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - (has ? 70 : 0)}px) scale(.8)`, opacity: 1, offset: (FLY * 0.55) / T },
+        { transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: FLY / T },
+        { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + (roll ? 200 : 300)) / T },
+        { transform: 'translate(0, 0) scale(2.6)', filter: 'brightness(2)', opacity: 0, offset: 1 },
+      ], { duration: T, easing: 'cubic-bezier(.3, 0, .2, 1)', fill: 'forwards' }).finished.then(() => seed.remove(), () => {});
+      // One part a task, in their order, under the seed.
+      const step = Math.max(40, Math.min(110, (FLY * 0.7) / Math.max(1, parts.length)));
+      parts.forEach((c, i) => later(step * (i + 1), () => stage.insertBefore(c, seed.isConnected ? seed : null)));
+      // The sound engine and the character's cheer are made ready in the gaps too, not at the moment they play.
+      later(step * (parts.length + 0.5), warmSounds);
+      if (me) later(step * (parts.length + 1), () => warmGesture('cheer'));
+    });
     vibrate([8]);
     const BURST = FLY + (roll ? 200 : 300);
 
     // 2. The burst: a soft flash, light sweeping across, sparks flying out, the moment playing.
     later(BURST, () => {
-      el.classList.add('go');
-      fx = sparks(canvas, sparkColors);
+      fx ??= sparks(canvas, sparkColors);
       const big = m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'star' || m.kind === 'flame' || (m.kind === 'chest' && tier >= 2);
-      const sb = stage.getBoundingClientRect();
-      const cr = canvas.getBoundingClientRect();
-      fx.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
+      for (const c of parts) if (!c.isConnected) stage.append(c);
+      const sb0 = sb ??= stage.getBoundingClientRect();
+      const cr = canvasBox();
+      if (chestBox) cb = chestBox.getBoundingClientRect();
+      if (isChest) hit!.focus({ preventScroll: true });
+      el.classList.add('go');
+      fx.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
       if (!isBadge) vibrate(m.kind === 'lantern' ? [18] : [22]);
       // A Platinum or Diamond badge: the gold wash and a second, bigger burst (a Diamond bigger still).
       const bstep = 'badge' in m ? m.badge.step : 0;
       if (bstep >= 3) {
         el.classList.add('epic');
-        later(280, () => fx?.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));
-        if (bstep === 4) later(620, () => fx?.burst(sb.left + sb.width / 2 - cr.left, sb.top + sb.height / 2 - cr.top, 60, 1.4));
+        later(280, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));
+        if (bstep === 4) later(620, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 60, 1.4));
       }
       // A chest drops in, lands with a squash and a thud, then waits for the user's taps.
       if (isChest) {
@@ -707,7 +741,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         later(Math.round(10 + Math.sqrt(260) * 0.5) * (1000 / 60), () => {
           sfx.land();
           me?.hop(0.2);
-          const b = chestBox!.getBoundingClientRect(), k = canvasBox();
+          const b = cb ?? chestBox!.getBoundingClientRect(), k = canvasBox();
           fx?.burst(b.left + b.width / 2 - k.left, b.bottom - b.height * 0.12 - k.top, 16, 0.4);
         });
         later(roll ? 420 : 620, () => { ready = true; });
@@ -729,7 +763,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       const badgeBeat = isBadge ? [900, 1000, 1150, 1450, 1250][(m as { badge: BadgeDef }).badge.step] + (m.kind === 'khatm' ? 500 : 0) : 0;
       const beat = (isBadge ? badgeBeat : m.kind === 'flame' ? 1400 : 900) * (roll ? 0.6 : 1);
       later(beat, () => {
-        const b2 = stage.getBoundingClientRect();
+        const b2 = sb0;
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);
         sfx.shimmer();
         showCombo();
