@@ -186,7 +186,11 @@ const VIEWS: PaneView[] = ['league', 'friends', 'global'];
 interface Pane { el: HTMLElement; inn: HTMLElement; head: HTMLElement; body: HTMLElement; o: number; t: number; y: number; painted: boolean; stale: boolean }
 
 export async function showRanks(root: HTMLElement): Promise<() => void> {
-  setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
+  // Built ahead while idle (main.ts, speed pass 3): kept hidden, painted only from what this phone kept; nothing asked,
+  // moved, played or scrolled until it is shown.
+  const hidden = () => root.classList.contains('screen-kept') || root.classList.contains('screen-warm');
+  const whenShown = (f: () => void) => { if (hidden()) root.addEventListener('screen-shown', f, { once: true }); else f(); };
+  whenShown(() => setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200)); // a friend streak milestone waiting
   // Three tabs (owner 2026-11-18): League · Friends · Global; My boards and challenges sit inside Friends.
   let view: View = (() => { try { const v = (sessionStorage.getItem('rankView') as View) || 'league'; return v === 'boards' ? 'friends' : v; } catch { return 'league'; } })();
   let allTime = false;
@@ -877,7 +881,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (now == null) return;
     const gain = shownPts == null ? 0 : now - shownPts;
     shownPts = now;
-    if (gain <= 0) return;
+    if (gain <= 0 || hidden()) return;
     const row = body.querySelector<HTMLElement>('.rk-row.me');
     const score = row?.querySelector<HTMLElement>('.rk-score');
     if (row && score && metric === 'all') {
@@ -892,7 +896,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // shows on a visit, the list scrolls so your row sits in the middle with the players just above and below you.
   let onMe = false;
   function openOnMe() {
-    if (onMe || view !== 'league') return;
+    if (onMe || view !== 'league' || hidden()) return;
     const row = body.querySelector<HTMLElement>('.rk-row.me');
     if (!row) return;
     onMe = true;
@@ -974,10 +978,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   };
   async function open() {
     if (!account()) { signedOut(); return; }
-    if (!isKept('league') && !isKept('status')) { const p = paint(true); firstLoad(p); await p; warmPanes(); return; }
+    if (!isKept('league') && !isKept('status')) {
+      if (hidden()) { whenShown(() => void open()); return; } // nothing kept to show yet: all of it once it is opened
+      const p = paint(true); firstLoad(p); await p; warmPanes(); return;
+    }
     fromKept = true;
     try { await staleFirst(() => paint(false)); } finally { fromKept = false; }
     warmPanes(); // the other tabs from what is kept, before the fresh answers
+    if (hidden()) await new Promise<void>((r) => whenShown(r)); // built ahead: the fresh answers when it is opened
     await paint(true);
     warmPanes();
   }
@@ -1093,8 +1101,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     document.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, { capture: true, signal: swipeOff.signal });
     // The whole screen takes the swipe, also below a short list (the page itself stays scrollable up and down).
     root.style.touchAction = 'pan-y';
-    document.documentElement.style.touchAction = 'pan-y';
-    swipeOff.signal.addEventListener('abort', () => { document.documentElement.style.touchAction = ''; });
+    if (!hidden()) document.documentElement.style.touchAction = 'pan-y'; // built ahead: set when it is shown (below)
+    swipeOff.signal.addEventListener('abort', () => { if (!hidden()) document.documentElement.style.touchAction = ''; });
     // Kept alive while another tab shows (main.ts): the page's swipe setting goes with it and comes back with it.
     root.addEventListener('screen-hidden', () => { document.documentElement.style.touchAction = ''; }, sig);
     root.addEventListener('screen-shown', () => { document.documentElement.style.touchAction = 'pan-y'; }, sig);

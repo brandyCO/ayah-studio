@@ -55,7 +55,7 @@ const dropAlive = (key?: string) => {
 let shownTab = '';
 
 /** Builds a tab ahead, hidden, while the app is idle (Me, then Learn), so even its first tap shows a ready screen. */
-async function prebuild(key: 'me' | 'learn') {
+async function prebuild(key: 'me' | 'learn' | 'ranks') {
   if (alive.has(key) || shownTab === key || kidsOn() || document.hidden) return;
   try { if (key === 'me' && sessionStorage.getItem('meFocus')) return; } catch { /* private window */ }
   const screen = h('div', { class: `screen screen-${key} screen-kept` });
@@ -64,6 +64,7 @@ async function prebuild(key: 'me' | 'learn') {
   app.prepend(screen);
   try {
     const c = key === 'me' ? await (await import('./ui/me')).showMe(screen)
+      : key === 'ranks' ? await (await import('./ui/ranks')).showRanks(screen)
       : await (await import('./ui/learnRoutes')).learnRoute(screen, undefined, undefined);
     // Opened (or the account changed) while it was built: the one built by route() wins.
     if (alive.has(key) || shownTab === key || !screen.isConnected) { c(); screen.remove(); return; }
@@ -78,7 +79,7 @@ async function prebuild(key: 'me' | 'learn') {
 }
 function prebuildTabs() {
   const idle = (fn: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : fn()), ms);
-  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn'), 1500)), 2500);
+  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn').then(() => idle(() => void prebuild('ranks'), 1500)), 1500)), 2500);
 }
 /** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
 function replaceScreens(...els: HTMLElement[]) {

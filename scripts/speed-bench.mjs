@@ -101,7 +101,7 @@ async function tabs(browser) {
   const { ctx, page } = await context(browser, null);
   await page.goto(base);
   await page.waitForFunction(() => !!document.querySelector('.mushaf-page:not(.loading)'), null, { timeout: 60000 });
-  await page.waitForTimeout(9000); // the app settles (idle prefetch of Me, Learn, Ranks)
+  await page.waitForTimeout(13000); // the app settles (idle prefetch of Me, Learn, Ranks)
   const out = [];
   for (const round of [1, 2]) {
     for (const [name, hash, want] of TABS) {
