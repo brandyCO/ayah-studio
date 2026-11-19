@@ -49,15 +49,15 @@
       try {
         var h = location.hash;
         if ((!h || h === '#' || h === '#/' || h.indexOf('#/s/') === 0) && localStorage.getItem('readerMode') !== 'translation' && localStorage.getItem('kidsOn') !== 'true') {
-          var l = document.createElement('link');
-          l.rel = 'preload'; l.as = 'fetch'; l.crossOrigin = 'anonymous';
-          l.href = './data/mushaf.json?v=%DATA_VERSION%';
-          document.head.appendChild(l);
-          // And the page's own font (the page left last time, or Al-Fatiha's page on a first open), so the words
-          // can be drawn as soon as the layout is in, instead of only then starting their download.
+          // The page left last time (or the surah's first page): its own small layout file and its font, so the words
+          // can be drawn as soon as both are in. The whole layout (~85 KB) comes after the page is on screen.
           var lp = JSON.parse(localStorage.getItem('lastPage') || 'null');
           var home = !h || h === '#' || h === '#/', m = /^#\/s\/(\d+)$/.exec(h);
           var pg = lp && (home || h === lp[0]) ? lp[1] : m ? %SURAH_PAGES%[m[1] - 1] : home ? 1 : 0;
+          var l = document.createElement('link');
+          l.rel = 'preload'; l.as = 'fetch'; l.crossOrigin = 'anonymous';
+          l.href = pg >= 1 && pg <= 604 ? './data/mushaf/p' + pg + '.json?v=%DATA_VERSION%' : './data/mushaf.json?v=%DATA_VERSION%';
+          document.head.appendChild(l);
           if (pg >= 1 && pg <= 604) {
             var f = document.createElement('link');
             f.rel = 'preload'; f.as = 'font'; f.type = 'font/woff2'; f.crossOrigin = 'anonymous';

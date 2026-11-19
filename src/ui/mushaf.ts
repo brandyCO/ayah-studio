@@ -9,7 +9,7 @@ import { addRecentPage } from '../data/history';
 import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
 import { loadPopular } from '../data/popular';
-import { loadMushaf, loadPageFont, PAGE_COUNT, releasePageFonts, type MushafLine } from '../data/mushaf';
+import { loadMushaf, loadMushafPage, loadPageFont, PAGE_COUNT, peekMushaf, releasePageFonts, surahFirstPage, type Mushaf, type MushafLine } from '../data/mushaf';
 import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
 import { FONT_PACK, packWaiting } from '../data/fontPack';
 import { isNative } from '../native';
@@ -126,8 +126,24 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // Reopening where the user left off: start that page's font right away, while the layout loads.
   const known = knownPage(location.hash);
   if (known) void loadPageFont(known).catch(() => {});
-  const [meta, mushaf, svg] = await Promise.all([loadMeta(), loadMushaf(), bismillah()]);
-  let page = focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n);
+  // The first page draws from its own small file when the page is known before the layout (a reopen, or a surah's
+  // first page); the whole layout follows once it is on screen (speed pass 3). Until then `mushaf` holds that one
+  // page, and anything needing another page waits for `whole()`.
+  const start = peekMushaf() ? null : known ?? (focusAyah ? null : surahFirstPage(n));
+  const [meta, firstData, svg] = await Promise.all([loadMeta(), start ? loadMushafPage(start) : loadMushaf(), bismillah()]);
+  let mushaf: Mushaf;
+  if ('pageOf' in firstData) mushaf = firstData;
+  else {
+    const pages: Mushaf['pages'] = [];
+    pages[start! - 1] = firstData.page;
+    mushaf = { pages, pageOf: () => start!, surahStartPage: () => start!, wordPage: () => start!, segStart: firstData.segStart };
+  }
+  let ready = 'pageOf' in firstData;
+  let wholeP: Promise<void> | null = null;
+  const whole = (): Promise<void> => ready ? Promise.resolve() : wholeP ??= loadMushaf()
+    .then((m) => { mushaf = m; ready = true; })
+    .catch((e: unknown) => { wholeP = null; throw e; });
+  let page = start ?? (focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n));
   root.classList.add('screen-mushaf');
   document.body.classList.add('mushaf-mode');
 
@@ -167,6 +183,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const player = sharedPlayer(meta);
   const detachPlayer = attachPlayer({
     onPosition: (pos) => {
+      if (!ready) { void whole().then(replayPosition, () => {}); return; } // the page being recited: once the layout is in
       if (doneLater && playing && (!pos || pos.s > playing.s)) { const f = doneLater; doneLater = null; f(); }
       // Where listening stops is where to pick up next time (kept as the ayah changes).
       if (pos && pos.a > 0 && (pos.s !== playing?.s || pos.a !== playing?.a)) noteStop(pos.s, pos.a, mushaf.pageOf(pos.s, pos.a), 'listen');
@@ -399,8 +416,10 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   function buildPage(p: number): Promise<HTMLElement> {
     if (!building.has(p)) {
       let fontOk = true;
-      const pr = loadPageFont(p)
-        .catch(() => { fontOk = false; toast(t('mushaf.fontFailed')); })
+      const pr = Promise.all([
+        loadPageFont(p).catch(() => { fontOk = false; toast(t('mushaf.fontFailed')); }),
+        mushaf.pages[p - 1] ? null : whole(),
+      ])
         .then(() => {
           const el = h('div', { class: `mushaf-page${p <= 2 ? ' opening' : ''}`, dir: 'rtl', lang: 'ar', 'data-page': String(p) });
           el.style.fontFamily = `qcf-p${p}`;
@@ -541,6 +560,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   let panX = 0;
   let lastPan = 0; // when the finger last moved a page
   function pan(phase: 'move' | 'end' | 'cancel', dx: number, vx: number) {
+    if (!ready) { void whole().catch(() => {}); return; } // the first moments of a cold open: the rest of the layout is on its way
     lastPan = performance.now();
     // Swiping again while a page is still sliding: let it land at once and follow the new swipe.
     if (animating) finishNow?.();
@@ -601,6 +621,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
 
   function go(p: number) {
+    if (!ready) { void whole().then(() => go(p), () => {}); return; }
     if (animating) finishNow?.();
     flushLayout();
     if (!valid(p) || p === page) return;
@@ -664,6 +685,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const dateFmt = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
   function openBookmarks() {
+    if (!ready) { void whole().then(openBookmarks, () => {}); return; }
     const list = bookmarks();
     const rows = list.map((b) => {
       const row = h('div', { class: 'bm-row' },
@@ -720,6 +742,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
+  if (intent && !ready) await whole().catch(() => {});
   // Listening moved from the tab bar into the reading view (2026-11-02): say where it is, once.
   if (!touring && !intent) {
     try {

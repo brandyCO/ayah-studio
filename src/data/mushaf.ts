@@ -4,6 +4,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { inPack, loadPackFont } from './fontPack';
+import { timedFetch } from '../net';
 
 /** ["h", surah] header · ["b", surah] basmala · [[surah, ayah, "glyph glyph …"], ...] text line */
 export type MushafLine = ['h', number] | ['b', number] | [number, number, string][];
@@ -28,6 +29,40 @@ export interface Mushaf {
 }
 
 let cached: Promise<Mushaf> | null = null;
+let loaded: Mushaf | null = null;
+
+/** The whole layout when it has already arrived (no waiting). */
+export const peekMushaf = (): Mushaf | null => loaded;
+
+/** The page each surah's header is on (= `surahStartPage()`), known before the layout has loaded (vite.config.ts). */
+export const surahFirstPage = (s: number): number => __SURAH_PAGES__[s - 1] ?? 1;
+
+/** One page with the word positions of its segments: what the reader needs to draw it. */
+export interface OnePage { page: MushafPage; segStart: WeakMap<[number, number, string], number> }
+
+/**
+ * One page of the layout, for the first page the reader draws (speed pass 3, 2026-11-19). The whole layout is ~85 KB
+ * compressed and ~0.5 MB to read; the build also writes each page on its own (`data/mushaf/p{N}.json`, ~1 KB:
+ * the page + `st`, the position within its ayah of each segment's first word), so on a slow connection the page
+ * shows while the rest comes after it. Falls back to the whole layout (dev server, offline before it was kept).
+ */
+export function loadMushafPage(p: number): Promise<OnePage> {
+  const whole = () => loadMushaf().then((m) => ({ page: m.pages[p - 1], segStart: m.segStart }));
+  if (loaded || import.meta.env.DEV) return whole();
+  return timedFetch(`${import.meta.env.BASE_URL}data/mushaf/p${p}.json?v=${__DATA_VERSION__}`, {}, 4000)
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<MushafPage & { st: number[] }>;
+    })
+    .then(({ juz, lines, st }) => {
+      const segStart = new WeakMap<[number, number, string], number>();
+      let i = 0;
+      for (const l of lines) if (l[0] !== 'h' && l[0] !== 'b') for (const seg of l as [number, number, string][]) segStart.set(seg, st[i++] ?? 1);
+      if (i !== st.length) throw new Error('page data out of step');
+      return { page: { juz, lines }, segStart };
+    })
+    .catch(whole);
+}
 
 export function loadMushaf(): Promise<Mushaf> {
   cached ??= fetch(`${import.meta.env.BASE_URL}data/mushaf.json?v=${__DATA_VERSION__}`)
@@ -72,8 +107,9 @@ export function loadMushaf(): Promise<Mushaf> {
           return p;
         },
         segStart,
-      };
-    });
+      } satisfies Mushaf;
+    })
+    .then((m) => (loaded = m));
   cached.catch(() => (cached = null));
   return cached;
 }

@@ -12,8 +12,33 @@ for (const f of (readdirSync('public/data', { recursive: true }) as string[]).so
 // The page each surah starts on (its header line, as surahStartPage() in src/data/mushaf.ts), so index.html can
 // start that page's font for `#/s/N` before the app has loaded the layout.
 const SURAH_PAGES: number[] = [];
-(JSON.parse(readFileSync('public/data/mushaf.json', 'utf8')) as { pages: { lines: unknown[][] }[] }).pages.forEach((pg, i) => {
+const MUSHAF = JSON.parse(readFileSync('public/data/mushaf.json', 'utf8')) as { pages: { juz: number; lines: unknown[][] }[] };
+MUSHAF.pages.forEach((pg, i) => {
   for (const l of pg.lines) if (l[0] === 'h' && !SURAH_PAGES[(l[1] as number) - 1]) SURAH_PAGES[(l[1] as number) - 1] = i + 1;
+});
+
+// Each page of the layout on its own (`data/mushaf/p{N}.json`, loadMushafPage() in src/data/mushaf.ts), so the
+// reader draws its first page without waiting for the whole layout: the page as in mushaf.json, plus `st`, the
+// position within its ayah of each text segment's first word (counted across pages, as loadMushaf() does).
+const mushafPages = (): Plugin => ({
+  name: 'mushaf-pages',
+  apply: 'build',
+  generateBundle() {
+    const count = new Map<string, number>();
+    MUSHAF.pages.forEach((pg, i) => {
+      const st: number[] = [];
+      for (const l of pg.lines) {
+        if (l[0] === 'h' || l[0] === 'b') continue;
+        for (const seg of l as [number, number, string][]) {
+          const k = `${seg[0]}:${seg[1]}`;
+          const start = (count.get(k) ?? 0) + 1;
+          st.push(start);
+          count.set(k, start - 1 + seg[2].split(' ').length);
+        }
+      }
+      this.emitFile({ type: 'asset', fileName: `data/mushaf/p${i + 1}.json`, source: JSON.stringify({ juz: pg.juz, lines: pg.lines, st }) });
+    });
+  },
 });
 
 // Relative base so the same build works on GitHub Pages, Capacitor and Tauri.
@@ -75,9 +100,10 @@ const versionFile = (): Plugin => ({
 export default defineConfig({
   base: './',
   // index.html starts the mushaf layout download before the app's code has even loaded (see there).
-  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads(), versionFile()],
+  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads(), versionFile(), mushafPages()],
   define: {
     __DATA_VERSION__: JSON.stringify(DATA_VERSION),
+    __SURAH_PAGES__: JSON.stringify(SURAH_PAGES),
     // Which build a problem report came from (the commit on GitHub's runners, else the build date).
     __BUILD__: JSON.stringify(BUILD),
   },
