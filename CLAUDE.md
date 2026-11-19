@@ -752,6 +752,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       **send later** (`src/together/outbox.ts`, localStorage `rankOutbox`, device-only): follow / unfollow, answering a friend ask,
       MashaAllah and challenge gestures done offline resolve at once and go in order when back (`rpc()` throws `Offline` on
       status 0; follow + unfollow offline cancel out; a refusal is dropped with a toast). Budget 136 KB (135.1)
+      **First opens** (speed pass 3, owner "Yes for both"): the build writes each mushaf page on its own (`data/mushaf/p{N}.json`,
+      ~1 KB with each segment's word position `st`; `mushafPages()` in vite.config.ts); index.html preloads it instead of the
+      whole layout when the page is known and the reader draws it with `loadMushafPage()`, loading the rest once it is on
+      screen (a swipe, the player or an intent waits for `whole()`); Read's first layout shows the page alone, its neighbours a
+      frame later; Ranks is built ahead too (from what the phone kept, nothing asked or played until shown); Me repaints on
+      return only what changed (or after a minute / a new day); Learn units off screen are skipped (`content-visibility: auto`).
+      Kept screens are see-through (`opacity: 0`: Learn's own sky, a positioned box, painted over the screen shown). 6× CPU:
+      web slow 3G 9.4 → 8.0 s, app start 1.0 → 0.74 s, reopen 1.0 → 0.42 s
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
