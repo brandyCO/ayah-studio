@@ -13,12 +13,23 @@ import { setMyXp } from '../data/xp';
 import { EDGE, installId, remoteConfig, timedFetch } from '../net';
 import { isFireDay, isFriendFireDay } from '../data/fireDays';
 import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
+import { Offline, isOffline, sendLater, watchOutbox } from './outbox';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+  if (navigator.onLine === false) throw new Offline('offline');
   const sb = await supabase();
-  const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(localMsg(error.message));
+  const { data, error, status } = await sb.rpc(fn, args);
+  // status 0 = no answer at all (no connection, or it gave up): the caller may keep the action for later (outbox.ts).
+  if (error) throw status === 0 ? new Offline(localMsg(error.message)) : new Error(localMsg(error.message));
   return data as T;
+}
+/** Sends now, or with no connection keeps it to send later (outbox.ts) and resolves as if it went. */
+async function rpcOrLater(key: string, fn: string, args: Record<string, unknown>, cancels?: (old: { fn: string }) => boolean): Promise<boolean> {
+  try { await rpc(fn, args); return true; } catch (e) {
+    if (!isOffline(e)) throw e;
+    sendLater(key, fn, args, cancels);
+    return false;
+  }
 }
 
 export const TIERS = ['lantern', 'star', 'moon', 'dawn', 'sun'] as const;
@@ -122,6 +133,9 @@ export async function report(now = false): Promise<void> {
 /** Keeps the server's numbers in step (main.ts). */
 export function watchRanks() {
   watchMaghrib(totals);
+  watchOutbox((fn, args) => rpc(fn, args).then((v) => { dropCache(); return v; }));
+  // An action kept offline that the server then refused (e.g. the player went private): say so once.
+  addEventListener('outbox-refused', (e) => { const m = (e as CustomEvent<{ message?: string }>).detail?.message; if (m) void import('../ui/dom').then((d) => d.toast(m)); });
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);
   window.addEventListener('journey-changed', () => featsSoon());
@@ -163,26 +177,43 @@ export function watchRanks() {
 // Answers are kept a minute in memory, and the last of each on this device too, so Ranks can open
 // at once with what it showed last time (`staleFirst`) while the fresh answers load. While Ranks is
 // open, `refreshCached()` asks again for what it shows and tells whether anything changed.
-const cache = new Map<string, { at: number; v: unknown; json: string; load: () => Promise<unknown> }>();
+const cache = new Map<string, { at: number; got: number; v: unknown; json: string; load: () => Promise<unknown> }>();
 const STORE = 'rankCache';
 let kept: Record<string, unknown> | null = null;
+// When each kept answer came from the server (ms), for "updated 5 min ago" while offline (thread "Make the whole app fast").
+let keptTimes: Record<string, number> = {};
 const keptAll = () => {
   if (kept) return kept;
   try {
     const v = JSON.parse(localStorage.getItem(STORE) ?? 'null');
     // A cleared copy (`v: null`, written after an account change) counts as empty: `typeof null` is 'object'.
-    kept = v && v.who === account()?.id && v.v && typeof v.v === 'object' ? v.v : {};
-  } catch { kept = {}; }
+    const ok = v && v.who === account()?.id && v.v && typeof v.v === 'object';
+    kept = ok ? v.v : {};
+    keptTimes = ok && v.t && typeof v.t === 'object' ? v.t : {};
+  } catch { kept = {}; keptTimes = {}; }
   return kept!;
+};
+/** When the answer for `key` last came from the server (ms since 1970), or null when it never did on this device. */
+export const keptAt = (key: string): number | null => {
+  const c = cache.get(key);
+  if (c?.got) return c.got;
+  keptAll();
+  return keptTimes[key] ?? null;
+};
+/** The oldest of several answers' times (a screen built from them is as old as its oldest part). */
+export const keptSince = (...keys: string[]): number | null => {
+  const ts = keys.map(keptAt);
+  return ts.some((t) => t === null) ? null : Math.min(...(ts as number[]));
 };
 /** Whether this device kept an answer for `key` (Ranks draws at once from it; with none, the first league shows a reveal). */
 export const isKept = (key: string) => key in keptAll();
 let keepTimer = 0;
 const keep = (key: string, v: unknown) => {
   keptAll()[key] = v;
+  keptTimes[key] = Date.now();
   clearTimeout(keepTimer);
   keepTimer = window.setTimeout(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept ?? {} })); } catch { /* full */ }
+    try { localStorage.setItem(STORE, JSON.stringify({ who: account()?.id, v: kept ?? {}, t: keptTimes })); } catch { /* full */ }
     // The inbox bell counts prizes and challenge chests from these (src/ui/inbox.ts).
     window.dispatchEvent(new Event('rank-cache'));
   }, 400);
@@ -208,7 +239,7 @@ async function cached<T>(key: string, load: () => Promise<T>, fresh = false): Pr
   const running = loading.get(key);
   if (running) return running as Promise<T>;
   const p = load().then((v) => {
-    cache.set(key, { at: Date.now(), v, json: JSON.stringify(v) ?? '', load });
+    cache.set(key, { at: Date.now(), got: Date.now(), v, json: JSON.stringify(v) ?? '', load });
     keep(key, v);
     return v;
   }).finally(() => loading.delete(key));
@@ -225,7 +256,7 @@ export async function refreshCached(live: (key: string) => boolean): Promise<boo
       const v = await c.load();
       const json = JSON.stringify(v) ?? '';
       if (json !== c.json) changed = true;
-      cache.set(key, { at: Date.now(), v, json, load: c.load });
+      cache.set(key, { at: Date.now(), got: Date.now(), v, json, load: c.load });
       keep(key, v);
     } catch { /* offline: keep what there is */ }
   }));
@@ -438,9 +469,17 @@ export interface Cheer { ch: string; kind: number; at: string; mine: boolean }
 export const myCheers = (fresh = false) => cached('cheers', () => rpc<Cheer[]>('rank_challenge_cheers'), fresh);
 /** Sends a gesture; returns how many are left today (5 a day). */
 export async function sendCheer(ch: string, kind: number): Promise<number> {
-  const n = await rpc<number>('rank_challenge_cheer', { ch, kind });
-  cache.delete('cheers');
-  return n;
+  try {
+    const n = await rpc<number>('rank_challenge_cheer', { ch, kind });
+    cache.delete('cheers');
+    return n;
+  } catch (e) {
+    if (!isOffline(e)) throw e;
+    // No connection: sent when it is back; today's count left is a guess until then.
+    sendLater(`cheer:${ch}:${Date.now()}`, 'rank_challenge_cheer', { ch, kind });
+    const mine = ((keptAll().cheers as Cheer[] | undefined) ?? []).filter((c) => c.mine && c.at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+    return Math.max(0, 4 - mine);
+  }
 }
 /** Claims a finished challenge's Light once (winner 100, tie 60, otherwise 30). */
 export async function claimChallenge(c: Challenge): Promise<ChallengeResult | null> {
@@ -705,7 +744,7 @@ export async function askFriend(pid: string): Promise<'sent' | 'friend'> {
   dropCache();
   return r;
 }
-export async function answerFriend(pid: string, ok: boolean) { await rpc('rank_friend_answer', { who: pid, ok }); dropCache(); }
+export async function answerFriend(pid: string, ok: boolean) { if (await rpcOrLater(`ask:${pid}`, 'rank_friend_answer', { who: pid, ok })) dropCache(); }
 export async function removeFriend(pid: string) { await rpc('rank_friend_remove', { who: pid }); dropCache(); }
 // --- report and block (App Store guideline 1.2, owner 2026-11-18): a blocked player shows to you only as "Blocked player",
 // their friendship ends and nothing passes between you; reports go to a table only the owner reads ---
@@ -720,8 +759,10 @@ export interface Follower extends Omit<Row, 'score'> { at: string; on: boolean }
 export interface Followed extends Omit<Row, 'score'> { week: number; live?: 'read' | 'listen' | null; friend: boolean }
 export interface Follows { following: Followed[]; followers: Follower[]; nFollowers: number; nFollowing: number }
 export const myFollows = (fresh = false) => cached('follows', () => rpc<Follows>('rank_my_follows', { d: rankDay() }), fresh);
-export async function followPlayer(pid: string) { await rpc('rank_follow', { who: pid }); dropCache(); }
-export async function unfollowPlayer(pid: string) { await rpc('rank_unfollow', { who: pid }); dropCache(); }
+// Follow / unfollow with no connection wait in the outbox; one undoing the other offline means nothing to send.
+const undoes = (fn: string) => (old: { fn: string }) => old.fn !== fn;
+export async function followPlayer(pid: string) { if (await rpcOrLater(`follow:${pid}`, 'rank_follow', { who: pid }, undoes('rank_follow'))) dropCache(); }
+export async function unfollowPlayer(pid: string) { if (await rpcOrLater(`follow:${pid}`, 'rank_unfollow', { who: pid }, undoes('rank_unfollow'))) dropCache(); }
 export async function dropFollower(pid: string) { await rpc('rank_drop_follower', { who: pid }); dropCache(); }
 export const followList = (pid: string, kind: 'followers' | 'following') => rpc<Follower[]>('rank_follow_list', { who: pid, kind });
 const FLAG = 'rankFlag';
@@ -833,7 +874,14 @@ export async function sendFeats(extra?: [FeatKind, number]) {
 }
 export const featsFeed = (fresh = false) => cached('feats', () => rpc<Feats>('rank_feats_feed'), fresh);
 export async function cheerFeat(id: number): Promise<number> {
-  const n = await rpc<number>('rank_feat_cheer', { id });
+  let n: number;
+  try { n = await rpc<number>('rank_feat_cheer', { id }); } catch (e) {
+    if (!isOffline(e)) throw e;
+    // No connection: the MashaAllah is sent when it is back (once per news item, so sending it twice is harmless).
+    sendLater(`feat:${id}`, 'rank_feat_cheer', { id });
+    const f = ((cache.get('feats')?.v ?? keptAll().feats) as Feats | undefined)?.friends.find((x) => x.id === id);
+    n = (f?.cheers ?? 0) + (f?.cheered ? 0 : 1);
+  }
   const c = cache.get('feats');
   if (c) { const f = (c.v as Feats).friends.find((x) => x.id === id); if (f) { f.cheered = true; f.cheers = n; } }
   return n;
