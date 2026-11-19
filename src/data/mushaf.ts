@@ -42,11 +42,11 @@ export interface OnePage { page: MushafPage; segStart: WeakMap<[number, number, 
 
 /**
  * One page of the layout, for the first page the reader draws (speed pass 3, 2026-11-19). The whole layout is ~85 KB
- * compressed and ~0.5 MB to read; the build also writes each page on its own (`data/mushaf/p{N}.json`, ~1 KB:
+ * compressed and ~0.5 MB to read (~50 ms of a slow phone's main thread); the build also writes each page on its own (`data/mushaf/p{N}.json`, ~1 KB:
  * the page + `st`, the position within its ayah of each segment's first word), so on a slow connection the page
  * shows while the rest comes after it. Falls back to the whole layout (dev server, offline before it was kept).
  */
-export function loadMushafPage(p: number): Promise<OnePage> {
+export function loadMushafPage(p: number, into?: OnePage['segStart']): Promise<OnePage> {
   const whole = () => loadMushaf().then((m) => ({ page: m.pages[p - 1], segStart: m.segStart }));
   if (loaded || import.meta.env.DEV) return whole();
   return timedFetch(`${import.meta.env.BASE_URL}data/mushaf/p${p}.json?v=${__DATA_VERSION__}`, {}, 4000)
@@ -55,7 +55,7 @@ export function loadMushafPage(p: number): Promise<OnePage> {
       return r.json() as Promise<MushafPage & { st: number[] }>;
     })
     .then(({ juz, lines, st }) => {
-      const segStart = new WeakMap<[number, number, string], number>();
+      const segStart = into ?? new WeakMap<[number, number, string], number>(); // `into`: the reader's, for a page added to it
       let i = 0;
       for (const l of lines) if (l[0] !== 'h' && l[0] !== 'b') for (const seg of l as [number, number, string][]) segStart.set(seg, st[i++] ?? 1);
       if (i !== st.length) throw new Error('page data out of step');
@@ -73,38 +73,42 @@ export function loadMushaf(): Promise<Mushaf> {
     .then(({ pages }) => {
       const sample = pages[2]?.lines.find((l) => l[0] !== 'h' && l[0] !== 'b') as [number, number, string][] | undefined;
       if (typeof sample?.[0]?.[2] !== 'string') throw new Error('Mushaf data is out of date — please reload the page');
-      const first = new Map<string, number>();
-      const header = new Map<number, number>();
-      const count = new Map<string, number>(); // words of each ayah seen so far
-      const breaks = new Map<string, [number, number][]>(); // per ayah: [first word position, page] where it continues
+      // One pass over the 13,818 segments. Numbers, not "s:a" strings, and words counted by their spaces, not by
+      // split(): this runs on the main thread just after the first page shows (it was ~100 ms at a Tecno-class CPU).
+      const K = 300; // more than any surah's ayat: key = surah × 300 + ayah
+      const first = new Uint16Array(115 * K);
+      const count = new Uint16Array(115 * K); // words of each ayah seen so far
+      const last = new Uint16Array(115 * K); // page where each ayah was last seen
+      const header = new Uint16Array(116);
+      const breaks = new Map<number, number[]>(); // per ayah: first word position, page, … where it continues
       const segStart = new WeakMap<[number, number, string], number>();
-      pages.forEach((pg, i) => {
-        for (const line of pg.lines) {
-          if (line[0] === 'h') header.set(line[1] as number, i + 1);
+      const words = (g: string) => { let n = 1, i = -1; while ((i = g.indexOf(' ', i + 1)) !== -1) n++; return n; };
+      for (let i = 0; i < pages.length; i++) {
+        const p = i + 1;
+        for (const line of pages[i].lines) {
+          if (line[0] === 'h') header[line[1] as number] = p;
           else if (line[0] !== 'b') {
             for (const seg of line as [number, number, string][]) {
-              const k = `${seg[0]}:${seg[1]}`;
-              if (!first.has(k)) first.set(k, i + 1);
-              const start = (count.get(k) ?? 0) + 1;
+              const k = seg[0] * K + seg[1];
+              if (!first[k]) first[k] = p;
+              const start = count[k] + 1;
               segStart.set(seg, start);
-              count.set(k, start - 1 + seg[2].split(' ').length);
-              const b = breaks.get(k) ?? [];
-              if (b[b.length - 1]?.[1] !== i + 1) b.push([start, i + 1]);
-              breaks.set(k, b);
+              count[k] = start - 1 + words(seg[2]);
+              if (last[k] !== p) { last[k] = p; const br = breaks.get(k); if (br) br.push(start, p); else breaks.set(k, [start, p]); }
             }
           }
         }
-      });
+      }
       return {
         pages,
-        pageOf: (s, a) => first.get(`${s}:${a}`) ?? 1,
-        surahStartPage: (s) => header.get(s) ?? first.get(`${s}:1`) ?? 1,
+        pageOf: (s, a) => first[s * K + a] || 1,
+        surahStartPage: (s) => header[s] || first[s * K + 1] || 1,
         wordPage: (s, a, pos) => {
-          const b = breaks.get(`${s}:${a}`);
-          if (!b) return 1;
-          let p = b[0][1];
-          for (const [start, page] of b) if (pos >= start) p = page;
-          return p;
+          const br = breaks.get(s * K + a);
+          if (!br) return 1;
+          let pg = br[1];
+          for (let j = 0; j < br.length; j += 2) if (pos >= br[j]) pg = br[j + 1];
+          return pg;
         },
         segStart,
       } satisfies Mushaf;

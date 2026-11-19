@@ -279,9 +279,12 @@ later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.
 later(() => setTimeout(() => {
   if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return;
   const go = () => {
+    // One screen's code per quiet moment: starting the three at once listed ~200 files in one task (~100 ms on a
+    // slow phone, a felt pause a few seconds after opening).
+    const quiet = (f: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 3000 }) : f()), ms);
     void import('./ui/me').catch(() => {});
-    void import('./ui/learnPath').catch(() => {});
-    setTimeout(() => void import('./ui/ranks').catch(() => {}), 600); // Ranks too, a moment later
+    quiet(() => void import('./ui/learnPath').catch(() => {}), 300);
+    quiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
     prebuildTabs(); // then Me and Learn built ahead, hidden, so their first tap is instant too
   };
   if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();

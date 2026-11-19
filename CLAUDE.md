@@ -760,6 +760,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       return only what changed (or after a minute / a new day); Learn units off screen are skipped (`content-visibility: auto`).
       Kept screens are see-through (`opacity: 0`: Learn's own sky, a positioned box, painted over the screen shown). 6× CPU:
       web slow 3G 9.4 → 8.0 s, app start 1.0 → 0.74 s, reopen 1.0 → 0.42 s
+      **Slow first visit + the pause after opening** (speed pass 4, owner "do the first one, the second one"): index.html also
+      preloads `meta.json` and skips the Nunito preload when the app opens on a mushaf page (no interface text shows until a
+      tap); the Bismillah picture is waited for only by a first page that shows it; pages wanted before the whole layout is in
+      (neighbours, two away) come from their own page files (`loadMushafPage(p, into)`), the whole layout follows while idle
+      ~1.2 s later and is read in one pass with numeric keys (~5× faster); the neighbours are fitted one per task, the next
+      page first; Me / Learn / Ranks code is fetched one per quiet moment. `scripts/speed-waterfall.mjs` (H2=1: HTTP/2 like the
+      real hosts) lists the downloads before the first page. 6× CPU: web slow 3G 8.0 → 6.6 s (HTTP/2 6.9 → 5.8 s), 4G 2.6 →
+      2.3 s; longest pause in the 3 s after the page shows ~150 → ~55 ms
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase

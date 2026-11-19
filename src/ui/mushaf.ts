@@ -130,20 +130,27 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   // first page); the whole layout follows once it is on screen (speed pass 3). Until then `mushaf` holds that one
   // page, and anything needing another page waits for `whole()`.
   const start = peekMushaf() ? null : known ?? (focusAyah ? null : surahFirstPage(n));
-  const [meta, firstData, svg] = await Promise.all([loadMeta(), start ? loadMushafPage(start) : loadMushaf(), bismillah()]);
+  const [meta, firstData] = await Promise.all([loadMeta(), start ? loadMushafPage(start) : loadMushaf()]);
+  // The Bismillah picture (8 KB) is fetched now but waited for only by a line that shows it: most pages have none,
+  // and on a slow first visit it would hold up the page behind the app's code.
+  let svg = '';
+  const svgP = bismillah().then((x) => { svg = x; }).catch(() => {});
   let mushaf: Mushaf;
+  const page0 = () => start ?? (focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n));
   if ('pageOf' in firstData) mushaf = firstData;
   else {
     const pages: Mushaf['pages'] = [];
     pages[start! - 1] = firstData.page;
     mushaf = { pages, pageOf: () => start!, surahStartPage: () => start!, wordPage: () => start!, segStart: firstData.segStart };
   }
+  // A first page that shows the Bismillah waits for its picture (no line filled in later on the page being read).
+  if (mushaf.pages[page0() - 1]?.lines.some((l) => l[0] === 'b')) await svgP;
   let ready = 'pageOf' in firstData;
   let wholeP: Promise<void> | null = null;
   const whole = (): Promise<void> => ready ? Promise.resolve() : wholeP ??= loadMushaf()
     .then((m) => { mushaf = m; ready = true; })
     .catch((e: unknown) => { wholeP = null; throw e; });
-  let page = start ?? (focusAyah ? mushaf.pageOf(n, focusAyah) : mushaf.surahStartPage(n));
+  let page = page0();
   root.classList.add('screen-mushaf');
   document.body.classList.add('mushaf-mode');
 
@@ -372,7 +379,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     }
     if (l[0] === 'b') {
       const el = h('div', { class: 'mp-line mp-basmala', 'data-s': String(lineSurah) });
-      el.innerHTML = svg; // bundled file (public/fonts/bismillah.svg)
+      if (svg) el.innerHTML = svg; // bundled file (public/fonts/bismillah.svg)
+      else void svgP.then(() => { el.innerHTML = svg; });
       return el;
     }
     const words: HTMLElement[] = [];
@@ -413,12 +421,22 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   const built = new Map<number, HTMLElement>();
   const building = new Map<number, Promise<HTMLElement>>();
   const valid = (p: number) => p >= 1 && p <= PAGE_COUNT;
+  // A page wanted before the whole layout is in (the neighbours of the first page, the pages two away): its own small
+  // file, added to the provisional layout, so they can be built without reading the whole layout on the main thread.
+  function pageData(p: number): Promise<void> {
+    if (ready) return whole();
+    const m = mushaf;
+    return loadMushafPage(p, m.segStart).then((r) => {
+      if (ready || r.segStart !== m.segStart) return whole(); // the whole layout came first (or the page file failed)
+      m.pages[p - 1] ??= r.page;
+    });
+  }
   function buildPage(p: number): Promise<HTMLElement> {
     if (!building.has(p)) {
       let fontOk = true;
       const pr = Promise.all([
         loadPageFont(p).catch(() => { fontOk = false; toast(t('mushaf.fontFailed')); }),
-        mushaf.pages[p - 1] ? null : whole(),
+        mushaf.pages[p - 1] ? null : pageData(p),
       ])
         .then(() => {
           const el = h('div', { class: `mushaf-page${p <= 2 ? ' opening' : ''}`, dir: 'rtl', lang: 'ar', 'data-page': String(p) });
@@ -501,7 +519,16 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     const id = ++renderId;
     const want = [page - 1, page, page + 1].filter(valid);
     let show = neighboursLater && built.has(page) ? [page] : want;
-    if (show !== want) requestAnimationFrame(() => setTimeout(() => { show = want; attach(); }, 0));
+    if (show !== want) {
+      // The next page first (the one a reader swipes to), the previous one in a task of its own: each fit lays out a
+      // whole page of QCF text (~30–60 ms on a slow phone), so two in one task would be a felt pause.
+      requestAnimationFrame(() => setTimeout(() => {
+        show = want.filter((p) => p !== page - 1); attach();
+        setTimeout(() => { show = want; attach(); }, 0);
+      }, 0));
+      // The rest of the layout (other pages, the player, search…) once the page and its neighbours are in.
+      if (!ready) setTimeout(() => idle(() => void whole().catch(() => {})), 1200);
+    }
     neighboursLater = false;
     const attach = () => {
       if (id !== renderId) return;
