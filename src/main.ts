@@ -44,7 +44,7 @@ const TAB_ROOTS = new Set(['me', 'ranks', 'learn']);
 const GHOST_MS = 10 * 60_000;
 const ghosts = new Map<string, { el: HTMLElement; at: number }>();
 // Instant tabs (thread "Make the whole app fast", 2026-11-19): a tab screen left is kept alive, hidden in #app (still
-// connected, so its listeners stay), with its cleanup held back. Tapping the tab again shows it as it was (scroll place
+// connected, so its listeners stay; `content-visibility: hidden` keeps its layout worked out, so showing it is cheap), with its cleanup held back. Tapping the tab again shows it as it was (scroll place
 // too) and tells it with the event `screen-shown`, so it can refresh what may have changed; nothing is rebuilt. Kept up
 // to KEEP_MS, then rebuilt as before. A screen keeps polling only while shown (`offScreen()` in dom.ts).
 const KEEP_MS = 10 * 60_000;
@@ -64,11 +64,11 @@ async function route() {
   const id = ++routeId;
   closeSheetsOnRoute();
   const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
-  const shown = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not([hidden])');
+  const shown = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept)');
   if (shownTab && cleanup && shown?.dataset.tab === shownTab && !kidsOn()) {
     // Keep the tab just left alive instead of tearing it down.
     alive.set(shownTab, { el: shown, c: cleanup, at: Date.now(), y: window.scrollY });
-    shown.hidden = true;
+    shown.classList.add('screen-kept');
     shown.inert = true;
     shown.dispatchEvent(new Event('screen-hidden'));
   } else cleanup?.();
@@ -89,7 +89,7 @@ async function route() {
   if (back) {
     alive.delete(keepKey);
     for (const el of [...app.children]) if (el !== back.el && ![...alive.values()].some((v) => v.el === el)) el.remove();
-    back.el.hidden = false;
+    back.el.classList.remove('screen-kept');
     back.el.inert = false;
     document.body.dataset.view = view;
     window.scrollTo(0, back.y);
@@ -101,7 +101,7 @@ async function route() {
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   // Tabs feel instant (owner 2026-11-16, "ultra fast like Duolingo"): the screen of a tab left earlier stays as a
   // still picture (inert) while its fresh copy is built underneath, then the two swap — no blank or skeleton between.
-  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not([hidden])');
+  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept)');
   if (prev?.dataset.tab) ghosts.set(prev.dataset.tab, { el: prev, at: Date.now() });
   const tabKey = TAB_ROOTS.has(view) && !a ? view : '';
   if (tabKey) screen.dataset.tab = tabKey;

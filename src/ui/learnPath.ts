@@ -619,7 +619,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   // Kept alive while another tab shows (main.ts): a change waits, and is painted (with the step to do now in view)
   // when the path shows again, e.g. back from a lesson.
   let dirty = false;
-  const onChange = () => { if (root.hidden) dirty = true; else paint(); };
+  const onChange = () => { if (root.classList.contains('screen-kept')) dirty = true; else paint(); };
   root.addEventListener('screen-shown', () => {
     if (!dirty) return;
     dirty = false;

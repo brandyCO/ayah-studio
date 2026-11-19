@@ -1060,7 +1060,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     swipeOff = new AbortController();
     const sig = { signal: swipeOff.signal };
     document.addEventListener('pointerdown', (e) => {
-      if (!root.isConnected || root.hidden || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
+      if (!root.isConnected || root.classList.contains('screen-kept') || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
       id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; axis = ''; moved = false;
     }, sig);
     document.addEventListener('pointermove', (e) => {
@@ -1137,7 +1137,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   const poll = async () => {
     if (stopped) return;
     // A kept tab (hidden while another tab shows, main.ts) asks nothing until it is shown again.
-    if (!document.hidden && !root.hidden && account() && !document.querySelector('dialog[open], .cel')) {
+    if (!document.hidden && !root.classList.contains('screen-kept') && account() && !document.querySelector('dialog[open], .cel')) {
       try {
         await report();
         // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when

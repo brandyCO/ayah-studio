@@ -53,7 +53,7 @@ const PROBE = () => {
 };
 const READY = (want) => {
   const app = document.getElementById('app');
-  const s = app?.querySelector(':scope > .screen:not(.screen-ghost):not([hidden])');
+  const s = app?.querySelector(':scope > .screen:not(.screen-ghost):not(.screen-kept)');
   if (!s || s.classList.contains('screen-building') || app.querySelector('.route-skel')) return false;
   if (want && !s.querySelector(want)) return false;
   if ([...s.querySelectorAll('.muted, [aria-busy="true"]')].some((e) => e.getAttribute('aria-busy') === 'true' || /^(Loading|…)/.test(e.textContent ?? ''))) return false;

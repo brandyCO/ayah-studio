@@ -1281,12 +1281,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   let queued = 0;
   const paintAll = () => { queued = 0; paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
   // Kept alive while another tab shows (main.ts): nothing is painted then; it catches up when shown again.
-  const refresh = () => { if (!root.hidden && !queued) queued = requestAnimationFrame(paintAll); };
+  const refresh = () => { if (!root.classList.contains('screen-kept') && !queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden && !root.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
-  const secTick = window.setInterval(() => { if (!document.hidden && !root.hidden) paintResets(); }, 1000);
+  const tick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) { void paintPrayer(); void paintSky(); } }, 30_000);
+  const secTick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) paintResets(); }, 1000);
   const onShown = () => { paintAll(); paintResets(); void paintPrayer(); void paintSky(); paintSync(); };
   root.addEventListener('screen-shown', onShown);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
