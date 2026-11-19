@@ -458,7 +458,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       2026-11-09 all 13 reciters (1 and 9 partly), checked on the audio by `scripts/qdc-fix-check.py` (`align.yml` scan =
       fixcheck: loudness contrast at both starts): where Quran.com starts late ours was right ~96 %, so those are applied
       for every reciter; earlier starts only for 1, 7, 9, 161; Shuraim (10) none (`EARLY_OK`, `SKIP`); 13,776 ayat
-- [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
+- [x] ~~Quick reel~~ — **removed by the owner on 2026-11-19** (Create opens the full studio instead; see "Studio fast
+      and premium" below; Make a series moved to Layout). As built (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
       tapped, becomes the single scene) → **Style**: five **vibes** (`VIBES` in `src/engine/styles.ts`:
@@ -636,6 +637,31 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       **Frame: Fill / Show whole** (`Clip.whole`; Scenes → Arrange for all scenes, a scene's Adjust for one):
       landscape videos and photos shown complete over a soft copy of themselves that fills the frame
       (`containSoft()`: shrunk to 1/40 and stretched back, pure). Pixabay videos already include landscape
+
+- [x] Studio fast and premium, first wave (owner request 2026-11-19; plan: Claude Doc "Ayah Studio: the fastest, most
+      premium Studio (plan)"): **Create opens the full studio** (`openCreate()` in `src/ui/tabs.ts`: today's ayah, no sheet);
+      a new reel gets a **starter nature clip** from Pixabay (`src/data/starter.ts`: a pool of 2 clips in My media,
+      localStorage `starterClips` / `starterUsed`, filled 20 s after start on Wi-Fi or for people who made reels, a different
+      FOOTAGE query each time; none ready → the look's scene, swapped when the download lands; the user's own uploads
+      stay). Top bar: the reference (other ayat via `openAyahPicker(n, keepLook)`) and Drafts. Looks keep video footage.
+      **Text layers** (`src/engine/textCache.ts`): each text block, the name + reference, the watermark and the recited
+      word are drawn once into a sprite at the screen's pixel size with the shadow / halo baked in (LRU, ~10 MP); blur
+      effects mix sharp and pre-blurred sprites. **GPU effects** (`src/engine/gpu.ts`, WebGL2, off with localStorage
+      `gpuFx`=off): ripple and caustics shaders, separable blur for the blur transition and a scene's own blur
+      (`blurred()` in `scenes.ts`; fallback canvas filter, else shrink-and-enlarge, so blurs show on iPhone Safari).
+      Preview drops resolution while playing under ~45 fps (was 25). Bench: `bench/` + `node scripts/studio-bench.mjs
+      [width] [cpuRate]` (dev server on 5199; ms per frame for every touch, text effect and transition; `ONLY=regex`,
+      `GPUFX=off`, `SHOT=dir` writes one still per row for a GPU ⇄ Canvas 2D pixel comparison)
+      Second wave (owner "yes to all" 2026-11-19): **instant studio** — `studioShell()` (dom.ts) shows the studio's frame
+      the moment Create is tapped, then the stage shows the first scene's still under `studioLoader()` (motes of light
+      gathering into the gold star, transform/opacity only) until the first frame is drawn (`.stage.loading`); the reel's
+      fonts load alongside the text. **Finishing pass on the GPU** (`gpuFinish`, `Finisher` in render.ts): ripple, grade
+      (source-over / soft-light / saturation), bloom (mip level 3), vignette, grain (overlay) , scrim and Cinematic's black
+      in one shader with the W3C blend formulas (within 1–3/255 of Canvas 2D; used when a run has a costly layer or ≥ 4
+      passes); water light samples the 2D version's tile. **Each phone picks**: the first play tries GPU and Canvas 2D in
+      turn (≤ 40 frames / 1.5 s each) and keeps the smoother (`gpuPick`, localStorage, 30 days; `gpuState()`). Slow
+      phones: the preview drops size after 5 frames under 12 fps, remembers it (`studioPlayScale`), steps back up when
+      smooth, and at the smallest size plays a steady 30 fps (`cap30`). The GPU canvas only grows (no realloc per frame)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

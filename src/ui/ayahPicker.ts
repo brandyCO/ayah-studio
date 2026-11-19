@@ -7,7 +7,8 @@ import { surahName, t } from '../i18n';
 import { h, haptic } from './dom';
 import { goMushaf } from './tabs';
 
-export async function openAyahPicker(start = 1) {
+/** `keepLook`: opened from the studio, the new reel keeps the current look and footage. */
+export async function openAyahPicker(start = 1, keepLook = false, a0 = 1, b0 = a0) {
   const meta = await loadMeta();
   let s = start;
   const surah = h('select', { class: 'search', 'aria-label': t('ap.surah') },
@@ -32,7 +33,7 @@ export async function openAyahPicker(start = 1) {
   surah.onchange = () => { s = Number(surah.value); from.value = '1'; to.value = '1'; fix(); };
   from.onchange = () => fix('from');
   to.onchange = () => fix('to');
-  from.value = '1'; to.value = '1';
+  from.value = String(a0); to.value = String(b0);
   fix();
   const d = h('dialog', { class: 'sheet bottom ap-sheet' },
     h('div', { class: 'sheet-head' }, h('h2', {}, t('create.pick')),
@@ -42,6 +43,7 @@ export async function openAyahPicker(start = 1) {
       fix();
       haptic(10);
       d.close();
+      if (keepLook) try { sessionStorage.setItem('reelKeepLook', '1'); } catch { /* private window */ }
       location.hash = `#/reel/${s}/${from.value}-${to.value}`;
     } },
       h('label', { class: 'ap-row' }, h('span', { class: 'muted small' }, t('ap.surah')), surah),

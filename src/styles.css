@@ -515,6 +515,8 @@ body[data-view="reel"] {
 }
 .studio-top { grid-area: top; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
 .top-right { display: flex; align-items: center; gap: 10px; }
+.studio-top .top-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.studio-top .top-ayat { display: inline-flex; align-items: center; gap: 4px; max-width: 46vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; height: 32px; padding: 0 10px; }
 .quality {
   display: inline-flex; align-items: center; gap: 2px; padding: 6px 8px; border: 0; border-radius: var(--r-s);
   background: none; color: var(--text); font-weight: 650; font-size: var(--fs-m); cursor: pointer;
@@ -565,6 +567,36 @@ body[data-view="reel"] {
 
 /* bottom area: timeline (with room under the tracks) + tool bar; panels cover both */
 .studio-bottom { grid-area: bottom; position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+
+/* Studio loading (owner request 2026-11-19): the frame at once (studioShell), then in the preview a few
+   motes of light gather into the gold star until the first frame is drawn over the clip's still. */
+.studio-shell .studio-top { height: 52px; gap: 8px; justify-content: flex-start; }
+.shell-pill, .shell-track, .shell-tools { display: block; border-radius: 999px; background: var(--line); opacity: .55; }
+.shell-pill { width: 34px; height: 30px; } .shell-pill.wide { width: 120px; }
+.studio-shell .stage { aspect-ratio: 9 / 16; --fr: 16 / 9; }
+.studio-shell .transport { height: 48px; }
+.studio-shell .studio-bottom { gap: 12px; padding: 18px 12px; }
+.shell-track { height: 44px; border-radius: 8px; } .shell-tools { height: 48px; margin-top: auto; border-radius: 12px; }
+.stage.loading { background: #000 center / cover no-repeat; }
+.stage.loading::before { content: ''; position: absolute; inset: 0; background: rgba(4, 10, 8, .45); }
+.stage .preview { transition: opacity .45s ease; }
+.stage.loading .preview { opacity: 0; }
+.studio-load { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .45s ease; }
+.stage:not(.loading) .studio-load { opacity: 0; }
+.studio-load > i { grid-area: 1 / 1; display: block; }
+.sl-star { width: 34px; height: 34px; background: linear-gradient(#ffe680, #ffc22e 55%, #ff9f1a);
+  -webkit-mask: var(--star-mask) center / contain no-repeat; mask: var(--star-mask) center / contain no-repeat;
+  animation: sl-star 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
+.sl-halo { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 210, 90, .38), transparent);
+  animation: sl-halo 1.6s ease-in-out infinite; }
+.sl-m { width: 6px; height: 6px; border-radius: 50%; background: #ffe7a3; opacity: 0;
+  animation: sl-mote 1.6s cubic-bezier(.4, 0, .9, .6) var(--d) infinite; }
+@keyframes sl-star { 0%, 100% { transform: scale(.82) rotate(0); } 55% { transform: scale(1.12) rotate(45deg); } }
+@keyframes sl-halo { 0%, 100% { transform: scale(.7); opacity: .5; } 55% { transform: scale(1.15); opacity: 1; } }
+@keyframes sl-mote { 0% { transform: rotate(var(--a)) translateX(78px) scale(.5); opacity: 0; } 25% { opacity: .9; }
+  100% { transform: rotate(var(--a)) translateX(4px) scale(1.1); opacity: 0; } }
+.stage.loading .stage-status { background: none; inset: auto 0 18%; font-size: var(--fs-xs); color: rgba(255, 255, 255, .8); }
+@media (prefers-reduced-motion: reduce) { .sl-m { display: none !important; } .sl-star, .sl-halo { animation-duration: 3.2s; } }
 .spine { position: relative; flex: 1; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; background: #121519; border-top: 1px solid var(--line); }
 .spine-canvas { display: block; width: 100%; }
 .spine-zooms { position: absolute; bottom: 8px; right: 10px; display: flex; gap: 6px; }
@@ -1193,23 +1225,13 @@ body[data-view="kids"] {
 .list-item .pill { margin-inline-start: 8px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--brand-fill); color: #fff; font-size: var(--fs-2xs); }
 .list-item .block { display: block; margin-top: 2px; }
 
-/* Quick reel (editor → Styles → Quick reel): numbered steps, Back / Next, an Export button at the end */
-.quick-steps { margin-bottom: 8px; }
-.quick-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
-.quick-export { width: 100%; margin-top: 12px; }
-.style-art.rec { background-color: #0b1424; background-size: cover; background-position: center; }
 
 /* Watching (editor): Play fades the tools away and the preview fills the screen; a tap brings them back */
 .studio.watching .transport { opacity: 0; pointer-events: none; transition: opacity .6s ease; }
 .studio.watching .stage { cursor: pointer; animation: watch-in .9s ease both; }
 @keyframes watch-in { from { opacity: .55; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .studio.watching .stage { animation: none; } }
-.quick-why { margin: 2px 0 10px; color: var(--text); font-size: .95rem; line-height: 1.4; }
-/* Quick reel: clip order numbers; the recited-word colours with an Off swatch */
-.bg-num {
-  position: absolute; inset-block-start: 6px; inset-inline-end: 6px; width: 22px; height: 22px; border-radius: 50%;
-  display: grid; place-items: center; font-size: var(--fs-xs); font-weight: 700; color: var(--accent-ink); background: var(--accent);
-}
+/* The recited-word colours with an Off swatch */
 .swatch-off { background: none; border: 1px dashed var(--muted); color: var(--muted); font-size: var(--fs-2xs); }
 .swatch:disabled { opacity: .35; cursor: default; }
 /* Transport: back to the start beside Play */
@@ -1237,13 +1259,6 @@ body[data-view="kids"] {
 .caption-box .chip { justify-self: start; }
 .make-another { margin-top: 10px; }
 .make-another p { margin: 0 0 6px; }
-.quick-try .chip { display: inline-flex; align-items: center; gap: 6px; }
-/* Vibe tiles over the user's own footage: each vibe's colour grade as a soft filter */
-.style-art.tint-warm { filter: sepia(.3) saturate(1.1); }
-.style-art.tint-golden { filter: sepia(.5) saturate(1.3) hue-rotate(-8deg); }
-.style-art.tint-cool { filter: saturate(.8) hue-rotate(12deg) brightness(.92); }
-.style-art.tint-dusk { filter: hue-rotate(-22deg) saturate(1.1) brightness(.9); }
-.style-art.tint-mono { filter: grayscale(1); }
 /* Tajweed colours legend */
 .tajweed-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 4px 0 8px; font-size: var(--fs-xs); color: var(--muted); }
 .tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }

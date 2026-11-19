@@ -16,7 +16,7 @@
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { closeSheetsOnRoute } from './ui/backCloses';
-import { h, skeleton, sweepListeners } from './ui/dom';
+import { h, skeleton, studioShell, sweepListeners } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
@@ -92,6 +92,8 @@ async function route() {
     } else if (view === 'reel' && Number(a) && b) {
       const [from, to] = b.split('-').map(Number);
       try { localStorage.setItem('studioUsed', '1'); } catch { /* private window */ } // the web warm-up may now keep the studio offline
+      // The studio's frame and its loading light show at once, while the editor's code and the reel load.
+      screen.append(studioShell());
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);
@@ -193,6 +195,8 @@ void initI18n().then(route).finally(() => {
 });
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
 later(() => setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 4000));
+// The studio's starter footage (a Pixabay nature clip ready for the next new reel), once the app has settled.
+later(() => setTimeout(() => void import('./data/starter').then((m) => m.warmStarter()).catch(() => {}), 20000));
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();

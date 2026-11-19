@@ -71,6 +71,20 @@ export function skeleton(kind: 'page' | 'list'): HTMLElement {
       h('span', { class: 'skel-dot' }), h('span', { class: 'skel-lines' }, h('span', { class: 'skel-bar' }), h('span', { class: 'skel-bar short' })))));
 }
 
+/** The studio's loading light (owner request 2026-11-19): motes of light drift in and gather into the gold
+ *  star while the reel gets ready. Transform / opacity only, so it stays smooth on a busy slow phone. */
+export const studioLoader = () => h('div', { class: 'studio-load', 'aria-hidden': 'true' },
+  h('i', { class: 'sl-halo' }),
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => h('i', { class: 'sl-m', style: `--a:${i * 45 + 20}deg;--d:${(i * 0.37) % 1.6}s` })),
+  h('i', { class: 'sl-star' }));
+
+/** The studio's frame shown at once while its code and the reel load (main.ts; the editor replaces it). */
+export const studioShell = () => h('div', { class: 'studio studio-shell', 'aria-busy': 'true' },
+  h('header', { class: 'studio-top' }, h('span', { class: 'shell-pill' }), h('span', { class: 'shell-pill wide' })),
+  h('div', { class: 'studio-stage' }, h('div', { class: 'stage loading' }, studioLoader())),
+  h('div', { class: 'transport' }),
+  h('div', { class: 'studio-bottom' }, h('span', { class: 'shell-track' }), h('span', { class: 'shell-track' }), h('span', { class: 'shell-tools' })));
+
 /** Rows of a list while it loads (search results, drafts). */
 export const skeletonRows = (n = 4) =>
   h('div', { class: 'skel skel-rows', 'aria-busy': 'true' }, ...Array.from({ length: n }, () => h('span', { class: 'skel-row' },

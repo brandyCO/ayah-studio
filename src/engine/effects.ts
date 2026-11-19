@@ -3,6 +3,7 @@
 // Long durations, soft easing; ink reveal and light sweep run right-to-left for Arabic.
 import type { TajweedWord } from './tajweed';
 import { W } from './layout';
+import { blurredSprite, put, roundK, sprite, type Sprite } from './textCache';
 
 export type TextEffect =
   | 'fade' | 'rise' | 'descend' | 'blur-in' | 'focus' | 'mist' | 'dissolve' | 'glow' | 'bloom'
@@ -90,29 +91,20 @@ export function setTextShadow(ctx: CanvasRenderingContext2D, color: string) {
   ctx.shadowBlur = 14 * pxScale(ctx);
 }
 
-function fillLines(ctx: CanvasRenderingContext2D, b: TextBlock, top: number, only?: number) {
+/** The lines of a block in paint coordinates (block top at y = 0). */
+function fillLines(ctx: CanvasRenderingContext2D, b: TextBlock, only?: number) {
   b.lines.forEach((line, i) => {
-    if (only === undefined || only === i) ctx.fillText(line, W / 2, top + b.size * b.lh * (i + 0.5));
+    if (only === undefined || only === i) ctx.fillText(line, W / 2, b.size * b.lh * (i + 0.5));
   });
 }
 
-/**
- * Draws line i clipped to the span [d0, d1] measured from its reading start (right edge for RTL).
- * `shift` moves the clip (not the text) right, for drawing the text's shadow only.
- */
-function fillSpan(ctx: CanvasRenderingContext2D, b: TextBlock, top: number, i: number, width: number, d0: number, d1: number, shift = 0) {
-  const start = b.dir === 'rtl' ? W / 2 + width / 2 : W / 2 - width / 2;
-  const x0 = b.dir === 'rtl' ? start - d1 : start + d0;
-  const y = top + b.size * b.lh * (i + 0.5);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x0 + shift, y - b.size * 1.2, Math.abs(d1 - d0), b.size * 2.4);
-  ctx.clip();
-  fillLines(ctx, b, top, i);
-  ctx.restore();
-}
+const blockKey = (b: TextBlock) => `${b.font}|${b.size}|${b.lh}|${b.dir}|${b.color}|${W}|${b.lines.join('\n')}`;
 
-/** Draw a text block for item g at time t with effect fx. The caller sets the legibility shadow. */
+/**
+ * Draw a text block for item g at time t with effect fx. The caller sets the legibility shadow
+ * (ctx.shadowColor / shadowBlur); it is baked into the block's picture (textCache.ts) with the text,
+ * so each frame only places pictures: no Arabic shaping and no shadow blur per frame.
+ */
 export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { start: number; end: number }, t: number, b: TextBlock) {
   const d = Math.max(0.001, g.end - g.start);
   const [enter, exit] = SPEC[fx] ?? SPEC.fade;
@@ -120,7 +112,6 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
   const p = easeOut(clamp01(age / Math.min(enter, d * 0.4)));
   const q = smooth(clamp01((g.end - t) / Math.min(exit, d * 0.25)));
   const k = Math.min(1, d / 1.5); // less motion for short items
-  const px = pxScale(ctx);
   let alpha = Math.min(p, q), dy = 0, scale = 1, blur = 0, glow = 0;
   let ink: number | null = null, sweep: number | null = null, stagger = false;
   switch (fx) {
@@ -142,12 +133,43 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
   }
   if (alpha <= 0.001) return;
 
+  const K = roundK(pxScale(ctx)); // device pixels per unit (before the effect's own scale)
+  const font = `${b.size}px ${b.font}`;
+  const lineH = b.size * b.lh;
+  const blockH = b.lines.length * lineH;
+  const pad = Math.round(b.size * 0.9 + 44); // marks above/below the lines + shadows and halos
+  const key = blockKey(b);
+  const shColor = ctx.shadowColor, shBlur = ctx.shadowBlur / (pxScale(ctx) || 1);
+  const setup = (x: CanvasRenderingContext2D) => {
+    x.direction = b.dir;
+    x.font = font;
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillStyle = b.color;
+  };
+  // The block with its legibility shadow (+ tajweed colours once they show). meta = line widths.
+  const showTajweed = !!b.tajweed && (ink === null || ink >= 1);
+  const base = sprite(`${key}|base|${shColor}|${shBlur}|${showTajweed ? JSON.stringify(b.tajweed) : ''}`, K, W, -pad, blockH + pad, (x, meta) => {
+    setup(x);
+    x.shadowColor = shColor;
+    x.shadowBlur = shBlur * K;
+    fillLines(x, b);
+    for (const l of b.lines) meta.push(x.measureText(l).width);
+    if (showTajweed) drawTajweed(x, b);
+  });
+  const widths = base.meta;
+  // A halo in the text colour (glow, breath): the text drawn with a wide soft shadow of its own colour.
+  const halo = () => sprite(`${key}|halo`, K, W, -pad, blockH + pad, (x) => {
+    setup(x);
+    x.shadowColor = rgba(b.color, 1);
+    x.shadowBlur = 28 * K;
+    fillLines(x, b);
+  });
+
   ctx.save();
-  ctx.direction = b.dir;
-  ctx.font = `${b.size}px ${b.font}`;
-  ctx.fillStyle = b.color;
-  ctx.globalAlpha = alpha * b.opacity;
-  const blockH = b.lines.length * b.size * b.lh;
+  ctx.shadowColor = 'transparent'; // the pictures carry their own shadows
+  ctx.shadowBlur = 0;
+  const A = alpha * b.opacity;
   if (scale !== 1) {
     const cy = b.top + blockH / 2;
     ctx.translate(W / 2, cy);
@@ -155,126 +177,160 @@ export function drawText(ctx: CanvasRenderingContext2D, fx: TextEffect, g: { sta
     ctx.translate(-W / 2, -cy);
   }
   const top = b.top + dy;
-  if (blur > 0.05) ctx.filter = `blur(${(blur * px).toFixed(2)}px)`;
 
   if (b.breath && b.breath > 0.02) {
     // Breath: a halo in the text colour, as strong as the voice is loud.
-    ctx.save();
-    ctx.shadowColor = rgba(b.color, 0.55 * b.breath);
-    ctx.shadowBlur = (12 + 30 * b.breath) * px;
-    fillLines(ctx, b, top);
-    ctx.restore();
+    ctx.globalAlpha = A * Math.min(1, 0.55 * b.breath * 1.4);
+    put(ctx, halo(), 0, top);
   }
   if (glow > 0.01) {
-    // A soft halo in the text colour under the text, then the text itself.
-    ctx.save();
-    ctx.shadowColor = rgba(b.color, Math.min(1, glow));
-    ctx.shadowBlur = 28 * px;
-    fillLines(ctx, b, top);
-    ctx.restore();
+    ctx.globalAlpha = A * Math.min(1, glow);
+    put(ctx, halo(), 0, top);
   }
 
-  if (stagger) {
+  const band = (i: number) => ({ y0: lineH * (i + 0.5) - b.size * 1.2, y1: lineH * (i + 0.5) + b.size * 1.2 });
+  /** Line i between d0 and d1 from its reading start (right edge for Arabic). */
+  const span = (s: Sprite, i: number, d0: number, d1: number, yOff = 0) => {
+    const w = widths[i] ?? 0;
+    const start = b.dir === 'rtl' ? W / 2 + w / 2 : W / 2 - w / 2;
+    const x0 = b.dir === 'rtl' ? start - d1 : start + d0;
+    put(ctx, s, 0, top + yOff, { x0, x1: x0 + Math.abs(d1 - d0), ...band(i) });
+  };
+
+  if (blur > 0.05) {
+    // Soft focus: the sharp picture and two blurred ones (made once), mixed by the amount of blur.
+    const lv = [0, 6, 14];
+    const i = blur >= lv[2] ? 1 : blur >= lv[1] ? 1 : 0;
+    const f = clamp01((blur - lv[i]) / (lv[i + 1] - lv[i]));
+    const pic = (n: number) => (lv[n] ? blurredSprite(key, base, lv[n]) : base);
+    ctx.globalAlpha = A;
+    mix(ctx, pic(i), pic(i + 1), f, top);
+  } else if (stagger) {
     // Lines come in one after another, each with a gentle rise.
     const step = Math.min(0.35, (d * 0.3) / b.lines.length);
     const win = Math.min(enter, d * 0.4);
     b.lines.forEach((_, i) => {
       const pi = easeOut(clamp01((age - i * step) / win));
       ctx.globalAlpha = Math.min(pi, q) * b.opacity;
-      fillLines(ctx, b, top + (1 - pi) * 20 * k, i);
+      if (ctx.globalAlpha > 0.001) put(ctx, base, 0, top + (1 - pi) * 20 * k, { x0: 0, x1: W, y0: lineH * i - (i ? 0 : pad), y1: lineH * (i + 1) + (i === b.lines.length - 1 ? pad : 0) });
     });
   } else if (ink !== null && ink < 1) {
     // Ink reveal: lines are written in reading order with a soft leading edge.
     const E = 110, N = 8;
-    const widths = b.lines.map((l) => ctx.measureText(l).width);
     const total = widths.reduce((s, w) => s + w + E, 0);
     let at = ink * total;
-    const base = alpha * b.opacity;
     b.lines.forEach((_, i) => {
-      const span = widths[i] + E;
-      const f = Math.min(at, span);
-      at -= span;
+      const len = widths[i] + E;
+      const f = Math.min(at, len);
+      at -= len;
       if (f <= 0) return;
-      ctx.globalAlpha = base;
-      if (f - E > 0) fillSpan(ctx, b, top, i, widths[i], -80, f - E);
+      ctx.globalAlpha = A;
+      if (f - E > 0) span(base, i, -80, f - E);
       for (let s = 0; s < N; s++) {
-        ctx.globalAlpha = base * (1 - (s + 0.5) / N);
-        fillSpan(ctx, b, top, i, widths[i], f - E + (s * E) / N, f - E + ((s + 1) * E) / N);
+        ctx.globalAlpha = A * (1 - (s + 0.5) / N);
+        span(base, i, f - E + (s * E) / N, f - E + ((s + 1) * E) / N);
       }
     });
   } else {
-    fillLines(ctx, b, top);
-  }
-
-  const linesIn = !stagger || age >= Math.min(0.35, (d * 0.3) / b.lines.length) * (b.lines.length - 1) + Math.min(enter, d * 0.4);
-  if (b.tajweed && (ink === null || ink >= 1) && linesIn) {
-    // Tajweed: the same word, same place, same shapes; only the colour of its ranges changes (rules 1, 7).
-    // A range's place inside the word is measured with a joiner after the prefix, so letters keep the
-    // joined forms they have in the word.
-    ctx.save();
-    ctx.textAlign = b.dir === 'rtl' ? 'right' : 'left';
-    ctx.shadowColor = 'transparent';
-    b.tajweed.forEach((items, li) => {
-      if (!items.length) return;
-      const lineW = ctx.measureText(b.lines[li]).width;
-      const y = top + b.size * b.lh * (li + 0.5);
-      for (const it of items) {
-        const pre = it.before ? ctx.measureText(`${it.before} `).width : 0;
-        const chars = [...it.word];
-        const wordW = ctx.measureText(it.word).width;
-        const at = (k: number) => (k <= 0 ? 0 : k >= chars.length ? wordW : ctx.measureText(`${chars.slice(0, k).join('')}\u200d`).width);
-        const x = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
-        for (const [s, e, color] of it.spans) {
-          const a0 = at(s), a1 = Math.max(a0 + 1, at(e));
-          ctx.save();
-          ctx.beginPath();
-          const pad = b.size; // marks above / below the line
-          if (b.dir === 'rtl') ctx.rect(x - a1, y - pad, a1 - a0, 2 * pad);
-          else ctx.rect(x + a0, y - pad, a1 - a0, 2 * pad);
-          ctx.clip();
-          ctx.fillStyle = color;
-          ctx.fillText(it.word, x, y);
-          ctx.restore();
-        }
-      }
-    });
-    ctx.restore();
+    ctx.globalAlpha = A;
+    put(ctx, base, 0, top);
   }
 
   if (b.hl && (ink === null || ink >= 1)) {
     // The recited word in the highlight colour, exactly over its place on the line: only its colour
-    // changes (rule 7), with a soft glow in the same colour.
+    // changes (rule 7), with a soft glow in the same colour. One small picture per word.
     const hl = b.hl;
-    const lineW = ctx.measureText(b.lines[hl.line]).width;
-    const pre = hl.before ? ctx.measureText(`${hl.before} `).width : 0;
-    const x = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
-    ctx.save();
-    ctx.textAlign = b.dir === 'rtl' ? 'right' : 'left';
-    ctx.fillStyle = hl.color;
-    ctx.shadowColor = rgba(hl.color, 0.55);
-    ctx.shadowBlur = 18 * px;
-    ctx.globalAlpha = alpha * b.opacity * hl.alpha;
-    ctx.fillText(hl.word, x, top + b.size * b.lh * (hl.line + 0.5));
-    ctx.restore();
+    const bd = band(hl.line);
+    const s = sprite(`${key}|hl|${hl.line}|${hl.before}|${hl.word}|${hl.color}`, K, W, bd.y0 - 30, bd.y1 + 30, (x) => {
+      setup(x);
+      const lineW = x.measureText(b.lines[hl.line]).width;
+      const pre = hl.before ? x.measureText(`${hl.before} `).width : 0;
+      const hx = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
+      x.textAlign = b.dir === 'rtl' ? 'right' : 'left';
+      x.fillStyle = hl.color;
+      x.shadowColor = rgba(hl.color, 0.55);
+      x.shadowBlur = 18 * K;
+      x.fillText(hl.word, hx, lineH * (hl.line + 0.5));
+    });
+    ctx.globalAlpha = A * hl.alpha;
+    put(ctx, s, 0, top);
   }
 
   if (sweep !== null && sweep > 0 && sweep < 1) {
     // Light sweep: a soft band of light passes once along each line in reading order. Only the halo
-    // is drawn (the text goes off-frame and its shadow lands on the letters), so letters never double.
+    // is kept in its picture (the text is drawn off the picture and its shadow lands on the letters).
     const B = 150, N = 10, OFF = 4000;
-    ctx.filter = 'none';
-    ctx.shadowColor = 'rgba(255,248,230,0.95)';
-    ctx.shadowBlur = 20 * px;
-    ctx.shadowOffsetX = OFF * px;
-    ctx.translate(-OFF, 0);
-    b.lines.forEach((l, i) => {
-      const w = ctx.measureText(l).width;
+    const light = sprite(`${key}|sweep`, K, W, -pad, blockH + pad, (x) => {
+      setup(x);
+      x.shadowColor = 'rgba(255,248,230,0.95)';
+      x.shadowBlur = 20 * K;
+      x.shadowOffsetX = OFF * K;
+      x.translate(-OFF, 0);
+      fillLines(x, b);
+    });
+    b.lines.forEach((_, i) => {
+      const w = widths[i];
       const c = sweep! * (w + 2 * B) - B;
       for (let s = 0; s < N; s++) {
-        ctx.globalAlpha = alpha * b.opacity * Math.sin(Math.PI * ((s + 0.5) / N));
-        fillSpan(ctx, b, top, i, w, c - B + 2 * B * (s / N), c - B + 2 * B * ((s + 1) / N), OFF);
+        ctx.globalAlpha = A * Math.sin(Math.PI * ((s + 0.5) / N));
+        span(light, i, c - B + 2 * B * (s / N), c - B + 2 * B * ((s + 1) / N));
       }
     });
   }
+  ctx.restore();
+}
+
+/** Two pictures of the same block mixed: (1 − f)·a + f·b, then drawn with the current alpha. The mix is
+ *  made in a scratch layer with added light (exact for premultiplied pictures), so the text never
+ *  looks thinner half-way. */
+let mixLayer: HTMLCanvasElement | OffscreenCanvas | null = null;
+function mix(ctx: CanvasRenderingContext2D, a: Sprite, b: Sprite, f: number, top: number) {
+  if (f <= 0.01) return put(ctx, a, 0, top);
+  if (f >= 0.99) return put(ctx, b, 0, top);
+  const w = a.canvas.width, h = a.canvas.height;
+  if (!mixLayer || mixLayer.width !== w || mixLayer.height !== h) {
+    mixLayer = typeof document !== 'undefined' ? Object.assign(document.createElement('canvas'), { width: w, height: h }) : new OffscreenCanvas(w, h);
+  }
+  const m = mixLayer.getContext('2d') as CanvasRenderingContext2D;
+  m.globalCompositeOperation = 'copy';
+  m.globalAlpha = 1 - f;
+  m.drawImage(a.canvas, 0, 0);
+  m.globalCompositeOperation = 'lighter';
+  m.globalAlpha = f;
+  m.drawImage(b.canvas, 0, 0);
+  put(ctx, { ...a, canvas: mixLayer }, 0, top);
+}
+
+/** Tajweed: the same word, same place, same shapes; only the colour of its ranges changes (rules 1, 7).
+ *  A range's place inside the word is measured with a joiner after the prefix, so letters keep the
+ *  joined forms they have in the word. Paint coordinates (block top at 0). */
+function drawTajweed(ctx: CanvasRenderingContext2D, b: TextBlock) {
+  ctx.save();
+  ctx.textAlign = b.dir === 'rtl' ? 'right' : 'left';
+  ctx.shadowColor = 'transparent';
+  b.tajweed!.forEach((items, li) => {
+    if (!items.length) return;
+    const lineW = ctx.measureText(b.lines[li]).width;
+    const y = b.size * b.lh * (li + 0.5);
+    for (const it of items) {
+      const pre = it.before ? ctx.measureText(`${it.before} `).width : 0;
+      const chars = [...it.word];
+      const wordW = ctx.measureText(it.word).width;
+      const at = (k: number) => (k <= 0 ? 0 : k >= chars.length ? wordW : ctx.measureText(`${chars.slice(0, k).join('')}‍`).width);
+      const x = b.dir === 'rtl' ? W / 2 + lineW / 2 - pre : W / 2 - lineW / 2 + pre;
+      for (const [s, e, color] of it.spans) {
+        const a0 = at(s), a1 = Math.max(a0 + 1, at(e));
+        ctx.save();
+        ctx.beginPath();
+        const pad = b.size; // marks above / below the line
+        if (b.dir === 'rtl') ctx.rect(x - a1, y - pad, a1 - a0, 2 * pad);
+        else ctx.rect(x + a0, y - pad, a1 - a0, 2 * pad);
+        ctx.clip();
+        ctx.fillStyle = color;
+        ctx.fillText(it.word, x, y);
+        ctx.restore();
+      }
+    }
+  });
   ctx.restore();
 }
