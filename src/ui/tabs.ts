@@ -5,11 +5,8 @@
 // 2026-11-02): ▶ in the mushaf's top bar or on a selected ayah; while listening elsewhere, Read goes
 // back to the page being recited. Learn is the juz gardens (#/learn). Me is its own screen (#/me).
 // A tab tapped on another screen can ask the mushaf to act once it opens (sessionStorage `tabIntent`).
-import { draftHash, listDrafts } from '../data/drafts';
 import { todaysAyah } from '../data/daily';
-import { weeklyTemplate } from '../data/popular';
-import { loadMeta } from '../data/quran';
-import { t, uiRef } from '../i18n';
+import { t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { lastRead } from './prefs';
@@ -63,41 +60,14 @@ export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLEle
     btn('me', 'me', t('tab.me'), () => { if (location.hash !== '#/me') location.hash = '#/me'; }));
 }
 
-/** The Create sheet: start from today's ayah, continue a draft, or pick ayat in the mushaf. */
+/** Create opens the full studio at once (owner request 2026-11-19, no quick-reel step): today's ayah with
+ *  its recitation and a nature video from Pixabay already in place (src/data/starter.ts). Other ayat,
+ *  drafts and the mushaf selection are one tap away inside the studio's top bar. */
 export async function openCreate() {
-  const [meta, drafts, daily, tpl] = await Promise.all([
-    loadMeta(), listDrafts().catch(() => []), todaysAyah().catch(() => null), weeklyTemplate(), import('./create.css').catch(() => null)]);
-  const noor = await import('./noor').catch(() => null);
-  const close = () => d.close();
-  const link = (href: string, title: string, sub: string, ic: string, c: string) =>
-    h('a', { class: `menu-item create-item ${c}`, href, onclick: close },
-      h('span', { class: 'create-ic' }, icon(ic, 22)),
-      h('span', { class: 'create-txt' }, h('b', {}, title), h('span', { class: 'muted small' }, sub)));
-  const last = drafts[0];
-  const d = h('dialog', { class: 'sheet bottom create-sheet' },
-    h('div', { class: 'sheet-head' }, h('h2', {}, t('create.title')),
-      h('button', { class: 'icon-btn', 'aria-label': t('common.close'), onclick: close }, '✕')),
-    h('div', { class: 'menu' },
-      h('button', {
-        class: 'menu-item create-item c-pick', onclick: () => {
-          close();
-          void import('./ayahPicker').then((m) => m.openAyahPicker());
-        },
-      }, h('span', { class: 'create-ic brand' }, icon('plus', 22)),
-      h('span', { class: 'create-txt' }, h('b', {}, t('create.pick')), h('span', { class: 'muted small' }, t('create.pickSub')))),
-      tpl && link(`#/t/${tpl.surah}/${tpl.from}-${tpl.to}/${tpl.reciter}${tpl.look ? `/${tpl.look}` : ''}`, t('create.template'),
-        uiRef(meta[tpl.surah - 1], tpl.from, tpl.to), 'sparkle', 'c-tpl'),
-      daily && link(`#/reel/${daily.s}/${daily.from}-${daily.to}`, t('create.today'),
-        uiRef(meta[daily.s - 1], daily.from, daily.to), 'sparkle', 'c-day'),
-      last && link(draftHash(last.project, last.id),
-        t('create.continue'), uiRef(meta[last.project.surah - 1], last.project.from, last.project.to), 'clip', 'c-cont'),
-      link('#/drafts', t('create.drafts'), drafts.length ? t('create.draftsN', { n: drafts.length }) : t('create.draftsNone'), 'scenes', 'c-mine')),
-    noor ? noor.noorLine('create') : '');
-  d.addEventListener('close', () => { d.remove(); window.removeEventListener('hashchange', close); });
-  window.addEventListener('hashchange', close); // a link was followed: the sheet goes with the old screen
-  d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
-  document.body.append(d);
-  d.showModal();
+  const daily = await todaysAyah().catch(() => null);
+  const [s, a, b] = daily ? [daily.s, daily.from, daily.to] : [1, 1, 7];
+  try { sessionStorage.setItem('reelFresh', '1'); } catch { /* private window */ }
+  location.hash = `#/reel/${s}/${a}-${b}`;
 }
 
 

@@ -5,6 +5,7 @@
 // - bloom, bokeh, leak, mist, rain: on the background, under the scrim
 // - motes, snow: small soft lights drifting in front of the background, behind the text
 import { H, W } from './layout';
+import { gpuCaustics, gpuRipple } from './gpu';
 
 export type Touch = 'ripple' | 'caustics' | 'motes' | 'bokeh' | 'bloom' | 'leak' | 'mist' | 'rain' | 'snow';
 export const TOUCHES: Touch[] = ['ripple', 'caustics', 'motes', 'bokeh', 'bloom', 'leak', 'mist', 'rain', 'snow'];
@@ -27,6 +28,7 @@ const wave = (p: number, t: number, a: number, b: number) =>
 /** The background (everything drawn so far) through moving water. `amount` 0–1 fades it. */
 export function ripple(ctx: CanvasRenderingContext2D, t: number, amount = 1) {
   if (amount < 0.02) return;
+  if (gpuRipple(ctx, t, 6 * amount, W, H)) return; // one shader pass (Canvas 2D fallback below)
   const c = ctx.canvas;
   const cw = c.width, ch = c.height;
   const k = cw / W; // device pixels per frame unit
@@ -86,6 +88,7 @@ function causticsTile() {
 /** Faint water light over the frame (added light only). */
 export function caustics(ctx: CanvasRenderingContext2D, t: number, amount = 1) {
   if (amount < 0.02) return;
+  if (gpuCaustics(ctx, t, amount, W, H)) return;
   const tl = causticsTile();
   const pat = ctx.createPattern(tl, 'repeat');
   if (!pat) return;

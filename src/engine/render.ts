@@ -2,8 +2,9 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import { bloom, bokeh, caustics, leak, mist, motes, rain, ripple, snow } from './touches';
+import { put, roundK, sprite } from './textCache';
 import type { BackgroundMedia } from './backgrounds';
-import { drawText, setTextShadow, type Highlight } from './effects';
+import { drawText, pxScale, setTextShadow, type Highlight } from './effects';
 import { drawScenes, sceneSpans } from './scenes';
 import { tajweedLines } from './tajweed';
 import { breathAt, darken, drift, shade, soften } from './cinema';
@@ -506,18 +507,29 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   const z = TITLE_SIZES[project.titleSize];
   const nameH = project.surahName !== false ? z.name * 1.4 : 0;
   const drawTitle = () => {
-    setTextShadow(ctx, colors.title);
-    ctx.fillStyle = colors.title;
+    // One picture per name + reference (textCache.ts): no shaping or shadow blur per frame.
+    const K = roundK(pxScale(ctx));
+    const sp = sprite(`title|${W}|${nameH}|${z.name}|${z.ref}|${colors.title}|${head.surah.ar}|${head.ref}`, K, W, -40, nameH + z.ref * 1.4 + 40, (g) => {
+      setTextShadow(g, colors.title);
+      g.shadowBlur = 14 * K;
+      g.fillStyle = colors.title;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      if (nameH) {
+        g.direction = 'rtl';
+        g.font = `${z.name}px ${FONT_NAME}`;
+        g.fillText(head.surah.ar, W / 2, z.name * 0.7);
+      }
+      g.direction = 'ltr';
+      g.font = `500 ${z.ref}px ${FONT_UI}`;
+      g.globalAlpha = 0.9;
+      g.fillText(head.ref, W / 2, nameH + z.ref * 0.7);
+    });
+    ctx.save();
+    ctx.shadowColor = 'transparent';
     ctx.globalAlpha = under;
-    if (nameH) {
-      ctx.direction = 'rtl';
-      ctx.font = `${z.name}px ${FONT_NAME}`;
-      ctx.fillText(head.surah.ar, W / 2, titleTop + z.name * 0.7);
-    }
-    ctx.direction = 'ltr';
-    ctx.font = `500 ${z.ref}px ${FONT_UI}`;
-    ctx.globalAlpha = 0.9 * under;
-    ctx.fillText(head.ref, W / 2, titleTop + nameH + z.ref * 0.7);
+    put(ctx, sp, 0, titleTop);
+    ctx.restore();
   };
   // "Below": the name and reference belong to the text block and move with it.
   if (project.titlePos === 'below' && box) posedText(drawTitle);
@@ -531,15 +543,26 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   }
   let wmRect: Rect | null = null;
   if (lay.watermark !== null) {
-    setTextShadow(ctx, '#ffffff');
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `500 26px ${FONT_UI}`;
-    ctx.globalAlpha = 0.6;
+    const K = roundK(pxScale(ctx));
+    const sp = sprite(`wm|${W}`, K, W, -40, 40, (g, meta) => {
+      setTextShadow(g, '#ffffff');
+      g.shadowBlur = 14 * K;
+      g.fillStyle = '#ffffff';
+      g.font = `500 26px ${FONT_UI}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('Ayah Studio', W / 2, 0);
+      meta.push(g.measureText('Ayah Studio').width / 2);
+    });
     // Centred, or where it was dragged along its line (always inside the title-safe width).
-    const hw = ctx.measureText('Ayah Studio').width / 2;
+    const hw = sp.meta[0];
     const cx = project.wmX === undefined ? W / 2
       : Math.min(SAFE.x1 - hw, Math.max(SAFE.x0 + hw, SAFE.x0 + project.wmX * (SAFE.x1 - SAFE.x0)));
-    ctx.fillText('Ayah Studio', cx, lay.watermark);
+    ctx.save();
+    ctx.shadowColor = 'transparent';
+    ctx.globalAlpha = 0.6;
+    put(ctx, sp, cx - W / 2, lay.watermark);
+    ctx.restore();
     wmRect = { x0: cx - hw, y0: lay.watermark - 20, x1: cx + hw, y1: lay.watermark + 20 };
   }
   if (info) info.wm = wmRect;

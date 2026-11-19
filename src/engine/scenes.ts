@@ -3,6 +3,7 @@
 import type { BackgroundMedia } from './backgrounds';
 import { pxScale } from './effects';
 import { H, W } from './layout';
+import { blurCanvas } from './textCache';
 
 /**
  * Single: one background · Per ayah: one scene per ayah (changes in the pause between ayat) ·
@@ -233,8 +234,10 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
   const b = m?.bg;
   ctx.fillStyle = b?.kind === 'color' ? b.color : '#000';
   ctx.fillRect(0, 0, W, H);
-  const prevFilter = ctx.filter;
-  if (blur > 0 && b?.kind !== 'color') ctx.filter = `blur(${(blur * BLUR_MAX * pxScale(ctx)).toFixed(2)}px)`;
+  if (blur > 0 && b?.kind !== 'color') {
+    // This scene's own blur (Adjust): drawn sharp into a layer, blurred on the GPU (blurred()).
+    return blurred(ctx, (c) => drawScene(c, s, t, m, o, { ...adj!, blur: 0 }), blur * BLUR_MAX);
+  }
   if (b?.kind === 'image' && m!.image) {
     const p = clamp01((t - s.from) / Math.max(s.to - s.from, 1));
     const fill = adj?.whole ? containSoft : cover;
@@ -249,7 +252,6 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
-  ctx.filter = prevFilter;
   const br = adj?.b ?? 0;
   if (Math.abs(br) > 0.005) {
     ctx.save();
@@ -258,6 +260,37 @@ function drawScene(ctx: CanvasRenderingContext2D, s: SceneSpan, t: number, m: Ba
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
+}
+
+/** Draws `paint` blurred by `radius` frame units (with `alpha`): painted into a layer, then blurred
+ *  on the GPU (or the fallbacks in blurCanvas), so it costs the same on every phone and also blurs on
+ *  iPhone Safari, whose canvas has no filter. */
+const blurLayers: HTMLCanvasElement[] = [];
+let blurDepth = 0;
+function blurred(ctx: CanvasRenderingContext2D, paint: (c: CanvasRenderingContext2D) => void, radius: number, alpha = 1) {
+  const r = radius * pxScale(ctx);
+  if (r < 0.5) {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    paint(ctx);
+    ctx.restore();
+    return;
+  }
+  const cw = ctx.canvas.width, ch = ctx.canvas.height;
+  const l = (blurLayers[blurDepth] ??= document.createElement('canvas'));
+  if (l.width !== cw || l.height !== ch) { l.width = cw; l.height = ch; }
+  const g = l.getContext('2d')!;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, cw, ch);
+  g.setTransform(ctx.getTransform());
+  blurDepth++;
+  try { paint(g); } finally { blurDepth--; }
+  const out = blurCanvas(l, r);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha *= alpha;
+  ctx.drawImage(out, 0, 0);
+  ctx.restore();
 }
 
 /** Draws `paint` through a soft gradient mask (soft wipe / iris), via an offscreen layer. */
@@ -303,14 +336,8 @@ export function drawScenes(ctx: CanvasRenderingContext2D, t: number, spans: Scen
     case 'cut':
       return p < 0.5 ? A() : B();
     case 'blur':
-      ctx.save();
-      ctx.filter = `blur(${(p * 18 * px).toFixed(2)}px)`;
-      A();
-      ctx.filter = `blur(${((1 - p) * 18 * px).toFixed(2)}px)`;
-      ctx.globalAlpha = p;
-      B();
-      ctx.restore();
-      return;
+      blurred(ctx, (c) => drawScene(c, a, t, media[a.entry], {}, clips?.[a.entry]), p * 18);
+      return blurred(ctx, (c) => drawScene(c, b, t, media[b.entry], {}, clips?.[b.entry]), (1 - p) * 18, p);
     case 'black':
     case 'white': {
       // Through a calm colour: the first scene fades out into it, the next fades in from it.

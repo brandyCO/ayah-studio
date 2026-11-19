@@ -458,7 +458,8 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       2026-11-09 all 13 reciters (1 and 9 partly), checked on the audio by `scripts/qdc-fix-check.py` (`align.yml` scan =
       fixcheck: loudness contrast at both starts): where Quran.com starts late ours was right ~96 %, so those are applied
       for every reciter; earlier starts only for 1, 7, 9, 161; Shuraim (10) none (`EARLY_OK`, `SKIP`); 13,776 ayat
-- [x] Quick reel (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
+- [x] ~~Quick reel~~ — **removed by the owner on 2026-11-19** (Create opens the full studio instead; see "Studio fast
+      and premium" below; Make a series moved to Layout). As built (owner request 2026-10-13): editor → Styles → **Quick reel** (opens by itself on a new
       reel), four steps: **Footage** (Sky, Sea, Rain, Mountains, Forest, Desert, Night, Light; remembered in
       localStorage `quickFootage`; 6 vertical Pixabay clips ≥ 5 s through the proxy, downloaded only when
       tapped, becomes the single scene) → **Style**: five **vibes** (`VIBES` in `src/engine/styles.ts`:
@@ -636,6 +637,20 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       **Frame: Fill / Show whole** (`Clip.whole`; Scenes → Arrange for all scenes, a scene's Adjust for one):
       landscape videos and photos shown complete over a soft copy of themselves that fills the frame
       (`containSoft()`: shrunk to 1/40 and stretched back, pure). Pixabay videos already include landscape
+
+- [x] Studio fast and premium, first wave (owner request 2026-11-19; plan: Claude Doc "Ayah Studio: the fastest, most
+      premium Studio (plan)"): **Create opens the full studio** (`openCreate()` in `src/ui/tabs.ts`: today's ayah, no sheet);
+      a new reel gets a **starter nature clip** from Pixabay (`src/data/starter.ts`: a pool of 2 clips in My media,
+      localStorage `starterClips` / `starterUsed`, filled 20 s after start on Wi-Fi or for people who made reels, a different
+      FOOTAGE query each time; none ready → the look's scene, swapped when the download lands; the user's own uploads
+      stay). Top bar: the reference (other ayat via `openAyahPicker(n, keepLook)`) and Drafts. Looks keep video footage.
+      **Text layers** (`src/engine/textCache.ts`): each text block, the name + reference, the watermark and the recited
+      word are drawn once into a sprite at the screen's pixel size with the shadow / halo baked in (LRU, ~10 MP); blur
+      effects mix sharp and pre-blurred sprites. **GPU effects** (`src/engine/gpu.ts`, WebGL2, off with localStorage
+      `gpuFx`=off): ripple and caustics shaders, separable blur for the blur transition and a scene's own blur
+      (`blurred()` in `scenes.ts`; fallback canvas filter, else shrink-and-enlarge, so blurs show on iPhone Safari).
+      Preview drops resolution while playing under ~45 fps (was 25). Bench: `bench/` + `node scripts/studio-bench.mjs
+      [width] [cpuRate]` (dev server on 5199; ms per frame for every touch, text effect and transition)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

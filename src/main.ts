@@ -191,6 +191,8 @@ void initI18n().then(route).finally(() => {
 });
 // Favourite reciters' downloads carry on where they stopped (Wi-Fi only), after the first screen.
 later(() => setTimeout(() => void import('./data/reciterDownload').then((m) => m.keepFavourites()), 4000));
+// The studio's starter footage (a Pixabay nature clip ready for the next new reel), once the app has settled.
+later(() => setTimeout(() => void import('./data/starter').then((m) => m.warmStarter()).catch(() => {}), 20000));
 // The daily streak (Me tab): opening the app lights today's flame (not in the Kids space).
 const markOpen = () => { if (!kidsOn() && !document.hidden) recordOpen(); };
 markOpen();

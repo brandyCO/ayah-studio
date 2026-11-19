@@ -512,6 +512,8 @@ body[data-view="reel"] {
 }
 .studio-top { grid-area: top; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
 .top-right { display: flex; align-items: center; gap: 10px; }
+.studio-top .top-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.studio-top .top-ayat { display: inline-flex; align-items: center; gap: 4px; max-width: 46vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; height: 32px; padding: 0 10px; }
 .quality {
   display: inline-flex; align-items: center; gap: 2px; padding: 6px 8px; border: 0; border-radius: var(--r-s);
   background: none; color: var(--text); font-weight: 650; font-size: var(--fs-m); cursor: pointer;
@@ -1190,23 +1192,13 @@ body[data-view="kids"] {
 .list-item .pill { margin-inline-start: 8px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--brand-fill); color: #fff; font-size: var(--fs-2xs); }
 .list-item .block { display: block; margin-top: 2px; }
 
-/* Quick reel (editor → Styles → Quick reel): numbered steps, Back / Next, an Export button at the end */
-.quick-steps { margin-bottom: 8px; }
-.quick-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
-.quick-export { width: 100%; margin-top: 12px; }
-.style-art.rec { background-color: #0b1424; background-size: cover; background-position: center; }
 
 /* Watching (editor): Play fades the tools away and the preview fills the screen; a tap brings them back */
 .studio.watching .transport { opacity: 0; pointer-events: none; transition: opacity .6s ease; }
 .studio.watching .stage { cursor: pointer; animation: watch-in .9s ease both; }
 @keyframes watch-in { from { opacity: .55; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .studio.watching .stage { animation: none; } }
-.quick-why { margin: 2px 0 10px; color: var(--text); font-size: .95rem; line-height: 1.4; }
-/* Quick reel: clip order numbers; the recited-word colours with an Off swatch */
-.bg-num {
-  position: absolute; inset-block-start: 6px; inset-inline-end: 6px; width: 22px; height: 22px; border-radius: 50%;
-  display: grid; place-items: center; font-size: var(--fs-xs); font-weight: 700; color: var(--accent-ink); background: var(--accent);
-}
+/* The recited-word colours with an Off swatch */
 .swatch-off { background: none; border: 1px dashed var(--muted); color: var(--muted); font-size: var(--fs-2xs); }
 .swatch:disabled { opacity: .35; cursor: default; }
 /* Transport: back to the start beside Play */
@@ -1234,13 +1226,6 @@ body[data-view="kids"] {
 .caption-box .chip { justify-self: start; }
 .make-another { margin-top: 10px; }
 .make-another p { margin: 0 0 6px; }
-.quick-try .chip { display: inline-flex; align-items: center; gap: 6px; }
-/* Vibe tiles over the user's own footage: each vibe's colour grade as a soft filter */
-.style-art.tint-warm { filter: sepia(.3) saturate(1.1); }
-.style-art.tint-golden { filter: sepia(.5) saturate(1.3) hue-rotate(-8deg); }
-.style-art.tint-cool { filter: saturate(.8) hue-rotate(12deg) brightness(.92); }
-.style-art.tint-dusk { filter: hue-rotate(-22deg) saturate(1.1) brightness(.9); }
-.style-art.tint-mono { filter: grayscale(1); }
 /* Tajweed colours legend */
 .tajweed-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 4px 0 8px; font-size: var(--fs-xs); color: var(--muted); }
 .tajweed-legend span { display: inline-flex; align-items: center; gap: 5px; }
