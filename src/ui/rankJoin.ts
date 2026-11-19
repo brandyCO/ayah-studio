@@ -8,7 +8,8 @@
 import './rankJoin.css';
 import { tierEmblem } from './rankMoment';
 import { avatar } from './rankAvatars';
-import { myFigureCode } from './actor';
+import { encode, random } from './figure';
+import { actor, myFigureCode } from './actor';
 import { rt, type RankKey } from '../i18n/ranks';
 import { h } from './dom';
 import { sfx } from './sfx';
@@ -28,19 +29,35 @@ export function joinReveal(done: Promise<unknown>, tier: () => number | null): P
   const name = h('h2', {});
   const sub = h('p', { class: 'rj-sub' }, rt('rk.joinSub'));
   const count = h('span', { class: 'rj-count' });
-  // Fifteen seats: fourteen readers (drawn avatars, different each time) and the user's own, last.
-  const pool = Array.from({ length: 24 }, (_, i) => i).sort(() => Math.random() - 0.5);
+  // Fifteen seats: fourteen readers, each a character of their own (owner 2026-11-19: "not profiles that aren't
+  // characters"; made up, different every time: they stand for the readers being found), and the user's own, last.
+  // Each character is drawn once into a picture (decoded off the main thread), so the seats popping in never
+  // redraw fourteen detailed drawings on a slow phone.
+  const pic = (svg: Element, size: number) => {
+    const img = h('img', { width: String(size), height: String(size), alt: '', decoding: 'async',
+      src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg.querySelector("svg") ?? svg))}` });
+    void img.decode().catch(() => {});
+    return img;
+  };
   const seats = Array.from({ length: SEATS }, (_, i) => {
-    const who = i === ME ? avatar(0, sel, 52, 0, myFigureCode()) : avatar(pool[i], sel, 44);
+    const who = h('span', { class: 'rj-pic' });
     const burst = i === ME ? h('span', { class: 'rj-burst', 'aria-hidden': 'true' }, ...Array.from({ length: 10 }, (_, k) => h('i', { style: `--a:${k * 36 + 18}deg` }))) : '';
     return h('span', { class: `rj-seat${i === ME ? ' me' : ''}` }, burst, h('span', { class: 'rj-who' }, who),
       i === ME ? h('b', { class: 'rj-you' }, rt('rk.you' as RankKey)) : '');
   });
   const grid = h('div', { class: 'rj-grid', 'aria-hidden': 'true' }, ...seats);
+  // The characters are drawn a few at a time while the emblems play, never all in one long task.
+  const draw = (i: number) => seats[i].querySelector('.rj-pic')!.replaceWith(
+    pic(i === ME ? avatar(0, sel, 56, 0, myFigureCode()) : avatar(i + 1, sel, 52, 0, encode(random(0))), i === ME ? 56 : 52));
+  let drawn = 0;
+  const drawSome = () => { const end = Math.min(SEATS, drawn + 2); while (drawn < end) draw(drawn++); if (drawn < SEATS) setTimeout(drawSome, 40); };
+  const drawAll = () => { while (drawn < SEATS) draw(drawn++); };
+  // The user's own character waits under the seats, watching them fill, and cheers when its seat is taken.
+  const me = still || !myFigureCode() ? null : actor('rj-actor');
   const el = h('div', { class: `rj${still ? ' still' : ''}`, role: 'status', 'aria-live': 'polite', 'aria-label': rt('rk.joinTitle') },
-    h('span', { class: 'rj-glow', 'aria-hidden': 'true' }),
+    h('span', { class: 'rj-bg', 'aria-hidden': 'true' }, h('span', { class: 'rj-glow' })),
     h('p', { class: 'rj-kick' }, rt('rk.joinKicker')), row,
-    h('div', { class: 'rj-text' }, name, sub), grid, count);
+    h('div', { class: 'rj-text' }, name, sub), grid, count, me ? h('div', { class: 'rj-me' }, me.el) : '');
 
   const place = () => {
     ems.forEach((e, i) => { e.style.setProperty('--d', String(i - sel)); e.classList.toggle('sel', i === sel); });
@@ -55,7 +72,8 @@ export function joinReveal(done: Promise<unknown>, tier: () => number | null): P
   const fill = (i: number) => {
     seats[i].classList.add('on');
     filled++; paintCount();
-    if (!still && filled % 2 === 0) sfx.pop(filled % 5);
+    if (!still && filled % 3 === 0) sfx.pop(filled % 5);
+    if (me && filled % 5 === 0) me.glance(filled % 10 ? 1 : -1);
   };
 
   document.body.append(el);
@@ -63,11 +81,11 @@ export function joinReveal(done: Promise<unknown>, tier: () => number | null): P
   const timers: number[] = [];
   const at = (ms: number, f: () => void) => { timers.push(window.setTimeout(f, Math.max(0, ms - (performance.now() - t0)))); };
 
-  if (still) { order.forEach(fill); }
+  if (still) { drawAll(); order.forEach(fill); }
   else {
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('go')));
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); setTimeout(drawSome, 60); }));
     at(900, () => { el.classList.add('focus'); sfx.shimmer(); vibrate(8); });
-    at(1250, () => el.classList.add('seats'));
+    at(1250, () => { drawAll(); el.classList.add('seats'); });
   }
   // Readers arrive at a steady pace up to the last three; those wait for the league to load.
   let next = 0;
@@ -85,8 +103,22 @@ export function joinReveal(done: Promise<unknown>, tier: () => number | null): P
       if (state === 'closed') return;
       state = 'closed';
       timers.forEach(clearTimeout);
+      // The user's seat flies to their own row in the league now painted underneath, so the reveal becomes the
+      // screen: everything else fades away round it.
+      const row = document.querySelector<HTMLElement>('.rk-row.me');
+      const to = row?.querySelector('svg')?.getBoundingClientRect();
+      const from = seats[ME].querySelector('.rj-who > *')?.getBoundingClientRect();
+      let ms = still ? 0 : 380;
+      if (!still && to && from && to.width && to.top > 0 && to.bottom < innerHeight) {
+        const k = to.width / from.width;
+        const dx = to.left + to.width / 2 - (from.left + from.width / 2), dy = to.top + to.height / 2 - (from.top + from.height / 2);
+        seats[ME].style.setProperty('--fly', `translate(${dx}px, ${dy}px) scale(${k})`);
+        el.classList.add('fly');
+        ms = 620;
+        setTimeout(() => { row?.classList.add('rj-arrived'); setTimeout(() => row?.classList.remove('rj-arrived'), 900); }, 520);
+      }
       el.classList.add('out');
-      setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 380);
+      setTimeout(() => { el.remove(); resolve(); }, ms);
     };
     const land = () => {
       if (state !== 'wait') return;
@@ -102,6 +134,7 @@ export function joinReveal(done: Promise<unknown>, tier: () => number | null): P
         el.classList.add('landed');
         sub.textContent = rt('rk.joinIn');
         if (!still) { sfx.pop(4, true); vibrate([14, 40, 18]); }
+        me?.cheer(1300); me?.face('happy', 1600);
         at(performance.now() - t0 + (still ? 500 : 1000), close);
       });
     };

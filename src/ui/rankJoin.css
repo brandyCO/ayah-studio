@@ -2,10 +2,27 @@
    league, fifteen seats fill with readers, the last one is the user's. Only transform / opacity / scale / translate move. */
 .rj { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px; padding: 24px 16px calc(40px + env(safe-area-inset-bottom, 0px)); color: #fff; text-align: center; overflow: hidden;
-  background: linear-gradient(180deg, #2a1d86 0%, #4a37c9 48%, #6c5ce7 100%); opacity: 0; transition: opacity .25s ease-out; }
+  opacity: 0; transition: opacity .25s ease-out; }
+.rj-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(180deg, #2a1d86 0%, #4a37c9 48%, #6c5ce7 100%); }
+.rj { isolation: isolate; }
 .rj.go, .rj.still { opacity: 1; }
-.rj.out { opacity: 0; transition-duration: .36s; }
-.rj.out .rj-row, .rj.out .rj-grid { scale: 1.06; transition: scale .36s ease-in; }
+.rj.out:not(.fly) { opacity: 0; transition-duration: .36s; }
+.rj.out:not(.fly) .rj-row, .rj.out:not(.fly) .rj-grid { scale: 1.06; transition: scale .36s ease-in; }
+/* Flying into the league: the sky, the emblems and the other seats fade; the user's seat flies to their row. */
+.rj.fly .rj-bg, .rj.fly .rj-kick, .rj.fly .rj-row, .rj.fly .rj-text, .rj.fly .rj-count, .rj.fly .rj-me,
+.rj.fly .rj-seat:not(.me) { opacity: 0; transition: opacity .34s ease-out; }
+.rj.fly .rj-grid { transition: none; }
+.rj.fly .rj-seat.me { background: none; box-shadow: none; animation: none; transform: var(--fly); scale: 1;
+  transition: transform .52s cubic-bezier(.5, -0.1, .2, 1.1), scale .52s ease-out, background .2s, box-shadow .2s; }
+.rj.fly .rj-you, .rj.fly .rj-burst { opacity: 0; transition: opacity .15s; }
+.rk-row.rj-arrived { animation: rj-arrive .8s cubic-bezier(.3, 1.4, .4, 1); }
+@keyframes rj-arrive { 0% { scale: 1; } 30% { scale: 1.04; } 100% { scale: 1; } }
+/* The user's character under the seats. */
+.rj-me { width: 104px; height: 128px; margin-top: 4px; opacity: 0; translate: 0 18px;
+  transition: opacity .3s ease-out, translate .5s cubic-bezier(.3, 1.3, .4, 1); }
+.rj-me > * { width: 100%; height: 100%; }
+.rj.seats .rj-me { opacity: 1; translate: 0 0; }
+@media (max-height: 720px) { .rj-me { width: 80px; height: 98px; } .rj { gap: 10px; } }
 .rj-glow { position: absolute; left: 50%; top: 30%; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, rgba(170, 150, 255, .55), rgba(170, 150, 255, 0) 62%); opacity: .5; }
 .rj-kick { margin: 0; font-size: 13px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: #cfc6ff;
@@ -40,14 +57,14 @@
 .rj.landed .rj-sub { color: #ffe08a; animation: rj-bump .45s cubic-bezier(.3, 1.6, .4, 1) both; }
 
 /* Fifteen seats in a 5 × 3 grid: empty rings that fill with readers. */
-.rj-grid { display: grid; grid-template-columns: repeat(5, 52px); gap: 12px 14px; margin-top: 6px; opacity: 0; translate: 0 14px;
+.rj-grid { display: grid; grid-template-columns: repeat(5, 58px); gap: 12px 12px; margin-top: 6px; opacity: 0; translate: 0 14px;
   transition: opacity .3s ease-out, translate .4s cubic-bezier(.3, 1.3, .4, 1); }
 .rj.seats .rj-grid, .rj.still .rj-grid { opacity: 1; translate: 0 0; }
-.rj-seat { position: relative; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%;
+.rj-seat { position: relative; width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%;
   background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22); }
 .rj-seat.me { box-shadow: inset 0 0 0 2.5px rgba(255, 224, 138, .7); }
 .rj-who { display: grid; place-items: center; opacity: 0; scale: .2; }
-.rj-who svg { display: block; }
+.rj-who > * { display: block; }
 .rj-seat.on .rj-who { opacity: 1; scale: 1; transition: opacity .12s ease-out, scale .42s cubic-bezier(.3, 1.7, .4, 1); }
 .rj-seat.me.on .rj-who { transition-duration: .12s, .55s; }
 .rj-seat.me.on { animation: rj-ring .7s ease-out both; }
