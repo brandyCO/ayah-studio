@@ -2353,11 +2353,14 @@ duas/reflections section in Me.
       (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`)
       **Ranks right after sign-in** (owner report 2026-11-19, "ranks started loading after I signed in"): the league is
       fetched the moment sign-in finishes, alongside the first report; with nothing kept for the account yet
-      (`isKept()` in `together/ranks.ts`) a **Joining your league** reveal (`src/ui/rankJoin.ts` + `.css`, lazy) covers the
-      first load: the user's character walks in beside an empty stand, a bar fills, the league's emblem drops onto the stand
-      and the character cheers; its length follows the real load (≥ 1.2 s, ≤ 3 s), later visits paint from the cache at once.
-      Compositor-only motion, 60 fps at 4× and 6× CPU. A claim tap no longer loads the moment: Me warms `celebrate`, the
-      sound engine and the badge art while idle once a claim card shows (`warmClaim()`)
+      (`isKept()` in `together/ranks.ts`) **Welcome to your league** covers the first load (`src/ui/rankWelcome.ts` + `.css`,
+      lazy; owner pick from two designs, the other, `rankJoin.ts`, kept behind `JOIN_STYLE`): on a light screen the
+      league's emblem falls, squashes and settles (spring physics simulated once, played as 60 fps keyframes), the user's
+      character waves, a bold title and the one rule come in, and a chunky Continue button fills like a loading bar; when
+      the league is there it pops ready and the character hops once and cheers (never two hops in a row, owner); Continue
+      flies the emblem into the league card and the real rows spring in one after another, the user's last. Later visits
+      paint from the cache at once. A claim tap no longer loads the moment: Me warms `celebrate`, the sound engine and the
+      badge art while idle once a claim card shows (`warmClaim()`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

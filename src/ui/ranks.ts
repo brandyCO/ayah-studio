@@ -953,8 +953,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   }
   /** Ranks at once from last time, then the fresh answers (only repainted when something changed). */
   // Nothing kept on this device yet (just signed in, a new phone): the wait becomes "Joining your league" (rankJoin.ts).
-  // The "joining your league" reveal is being redesigned (owner 2026-11-19); it stays off until he approves it.
-  const JOIN_REVEAL = false;
+  // The first-sign-in reveal (owner 2026-11-19 chose "Welcome to your league", src/ui/rankWelcome.ts).
+  const JOIN_REVEAL = true;
   const JOIN_STYLE = 'welcome' as 'welcome' | 'seats'; // two designs shown to the owner (rankWelcome.ts, rankJoin.ts)
   const firstLoad = (p: Promise<unknown>) => {
     if (!JOIN_REVEAL || !account() || isKept('league') || isKept('status')) return;
