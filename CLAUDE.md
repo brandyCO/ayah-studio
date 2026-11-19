@@ -741,6 +741,17 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       screen, ~140 KB), errors before it kept (≤ 5) and sent. `keptPageFonts()` (one pass over Cache Storage) replaces 604
       `caches.match` calls in the whole-mushaf download. `hijriDate()` (`src/data/hijri.ts`): one Umm al-Qura formatter, a result per
       local day (Ramadan, season, wardrobe, page tint). First-load budget 135 KB (134.3)
+      **Instant tabs** (owner "Yes, both", 2026-11-19): `route()` in main.ts keeps the tab screen left (Me, Learn, Ranks roots)
+      alive in #app as `.screen-kept` (`content-visibility: hidden`, listeners kept, cleanup held back, ≤ 10 min, dropped on an
+      account change or the Kids space) and shows it again as it was (scroll place) with the event `screen-shown` (`screen-hidden`
+      on leaving); Me and Learn are built ahead while idle (`prebuild()`, rendered once unseen as `.screen-warm`). Kept screens do
+      nothing while hidden: Ranks polls / takes swipes only when shown, Me and the Learn path paint on show. 6× CPU: first tap on
+      Learn 413 → 140 ms, returns 170–310 → 70–100 ms with no slow frame. **Offline Ranks**: kept answers carry their time
+      (`keptAt()` / `keptSince()` / `profileAt()`), a quiet "Offline · 25 min ago" (`src/ui/updatedAgo.ts`, Intl.RelativeTimeFormat)
+      on the league hero, the Friends tab and profiles; the kept league stays on screen offline (was "Could not load the ranks");
+      **send later** (`src/together/outbox.ts`, localStorage `rankOutbox`, device-only): follow / unfollow, answering a friend ask,
+      MashaAllah and challenge gestures done offline resolve at once and go in order when back (`rpc()` throws `Offline` on
+      status 0; follow + unfollow offline cancel out; a refusal is dropped with a toast). Budget 136 KB (135.1)
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
