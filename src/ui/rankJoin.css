@@ -1,42 +1,75 @@
-/* "Joining your league" (src/ui/rankJoin.ts): Ranks violet, one stand with the league's emblem, the user's character. */
-.rj { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-  padding: 24px 24px calc(96px + env(safe-area-inset-bottom, 0px)); color: #fff; text-align: center; overflow: hidden;
-  background: radial-gradient(120% 70% at 50% 35%, #8f7dff 0%, #6c5ce7 45%, #3e2fa8 100%); opacity: 0; transition: opacity .22s ease-out; }
+/* "Joining your league" (src/ui/rankJoin.ts): Ranks violet; the five league emblems in a row glide to the user's
+   league, fifteen seats fill with readers, the last one is the user's. Only transform / opacity / scale / translate move. */
+.rj { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px 16px calc(40px + env(safe-area-inset-bottom, 0px)); color: #fff; text-align: center; overflow: hidden;
+  background: linear-gradient(180deg, #2a1d86 0%, #4a37c9 48%, #6c5ce7 100%); opacity: 0; transition: opacity .25s ease-out; }
 .rj.go, .rj.still { opacity: 1; }
-.rj.out { opacity: 0; transition-duration: .3s; }
-.rj-stand { position: relative; width: 168px; height: 168px; display: grid; place-items: center; }
-.rj-stand::after { content: ''; position: absolute; bottom: 4px; left: 18%; right: 18%; height: 18px; border-radius: 50%;
-  background: rgba(20, 8, 70, .35); }
-.rj-rays { position: absolute; inset: -60px; border-radius: 50%; opacity: 0; scale: .6;
-  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.16) 0 10deg, transparent 10deg 30deg);
-  -webkit-mask: radial-gradient(circle, #000 25%, transparent 68%); mask: radial-gradient(circle, #000 25%, transparent 68%);
-  transition: opacity .5s ease-out, scale .7s cubic-bezier(.2,.9,.3,1.3); }
-.rj.go .rj-rays { animation: rj-turn 9s linear infinite; }
-.rj.landed .rj-rays { opacity: 1; scale: 1; }
-.rj-slot { position: relative; width: 132px; height: 132px; }
-/* Before the league is known: a soft breathing light where the emblem will land. */
-.rj-slot:empty { border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0) 66%); animation: rj-breathe 1.4s ease-in-out infinite; }
-.rj-slot svg { width: 100%; height: 100%; animation: rj-drop .62s cubic-bezier(.2,.9,.3,1.25) both; }
-.rj-scene { position: relative; width: 300px; height: 210px; display: flex; justify-content: center; align-items: flex-end; }
-.rj-walk { position: absolute; bottom: 0; inset-inline-start: -6px; width: 104px; height: 136px; translate: -80vw 0; }
-.rj.go .rj-walk { animation: rj-in .95s cubic-bezier(.25,.8,.3,1) .1s both; }
-.rj-walk > * { width: 100%; height: 100%; }
-.rj.go .rj-walk > * { animation: rj-step .24s ease-in-out 4 alternate .1s; }
-[dir="rtl"] .rj-walk { translate: 80vw 0; }
-[dir="rtl"] .rj.go .rj-walk { animation-name: rj-in-rtl; }
-.rj-text h2 { margin: 0; font-size: 26px; font-weight: 900; }
-.rj-text p { margin: 4px 0 0; opacity: .85; font-weight: 700; }
-.rj-bar { width: min(280px, 72vw); height: 14px; border-radius: 7px; background: rgba(255,255,255,.22); overflow: hidden; }
-.rj-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd166, #fff3c4); transform-origin: 0 50%;
-  transform: scaleX(.04); transition: transform 2.4s cubic-bezier(.1,.6,.3,1); }
-[dir="rtl"] .rj-bar i { transform-origin: 100% 50%; }
-.rj.go .rj-bar i { transform: scaleX(.82); }
-.rj.landed .rj-bar i { transform: scaleX(1); transition-duration: .35s; }
+.rj.out { opacity: 0; transition-duration: .36s; }
+.rj.out .rj-row, .rj.out .rj-grid { scale: 1.06; transition: scale .36s ease-in; }
+.rj-glow { position: absolute; left: 50%; top: 30%; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(170, 150, 255, .55), rgba(170, 150, 255, 0) 62%); opacity: .5; }
+.rj-kick { margin: 0; font-size: 13px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: #cfc6ff;
+  opacity: 0; translate: 0 8px; transition: opacity .3s ease-out .15s, translate .3s ease-out .15s; }
+.rj.go .rj-kick, .rj.still .rj-kick { opacity: 1; translate: 0 0; }
+
+/* The row of emblems: 120 px each, drawn at full size and scaled down, so the chosen one stays sharp when it grows. */
+.rj-row { position: relative; width: 100%; height: 150px; }
+.rj-em { position: absolute; left: 50%; top: 15px; width: 120px; height: 120px; margin-left: -60px;
+  translate: calc((var(--i) - 2) * 74px) 0; scale: .5;
+  transition: translate .62s cubic-bezier(.3, 1.25, .4, 1), scale .62s cubic-bezier(.3, 1.35, .4, 1), opacity .4s ease-out; }
+/* Before the focus the row is centred on its own middle (emblem 2). */
+.rj:not(.focus) .rj-em { translate: calc((var(--i) - 2) * 74px) 0; }
+.rj-em svg { width: 100%; height: 100%; display: block; opacity: 0; scale: 0; }
+.rj.go .rj-em svg { animation: rj-pop .5s cubic-bezier(.3, 1.6, .4, 1) calc(.12s + var(--i) * .07s) both; }
+.rj.still .rj-em svg, .rj.landed .rj-em svg { opacity: 1; scale: 1; }
+.rj.focus .rj-em, .rj.still .rj-em { translate: calc(var(--d) * 112px) 0; scale: .42; opacity: .42; }
+.rj.focus .rj-em.sel, .rj.still .rj-em.sel { scale: 1; opacity: 1; }
+.rj-rays { position: absolute; left: 50%; top: 75px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%; opacity: 0; scale: .4;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 236, 170, .22) 0 9deg, transparent 9deg 24deg);
+  -webkit-mask: radial-gradient(circle, #000 22%, transparent 66%); mask: radial-gradient(circle, #000 22%, transparent 66%);
+  transition: opacity .5s ease-out, scale .7s cubic-bezier(.2, 1.2, .3, 1); }
+.rj.go .rj-rays { animation: rj-turn 14s linear infinite; }
+.rj.focus .rj-rays, .rj.still .rj-rays { opacity: 1; scale: 1; }
+.rj.landed .rj-rays { scale: 1.25; }
+.rj.landed .rj-em.sel svg { animation: rj-bump .5s cubic-bezier(.3, 1.6, .4, 1) both; }
+
+.rj-text { opacity: 0; translate: 0 10px; transition: opacity .3s ease-out, translate .4s cubic-bezier(.3, 1.3, .4, 1); }
+.rj.focus .rj-text, .rj.still .rj-text { opacity: 1; translate: 0 0; transition-delay: .2s; }
+.rj-text h2 { margin: 0; font-size: 30px; font-weight: 1000; line-height: 1.1; text-shadow: 0 3px 0 rgba(20, 8, 80, .35); }
+.rj-sub { margin: 6px 0 0; font-weight: 800; color: #e6e0ff; min-height: 1.3em; }
+.rj.landed .rj-sub { color: #ffe08a; animation: rj-bump .45s cubic-bezier(.3, 1.6, .4, 1) both; }
+
+/* Fifteen seats in a 5 × 3 grid: empty rings that fill with readers. */
+.rj-grid { display: grid; grid-template-columns: repeat(5, 52px); gap: 12px 14px; margin-top: 6px; opacity: 0; translate: 0 14px;
+  transition: opacity .3s ease-out, translate .4s cubic-bezier(.3, 1.3, .4, 1); }
+.rj.seats .rj-grid, .rj.still .rj-grid { opacity: 1; translate: 0 0; }
+.rj-seat { position: relative; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22); }
+.rj-seat.me { box-shadow: inset 0 0 0 2.5px rgba(255, 224, 138, .7); }
+.rj-who { display: grid; place-items: center; opacity: 0; scale: .2; }
+.rj-who svg { display: block; }
+.rj-seat.on .rj-who { opacity: 1; scale: 1; transition: opacity .12s ease-out, scale .42s cubic-bezier(.3, 1.7, .4, 1); }
+.rj-seat.me.on .rj-who { transition-duration: .12s, .55s; }
+.rj-seat.me.on { animation: rj-ring .7s ease-out both; }
+.rj-you { position: absolute; bottom: -9px; left: 50%; translate: -50% 0; padding: 1px 7px; border-radius: 8px; font-size: 10px; font-weight: 1000;
+  background: #ffd166; color: #3a2a00; box-shadow: 0 2px 0 #c99a2e; opacity: 0; scale: .4; }
+.rj-seat.me.on .rj-you { opacity: 1; scale: 1; transition: opacity .15s ease-out .2s, scale .4s cubic-bezier(.3, 1.7, .4, 1) .2s; }
+.rj-count { margin-top: 10px; padding: 6px 14px; border-radius: 999px; background: rgba(20, 8, 80, .35); font-weight: 900; font-size: 14px;
+  font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .3s ease-out; }
+.rj.seats .rj-count, .rj.still .rj-count { opacity: 1; }
+.rj.landed .rj-count { background: #ffd166; color: #3a2a00; }
+
+@keyframes rj-pop { from { opacity: 0; scale: 0; } 40% { opacity: 1; } to { opacity: 1; scale: 1; } }
+@keyframes rj-bump { 0% { scale: 1; } 35% { scale: 1.12; } 100% { scale: 1; } }
 @keyframes rj-turn { to { rotate: 360deg; } }
-@keyframes rj-breathe { 50% { scale: 1.12; opacity: .7; } }
-@keyframes rj-drop { from { transform: translateY(-140px) scale(.7); opacity: 0; } 70% { transform: translateY(6px) scale(1.06, .94); opacity: 1; } to { transform: none; } }
-@keyframes rj-in { from { translate: -80vw 0; } to { translate: 0 0; } }
-@keyframes rj-in-rtl { from { translate: 80vw 0; } to { translate: 0 0; } }
-@keyframes rj-step { to { transform: translateY(-7px) rotate(2deg); } }
-.rj.still .rj-walk { translate: 0 0; }
-@media (prefers-reduced-motion: reduce) { .rj, .rj * { animation: none !important; transition: none !important; } .rj-bar i { transform: scaleX(1); } }
+@keyframes rj-ring { 0% { box-shadow: inset 0 0 0 2.5px rgba(255, 224, 138, .7), 0 0 0 0 rgba(255, 209, 102, .7); }
+  100% { box-shadow: inset 0 0 0 2.5px rgba(255, 224, 138, .9), 0 0 0 16px rgba(255, 209, 102, 0); } }
+@media (max-height: 640px) { .rj-row { height: 120px; } .rj-em { top: 0; } .rj-rays { top: 60px; } .rj-grid { gap: 8px 10px; } }
+@media (prefers-reduced-motion: reduce) { .rj, .rj * { animation: none !important; transition: none !important; } }
+/* The user's seat: larger, and a burst of light when it is taken. */
+.rj-seat.me { scale: 1.22; z-index: 1; background: rgba(255, 209, 102, .14); }
+.rj-burst { position: absolute; inset: 0; pointer-events: none; }
+.rj-burst i { position: absolute; left: 50%; top: 50%; width: 6px; height: 14px; margin: -7px 0 0 -3px; border-radius: 3px; background: #ffe08a;
+  rotate: var(--a); opacity: 0; }
+.rj-seat.me.on .rj-burst i { animation: rj-spark .6s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes rj-spark { 0% { opacity: 1; transform: translateY(-20px) scale(1); } 100% { opacity: 0; transform: translateY(-52px) scale(.4); } }
