@@ -611,7 +611,9 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     const cur = list.querySelector('.lp-step.is-current') ?? list.querySelector('.lp-tree.grew');
     cur?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
   });
-  toCurrent();
+  // Built ahead while another tab shows (main.ts): scrolled into view when first shown instead.
+  let scrollOnShow = root.classList.contains('screen-kept');
+  if (!scrollOnShow) toCurrent();
   // F8: no sheet on the first visit: Juz 'Amma, one ayah at a time, and the path at once.
   if (!pathSet()) setPath({ kind: 'amma' }, 1);
 
@@ -621,6 +623,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   let dirty = false;
   const onChange = () => { if (root.classList.contains('screen-kept')) dirty = true; else paint(); };
   root.addEventListener('screen-shown', () => {
+    if (scrollOnShow && !dirty) { scrollOnShow = false; toCurrent(); }
     if (!dirty) return;
     dirty = false;
     paint();

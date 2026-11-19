@@ -355,7 +355,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   let streakPlaying = false;
   const maybeStreak = () => {
     const s = streak();
-    if (page || streakPlaying || !s.litToday || s.days < 1 || document.hidden) return;
+    if (page || streakPlaying || !s.litToday || s.days < 1 || document.hidden || root.classList.contains('screen-kept')) return;
     let seen = '';
     try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
     if (seen === dayKey()) return;

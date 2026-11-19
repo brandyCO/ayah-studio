@@ -54,6 +54,32 @@ const dropAlive = (key?: string) => {
 };
 let shownTab = '';
 
+/** Builds a tab ahead, hidden, while the app is idle (Me, then Learn), so even its first tap shows a ready screen. */
+async function prebuild(key: 'me' | 'learn') {
+  if (alive.has(key) || shownTab === key || kidsOn() || document.hidden) return;
+  try { if (key === 'me' && sessionStorage.getItem('meFocus')) return; } catch { /* private window */ }
+  const screen = h('div', { class: `screen screen-${key} screen-kept` });
+  screen.dataset.tab = key;
+  screen.inert = true;
+  app.prepend(screen);
+  try {
+    const c = key === 'me' ? await (await import('./ui/me')).showMe(screen)
+      : await (await import('./ui/learnRoutes')).learnRoute(screen, undefined, undefined);
+    // Opened (or the account changed) while it was built: the one built by route() wins.
+    if (alive.has(key) || shownTab === key || !screen.isConnected) { c(); screen.remove(); return; }
+    alive.set(key, { el: screen, c, at: Date.now(), y: 0 });
+    // Laid out and painted once, unseen (a kept screen that never rendered would do it all on its first tap); then
+    // `content-visibility: hidden` keeps that work for the tap.
+    screen.classList.replace('screen-kept', 'screen-warm');
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
+    }, 50)));
+  } catch (e) { console.warn('prebuild', key, e); screen.remove(); }
+}
+function prebuildTabs() {
+  const idle = (fn: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : fn()), ms);
+  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn'), 1500)), 2500);
+}
 /** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
 function replaceScreens(...els: HTMLElement[]) {
   const keep = new Set([...alive.values()].map((v) => v.el));
@@ -64,7 +90,7 @@ async function route() {
   const id = ++routeId;
   closeSheetsOnRoute();
   const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
-  const shown = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept)');
+  const shown = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept):not(.screen-warm)');
   if (shownTab && cleanup && shown?.dataset.tab === shownTab && !kidsOn()) {
     // Keep the tab just left alive instead of tearing it down.
     alive.set(shownTab, { el: shown, c: cleanup, at: Date.now(), y: window.scrollY });
@@ -89,7 +115,7 @@ async function route() {
   if (back) {
     alive.delete(keepKey);
     for (const el of [...app.children]) if (el !== back.el && ![...alive.values()].some((v) => v.el === el)) el.remove();
-    back.el.classList.remove('screen-kept');
+    back.el.classList.remove('screen-kept', 'screen-warm');
     back.el.inert = false;
     document.body.dataset.view = view;
     window.scrollTo(0, back.y);
@@ -101,7 +127,7 @@ async function route() {
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   // Tabs feel instant (owner 2026-11-16, "ultra fast like Duolingo"): the screen of a tab left earlier stays as a
   // still picture (inert) while its fresh copy is built underneath, then the two swap — no blank or skeleton between.
-  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept)');
+  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept):not(.screen-warm)');
   if (prev?.dataset.tab) ghosts.set(prev.dataset.tab, { el: prev, at: Date.now() });
   const tabKey = TAB_ROOTS.has(view) && !a ? view : '';
   if (tabKey) screen.dataset.tab = tabKey;
@@ -254,6 +280,7 @@ later(() => setTimeout(() => {
     void import('./ui/me').catch(() => {});
     void import('./ui/learnPath').catch(() => {});
     setTimeout(() => void import('./ui/ranks').catch(() => {}), 600); // Ranks too, a moment later
+    prebuildTabs(); // then Me and Learn built ahead, hidden, so their first tap is instant too
   };
   if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
 }, 2500));

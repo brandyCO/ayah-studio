@@ -77,6 +77,7 @@ button { font: inherit; color: inherit; }
 .updated-ago[hidden] { display: none; }
 /* Instant tabs (main.ts): a tab screen kept alive while another shows. Its rendering is skipped but kept, so showing it again needs no new layout. */
 #app > .screen-kept { content-visibility: hidden; position: absolute; inset: 0 0 auto 0; pointer-events: none; }
+#app > .screen-warm { position: absolute; inset: 0 0 auto 0; visibility: hidden; pointer-events: none; }
 [hidden] { display: none !important; }
 
 .screen { max-width: 1100px; margin: 0 auto; padding: 0 var(--sp-4) var(--sp-6); }
