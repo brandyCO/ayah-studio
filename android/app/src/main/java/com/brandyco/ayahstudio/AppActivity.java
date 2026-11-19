@@ -107,6 +107,8 @@ public class AppActivity extends BridgeActivity {
             v.remove(); // the layer, same colour, is already on top: no flash
         });
         super.onCreate(savedInstanceState);
+        // No stretch past the end of a page: Android 12+ stretched the whole web view, the tab bar with it.
+        try { getBridge().getWebView().setOverScrollMode(android.view.View.OVER_SCROLL_NEVER); } catch (Exception ignored) { }
         if (animate) {
             // On top from the first frame: between the system splash and the opening the (white) web view never shows.
             ensureCover();
