@@ -93,6 +93,24 @@ export async function pageFontKept(page: number): Promise<boolean> {
   return !!(await caches.match(new URL(pageFontUrl(page), location.href).href).catch(() => undefined));
 }
 
+/** Every page whose font is on this device, in one pass over the caches (604 separate lookups kept a slow phone's main
+ *  thread busy for a moment each time the whole-mushaf download started or its progress was shown). */
+export async function keptPageFonts(): Promise<Set<number>> {
+  const kept = new Set<number>();
+  if (Capacitor.isNativePlatform()) { for (let p = 1; p <= PAGE_COUNT; p++) kept.add(p); return kept; }
+  const own = new URL(`${import.meta.env.BASE_URL}fonts/qcf-v2/`, location.href).href;
+  try {
+    for (const name of await caches.keys()) {
+      for (const req of await (await caches.open(name)).keys()) {
+        if (!req.url.startsWith(own)) continue;
+        const m = /^p(\d+)\.woff2(?:$|\?)/.exec(req.url.slice(own.length));
+        if (m) kept.add(Number(m[1]));
+      }
+    }
+  } catch { /* no Cache Storage (private window): nothing kept */ }
+  return kept;
+}
+
 /** Download a page's font into the service worker's cache without loading it (the whole-mushaf download). */
 export async function keepPageFont(page: number): Promise<void> {
   if (Capacitor.isNativePlatform()) return;

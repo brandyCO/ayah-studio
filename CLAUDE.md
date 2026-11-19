@@ -728,6 +728,19 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [x] Error reports (`src/errors.ts`, Sentry, lazy-loaded): on since 2026-11-16 (the owner's DSN, EU region, is the
       default in `errors.ts`; the repo variable `SENTRY_DSN` overrides it); privacy page → Other services → Crash reports
+- [x] Whole-app speed pass (owner request 2026-11-19, "very, very fast … no matter the connection"; thread "Make the whole app
+      fast"; report + offline-first plan: Claude Doc "Ayah Studio: fast everywhere, works offline"). **Bench**: `scripts/speed-bench.mjs
+      [cpu] [runs]` (built `dist/`, `DIST=` another build; phone size, CPU ×6, outside hosts fail after 0.6 s or `HANG` ms; web cold
+      start on slow 3G / 4G with gzip, app start / restart, tab switches Read → Learn → Ranks → Me twice: ms to ready, longest
+      freeze, slow frames; `JSON=` writes the numbers), `speed-trace.mjs` (style / layout / paint / script of one switch, `VIA=` a
+      return visit, `CSS=` injected), `speed-profile.mjs` (functions; unminified build `--minify false --outDir dist-prof`, `FN=`
+      callers), `speed-idle.mjs` (main thread at rest per screen), `speed-scroll.mjs` (touch scrolling), `speed-res.mjs` (first-open
+      downloads). **No request hangs**: `timedFetch()` in `src/net.ts` (fails at once offline, gives up after a limit, keeps a passed
+      signal): the Supabase client's `global.fetch` (20 s, Storage 120 s), the Ranks / friends pulses at the edge, `/config`, word
+      files from Cloudflare (10 s), popular / reel counter. Sentry loads 8 s after start at an idle moment (was with the first
+      screen, ~140 KB), errors before it kept (≤ 5) and sent. `keptPageFonts()` (one pass over Cache Storage) replaces 604
+      `caches.match` calls in the whole-mushaf download. `hijriDate()` (`src/data/hijri.ts`): one Umm al-Qura formatter, a result per
+      local day (Ramadan, season, wardrobe, page tint). First-load budget 135 KB (134.3)
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase

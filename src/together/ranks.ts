@@ -10,7 +10,7 @@ import { addDays, allDays, claimGoal, earnedBadges, streak, todayRec } from '../
 import { dayKey, readLogAll } from '../data/readLog';
 import { isNative, shareableLink } from '../native';
 import { setMyXp } from '../data/xp';
-import { EDGE, installId, remoteConfig } from '../net';
+import { EDGE, installId, remoteConfig, timedFetch } from '../net';
 import { isFireDay, isFriendFireDay } from '../data/fireDays';
 import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 
@@ -249,7 +249,7 @@ export async function rankPulse(): Promise<string | null> {
   }
   if (!ownPulse.l) return ownPulse.p;
   try {
-    const r = await fetch(`${EDGE}/lp?l=${encodeURIComponent(ownPulse.l)}&d=${d}&i=${encodeURIComponent(installId())}`);
+    const r = await timedFetch(`${EDGE}/lp?l=${encodeURIComponent(ownPulse.l)}&d=${d}&i=${encodeURIComponent(installId())}`);
     const lp = r.ok ? ((await r.json()) as { p?: string | null }).p : undefined;
     if (typeof lp === 'string') return `${ownPulse.p}:${lp}`;
   } catch { /* the proxy did not answer: ask the database */ }
@@ -274,7 +274,7 @@ export async function socialPulse(only: 'all' | 'own' | 'rival' = 'all'): Promis
   try {
     const parts: string[] = [];
     for (let i = 0; i < pids.length; i += 50) {
-      const r = await fetch(`${EDGE}/pp?p=${pids.slice(i, i + 50).join(',')}&d=${d}&i=${encodeURIComponent(installId())}`);
+      const r = await timedFetch(`${EDGE}/pp?p=${pids.slice(i, i + 50).join(',')}&d=${d}&i=${encodeURIComponent(installId())}`);
       if (!r.ok) return null;
       const m = ((await r.json()) as { p?: Record<string, string> }).p;
       if (!m || typeof m !== 'object') return null;

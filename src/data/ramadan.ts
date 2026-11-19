@@ -4,6 +4,7 @@
 // ayat the user came back to (for the Eid recap), the reminder before Maghrib and a ±1 day shift for
 // local moon sighting. Dates follow the Umm al-Qura calendar (Intl). A preview setting pretends it is
 // Ramadan (or Eid) so the mode can be tried at any time of year.
+import { hijriDate } from './hijri';
 const KEY = 'ramadan';
 const DAY = 86_400_000;
 export const PAGES = 604;
@@ -60,16 +61,7 @@ export function ramadanSettings(): RamadanSettings {
 export const setRamadanSettings = (s: RamadanSettings) => write(`${KEY}-settings`, s);
 
 // --- the calendar ---
-function hijri(date: Date): { year: number; month: number; day: number } | null {
-  try {
-    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(date);
-    const num = (t: string) => parseInt(parts.find((p) => p.type === t)?.value ?? '', 10);
-    const v = { year: num('year'), month: num('month'), day: num('day') };
-    return Object.values(v).every(Number.isInteger) ? v : null;
-  } catch {
-    return null;
-  }
-}
+const hijri = (date: Date) => hijriDate(date);
 
 export interface RamadanNow {
   day: number | null; // day of Ramadan (1–30), or null

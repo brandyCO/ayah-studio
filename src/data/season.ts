@@ -5,17 +5,11 @@
 import { PAGES, ramadanData, ramadanNow, ramadanSettings, type RamadanData, type RamadanNow } from './ramadan';
 import { allDays } from './journey';
 import { dayKey, readLogAll } from './readLog';
+import { hijriDate } from './hijri';
 
 const DAY = 86_400_000;
 
-function hijriOf(d: Date): { year: number; month: number; day: number } | null {
-  try {
-    const p = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(d);
-    const n = (t: string) => parseInt(p.find((x) => x.type === t)?.value ?? '', 10);
-    const v = { year: n('year'), month: n('month'), day: n('day') };
-    return Object.values(v).every(Number.isInteger) ? v : null;
-  } catch { return null; }
-}
+const hijriOf = (d: Date) => hijriDate(d);
 
 export interface SeasonState {
   /** 'soon' before Ramadan, 'open' during it, 'eid' on 1–3 Shawwal. */
