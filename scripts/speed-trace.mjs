@@ -24,7 +24,7 @@ await ctx.addInitScript(() => { try { for (const k of ['onboarded', 'tourSeen', 
 const page = await ctx.newPage();
 const cdp = await ctx.newCDPSession(page);
 if (process.env.CSS) await ctx.addInitScript((css) => { document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = css; document.head.append(s); }); }, process.env.CSS);
-await page.goto(base); await page.waitForTimeout(9000);
+await page.goto(base); await page.waitForTimeout(13000);
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
 if (process.env.VIA) { await page.evaluate((h) => { location.hash = h; }, process.env.VIA); await page.waitForTimeout(3000); await page.evaluate(() => { location.hash = '#/s/1'; }); await page.waitForTimeout(2500); }
 const events = [];

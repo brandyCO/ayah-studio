@@ -1281,16 +1281,25 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const offAcct = onAccount(() => paintSafe());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
+  let missed = false, paintedDay = '';
+  const paintAll = () => { queued = 0; missed = false; paintedDay = new Date().toDateString(); paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
   // Kept alive while another tab shows (main.ts): nothing is painted then; it catches up when shown again.
-  const refresh = () => { if (!root.classList.contains('screen-kept') && !queued) queued = requestAnimationFrame(paintAll); };
+  const refresh = () => { if (root.classList.contains('screen-kept')) missed = true; else if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
   void paintPrayer();
   const tick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) { void paintPrayer(); void paintSky(); } }, 30_000);
   const secTick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) paintResets(); }, 1000);
-  const onShown = () => { paintAll(); paintResets(); void paintPrayer(); void paintSky(); paintSync(); };
+  // Shown again: the kept screen appears as it was in this frame; what changed meanwhile (or a new day) is painted right
+  // after it (speed pass 3: repainting everything on each return cost a slow phone ~30 ms before the screen showed).
+  const onShown = () => requestAnimationFrame(() => setTimeout(() => {
+    if (!root.isConnected || root.classList.contains('screen-kept')) return;
+    if (missed || paintedDay !== new Date().toDateString() || Date.now() - hiddenAt > 60_000) paintAll(); else maybeStreak();
+    paintResets(); void paintPrayer(); void paintSky(); paintSync();
+  }, 0));
   root.addEventListener('screen-shown', onShown);
+  let hiddenAt = Date.now(); // away longer than a minute: everything is painted again (a change no event told about)
+  root.addEventListener('screen-hidden', () => { hiddenAt = Date.now(); });
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();
