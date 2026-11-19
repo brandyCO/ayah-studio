@@ -173,3 +173,4 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-follow-txt b { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fr-follow-xp { font-weight: 800; color: #6c5ce7; font-size: .9rem; white-space: nowrap; }
 .fr-new-followers .fr-follow-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: start; color: inherit; }
+.fr-tab > .updated-ago { align-self: flex-end; }

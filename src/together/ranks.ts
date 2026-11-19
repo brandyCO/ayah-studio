@@ -689,6 +689,11 @@ export function peekProfile(pid: string): Profile | null | undefined {
   loadProfs();
   return profs.get(pid)?.v;
 }
+/** When the kept profile of `pid` came (ms), or null when none is kept. */
+export function profileAt(pid: string): number | null {
+  loadProfs();
+  return profs.get(pid)?.at ?? null;
+}
 /** Sets the kept profile (after an action, so a reopened profile shows the new state at once). */
 export function putProfile(pid: string, v: Profile | null) {
   loadProfs();

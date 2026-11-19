@@ -15,7 +15,10 @@ import {
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
   StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse, isKept,
+  keptSince,
 } from '../together/ranks';
+import { updatedNote } from './updatedAgo';
+import { isOffline } from '../together/outbox';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
 import { star } from './lightChip';
@@ -315,7 +318,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
           h('span', { class: 'rk-hero-em', 'aria-hidden': 'true' }, tierEmblem(s.tier) as unknown as Node),
           h('div', { class: 'rk-hero-txt' },
             h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
-            h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends)),
+            h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
+            // Offline or not fresh: when this league was last brought from the server (offline-first, 2026-11-19).
+            updatedNote(() => keptSince('league', 'status'))),
           h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
             pts(s.week, false), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
         isRankFriday() ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
@@ -950,6 +955,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       openOnMe();
     } catch (e) {
       if (e instanceof StaleMiss) return;
+      // No connection (offline-first, 2026-11-19): what this phone kept stays on screen with its "Offline · 5 min ago"
+      // note in the hero; the poll and the `online` event bring the fresh answers when the connection is back.
+      if ((isOffline(e) || navigator.onLine === false) && panes[key(view)].painted) return;
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));
     }
   }
@@ -1151,7 +1159,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
   document.addEventListener('visibilitychange', wake);
   root.addEventListener('screen-shown', wake);
-  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); };
+  addEventListener('online', wake);
+  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); removeEventListener('online', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */

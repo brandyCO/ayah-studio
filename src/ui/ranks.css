@@ -495,3 +495,4 @@ html[lang="ar"] .rk-hero.compact .rk-hero-sub { white-space: normal; }
 .rk-swipe { position: relative; overflow-x: clip; touch-action: pan-y; }
 .rk-panes { position: relative; will-change: translate; }
 .rk-pane:not(.cur) { position: absolute; top: 0; inset-inline: 0; height: 100lvh; overflow: clip; contain: strict; }
+.rk-hero .updated-ago { color: inherit; opacity: .75; margin-top: 2px; }
