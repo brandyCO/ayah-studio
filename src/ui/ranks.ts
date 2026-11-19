@@ -230,6 +230,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     topActs.replaceChildren(infoBtn(), localAv());
     head.replaceChildren();
     tabs.replaceChildren();
+    // The other tabs' panes wait with "Loading…" for an account that is not there: empty them (no tabs to reach them).
+    for (const v of VIEWS) if (panes[v].body !== body) { panes[v].head.replaceChildren(); panes[v].body.replaceChildren(); }
     // What you would be joining (F19): a sample league with your own character on the podium at #3.
     body.replaceChildren(h('div', { class: 'rk-signin rk-sample me-card' },
       sampleLeague(),
