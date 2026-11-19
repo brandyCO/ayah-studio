@@ -49,11 +49,16 @@ export interface OnePage { page: MushafPage; segStart: WeakMap<[number, number, 
 export function loadMushafPage(p: number, into?: OnePage['segStart']): Promise<OnePage> {
   const whole = () => loadMushaf().then((m) => ({ page: m.pages[p - 1], segStart: m.segStart }));
   if (loaded || import.meta.env.DEV) return whole();
-  return timedFetch(`${import.meta.env.BASE_URL}data/mushaf/p${p}.json?v=${__DATA_VERSION__}`, {}, 4000)
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<MushafPage & { st: number[] }>;
-    })
+  // index.html already asked for the page the app opens on (and drew it from that answer): taken once.
+  const early = (window as { __page?: { p: number; d: Promise<(MushafPage & { st: number[] }) | null> | null } }).__page;
+  const got = early?.p === p && early.d ? early.d : null;
+  if (got) early!.d = null;
+  return (got ?? Promise.resolve(null))
+    .then((d) => d ?? timedFetch(`${import.meta.env.BASE_URL}data/mushaf/p${p}.json?v=${__DATA_VERSION__}`, {}, 4000)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<MushafPage & { st: number[] }>;
+      }))
     .then(({ juz, lines, st }) => {
       const segStart = into ?? new WeakMap<[number, number, string], number>(); // `into`: the reader's, for a page added to it
       let i = 0;
@@ -160,6 +165,12 @@ export async function keepPageFont(page: number): Promise<void> {
 }
 
 export function loadPageFont(page: number): Promise<void> {
+  const early = (window as { __pageFont?: { p: number; f: Promise<void> } }).__pageFont;
+  if (!fonts.has(page) && early?.p === page) {
+    // index.html's first page already loaded this face; on a failure it is asked for again as usual.
+    fonts.set(page, early.f.catch(() => { fonts.delete(page); return loadPageFont(page); }));
+    (window as { __pageFont?: unknown }).__pageFont = undefined;
+  }
   if (!fonts.has(page)) {
     // Play build: pages 4–604 come from the asset pack (or, until it is in, this page alone from our site).
     if (inPack(page)) { fonts.set(page, loadPackFont(page, `qcf-p${page}`)); return fonts.get(page)!; }

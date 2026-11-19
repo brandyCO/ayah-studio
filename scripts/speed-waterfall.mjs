@@ -42,6 +42,9 @@ await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
 await cdp.send('Network.enable');
 await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 400, downloadThroughput: (400 * 1024) / 8, uploadThroughput: (400 * 1024) / 8 });
 await page.goto(base, { waitUntil: 'commit' });
+// The page on screen: index.html's first picture (#prepaint) or the reader's own; then the reader itself.
+await page.waitForFunction(() => !!document.querySelector('#prepaint .w') || !!document.querySelector('.mushaf-page:not(.loading) .qcf-line, .mushaf-page:not(.loading) [data-p]'), null, { timeout: 90000, polling: 50 });
+const shown = await page.evaluate(() => performance.now());
 await page.waitForFunction(() => !!document.querySelector('.mushaf-page:not(.loading) .qcf-line, .mushaf-page:not(.loading) [data-p]'), null, { timeout: 90000, polling: 50 });
 const r = await page.evaluate(() => ({ now: performance.now(), fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0,
   res: performance.getEntriesByType('resource').map((e) => [e.name, Math.round(e.startTime), Math.round(e.responseEnd), e.transferSize, e.initiatorType]) }));
@@ -50,5 +53,5 @@ for (const [n, s, e, t, i] of r.res.sort((a, b) => a[1] - b[1])) {
   if (s > r.now) continue; kb += t / 1024;
   console.log(`${String(s).padStart(6)} → ${String(e).padStart(6)} ms ${(t / 1024).toFixed(1).padStart(7)} KB ${e <= r.now ? '*' : ' '} ${i.padEnd(6)} ${n.replace(base, '')}`);
 }
-console.log(`first paint ${Math.round(r.fcp)} ms · page drawn ${Math.round(r.now)} ms · ${kb.toFixed(0)} KB started before it (* = finished before)`);
+console.log(`first paint ${Math.round(r.fcp)} ms · page shown ${Math.round(shown)} ms · reader ready ${Math.round(r.now)} ms · ${kb.toFixed(0)} KB started before it (* = finished before)`);
 await browser.close(); server.close();

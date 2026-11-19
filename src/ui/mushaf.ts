@@ -42,7 +42,9 @@ type Seg = [number, number, string];
 
 let bismillahSvg: Promise<string> | null = null;
 const bismillah = () =>
-  (bismillahSvg ??= fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()));
+  (bismillahSvg ??= (window as { __bsvg?: Promise<string> }).__bsvg?.catch(() => '') // index.html's first page fetched it
+    .then((x) => x || fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()))
+    ?? fetch(`${import.meta.env.BASE_URL}fonts/bismillah.svg`).then((r) => r.text()));
 
 // The living mushaf's first sources: bookmarks in the margin, and Today lines for a recent bookmark
 // and a reel draft still waiting.
@@ -541,6 +543,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       for (const el of els) if (el.parentNode !== strip) strip.append(el);
       for (const el of els) if (!el.dataset.fit && !el.classList.contains('loading')) fit(el);
       place();
+      // The page index.html drew before the code was in: this page now stands in its place, same frame.
+      if (built.get(page)?.dataset.fit) document.getElementById('prepaint')?.remove();
       sel.repaint();
       paintPlaying();
       pulseNotes();

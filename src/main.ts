@@ -84,6 +84,8 @@ function prebuildTabs() {
 /** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
 function replaceScreens(...els: HTMLElement[]) {
   const keep = new Set([...alive.values()].map((v) => v.el));
+  const pre = document.getElementById('prepaint'); // index.html's first page: stays until the reader's own is drawn
+  if (pre) keep.add(pre);
   for (const el of [...app.children]) if (!keep.has(el as HTMLElement)) el.remove();
   app.append(...els);
 }
@@ -211,11 +213,13 @@ async function route() {
     }
     dropSkel();
     unGhost();
+    if (!screen.classList.contains('screen-mushaf')) document.getElementById('prepaint')?.remove();
     if (id === routeId) cleanup = c;
     else { c(); if (shownTab === tabKey) shownTab = ''; }
   } catch (e) {
     dropSkel();
     unGhost();
+    document.getElementById('prepaint')?.remove();
     if (id !== routeId) return;
     console.error(e);
     screen.replaceChildren(h('div', { class: 'error' },

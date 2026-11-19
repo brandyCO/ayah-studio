@@ -52,6 +52,33 @@ const ROUTE_PRELOADS: Record<string, { mods: string[]; data?: string[]; fonts?: 
   '#/learn': { mods: ['src/ui/learnRoutes.ts', 'src/ui/learnPath.ts', 'src/ui/pathBuddy.ts', 'src/ui/actor.ts'],
     data: ['meta.json', 'mushaf.json'] },
 };
+// A first visit on a slow connection opening on the mushaf (speed pass 5): the app's code (~110 KB) waits until the
+// page's own file and font are in (at most 2.5 s), so they get the whole connection and index.html can draw the page
+// first; the code then has the line to itself. The tags stay in the page inside a <template> (check-size.mjs reads them)
+// and are added from it. Straight away when the page is not known, with a service worker (files on the phone), in the
+// Android / iPhone app (local files) and anywhere else.
+const codeAfterPage = (): Plugin => ({
+  name: 'code-after-page',
+  apply: 'build',
+  transformIndexHtml: {
+    order: 'post',
+    handler(html) {
+      const re = /\s*<script type="module" crossorigin src="[^"]+"><\/script>(?:\s*<link rel="modulepreload" crossorigin href="[^"]+">)*/;
+      const m = re.exec(html);
+      if (!m) throw new Error('code-after-page: entry script not found in index.html');
+      const loader = `<script>(function () {
+  var done = false, go = function () {
+    if (done) return; done = true;
+    var t = document.getElementById('app-code').content.children;
+    for (var i = 0; i < t.length; i++) { var o = t[i], n = document.createElement(o.tagName); for (var j = 0; j < o.attributes.length; j++) n.setAttribute(o.attributes[j].name, o.attributes[j].value); document.head.appendChild(n); }
+  };
+  var P = window.__page;
+  if (P && P.f && P.first) { Promise.all([P.d, P.f]).then(go, go); setTimeout(go, 2500); } else go();
+})();</script>`;
+      return html.replace(m[0], `\n    <template id="app-code">${m[0]}\n    </template>\n    ${loader}`);
+    },
+  },
+});
 const routePreloads = (): Plugin => ({
   name: 'route-preloads',
   apply: 'build',
@@ -100,7 +127,7 @@ const versionFile = (): Plugin => ({
 export default defineConfig({
   base: './',
   // index.html starts the mushaf layout download before the app's code has even loaded (see there).
-  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads(), versionFile(), mushafPages()],
+  plugins: [{ name: 'data-version-in-html', transformIndexHtml: (html) => html.replaceAll('%DATA_VERSION%', DATA_VERSION).replace('%SURAH_PAGES%', JSON.stringify(SURAH_PAGES)) }, routePreloads(), codeAfterPage(), versionFile(), mushafPages()],
   define: {
     __DATA_VERSION__: JSON.stringify(DATA_VERSION),
     __SURAH_PAGES__: JSON.stringify(SURAH_PAGES),
