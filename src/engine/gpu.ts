@@ -131,10 +131,13 @@ function prog(g: Gpu, name: string): WebGLProgram {
   return p;
 }
 
+/** Draws into the top-left w×h of the GPU canvas. The canvas only grows: resizing it reallocates its
+ *  buffers (measured: ~40 ms a frame at 4× CPU slowdown when water and water light took turns). */
 function size(g: Gpu, w: number, h: number) {
-  if (g.canvas.width !== w || g.canvas.height !== h) { g.canvas.width = w; g.canvas.height = h; }
+  const c = g.canvas;
+  if (c.width < w || c.height < h) { c.width = Math.max(c.width, w); c.height = Math.max(c.height, h); }
   g.gl.bindFramebuffer(g.gl.FRAMEBUFFER, null);
-  g.gl.viewport(0, 0, w, h);
+  g.gl.viewport(0, c.height - h, w, h); // GL counts rows from the bottom
 }
 
 function upload(g: Gpu, src: CanvasImageSource) {
@@ -184,7 +187,7 @@ export function gpuRipple(ctx: CanvasRenderingContext2D, t: number, ampUnits: nu
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'copy';
-    ctx.drawImage(g.canvas, 0, 0);
+    ctx.drawImage(g.canvas, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
     ctx.restore();
     return true;
   }) ?? false;
@@ -203,7 +206,7 @@ export function gpuCaustics(ctx: CanvasRenderingContext2D, t: number, amount: nu
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'lighter';
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(g.canvas, 0, 0, c.width, c.height);
+    ctx.drawImage(g.canvas, 0, 0, w, h, 0, 0, c.width, c.height);
     ctx.restore();
     return true;
   }) ?? false;
@@ -229,7 +232,8 @@ function fbo(g: Gpu, i: number, w: number, h: number) {
 
 /** A blurred copy of `src` (radius in source pixels) on the GPU canvas, or null (no WebGL2). The
  *  picture is shrunk first (a blur this soft loses nothing), blurred twice each way, then returned
- *  at the source size for the caller to draw at once. */
+ *  at the source size in the canvas's top-left corner (the rest is clear; the canvas may be larger)
+ *  for the caller to draw at once at (0, 0). */
 export function gpuBlurred(src: Src, radius: number): Src | null {
   if (radius < 0.5) return src;
   return guarded((g) => {

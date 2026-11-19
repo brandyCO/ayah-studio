@@ -108,6 +108,9 @@ const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${S
 /** `draftId`: reopen a saved draft (its ayat range comes from the address, which may have changed). */
 export async function showEditor(root: HTMLElement, n: number, from: number, to: number, draftId?: string): Promise<() => void> {
   const perfEditor = perfStart('Open studio → preview ready');
+  // The reel's fonts start downloading now, alongside the text (on a slow connection they used to
+  // wait for it: ~90 KB more after the data).
+  void Promise.all([document.fonts.load('80px "UthmanicHafs"'), document.fonts.load('40px Nunito', 'Aa')]).catch(() => {});
   const [s, allAr, allEn, allWbw, wordMap, , draft] = await Promise.all([surahMeta(n), surahText(n), surahTranslation(n, currentTranslation()), surahWordMeanings(n), loadWordMap(), loadLibrary(),
     draftId ? getDraft(draftId).catch(() => undefined) : undefined]);
   from = Math.max(1, Math.min(from || 1, s.ayahs));
@@ -162,7 +165,8 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let mediaReady = false;
   let mediaVersion = 0; // bumped whenever the decoded scenes change
   let previewScale = 1; // preview resolution now (lowered only while playing on a slow device)
-  let playScale = liteMode() ? 0.75 : 1; // learned for this visit: used from the next Play on (old phones start lower)
+  // Learned on this phone (kept for the next visit): the next Play starts at it. Old phones start lower.
+  let playScale = (() => { try { const v = Number(localStorage.getItem('studioPlayScale')); if (v === 0.5 || v === 0.75) return v; } catch { /* ignore */ } return liteMode() ? 0.75 : 1; })();
   let frameGap = 0, gapCount = 0, lastFrameAt = 0;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
@@ -2134,8 +2138,17 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     if (previewScale !== playScale && gapCount === 0) setPreviewScale(playScale);
     if (lastFrameAt) {
       frameGap = frameGap ? frameGap * 0.92 + (now - lastFrameAt) * 0.08 : now - lastFrameAt;
-      if (++gapCount > 30 && frameGap > 22 && playScale > 0.5) { // under ~45 fps: a smaller picture (60 fps target)
+      // Under ~45 fps over 30 frames, or clearly slow (< 12 fps) after 5: a smaller picture (60 fps target).
+      // Counting frames alone took 15 s to react on a very slow phone.
+      if (((++gapCount > 30 && frameGap > 22) || (gapCount > 5 && frameGap > 80)) && playScale > 0.5) {
         playScale = playScale > 0.75 ? 0.75 : 0.5;
+        try { localStorage.setItem('studioPlayScale', String(playScale)); } catch { /* ignore */ }
+        setPreviewScale(playScale);
+        gapCount = 1;
+        frameGap = 0;
+      } else if (gapCount > 120 && frameGap < 15 && playScale < 1) { // smooth with room to spare: sharper again
+        playScale = playScale < 0.75 ? 0.75 : 1;
+        try { localStorage.setItem('studioPlayScale', String(playScale)); } catch { /* ignore */ }
         setPreviewScale(playScale);
         gapCount = 1;
         frameGap = 0;
