@@ -265,7 +265,7 @@ button { font: inherit; color: inherit; }
 @keyframes spin { to { rotate: 360deg; } }
 /* A rare frame's glint (rankAvatars.ts): its own layer over the frame, turned by the graphics chip. */
 .rk-av:has(> .rk-glint) { display: inline-grid; }
-.rk-av > svg, .rk-av > .rk-glint { grid-area: 1 / 1; }
+.rk-av > svg, .rk-av > img, .rk-av > .rk-glint { grid-area: 1 / 1; }
 .rk-av > .rk-glint { line-height: 0; pointer-events: none; animation: rk-glint 7s linear infinite; }
 @keyframes rk-glint { to { transform: rotate(360deg); } }
 .picker-status { margin: 0 0 8px; color: var(--accent); font-weight: 600; }

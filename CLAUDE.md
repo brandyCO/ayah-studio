@@ -2376,7 +2376,15 @@ duas/reflections section in Me.
       prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap
       into the existing moment. **Opening** (Tecno report): `opening.webp` is opaque on the splash colour, cropped to the
       character's box, 720 wide and deduped (446 → 300 KB, ~37 % cheaper per frame); `AppActivity` places the crop
-      (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`)
+      (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`). Fix (owner 2026-11-19, "only saw a quarter of him"): the crop is placed by its
+      own pixel size (`OPENING_CROP_W/H`; `getIntrinsicWidth()` of a `res/raw` picture is scaled by the screen density, 3×
+      too big on his phone) and stored at the size a 1080 px phone draws it (1016 wide, quality 88, ~0.75 MB; `OPENING_W`,
+      `OPENING_Q`), so it is shown pixel for pixel. **Ranks opens at once again**: `onAccount()` calls back immediately, and
+      since the swipe panes (#317) that fresh paint merged into the instant one from the kept answers, so every open waited
+      for the network behind "Loading…"; it now repaints only on a real account change. A character avatar is one `<img>`
+      of its SVG (cached per look, still vector) instead of ~180 SVG nodes (a league 4,700 → ~1,300 elements). The swipe
+      strip is `.rk-panes` (it shared `.rk-strip` with the quest strip and took its border, padding and flex, so Global's
+      rows ran past the card)
       **Ranks right after sign-in** (owner report 2026-11-19, "ranks started loading after I signed in"): the league is
       fetched the moment sign-in finishes, alongside the first report; with nothing kept for the account yet
       (`isKept()` in `together/ranks.ts`) **Welcome to your league** covers the first load (`src/ui/rankWelcome.ts` + `.css`,

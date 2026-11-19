@@ -39,7 +39,7 @@
 @media (prefers-color-scheme: dark) { .rk-move.up, .rk-dir.up { color: #46d483; } .rk-move.down, .rk-dir.down { color: #f07462; } }
 /* Avatars (drawn, no photos), the look sheet, private mode */
 .rk-av { display: inline-grid; flex: none; line-height: 0; }
-.rk-av.sun svg { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
+.rk-av.sun :is(svg, img) { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
 .rk-me-av { padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; flex: none; }
 .rk-av-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; margin-top: 8px; }
 .rk-av-pick { padding: 4px; border: 2px solid transparent; border-radius: 50%; background: none; display: grid; place-items: center; }
@@ -189,7 +189,7 @@
 .rk-shop-item.locked.wk .rk-av { filter: none; opacity: .9; }
 .rk-shop-item.locked.now { border-color: color-mix(in srgb, #f2c14e 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, #f2c14e 30%, transparent); }
 .rk-shop-item.locked span.small { font-size: 11px; line-height: 1.2; color: var(--muted); }
-.rk-av.glow svg { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
+.rk-av.glow :is(svg, img) { filter: drop-shadow(0 0 4px rgba(242, 193, 78, .55)); }
 
 /* This week's prizes */
 .rk-weekprize { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer;
@@ -493,5 +493,5 @@ html[lang="ar"] .rk-hero.compact .rk-hero-sub { white-space: normal; }
 /* Swipe between the three tabs: the one on screen in the flow; the others beside it in a window as tall as the screen
    (clipped, so they add nothing to the page), shown only while a swipe moves them */
 .rk-swipe { position: relative; overflow-x: clip; touch-action: pan-y; }
-.rk-strip { position: relative; will-change: translate; }
+.rk-panes { position: relative; will-change: translate; }
 .rk-pane:not(.cur) { position: absolute; top: 0; inset-inline: 0; height: 100lvh; overflow: clip; contain: strict; }

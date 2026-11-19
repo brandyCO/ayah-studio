@@ -38,8 +38,8 @@ public class AppActivity extends BridgeActivity {
     private static final long WAIT_PICTURE = 2500, MAX_SPLASH = 6000, MAX_OPENING = 9000;
     // res/raw/opening.webp holds only the box the character moves in (scripts/opening_anim.py --webp prints these):
     // the whole frame is FULL_W x FULL_H, the stored part starts at CROP_X, CROP_Y. Smaller frames decode faster.
-    private static final int OPENING_FULL_W = 720, OPENING_FULL_H = 602, OPENING_CROP_X = 112, OPENING_CROP_Y = 116,
-        OPENING_CROP_W = 496, OPENING_CROP_H = 462;
+    private static final int OPENING_FULL_W = 1016, OPENING_FULL_H = 850, OPENING_CROP_X = 162, OPENING_CROP_Y = 166,
+        OPENING_CROP_W = 692, OPENING_CROP_H = 648;
     private volatile AnimatedImageDrawable opening = null;
     private volatile boolean noPicture = false;
 

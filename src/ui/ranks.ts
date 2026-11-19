@@ -974,7 +974,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
 
   // --- the swipe ---
   let swipeOff: AbortController | null = null;
-  const paneStrip = h('div', { class: 'rk-strip' }, ...VIEWS.map((v) => panes[v].el));
+  const paneStrip = h('div', { class: 'rk-panes' }, ...VIEWS.map((v) => panes[v].el));
   const swipe = h('div', { class: 'rk-swipe' }, paneStrip);
   const sign = () => (document.documentElement.dir === 'rtl' ? -1 : 1);
   const swipeTop = () => swipe.getBoundingClientRect().top + scrollY;
@@ -1109,7 +1109,10 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { await acceptChallenge(pendingCh); showFriends(); toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
   }
   void open();
-  const off = onAccount(() => { const p = paint(true); firstLoad(p); });
+  // Only a real change of account repaints from the server: onAccount also calls back at once with the account already
+  // here, and that fresh paint used to merge into the instant one above, so every open waited for the network (~1 s).
+  let who = account()?.id ?? null;
+  const off = onAccount((a) => { if ((a?.id ?? null) === who) return; who = a?.id ?? null; const p = paint(true); firstLoad(p); });
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
   // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
   // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
