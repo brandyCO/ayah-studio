@@ -2344,7 +2344,7 @@ duas/reflections section in Me.
       fire days, chests), Friends (follows, asks, challenges, gestures, news, MashaAllahs, gifts), League (passed / passed
       by, last hours, result, prize), News (Friday Al-Kahf, Ramadan ahead); tabs with unread counts, Today / This week /
       Earlier, tap → where it leads (`src/ui/notifText.ts`). Long-press (or ✓) → select mode: Select all, Mark read,
-      Delete / Delete all, Undo. ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
+      Delete / Delete all, Undo (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
       3 a day while the app is in the background (ids 3650–3659), none in quiet hours; push while the app is closed waits
       on T2b (Firebase). Me's claim cards are **prize cards** (`.prize-card` in me.css): a sky in the badge's metal, the
       prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap

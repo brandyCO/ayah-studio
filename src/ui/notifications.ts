@@ -66,16 +66,16 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
       const allOn = all.length > 0 && all.every((e) => picked.has(e.k));
       head.className = 'topbar nt-top selecting';
       head.replaceChildren(
-        h('button', { class: 'icon-btn', 'aria-label': nt('nt.cancel'), onclick: () => { selecting = false; picked.clear(); paint(); } }, icon('close', 22)),
+        h('button', { class: 'icon-btn', 'aria-label': nt('nt.cancel'), onclick: () => { selecting = false; picked.clear(); sync(); } }, icon('close', 22)),
         h('div', { class: 'brand' }, h('h1', {}, nt('nt.selected', { n: picked.size }))),
-        h('button', { class: 'chip', onclick: () => { haptic(6); if (allOn) picked.clear(); else all.forEach((e) => picked.add(e.k)); paint(); } }, allOn ? nt('nt.cancel') : nt('nt.selectAll')),
+        h('button', { class: 'chip', onclick: () => { haptic(6); if (allOn) picked.clear(); else all.forEach((e) => picked.add(e.k)); sync(); } }, allOn ? nt('nt.cancel') : nt('nt.selectAll')),
       );
     } else {
       head.className = 'topbar nt-top';
       head.replaceChildren(
         h('button', { class: 'icon-btn back-btn', 'aria-label': t('common.close'), onclick: back }, icon('back', 22)),
         h('div', { class: 'brand' }, h('h1', {}, nt('nt.title'))),
-        shown().length ? h('button', { class: 'icon-btn nt-select', 'aria-label': nt('nt.select'), title: nt('nt.select'), onclick: () => { haptic(6); selecting = true; paint(); } }, icon('check', 22)) : '',
+        shown().length ? h('button', { class: 'icon-btn nt-select', 'aria-label': nt('nt.select'), title: nt('nt.select'), onclick: () => { haptic(6); selecting = true; sync(); } }, icon('check', 22)) : '',
         h('button', { class: 'icon-btn', 'aria-label': nt('nt.settings'), onclick: openSettings }, icon('gear', 22)),
       );
     }
@@ -101,7 +101,13 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
     rows.forEach((r) => r.classList.add('going'));
     const gone = deleteNotifs(keys);
     selecting = false; picked.clear();
-    setTimeout(paint, rows.length ? 220 : 0);
+    // The rows slide away, then only they leave (no list rebuilt; a day heading left empty goes too).
+    setTimeout(() => {
+      if (!rows.length || !shown().length) { paint(); return; }
+      rows.forEach((r) => r.remove());
+      for (const hd of list.querySelectorAll('.nt-h')) if (!hd.nextElementSibling?.classList.contains('nt-row')) hd.remove();
+      paintTabs(); sync();
+    }, rows.length ? 220 : 0);
     undoBox?.remove();
     const box = h('div', { class: 'nt-undo', role: 'status' },
       h('span', {}, gone.length > 1 ? nt('nt.deletedN', { n: gone.length }) : nt('nt.deleted1')),
@@ -119,12 +125,12 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
       class: `nt-row g-${e.g}${fresh.has(e.k) ? ' unread' : ''}${on ? ' picked' : ''}${v.act ? ' has-act' : ''}`,
       role: 'button', tabindex: '0', 'data-k': e.k, 'aria-pressed': selecting ? String(on) : false,
     },
-      selecting ? h('span', { class: `nt-box${on ? ' on' : ''}`, 'aria-hidden': 'true' }, on ? icon('check', 14) : '') : '',
+      h('span', { class: `nt-box${on ? ' on' : ''}`, 'aria-hidden': 'true' }, icon('check', 14)), // shown only while selecting (CSS)
       h('span', { class: 'nt-ic', 'aria-hidden': 'true' }, icon(v.icon, 20)),
       h('span', { class: 'nt-txt' }, h('b', {}, v.title), v.sub ? h('span', { class: 'nt-sub' }, v.sub) : '', h('span', { class: 'nt-when' }, when(e.at))),
-      v.act && !selecting ? h('button', { class: 'chip nt-act', tabindex: '-1', onclick: (ev: Event) => { ev.stopPropagation(); open(); } }, v.act) : '');
+      v.act ? h('button', { class: 'chip nt-act', tabindex: '-1', onclick: (ev: Event) => { ev.stopPropagation(); open(); } }, v.act) : '');
     const open = () => { haptic(6); markRead([e.k]); v.go(); };
-    const toggle = () => { haptic(6); if (picked.has(e.k)) picked.delete(e.k); else picked.add(e.k); if (!picked.size) selecting = false; paint(); };
+    const toggle = () => { haptic(6); if (picked.has(e.k)) picked.delete(e.k); else picked.add(e.k); if (!picked.size) selecting = false; sync(); };
     // Press and hold: start selecting with this row; a tap while selecting toggles it.
     let timer = 0, held = false, sx = 0, sy = 0;
     el.addEventListener('pointerdown', (ev) => {
@@ -133,7 +139,7 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
         held = true; haptic(18);
         try { localStorage.setItem('notifHint', '1'); } catch { /* ignore */ }
         if (!selecting) { selecting = true; picked.clear(); }
-        picked.add(e.k); paint();
+        picked.add(e.k); sync();
       }, LONG);
       el.classList.add('pressing');
     });
@@ -149,6 +155,19 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
       if (ev.key === 'Delete') remove([e.k]);
     });
     return el;
+  };
+
+  // Selecting changes only classes on the rows already there: no list rebuilt, so the long-press and each tap stay in one frame.
+  const sync = () => {
+    paintHead(); paintActions();
+    list.classList.toggle('selecting', selecting);
+    for (const el of list.querySelectorAll<HTMLElement>('.nt-row')) {
+      const on = picked.has(el.dataset.k ?? '');
+      el.classList.toggle('picked', on);
+      el.querySelector('.nt-box')?.classList.toggle('on', on);
+      if (selecting) el.setAttribute('aria-pressed', String(on)); else el.removeAttribute('aria-pressed');
+    }
+    hint.hidden = selecting || (() => { try { return !!localStorage.getItem('notifHint'); } catch { return true; } })();
   };
 
   const paint = () => {

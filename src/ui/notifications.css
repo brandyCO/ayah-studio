@@ -18,6 +18,7 @@
 .nt-row { --g: #f59f00; position: relative; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px;
   background: var(--card); border: 1.5px solid var(--line); cursor: pointer; text-align: start; -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none; transition: transform var(--dur-1, .12s) var(--ease-out), background-color .2s, border-color .2s, opacity .2s; }
+.nt-row { content-visibility: auto; contain-intrinsic-size: auto 76px; } /* rows off screen skip style, layout and paint */
 .nt-row.g-friend { --g: #ff6b4a; }
 .nt-row.g-league { --g: #6c5ce7; }
 .nt-row.g-news { --g: #12a594; }
@@ -39,8 +40,12 @@
   background: var(--g); color: #fff; border-color: transparent; }
 .nt-row.g-news .nt-act, .nt-row.g-win .nt-act { color: #1d1a10; }
 .nt-row.g-news .nt-act { color: #fff; }
-.nt-box { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; color: #fff; }
+.nt-box { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); display: none; place-items: center; color: #fff; }
+.nt-box svg { opacity: 0; }
 .nt-box.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.nt-box.on svg { opacity: 1; }
+.nt-list.selecting .nt-box { display: grid; }
+.nt-list.selecting .nt-act { display: none; }
 .nt-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 56px 24px; color: var(--muted); }
 .nt-empty p { max-width: 30ch; }
 .nt-empty-ic { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 12%, var(--card)); color: var(--accent); }
