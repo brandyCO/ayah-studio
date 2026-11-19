@@ -41,6 +41,7 @@ const soon = () => {
 };
 
 export function watchRewards() {
+  void import('../data/notifs').then((m) => m.watchNotifs()); // the bell's log (Notifications screen)
   window.addEventListener('journey-changed', soon);
   window.addEventListener('readlog-changed', soon);
   // Badges also count Learn trees, page memory and Ranks weeks (src/data/badges.ts).

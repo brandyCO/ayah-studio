@@ -269,6 +269,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
   const prayerBox = h('section', { class: 'me-card' });
+  // A prize waiting (owner request 2026-11-19, "something so beautiful to claim"): the user's own character peeks
+  // round the card's edge at it, and a tap lifts the card before the claim moment takes over.
+  const peek = () => {
+    const el = h('span', { class: 'pc-peek', 'aria-hidden': 'true' });
+    let code: string | null = null;
+    try { code = localStorage.getItem('rankFigure'); } catch { /* private */ }
+    if (code) void import('./figure').then(({ parse, bustMarkup }) => {
+      const f = parse(code);
+      if (f) el.innerHTML = `<svg viewBox="1 1 38 38" width="58" height="58">${bustMarkup(f, 19)}</svg>`;
+    });
+    return el;
+  };
+  const liftCard = (el: HTMLElement) => { el.classList.add('lifting'); setTimeout(() => el.classList.remove('lifting'), 700); return el; };
   // Badges waiting for their Claim stay on Me itself; the rest of the badges live behind a door.
   const claimSlot = h('div', { class: 'me-claims' });
   // F37: two or more prizes waiting (badges, new pieces, gifts) fold into one row that opens them one after another.
@@ -284,10 +297,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const n = waiting().length + Math.max(0, Number(claimSlot.dataset.more ?? 0));
     const fold = n >= 2 && !page;
     for (const el of [claimSlot, giftSlot, wardrobeSlot]) el.classList.toggle('me-folded', fold);
-    waitRow.replaceChildren(fold ? h('button', { class: 'me-wait', onclick: () => void openAllWaiting() },
-      chest(60, 'ready', mpt('mp.wait.open')),
+    waitRow.replaceChildren(fold ? h('button', { class: 'me-wait prize-card', onclick: (e: Event) => { liftCard(e.currentTarget as HTMLElement); void openAllWaiting(); } },
+      h('span', { class: 'pc-art', 'aria-hidden': 'true' }, chest(60, 'ready', mpt('mp.wait.open'))),
       h('b', {}, mpt('mp.wait.n', { n })),
-      h('span', { class: 'chip primary brand-btn' }, mpt('mp.wait.open'))) : '');
+      h('span', { class: 'cb-go' }, mpt('mp.wait.open')),
+      peek()) : '');
   };
   const openAllWaiting = async () => {
     opening = true;
@@ -1117,10 +1131,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
     claimSlot.dataset.more = String(waiting.length - shown.length);
     claimSlot.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, e.currentTarget as Element) },
-        badgeArt(b.def.tier, b.def.icon, true, 44),
-        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def))),
-        h('span', { class: 'cb-go' }, `✦ ${t('cel.claim')}`))),
+      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge prize-card t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, liftCard(e.currentTarget as HTMLElement)) },
+        h('span', { class: 'pc-art', 'aria-hidden': 'true' }, badgeArt(b.def.tier, b.def.icon, true, 60)),
+        h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def)), h('span', { class: 'pc-light' }, `✦ ${BADGE_LIGHT[b.def.tier]}`)),
+        h('span', { class: 'cb-go' }, t('cel.claim')),
+        peek())),
         waiting.length > shown.length ? h('a', { class: 'chip claim-more', href: '#/me/stats' }, `+${waiting.length - shown.length}`) : '') : '',
       page ? '' : newIconCard() ?? '');
     badgeBox.replaceChildren(

@@ -2337,6 +2337,20 @@ duas/reflections section in Me.
       screen at their own scroll place; past 22 % or a fling it slides on, fresh answers repaint in place only when changed.
       4× CPU: worst frame ~50 ms (no `inert`/visibility toggles: inherited, they restyled every row). Global stays the top 100 +
       your place. Migration `20261118100000_rank_follow_flag.sql`, pgTAP `rank_follow_flag.test.sql` (34)
+- [x] M30 Notifications screen + prize cards + lighter opening (owner "build all three", 2026-11-19): the bell opens
+      `#/notifications` (`src/ui/notifications.ts` + `.css`, strings `src/i18n/notifs.ts` `nt()`, all 30 languages): a log
+      kept after reading (`src/data/notifs.ts`, localStorage `notifLog`, synced, 60 days / 200 entries; deleted keys in
+      `notifGone`) gathered from the journey and the kept Ranks answers (`rankCache`): Wins (goals, badges, pieces, level,
+      fire days, chests), Friends (follows, asks, challenges, gestures, news, MashaAllahs, gifts), League (passed / passed
+      by, last hours, result, prize), News (Friday Al-Kahf, Ramadan ahead); tabs with unread counts, Today / This week /
+      Earlier, tap → where it leads (`src/ui/notifText.ts`). Long-press (or ✓) → select mode: Select all, Mark read,
+      Delete / Delete all, Undo. ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
+      3 a day while the app is in the background (ids 3650–3659), none in quiet hours; push while the app is closed waits
+      on T2b (Firebase). Me's claim cards are **prize cards** (`.prize-card` in me.css): a sky in the badge's metal, the
+      prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap
+      into the existing moment. **Opening** (Tecno report): `opening.webp` is opaque on the splash colour, cropped to the
+      character's box, 720 wide and deduped (446 → 300 KB, ~37 % cheaper per frame); `AppActivity` places the crop
+      (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

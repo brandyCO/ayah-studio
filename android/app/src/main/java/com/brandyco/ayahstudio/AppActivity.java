@@ -36,6 +36,9 @@ public class AppActivity extends BridgeActivity {
     private static volatile boolean firstUp = false;
     static void firstScreen() { firstUp = true; }
     private static final long WAIT_PICTURE = 2500, MAX_SPLASH = 6000, MAX_OPENING = 9000;
+    // res/raw/opening.webp holds only the box the character moves in (scripts/opening_anim.py --webp prints these):
+    // the whole frame is FULL_W x FULL_H, the stored part starts at CROP_X, CROP_Y. Smaller frames decode faster.
+    private static final int OPENING_FULL_W = 720, OPENING_FULL_H = 602, OPENING_CROP_X = 112, OPENING_CROP_Y = 116;
     private volatile AnimatedImageDrawable opening = null;
     private volatile boolean noPicture = false;
 
@@ -176,11 +179,15 @@ public class AppActivity extends BridgeActivity {
         view.setImageDrawable(pic);
         pic.setRepeatCount(0); // once, then he holds the last frame
         DisplayMetrics m = getResources().getDisplayMetrics();
-        float ratio = (float) pic.getIntrinsicHeight() / Math.max(1, pic.getIntrinsicWidth());
-        int w = (int) Math.min(m.widthPixels * 0.94f, m.heightPixels * 0.66f / ratio);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, (int) (w * ratio), Gravity.CENTER);
+        int cw = Math.max(1, pic.getIntrinsicWidth()), ch = Math.max(1, pic.getIntrinsicHeight());
+        float ratio = (float) OPENING_FULL_H / OPENING_FULL_W;
+        int w = (int) Math.min(m.widthPixels * 0.94f, m.heightPixels * 0.66f / ratio); // the whole frame's width on screen
+        float s = (float) w / OPENING_FULL_W;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.round(cw * s), Math.round(ch * s), Gravity.CENTER);
         layer.addView(view, lp);
-        view.setTranslationY(-0.05f * m.heightPixels);
+        // Put the stored part where it sits inside the whole frame, the frame centred and a little high.
+        view.setTranslationX((OPENING_CROP_X + cw / 2f - OPENING_FULL_W / 2f) * s);
+        view.setTranslationY((OPENING_CROP_Y + ch / 2f - OPENING_FULL_H / 2f) * s - 0.05f * m.heightPixels);
         final boolean[] played = { false };
         pic.registerAnimationCallback(new Animatable2.AnimationCallback() {
             @Override
