@@ -10,35 +10,13 @@ import { actor, myFigureCode } from './actor';
 import { rt, type RankKey } from '../i18n/ranks';
 import { h } from './dom';
 import { sfx } from './sfx';
-import { springValues } from './juice';
+import { drop, own, rise, springValues, stagger } from './juice';
 
-// Real spring physics (owner 2026-11-19: "not smooth and satisfying the squashing"): every bounce here is
-// simulated once and played as keyframes at 60 a second, so it squashes on impact, stretches back, wobbles and
-// settles like a body, not along a fixed curve.
+// Real spring physics (owner 2026-11-19: "not smooth and satisfying the squashing"), from the motion engine
+// (juice.ts): every bounce is simulated once and played as keyframes at 60 a second, so it squashes on impact,
+// stretches back, wobbles and settles like a body, not along a fixed curve.
 const F = 1000 / 60;
-/** The emblem falls (accelerating, stretched by its speed), hits the ground, squashes flat, springs back up a
- *  little, stretches, and settles with a jelly wobble. */
-function dropFrames(): Keyframe[] {
-  const out: Keyframe[] = [];
-  const fall = 17, h0 = 240;                                   // ~0.28 s of fall from 240 px up
-  for (let i = 0; i <= fall; i++) {
-    const p = i / fall, y = -h0 * (1 - p * p), st = 1 + 0.16 * p * p;
-    out.push({ transform: `translateY(${y.toFixed(1)}px) scale(${(1 / st).toFixed(3)}, ${st.toFixed(3)})`, opacity: Math.min(1, p * 3) });
-  }
-  // After the hit: the squash (d) and a small rebound (y) are two springs played together.
-  const d = springValues({ from: 1, to: 0, stiffness: 380, damping: 9 });
-  const y = springValues({ from: 0, to: 0, v0: -520, stiffness: 260, damping: 15 });
-  const n = Math.max(d.length, y.length);
-  for (let i = 1; i < n; i++) {
-    const dd = d[Math.min(i, d.length - 1)] * 0.26, yy = y[Math.min(i, y.length - 1)];
-    out.push({ transform: `translateY(${yy.toFixed(1)}px) scale(${(1 + dd).toFixed(3)}, ${(1 - dd).toFixed(3)})`, opacity: 1 });
-  }
-  return out;
-}
-const play = (el: Element, frames: Keyframe[], delay = 0) => el.animate(frames, { duration: (frames.length - 1) * F, delay, fill: 'both', easing: 'linear' });
-/** Rises into place from `dy` px below with an overshoot. */
-const rise = (dy: number, k = 300, c = 17, scale0 = 1) => springValues({ from: 1, to: 0, stiffness: k, damping: c })
-  .map((v, i, a) => ({ transform: `translateY(${(dy * v).toFixed(1)}px) scale(${(1 + (scale0 - 1) * v).toFixed(3)})`, opacity: Math.min(1, (i / a.length) * 6) }));
+const play = (el: Element, frames: Keyframe[], delay = 0) => { own(el); return el.animate(frames, { duration: (frames.length - 1) * F, delay, fill: 'both', easing: 'linear' }); };
 /** A pop: scale from `s0` to 1 with an overshoot, squashing a little as it lands. */
 const pop = (s0: number, k = 420, c = 12) => springValues({ from: s0, to: 1, stiffness: k, damping: c })
   .map((v) => ({ transform: `scale(${(v + (v - 1) * 0.35).toFixed(3)}, ${(v - (v - 1) * 0.35).toFixed(3)})` }));
@@ -69,11 +47,11 @@ export function welcomeReveal(done: Promise<unknown>, tier: () => number | null)
   if (!still) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       el.classList.add('go');
-      play(em.firstElementChild!, dropFrames(), 60);
-      play(el.querySelector('.rw-text')!, rise(28), 520);
-      play(el.querySelector('.rw-foot')!, rise(36), 680);
+      drop(em.firstElementChild!, { height: 240, delay: 60 });
+      rise(el.querySelector('.rw-text')!, 28, { delay: 520, feel: 'bouncy' });
+      rise(el.querySelector('.rw-foot')!, 36, { delay: 680, feel: 'bouncy' });
     }));
-    setTimeout(() => { sfx.pop(2); vibrate(12); }, 60 + 17 * F);      // the emblem hits the ground
+    setTimeout(() => { sfx.pop(2); vibrate(12); }, 60 + 18 * F);      // the emblem hits the ground
     setTimeout(() => { me?.wave(1400); }, 650);
   }
   let ready = false;
@@ -115,12 +93,11 @@ export function welcomeReveal(done: Promise<unknown>, tier: () => number | null)
       const rows = [...document.querySelectorAll<HTMLElement>('.rk-list .rk-row')].filter((r) => {
         const b = r.getBoundingClientRect(); return b.bottom > 0 && b.top < innerHeight;
       });
-      if (!still) rows.forEach((r, i) => {
+      // The rows spring in one after another, the user's own last and bouncier.
+      if (!still) stagger(rows, (r, delay) => {
         const mine = r.classList.contains('me');
-        const fr = rise(mine ? 44 : 34, mine ? 260 : 320, mine ? 13 : 18, mine ? 0.92 : 1);
-        const a = r.animate(fr, { duration: (fr.length - 1) * F, delay: 120 + i * 55, fill: 'backwards', easing: 'linear' });
-        a.onfinish = () => a.cancel();
-      });
+        rise(r, mine ? 44 : 34, { delay, feel: mine ? 'bouncy' : 'gentle', scale0: mine ? 0.92 : 1 });
+      }, 55, 120);
       setTimeout(() => { el.remove(); resolve(); }, still ? 0 : 520);
     });
   });

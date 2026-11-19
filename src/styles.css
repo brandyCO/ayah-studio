@@ -57,6 +57,9 @@
 }
 
 * { box-sizing: border-box; }
+/* No system stretch / bounce past the top or bottom of a page (Android 12+ stretched the whole view, tab bar included;
+   owner 2026-11-19: "I like the stretch, but not for nav"): src/ui/stretch.ts stretches the content alone. */
+html, body { overscroll-behavior-y: none; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -1264,6 +1267,10 @@ body[data-view="kids"] {
   border-radius: var(--r-m); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .tab-btn.on { color: var(--accent); }
+/* The tab just tapped: its icon jumps up, stretches, lands with a squash and settles (a spring as a curve). */
+.tab-btn.hop > svg { animation: tab-hop .5s var(--ease-spring); transform-origin: 50% 100%; }
+@keyframes tab-hop { 0% { transform: scale(.8, 1.15); } 35% { transform: translateY(-7px); } 60% { transform: scale(1.12, .88); } }
+@media (prefers-reduced-motion: reduce) { .tab-btn.hop > svg { animation: none; } }
 .tab-btn:active { background: var(--sel); }
 .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }

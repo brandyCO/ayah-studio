@@ -200,6 +200,7 @@ document.addEventListener('visibilitychange', markOpen);
 // Goals and badges (Me tab): checked whenever the journey changes; a new badge is announced.
 later(() => void import('./ui/rewards').then((m) => m.watchRewards()));
 later(() => void import('./data/nightCalm').then((m) => m.watchCalm()));
+later(() => void import('./ui/press').then((m) => m.initPress())); // a boing on what was tapped; the page stretches at its ends, the tab bar stays
 later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.ts)
 // Me and Learn are ready before their first tap (front-end review G12): fetched and parsed in a quiet moment
 // once the first screen is up, not on Data Saver.
