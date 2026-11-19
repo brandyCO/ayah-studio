@@ -177,6 +177,7 @@ export function lookName(kind: 'avatar' | 'frame', n: number, ar = false): strin
 }
 
 /** An avatar disc with its frame. `i` null = a private player. */
+const busts = new Map<string, string>();
 export function avatar(i: number | null | undefined, tier = 0, size = 36, frame = 0, figure?: string | null): HTMLElement {
   const svg = el('svg', { viewBox: '-4 -4 48 48', width: String(size), height: String(size), 'aria-hidden': 'true', overflow: 'visible' });
   const priv = i === null || i === undefined;
@@ -188,7 +189,23 @@ export function avatar(i: number | null | undefined, tier = 0, size = 36, frame 
     svg.append(g);
     const f = Math.max(0, Math.min(FRAMES - 1, frame | 0));
     drawFrame(svg, f, tier);
-    return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 ? ' glow' : ''}` }, svg as unknown as Node, glintLayer(size));
+    // One image instead of ~180 SVG nodes (still vector, sharp at any size): a league of 15 characters was ~4,700
+    // elements to style and lay out on every visit to Ranks. Made once per look, then reused from memory.
+    const key = `${figure}|${f}|${tier}`;
+    let src = busts.get(key);
+    if (!src) {
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.setAttribute('viewBox', '-10 -10 60 60'); // room for what the frame draws past its edge (the svg was overflow: visible)
+      svg.setAttribute('width', '60');
+      svg.setAttribute('height', '60');
+      src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+      if (busts.size > 300) busts.clear();
+      busts.set(key, src);
+    }
+    const big = size * 60 / 48, m = (big - size) / 2;
+    const img = h('img', { src, width: String(big), height: String(big), alt: '', 'aria-hidden': 'true', draggable: 'false',
+      style: `margin:${-m}px;max-width:none;pointer-events:none` });
+    return h('span', { class: `rk-av f${f}${tier === 4 || f === 1 || f === 4 || f === 5 || f >= 8 ? ' glow' : ''}` }, img, glintLayer(size));
   }
   const n = priv ? 0 : Math.max(0, Math.min(AVATARS - 1, i | 0));
   const f = priv ? 0 : Math.max(0, Math.min(FRAMES - 1, frame | 0));

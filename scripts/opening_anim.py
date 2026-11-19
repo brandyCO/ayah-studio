@@ -82,7 +82,7 @@ def load_parts(svg):
     for x in ['x0', 'x-happy', 'x-wow', 'x-star', 'x-sleepy', 'x-calm', 'x-proud']:
         g, head = cut(head, f'fg-{x}')
         xp[x] = inner(g)
-    i = head.index('<clipPath id="fg14">')
+    i = head.index('<clipPath', head.index('<clipPath') + 1)  # the neck is the first clipped part (ids move with figure.ts)
     neck, head = head[:i], head[i:]
     eyes, x0rest = cut(xp['x0'], 'fg-eyes')
     hp = xp['x-happy']
@@ -1198,6 +1198,10 @@ def frames(key='hello'):
     return [frame(V, P, f, i) for i, f in enumerate(simulate(V))]
 
 
+OUT_W = int(os.environ.get('OPENING_W', 1016))
+OUT_Q = int(os.environ.get('OPENING_Q', 88))
+
+
 def main():
     from PIL import Image
     key = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else 'launch'
@@ -1215,8 +1219,10 @@ def main():
         svgs = frames(key)
         render(svgs, d, SPLASH_BG, key)
         full = [Image.open(f'{d}/f{i:04d}.png').convert('RGB') for i in range(len(svgs))]
-        if full[0].width > 720:  # what the phone draws (94 % of a 1080 px screen); more pixels only cost decoding
-            size = (720, round(full[0].height * 720 / full[0].width))
+        # Stored at the size a 1080 px wide phone draws it (94 % of the width), so it is shown pixel for pixel, never
+        # enlarged (owner 2026-11-19: at 720 px it looked soft, like a video).
+        if full[0].width != OUT_W:
+            size = (OUT_W, round(full[0].height * OUT_W / full[0].width))
             full = [im.resize(size, Image.LANCZOS) for im in full]
         # Lighter to decode on a mid-range phone (owner 2026-11-19: it stuttered on a Tecno while the app started):
         # opaque on the splash colour (no alpha plane to decode), cropped to where anything moves (half the pixels;
@@ -1240,10 +1246,10 @@ def main():
             if ImageChops.difference(im, ims[-1]).getbbox() is None: dur[-1] += t
             else: ims.append(im); dur.append(t)
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=70, method=6,
+        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=OUT_Q, method=6,
                     minimize_size=True, allow_mixed=True)
         print(OUT, OUT.stat().st_size, 'bytes,', len(ims), 'frames of', len(crop))
-        print(f'AppActivity: OPENING_FULL = {{ {full[0].width}, {full[0].height} }}, OPENING_CROP = {{ {x0}, {y0} }}')
+        print(f'AppActivity: OPENING_FULL = {{ {full[0].width}, {full[0].height} }}, OPENING_CROP = {{ {x0}, {y0} }}, OPENING_CROP_W/H = {{ {x1 - x0}, {y1 - y0} }}')
 
 
 if __name__ == '__main__':
