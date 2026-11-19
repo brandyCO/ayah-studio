@@ -265,8 +265,6 @@
 .bdf-bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: inherit; }
 [dir="rtl"] .bdf-bar span { inset: 0 0 0 auto; }
 .bdf-bar b { position: relative; display: grid; place-items: center; height: 100%; font-size: var(--fs-xs); font-weight: 800; mix-blend-mode: normal; text-shadow: 0 0 6px var(--bg); direction: ltr; unicode-bidi: isolate; }
-.claim-badge.t-platinum { box-shadow: 0 0 0 1.5px #b49cf5 inset, 0 6px 18px -8px #8a6af0; }
-.claim-badge.t-diamond { box-shadow: 0 0 0 1.5px #7fd3f2 inset, 0 6px 22px -6px #4fb3e6; }
 .claim-more { align-self: center; }
 
 /* Unlockable app icons (src/ui/appIcons.ts). */
@@ -490,3 +488,52 @@ details[open] > summary .fold-chev { rotate: 180deg; }
 .me-safe-txt p { margin: 0; color: color-mix(in srgb, var(--text) 70%, transparent); font-size: var(--fs-s, 14px); line-height: 1.4; }
 .me-safe-row { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; margin-top: 8px; }
 .me-safe-row .google-btn { flex: 1; }
+
+/* A prize waiting (owner request 2026-11-19): a night sky in the prize's own metal, the art breathing with a soft
+   glow, a slow light sweep, the user's character peeking round the edge. Only transform / opacity move (compositor);
+   everything rests off screen (.anim-off) and with reduced motion. */
+.prize-card { --m0: #8d6bff; --m1: #3c2a9c; --m2: #1d1460; --mg: rgba(170, 140, 255, .55);
+  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; gap: 14px; width: 100%;
+  min-height: 92px; margin: 0 0 10px; padding: 12px 16px; padding-inline-end: 40px; flex-wrap: wrap; row-gap: 8px; border: 0; border-radius: 22px; font: inherit; text-align: start; cursor: pointer;
+  color: #fff; background: radial-gradient(120% 150% at 12% 20%, var(--m0) 0%, var(--m1) 52%, var(--m2) 100%);
+  box-shadow: 0 12px 28px -14px var(--m1), inset 0 0 0 1.5px rgba(255, 255, 255, .16), inset 0 -3px 0 rgba(0, 0, 0, .18);
+  transition: transform .25s var(--ease-spring); }
+.prize-card.t-bronze { --m0: #e3a06a; --m1: #9a5a2b; --m2: #4a2511; --mg: rgba(255, 190, 130, .55); }
+.prize-card.t-silver { --m0: #c9d6e6; --m1: #66788f; --m2: #28323f; --mg: rgba(220, 235, 255, .6); }
+.prize-card.t-gold { --m0: #ffd36b; --m1: #c4870f; --m2: #5a3600; --mg: rgba(255, 214, 110, .65); }
+.prize-card.t-platinum { --m0: #b9a3ff; --m1: #6a4fd8; --m2: #2a1a70; --mg: rgba(190, 170, 255, .65); }
+.prize-card.t-diamond { --m0: #8fe3ff; --m1: #2f8fd0; --m2: #0d2e5a; --mg: rgba(150, 225, 255, .7); }
+.prize-card::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; transform: translateX(-110%);
+  background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, .32) 50%, transparent 62%); animation: pc-sweep 4.2s .6s ease-in-out infinite; }
+[dir="rtl"] .prize-card::after { animation-name: pc-sweep-rtl; }
+@keyframes pc-sweep { 0%, 62% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
+@keyframes pc-sweep-rtl { 0%, 62% { transform: translateX(110%); } 100% { transform: translateX(-110%); } }
+.prize-card::before { content: ''; position: absolute; z-index: -1; inset-inline-start: -10px; top: 50%; width: 120px; height: 120px; margin-top: -60px; border-radius: 50%;
+  background: radial-gradient(circle, var(--mg) 0%, transparent 68%); animation: pc-glow 2.6s ease-in-out infinite; }
+@keyframes pc-glow { 50% { opacity: .55; transform: scale(.88); } }
+.prize-card .pc-art { position: relative; flex: none; display: grid; place-items: center; width: 64px; height: 64px; animation: pc-breathe 2.6s ease-in-out infinite; }
+.prize-card .pc-art .chest { width: 64px; }
+.prize-card .pc-art .badge-art { scale: 1.3; }
+.prize-card .pc-art .badge-art.t-bronze, .prize-card .pc-art .badge-art.t-silver { scale: 1.45; }
+@keyframes pc-breathe { 50% { transform: translateY(-2px) scale(1.05); } }
+.prize-card .cb-txt { flex: 1 1 130px; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.prize-card .cb-txt > span:first-child { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.prize-card .cb-txt b, .prize-card > b { font-size: 17px; font-weight: 900; overflow-wrap: break-word; }
+.prize-card > b { flex: 1 1 130px; min-width: 0; }
+.prize-card .pc-light { font-size: 13px; font-weight: 800; color: #ffe08a; opacity: 1; }
+.prize-card .cb-go { position: relative; z-index: 3; flex: none; margin-inline-start: auto; white-space: nowrap; padding: 9px 16px; border-radius: 999px; font-size: 15px; font-weight: 900;
+  color: var(--m2); background: #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--m0) 60%, #fff), 0 6px 16px -6px rgba(0, 0, 0, .45); }
+.prize-card .pc-peek { position: absolute; z-index: 1; inset-inline-end: -6px; bottom: -14px; width: 58px; height: 58px; pointer-events: none;
+  transform: rotate(-8deg); transform-origin: 50% 100%; animation: pc-peek 5s ease-in-out infinite; }
+[dir="rtl"] .prize-card .pc-peek { transform: scaleX(-1) rotate(-8deg); animation-name: pc-peek-rtl; }
+.prize-card .pc-peek:empty { display: none; }
+@keyframes pc-peek { 0%, 70%, 100% { transform: rotate(-8deg); } 78%, 90% { transform: rotate(-16deg) translateY(-4px); } }
+@keyframes pc-peek-rtl { 0%, 70%, 100% { transform: scaleX(-1) rotate(-8deg); } 78%, 90% { transform: scaleX(-1) rotate(-16deg) translateY(-4px); } }
+.prize-card:has(.pc-peek:empty) { padding-inline-end: 16px; }
+.prize-card:active { transform: scale(.97); }
+.prize-card.lifting { transform: scale(1.04) translateY(-4px); box-shadow: 0 22px 40px -14px var(--m1), 0 0 0 3px var(--mg); }
+.me-wait.prize-card { margin-block: 10px; border: 0; }
+.claim-badges .prize-card { margin: 0; }
+.anim-off .prize-card::after, .anim-off .prize-card::before, .anim-off .prize-card .pc-art, .anim-off .prize-card .pc-peek { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .prize-card::after, .prize-card::before, .prize-card .pc-art, .prize-card .pc-peek { animation: none; } }
+html.lite .prize-card::after { animation: none; }
