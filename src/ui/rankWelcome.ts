@@ -51,7 +51,7 @@ export function welcomeReveal(done: Promise<unknown>, tier: () => number | null)
     }
     btn.disabled = false;
     el.classList.add('ready');
-    if (!still) { sfx.shimmer(); vibrate(8); me?.cheer(1200); }
+    if (!still) { sfx.shimmer(); vibrate(8); me?.hop(0.8); setTimeout(() => me?.cheer(1200), 380); } // one hop, never two in a row (owner 2026-11-19)
     btn.focus({ preventScroll: true });
   };
   let loaded = false;
