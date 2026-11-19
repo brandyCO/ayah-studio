@@ -1,0 +1,42 @@
+/* "Joining your league" (src/ui/rankJoin.ts): Ranks violet, one stand with the league's emblem, the user's character. */
+.rj { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: 24px 24px calc(96px + env(safe-area-inset-bottom, 0px)); color: #fff; text-align: center; overflow: hidden;
+  background: radial-gradient(120% 70% at 50% 35%, #8f7dff 0%, #6c5ce7 45%, #3e2fa8 100%); opacity: 0; transition: opacity .22s ease-out; }
+.rj.go, .rj.still { opacity: 1; }
+.rj.out { opacity: 0; transition-duration: .3s; }
+.rj-stand { position: relative; width: 168px; height: 168px; display: grid; place-items: center; }
+.rj-stand::after { content: ''; position: absolute; bottom: 4px; left: 18%; right: 18%; height: 18px; border-radius: 50%;
+  background: rgba(20, 8, 70, .35); }
+.rj-rays { position: absolute; inset: -60px; border-radius: 50%; opacity: 0; scale: .6;
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.16) 0 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 68%); mask: radial-gradient(circle, #000 25%, transparent 68%);
+  transition: opacity .5s ease-out, scale .7s cubic-bezier(.2,.9,.3,1.3); }
+.rj.go .rj-rays { animation: rj-turn 9s linear infinite; }
+.rj.landed .rj-rays { opacity: 1; scale: 1; }
+.rj-slot { position: relative; width: 132px; height: 132px; }
+/* Before the league is known: a soft breathing light where the emblem will land. */
+.rj-slot:empty { border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0) 66%); animation: rj-breathe 1.4s ease-in-out infinite; }
+.rj-slot svg { width: 100%; height: 100%; animation: rj-drop .62s cubic-bezier(.2,.9,.3,1.25) both; }
+.rj-scene { position: relative; width: 300px; height: 210px; display: flex; justify-content: center; align-items: flex-end; }
+.rj-walk { position: absolute; bottom: 0; inset-inline-start: -6px; width: 104px; height: 136px; translate: -80vw 0; }
+.rj.go .rj-walk { animation: rj-in .95s cubic-bezier(.25,.8,.3,1) .1s both; }
+.rj-walk > * { width: 100%; height: 100%; }
+.rj.go .rj-walk > * { animation: rj-step .24s ease-in-out 4 alternate .1s; }
+[dir="rtl"] .rj-walk { translate: 80vw 0; }
+[dir="rtl"] .rj.go .rj-walk { animation-name: rj-in-rtl; }
+.rj-text h2 { margin: 0; font-size: 26px; font-weight: 900; }
+.rj-text p { margin: 4px 0 0; opacity: .85; font-weight: 700; }
+.rj-bar { width: min(280px, 72vw); height: 14px; border-radius: 7px; background: rgba(255,255,255,.22); overflow: hidden; }
+.rj-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd166, #fff3c4); transform-origin: 0 50%;
+  transform: scaleX(.04); transition: transform 2.4s cubic-bezier(.1,.6,.3,1); }
+[dir="rtl"] .rj-bar i { transform-origin: 100% 50%; }
+.rj.go .rj-bar i { transform: scaleX(.82); }
+.rj.landed .rj-bar i { transform: scaleX(1); transition-duration: .35s; }
+@keyframes rj-turn { to { rotate: 360deg; } }
+@keyframes rj-breathe { 50% { scale: 1.12; opacity: .7; } }
+@keyframes rj-drop { from { transform: translateY(-140px) scale(.7); opacity: 0; } 70% { transform: translateY(6px) scale(1.06, .94); opacity: 1; } to { transform: none; } }
+@keyframes rj-in { from { translate: -80vw 0; } to { translate: 0 0; } }
+@keyframes rj-in-rtl { from { translate: 80vw 0; } to { translate: 0 0; } }
+@keyframes rj-step { to { transform: translateY(-7px) rotate(2deg); } }
+.rj.still .rj-walk { translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .rj, .rj * { animation: none !important; transition: none !important; } .rj-bar i { transform: scaleX(1); } }

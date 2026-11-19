@@ -2351,6 +2351,13 @@ duas/reflections section in Me.
       into the existing moment. **Opening** (Tecno report): `opening.webp` is opaque on the splash colour, cropped to the
       character's box, 720 wide and deduped (446 → 300 KB, ~37 % cheaper per frame); `AppActivity` places the crop
       (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`)
+      **Ranks right after sign-in** (owner report 2026-11-19, "ranks started loading after I signed in"): the league is
+      fetched the moment sign-in finishes, alongside the first report; with nothing kept for the account yet
+      (`isKept()` in `together/ranks.ts`) a **Joining your league** reveal (`src/ui/rankJoin.ts` + `.css`, lazy) covers the
+      first load: the user's character walks in beside an empty stand, a bar fills, the league's emblem drops onto the stand
+      and the character cheers; its length follows the real load (≥ 1.2 s, ≤ 3 s), later visits paint from the cache at once.
+      Compositor-only motion, 60 fps at 4× and 6× CPU. A claim tap no longer loads the moment: Me warms `celebrate`, the
+      sound engine and the badge art while idle once a claim card shows (`warmClaim()`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -4,6 +4,8 @@ import { fill, lang, tr } from './index';
 
 const en = {
   'rk.title': "Ranks",
+  'rk.joinTitle': "Joining your league",
+  'rk.joinSub': "Finding readers at your pace",
   'rk.sub': "Read, listen and make reels together",
   'rk.outTitle': "Climb the ranks",
   'rk.outLine': "Join a league of 15 readers this week. Only what the app checks itself counts.",
@@ -625,6 +627,8 @@ const ar: Partial<Record<RankKey, string>> = {
   'fb.pose.0': "واقف",
   'fb.pose.1': "جالس",
   'rk.title': "الترتيب",
+  'rk.joinTitle': "ننضمّ إلى دوريك",
+  'rk.joinSub': "نبحث عن قرّاء على وتيرتك",
   'rk.sub': "اقرأ واستمع واصنع المقاطع مع غيرك",
   'rk.outTitle': "اصعد في الترتيب",
   'rk.outLine': "انضم إلى دوري من 15 قارئًا هذا الأسبوع. لا يُحسب إلا ما يتحقق منه التطبيق بنفسه.",

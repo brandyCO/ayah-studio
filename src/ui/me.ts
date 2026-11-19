@@ -271,7 +271,17 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const prayerBox = h('section', { class: 'me-card' });
   // A prize waiting (owner request 2026-11-19, "something so beautiful to claim"): the user's own character peeks
   // round the card's edge at it, and a tap lifts the card before the claim moment takes over.
+  // A prize card on screen will likely be tapped: its moment and the sound engine are made ready while the phone is idle,
+  // so the tap only plays (they cost ~60 ms of the tap's frame at 4x CPU when made then).
+  let warmed = false;
+  const warmClaim = () => {
+    if (warmed) return;
+    warmed = true;
+    const go = () => { void import('./celebrate'); void import('./sfx').then((m) => m.warmSounds()); void import('./badge'); };
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2500 }); else setTimeout(go, 800);
+  };
   const peek = () => {
+    warmClaim();
     const el = h('span', { class: 'pc-peek', 'aria-hidden': 'true' });
     let code: string | null = null;
     try { code = localStorage.getItem('rankFigure'); } catch { /* private */ }
