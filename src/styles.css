@@ -564,6 +564,36 @@ body[data-view="reel"] {
 
 /* bottom area: timeline (with room under the tracks) + tool bar; panels cover both */
 .studio-bottom { grid-area: bottom; position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+
+/* Studio loading (owner request 2026-11-19): the frame at once (studioShell), then in the preview a few
+   motes of light gather into the gold star until the first frame is drawn over the clip's still. */
+.studio-shell .studio-top { height: 52px; gap: 8px; justify-content: flex-start; }
+.shell-pill, .shell-track, .shell-tools { display: block; border-radius: 999px; background: var(--line); opacity: .55; }
+.shell-pill { width: 34px; height: 30px; } .shell-pill.wide { width: 120px; }
+.studio-shell .stage { aspect-ratio: 9 / 16; --fr: 16 / 9; }
+.studio-shell .transport { height: 48px; }
+.studio-shell .studio-bottom { gap: 12px; padding: 18px 12px; }
+.shell-track { height: 44px; border-radius: 8px; } .shell-tools { height: 48px; margin-top: auto; border-radius: 12px; }
+.stage.loading { background: #000 center / cover no-repeat; }
+.stage.loading::before { content: ''; position: absolute; inset: 0; background: rgba(4, 10, 8, .45); }
+.stage .preview { transition: opacity .45s ease; }
+.stage.loading .preview { opacity: 0; }
+.studio-load { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .45s ease; }
+.stage:not(.loading) .studio-load { opacity: 0; }
+.studio-load > i { grid-area: 1 / 1; display: block; }
+.sl-star { width: 34px; height: 34px; background: linear-gradient(#ffe680, #ffc22e 55%, #ff9f1a);
+  -webkit-mask: var(--star-mask) center / contain no-repeat; mask: var(--star-mask) center / contain no-repeat;
+  animation: sl-star 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
+.sl-halo { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 210, 90, .38), transparent);
+  animation: sl-halo 1.6s ease-in-out infinite; }
+.sl-m { width: 6px; height: 6px; border-radius: 50%; background: #ffe7a3; opacity: 0;
+  animation: sl-mote 1.6s cubic-bezier(.4, 0, .9, .6) var(--d) infinite; }
+@keyframes sl-star { 0%, 100% { transform: scale(.82) rotate(0); } 55% { transform: scale(1.12) rotate(45deg); } }
+@keyframes sl-halo { 0%, 100% { transform: scale(.7); opacity: .5; } 55% { transform: scale(1.15); opacity: 1; } }
+@keyframes sl-mote { 0% { transform: rotate(var(--a)) translateX(78px) scale(.5); opacity: 0; } 25% { opacity: .9; }
+  100% { transform: rotate(var(--a)) translateX(4px) scale(1.1); opacity: 0; } }
+.stage.loading .stage-status { background: none; inset: auto 0 18%; font-size: var(--fs-xs); color: rgba(255, 255, 255, .8); }
+@media (prefers-reduced-motion: reduce) { .sl-m { display: none !important; } .sl-star, .sl-halo { animation-duration: 3.2s; } }
 .spine { position: relative; flex: 1; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; background: #121519; border-top: 1px solid var(--line); }
 .spine-canvas { display: block; width: 100%; }
 .spine-zooms { position: absolute; bottom: 8px; right: 10px; display: flex; gap: 6px; }

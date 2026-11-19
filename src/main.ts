@@ -16,7 +16,7 @@
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
 import './styles.css';
 import { closeSheetsOnRoute } from './ui/backCloses';
-import { h, skeleton, sweepListeners } from './ui/dom';
+import { h, skeleton, studioShell, sweepListeners } from './ui/dom';
 import { playOpening } from './ui/opening';
 import { showMushaf } from './ui/mushaf';
 import { lastRead, readerMode, setLastRead } from './ui/prefs';
@@ -92,6 +92,8 @@ async function route() {
     } else if (view === 'reel' && Number(a) && b) {
       const [from, to] = b.split('-').map(Number);
       try { localStorage.setItem('studioUsed', '1'); } catch { /* private window */ } // the web warm-up may now keep the studio offline
+      // The studio's frame and its loading light show at once, while the editor's code and the reel load.
+      screen.append(studioShell());
       // The editor pulls in the video engine (Mediabunny); load it only when needed.
       const { showEditor } = await import('./ui/editor');
       c = await showEditor(screen, Number(a), from, to || from, c4 || undefined);

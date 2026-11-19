@@ -650,7 +650,18 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       `gpuFx`=off): ripple and caustics shaders, separable blur for the blur transition and a scene's own blur
       (`blurred()` in `scenes.ts`; fallback canvas filter, else shrink-and-enlarge, so blurs show on iPhone Safari).
       Preview drops resolution while playing under ~45 fps (was 25). Bench: `bench/` + `node scripts/studio-bench.mjs
-      [width] [cpuRate]` (dev server on 5199; ms per frame for every touch, text effect and transition)
+      [width] [cpuRate]` (dev server on 5199; ms per frame for every touch, text effect and transition; `ONLY=regex`,
+      `GPUFX=off`, `SHOT=dir` writes one still per row for a GPU ⇄ Canvas 2D pixel comparison)
+      Second wave (owner "yes to all" 2026-11-19): **instant studio** — `studioShell()` (dom.ts) shows the studio's frame
+      the moment Create is tapped, then the stage shows the first scene's still under `studioLoader()` (motes of light
+      gathering into the gold star, transform/opacity only) until the first frame is drawn (`.stage.loading`); the reel's
+      fonts load alongside the text. **Finishing pass on the GPU** (`gpuFinish`, `Finisher` in render.ts): ripple, grade
+      (source-over / soft-light / saturation), bloom (mip level 3), vignette, grain (overlay) , scrim and Cinematic's black
+      in one shader with the W3C blend formulas (within 1–3/255 of Canvas 2D; used when a run has a costly layer or ≥ 4
+      passes); water light samples the 2D version's tile. **Each phone picks**: the first play tries GPU and Canvas 2D in
+      turn (≤ 40 frames / 1.5 s each) and keeps the smoother (`gpuPick`, localStorage, 30 days; `gpuState()`). Slow
+      phones: the preview drops size after 5 frames under 12 fps, remembers it (`studioPlayScale`), steps back up when
+      smooth, and at the smallest size plays a steady 30 fps (`cap30`). The GPU canvas only grows (no realloc per frame)
 
 ### Phase 1b — media
 - [x] Upload own videos/images (gallery / file picker): Scenes → Add/Change → **My media** → "From

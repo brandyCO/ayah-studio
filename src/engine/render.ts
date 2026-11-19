@@ -2,6 +2,7 @@
 // exporter alike, so preview = export. All coordinates are in logical 1080×1920 units; the caller
 // sets the canvas transform for the output size.
 import { bloom, bokeh, caustics, leak, mist, motes, rain, ripple, snow } from './touches';
+import { gpuFinish, type Finish, type FinishLayer } from './gpu';
 import { put, roundK, sprite } from './textCache';
 import type { BackgroundMedia } from './backgrounds';
 import { drawText, pxScale, setTextShadow, type Highlight } from './effects';
@@ -63,7 +64,8 @@ function drawVignette(ctx: CanvasRenderingContext2D, amount = VIGNETTE_DEFAULT) 
 
 /** Film grain: a fixed noise tile moved to a new place 12 times a second (pure in t, so preview = export). */
 let grainTile: HTMLCanvasElement | null = null;
-function drawGrain(ctx: CanvasRenderingContext2D, t: number, amount = GRAIN_DEFAULT) {
+const grainOffset = (t: number) => { const step = Math.floor(t * 12); return [-((step * 97) % 256), -((step * 57) % 256)] as const; };
+function grain(): HTMLCanvasElement {
   if (!grainTile) {
     grainTile = document.createElement('canvas');
     grainTile.width = grainTile.height = 256;
@@ -78,8 +80,11 @@ function drawGrain(ctx: CanvasRenderingContext2D, t: number, amount = GRAIN_DEFA
     }
     g.putImageData(img, 0, 0);
   }
-  const step = Math.floor(t * 12);
-  const ox = -((step * 97) % 256), oy = -((step * 57) % 256);
+  return grainTile;
+}
+function drawGrain(ctx: CanvasRenderingContext2D, t: number, amount = GRAIN_DEFAULT) {
+  const grainTile = grain();
+  const [ox, oy] = grainOffset(t);
   ctx.save();
   ctx.globalCompositeOperation = 'overlay';
   ctx.globalAlpha = 0.14 * amount;
@@ -88,6 +93,66 @@ function drawGrain(ctx: CanvasRenderingContext2D, t: number, amount = GRAIN_DEFA
   ctx.fillStyle = pat;
   ctx.fillRect(-ox, -oy, W, H);
   ctx.restore();
+}
+
+/** Collects consecutive finishing layers and draws them in one GPU pass when that saves work, else
+ *  each in Canvas 2D exactly as before (same order, same formulas: preview = export either way). */
+const rgba = (c: string): [number, number, number, number] => {
+  const m = /rgba?\(([^)]+)\)/.exec(c);
+  const v = m ? m[1].split(',').map(Number) : [0, 0, 0, 1];
+  return [v[0] / 255, v[1] / 255, v[2] / 255, v[3] ?? 1];
+};
+const MODES: Partial<Record<GlobalCompositeOperation, 1 | 2 | 3>> = { 'source-over': 1, 'soft-light': 2, saturation: 3 };
+class Finisher {
+  private f: Finish = {};
+  private steps: (() => void)[] = []; // the same layers in Canvas 2D
+  private passes = 0; // full-screen 2D passes they would take
+  private heavy = false; // a costly 2D layer (water, bloom, grain)
+  constructor(private ctx: CanvasRenderingContext2D, private t: number) {}
+  ripple() { this.f.ripple = { t: this.t, amp: 6 }; this.steps.push(() => ripple(this.ctx, this.t)); this.heavy = true; }
+  grade(g: Project['grade'], amount: number) {
+    const layers = amount > 0.001 ? GRADES[g]?.layers ?? [] : [];
+    if (!layers.length) return;
+    const fl: FinishLayer[] = [];
+    for (const [op, color] of layers) {
+      const mode = MODES[op];
+      const [r, gg, b, a] = rgba(color);
+      if (!mode || fl.length >= 2) { this.flush(); drawGrade(this.ctx, g, amount); return; }
+      fl.push({ mode, rgb: [r, gg, b], a: a * amount });
+    }
+    this.f.grade = fl;
+    this.steps.push(() => drawGrade(this.ctx, g, amount));
+    this.passes += fl.length;
+  }
+  bloom() { this.f.bloom = true; this.steps.push(() => bloom(this.ctx)); this.heavy = true; }
+  vignette(amount = VIGNETTE_DEFAULT) {
+    this.f.vignette = { a: Math.min(0.95, amount * 1.1), r0: Math.min(W, H) * (0.45 - amount * 0.2), r1: Math.hypot(W, H) / 2 };
+    this.steps.push(() => drawVignette(this.ctx, amount));
+    this.passes++;
+  }
+  grain(amount = GRAIN_DEFAULT) {
+    const [ox, oy] = grainOffset(this.t);
+    this.f.grain = { a: 0.14 * amount, ox, oy, tile: grain() };
+    this.steps.push(() => drawGrain(this.ctx, this.t, amount));
+    this.heavy = true;
+  }
+  scrim(k: number) { this.f.scrim = k; this.steps.push(() => drawScrim(this.ctx, k)); this.passes += 2; }
+  dark(k: number) {
+    if (k < 0.004) return;
+    this.f.dark = k;
+    this.steps.push(() => darken(this.ctx, k));
+    this.passes++;
+  }
+  flush() {
+    if (!this.steps.length) return;
+    // Uploading the picture to the graphics chip and back costs about three plain passes.
+    const gpu = (this.heavy || this.passes >= 4) && gpuFinish(this.ctx, this.f, W, H);
+    if (!gpu) for (const s of this.steps) s();
+    this.f = {};
+    this.steps = [];
+    this.passes = 0;
+    this.heavy = false;
+  }
 }
 
 /** The word being recited at t inside event ev, placed on its line (null between words or without timings: rule 8). */
@@ -374,22 +439,30 @@ export function render(ctx: CanvasRenderingContext2D, t: number, project: Projec
   if (posed) ctx.restore();
   const tch = project.touches ?? [];
   const has = (x: string) => tch.includes(x as never);
-  if (has('ripple')) ripple(ctx, t);
   const am = project.amounts;
-  drawGrade(ctx, project.grade, am?.grade ?? 1);
-  if (has('bloom')) bloom(ctx);
-  if (has('leak')) leak(ctx, t);
-  if (has('bokeh')) bokeh(ctx, t);
-  if (has('mist')) mist(ctx, t);
-  if (has('rain')) rain(ctx, t);
-  if (project.vignette) drawVignette(ctx, am?.vignette);
-  if (project.grain) drawGrain(ctx, t, am?.grain);
-  drawScrim(ctx, am?.dark !== undefined ? darkK(am.dark) : SCRIM_STRENGTH[project.scrim] ?? 1);
+  // The finishing layers in their order. Runs of them that the graphics chip can do are gathered and
+  // drawn in one shader pass (gpuFinish); the rest, and every layer without WebGL2, in Canvas 2D.
+  const fin = new Finisher(ctx, t);
+  if (has('ripple')) fin.ripple();
+  fin.grade(project.grade, am?.grade ?? 1);
+  if (has('bloom')) fin.bloom();
+  const between = (['leak', 'bokeh', 'mist', 'rain'] as const).filter(has);
+  if (between.length) {
+    fin.flush();
+    for (const x of between) ({ leak, bokeh, mist, rain })[x](ctx, t);
+  }
+  if (project.vignette) fin.vignette(am?.vignette);
+  if (project.grain) fin.grain(am?.grain);
+  fin.scrim(am?.dark !== undefined ? darkK(am.dark) : SCRIM_STRENGTH[project.scrim] ?? 1);
   // Small lights in front of the background, behind the text.
-  if (has('motes')) motes(ctx, t);
-  if (has('snow')) snow(ctx, t);
+  if (has('motes') || has('snow')) {
+    fin.flush();
+    if (has('motes')) motes(ctx, t);
+    if (has('snow')) snow(ctx, t);
+  }
   // Open from black, settle back into it; the text and the reference are drawn after, unchanged.
-  if (cine) darken(ctx, shade(t, tl.duration));
+  if (cine) fin.dark(shade(t, tl.duration));
+  fin.flush();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

@@ -37,6 +37,7 @@ import { breathOf, knownBreath, OPEN } from '../engine/cinema';
 import { parseTajweed, TAJWEED_LEGEND, type AyahTajweed } from '../engine/tajweed';
 import { applyStyle, applyVibe, currentStyle, currentVibe, recommendVibe, STYLES, VIBES } from '../engine/styles';
 import { takeStarter, waitStarter } from '../data/starter';
+import { gpuPick, gpuPicked, gpuTrial } from '../engine/gpu';
 import { recordReel, popularReciters } from '../data/popular';
 import { addShare, reelMade } from '../data/journey';
 import {
@@ -51,7 +52,7 @@ import { liteMode } from '../lite';
 import { perfRecord, perfStart } from '../perf';
 import { exportGuard, isIOS, isNative, saveVideo, shareableLink, shareFile, shareFiles, type SavedFile } from '../native';
 import { openDebugPanel } from './debug';
-import { h, toast } from './dom';
+import { h, studioLoader, toast } from './dom';
 import { lanternProgress } from './lanternProgress';
 import { icon } from './icons';
 import { createMediaPicker } from './mediaPicker';
@@ -167,7 +168,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   let previewScale = 1; // preview resolution now (lowered only while playing on a slow device)
   // Learned on this phone (kept for the next visit): the next Play starts at it. Old phones start lower.
   let playScale = (() => { try { const v = Number(localStorage.getItem('studioPlayScale')); if (v === 0.5 || v === 0.75) return v; } catch { /* ignore */ } return liteMode() ? 0.75 : 1; })();
-  let frameGap = 0, gapCount = 0, lastFrameAt = 0;
+  let frameGap = 0, gapCount = 0, lastFrameAt = 0, lastDrawAt = 0, cap30 = false;
   let exporting: AbortController | null = null;
   let ac: AudioContext | null = null;
   let src: AudioBufferSourceNode | null = null;
@@ -193,7 +194,20 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   const canvas = h('canvas', { class: 'preview', width: 540, height: 960 });
   const pctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
   const status = h('div', { class: 'stage-status' });
-  const stage = h('div', { class: 'stage' }, canvas, status);
+  // Until the first frame is drawn: the clip's still under the loading light (studioLoader), then both fade.
+  const stage = h('div', { class: 'stage loading' }, canvas, studioLoader(), status);
+  const showPoster = () => {
+    if (!stage.classList.contains('loading')) return;
+    const b = backgroundById(project.scenes[0] ?? '');
+    const th = b && (b.kind === 'image' || b.kind === 'video') ? b.thumb : '';
+    stage.style.backgroundImage = th ? `url("${th}")` : '';
+  };
+  const firstFrameShown = () => {
+    if (!stage.classList.contains('loading')) return;
+    stage.classList.remove('loading');
+    stage.removeAttribute('aria-busy');
+    window.setTimeout(() => { stage.querySelector('.studio-load')?.remove(); stage.style.backgroundImage = ''; }, 500);
+  };
   let shownFormat = ''; // the format the stage is shaped for (fitStage)
   const playBtn = h('button', { class: 'ctl play', 'aria-label': ui('ed.play'), onclick: () => (playing ? pause() : void play()) }, icon('play', 26)); // plays in place, like CapCut
   const restartBtn = h('button', { class: 'ctl', 'aria-label': ui('ed.restart'), title: ui('ed.restart'), onclick: () => restart() }, icon('restart'));
@@ -1807,6 +1821,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     h('div', { class: 'studio-bottom' }, spine.el, bar, panel),
     premiereBar,
     overlay);
+  root.querySelector(':scope > .studio-shell')?.remove(); // the frame main.ts showed while loading
   root.append(studio);
   built = true;
   // A new reel opens as the full studio, ready to play (owner request 2026-11-19, no quick-reel step):
@@ -1847,6 +1862,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
       void waitStarter().then((x) => {
         if (!x || !alive || JSON.stringify(project.scenes) !== was) return;
         useStarter(x);
+        showPoster();
         void loadScenes();
         rebuild();
         if (hIndex === 0) history[0] = JSON.stringify(project);
@@ -1854,6 +1870,7 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
   }
   history[0] = JSON.stringify(project);
+  showPoster();
   refreshUI();
 
   // The encoder check can hold the page for a second on a phone, so it runs only at Export; a device
@@ -2131,9 +2148,34 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
   function setPreviewScale(k: number) {
     if (k === previewScale) return;
     previewScale = k;
+    trialReset(); trialMean[0] = trialMean[1] = 0;
     resize();
   }
+  // The first plays on a phone try the graphics chip and Canvas 2D in turn (each for 40 frames or 1.5 s,
+  // the first 3 frames left out) and keep the smoother way for this phone (gpu.ts). The picture is the
+  // same either way. A change of preview size starts the trial again (it would skew the comparison).
+  let trialSide = 0, trialFrom = 0, trialFrames = 0, trialLast = 0;
+  const trialMean = [0, 0];
+  function trialReset() { trialSide = 0; trialFrom = 0; trialFrames = 0; trialLast = 0; }
+  function gpuTrialStep(now: number) {
+    if (gpuPicked()) return;
+    if (!playing) { gpuTrial(null); trialReset(); return; }
+    gpuTrial(trialSide === 0); // 0: graphics chip, 1: Canvas 2D
+    if (!trialFrom) trialFrom = now;
+    if (trialLast && ++trialFrames > 3) trialMean[trialSide] += now - trialLast;
+    trialLast = now;
+    const counted = trialFrames - 3;
+    if (counted >= 37 || (counted >= 5 && now - trialFrom > 1500)) {
+      trialMean[trialSide] /= counted;
+      if (trialSide === 1) {
+        gpuTrial(null);
+        gpuPick(!(trialMean[1] < trialMean[0] * 0.92)); // the graphics chip unless Canvas 2D is clearly smoother here
+      }
+      trialSide++; trialFrom = 0; trialFrames = 0; trialLast = 0;
+    }
+  }
   function pacePlayback(now: number) {
+    gpuTrialStep(now);
     if (!playing) { lastFrameAt = 0; gapCount = 0; frameGap = 0; if (previewScale !== 1) setPreviewScale(1); return; }
     if (previewScale !== playScale && gapCount === 0) setPreviewScale(playScale);
     if (lastFrameAt) {
@@ -2146,7 +2188,9 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
         setPreviewScale(playScale);
         gapCount = 1;
         frameGap = 0;
-      } else if (gapCount > 120 && frameGap < 15 && playScale < 1) { // smooth with room to spare: sharper again
+      } else if (!cap30 && playScale <= 0.5 && gapCount > 30 && frameGap > 22) {
+        cap30 = true; // already at the smallest preview and still under ~45 fps: a steady 30 (this visit)
+      } else if (!cap30 && gapCount > 120 && frameGap < 15 && playScale < 1) { // smooth with room to spare: sharper again
         playScale = playScale < 0.75 ? 0.75 : 1;
         try { localStorage.setItem('studioPlayScale', String(playScale)); } catch { /* ignore */ }
         setPreviewScale(playScale);
@@ -2178,8 +2222,13 @@ export async function showEditor(root: HTMLElement, n: number, from: number, to:
     }
     spine.frame();
     if (!dirty) return;
+    // A phone that cannot keep 60 fps even at the smallest preview plays a steady 30 instead of an
+    // uneven 35–50 (each frame the same length looks smoother than more frames at uneven times).
+    if (playing && cap30 && now - lastDrawAt < 30) return;
+    lastDrawAt = now;
     dirty = false;
     render(pctx, t, project, tl, media, drawn);
+    firstFrameShown();
     if (mediaReady && audio) perfEditor();
     const guides = touch.guides();
     if (guides) drawGuides(pctx, guides.centred);

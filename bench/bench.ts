@@ -15,6 +15,9 @@ import { W } from '../src/engine/layout';
 const q = new URLSearchParams(location.search);
 const width = Number(q.get('w') ?? 720);
 const frames = Number(q.get('n') ?? 60);
+const shots: Record<string, string> = {};
+(window as unknown as { shots: unknown }).shots = shots;
+const only = q.get('only') ? new RegExp(q.get('only')!) : null; // e.g. ?only=caustics|grain
 const out = document.getElementById('o')!;
 
 async function main() {
@@ -41,12 +44,19 @@ async function main() {
   for (const id of ['mist', 'night', 'dunes']) media.set(id, await loadBackground(backgroundById(id)!));
 
   async function run(label: string, mut: (p: Project) => void, t0 = 2, scenes = ['mist']) {
+    if (only && !only.test(label)) return { label, avg: 0, p90: 0 };
     const p: Project = { ...structuredClone(base), mode: undefined } as unknown as Project;
     p.textMode = 'ayah'; p.translationMode = 'ayah'; p.scenes = scenes; p.cinema = false;
     mut(p);
     const tl = make(p, p.scenes);
     const m = p.scenes.map((id) => media.get(id));
     const k = c.width / W;
+    if (q.get('shot')) { // one still frame for a GPU ⇄ Canvas 2D comparison (scripts/studio-bench.mjs SHOT=dir)
+      for (let i = 0; i < 3; i++) { ctx.setTransform(k, 0, 0, k, 0, 0); render(ctx, t0 + 0.25, p, tl, m); await new Promise((r) => setTimeout(r, 60)); }
+      ctx.setTransform(k, 0, 0, k, 0, 0); render(ctx, t0 + 0.25, p, tl, m);
+      shots[label] = c.toDataURL('image/png');
+      return { label, avg: 1, p90: 1 };
+    }
     // warm up
     for (let i = 0; i < 5; i++) { ctx.setTransform(k, 0, 0, k, 0, 0); render(ctx, t0 + i / 30, p, tl, m); }
     const ts: number[] = [];
@@ -66,12 +76,14 @@ async function main() {
   rows.push(await run('baseline (mist video, rise)', () => {}));
   rows.push(await run('baseline image', () => {}, 2, ['night']));
   rows.push(await run('cinematic', (p) => { p.cinema = true; }));
+  for (const g of ['warm', 'cool', 'mono'] as const) rows.push(await run(`grade:${g}`, (p) => { p.grade = g; }));
   rows.push(await run('grain+vignette', (p) => { p.grain = true; p.vignette = true; }));
   for (const tch of TOUCHES) rows.push(await run(`touch:${tch}`, (p) => { p.touches = [tch]; }));
   rows.push(await run('touch:4 (ripple,caustics,bloom,mist)', (p) => { p.touches = ['ripple', 'caustics', 'bloom', 'mist']; }));
   for (const fx of TEXT_EFFECTS) rows.push(await run(`text:${fx.value} (entering)`, (p) => { p.textEffect = fx.value; }, 0.45));
   for (const tr of TRANSITIONS) rows.push(await run(`transition:${tr.value}`, (p) => { p.transition = tr.value; }, 11.1, ['mist', 'night']));
-  out.textContent = JSON.stringify(rows);
-  (window as unknown as { benchDone: unknown }).benchDone = rows;
+  const done = rows.filter((r) => r.avg > 0);
+  out.textContent = JSON.stringify(done);
+  (window as unknown as { benchDone: unknown }).benchDone = done;
 }
 main().catch((e) => { out.textContent = 'ERR ' + (e?.stack ?? e); (window as unknown as { benchDone: unknown }).benchDone = String(e); });

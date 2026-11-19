@@ -88,17 +88,19 @@ function causticsTile() {
 /** Faint water light over the frame (added light only). */
 export function caustics(ctx: CanvasRenderingContext2D, t: number, amount = 1) {
   if (amount < 0.02) return;
-  if (gpuCaustics(ctx, t, amount, W, H)) return;
   const tl = causticsTile();
-  const pat = ctx.createPattern(tl, 'repeat');
-  if (!pat) return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
   // Two layers drifting in different directions; where they meet the light gathers, as in water.
   const layers: [number, number, number, number][] = [
     [3.2, 14, 9, 0.06],
     [2.3, -11, 7, 0.045],
   ];
+  const at = (sc: number, vx: number, vy: number, a: number): [number, number, number, number] =>
+    [(t * vx) % (256 * sc), (t * vy) % (256 * sc), sc, a * amount];
+  if (gpuCaustics(ctx, tl, layers.map(([sc, vx, vy, a]) => at(sc, vx, vy, a)), W, H)) return; // one cheap shader pass
+  const pat = ctx.createPattern(tl, 'repeat');
+  if (!pat) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
   for (const [scale, vx, vy, a] of layers) {
     ctx.save();
     ctx.globalAlpha = a * amount;
