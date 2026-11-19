@@ -57,8 +57,8 @@
 }
 
 * { box-sizing: border-box; }
-/* No stretch / bounce past the top or bottom of a page (Android 12+ stretched the whole view, tab bar included;
-   owner 2026-11-19: "navs shouldn't move"). Pull to sync on Me is our own, not the browser's. */
+/* No system stretch / bounce past the top or bottom of a page (Android 12+ stretched the whole view, tab bar included;
+   owner 2026-11-19: "I like the stretch, but not for nav"): src/ui/stretch.ts stretches the content alone. */
 html, body { overscroll-behavior-y: none; }
 html { -webkit-text-size-adjust: 100%; }
 body {
