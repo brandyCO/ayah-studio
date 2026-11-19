@@ -7,16 +7,13 @@ import { WARDROBE, type How } from '../ui/figure';
 import { shopAdd, shopHas } from './garden';
 import { streak } from './journey';
 import { nightsKept, QADR_NIGHTS } from './season';
+import { hijriDate } from './hijri';
 
 const STREAK: Partial<Record<How, number>> = { s7: 7, s30: 30, s100: 100, s365: 365 };
 
 export function hijri(d: Date): { month: number; day: number } | null {
-  try {
-    const p = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'numeric', day: 'numeric' }).formatToParts(d);
-    const n = (t: string) => parseInt(p.find((x) => x.type === t)?.value ?? '', 10);
-    const v = { month: n('month'), day: n('day') };
-    return Number.isInteger(v.month) && Number.isInteger(v.day) ? v : null;
-  } catch { return null; }
+  const v = hijriDate(d);
+  return v && { month: v.month, day: v.day };
 }
 /** The season on now, if any. */
 export function seasonNow(d = new Date()): How | null {

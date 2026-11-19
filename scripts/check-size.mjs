@@ -20,7 +20,9 @@ import { gzipSync } from 'node:zlib';
 // 2026-11-16: raised to 132 for 59 more recordings (131.6 KB: their entries in the reciter list, which the player and
 // the reciter pickers need at once).
 // 2026-11-16: raised to 134 for 49 more (batch 3, 133.0 KB).
-const BUDGET_KB = 134;
+// 2026-11-19: raised to 135 for the speed pass (requests that give up on a weak connection, early errors kept until
+// Sentry loads 8 s in instead of with the first screen: ~140 KB less on a first open). 134.3 KB.
+const BUDGET_KB = 135;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

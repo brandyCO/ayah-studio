@@ -42,8 +42,21 @@ export function sentry(): Promise<SentryMod | null> {
 
 export function initErrors() {
   if (!DSN || !import.meta.env.PROD) return;
-  const start = () => void sentry();
-  // After the first screen, so it never slows the start.
-  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 5000 });
-  else setTimeout(start, 3000);
+  // Sentry is ~140 KB: it downloads once the app has settled (8 s in, at a quiet moment), never alongside the first
+  // screen on a slow connection. Errors before that are kept here (up to 5) and sent once it is up.
+  const early: unknown[] = [];
+  const keep = (e: unknown) => { if (early.length < 5) early.push(e); };
+  const onError = (e: ErrorEvent) => keep(e.error ?? e.message);
+  const onReject = (e: PromiseRejectionEvent) => keep(e.reason);
+  addEventListener('error', onError);
+  addEventListener('unhandledrejection', onReject);
+  const start = () => void sentry().then((S) => {
+    removeEventListener('error', onError);
+    removeEventListener('unhandledrejection', onReject);
+    if (S) for (const e of early.splice(0)) S.captureException(e);
+  });
+  setTimeout(() => {
+    if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 5000 });
+    else start();
+  }, 8000);
 }

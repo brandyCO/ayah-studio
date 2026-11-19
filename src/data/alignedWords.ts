@@ -8,7 +8,7 @@
 // for the surahs whose ayah 1 lies in one juz, FFF = the first of them; the dev server serves the surah files.
 import { Capacitor } from '@capacitor/core';
 import { PUBLIC_URL } from '../cloud/config';
-import { FILES } from '../net';
+import { FILES, timedFetch } from '../net';
 import { hasAlignedWords, wordsKey, type Reciter } from './reciters';
 
 export type AyahWords = [number, number, number][];
@@ -49,7 +49,7 @@ async function wordsFile(path: string): Promise<Response> {
   const hit = await cache.match(url);
   if (hit) return hit;
   // Cloudflare first (no bandwidth limit), the Pages site when it does not answer; kept under the site's address.
-  const viaFiles = FILES ? await fetch(`${FILES}/${path.replace(/^\.\//, '')}`).catch(() => null) : null;
+  const viaFiles = FILES ? await timedFetch(`${FILES}/${path.replace(/^\.\//, '')}`, {}, 10000).catch(() => null) : null;
   const res = viaFiles?.ok ? viaFiles : await fetch(url);
   if (!res.ok) return res;
   await cache.put(url, res.clone());

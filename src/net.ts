@@ -29,6 +29,21 @@ export function installId(): string {
   }
 }
 
+/**
+ * fetch() that gives up: a connection that is "on" but passes nothing (weak signal, captive Wi-Fi, a lift) would
+ * otherwise hold a request for minutes, so screens wait and sync stalls. After `ms` (or at once when the phone says it
+ * is offline) the request fails like any network error, and callers fall back to what the phone keeps and try again
+ * later. An abort signal passed in still works.
+ */
+export function timedFetch(input: RequestInfo | URL, init: RequestInit = {}, ms = 15000): Promise<Response> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.reject(new TypeError('Failed to fetch (offline)'));
+  const ctl = new AbortController();
+  const outer = init.signal;
+  if (outer) { if (outer.aborted) ctl.abort(outer.reason); else outer.addEventListener('abort', () => ctl.abort(outer.reason), { once: true }); }
+  const t = setTimeout(() => ctl.abort(new DOMException('The connection is too slow', 'TimeoutError')), ms);
+  return fetch(input, { ...init, signal: ctl.signal }).finally(() => clearTimeout(t));
+}
+
 /** `ms` spread randomly between half and one and a half times, so phones don't act in step. */
 export const jitter = (ms: number) => Math.round(ms * (0.5 + Math.random()));
 
@@ -60,9 +75,7 @@ export function remoteConfig(): Promise<RemoteConfig> {
     } catch { /* no storage */ }
     if (!EDGE) return DEFAULTS;
     try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 3000);
-      const r = await fetch(`${EDGE}/config`, { signal: ctl.signal }).finally(() => clearTimeout(t));
+      const r = await timedFetch(`${EDGE}/config`, {}, 3000);
       if (!r.ok) return DEFAULTS;
       const v = clean(await r.json());
       try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), v })); } catch { /* ignore */ }

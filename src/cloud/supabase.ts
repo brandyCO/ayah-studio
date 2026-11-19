@@ -2,6 +2,12 @@
 // before, or is coming back from Google's sign-in page. Everyone else never downloads it.
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
+import { timedFetch } from '../net';
+
+// Every database / sign-in call gives up after a while instead of hanging on a weak connection (sync then backs off and
+// retries; screens keep showing what the phone has). File uploads (voice clips) get longer.
+const giveUp = (input: RequestInfo | URL) => (String(input instanceof Request ? input.url : input).includes('/storage/v1/') ? 120000 : 20000);
+const patientFetch: typeof fetch = (input, init) => timedFetch(input, init, giveUp(input));
 
 let client: Promise<SupabaseClient> | null = null;
 
@@ -9,6 +15,7 @@ export function supabase(): Promise<SupabaseClient> {
   client ??= import('@supabase/supabase-js').then(({ createClient }) =>
     createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      global: { fetch: patientFetch },
     }));
   client.catch(() => (client = null));
   return client;

@@ -6,6 +6,7 @@ import { icon } from './icons';
 import { h } from './dom';
 import { t } from '../i18n';
 import { touchPref } from './prefs';
+import { hijriDate } from '../data/hijri';
 
 // --- margin marks ---
 export interface Mark {
@@ -84,15 +85,8 @@ export function applyTimeTint() {
 // --- Ramadan ---
 /** Today's date in the Umm al-Qura calendar (null if the browser lacks it). */
 export function hijriToday(date = new Date()): { month: number; day: number } | null {
-  try {
-    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'numeric', day: 'numeric' }).formatToParts(date);
-    const num = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-    const month = num('month');
-    const day = num('day');
-    return Number.isInteger(month) && Number.isInteger(day) ? { month, day } : null;
-  } catch {
-    return null;
-  }
+  const v = hijriDate(date);
+  return v && { month: v.month, day: v.day };
 }
 /** Day of Ramadan, with the user's moon-sighting shift and the Ramadan-mode preview (T7). */
 export const ramadanDay = (date = new Date()): number | null => ramadanNow(date).day;

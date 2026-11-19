@@ -6,7 +6,7 @@
 // endpoint, so nobody downloads the Supabase client for this. Nothing about the person is sent:
 // only the reciter id and the ayah range of an exported reel.
 import { SUPABASE_KEY, SUPABASE_URL } from '../cloud/config';
-import { EDGE, installId, remoteConfig } from '../net';
+import { EDGE, installId, remoteConfig, timedFetch } from '../net';
 import { RECITERS } from './reciters';
 
 const base = import.meta.env.BASE_URL;
@@ -28,7 +28,7 @@ export async function recordReel(reciterId: number, surah: number, from: number,
     if (!(await remoteConfig()).popular) return;
     // text/plain: a "simple" request, so no extra preflight round trip.
     // An older proxy without /reel answers 404/405: count directly then.
-    const viaEdge = EDGE ? await fetch(`${EDGE}/reel?i=${installId()}`, { method: 'POST', body: JSON.stringify({ r: reciterId, s: surah, a: from, b: to }) })
+    const viaEdge = EDGE ? await timedFetch(`${EDGE}/reel?i=${installId()}`, { method: 'POST', body: JSON.stringify({ r: reciterId, s: surah, a: from, b: to }) })
       .then((r) => r.ok || r.status === 429 || r.status === 400, () => false) : false;
     if (!viaEdge) await rpc('record_reel', { reciter_id: reciterId, s: surah, a_from: from, a_to: to });
   } catch {
@@ -59,7 +59,7 @@ export function loadPopular(): Promise<Popular> {
       remoteConfig().then(async (c) => {
         if (!c.popular) return null;
         // An older proxy without /popular: ask the database directly.
-        const r = EDGE ? await fetch(`${EDGE}/popular`).catch(() => null) : null;
+        const r = EDGE ? await timedFetch(`${EDGE}/popular`, {}, 8000).catch(() => null) : null;
         return r?.ok ? r : rpc('popular_this_week');
       })
         .then((r) => (r?.ok ? r.json() : null)).catch(() => null) as Promise<{ reciters?: { id: unknown }[]; ayat?: { key: unknown }[] } | null>,

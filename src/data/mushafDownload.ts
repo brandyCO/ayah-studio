@@ -9,7 +9,7 @@
 // For a large crowd: it can be switched off remotely (`mushafDownload`), and when the server says it is
 // busy or failing it rests 5–15 minutes.
 import { Capacitor } from '@capacitor/core';
-import { PAGE_COUNT, keepPageFont, pageFontKept } from './mushaf';
+import { PAGE_COUNT, keepPageFont, keptPageFonts } from './mushaf';
 import { remoteConfig } from '../net';
 
 const DONE = 'mushafKept';
@@ -50,8 +50,7 @@ export function mushafProgress(): MushafProgress {
 /** Count the pages already on this device (for the progress shown before a run). */
 export async function countMushafKept() {
   if (kept >= 0 || mushafKept()) return;
-  let n = 0;
-  for (let p = 1; p <= PAGE_COUNT; p++) if (await pageFontKept(p)) n++;
+  const n = (await keptPageFonts()).size;
   if (kept < 0) { kept = n; changed(); }
 }
 const changed = () => window.dispatchEvent(new Event('mushaf-download'));
@@ -103,8 +102,9 @@ async function run() {
   changed();
   try {
     if (!(await remoteConfig()).mushafDownload) return;
+    const have = await keptPageFonts();
     const left = new Set<number>();
-    for (let p = 1; p <= PAGE_COUNT; p++) if (!(await pageFontKept(p))) left.add(p);
+    for (let p = 1; p <= PAGE_COUNT; p++) if (!have.has(p)) left.add(p);
     kept = PAGE_COUNT - left.size;
     changed();
     while (left.size) {
