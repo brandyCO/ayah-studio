@@ -122,6 +122,7 @@ async function route() {
     cleanup = back.c;
     shownTab = keepKey;
     back.el.dispatchEvent(new Event('screen-shown'));
+    void import('./ui/tabs').then((m) => m.hopKept(back.el));
     return;
   }
   const screen = h('div', { class: `screen screen-${view || 'home'}` });

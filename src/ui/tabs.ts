@@ -46,6 +46,15 @@ export function takeTabIntent(): Intent | null {
 let hopTo: Tab | 0 = 0;
 const hopNext = (id: Tab) => { hopTo = id; };
 const hopped = (id: Tab) => hopTo === id && !(hopTo = 0);
+/** A kept tab shown again (main.ts): its bar is the one drawn before, so the tapped tab hops here. */
+export function hopKept(screen: HTMLElement) {
+  const b = screen.querySelector<HTMLElement>('.tabbar .tab-btn.on');
+  const id = (['read', 'learn', 'create', 'ranks', 'me'] as string[]).find((x) => b?.classList.contains(x)) as Tab | undefined;
+  if (!b || !id || !hopped(id)) return;
+  b.classList.remove('hop');
+  void b.offsetWidth;
+  b.classList.add('hop');
+}
 
 export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLElement {
   const btn = (id: Tab, ic: string, label: string, act: () => void) =>

@@ -438,6 +438,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       // A tap greets you, then goes into the room.
       a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
+      // Me kept alive between tab taps (main.ts): it greets you again each time you come back to it.
+      root.addEventListener('screen-shown', () => setTimeout(() => { if (a.el.isConnected) (look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()); }, 250));
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
       // It reacts to how today is going (front-end backlog): proud once the flame is lit by reading, a look over at
       // the flame in the evening while it still waits, and calm (never sad) when the flame went out.
