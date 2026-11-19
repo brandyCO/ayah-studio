@@ -38,7 +38,8 @@ public class AppActivity extends BridgeActivity {
     private static final long WAIT_PICTURE = 2500, MAX_SPLASH = 6000, MAX_OPENING = 9000;
     // res/raw/opening.webp holds only the box the character moves in (scripts/opening_anim.py --webp prints these):
     // the whole frame is FULL_W x FULL_H, the stored part starts at CROP_X, CROP_Y. Smaller frames decode faster.
-    private static final int OPENING_FULL_W = 720, OPENING_FULL_H = 602, OPENING_CROP_X = 112, OPENING_CROP_Y = 116;
+    private static final int OPENING_FULL_W = 720, OPENING_FULL_H = 602, OPENING_CROP_X = 112, OPENING_CROP_Y = 116,
+        OPENING_CROP_W = 496, OPENING_CROP_H = 462;
     private volatile AnimatedImageDrawable opening = null;
     private volatile boolean noPicture = false;
 
@@ -181,7 +182,9 @@ public class AppActivity extends BridgeActivity {
         view.setImageDrawable(pic);
         pic.setRepeatCount(0); // once, then he holds the last frame
         DisplayMetrics m = getResources().getDisplayMetrics();
-        int cw = Math.max(1, pic.getIntrinsicWidth()), ch = Math.max(1, pic.getIntrinsicHeight());
+        // The stored picture's own pixels: getIntrinsicWidth() of a res/raw picture is scaled by the screen density
+        // (raw counts as 160 dpi), so on a 3x phone it was three times too big and only part of him showed.
+        int cw = OPENING_CROP_W, ch = OPENING_CROP_H;
         float ratio = (float) OPENING_FULL_H / OPENING_FULL_W;
         int w = (int) Math.min(m.widthPixels * 0.94f, m.heightPixels * 0.66f / ratio); // the whole frame's width on screen
         float s = (float) w / OPENING_FULL_W;

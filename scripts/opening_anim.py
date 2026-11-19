@@ -1243,7 +1243,7 @@ def main():
         ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=70, method=6,
                     minimize_size=True, allow_mixed=True)
         print(OUT, OUT.stat().st_size, 'bytes,', len(ims), 'frames of', len(crop))
-        print(f'AppActivity: OPENING_FULL = {{ {full[0].width}, {full[0].height} }}, OPENING_CROP = {{ {x0}, {y0} }}')
+        print(f'AppActivity: OPENING_FULL = {{ {full[0].width}, {full[0].height} }}, OPENING_CROP = {{ {x0}, {y0} }}, OPENING_CROP_W/H = {{ {x1 - x0}, {y1 - y0} }}')
 
 
 if __name__ == '__main__':
