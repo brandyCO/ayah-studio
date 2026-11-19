@@ -3,7 +3,6 @@
    is tapped open, light pours up and the prizes come out one by one */
 .cel-stage .cel-chest { position: absolute; inset: 8%; width: 84%; height: 84%; overflow: visible; }
 .cel-chest-rays { position: absolute; inset: -30%; pointer-events: none; opacity: 0; border-radius: 50%;
-  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rw-hi) 55%, transparent) 0 7deg, transparent 7deg 22deg);
   -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%); mask: radial-gradient(circle, #000 18%, transparent 66%); }
 .cel-chest-beam { position: absolute; left: 50%; bottom: 46%; width: 46%; height: 120%; translate: -50% 0; pointer-events: none; opacity: 0;
   transform-origin: 50% 100%; background: linear-gradient(to top, color-mix(in srgb, var(--rw-core) 90%, transparent), color-mix(in srgb, var(--rw-hi) 30%, transparent) 55%, transparent);
@@ -13,17 +12,17 @@
 /* Tapped open by hand: the chest nudges now and then until the first tap; each tap jolts it (WAAPI on
    .cel-chest-jolt), lights another crack and lets more light out of the seam (--crack 0 → 1). */
 .cel-chest .cel-stage { width: min(62vw, 240px); }
-.cel-chest-jolt { position: absolute; inset: 0; transform-origin: 50% 88%; }
+.cel-chest-jolt, .cel-chest-nudge { position: absolute; inset: 0; transform-origin: 50% 88%; }
 .cel-chest-jolt > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .cel-chest-jolt > .ck-art { position: absolute; left: 0; top: 50%; width: 100%; translate: 0 -50%; }
-.cel-chest.go:not(.tapped) .cel-chest-jolt { animation: cel-nudge 2.4s 1.2s ease-in-out infinite; }
+.cel-chest.go:not(.tapped) .cel-chest-nudge { animation: cel-nudge 2.4s 1.2s ease-in-out infinite; }
 @keyframes cel-nudge { 0%, 70%, 100% { translate: 0 0; rotate: 0deg; } 76% { translate: 0 -7px; rotate: -4deg; } 84% { translate: 0 -3px; rotate: 4deg; } 92% { translate: 0 0; rotate: -1.5deg; } }
 .cel-chest-hit { position: absolute; inset: 4%; z-index: 3; border: 0; border-radius: 28px; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cel-chest-hit:focus-visible { outline: 2px solid color-mix(in srgb, var(--rw-n3) 45%, transparent); outline-offset: 4px; }
 .cel-chest.opened .cel-chest-hit { display: none; }
 .cel-chest .cel-chest-box:not(.open) .ck-mouth { opacity: calc(var(--crack, 0) * .8); }
 .cel-crack path { fill: none; stroke: var(--rw-core); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 2px var(--rw-hi)); transition: stroke-dashoffset .3s ease-out; }
+  transition: stroke-dashoffset .18s ease-out; }
 .cel-crack path.on { stroke-dashoffset: 0; }
 .cel-crack .seam { stroke-dasharray: none; stroke-dashoffset: 0; stroke-width: 2; opacity: calc(var(--crack, 0) * .95); }
 .cel-chest-box.open .cel-crack { opacity: 0; transition: opacity .3s; }
@@ -48,10 +47,13 @@
 @keyframes cel-halo { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: 1; } 100% { opacity: .45; transform: none; } }
 .cel-loot-it.rare .cel-loot-art { border-color: #ffe08a; box-shadow: 0 0 18px rgba(255, 224, 138, .45); }
 .cel-loot-lb { font-size: var(--fs-xs); font-weight: 700; line-height: 1.25; color: var(--rw-core); }
-.cel-loot-lb b { font-variant-numeric: tabular-nums; }
+.cel-loot-lb b { display: inline-block; font-variant-numeric: tabular-nums; }
 .cel-orb { width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #fff 0 16%, var(--rw-hi) 42%, var(--rw-n2) 68%, transparent 72%);
   box-shadow: 0 0 18px 4px color-mix(in srgb, var(--rw-n3) 50%, transparent); animation: cel-orb 2.6s ease-in-out infinite; }
 @keyframes cel-orb { 50% { transform: scale(1.1); } }
+/* Never animate what is not shown: a loop on a hidden element has no layer and ticks on the main thread every
+   frame (the waiting chest's cost on slow phones). */
+.cel-loot-it:not(.in) .cel-orb { animation: none; }
 /* The words and the button wait until everything is out of the chest */
 .cel-chest:not(.revealed) :is(.cel-text, .cel-text *, .cel-ok) { visibility: hidden; animation: none !important; }
 .cel-chest .cel-kicker { animation-delay: 0s; } .cel-chest .cel-text h2 { animation-delay: .08s; }
@@ -63,7 +65,11 @@
 .cel-chest-box.open .ck-aura { opacity: 1; animation: spin 22s linear infinite; }
 .cel-chest-box.open .ck-glints { opacity: 1; }
 .cel-chest-box.open .ck-glints .ck-gl { animation: ck-glint 1.6s calc(var(--i) * .3s) ease-in-out infinite; }
-.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both, spin 26s linear infinite; }
+/* Two motions, two layers: the rays grow in on the outer one and turn on the inner one. */
+.cel-chest-rays > i { position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rw-hi) 55%, transparent) 0 7deg, transparent 7deg 22deg); }
+.cel-stage.opened .cel-chest-rays { animation: cel-rays-in 1s ease-out both; }
+.cel-stage.opened .cel-chest-rays > i { animation: spin 26s linear infinite; }
 .cel-stage.opened .cel-chest-beam { animation: cel-beam 1.8s ease-out both; }
 @keyframes cel-chest-in { from { transform: translateY(-60px) scale(.4); opacity: 0; } 60% { opacity: 1; } to { transform: none; } }
 @keyframes cel-chest-pop { 0% { transform: scale(.92, 1.08); } 40% { transform: scale(1.12, .9); } 100% { transform: none; } }

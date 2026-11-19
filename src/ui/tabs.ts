@@ -45,11 +45,16 @@ export function takeTabIntent(): Intent | null {
   } catch { return null; }
 }
 
+// The tab just tapped hops when its screen opens (each screen draws its own bar, so it is handed over).
+let hopTo: Tab | 0 = 0;
+const hopNext = (id: Tab) => { hopTo = id; };
+const hopped = (id: Tab) => hopTo === id && !(hopTo = 0);
+
 export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLElement {
   const btn = (id: Tab, ic: string, label: string, act: () => void) =>
     h('button', {
-      class: `tab-btn ${id}${id === active ? ' on' : ''}${id === 'me' && rewardWaiting() ? ' has-dot' : ''}`, 'aria-current': id === active ? 'page' : false,
-      onclick: () => { haptic(); act(); },
+      class: `tab-btn ${id}${id === active ? ' on' : ''}${id === active && hopped(id) ? ' hop' : ''}${id === 'me' && rewardWaiting() ? ' has-dot' : ''}`, 'aria-current': id === active ? 'page' : false,
+      onclick: () => { haptic(); if (id !== active) hopNext(id); act(); },
     }, icon(ic, 24), h('span', {}, label));
   return h('nav', { class: `tabbar${auto ? ' auto' : ''}`, 'aria-label': t('tab.nav') },
     // Listening from another screen: Read goes back to the page being recited.

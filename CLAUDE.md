@@ -2361,6 +2361,22 @@ duas/reflections section in Me.
       flies the emblem into the league card and the real rows spring in one after another, the user's last. Later visits
       paint from the cache at once. A claim tap no longer loads the moment: Me warms `celebrate`, the sound engine and the
       badge art while idle once a claim card shows (`warmClaim()`)
+- [x] M31 Motion engine + chest smoothness (owner request 2026-11-19, "optimize the engine … Duolingo style to the max"):
+      `src/ui/juice.ts` — named feels (`FEEL`: snappy, bouncy, jelly, heavy, gentle), springs simulated once and memoised,
+      `drop` (falls stretched, squashes on impact, rebounds, jelly settle), `rise`, `stagger`, `wobble`, `anticipate`.
+      **One motion per layer**: every scripted move is noted per element (Element.animate wrapped once) so `own(el)` stops the
+      last one without asking the browser (getAnimations() restyled the page, 20–40 ms a tap on a slow phone) and `takeOver(el)`
+      starts the next from the current pose; CSS idle loops keep their own layers and scripted moves get the ones inside or
+      around them (actor `fg-hn` head, `fg-ln` lean, `fg-sh > i` shadow; Noor `nr-hop`, `nr-flare`; chest `cel-chest-nudge`;
+      the rays turn on an inner layer). No loops on hidden things (`.cel-loot-it:not(.in) .cel-orb`), sparkles placed in
+      percentages (no size reads), positions read before changes, faces switched only on the head's copy, the page behind a
+      moment brought back while the prizes are read (`uncover()`), not at Continue. Chest at 6× CPU (headless): raster
+      529 → 240 ms, layerize 619 → 430 ms over 9 s. **Press boing** (`src/ui/press.ts`, lazy): what was tapped springs back past
+      its size on release (`scale`; not on the mushaf, studio or Kids); the tab just tapped hops when its screen opens
+      (`.tab-btn.hop`). **Stretch without the nav** (owner: "I like the stretch, but not for nav"): the system overscroll is off
+      (`overscroll-behavior-y: none`, `OVER_SCROLL_NEVER` in `AppActivity`) and `src/ui/stretch.ts` stretches only the screen's
+      scrolling parts from the edge pulled past (fixed / sticky bars stay), springing back on release. Welcome to your league
+      uses the engine (`drop`, `rise`, `stagger`)
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

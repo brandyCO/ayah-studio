@@ -2,6 +2,7 @@
    body; feeling shown only by light. It breathes and bobs while it waits; hops and flares are WAAPI. */
 .noor-sprite { position: absolute; z-index: 3; width: 44px; height: 44px; pointer-events: none; --nr: 0; }
 .noor-sprite .nr-body { position: absolute; inset: 0; display: block; animation: nr-bob 2.6s ease-in-out infinite; }
+.noor-sprite .nr-hop, .noor-sprite .nr-flare { position: absolute; inset: 0; display: block; }
 .noor-sprite .nr-halo { position: absolute; inset: -60%; border-radius: 50%; opacity: calc(.75 + var(--nr) * .25);
   background: radial-gradient(circle, color-mix(in srgb, var(--rw-hi, #ffe8a8) 70%, transparent) 0, color-mix(in srgb, var(--rw-n3, #3dd1ad) 30%, transparent) 38%, transparent 68%);
   animation: nr-breathe 2.6s ease-in-out infinite; }

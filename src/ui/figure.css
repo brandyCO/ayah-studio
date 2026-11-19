@@ -139,13 +139,15 @@ dialog.fb[open] { animation: fb-in .28s cubic-bezier(.2, .9, .3, 1.1); }
 /* Layered actor (actor.ts `layer()`): the shadow, the whole-body moves and the breathing bob are HTML layers the
    compositor moves without repainting; the SVG's own shadow and bob are switched off so the picture is the same. */
 .fg-lay { position: relative; display: block; flex: none; }
-.fg-lay > .fg-mv, .fg-lay .fg-bb { display: block; transform-origin: 50% 95.42%; }
+.fg-lay > .fg-mv, .fg-lay .fg-ln, .fg-lay .fg-bb { display: block; transform-origin: 50% 95.42%; }
 .fg-lay .fg-bb { animation: fg-bob-l 3.2s ease-in-out infinite; }
 .fg-lay.sleepy .fg-bb { animation-duration: 6s; }
 .fg-lay svg .fg-bob { animation: none; }
 .fg-lay svg .fg-shadow { display: none; }
-.fg-lay > .fg-sh { position: absolute; left: 19%; width: 62%; top: 91.98%; height: 6.87%; border-radius: 50%; background: #000; opacity: .3;
+.fg-lay > .fg-sh { position: absolute; left: 19%; width: 62%; top: 91.98%; height: 6.87%; opacity: .3;
   animation: fg-shadow 3.2s ease-in-out infinite; }
+/* The shadow's shape on its own layer inside the breathing one, squashed by hops (one motion per layer). */
+.fg-lay > .fg-sh > i { position: absolute; inset: 0; border-radius: 50%; background: #000; }
 @keyframes fg-bob-l { 50% { transform: translateY(-1.145%) scale(1.01, .99); } }
 @media (prefers-reduced-motion: reduce) { .fg-lay .fg-bb, .fg-lay > .fg-sh { animation: none; } }
 html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: paused !important; }
@@ -164,6 +166,10 @@ html.lite .fg-actor .fg-bb, html.lite .fg-actor .fg-sh { animation-play-state: p
 .fg-lay svg .fg-head, .fg-lay svg .fg-wave-arm { animation: none; }
 .fg-lay .fg-hd { transform-origin: 50% 57.25%; animation: fg-sway-l 7.4s ease-in-out infinite; }
 .fg-lay.kid .fg-hd { transform-origin: 50% 64.89%; }
+/* Nods, glances and gestures move the head on this layer inside the sway. */
+.fg-lay .fg-hn { position: absolute; inset: 0; display: block; transform-origin: 50% 57.25%; }
+.fg-lay.kid .fg-hn { transform-origin: 50% 64.89%; }
+.fg-lay .fg-hn > svg { display: block; width: 100%; height: auto; }
 /* Individual rotate / translate properties: Chrome re-layers the page every frame for an animated rotate() in
    `transform`, not for the `rotate` property (measured). */
 /* `transform`, not the `rotate` / `translate` properties: Chromium ran those on the main thread here (~20 % of a

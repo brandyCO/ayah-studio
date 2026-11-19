@@ -4,7 +4,7 @@
 // beat each. Every gesture is a set of targets that springs chase (overshoot, follow-through), simulated once and
 // played as Web Animations keyframes on the HTML layers of `layer()` (actor.ts), so the compositor moves them
 // without repainting. Reduced motion: nothing moves.
-import { reduced } from './juice';
+import { own, reduced } from './juice';
 
 /** Channels a gesture drives. Arms: upper arm and forearm in degrees away from the body (0 = hanging at rest; the
  *  forearm is turned about the elbow on top of the upper arm). Body: squash (−0.1 = 10 % shorter), lift (view-box
@@ -139,8 +139,10 @@ export function gesture(root: Element, name: Gesture, face?: (xp: string | null,
   stop(root);
   const q = (sel: string) => lay.querySelector<HTMLElement>(sel);
   const anims: Animation[] = [];
-  const play = (el: HTMLElement | null, frames: Keyframe[], composite: CompositeOperation = 'replace') => {
-    if (el) anims.push(el.animate(frames, { duration: ms, easing: 'linear', composite }));
+  // Each part takes over its own layer: a move left there (a hop, a nod) stops, so the layer keeps one motion
+  // and the graphics chip runs it (motion engine pass 2026-11-19).
+  const play = (el: HTMLElement | null, frames: Keyframe[]) => {
+    if (el) { own(el); anims.push(el.animate(frames, { duration: ms, easing: 'linear' })); }
   };
   const n = F.sq.length;
   const fr = <T extends Keyframe>(f: (i: number) => T) => Array.from({ length: n }, (_, i) => f(i));
@@ -157,9 +159,9 @@ export function gesture(root: Element, name: Gesture, face?: (xp: string | null,
     const sy = 1 + F.sq[i], sx = 1 / Math.sqrt(Math.max(0.5, sy));
     return { transform: `translateY(${pct(-F.lift[i], 262)}) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` };
   }));
-  // The head on top of its own idle sway (added, not replaced); a squashed body squashes the head less.
-  play(q('.fg-hd'), fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` })), 'add');
-  play(lay.querySelector<HTMLElement>(':scope > .fg-sh'), fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` })));
+  // The head on its own layer inside its idle sway; a squashed body squashes the head less.
+  play(q('.fg-hn'), fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` })));
+  play(lay.querySelector<HTMLElement>(':scope > .fg-sh > i'), fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` })));
   if (s.face && face) face(s.face, ms * 0.85);
   const t = window.setTimeout(() => { lay.classList.remove('rigging'); playing.delete(root); }, ms);
   playing.set(root, { anims, t });

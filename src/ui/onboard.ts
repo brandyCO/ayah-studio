@@ -13,6 +13,7 @@ import { LANGS } from '../i18n/langs';
 import { actor, myFigureCode, type Actor } from './actor';
 import { h, haptic } from './dom';
 import { DEFAULT, encode, normalize, parse } from './figure';
+import { own } from './juice';
 import { flame } from './flame';
 import { goalText } from './goalName';
 import { icon } from './icons';
@@ -83,13 +84,14 @@ export function openOnboarding(resumed = false) {
     if (reduced()) { el.textContent = text; return; }
     const spans = words.map((w) => h('span', { class: /\S/.test(w) ? 'ob-w' : '' }, w));
     el.append(...spans);
-    const head = a?.el.querySelector('.fg-hd');
+    const head = a?.el.querySelector('.fg-hn');
     let k = 0;
     const next = () => {
       while (k < spans.length && !spans[k].classList.contains('ob-w')) k++;
       if (k >= spans.length) { a?.face('happy', 1200); return; }
       spans[k++].classList.add('on');
       a?.face(k % 4 === 1 ? 'wow' : 'happy', 0);
+      if (head) own(head);
       head?.animate([{ translate: '0 0' }, { translate: '0 -1.4%' }, { translate: '0 0' }], { duration: 190, easing: 'ease-out' });
       typing = window.setTimeout(next, 72);
     };
