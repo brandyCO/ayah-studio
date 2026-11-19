@@ -494,12 +494,18 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
   const idle = (f: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(f, { timeout: 600 }); else setTimeout(f, 120); };
   /** Show `page` with its neighbours at once (placeholders for pages still loading). */
+  // The first layout of this visit shows the page alone; its neighbours are fitted and put beside it right after that
+  // frame is painted, so opening Read draws one page, not three (speed pass 3: each fit measures its page).
+  let neighboursLater = true;
   function layout() {
     const id = ++renderId;
     const want = [page - 1, page, page + 1].filter(valid);
+    let show = neighboursLater && built.has(page) ? [page] : want;
+    if (show !== want) requestAnimationFrame(() => setTimeout(() => { show = want; attach(); }, 0));
+    neighboursLater = false;
     const attach = () => {
       if (id !== renderId) return;
-      const els = want.map((p) => built.get(p) ?? placeholder(p));
+      const els = show.map((p) => built.get(p) ?? placeholder(p));
       // Pages two away stay in the strip once prepared (hidden, already fitted), so a page that
       // becomes a neighbour after a flip needs no layout work then. Nothing already in place moves.
       const keep = new Set<Element>(els);
