@@ -1052,7 +1052,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     swipeOff = new AbortController();
     const sig = { signal: swipeOff.signal };
     document.addEventListener('pointerdown', (e) => {
-      if (!root.isConnected || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
+      if (!root.isConnected || root.hidden || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
       id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; axis = ''; moved = false;
     }, sig);
     document.addEventListener('pointermove', (e) => {
@@ -1087,6 +1087,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     root.style.touchAction = 'pan-y';
     document.documentElement.style.touchAction = 'pan-y';
     swipeOff.signal.addEventListener('abort', () => { document.documentElement.style.touchAction = ''; });
+    // Kept alive while another tab shows (main.ts): the page's swipe setting goes with it and comes back with it.
+    root.addEventListener('screen-hidden', () => { document.documentElement.style.touchAction = ''; }, sig);
+    root.addEventListener('screen-shown', () => { document.documentElement.style.touchAction = 'pan-y'; }, sig);
     arrange([]);
   }
 
@@ -1125,7 +1128,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();
   const poll = async () => {
     if (stopped) return;
-    if (!document.hidden && account() && !document.querySelector('dialog[open], .cel')) {
+    // A kept tab (hidden while another tab shows, main.ts) asks nothing until it is shown again.
+    if (!document.hidden && !root.hidden && account() && !document.querySelector('dialog[open], .cel')) {
       try {
         await report();
         // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when
@@ -1146,7 +1150,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Back from another app or a sheet, or a tab switched: look again soon.
   const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
   document.addEventListener('visibilitychange', wake);
-  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
+  root.addEventListener('screen-shown', wake);
+  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */

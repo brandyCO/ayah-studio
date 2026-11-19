@@ -1280,12 +1280,15 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
   const paintAll = () => { queued = 0; paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
-  const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
+  // Kept alive while another tab shows (main.ts): nothing is painted then; it catches up when shown again.
+  const refresh = () => { if (!root.hidden && !queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
-  const secTick = window.setInterval(() => { if (!document.hidden) paintResets(); }, 1000);
+  const tick = window.setInterval(() => { if (!document.hidden && !root.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
+  const secTick = window.setInterval(() => { if (!document.hidden && !root.hidden) paintResets(); }, 1000);
+  const onShown = () => { paintAll(); paintResets(); void paintPrayer(); void paintSky(); paintSync(); };
+  root.addEventListener('screen-shown', onShown);
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();
