@@ -15,7 +15,10 @@ import {
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
   StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse, isKept,
+  keptSince,
 } from '../together/ranks';
+import { updatedNote } from './updatedAgo';
+import { isOffline } from '../together/outbox';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
 import { star } from './lightChip';
@@ -183,7 +186,11 @@ const VIEWS: PaneView[] = ['league', 'friends', 'global'];
 interface Pane { el: HTMLElement; inn: HTMLElement; head: HTMLElement; body: HTMLElement; o: number; t: number; y: number; painted: boolean; stale: boolean }
 
 export async function showRanks(root: HTMLElement): Promise<() => void> {
-  setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200); // a friend streak milestone waiting
+  // Built ahead while idle (main.ts, speed pass 3): kept hidden, painted only from what this phone kept; nothing asked,
+  // moved, played or scrolled until it is shown.
+  const hidden = () => root.classList.contains('screen-kept') || root.classList.contains('screen-warm');
+  const whenShown = (f: () => void) => { if (hidden()) root.addEventListener('screen-shown', f, { once: true }); else f(); };
+  whenShown(() => setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200)); // a friend streak milestone waiting
   // Three tabs (owner 2026-11-18): League · Friends · Global; My boards and challenges sit inside Friends.
   let view: View = (() => { try { const v = (sessionStorage.getItem('rankView') as View) || 'league'; return v === 'boards' ? 'friends' : v; } catch { return 'league'; } })();
   let allTime = false;
@@ -315,7 +322,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
           h('span', { class: 'rk-hero-em', 'aria-hidden': 'true' }, tierEmblem(s.tier) as unknown as Node),
           h('div', { class: 'rk-hero-txt' },
             h('h2', { class: 'rk-hero-title' }, rt('rk.leagueTitle', { tier: tierName(s.tier) })),
-            h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends)),
+            h('p', { class: 'rk-hero-sub' }, rt('rk.zoneUp'), ' · ', ends),
+            // Offline or not fresh: when this league was last brought from the server (offline-first, 2026-11-19).
+            updatedNote(() => keptSince('league', 'status'))),
           h('button', { class: 'rk-hero-pts', onclick: openHow, 'aria-label': `${num(s.week)} ${rt('rk.ptsWeek')}. ${rt('rk.info')}` },
             pts(s.week, false), h('span', { class: 'rk-hero-pts-i', 'aria-hidden': 'true' }, 'i'))),
         isRankFriday() ? h('span', { class: 'rk-x2' }, rt('rk.fridayX2')) : '')),
@@ -872,7 +881,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (now == null) return;
     const gain = shownPts == null ? 0 : now - shownPts;
     shownPts = now;
-    if (gain <= 0) return;
+    if (gain <= 0 || hidden()) return;
     const row = body.querySelector<HTMLElement>('.rk-row.me');
     const score = row?.querySelector<HTMLElement>('.rk-score');
     if (row && score && metric === 'all') {
@@ -887,7 +896,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // shows on a visit, the list scrolls so your row sits in the middle with the players just above and below you.
   let onMe = false;
   function openOnMe() {
-    if (onMe || view !== 'league') return;
+    if (onMe || view !== 'league' || hidden()) return;
     const row = body.querySelector<HTMLElement>('.rk-row.me');
     if (!row) return;
     onMe = true;
@@ -950,6 +959,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       openOnMe();
     } catch (e) {
       if (e instanceof StaleMiss) return;
+      // No connection (offline-first, 2026-11-19): what this phone kept stays on screen with its "Offline · 5 min ago"
+      // note in the hero; the poll and the `online` event bring the fresh answers when the connection is back.
+      if ((isOffline(e) || navigator.onLine === false) && panes[key(view)].painted) return;
       if (id === paintId) body.replaceChildren(h('p', { class: 'muted' }, rt('rk.offline')), h('button', { class: 'chip', onclick: () => void paint(true) }, t('common.reload')));
     }
   }
@@ -966,10 +978,14 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   };
   async function open() {
     if (!account()) { signedOut(); return; }
-    if (!isKept('league') && !isKept('status')) { const p = paint(true); firstLoad(p); await p; warmPanes(); return; }
+    if (!isKept('league') && !isKept('status')) {
+      if (hidden()) { whenShown(() => void open()); return; } // nothing kept to show yet: all of it once it is opened
+      const p = paint(true); firstLoad(p); await p; warmPanes(); return;
+    }
     fromKept = true;
     try { await staleFirst(() => paint(false)); } finally { fromKept = false; }
     warmPanes(); // the other tabs from what is kept, before the fresh answers
+    if (hidden()) await new Promise<void>((r) => whenShown(r)); // built ahead: the fresh answers when it is opened
     await paint(true);
     warmPanes();
   }
@@ -1052,7 +1068,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     swipeOff = new AbortController();
     const sig = { signal: swipeOff.signal };
     document.addEventListener('pointerdown', (e) => {
-      if (!root.isConnected || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
+      if (!root.isConnected || root.classList.contains('screen-kept') || busy || !tabs.childElementCount || e.pointerType === 'mouse' || skip(e.target)) return;
       id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; axis = ''; moved = false;
     }, sig);
     document.addEventListener('pointermove', (e) => {
@@ -1085,8 +1101,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     document.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, { capture: true, signal: swipeOff.signal });
     // The whole screen takes the swipe, also below a short list (the page itself stays scrollable up and down).
     root.style.touchAction = 'pan-y';
-    document.documentElement.style.touchAction = 'pan-y';
-    swipeOff.signal.addEventListener('abort', () => { document.documentElement.style.touchAction = ''; });
+    if (!hidden()) document.documentElement.style.touchAction = 'pan-y'; // built ahead: set when it is shown (below)
+    swipeOff.signal.addEventListener('abort', () => { if (!hidden()) document.documentElement.style.touchAction = ''; });
+    // Kept alive while another tab shows (main.ts): the page's swipe setting goes with it and comes back with it.
+    root.addEventListener('screen-hidden', () => { document.documentElement.style.touchAction = ''; }, sig);
+    root.addEventListener('screen-shown', () => { document.documentElement.style.touchAction = 'pan-y'; }, sig);
     arrange([]);
   }
 
@@ -1125,7 +1144,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();
   const poll = async () => {
     if (stopped) return;
-    if (!document.hidden && account() && !document.querySelector('dialog[open], .cel')) {
+    // A kept tab (hidden while another tab shows, main.ts) asks nothing until it is shown again.
+    if (!document.hidden && !root.classList.contains('screen-kept') && account() && !document.querySelector('dialog[open], .cel')) {
       try {
         await report();
         // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when
@@ -1146,7 +1166,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Back from another app or a sheet, or a tab switched: look again soon.
   const wake = () => { if (document.hidden || stopped) return; quiet = 0; clearTimeout(live); live = window.setTimeout(poll, 1_000); };
   document.addEventListener('visibilitychange', wake);
-  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); };
+  root.addEventListener('screen-shown', wake);
+  addEventListener('online', wake);
+  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); removeEventListener('online', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */

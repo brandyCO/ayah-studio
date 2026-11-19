@@ -11,7 +11,10 @@ import {
   SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy, followPlayer, unfollowPlayer, followList, dropFollower, myFlag, setFlag, myFollows, newFollowers, markFollowersSeen, type Follower, type Follows,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
+  profileAt, keptSince,
 } from '../together/ranks';
+import { updatedNote } from './updatedAgo';
+import { isOffline } from '../together/outbox';
 import { myFigureCode, actor } from './actor';
 import { avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
@@ -75,12 +78,14 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   let prof: Profile | null = kept === undefined ? fromRow(row) : kept;
   let known = kept !== undefined;
   const title = h('h2', {}, row.me ? ft('fr.mine') : row.name ?? rt('rk.private'));
+  // Without a connection the page shows what this phone kept (or the board row), with when it was brought.
+  const ago = updatedNote(() => profileAt(pid), 120_000, { offlineAlone: true });
   const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
   const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, stage, info));
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info));
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
@@ -227,11 +232,17 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     try {
       const v = await rankProfile(pid, true);
       if (!d.isConnected) return;
+      ago.update();
       if (known && JSON.stringify(v) === JSON.stringify(prof)) return;
       prof = v;
       known = true;
       paint();
-    } catch (e) { if (!known && d.isConnected) toast((e as Error).message); }
+    } catch (e) {
+      ago.update();
+      // Offline: no error, the kept page and its "Offline · 5 min ago" note stay; it fills in when back online.
+      if (isOffline(e)) { if (d.isConnected) addEventListener('online', () => { if (d.isConnected) void refresh(); }, { once: true }); return; }
+      if (!known && d.isConnected) toast((e as Error).message);
+    }
   };
   // Built before it is shown, so the page slides in smoothly from its first frame.
   paint();
@@ -450,7 +461,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void, hidden = 
   if (!hidden) setTimeout(() => void friendMilestone(data.friends), 900);
   const fresh2 = newFollowers(follows);
   if (!hidden) markFollowersSeen(follows);
-  return h('div', { class: 'fr-tab' }, asks, newFollowersSection(fresh2, onChange), news(feats, meta),
+  return h('div', { class: 'fr-tab' }, updatedNote(() => keptSince('friends')), asks, newFollowersSection(fresh2, onChange), news(feats, meta),
     cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
     followingSection(follows, onChange),
     inviteRewards(inv, onChange),

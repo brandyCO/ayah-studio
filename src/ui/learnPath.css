@@ -33,6 +33,9 @@
 
 .lp-list { display: grid; gap: 28px; padding: 6px 0 40px; }
 .lp-unit { display: grid; justify-items: center; gap: 10px; }
+/* Units off screen are skipped (style, layout, paint) until scrolled near: opening Learn restyles the units in view, not
+   the whole path (speed pass 3). `auto` keeps each unit's real height once it has been drawn. */
+.lp-list > .lp-unit { content-visibility: auto; contain-intrinsic-size: auto 720px; }
 .lp-banner {
   --hc: #17a273; --he: #0e7d58;
   justify-self: stretch; display: flex; align-items: center; gap: 12px; padding: 14px 12px 14px 16px; border-radius: 20px;

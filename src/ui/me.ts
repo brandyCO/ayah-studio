@@ -355,7 +355,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   let streakPlaying = false;
   const maybeStreak = () => {
     const s = streak();
-    if (page || streakPlaying || !s.litToday || s.days < 1 || document.hidden) return;
+    if (page || streakPlaying || !s.litToday || s.days < 1 || document.hidden || root.classList.contains('screen-kept')) return;
     let seen = '';
     try { seen = localStorage.getItem('flameSeen') ?? ''; } catch { /* ignore */ }
     if (seen === dayKey()) return;
@@ -438,6 +438,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       // A tap greets you, then goes into the room.
       a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
+      // Me kept alive between tab taps (main.ts): it greets you again each time you come back to it.
+      root.addEventListener('screen-shown', () => setTimeout(() => { if (a.el.isConnected) (look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()); }, 250));
       setTimeout(() => (cheer ? a.cheer() : look.mode === 'morning' ? a.stretch() : look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()), 600);
       // It reacts to how today is going (front-end backlog): proud once the flame is lit by reading, a look over at
       // the flame in the evening while it still waits, and calm (never sad) when the flame went out.
@@ -1279,13 +1281,25 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const offAcct = onAccount(() => paintSafe());
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
-  const paintAll = () => { queued = 0; paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
-  const refresh = () => { if (!queued) queued = requestAnimationFrame(paintAll); };
+  let missed = false, paintedDay = '';
+  const paintAll = () => { queued = 0; missed = false; paintedDay = new Date().toDateString(); paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
+  // Kept alive while another tab shows (main.ts): nothing is painted then; it catches up when shown again.
+  const refresh = () => { if (root.classList.contains('screen-kept')) missed = true; else if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
   paintLibrary();
   void paintPrayer();
-  const tick = window.setInterval(() => { if (!document.hidden) { void paintPrayer(); void paintSky(); } }, 30_000);
-  const secTick = window.setInterval(() => { if (!document.hidden) paintResets(); }, 1000);
+  const tick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) { void paintPrayer(); void paintSky(); } }, 30_000);
+  const secTick = window.setInterval(() => { if (!document.hidden && !root.classList.contains('screen-kept')) paintResets(); }, 1000);
+  // Shown again: the kept screen appears as it was in this frame; what changed meanwhile (or a new day) is painted right
+  // after it (speed pass 3: repainting everything on each return cost a slow phone ~30 ms before the screen showed).
+  const onShown = () => requestAnimationFrame(() => setTimeout(() => {
+    if (!root.isConnected || root.classList.contains('screen-kept')) return;
+    if (missed || paintedDay !== new Date().toDateString() || Date.now() - hiddenAt > 60_000) paintAll(); else maybeStreak();
+    paintResets(); void paintPrayer(); void paintSky(); paintSync();
+  }, 0));
+  root.addEventListener('screen-shown', onShown);
+  let hiddenAt = Date.now(); // away longer than a minute: everything is painted again (a change no event told about)
+  root.addEventListener('screen-hidden', () => { hiddenAt = Date.now(); });
   // The evening adhkar join the goals at Asr: work out today's Asr, and repaint when it comes.
   void refreshAsr();
   const toAsr = eveningFrom().getTime() - Date.now();

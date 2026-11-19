@@ -741,6 +741,33 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       screen, ~140 KB), errors before it kept (≤ 5) and sent. `keptPageFonts()` (one pass over Cache Storage) replaces 604
       `caches.match` calls in the whole-mushaf download. `hijriDate()` (`src/data/hijri.ts`): one Umm al-Qura formatter, a result per
       local day (Ramadan, season, wardrobe, page tint). First-load budget 135 KB (134.3)
+      **Instant tabs** (owner "Yes, both", 2026-11-19): `route()` in main.ts keeps the tab screen left (Me, Learn, Ranks roots)
+      alive in #app as `.screen-kept` (`content-visibility: hidden`, listeners kept, cleanup held back, ≤ 10 min, dropped on an
+      account change or the Kids space) and shows it again as it was (scroll place) with the event `screen-shown` (`screen-hidden`
+      on leaving); Me and Learn are built ahead while idle (`prebuild()`, rendered once unseen as `.screen-warm`). Kept screens do
+      nothing while hidden: Ranks polls / takes swipes only when shown, Me and the Learn path paint on show. 6× CPU: first tap on
+      Learn 413 → 140 ms, returns 170–310 → 70–100 ms with no slow frame. **Offline Ranks**: kept answers carry their time
+      (`keptAt()` / `keptSince()` / `profileAt()`), a quiet "Offline · 25 min ago" (`src/ui/updatedAgo.ts`, Intl.RelativeTimeFormat)
+      on the league hero, the Friends tab and profiles; the kept league stays on screen offline (was "Could not load the ranks");
+      **send later** (`src/together/outbox.ts`, localStorage `rankOutbox`, device-only): follow / unfollow, answering a friend ask,
+      MashaAllah and challenge gestures done offline resolve at once and go in order when back (`rpc()` throws `Offline` on
+      status 0; follow + unfollow offline cancel out; a refusal is dropped with a toast). Budget 136 KB (135.1)
+      **First opens** (speed pass 3, owner "Yes for both"): the build writes each mushaf page on its own (`data/mushaf/p{N}.json`,
+      ~1 KB with each segment's word position `st`; `mushafPages()` in vite.config.ts); index.html preloads it instead of the
+      whole layout when the page is known and the reader draws it with `loadMushafPage()`, loading the rest once it is on
+      screen (a swipe, the player or an intent waits for `whole()`); Read's first layout shows the page alone, its neighbours a
+      frame later; Ranks is built ahead too (from what the phone kept, nothing asked or played until shown); Me repaints on
+      return only what changed (or after a minute / a new day); Learn units off screen are skipped (`content-visibility: auto`).
+      Kept screens are see-through (`opacity: 0`: Learn's own sky, a positioned box, painted over the screen shown). 6× CPU:
+      web slow 3G 9.4 → 8.0 s, app start 1.0 → 0.74 s, reopen 1.0 → 0.42 s
+      **Slow first visit + the pause after opening** (speed pass 4, owner "do the first one, the second one"): index.html also
+      preloads `meta.json` and skips the Nunito preload when the app opens on a mushaf page (no interface text shows until a
+      tap); the Bismillah picture is waited for only by a first page that shows it; pages wanted before the whole layout is in
+      (neighbours, two away) come from their own page files (`loadMushafPage(p, into)`), the whole layout follows while idle
+      ~1.2 s later and is read in one pass with numeric keys (~5× faster); the neighbours are fitted one per task, the next
+      page first; Me / Learn / Ranks code is fetched one per quiet moment. `scripts/speed-waterfall.mjs` (H2=1: HTTP/2 like the
+      real hosts) lists the downloads before the first page. 6× CPU: web slow 3G 8.0 → 6.6 s (HTTP/2 6.9 → 5.8 s), 4G 2.6 →
+      2.3 s; longest pause in the 3 s after the page shows ~150 → ~55 ms
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase

@@ -53,7 +53,7 @@ const PROBE = () => {
 };
 const READY = (want) => {
   const app = document.getElementById('app');
-  const s = app?.querySelector(':scope > .screen:not(.screen-ghost)');
+  const s = app?.querySelector(':scope > .screen:not(.screen-ghost):not(.screen-kept):not(.screen-warm)');
   if (!s || s.classList.contains('screen-building') || app.querySelector('.route-skel')) return false;
   if (want && !s.querySelector(want)) return false;
   if ([...s.querySelectorAll('.muted, [aria-busy="true"]')].some((e) => e.getAttribute('aria-busy') === 'true' || /^(Loading|…)/.test(e.textContent ?? ''))) return false;
@@ -101,7 +101,7 @@ async function tabs(browser) {
   const { ctx, page } = await context(browser, null);
   await page.goto(base);
   await page.waitForFunction(() => !!document.querySelector('.mushaf-page:not(.loading)'), null, { timeout: 60000 });
-  await page.waitForTimeout(9000); // the app settles (idle prefetch of Me, Learn, Ranks)
+  await page.waitForTimeout(13000); // the app settles (idle prefetch of Me, Learn, Ranks)
   const out = [];
   for (const round of [1, 2]) {
     for (const [name, hash, want] of TABS) {

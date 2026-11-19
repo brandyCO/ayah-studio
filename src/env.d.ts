@@ -1,5 +1,6 @@
 /** Content hash of public/data/*, injected by vite.config.ts. */
 declare const __DATA_VERSION__: string;
+declare const __SURAH_PAGES__: number[];
 declare const __BUILD__: string;
 
 interface ImportMetaEnv {

@@ -114,7 +114,7 @@ async function notifyNow(title: string, body: string) {
 
 /** A goal met: the Me tab gives a small check and a soft tap, nothing more. */
 function tabTick() {
-  const me = document.querySelector<HTMLElement>('.tab-btn.me');
+  const me = [...document.querySelectorAll<HTMLElement>('.tab-btn.me')].find((b) => b.getClientRects().length);
   if (!me || busyScreen()) return;
   me.classList.remove('ticked');
   void me.offsetWidth;

@@ -607,15 +607,28 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
   paint();
   void import('./pathBuddy').then((b) => b.pathBuddy(list));
   // Scroll the step to do now into view; a tree that just grew plays its moment.
-  requestAnimationFrame(() => {
+  const toCurrent = () => requestAnimationFrame(() => {
     const cur = list.querySelector('.lp-step.is-current') ?? list.querySelector('.lp-tree.grew');
     cur?.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
   });
+  // Built ahead while another tab shows (main.ts): scrolled into view when first shown instead.
+  let scrollOnShow = root.classList.contains('screen-kept');
+  if (!scrollOnShow) toCurrent();
   // F8: no sheet on the first visit: Juz 'Amma, one ayah at a time, and the path at once.
   if (!pathSet()) setPath({ kind: 'amma' }, 1);
 
   const onClick = (e: MouseEvent) => { if (pop && !(e.target as Element).closest('.lp-pop, .lp-node, .lp-gate-btn, .lp-chest-hit')) closePop(); };
-  const onChange = () => paint();
+  // Kept alive while another tab shows (main.ts): a change waits, and is painted (with the step to do now in view)
+  // when the path shows again, e.g. back from a lesson.
+  let dirty = false;
+  const onChange = () => { if (root.classList.contains('screen-kept')) dirty = true; else paint(); };
+  root.addEventListener('screen-shown', () => {
+    if (scrollOnShow && !dirty) { scrollOnShow = false; toCurrent(); }
+    if (!dirty) return;
+    dirty = false;
+    paint();
+    toCurrent();
+  });
   document.addEventListener('click', onClick);
   window.addEventListener('garden-changed', onChange);
   window.addEventListener('journey-changed', onChange);

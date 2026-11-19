@@ -31,7 +31,7 @@ export function initStretch() {
     edge = dir;
     for (const a of back) a.cancel();
     back = [];
-    const screen = document.getElementById('app')?.lastElementChild;
+    const screen = document.querySelector('#app > .screen:not(.screen-kept):not(.screen-warm):not(.screen-ghost)') ?? document.getElementById('app')?.lastElementChild;
     parts = screen ? [...screen.children].filter((c): c is HTMLElement => c instanceof HTMLElement
       && !/fixed|sticky/.test(getComputedStyle(c).position) && c.offsetHeight > 0) : [];
     const y = dir < 0 ? 0 : innerHeight;

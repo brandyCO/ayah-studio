@@ -43,13 +43,64 @@ let routeId = 0;
 const TAB_ROOTS = new Set(['me', 'ranks', 'learn']);
 const GHOST_MS = 10 * 60_000;
 const ghosts = new Map<string, { el: HTMLElement; at: number }>();
+// Instant tabs (thread "Make the whole app fast", 2026-11-19): a tab screen left is kept alive, hidden in #app (still
+// connected, so its listeners stay; `content-visibility: hidden` keeps its layout worked out, so showing it is cheap), with its cleanup held back. Tapping the tab again shows it as it was (scroll place
+// too) and tells it with the event `screen-shown`, so it can refresh what may have changed; nothing is rebuilt. Kept up
+// to KEEP_MS, then rebuilt as before. A screen keeps polling only while shown (`offScreen()` in dom.ts).
+const KEEP_MS = 10 * 60_000;
+const alive = new Map<string, { el: HTMLElement; c: () => void; at: number; y: number }>();
+const dropAlive = (key?: string) => {
+  for (const [k, v] of alive) if (!key || k === key) { alive.delete(k); try { v.c(); } catch (e) { console.error(e); } v.el.remove(); }
+};
+let shownTab = '';
 
+/** Builds a tab ahead, hidden, while the app is idle (Me, then Learn), so even its first tap shows a ready screen. */
+async function prebuild(key: 'me' | 'learn' | 'ranks') {
+  if (alive.has(key) || shownTab === key || kidsOn() || document.hidden) return;
+  try { if (key === 'me' && sessionStorage.getItem('meFocus')) return; } catch { /* private window */ }
+  const screen = h('div', { class: `screen screen-${key} screen-kept` });
+  screen.dataset.tab = key;
+  screen.inert = true;
+  app.prepend(screen);
+  try {
+    const c = key === 'me' ? await (await import('./ui/me')).showMe(screen)
+      : key === 'ranks' ? await (await import('./ui/ranks')).showRanks(screen)
+      : await (await import('./ui/learnRoutes')).learnRoute(screen, undefined, undefined);
+    // Opened (or the account changed) while it was built: the one built by route() wins.
+    if (alive.has(key) || shownTab === key || !screen.isConnected) { c(); screen.remove(); return; }
+    alive.set(key, { el: screen, c, at: Date.now(), y: 0 });
+    // Laid out and painted once, unseen (a kept screen that never rendered would do it all on its first tap); then
+    // `content-visibility: hidden` keeps that work for the tap.
+    screen.classList.replace('screen-kept', 'screen-warm');
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
+    }, 50)));
+  } catch (e) { console.warn('prebuild', key, e); screen.remove(); }
+}
+function prebuildTabs() {
+  const idle = (fn: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : fn()), ms);
+  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn').then(() => idle(() => void prebuild('ranks'), 1500)), 1500)), 2500);
+}
+/** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
+function replaceScreens(...els: HTMLElement[]) {
+  const keep = new Set([...alive.values()].map((v) => v.el));
+  for (const el of [...app.children]) if (!keep.has(el as HTMLElement)) el.remove();
+  app.append(...els);
+}
 async function route() {
   const id = ++routeId;
   closeSheetsOnRoute();
-  cleanup?.();
-  cleanup = null;
   const [view, a, b, c4, d5] = location.hash.replace(/^#\/?/, '').split('/');
+  const shown = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept):not(.screen-warm)');
+  if (shownTab && cleanup && shown?.dataset.tab === shownTab && !kidsOn()) {
+    // Keep the tab just left alive instead of tearing it down.
+    alive.set(shownTab, { el: shown, c: cleanup, at: Date.now(), y: window.scrollY });
+    shown.classList.add('screen-kept');
+    shown.inert = true;
+    shown.dispatchEvent(new Event('screen-hidden'));
+  } else cleanup?.();
+  cleanup = null;
+  shownTab = '';
   // The Kids space is on: only its own screens (and a page the parent opened through the gate).
   if (kidsOn() && view !== 'kids' && !usePass(location.hash)) {
     history.replaceState(null, '', '#/kids');
@@ -59,10 +110,26 @@ async function route() {
   markRoute(location.hash); // anonymous screen counts (src/usage.ts)
   // Listening carries on across screens, but not into the studio (its own sound) or the Kids space.
   if (view === 'reel' || view === 'kids') quietPlayer(view === 'kids');
+  for (const [k, v] of alive) if (Date.now() - v.at > KEEP_MS || view === 'kids') dropAlive(k);
+  const keepKey = TAB_ROOTS.has(view) && !a ? view : '';
+  const back = keepKey ? alive.get(keepKey) : undefined;
+  if (back) {
+    alive.delete(keepKey);
+    for (const el of [...app.children]) if (el !== back.el && ![...alive.values()].some((v) => v.el === el)) el.remove();
+    back.el.classList.remove('screen-kept', 'screen-warm');
+    back.el.inert = false;
+    document.body.dataset.view = view;
+    window.scrollTo(0, back.y);
+    cleanup = back.c;
+    shownTab = keepKey;
+    back.el.dispatchEvent(new Event('screen-shown'));
+    void import('./ui/tabs').then((m) => m.hopKept(back.el));
+    return;
+  }
   const screen = h('div', { class: `screen screen-${view || 'home'}` });
   // Tabs feel instant (owner 2026-11-16, "ultra fast like Duolingo"): the screen of a tab left earlier stays as a
   // still picture (inert) while its fresh copy is built underneath, then the two swap — no blank or skeleton between.
-  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost)');
+  const prev = app.querySelector<HTMLElement>(':scope > .screen:not(.screen-ghost):not(.screen-kept):not(.screen-warm)');
   if (prev?.dataset.tab) ghosts.set(prev.dataset.tab, { el: prev, at: Date.now() });
   const tabKey = TAB_ROOTS.has(view) && !a ? view : '';
   if (tabKey) screen.dataset.tab = tabKey;
@@ -72,8 +139,9 @@ async function route() {
     ghost.el.classList.add('screen-ghost');
     ghost.el.inert = true;
     screen.classList.add('screen-building');
-    app.replaceChildren(ghost.el, screen);
-  } else app.replaceChildren(screen);
+    replaceScreens(ghost.el, screen);
+  } else replaceScreens(screen);
+  if (tabKey) shownTab = tabKey;
   const unGhost = () => { if (id !== routeId) return; app.querySelector(':scope > .screen-ghost')?.remove(); screen.classList.remove('screen-building'); };
   sweepListeners(); // listeners of the screen just left
   document.body.dataset.view = view || 'home';
@@ -144,7 +212,7 @@ async function route() {
     dropSkel();
     unGhost();
     if (id === routeId) cleanup = c;
-    else c();
+    else { c(); if (shownTab === tabKey) shownTab = ''; }
   } catch (e) {
     dropSkel();
     unGhost();
@@ -211,9 +279,13 @@ later(initUsage); // anonymous usage counts, sent once a day per key (src/usage.
 later(() => setTimeout(() => {
   if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return;
   const go = () => {
+    // One screen's code per quiet moment: starting the three at once listed ~200 files in one task (~100 ms on a
+    // slow phone, a felt pause a few seconds after opening).
+    const quiet = (f: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 3000 }) : f()), ms);
     void import('./ui/me').catch(() => {});
-    void import('./ui/learnPath').catch(() => {});
-    setTimeout(() => void import('./ui/ranks').catch(() => {}), 600); // Ranks too, a moment later
+    quiet(() => void import('./ui/learnPath').catch(() => {}), 300);
+    quiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
+    prebuildTabs(); // then Me and Learn built ahead, hidden, so their first tap is instant too
   };
   if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
 }, 2500));
@@ -241,7 +313,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && !a
 setTimeout(() => void import('./ui/seasonCard').then((m) => m.initSeason()), 2500);
 // Ranks: the day's checked totals go to the server when they change (signed in with Google only).
 later(() => void import('./together/ranks').then((m) => m.watchRanks()));
-later(() => void import('./cloud/auth').then(({ onAccount }) => { let who: string | undefined; onAccount((x) => { if (x?.id !== who) ghosts.clear(); who = x?.id; }); }));
+later(() => void import('./cloud/auth').then(({ onAccount }) => { let who: string | undefined; onAccount((x) => { if (x?.id !== who) { ghosts.clear(); dropAlive(); } who = x?.id; }); }));
 // Web: ask the browser to keep this site's storage (streak, Light, goals) instead of clearing it
 // when space runs low or, on iPhone Safari, after 7 days away. Asked once the user has earned
 // something, so Firefox's question never comes before there is anything to keep.
