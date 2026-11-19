@@ -2363,6 +2363,55 @@ duas/reflections section in Me.
       screen at their own scroll place; past 22 % or a fling it slides on, fresh answers repaint in place only when changed.
       4× CPU: worst frame ~50 ms (no `inert`/visibility toggles: inherited, they restyled every row). Global stays the top 100 +
       your place. Migration `20261118100000_rank_follow_flag.sql`, pgTAP `rank_follow_flag.test.sql` (34)
+- [x] M30 Notifications screen + prize cards + lighter opening (owner "build all three", 2026-11-19): the bell opens
+      `#/notifications` (`src/ui/notifications.ts` + `.css`, strings `src/i18n/notifs.ts` `nt()`, all 30 languages): a log
+      kept after reading (`src/data/notifs.ts`, localStorage `notifLog`, synced, 60 days / 200 entries; deleted keys in
+      `notifGone`) gathered from the journey and the kept Ranks answers (`rankCache`): Wins (goals, badges, pieces, level,
+      fire days, chests), Friends (follows, asks, challenges, gestures, news, MashaAllahs, gifts), League (passed / passed
+      by, last hours, result, prize), News (Friday Al-Kahf, Ramadan ahead); tabs with unread counts, Today / This week /
+      Earlier, tap → where it leads (`src/ui/notifText.ts`). Long-press (or ✓) → select mode: Select all, Mark read,
+      Delete / Delete all, Undo (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
+      3 a day while the app is in the background (ids 3650–3659), none in quiet hours; push while the app is closed waits
+      on T2b (Firebase). Me's claim cards are **prize cards** (`.prize-card` in me.css): a sky in the badge's metal, the
+      prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap
+      into the existing moment. **Opening** (Tecno report): `opening.webp` is opaque on the splash colour, cropped to the
+      character's box, 720 wide and deduped (446 → 300 KB, ~37 % cheaper per frame); `AppActivity` places the crop
+      (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`)
+      **Ranks right after sign-in** (owner report 2026-11-19, "ranks started loading after I signed in"): the league is
+      fetched the moment sign-in finishes, alongside the first report; with nothing kept for the account yet
+      (`isKept()` in `together/ranks.ts`) **Welcome to your league** covers the first load (`src/ui/rankWelcome.ts` + `.css`,
+      lazy; owner pick from two designs, the other, `rankJoin.ts`, kept behind `JOIN_STYLE`): on a light screen the
+      league's emblem falls, squashes and settles (spring physics simulated once, played as 60 fps keyframes), the user's
+      character waves, a bold title and the one rule come in, and a chunky Continue button fills like a loading bar; when
+      the league is there it pops ready and the character hops once and cheers (never two hops in a row, owner); Continue
+      flies the emblem into the league card and the real rows spring in one after another, the user's last. Later visits
+      paint from the cache at once. A claim tap no longer loads the moment: Me warms `celebrate`, the sound engine and the
+      badge art while idle once a claim card shows (`warmClaim()`)
+- [x] M31 Motion engine + chest smoothness (owner request 2026-11-19, "optimize the engine … Duolingo style to the max"):
+      `src/ui/juice.ts` — named feels (`FEEL`: snappy, bouncy, jelly, heavy, gentle), springs simulated once and memoised,
+      `drop` (falls stretched, squashes on impact, rebounds, jelly settle), `rise`, `stagger`, `wobble`, `anticipate`.
+      **One motion per layer**: every scripted move is noted per element (Element.animate wrapped once) so `own(el)` stops the
+      last one without asking the browser (getAnimations() restyled the page, 20–40 ms a tap on a slow phone) and `takeOver(el)`
+      starts the next from the current pose; CSS idle loops keep their own layers and scripted moves get the ones inside or
+      around them (actor `fg-hn` head, `fg-ln` lean, `fg-sh > i` shadow; Noor `nr-hop`, `nr-flare`; chest `cel-chest-nudge`;
+      the rays turn on an inner layer). No loops on hidden things (`.cel-loot-it:not(.in) .cel-orb`), sparkles placed in
+      percentages (no size reads), positions read before changes, faces switched only on the head's copy, the page behind a
+      moment brought back while the prizes are read (`uncover()`), not at Continue. Chest at 6× CPU (headless): raster
+      529 → 240 ms, layerize 619 → 430 ms over 9 s. **Press boing** (`src/ui/press.ts`, lazy): what was tapped springs back past
+      its size on release (`scale`; not on the mushaf, studio or Kids); the tab just tapped hops when its screen opens
+      (`.tab-btn.hop`). **Stretch without the nav** (owner: "I like the stretch, but not for nav"): the system overscroll is off
+      (`overscroll-behavior-y: none`, `OVER_SCROLL_NEVER` in `AppActivity`) and `src/ui/stretch.ts` stretches only the screen's
+      scrolling parts from the edge pulled past (fixed / sticky bars stay), springing back on release. Welcome to your league
+      uses the engine (`drop`, `rise`, `stagger`)
+      **Slowest-phone pass** (owner 2026-11-19, "ready for the slowest phone"): no class on a moment restyles all of it (no
+      `*` / `:not()`-only selectors keyed on `.go` / `.revealed` / `.fg-off`; the paused loops are named by class), the page
+      behind is skipped by a class on each of its own elements (`cel-off`, was `html.cel-cover body > …`, a whole-document
+      restyle), `holdPage` pauses only the moves the engine knows (no `document.getAnimations()`), the stage's parts
+      (chest, character, Noor) join one per task while the seed flies (`cel-wait`), boxes are read once before anything
+      moves (canvas, stage, chest at rest, prize cards), `--crack` is set only on the seam and mouth, the sound engine and
+      the cheer's keyframes (`warmGesture()` in `rig.ts`) are made ready in the gaps; the lantern moment no longer sways the
+      whole screen (`.cel-lantern` was also the moment's kind class). Chest at 6× CPU: long tasks 5 (50–150 ms) → 0–1
+      (≤ 66 ms), worst frame 100–150 → 50 ms, script 547 → ~340 ms, style ~1300 → ~950 ms over 9 s
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

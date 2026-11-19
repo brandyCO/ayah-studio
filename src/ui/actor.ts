@@ -7,7 +7,7 @@
 // compositor moves without repainting anything; only the head, eyes and arms still move inside the drawing.
 import { FIG_CODE, encode, figureSvg, normalize, parse, type Xp } from './figure';
 import { h } from './dom';
-import { reduced } from './juice';
+import { own, reduced } from './juice';
 import { sfx } from './sfx';
 import { gesture, type Gesture } from './rig';
 import './figure.css';
@@ -63,8 +63,13 @@ export function layer(root: Element) {
   const lay = h('span', { class: `fg-lay${kidHead ? ' kid' : ''}` });
   const bb = h('span', { class: 'fg-bb' });
   svg.replaceWith(lay);
-  bb.append(svg, ...(rig ? [rig] : []), h('span', { class: 'fg-hd' }, head), h('span', { class: 'fg-pt' }, up), h('span', { class: 'fg-wa' }, wave));
-  lay.append(h('span', { class: 'fg-sh' }), h('span', { class: 'fg-mv' }, bb));
+  bb.append(svg, ...(rig ? [rig] : []), h('span', { class: 'fg-hd' }, h('span', { class: 'fg-hn' }, head)), h('span', { class: 'fg-pt' }, up), h('span', { class: 'fg-wa' }, wave));
+  // One motion per layer (motion engine pass 2026-11-19): a CSS loop and a scripted move on the same element, or two
+  // moves on the same one, push all of its motion onto the main thread (the chest lagged on slow phones). So the idle
+  // loops keep their own layers (`fg-hd` sway, `fg-bb` breath, `fg-sh` shadow) and the scripted moves get the ones
+  // inside or around them: `fg-hn` the head's nods and glances, `fg-ln` leans and sinks, `fg-mv` hops and gestures,
+  // the shadow's `i` its squash.
+  lay.append(h('span', { class: 'fg-sh' }, h('i', {})), h('span', { class: 'fg-mv' }, h('span', { class: 'fg-ln' }, bb)));
 }
 
 /** Sets a pose class (cheer, waving, sleepy) on the character: on every layer of a layered one. */
@@ -81,11 +86,15 @@ const parts = (root: Element) => {
     svg: root.querySelector<SVGSVGElement>('svg.fg'),
     /** HTML mover (percent units) when layered, else the SVG group (view-box units). */
     act: (mv ?? root.querySelector<SVGGElement>('.fg-act')) as Element | null,
+    /** The lean layer (leans, sinks, stretches) inside the mover, so they never share it with a hop. */
+    lean: (root.querySelector('.fg-ln') ?? mv ?? root.querySelector<SVGGElement>('.fg-act')) as Element | null,
     tx: mv ? ux : (n: number) => `${n}px`,
     ty: mv ? uy : (n: number) => `${n}px`,
-    head: (root.querySelector('.fg-hd') ?? root.querySelector('.fg-head')) as Element | null,
+    head: (root.querySelector('.fg-hn') ?? root.querySelector('.fg-head')) as Element | null,
+    /** Head moves add onto the SVG head's own sway; on a layered one they have a layer of their own. */
+    comp: (root.querySelector('.fg-hn') ? 'replace' : 'add') as CompositeOperation,
     eyes: root.querySelector<SVGGElement>('.fg-eyes'),
-    shadow: (root.querySelector('.fg-sh') ?? root.querySelector('.fg-shadow')) as Element | null,
+    shadow: (root.querySelector('.fg-sh > i') ?? root.querySelector('.fg-shadow')) as Element | null,
   };
 };
 
@@ -95,6 +104,7 @@ export function hop(root: Element, height = 26, ms = 620, sound = true, quiet = 
   if (!act || reduced()) return;
   // While a recitation plays the character only nods (it is listening), unless it is cheering a finished surah.
   if (quiet && document.documentElement.classList.contains('reciting')) { nod(root, 3); return; }
+  own(act); if (shadow) own(shadow);
   act.animate([
     { transform: 'none' },
     { transform: `translateY(${ty(4)}) scale(1.08, .9)`, offset: 0.16 },
@@ -103,32 +113,33 @@ export function hop(root: Element, height = 26, ms = 620, sound = true, quiet = 
     { transform: `translateY(${ty(-3)}) scale(.98, 1.03)`, offset: 0.86 },
     { transform: 'none' },
   ], { duration: ms, easing: 'cubic-bezier(.3, .7, .4, 1)' });
-  // `scale` only: the shadow's breathing loop animates `transform` and `opacity`, and a hop on the same properties
-  // left that loop on the main processor for good (the podium kept Ranks ~15 % busy).
   shadow?.animate([{ scale: '1' }, { scale: '1.06', offset: 0.16 }, { scale: '.45', offset: 0.42 }, { scale: '1.1', offset: 0.72 }, { scale: '1' }], { duration: ms });
   if (sound) setTimeout(() => sfx.land(), ms * 0.7);
 }
 /** A little nod of the head. */
 export function nod(root: Element, deg = 6) {
-  const { head, ty } = parts(root);
+  const { head, ty, comp } = parts(root);
   if (!head || reduced()) return;
-  head.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: `${-deg}deg`, translate: `0 ${ty(2)}`, offset: 0.35 }, { rotate: `${deg * 0.5}deg`, translate: '0 0', offset: 0.7 }, { rotate: '0deg', translate: '0 0' }], { duration: 560, easing: 'ease-in-out', composite: 'add' });
+  if (comp === 'replace') own(head);
+  head.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: `${-deg}deg`, translate: `0 ${ty(2)}`, offset: 0.35 }, { rotate: `${deg * 0.5}deg`, translate: '0 0', offset: 0.7 }, { rotate: '0deg', translate: '0 0' }], { duration: 560, easing: 'ease-in-out', composite: comp });
 }
 /** A glance to one side (eyes and head), then back. */
 export function glance(root: Element, dir = Math.random() < 0.5 ? -1 : 1, ms = 1300) {
-  const { eyes, head } = parts(root);
+  const { eyes, head, comp } = parts(root);
   if (reduced()) return;
+  if (head && comp === 'replace') own(head);
   eyes?.animate([{ transform: 'none' }, { transform: `translateX(${dir * 4}px)`, offset: 0.2 }, { transform: `translateX(${dir * 4}px)`, offset: 0.7 }, { transform: 'none' }], { duration: ms, easing: 'ease-in-out', composite: 'add' });
-  head?.animate([{ rotate: '0deg' }, { rotate: `${dir * 4}deg`, offset: 0.25 }, { rotate: `${dir * 4}deg`, offset: 0.7 }, { rotate: '0deg' }], { duration: ms, easing: 'ease-in-out', composite: 'add' });
+  head?.animate([{ rotate: '0deg' }, { rotate: `${dir * 4}deg`, offset: 0.25 }, { rotate: `${dir * 4}deg`, offset: 0.7 }, { rotate: '0deg' }], { duration: ms, easing: 'ease-in-out', composite: comp });
 }
 /** Sparkles bursting out of the middle of `box` (a positioned element). */
 export function sparkle(box: HTMLElement, n = 14, at = 0.45) {
   if (reduced()) return;
-  const w = box.clientWidth, hgt = box.clientHeight;
+  // Placed in percentages, never measured: a read of the box's size in the middle of a moment made the phone lay
+  // out the whole screen first (~25 ms on a slow phone when the chest burst).
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4, r = Math.min(w, 280) * (0.25 + Math.random() * 0.25);
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4, r = 60 * (0.6 + Math.random() * 0.6);
     const sp = h('span', { class: 'fb-spark', 'aria-hidden': 'true' });
-    sp.style.cssText = `left:${w / 2 - 7}px;top:${hgt * at}px;--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8}px;animation-delay:${Math.random() * 120}ms;--s:${(0.6 + Math.random() * 0.8).toFixed(2)}`;
+    sp.style.cssText = `left:calc(50% - 7px);top:${(at * 100).toFixed(1)}%;--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8}px;animation-delay:${Math.random() * 120}ms;--s:${(0.6 + Math.random() * 0.8).toFixed(2)}`;
     box.append(sp);
     setTimeout(() => sp.remove(), 1200);
   }
@@ -216,8 +227,12 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
   layer(el);
   rest(el);
   let armsT = 0, faceT = 0;
+  // Only the copies that draw a face change with it (the head's, after `layer()`): a class on every copy made
+  // the phone restyle all eight drawings at each new expression.
+  let faced: SVGSVGElement[] | null = null;
   const face = (xp: Xp | null, ms = 1600) => {
-    el.querySelectorAll('svg.fg').forEach((e) => { for (const c of [...e.classList]) if (c.startsWith('xp-')) e.classList.remove(c); if (xp) e.classList.add(`xp-${xp}`); });
+    faced ??= [...el.querySelectorAll<SVGSVGElement>('svg.fg')].filter((e) => e.querySelector('.fg-xp, .fg-x0'));
+    faced.forEach((e) => { for (const c of [...e.classList]) if (c.startsWith('xp-')) e.classList.remove(c); if (xp) e.classList.add(`xp-${xp}`); });
     clearTimeout(faceT);
     if (xp && ms > 0) faceT = window.setTimeout(() => face(null), ms);
   };
@@ -259,26 +274,29 @@ export function actor(cls = '', code: string | null = myFigureCode()): Actor | n
       if (!rig('proud')) { face('proud', 1800); hop(el, 14, 520, false); }
     },
     lean(dir) {
-      const { act, tx } = parts(el);
+      const { lean: act, tx } = parts(el);
       if (!act || reduced()) return;
       face('wow', 900);
+      own(act);
       act.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `${tx(dir * 5)} 0`, rotate: `${dir * 4}deg`, offset: 0.3 }, { translate: `${tx(dir * 5)} 0`, rotate: `${dir * 4}deg`, offset: 0.7 }, { translate: '0 0', rotate: '0deg' }], { duration: 700, easing: 'ease-in-out' });
     },
     sink() {
-      const { act, head, ty } = parts(el);
+      const { lean: act, head, ty, comp } = parts(el);
       face('calm', 1800);
       if (!act || reduced()) return;
+      own(act); if (head && comp === 'replace') own(head);
       act.animate([{ transform: 'none' }, { transform: `translateY(${ty(5)}) scale(1.03, .95)`, offset: 0.35 }, { transform: `translateY(${ty(5)}) scale(1.03, .95)`, offset: 0.65 }, { transform: 'none' }], { duration: 1600, easing: 'ease-in-out' });
-      head?.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.35 }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.65 }, { rotate: '0deg', translate: '0 0' }], { duration: 1600, easing: 'ease-in-out', composite: 'add' });
+      head?.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.35 }, { rotate: '-4deg', translate: `0 ${ty(4)}`, offset: 0.65 }, { rotate: '0deg', translate: '0 0' }], { duration: 1600, easing: 'ease-in-out', composite: comp });
     },
     nod: () => nod(el),
     face,
     glance: (dir) => glance(el, dir),
     stretch() {
-      const { act, ty } = parts(el);
+      const { lean: act, ty } = parts(el);
       if (!act || reduced()) return;
       face('sleepy', 900);
       pose('cheer', 1700);
+      own(act);
       act.animate([{ transform: 'none' }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.45 }, { transform: `translateY(${ty(-6)}) scale(.97, 1.06)`, offset: 0.7 }, { transform: `translateY(${ty(1)}) scale(1.03, .97)`, offset: 0.88 }, { transform: 'none' }], { duration: 1700, easing: 'ease-in-out' });
     },
   };

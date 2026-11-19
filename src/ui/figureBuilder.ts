@@ -12,7 +12,7 @@ import {
   type Fig, type Rarity, type Slot, type Xp,
 } from './figure';
 import { h, haptic, toast } from './dom';
-import { reduced } from './juice';
+import { own, reduced } from './juice';
 import { glance, hop, layer, nod, poseClass, sparkle } from './actor';
 import { sfx } from './sfx';
 import { ownsPiece } from '../data/wardrobe';
@@ -185,7 +185,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     const steps = [0, 70, 150, 245, 360];
     steps.forEach((ms, i) => setTimeout(() => {
       f = random(f.face);
-      if (i < steps.length - 1) { paintStage(false); sfx.tick(); stage.querySelector('.fg-mv')?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
+      if (i < steps.length - 1) { paintStage(false); sfx.tick(); const mv = stage.querySelector('.fg-mv'); if (mv) own(mv); mv?.animate([{ transform: 'scale(1.04, .96)' }, { transform: 'none' }], { duration: 90 }); return; }
       lastSlot = null;
       paintStage(true); paintTabs(); paintPanel();
       rolling = false;

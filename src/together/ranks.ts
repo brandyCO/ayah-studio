@@ -175,6 +175,8 @@ const keptAll = () => {
   } catch { kept = {}; }
   return kept!;
 };
+/** Whether this device kept an answer for `key` (Ranks draws at once from it; with none, the first league shows a reveal). */
+export const isKept = (key: string) => key in keptAll();
 let keepTimer = 0;
 const keep = (key: string, v: unknown) => {
   keptAll()[key] = v;

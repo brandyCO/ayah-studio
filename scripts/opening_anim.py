@@ -12,7 +12,7 @@ and loaded slowly on the phone). The rig reads figure.ts from before the in-app 
 `git archive 6d490c12^ src`), as the rig's clip ids moved. Earlier: a vector Lottie by scripts/opening_lottie.py (owner pick
 2026-11-15). Here each frame is SVG rendered by Chromium, for previews:
 
-  python3 scripts/opening_anim.py --webp OUT.webp      # an animated WebP with alpha
+  python3 scripts/opening_anim.py --webp OUT.webp      # an animated WebP, opaque on the splash colour, cropped
   python3 scripts/opening_anim.py --preview OUT.mp4   # a phone-screen video on the splash colour
   --version hello | wake | dua | flip | catch           # which animation (VERSIONS; default catch, owner pick 2026-11-14)"""
 import json
@@ -1213,14 +1213,37 @@ def main():
             sys.exit('use --preview OUT.mp4 or --webp OUT.webp (the app plays res/raw/opening.webp)')
         OUT = Path(sys.argv[sys.argv.index('--webp') + 1])
         svgs = frames(key)
-        render(svgs, d, None, key)
-        ims = [Image.open(f'{d}/f{i:04d}.png').convert('RGBA') for i in range(len(svgs))]
+        render(svgs, d, SPLASH_BG, key)
+        full = [Image.open(f'{d}/f{i:04d}.png').convert('RGB') for i in range(len(svgs))]
+        if full[0].width > 720:  # what the phone draws (94 % of a 1080 px screen); more pixels only cost decoding
+            size = (720, round(full[0].height * 720 / full[0].width))
+            full = [im.resize(size, Image.LANCZOS) for im in full]
+        # Lighter to decode on a mid-range phone (owner 2026-11-19: it stuttered on a Tecno while the app started):
+        # opaque on the splash colour (no alpha plane to decode), cropped to where anything moves (half the pixels;
+        # AppActivity places the crop at the same spot and scale), and a frame equal to the one before is not stored
+        # again: the earlier one simply shows longer.
+        bg = Image.new('RGB', full[0].size, SPLASH_BG)
+        from PIL import ImageChops
+        box = None
+        for im in full:
+            b = ImageChops.difference(im, bg).point(lambda v: 255 if v > 6 else 0).getbbox()
+            if b: box = b if not box else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
+        m = 6
+        x0, y0 = max(0, box[0] - m) & ~1, max(0, box[1] - m) & ~1
+        x1, y1 = min(full[0].width, box[2] + m), min(full[0].height, box[3] + m)
+        x1, y1 = x0 + ((x1 - x0 + 1) & ~1), y0 + ((y1 - y0 + 1) & ~1)
+        crop = [im.crop((x0, y0, x1, y1)) for im in full]
         # 60 fps in whole milliseconds: 17, 17, 16, …
-        dur = [17 if i % 3 != 2 else 16 for i in range(len(ims))]
+        dur0 = [17 if i % 3 != 2 else 16 for i in range(len(crop))]
+        ims, dur = [crop[0]], [dur0[0]]
+        for im, t in zip(crop[1:], dur0[1:]):
+            if ImageChops.difference(im, ims[-1]).getbbox() is None: dur[-1] += t
+            else: ims.append(im); dur.append(t)
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=60, method=6,
-                    alpha_quality=70, minimize_size=True, allow_mixed=True)
-        print(OUT, OUT.stat().st_size, 'bytes,', len(ims), 'frames')
+        ims[0].save(OUT, 'WEBP', save_all=True, append_images=ims[1:], duration=dur, loop=1, quality=70, method=6,
+                    minimize_size=True, allow_mixed=True)
+        print(OUT, OUT.stat().st_size, 'bytes,', len(ims), 'frames of', len(crop))
+        print(f'AppActivity: OPENING_FULL = {{ {full[0].width}, {full[0].height} }}, OPENING_CROP = {{ {x0}, {y0} }}')
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ import {
   rankLeague, rankMoments, myPrizes, setFigure, claimPrize, rankName, rankStatus, report, setBoardGoal, setLook, setRankName, takeRankMoments, tierOf, weekEnds,
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
-  StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse,
+  StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse, isKept,
 } from '../together/ranks';
 import { inboxBell } from './inbox';
 import { bump } from './juice';
@@ -937,6 +937,8 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
     try {
       if (fresh) await report(true);
+      // The league is asked for beside the status, not after it (the same request is shared when the list asks).
+      if (key(view) === 'league') void rankLeague(fresh).catch(() => {});
       await paintHead(fresh);
       if (status && fresh) void import('./levelUp').then((m) => m.maybeLevelUp(status!.total));
       await paintBody(fresh);
@@ -950,8 +952,19 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     }
   }
   /** Ranks at once from last time, then the fresh answers (only repainted when something changed). */
+  // Nothing kept on this device yet (just signed in, a new phone): the wait becomes "Joining your league" (rankJoin.ts).
+  // The first-sign-in reveal (owner 2026-11-19 chose "Welcome to your league", src/ui/rankWelcome.ts).
+  const JOIN_REVEAL = true;
+  const JOIN_STYLE = 'welcome' as 'welcome' | 'seats'; // two designs shown to the owner (rankWelcome.ts, rankJoin.ts)
+  const firstLoad = (p: Promise<unknown>) => {
+    if (!JOIN_REVEAL || !account() || isKept('league') || isKept('status')) return;
+    const t = () => status?.tier ?? null;
+    if (JOIN_STYLE === 'welcome') void import('./rankWelcome').then((m) => m.welcomeReveal(p, t)).catch(() => {});
+    else void import('./rankJoin').then((m) => m.joinReveal(p, t)).catch(() => {});
+  };
   async function open() {
     if (!account()) { signedOut(); return; }
+    if (!isKept('league') && !isKept('status')) { const p = paint(true); firstLoad(p); await p; warmPanes(); return; }
     fromKept = true;
     try { await staleFirst(() => paint(false)); } finally { fromKept = false; }
     warmPanes(); // the other tabs from what is kept, before the fresh answers
@@ -1096,7 +1109,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     try { await acceptChallenge(pendingCh); showFriends(); toast(rt('rk.chJoined')); } catch (e) { toast((e as Error).message); }
   }
   void open();
-  const off = onAccount(() => void paint(true));
+  const off = onAccount(() => { const p = paint(true); firstLoad(p); });
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
   // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
   // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
