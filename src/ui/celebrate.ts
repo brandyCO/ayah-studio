@@ -679,8 +679,12 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     // 1. A seed of light: the Claim button lifts, becomes a glowing orb and flies to the centre,
     //    gathers itself (anticipation) and bursts — then the moment unfolds from that burst.
     const has = !!(r && r.width);
-    const FLY = (has ? 560 : 360) * (roll ? 0.65 : 1);
-    const T = FLY + (roll ? 300 : 420);
+    // A badge comes in quicker than a chest (owner 2026-11-20: "a little lag when I pressed on claiming the badge"):
+    // the seed flies in ~0.38 s and bursts ~0.2 s later, so the badge itself shows ~0.3 s sooner.
+    const quick = isBadge || m.kind === 'flame';
+    const FLY = (has ? (quick ? 380 : 560) : 360) * (roll ? 0.65 : 1);
+    const GATHER = quick ? 180 : roll ? 200 : 300;
+    const T = FLY + (quick ? 280 : roll ? 300 : 420);
     // The first layout of the moment happens in the next frame, not in the tap that claimed it (on a slow phone the
     // two together were one long stall). The boxes read there are kept, so no later beat has to ask for them again.
     requestAnimationFrame(() => {
@@ -700,7 +704,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         { transform: has ? `translate(${dx}px, ${dy}px) scale(${r!.width / 48}, ${r!.height / 48})` : `translate(0, ${dy}px) scale(.2)`, opacity: 0.9, offset: 0 },
         { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - (has ? 70 : 0)}px) scale(.8)`, opacity: 1, offset: (FLY * 0.55) / T },
         { transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: FLY / T },
-        { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + (roll ? 200 : 300)) / T },
+        { transform: 'translate(0, 0) scale(.62)', filter: 'brightness(1.6)', offset: (FLY + GATHER) / T },
         { transform: 'translate(0, 0) scale(2.6)', filter: 'brightness(2)', opacity: 0, offset: 1 },
       ], { duration: T, easing: 'cubic-bezier(.3, 0, .2, 1)', fill: 'forwards' }).finished.then(() => seed.remove(), () => {});
       // One part a task, in their order, under the seed.
@@ -711,7 +715,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       if (me) later(step * (parts.length + 1), () => warmGesture('cheer'));
     });
     vibrate([8]);
-    const BURST = FLY + (roll ? 200 : 300);
+    const BURST = FLY + GATHER;
 
     // 2. The burst: a soft flash, light sweeping across, sparks flying out, the moment playing.
     later(BURST, () => {

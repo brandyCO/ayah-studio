@@ -73,7 +73,17 @@ public class AppActivity extends BridgeActivity {
         if (animate) {
             new Thread(() -> {
                 try {
-                    Drawable d = ImageDecoder.decodeDrawable(ImageDecoder.createSource(getResources(), R.raw.opening));
+                    // From the bytes, not createSource(getResources(), …): a res/raw picture counts as 160 dpi, so the
+                    // decoder enlarged every frame to the screen density (3x: nine times the pixels to decode, 60 times
+                    // a second), which made it lag on mid-range phones (owner, 2026-11-20). Its own size, pixel for pixel.
+                    byte[] bytes;
+                    try (java.io.InputStream in = getResources().openRawResource(R.raw.opening)) {
+                        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream(800 * 1024);
+                        byte[] buf = new byte[64 * 1024];
+                        for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                        bytes = out.toByteArray();
+                    }
+                    Drawable d = ImageDecoder.decodeDrawable(ImageDecoder.createSource(java.nio.ByteBuffer.wrap(bytes)));
                     if (d instanceof AnimatedImageDrawable) opening = (AnimatedImageDrawable) d;
                     else noPicture = true;
                     Log.i("AyahOpening", "ready in " + (SystemClock.uptimeMillis() - start) + " ms, ok=" + (opening != null));
@@ -182,8 +192,7 @@ public class AppActivity extends BridgeActivity {
         view.setImageDrawable(pic);
         pic.setRepeatCount(0); // once, then he holds the last frame
         DisplayMetrics m = getResources().getDisplayMetrics();
-        // The stored picture's own pixels: getIntrinsicWidth() of a res/raw picture is scaled by the screen density
-        // (raw counts as 160 dpi), so on a 3x phone it was three times too big and only part of him showed.
+        // The stored picture's own pixels (decoded from its bytes, so no density scaling).
         int cw = OPENING_CROP_W, ch = OPENING_CROP_H;
         float ratio = (float) OPENING_FULL_H / OPENING_FULL_W;
         int w = (int) Math.min(m.widthPixels * 0.94f, m.heightPixels * 0.66f / ratio); // the whole frame's width on screen
