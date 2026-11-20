@@ -64,6 +64,8 @@ async function context(browser, net) {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2.6, serviceWorkers: 'block', locale: 'en-US', isMobile: true, hasTouch: true });
   await ctx.route((url) => !url.href.startsWith(base), async (r) => { await new Promise((ok) => setTimeout(ok, Number(process.env.HANG) || 600)); await r.abort().catch(() => {}); });
   await ctx.addInitScript(PROBE);
+  // The app (files on the phone): index.html starts the code at once there, as it does under a service worker.
+  if (!net) await ctx.addInitScript(() => { try { Object.defineProperty(navigator.serviceWorker, 'controller', { get: () => ({}) }); } catch { /* none */ } });
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
@@ -79,6 +81,8 @@ async function start(browser, net, warm) {
   if (warm) { await page.goto(base); await page.waitForTimeout(6000); }
   const t0 = Date.now();
   if (warm) await page.reload({ waitUntil: 'commit' }); else await page.goto(base, { waitUntil: 'commit' });
+  await page.waitForFunction(() => !!document.querySelector('#prepaint .w') || !!document.querySelector('.mushaf-page:not(.loading) .qcf-line, .mushaf-page:not(.loading) [data-p]'), null, { timeout: 90000, polling: 50 });
+  const shown = await page.evaluate(() => performance.now()); // index.html's first picture, or the reader's page
   await page.waitForFunction(() => !!document.querySelector('.mushaf-page:not(.loading) .qcf-line, .mushaf-page:not(.loading) [data-p]'), null, { timeout: 90000, polling: 50 });
   const r = await page.evaluate(() => ({
     fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0,
@@ -91,7 +95,7 @@ async function start(browser, net, warm) {
   const after = await page.evaluate(() => ({ lt: window.__lt, now: performance.now() }));
   await cdp.detach().catch(() => {});
   await ctx.close();
-  return { fcp: Math.round(r.fcp), page: Math.round(r.now), wall: Date.now() - t0, blockedToPage: Math.round(blocked(r.lt, 0, r.now)), blocked3sAfter: Math.round(blocked(after.lt, r.now, after.now)), jsKB: Math.round(r.js / 1024), reqs: r.reqs };
+  return { fcp: Math.round(r.fcp), shown: Math.round(shown), page: Math.round(r.now), wall: Date.now() - t0, blockedToPage: Math.round(blocked(r.lt, 0, r.now)), blocked3sAfter: Math.round(blocked(after.lt, r.now, after.now)), jsKB: Math.round(r.js / 1024), reqs: r.reqs };
 }
 
 const TABS = [['learn', '#/learn', '.lp-top'], ['ranks', '#/ranks', null], ['me', '#/me', null], ['read', null, '.mushaf-page:not(.loading)']];
@@ -132,7 +136,7 @@ for (const [label, net, warm] of [['web slow 3G', 'slow3g', false], ['web 4G', '
   const m = {};
   for (const k of Object.keys(rs[0])) m[k] = med(rs.map((r) => r[k]));
   result.starts[label] = m;
-  console.log(`${label.padEnd(13)} page drawn ${m.page} ms · blocked ${m.blockedToPage} ms (+${m.blocked3sAfter} ms next 3 s) · JS ${m.jsKB} KB · ${m.reqs} requests`);
+  console.log(`${label.padEnd(13)} page shown ${m.shown} ms · reader ready ${m.page} ms · blocked ${m.blockedToPage} ms (+${m.blocked3sAfter} ms next 3 s) · JS ${m.jsKB} KB · ${m.reqs} requests`);
 }
 const all = [];
 for (let i = 0; i < RUNS; i++) all.push(await tabs(browser));

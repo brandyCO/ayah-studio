@@ -7,6 +7,7 @@ import { h } from './dom';
 import { t } from '../i18n';
 import { touchPref } from './prefs';
 import { hijriDate } from '../data/hijri';
+import { saveBootLook } from './theme';
 
 // --- margin marks ---
 export interface Mark {
@@ -80,6 +81,7 @@ export function applyTimeTint() {
   const root = document.documentElement.style;
   root.setProperty('--tod', color);
   root.setProperty('--tod-amt', `${amount}%`);
+  saveBootLook({ ten: ramadanNow().lastTen ? '1' : '' }); // index.html works out the same tint for the first picture
 }
 
 // --- Ramadan ---

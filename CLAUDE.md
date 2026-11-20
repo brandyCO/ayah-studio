@@ -768,6 +768,21 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       page first; Me / Learn / Ranks code is fetched one per quiet moment. `scripts/speed-waterfall.mjs` (H2=1: HTTP/2 like the
       real hosts) lists the downloads before the first page. 6× CPU: web slow 3G 8.0 → 6.6 s (HTTP/2 6.9 → 5.8 s), 4G 2.6 →
       2.3 s; longest pause in the 3 s after the page shows ~150 → ~55 ms
+      **The first page before the code** (speed pass 5, owner "First faster web open"): index.html fetches the page file itself
+      (`window.__page`, taken once by `loadMushafPage()`) and an inline script at the top of `<body>` (it runs once the stylesheet
+      is in) draws that page as `main#prepaint` (z-index 3) with the reader's own elements, classes and fit (empty page-number row
+      while fitting, as the reader does), waiting for the page font, the surah-name fonts and the Bismillah picture
+      (`window.__bsvg`, reused by `bismillah()`). The reader removes it in the frame its own page is fitted (`attach()` in
+      mushaf.ts); other routes and errors remove it in `route()`; `replaceScreens()` keeps it. Pixel-identical (checked on pages
+      1, 2, 50 dark, 77, 300). The head script also applies the theme colours (`bootLook` in localStorage: theme css + id + Ramadan's
+      last ten, device-only; `saveBootLook()` in theme.ts), the time-of-day tint (`timeTint()`'s formula), old-phone mode and big
+      text before the code, so nothing changes colour at the hand-over; the reader takes its page font too (`window.__pageFont`).
+      Only on a first web visit (`__page.first`: no service worker in control, not the Android / iPhone app; there the code is on
+      the device and drawing the page twice only cost time). **Code after the page** (`codeAfterPage()` in vite.config.ts):
+      on such a visit the entry script and its modulepreloads wait in `<template id="app-code">` until the page file and
+      font are in (≤ 2.5 s), so they get the whole connection. Taps do nothing until the reader takes over. Benches report
+      "page shown" (prepaint or reader) and "reader ready". 6× CPU, slow 3G HTTP/2: page shown 5.8 → 2.6 s, reader ready
+      5.8 → 6.3 s
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase

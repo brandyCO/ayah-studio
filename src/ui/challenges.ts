@@ -8,7 +8,7 @@ import { account } from '../cloud/auth';
 import { icon } from './icons';
 import { clt, type ChallengeKey } from '../i18n/challenges';
 import {
-  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, teamWithFriend, claimDuel, myChallenges, myDuel, socialPulse,
+  CHALLENGE_KINDS, answerChallenge, cancelChallenge, challengeFriend, claimChallenge, teamWithFriend, claimDuel, myChallenges, myDuel, socialPulse, staleFirst, StaleMiss,
   type Challenge, type ChallengeKind, type ChallengeResult, type DuelQuest, type DuelState, type Row,
 } from '../together/ranks';
 import { chestArt, chestTier } from './chest';
@@ -145,9 +145,14 @@ export function teamCard(c: Challenge, k: ChallengeKind, who: string, repaint: (
 }
 
 /** Me → goals → Challenges: friend challenges only (the weekly rival is on Ranks, with a small pill here). */
-export async function challengesPanel(repaint: () => void, fresh = false): Promise<HTMLElement> {
+export async function challengesPanel(repaint: () => void, fresh = false, kept = false): Promise<HTMLElement | null> {
   if (!account()) return h('p', { class: 'muted' }, clt('cl.signIn'));
-  const [list, duel] = await Promise.all([myChallenges(fresh).catch(() => [] as Challenge[]), myDuel(fresh).catch(() => null)]);
+  // `kept`: drawn at once from the answers this phone kept (no network); null when it kept none, so the caller waits for the fresh one.
+  const get = () => Promise.all([myChallenges(fresh).catch((e) => { if (kept && e instanceof StaleMiss) throw e; return [] as Challenge[]; }),
+    myDuel(fresh).catch(() => null)]);
+  let got: Awaited<ReturnType<typeof get>>;
+  try { got = kept ? await staleFirst(get) : await get(); } catch (e) { if (e instanceof StaleMiss) return null; throw e; }
+  const [list, duel] = got;
   const cards = list.filter((c) => !(c.expired && !c.incoming) && !(c.over && c.claimed)).map((c) => card(c, repaint)).filter((x): x is HTMLElement => !!x);
   const find = h('button', { class: 'chip cl-find', onclick: () => { try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ } location.hash = '#/ranks'; } }, `＋ ${clt('cl.find')}`);
   const d = duel?.duel;

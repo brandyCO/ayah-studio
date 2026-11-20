@@ -180,6 +180,16 @@ function setAppIcon(x: BrandTheme) {
 export const refreshAppIcon = () => setAppIcon(themeById(themeId()));
 
 /** Applies the saved theme (call once at start, before the first screen). */
+/** What index.html applies before the app's code is in (the first picture already in the user's colours). */
+export function saveBootLook(part: { css?: string; id?: string; ten?: string }) {
+  try {
+    const was = JSON.parse(localStorage.getItem('bootLook') ?? '{}') as Record<string, string>;
+    const now: Record<string, string | undefined> = { ...was, ...part };
+    if (Object.keys(part).every((k) => was[k] === now[k])) return;
+    localStorage.setItem('bootLook', JSON.stringify(now));
+  } catch { /* storage blocked */ }
+}
+
 export function applyTheme(id = themeId()) {
   const x = themeById(id);
   let style = document.getElementById('brand-theme') as HTMLStyleElement | null;
@@ -190,6 +200,7 @@ export function applyTheme(id = themeId()) {
   }
   style.textContent = `${themeCss(x)}\n${rewardCss(x)}`;
   document.documentElement.dataset.theme = x.id;
+  saveBootLook({ css: style.textContent, id: x.id });
   const dark = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="dark"]');
   if (dark) dark.content = night(x).meta;
   setAppIcon(x);

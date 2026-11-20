@@ -43,6 +43,25 @@
       @font-face { font-family: 'Nunito'; src: url('./fonts/Nunito-latin-ext.woff2') format('woff2'); font-weight: 200 1000; font-display: swap; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
     </style>
     <script>
+      // The theme colours and the page's time-of-day tint as the app last set them (src/ui/theme.ts, living.ts), so the
+      // first picture already has them and nothing changes colour when the app's code arrives.
+      try {
+        var bl = JSON.parse(localStorage.getItem('bootLook') || 'null');
+        if (bl && bl.css) { var st = document.createElement('style'); st.id = 'brand-theme'; st.textContent = bl.css; document.head.appendChild(st); document.documentElement.dataset.theme = bl.id; }
+        // timeTint() in src/ui/living.ts: dawn rose, Maghrib amber, night indigo (deeper in Ramadan's last ten nights).
+        if (localStorage.getItem('timeTint') !== 'off') {
+          var d0 = new Date(), hr = d0.getHours() + d0.getMinutes() / 60, ten = bl && bl.ten;
+          var bump = function (c, half, max) { var d = Math.min(Math.abs(hr - c), 24 - Math.abs(hr - c)); return d >= half ? 0 : max * (0.5 + 0.5 * Math.cos((Math.PI * d) / half)); };
+          var opts = [['#f0b49a', bump(5.75, 1.75, 5)], ['#e9a053', bump(18.25, 1.75, 6)], ['#3d4f86', ten ? Math.min(6, bump(0.5, 6, 9)) : Math.min(4, bump(0.5, 4.5, 6.5))]];
+          var best = opts[0]; for (var oi = 1; oi < 3; oi++) if (opts[oi][1] > best[1]) best = opts[oi];
+          document.documentElement.style.setProperty('--tod', best[0]);
+          document.documentElement.style.setProperty('--tod-amt', Math.round(best[1] * 10) / 10 + '%');
+        }
+        // Old-phone mode (src/lite.ts: applyLite) and big text, as the app will set them.
+        var nv = navigator, lm = localStorage.getItem('liteMode');
+        if (lm === 'on' || (lm !== 'off' && ((nv.connection && nv.connection.saveData) || (nv.deviceMemory && nv.deviceMemory <= 3) || (nv.hardwareConcurrency && nv.hardwareConcurrency <= 4)))) document.documentElement.classList.add('lite');
+        if (localStorage.getItem('easyMode') === 'on') document.documentElement.classList.add('easy');
+      } catch (e) { /* storage blocked */ }
       // Opening on the mushaf (the usual launch): start the page layout download right away, in parallel
       // with the app's code, instead of after it (saves a round trip and the script time on a first visit).
       try {
@@ -61,10 +80,19 @@
           var lp = JSON.parse(localStorage.getItem('lastPage') || 'null');
           var home = !h || h === '#' || h === '#/', m = /^#\/s\/(\d+)$/.exec(h);
           var pg = lp && (home || h === lp[0]) ? lp[1] : m ? %SURAH_PAGES%[m[1] - 1] : home ? 1 : 0;
-          var l = document.createElement('link');
-          l.rel = 'preload'; l.as = 'fetch'; l.crossOrigin = 'anonymous';
-          l.href = pg >= 1 && pg <= 604 ? './data/mushaf/p' + pg + '.json?v=%DATA_VERSION%' : './data/mushaf.json?v=%DATA_VERSION%';
-          document.head.appendChild(l);
+          if (pg >= 1 && pg <= 604) {
+            // Fetched here (not just preloaded) so the page can be drawn below before the app's code is in; the
+            // reader takes this same answer (src/data/mushaf.ts loadMushafPage) instead of asking again.
+            // A first web visit (no service worker, not the Android / iPhone app): the code is a download away, so the page
+            // is drawn below first and the code waits for the page's files (vite.config.ts codeAfterPage). Elsewhere the code
+            // is on the device and the reader draws the page itself just as soon.
+            var first = !(navigator.serviceWorker && navigator.serviceWorker.controller) && !window.Capacitor && /^https?:/.test(location.protocol);
+            window.__page = { p: pg, first: first, d: fetch('./data/mushaf/p' + pg + '.json?v=%DATA_VERSION%').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) };
+          } else {
+            var l = document.createElement('link');
+            l.rel = 'preload'; l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = './data/mushaf.json?v=%DATA_VERSION%';
+            document.head.appendChild(l);
+          }
           // Surah names and ayah counts (src/data/quran.ts loadMeta), needed before the page is drawn.
           var mt = document.createElement('link');
           mt.rel = 'preload'; mt.as = 'fetch'; mt.crossOrigin = 'anonymous'; mt.href = './data/meta.json?v=%DATA_VERSION%';
@@ -73,6 +101,7 @@
             var f = document.createElement('link');
             f.rel = 'preload'; f.as = 'font'; f.type = 'font/woff2'; f.crossOrigin = 'anonymous';
             f.href = './fonts/qcf-v2/p' + pg + '.woff2';
+            if (window.__page) window.__page.f = new Promise(function (ok) { f.onload = f.onerror = ok; });
             document.head.appendChild(f);
           }
         }
@@ -81,6 +110,58 @@
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // The first page, drawn before the app's code is in (on slow 3G that code takes seconds after the page's own small
+      // file and font): the same elements, classes and fitting as the reader (src/ui/mushaf.ts line() and fit()), so when
+      // the reader draws its page in the same place this one is removed without a visible change. Only the picture: a
+      // tap does nothing until the reader takes over. This script runs once the stylesheet above is in.
+      (function () {
+        var P = window.__page;
+        if (!P || !P.first || !window.FontFace || !window.Promise || (innerWidth > innerHeight && innerHeight < 640)) return;
+        var pg = P.p, wait = [new FontFace('qcf-p' + pg, 'url(./fonts/qcf-v2/p' + pg + '.woff2)', { display: 'block' }).load().then(function (f) { document.fonts.add(f); })];
+        window.__pageFont = { p: pg, f: wait[0] }; // the reader takes this face (src/data/mushaf.ts loadPageFont)
+        P.d.then(function (d) {
+          if (!d) return;
+          var svg = '';
+          d.lines.forEach(function (l) {
+            if (l[0] === 'h') { var n = String(l[1]); while (n.length < 3) n = '0' + n; wait.push(new FontFace('sn' + Number(l[1]), 'url(./fonts/suras/s' + n + '.woff2)', { display: 'block' }).load().then(function (f) { document.fonts.add(f); })); }
+            if (l[0] === 'b' && !window.__bsvg) { window.__bsvg = fetch('./fonts/bismillah.svg').then(function (r) { return r.text(); }); wait.push(window.__bsvg.then(function (x) { svg = x; })); }
+          });
+          return Promise.all(wait).then(function () { draw(d, svg); });
+        }).catch(function () {});
+        function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+        function draw(d, svg) {
+          var app = document.getElementById('app');
+          if (!app || app.querySelector('.mushaf-page[data-fit]')) return; // the reader was quicker
+          var page = el('div', 'mushaf-page' + (pg <= 2 ? ' opening' : ''));
+          page.dir = 'rtl'; page.lang = 'ar'; page.style.fontFamily = 'qcf-p' + pg;
+          d.lines.forEach(function (l) {
+            if (l[0] === 'h') { var f = el('div', 'surah-frame'), nm = el('span', 'surah-name', ('00' + l[1]).slice(-3)); nm.style.fontFamily = 'sn' + Number(l[1]); f.appendChild(nm); var hl = el('div', 'mp-line mp-surah'); hl.appendChild(f); page.appendChild(hl); return; }
+            if (l[0] === 'b') { var b = el('div', 'mp-line mp-basmala'); b.innerHTML = svg; page.appendChild(b); return; }
+            var t = el('div', 'mp-line text');
+            l.forEach(function (seg) { seg[2].split(' ').forEach(function (g) { t.appendChild(el('span', 'w', g)); }); });
+            page.appendChild(t);
+          });
+          var strip = el('div', 'mushaf-strip'), view = el('div', 'mushaf-view'), main = el('main', 'mushaf');
+          main.id = 'prepaint'; main.setAttribute('aria-hidden', 'true'); main.style.zIndex = '3';
+          // The page number is filled in after fitting, as the reader does (its first fit sees the number's row empty).
+          var num = el('div', 'mp-num');
+          strip.appendChild(page); view.appendChild(strip); main.appendChild(view); main.appendChild(num);
+          app.appendChild(main);
+          var lh = Math.floor((page.clientHeight - 10) / 15);
+          page.style.setProperty('--lh', lh + 'px');
+          page.style.setProperty('--f', '30px');
+          page.classList.add('measuring');
+          var widest = 1, ls = page.querySelectorAll('.mp-line.text');
+          for (var i = 0; i < ls.length; i++) widest = Math.max(widest, ls[i].scrollWidth);
+          page.classList.remove('measuring');
+          var cs = getComputedStyle(page), inner = page.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          var f = Math.min((30 * inner * (pg <= 2 ? 0.8 : 1)) / widest, lh * 0.72);
+          page.style.setProperty('--f', Math.floor(f * 4) / 4 + 'px');
+          num.textContent = String(pg);
+        }
+      })();
+    </script>
     <script type="module" src="./src/main.ts"></script>
     <script>
       // Boot rescue: if nothing has been drawn after 9 s (a stale offline copy, a script that failed to load), clear the
@@ -89,7 +170,7 @@
       (function () {
         var app = document.getElementById('app');
         setTimeout(function () {
-          if (!app || app.childElementCount > 0 || document.querySelector('dialog[open]')) { try { sessionStorage.removeItem('bootRescue'); } catch (e) {} return; }
+          if (!app || app.querySelector(':scope > :not(#prepaint)') || document.querySelector('dialog[open]')) { try { sessionStorage.removeItem('bootRescue'); } catch (e) {} return; }
           var tried = false;
           try { tried = sessionStorage.getItem('bootRescue') === '1'; sessionStorage.setItem('bootRescue', '1'); } catch (e) {}
           if (!tried) {
