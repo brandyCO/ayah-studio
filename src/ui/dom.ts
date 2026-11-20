@@ -1,4 +1,4 @@
-import { errMsg } from '../i18n';
+import { errMsg, t } from '../i18n';
 type Child = Node | string | null | undefined | false;
 type Attrs = Record<string, unknown>;
 
@@ -85,9 +85,11 @@ export const studioShell = () => h('div', { class: 'studio studio-shell', 'aria-
   h('div', { class: 'transport' }),
   h('div', { class: 'studio-bottom' }, h('span', { class: 'shell-track' }), h('span', { class: 'shell-track' }), h('span', { class: 'shell-tools' })));
 
-/** Rows of a list while it loads (search results, drafts). */
-export const skeletonRows = (n = 4) =>
-  h('div', { class: 'skel skel-rows', 'aria-busy': 'true' }, ...Array.from({ length: n }, () => h('span', { class: 'skel-row' },
+/** Rows of a list while it loads (search results, drafts; `dot`: with an avatar, as on Ranks). */
+export const skeletonRows = (n = 4, dot = false) =>
+  h('div', { class: `skel skel-rows${dot ? ' with-dot' : ''}`, 'aria-busy': 'true', 'aria-label': t('common.loading') },
+    ...Array.from({ length: n }, () => h('span', { class: 'skel-row' },
+    ...(dot ? [h('span', { class: 'skel-dot' })] : []),
     h('span', { class: 'skel-lines' }, h('span', { class: 'skel-bar' }), h('span', { class: 'skel-bar short' })))));
 
 // Listeners that belong to a piece of a screen: removed once that piece has left the page (checked at

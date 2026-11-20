@@ -586,7 +586,14 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
   const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
   const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
-  const claimBadgeNow = (b: BadgeDef, from?: Element) => play(
+  const claimBadgeNow = (b: BadgeDef, from?: Element) => {
+    // Felt at once (owner 2026-11-20: "a little lag when I pressed on claiming the badge"): a tap and a click on the
+    // press itself, before the moment's code runs.
+    haptic(10);
+    void import('./sfx').then((m) => m.sfx.pop(0));
+    return claimBadgeInner(b, from);
+  };
+  const claimBadgeInner = (b: BadgeDef, from?: Element) => play(
     () => import('./celebrate').then((m) => {
       const k = badgeMoment(b);
       return m.celebrate(k === 'flame' ? { kind: 'flame', badge: b, days: b.need } : { kind: k, badge: b }, from, BADGE_LIGHT[b.tier]);

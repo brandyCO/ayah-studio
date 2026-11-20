@@ -25,7 +25,7 @@ import { loadMeta, type SurahMeta } from '../data/quran';
 import { openAccount } from './account';
 import { flame } from './flame';
 import { richIcon, levelIcon } from './richIcon';
-import { h, haptic, toast } from './dom';
+import { h, haptic, skeletonRows, toast } from './dom';
 import { tabBar } from './tabs';
 import { levelLabel, levelOf, levelProgress, myXp } from '../data/xp';
 import { withLevel } from './levelLook';
@@ -252,7 +252,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
 }
 /** Followers or Following of a player: a sheet of rows (tap → that profile), with Follow / Remove on your own. */
 function openFollowList(pid: string, kind: 'followers' | 'following', name: string, onChange: () => void) {
-  const box = h('div', { class: 'fr-follow-list' }, h('p', { class: 'muted' }, rt('rk.loading')));
+  const box = h('div', { class: 'fr-follow-list' }, skeletonRows(4, true));
   const d = sheet(kind === 'followers' ? ft('fr.followers') : ft('fr.followingN'), box);
   void followList(pid, kind).then((rows) => {
     if (!d.isConnected) return;
@@ -327,7 +327,7 @@ function openReport(pid: string, name: string | null, onBlocked: () => void) {
 
 /** Me → Settings → App → Blocked players: everyone you blocked, each with Unblock. */
 export async function openBlocked() {
-  const box = h('div', { class: 'fr-blocked-list' }, h('p', { class: 'muted' }, rt('rk.loading')));
+  const box = h('div', { class: 'fr-blocked-list' }, skeletonRows(3, true));
   sheet(ft('fr.blockedList'), box);
   const fill = async () => {
     let rows: { pid: string; name: string | null }[];

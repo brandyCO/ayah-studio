@@ -34,7 +34,7 @@ import { DEFAULT, WARDROBE, encode, normalize, weekPiece } from './figure';
 import { chest, chestArt, chestTier } from './chest';
 import { tierEmblem } from './rankMoment';
 import { openAccount } from './account';
-import { h, haptic, toast } from './dom';
+import { h, haptic, skeletonRows, toast } from './dom';
 import { goMushaf, tabBar } from './tabs';
 import { levelLabel, levelOf } from '../data/xp';
 import { withLevel } from './levelLook';
@@ -205,7 +205,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // side like the mushaf pages; a swipe only slides them (nothing loads mid-swipe), the fresh answers come in quietly after.
   const mkPane = (v: PaneView): Pane => {
     const hd = h('section', { class: 'rk-head' });
-    const bd = h('section', { class: 'rk-body' }, h('p', { class: 'muted' }, rt('rk.loading')));
+    const bd = h('section', { class: 'rk-body' }, skeletonRows(6, true));
     const inn = h('div', { class: 'rk-in' }, hd, bd);
     return { el: h('div', { class: 'rk-pane', 'data-v': v }, inn), inn, head: hd, body: bd, o: 0, t: 0, y: 0, painted: false, stale: false };
   };
@@ -945,7 +945,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     if (!account()) { signedOut(); return; }
     paintTabs();
     ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) });
-    if (!body.childElementCount) body.append(h('p', { class: 'muted' }, rt('rk.loading')));
+    if (!body.childElementCount) body.append(skeletonRows(6, true));
     try {
       if (fresh) await report(true);
       // The league is asked for beside the status, not after it (the same request is shared when the list asks).

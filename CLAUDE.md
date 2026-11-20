@@ -2419,7 +2419,11 @@ duas/reflections section in Me.
       (`OPENING_FULL_*`, `OPENING_CROP_*`, printed by `opening_anim.py --webp`). Fix (owner 2026-11-19, "only saw a quarter of him"): the crop is placed by its
       own pixel size (`OPENING_CROP_W/H`; `getIntrinsicWidth()` of a `res/raw` picture is scaled by the screen density, 3×
       too big on his phone) and stored at the size a 1080 px phone draws it (1016 wide, quality 88, ~0.75 MB; `OPENING_W`,
-      `OPENING_Q`), so it is shown pixel for pixel. **Ranks opens at once again**: `onAccount()` calls back immediately, and
+      `OPENING_Q`), so it is shown pixel for pixel. Fix 2026-11-20 (owner: "a lag and … another hand is there still"): the picture is decoded
+      from its bytes (`ImageDecoder.createSource(ByteBuffer)`; from the resource it was enlarged 3× per frame, nine times the
+      pixels, which lagged), and `opening_anim.py` drops figure.ts's own two-piece arm rig (`fg-rig`), which drew a second
+      pair of hands. A badge's claim moment comes in quicker (seed 0.38 s, burst 0.18 s later) with a tap + pop on the press;
+      Ranks panes wait with avatar skeleton rows (`skeletonRows(n, true)`), not a "Loading…" line. **Ranks opens at once again**: `onAccount()` calls back immediately, and
       since the swipe panes (#317) that fresh paint merged into the instant one from the kept answers, so every open waited
       for the network behind "Loading…"; it now repaints only on a real account change. A character avatar is one `<img>`
       of its SVG (cached per look, still vector) instead of ~180 SVG nodes (a league 4,700 → ~1,300 elements). The swipe

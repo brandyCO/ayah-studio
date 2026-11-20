@@ -75,7 +75,7 @@ def load_parts(svg):
     s = re.sub(r'<ellipse class="fg-shadow"[^>]*/>', '', svg)
     body = s[s.index('class="fg-bob">') + len('class="fg-bob">'):s.rindex('</g></g></svg>')]
     head, body = cut(body, 'fg-head')
-    for c in ['fg-up', 'fg-wv', 'fg-arms']:
+    for c in ['fg-up', 'fg-wv', 'fg-arms', 'fg-rig']:   # fg-rig: the in-app two-piece arms (figure.ts), else a second pair of hands shows
         _, body = cut(body, c)
     head = inner(head)
     xp = {}
