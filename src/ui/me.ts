@@ -86,6 +86,8 @@ let period: Period = 'week';
 type GoalTab = 'day' | 'week' | 'ch';
 /** Goals lists opened past their first three this session (owner 2026-11-13: all at once was too much). */
 const goalsOpen = new Set<string>();
+/** The Challenges panel last drawn, shown again at once when the switch comes back to it. */
+let lastCh: { el: HTMLElement; who: string | undefined; at: number } | null = null;
 let goalTab: GoalTab = (() => { try { const v = localStorage.getItem('meGoalTab'); return v === 'week' || v === 'ch' ? v : 'day'; } catch { return 'day'; } })();
 /** A friend challenge waits for an answer or a chest, from the Ranks answers kept on this device (no network). */
 const challengeWaiting = () => {
@@ -936,9 +938,19 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }, label, dot && tab !== v ? h('i', { class: 'goal-seg-dot', 'aria-label': mpt('mp.weekReady') }) : '');
     const chBox = h('div', { class: 'goal-ch' });
     if (tab === 'ch') {
-      const fill = (fresh: boolean) => void import('./challenges').then((m) => m.challengesPanel(() => fill(true), fresh)).then((el) => chBox.replaceChildren(el)).catch(() => {});
-      fill(false);
-      setTimeout(() => { if (chBox.isConnected) fill(true); }, 400);
+      // Instant (owner 2026-11-20: "one to two seconds to load challenges"): the panel shown last time comes back at once,
+      // else it is drawn from the answers this phone kept, then the fresh answer replaces it.
+      const who = account()?.id;
+      const prev = lastCh?.who === who ? lastCh : null;
+      if (prev) chBox.append(prev.el);
+      const show = (el: HTMLElement | null) => { if (el && chBox.isConnected) { lastCh = { el, who, at: Date.now() }; chBox.replaceChildren(el); } };
+      const fill = (fresh: boolean) => void import('./challenges').then((m) => m.challengesPanel(() => fill(true), fresh)).then(show).catch(() => {});
+      if (!prev) void import('./challenges').then((m) => m.challengesPanel(() => fill(true), false, true)).then(show).catch(() => {});
+      // Asked again only when the last answer is more than 15 s old (the switch repaints often).
+      if (!prev || Date.now() - prev.at > 15_000) fill(true);
+    } else if (withCh) {
+      const warm = () => void import('./challenges');
+      if ('requestIdleCallback' in window) requestIdleCallback(warm, { timeout: 3000 }); else setTimeout(warm, 1500);
     }
     const body = tab === 'ch' ? [chBox] : tab === 'week'
       ? [weekBox()]
