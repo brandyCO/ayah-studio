@@ -31,11 +31,12 @@
 .lp-garden-btn svg { color: #3b9a1c; }
 .lp-streak { display: inline-flex; align-items: center; gap: 2px; font: 900 16px var(--ui-round); color: #f07c1e; }
 
-.lp-list { display: grid; gap: 28px; padding: 6px 0 40px; }
+.lp-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 6px 0 40px; }
 .lp-unit { display: grid; justify-items: center; gap: 10px; }
 /* Units off screen are skipped (style, layout, paint) until scrolled near: opening Learn restyles the units in view, not
    the whole path (speed pass 3). `auto` keeps each unit's real height once it has been drawn. */
-.lp-list > .lp-unit { content-visibility: auto; contain-intrinsic-size: auto 720px; }
+/* Only the height is guessed for units off screen: "auto 720px" set the width too, so the list grew 720 px wide and the path sat far to the right. */
+.lp-list > .lp-unit { content-visibility: auto; contain-intrinsic-size: none auto 720px; }
 .lp-banner {
   --hc: #17a273; --he: #0e7d58;
   justify-self: stretch; display: flex; align-items: center; gap: 12px; padding: 14px 12px 14px 16px; border-radius: 20px;
