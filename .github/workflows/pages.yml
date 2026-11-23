@@ -31,6 +31,31 @@ jobs:
           VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
       - run: node scripts/check-size.mjs # speed budget: first-load JS + CSS
+      # Android App Links: shared links (https://…/i/#/…) open the installed app only when the site lists the
+      # SHA-256 of the key the app is signed with. Taken from the signing key in the secrets (never stored), plus
+      # Google Play's app-signing key once the app is on Play (repo variable PLAY_SIGNING_SHA256, from Play Console →
+      # Test and release → App integrity), so both sideloaded and Play installs open links.
+      - name: Android App Links file
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PLAY_SHA: ${{ vars.PLAY_SIGNING_SHA256 }}
+        run: |
+          fps=()
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf %s "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/app.keystore"
+            PW=$(printf %s "$PW" | tr -d '[:space:]')
+            fp=$(keytool -list -v -keystore "$RUNNER_TEMP/app.keystore" -storetype PKCS12 -storepass "$PW" -alias ayahstudio 2>/dev/null | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -1)
+            rm -f "$RUNNER_TEMP/app.keystore"
+            [ -n "$fp" ] && fps+=("$fp") || echo "::warning::Could not read the app's signing key: links will open the web on Android"
+          fi
+          for f in $(printf %s "$PLAY_SHA" | tr ',;' '  '); do fps+=("$f"); done
+          if [ ${#fps[@]} -gt 0 ]; then
+            mkdir -p dist/.well-known
+            list=$(printf '"%s",' "${fps[@]}"); list="[${list%,}]"
+            printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.brandyco.ayahstudio","sha256_cert_fingerprints":%s}}]\n' "$list" > dist/.well-known/assetlinks.json
+            echo "assetlinks.json lists ${#fps[@]} key(s)"
+          fi
       # GitHub Pages only while the repo is public (a private repo on the free plan has no Pages site).
       - uses: actions/configure-pages@v5
         if: ${{ !github.event.repository.private }}
@@ -141,6 +166,8 @@ jobs:
           # Cloudflare answers /privacy.html with a redirect to /privacy (html_handling auto-trailing-slash), so follow it.
           curl -sfL "$site/privacy.html" | grep -q 'id="delete"' || { echo "::error::$site/privacy.html missing"; exit 1; }
           curl -sf "$site/sw.js" > /dev/null || { echo "::error::$site/sw.js missing"; exit 1; }
+          curl -sf "$site/.well-known/apple-app-site-association" | grep -q applinks || echo "::warning::$site/.well-known/apple-app-site-association missing: links will not open the iPhone app"
+          curl -sf "$site/i/" | grep -q stores.json || echo "::warning::$site/i/ (shared links) missing"
           grep -q "$site/" files/site/assets/*.js || echo "::warning::The build's PUBLIC_URL is not $site/ (src/cloud/config.ts)"
           echo "The web app is live at $site/" >> "$GITHUB_STEP_SUMMARY"
       - name: Let Google sign-ins come back to the new address

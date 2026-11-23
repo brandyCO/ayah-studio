@@ -120,10 +120,11 @@ export async function shareTextFile(name: string, text: string) {
   await shareFile(uri, name);
 }
 
-/** A link to an app address (e.g. `#/gift/…`) that works for anyone: inside the Android app the page
- *  lives at https://localhost, so shared links use the public web app instead. */
-export const shareableLink = (hash: string) =>
-  `${isNative() ? PUBLIC_URL : location.origin + location.pathname}${hash}`;
+/** A link to an app address (e.g. `#/rc/CODE`) that works for anyone: https://<site>/i/#/… opens the
+ *  installed app on that address (iPhone Universal Links, Android App Links: `public/.well-known/`), else the
+ *  store listing once `public/i/stores.json` says the app is there, else the web app (`public/i/index.html`).
+ *  Always the public site, also from the web app on another address and inside the apps (https://localhost). */
+export const shareableLink = (hash: string) => `${PUBLIC_URL}i/${hash}`;
 
 /** Our native foreground service (android/…/ExportService.java): keeps an export running in the background. */
 interface ExportServicePlugin {

@@ -92,6 +92,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (ours) {
+    // Shared links (i/) and the app-link files go straight to the network: the app's page must never be kept under them.
+    if (path === 'i' || path.startsWith('i/') || path.startsWith('.well-known/')) return;
     if (req.mode === 'navigate' || path === '' || path === 'index.html') {
       // A good connection answers well within 0.8 s (and brings an update at once); a weak one no longer
       // keeps the app waiting: the kept copy opens, and the fresh page is stored for the next open.

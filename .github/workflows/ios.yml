@@ -178,6 +178,7 @@ jobs:
             codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app" > "$RUNNER_TEMP/ent.plist" 2>/dev/null || true
             plutil -p "$RUNNER_TEMP/ent.plist" || true
             grep -q applesignin "$RUNNER_TEMP/ent.plist" || { echo "::error::The signed app lacks the Sign in with Apple entitlement"; exit 1; }
+            grep -q associated-domains "$RUNNER_TEMP/ent.plist" || echo "::warning::The signed app lacks Associated Domains: shared links will open the web, not the app. Turn on Associated Domains for com.brandyco.ayahstudio in Apple Developer → Identifiers."
           fi
           done
           echo "Uploaded version $VERSION ($BUILD). It shows in App Store Connect → TestFlight after Apple's processing." | tee -a "$GITHUB_STEP_SUMMARY"
