@@ -3,6 +3,7 @@
 //   lantern  a daily goal met: a paper lantern rises, opens into warm light, gold motes drift up
 //   star     every goal met today: gold lines draw the eight-pointed khatam star, which fills with light
 //   flame    a streak milestone: the flame rises, rings of light pulse out, the days count up, the badge drops in
+//   hifz     a surah's Hifz badge (Bronze → Diamond, hifzBadge.ts), staged like the badges below
 //   medal / rosette / khatm  a badge: each tier its own moment (badgeStage(): Bronze tossed like a coin,
 //            Silver locked into a khatam star, Gold rising over a sunburst, Platinum dropping into blooming
 //            petals, Diamond condensed from light); a rosette (a surah, a juz…) also has the character cheering,
@@ -14,11 +15,16 @@
 //           each one jolts it, cracks it and lets more light out of the seam), it bursts open and what
 //           was won comes out one by one (`loot`: Light, a trophy, a freeze, an avatar…). Never random:
 //           the chest holds exactly what was earned, and it says so before it is opened.
+// A tier-up (owner request 2026-11-23, "the new badge replacing the old one"): the badge it had before comes
+// out of the seed first, shudders as cracks of light run through it and shatters into shards of its old metal;
+// the new tier is born out of that light with its own entrance. Transform / opacity only.
 // Reduced motion: the still final picture, faded in.
 import type { BadgeDef } from '../data/badges';
 import { locale, t, type Key } from '../i18n';
 import { h } from './dom';
 import { badgeArt } from './badge';
+import { TIERS } from '../data/badges';
+import { hifzBadge } from './hifzBadge';
 import { badgeGoal, badgeName } from '../i18n/badges';
 import { flame } from './flame';
 import { sparks, type Sparks } from './sparks';
@@ -41,7 +47,9 @@ export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string; stats?: MomentStat[] }
   | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[] }
   | { kind: 'flame'; badge: BadgeDef; days: number }
-  | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef };
+  | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef }
+  /** A Hifz badge earned (step 0) or climbed to `step` from `from`. */
+  | { kind: 'hifz'; s: number; step: number; from?: number; title: string; sub: string; kicker?: string; stats?: MomentStat[] };
 
 /** A line under a moment's title (a Learn lesson: the time it took, flawless, a lamp lit again). */
 export interface MomentStat { text: string; icon?: 'time' | 'flawless' | 'lamp' }
@@ -286,6 +294,54 @@ function crackArt() {
   return el;
 }
 
+/** Sizes of the badge on its stage, by tier. */
+const BADGE_PX = [250, 176, 150, 146, 146];
+/** The badge it had before a tier-up, with the cracks that run through it and the shards it breaks into. */
+function oldBadge(art: Node, step: number) {
+  const c = TIER_C[step];
+  // Each crack its own layer, so lighting one fades a layer instead of repainting the drawing.
+  const ks = ['M100 46l-9 26 14 12-11 22 8 18', 'M64 92l22 6 8 18-12 20', 'M138 82l-18 14 4 20 16 14', 'M78 140l20-10 22 6'].map((d) =>
+    h('span', { class: 'bm-l bm-crack' }, svgOf('0 0 200 200', `<path d="${d}" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`)));
+  const wrap = h('span', { class: 'cel-badge bm-old', 'aria-hidden': 'true' }, art, ...ks);
+  // Twelve shards scattered over the badge's face, each flying out from where it sat.
+  let seed = step * 97 + 13;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const shards = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2 + rnd() * 0.4, r = 8 + rnd() * 18;
+    const x = 50 + r * Math.cos(a), y = 50 + r * Math.sin(a);
+    const pts = [0, 1, 2].map((k) => `${Math.round(50 + 50 * Math.cos(a + k * 2.1 + rnd()))}% ${Math.round(50 + 50 * Math.sin(a + k * 2.1 + rnd()))}%`).join(',');
+    const el = h('i', { class: 'bm-shard', style: `left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;width:${(9 + rnd() * 8).toFixed(1)}%;clip-path:polygon(${pts});background:linear-gradient(${Math.round(rnd() * 360)}deg,${c[0]},${c[1]} 45%,${c[2]})` });
+    return { el, dx: Math.cos(a) * (90 + rnd() * 80), dy: Math.sin(a) * (90 + rnd() * 80) + 30, rot: (rnd() - 0.5) * 540 };
+  });
+  const shardLayer = h('span', { class: 'bm-l bm-shards', 'aria-hidden': 'true' }, ...shards.map((x) => x.el));
+  return {
+    wrap, shardLayer,
+    /** Comes out of the burst, shudders while the cracks run through it, then breaks. Returns when it broke (ms). */
+    play(later: (ms: number, f: () => void) => void, onBreak: () => void): number {
+      wrap.animate([{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'scale(1.1)', offset: .6 }, { opacity: 1, transform: 'scale(1)' }],
+        { duration: 380, easing: 'cubic-bezier(.2,1,.4,1)', fill: 'both' });
+      [430, 560, 680, 780].forEach((ms, i) => later(ms, () => {
+        ks[i]?.animate([{ opacity: 0 }, { opacity: .95 }], { duration: 90, fill: 'forwards' });
+        wrap.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${i % 2 ? 7 : -7}deg) scale(${1 - i * 0.015})` }, { transform: 'rotate(0deg)' }], { duration: 110, easing: 'ease-out', composite: 'add' });
+        sfx.tap(0.35 + i * 0.15, Math.min(4, step + 1));
+        vibrate([6 + i * 3]);
+      }));
+      later(880, () => {
+        wrap.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.18)' }], { duration: 160, easing: 'ease-in', fill: 'forwards' });
+        shards.forEach((x) => x.el.animate([
+          { opacity: 1, transform: 'translate(0,0) rotate(0deg) scale(1)' },
+          { opacity: 1, transform: `translate(${x.dx * .7}px,${x.dy * .7 - 30}px) rotate(${x.rot * .7}deg) scale(.9)`, offset: .55 },
+          { opacity: 0, transform: `translate(${x.dx}px,${x.dy + 40}px) rotate(${x.rot}deg) scale(.5)` },
+        ], { duration: 720, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'forwards' }));
+        sfx.pop(2);
+        vibrate([18, 30, 10]);
+        onBreak();
+      });
+      return 920;
+    },
+  };
+}
+
 function vibrate(p: number[]) {
   try { if (!matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate?.(p); } catch { /* ignore */ }
 }
@@ -298,7 +354,8 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const stage = h('div', { class: 'cel-stage' });
   let kicker = '', title = '', sub = '';
   let count: HTMLElement | null = null;
-  const stats = m.kind === 'lantern' || m.kind === 'star' ? m.stats ?? [] : [];
+  let old: ReturnType<typeof oldBadge> | null = null;
+  const stats = m.kind === 'lantern' || m.kind === 'star' || m.kind === 'hifz' ? m.stats ?? [] : [];
   // A chest: dropped in, then tapped open (a bigger one takes more taps), then what it holds comes out.
   const tier = chestTier(light);
   const isChest = m.kind === 'chest';
@@ -347,8 +404,15 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
     stage.append(m.kind === 'lantern' ? lanternArt() : starArt());
     kicker = m.kicker ?? t(m.kind === 'lantern' ? 'cel.goal' : 'cel.all');
     title = m.title; sub = m.sub;
+  } else if (m.kind === 'hifz') {
+    kicker = m.kicker ?? t('cel.big');
+    title = m.title; sub = m.sub;
+    stage.classList.add('bm');
+    stage.style.cssText = TIER_C[m.step].map((x, i) => `--b${i}:${x}`).join(';');
+    stage.append(...badgeStage(m.step, false, hifzBadge(m.s, m.step, 168)));
+    if (m.from != null && m.from >= 0 && m.from < m.step && !still) old = oldBadge(hifzBadge(m.s, m.from, 168), m.from);
   } else {
-    const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' | 'chest' }>).badge;
+    const b = (m as Exclude<Moment, { kind: 'lantern' | 'star' | 'chest' | 'hifz' }>).badge;
     title = badgeName(b);
     sub = badgeGoal(b);
     if (m.kind === 'flame') {
@@ -365,12 +429,18 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       if (m.kind === 'khatm') sub = t('cel.khatmSub', { date: new Intl.DateTimeFormat(locale(), { dateStyle: 'long' }).format(new Date()) });
       stage.classList.add('bm');
       stage.style.cssText = TIER_C[b.step].map((x, i) => `--b${i}:${x}`).join(';');
-      stage.append(...badgeStage(b.step, m.kind === 'khatm', badgeArt(b.tier, b.icon, true, [250, 176, 150, 146, 146][b.step] - (m.kind === 'khatm' ? 10 : 0))));
+      stage.append(...badgeStage(b.step, m.kind === 'khatm', badgeArt(b.tier, b.icon, true, BADGE_PX[b.step] - (m.kind === 'khatm' ? 10 : 0))));
+      // A tier above Bronze replaces the one before it (the Khatm is a badge of its own).
+      if (b.step > 0 && m.kind !== 'khatm' && !still) old = oldBadge(badgeArt(TIERS[b.step - 1], b.icon, true, BADGE_PX[b.step - 1]), b.step - 1);
     }
   }
   // Sparks in the theme's colours: its neon stops, its brightest stop lifted, a near-white core.
-  const isBadge = m.kind === 'medal' || m.kind === 'rosette' || m.kind === 'khatm';
-  const sparkColors = isBadge ? tierSparks((m as { badge: BadgeDef }).badge.step) : [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1), ...(m.kind === 'flame' ? [rgba(P.n2, 1)] : [])];
+  const isBadge = m.kind === 'medal' || m.kind === 'rosette' || m.kind === 'khatm' || m.kind === 'hifz';
+  const bstep = m.kind === 'hifz' ? m.step : 'badge' in m ? m.badge.step : 0;
+  // A tier-up: the new tier's stage waits aside while the old badge breaks; the old one (and its shards) stand in.
+  const newParts: Node[] = old ? [...stage.childNodes] : [];
+  if (old) stage.replaceChildren(old.shardLayer, old.wrap);
+  const sparkColors = isBadge ? tierSparks(bstep) : [rgba(P.n1, 1), rgba(P.n3, 1), rgba(P.hi, 1), rgba(P.core, 1), ...(m.kind === 'flame' ? [rgba(P.n2, 1)] : [])];
   // The Light this claim adds: a small pill that counts up once the moment lands.
   const lightNum = light > 0 && !isChest ? h('b', {}, String(still ? light : 0)) : null;
   const lightPill = lightNum ? h('p', { class: 'cel-light' }, '✦ ', lightNum, ` ${t('me.light')}`) : null;
@@ -384,13 +454,13 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   if (nr) stage.append(nr.el);
   // The user's own character (when they made one) stands beside the chest, watches and cheers.
   // The character also cheers the big milestones: a first surah, a juz, ten surahs, the Khatm (round 3).
-  const me = (isChest || m.kind === 'rosette' || m.kind === 'khatm') && !still ? makeActor(`cel-actor${isChest ? '' : ' big'}`) : null;
+  const me = (isChest || m.kind === 'rosette' || m.kind === 'khatm' || (m.kind === 'hifz' && m.step === 0)) && !still ? makeActor(`cel-actor${isChest ? '' : ' big'}`) : null;
   if (me) stage.append(me.el);
   return new Promise((resolve) => {
     const frames = still ? null : fpsStart(isChest ? `Chest · ${['wood','brass','cedar','emerald','pearl'][tier]}` : `Moment · ${m.kind}`);
     const ok = h('button', { class: 'cel-ok' }, t('cel.ok'));
     const canvas = h('canvas', { class: 'cel-sparks', 'aria-hidden': 'true' });
-    const el = h('div', { class: `cel cel-${m.kind}${isBadge ? ` bm-t${(m as { badge: BadgeDef }).badge.step}` : ''}${still ? ' still go' : ''}${still && isChest ? ' opened revealed' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
+    const el = h('div', { class: `cel cel-${m.kind}${isBadge ? ` bm-t${bstep}` : ''}${still ? ' still go' : ''}${still && isChest ? ' opened revealed' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `${kicker}: ${title}` },
       h('span', { class: 'cel-flash', 'aria-hidden': 'true' }),
       h('span', { class: 'cel-sweep', 'aria-hidden': 'true' }),
       stage,
@@ -729,13 +799,20 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       el.classList.add('go');
       fx.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, big ? 90 : 60, big ? 1.15 : 0.9);
       if (!isBadge) vibrate(m.kind === 'lantern' ? [18] : [22]);
-      // A Platinum or Diamond badge: the gold wash and a second, bigger burst (a Diamond bigger still).
-      const bstep = 'badge' in m ? m.badge.step : 0;
-      if (bstep >= 3) {
+      // A tier-up: the old badge first; when it breaks, the new tier's stage comes in and its own beats start then.
+      const up = old ? old.play(later, () => {
+        stage.prepend(...newParts);
+        const k = canvasBox();
+        fx?.burst(sb0.left + sb0.width / 2 - k.left, sb0.top + sb0.height / 2 - k.top, 70, 1.05);
+        // The flash and the sweep again, in the new metal: the moment of the upgrade.
+        for (const c of el.querySelectorAll<HTMLElement>('.cel-flash, .cel-sweep')) for (const a of c.getAnimations()) { a.cancel(); a.play(); }
+      }) : 0;
+      const at0 = (f: () => void) => (up ? later(up, f) : f());
+      if (bstep >= 3) at0(() => {
         el.classList.add('epic');
         later(280, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));
         if (bstep === 4) later(620, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 60, 1.4));
-      }
+      });
       // A chest drops in, lands with a squash and a thud, then waits for the user's taps.
       if (isChest) {
         // Falls (stretched by its speed), squashes flat on the ground and settles with a jelly wobble: one
@@ -751,21 +828,21 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         later(roll ? 420 : 620, () => { ready = true; });
         return;
       }
-      if (me) later(260, () => me.cheer(m.kind === 'khatm' ? 3400 : 2400));
+      if (me) later(260 + up, () => me.cheer(m.kind === 'khatm' ? 3400 : 2400));
       // A badge's own beats, by tier: when the coin lands, the star locks, the sun is up, the petals open,
       // the light condenses (the CSS timings in cel.css).
       if (isBadge) {
-        const st = (m as { badge: BadgeDef }).badge.step;
+        const st = bstep;
         const at = [[[760, () => { vibrate([22]); sfx.land(); }]],
           [[780, () => { vibrate([10, 40, 12]); sfx.tap(0.6, 1); }], [1150, () => sfx.pop(2)]],
           [[300, () => sfx.whoosh()], [900, () => { vibrate([18]); sfx.shimmer(); }]],
           [[250, () => vibrate([12])], [550, () => vibrate([12])], [1150, () => { vibrate([24, 90, 14]); sfx.open(0, 3); }]],
           [[0, () => sfx.rare(900)], [1000, () => { vibrate([30, 80, 20, 80, 12]); sfx.open(2, 4); }]]][st] as [number, () => void][];
-        for (const [ms, f] of at) later(ms * (roll ? 0.6 : 1), f);
+        for (const [ms, f] of at) later(up + ms * (roll ? 0.6 : 1), f);
       }
       // A second beat when the badge lands / the star fills / the lantern opens.
-      const badgeBeat = isBadge ? [900, 1000, 1150, 1450, 1250][(m as { badge: BadgeDef }).badge.step] + (m.kind === 'khatm' ? 500 : 0) : 0;
-      const beat = (isBadge ? badgeBeat : m.kind === 'flame' ? 1400 : 900) * (roll ? 0.6 : 1);
+      const badgeBeat = isBadge ? [900, 1000, 1150, 1450, 1250][bstep] + (m.kind === 'khatm' ? 500 : 0) : 0;
+      const beat = (isBadge ? badgeBeat : m.kind === 'flame' ? 1400 : 900) * (roll ? 0.6 : 1) + up;
       later(beat, () => {
         const b2 = sb0;
         fx?.burst(b2.left + b2.width / 2 - cr.left, b2.top + b2.height / 2 - cr.top, big ? 46 : 30, 0.7);

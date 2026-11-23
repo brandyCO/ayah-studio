@@ -2513,7 +2513,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       only (rule 8); tap a word: Quran.com meaning + its sound where timed. Juz 'Amma recordings kept on the device
       (`kidsRecitation`), longer surahs streamed. `addMemorised()` feeds the Me tab's memorise goal; rewards play
       `celebrate()` (lantern / star, own kicker)
-- [x] The 114 magic trees (owner request 2026-11-02, "nothing better than another"): `src/ui/magicTrees.ts` — every
+- [x] ~~The 114 magic trees~~ — **removed by the owner on 2026-11-23** (Hifz badges below). As built (owner request 2026-11-02, "nothing better than another"): `src/ui/magicTrees.ts` — every
       surah its own combination of 12 shapes × 14 leaves × 14 fruits × 10 barks × 24 colour sets (no two share three of
       the five, neighbours never share shape/leaf/fruit) and its own seed (12 bodies × 8 marks); growth is continuous
       (`STAGE_G`: seed → full, fruit ripening from the growing stage); size follows the surah's pages (`SURAH_PAGES`,
@@ -2670,7 +2670,7 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       words start line n — wrong choices from the 3 pages either side — and where does ayah X start, tapped on the page's
       outline with its 15 lines, headers and basmala drawn as such), **Recite page** (all hidden, peeks and "Stuck? Next
       word" are slips, then tap missed words; the result sets the page's strength). ‹ › to the pages either side
-- [x] **Tree close-up** (2026-11-10, `src/ui/treeView.ts`, `#/learn/tree/S`; from a tree's sheet → Look closer and from
+- [x] ~~**Tree close-up**~~ — **removed 2026-11-23** with the trees. As built (2026-11-10, `src/ui/treeView.ts`, `#/learn/tree/S`; from a tree's sheet → Look closer and from
       Your garden's cards): the surah's tree on its starry island, drawn live at the screen's full resolution every frame
       (`drawTreeFrame()` / `drawIsland()` in `gardenArt.ts`, never a cached picture), so it stays sharp at any zoom (pinch,
       wheel, double tap, 1–5×, drag); sways (still with reduced motion); **Full grown** previews the finished tree. The
@@ -2699,6 +2699,25 @@ Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the ju
       week and the total like the quest bonus; pgTAP `rank_flawless.test.sql`); its celebration is the star with "Flawless".
       **Time spent**: every lesson's celebration shows "Learning · 4 min 12 s" / "Memorising · …" (visible time only;
       `MomentStat` lines in `celebrate()`)
+- [x] **Hifz badges instead of trees** (owner decision 2026-11-23): the trees are gone (`gardenArt.ts`, `magicTrees.ts`,
+      `treeView.ts`, `livingTree.ts`, the garden screen; `#/learn/garden` and `#/learn/tree/S` now open the shelf). Each surah
+      has a **Hifz badge** (`src/ui/hifzBadge.ts`, flat two-tone): Bronze coin when the whole surah is recited from memory, then
+      Silver (khatam star), Gold (sunburst with laurels), Platinum (violet rosette, crown), Diamond (sapphire star, cut stone,
+      crown) after 7 / 30 / 90 / 365 days with every review on time (`HIFZ_DAYS`; Tree `hz` tier, `hk` kept since; reviews
+      as before, `WATER_DAYS`). A review more than 2 days late (`HIFZ_GRACE`) drops one tier, one more for each further 30 days,
+      never below Bronze, and the time kept starts again; a review with slips never drops it (the surah just comes back sooner).
+      Due → the badge shows dusty. `hifzAt()` / `hifzNext()` / `hifzAll()` in `garden.ts`; climbing adds `HIFZ_LIGHT`.
+      The badge stands at the end of each surah on the path (`.lp-hifz`, sheet with the rule and the next tier), in the lesson
+      header and done screen, on **Hifz badges** `#/learn/hifz` ("N surahs in my heart", by juz, juz gates), in the room
+      (best two on the lower shelf) and on profiles (sent among the best badges as `hz{s}-{tier}` + `hzc{count}-0`, no new
+      column; `hifzIds()` / `parseHifz()`). **Tier-up moment** (`celebrate.ts`, kind `hifz`, and every badge family's tier
+      above Bronze): the badge it had before comes out of the seed, shudders while four cracks of light run through it
+      (each crack its own layer) and shatters into twelve shards of its old metal; the new tier's own entrance plays from that
+      burst (`oldBadge()`; WAAPI transform / opacity; ~60 fps at 6× CPU). **Chests on the path** come in a rhythm of sizes
+      (`chestLight()`: 10 / 20 / 35 / 60 / 100 Light → wood, brass, cedar, emerald, pearl, each larger and opening its own way).
+      **Each surah its own theme** (`src/ui/surahTheme.ts`): a colour on its banner, steps and Continue, and a quiet white motif
+      from its name only (Al-Kahf a cave, An-Nahl honeycomb, Al-Qamar a moon…; others a geometric pattern), never an
+      interpretation. The juz gate is an SVG arch with a lantern (`juzGateArt()`)
 - [ ] Tested by the owner on the phone (the path, a lesson with audio, quick tasmi', reviews)
 - [ ] Next (plan doc "Learn tab: the 114 trees"): Mukhtasar fruit lessons (licence first), gardens sized by pages with
       joined juz (Al-Baqarah 1–3), tree close-up, Light buys decorations only

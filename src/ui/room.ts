@@ -7,11 +7,12 @@ import { actor, myFigureCode, type Actor } from './actor';
 import { encode, normalize, parse, WARDROBE } from './figure';
 import { circlePath, edge, mix, shine, starPath, two } from './flat';
 import { BADGES, badgeStates } from '../data/badges';
-import { prizeWins } from '../data/garden';
+import { hifzAll, prizeWins } from '../data/garden';
 import { streak } from '../data/journey';
 import { ownsPiece } from '../data/wardrobe';
 import { rt, type RankKey } from '../i18n/ranks';
 import { badgeArt } from './badge';
+import { hifzBadge, parseHifz } from './hifzBadge';
 import { trophy } from './rankAvatars';
 import { SLOTS, readRoomCode, roomLook, type Slot } from '../data/roomItems';
 import { hijri, seasonNow } from '../data/wardrobe';
@@ -116,8 +117,10 @@ function buildScene(visit?: Visit): Built | null {
   if (!wins.length && !visit) top.append(h('span', { class: 'rm-empty' }, rt('room.emptyCups')));
   const order = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 } as const;
   const got = visit ? (visit.badges ?? []).map((id) => BADGES.find((b) => b.id === id)).filter((d) => !!d).slice(0, 4).map((def) => ({ def: def! })) : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
-  const low = h('div', { class: 'rm-shelf low' }, ...got.map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
-  if (!got.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
+  // The Hifz badges held (the best two) stand first on the lower shelf.
+  const hz = visit ? parseHifz(visit.badges).list : hifzAll().sort((x, y) => y.tier - x.tier || y.s - x.s).slice(0, 2);
+  const low = h('div', { class: 'rm-shelf low' }, ...hz.map((x) => hifzBadge(x.s, x.tier, 30)), ...got.slice(0, hz.length ? 3 : 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
+  if (!got.length && !hz.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
   // The character on its cushion: reading by day, its lantern at night.
   const sit = encode(normalize({ ...f, pose: 1, hold: night ? 5 : f.hold === 0 || f.hold === 1 ? 2 : f.hold }));
   const cushion = h('span', { class: 'rm-cushion', 'aria-hidden': 'true' });

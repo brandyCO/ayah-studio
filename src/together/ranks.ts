@@ -827,8 +827,11 @@ async function sendBadges() {
     const { badgeStates } = await import('../data/badges');
     const order: Record<string, number> = { diamond: 0, platinum: 1, emerald: 2, gold: 2, silver: 3, bronze: 4 };
     const got = badgeStates().filter((b) => b.earned);
-    const top = got.sort((a, b) => (order[a.def.tier] ?? 9) - (order[b.def.tier] ?? 9) || String(b.earned).localeCompare(String(a.earned)))
-      .slice(0, 6).map((b) => b.def.id).filter((id) => /^[a-z][a-z0-9]{1,15}-[0-4]$/.test(id));
+    // Room for the Hifz badges (the best two and how many surahs are held) when there are some.
+    const [{ hifzAll }, { hifzIds }] = await Promise.all([import('../data/garden'), import('../ui/hifzBadge')]);
+    const hz = hifzIds(hifzAll());
+    const top = [...got.sort((a, b) => (order[a.def.tier] ?? 9) - (order[b.def.tier] ?? 9) || String(b.earned).localeCompare(String(a.earned)))
+      .slice(0, 6 - hz.length).map((b) => b.def.id), ...hz].filter((id) => /^[a-z][a-z0-9]{1,15}-[0-4]$/.test(id));
     const sig = `${top.join(',')}:${got.length}`;
     if (localStorage.getItem('rankBadgesSent') === sig) return;
     await rpc('rank_set_badges', { top, n: Math.min(500, Math.max(got.length, top.length)) });

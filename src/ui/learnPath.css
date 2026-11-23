@@ -11,7 +11,6 @@
 .lp-scenery { position: absolute; inset: 0 0 auto; width: 100%; height: 100dvh; z-index: -1; pointer-events: none; }
 .lp-sun-halo { fill: #ffe3a3; } .lp-sun { fill: #ffd57a; }
 .lp-hill1 { fill: #cfe9d8; } .lp-hill2 { fill: #bfe1cc; }
-.lp-trunk { fill: #8a6a4a; } .lp-crown { fill: #4fae7c; } .lp-crown-hi { fill: #7cc79b; }
 
 .lp-top {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px;
@@ -37,11 +36,14 @@
    the whole path (speed pass 3). `auto` keeps each unit's real height once it has been drawn. */
 /* Only the height is guessed for units off screen: "auto 720px" set the width too, so the list grew 720 px wide and the path sat far to the right. */
 .lp-list > .lp-unit { content-visibility: auto; contain-intrinsic-size: none auto 720px; }
+/* Each surah's own colour (--hc / --he, set on the unit by surahTheme.ts) and a quiet white motif from its name. */
 .lp-banner {
-  --hc: #17a273; --he: #0e7d58;
+  position: relative; overflow: hidden; isolation: isolate;
   justify-self: stretch; display: flex; align-items: center; gap: 12px; padding: 14px 12px 14px 16px; border-radius: 20px;
-  background: var(--hc); color: #fff; box-shadow: 0 5px 0 var(--he);
+  background: var(--hc, #17a273); color: #fff; box-shadow: 0 5px 0 var(--he, #0e7d58);
 }
+.lp-banner > * { position: relative; }
+.lp-banner > .lp-motif { position: absolute; z-index: -1; inset-block: -6px; inset-inline-end: 52px; height: calc(100% + 12px); width: auto; opacity: .2; pointer-events: none; }
 .lp-banner-t { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .lp-kicker { font: 900 12px var(--ui-round); letter-spacing: .08em; opacity: .88; }
 .lp-banner h2 { margin: 0; font-size: 21px; font-weight: 900; color: #fff; }
@@ -114,15 +116,27 @@
 .lp-btn.ghost { background: #ffffff59; color: inherit; }
 .lp-go { width: 100%; background: var(--hc); color: #fff; box-shadow: 0 5px 0 var(--he); }
 
-.lp-tree {
-  display: grid; justify-items: center; gap: 2px; padding: 8px 14px 10px; border: 0; border-radius: 24px; background: #ffffffa6;
+/* The end of a surah: its Hifz badge (slate while still to earn, dusty when a review is due). */
+.lp-hifz {
+  display: grid; justify-items: center; gap: 2px; padding: 8px 16px 10px; border: 0; border-radius: 24px; background: #ffffffa6;
   box-shadow: 0 4px 0 #0000000f; cursor: pointer; color: inherit;
 }
-.lp-tree canvas { border-radius: 18px; }
-.lp-tree:not(.full) canvas { filter: saturate(.55); opacity: .9; }
-.lp-tree.full { background: #fff8e0; box-shadow: 0 4px 0 #f1dc9a, 0 0 30px #ffd77a80; }
-.lp-tree.grew canvas { animation: lp-grow 1.4s var(--ease-spring); }
-@keyframes lp-grow { 0% { scale: .6; filter: brightness(1.6); } 60% { scale: 1.08; } }
+.lp-hifz:active { translate: 0 3px; box-shadow: 0 1px 0 #0000000f; }
+.lp-hifz.held { background: #fff8e0; box-shadow: 0 4px 0 #f1dc9a, 0 0 30px #ffd77a80; }
+.lp-hifz.held.due { background: #eef2f6; box-shadow: 0 4px 0 #cfd8e2; }
+.lp-hifz.due .lp-cap { color: #2f86c9; }
+.hz-badge { display: inline-grid; }
+.hz-badge svg { display: block; overflow: visible; }
+.lp-hifz.grew .hz-badge { animation: lp-earn 1.2s var(--ease-spring) both; }
+@keyframes lp-earn { 0% { scale: .5; opacity: 0; } 55% { scale: 1.12; opacity: 1; } 100% { scale: 1; } }
+/* The Hifz shelf */
+.lp-hz-sum { display: grid; justify-items: center; gap: 6px; padding: 14px; margin: 4px 0 6px; border-radius: 20px; background: var(--lp-card); text-align: center; }
+.lp-hz-sum b { font: 900 22px var(--ui-round); }
+.lp-hz-sum > span { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.lp-hz-sum i { font: 800 12px var(--ui-round); font-style: normal; padding: 3px 10px; border-radius: 99px; color: #3a2a00; }
+.lp-hz-sum i.t0 { background: #f6d3b0; } .lp-hz-sum i.t1 { background: #e5ebf1; } .lp-hz-sum i.t2 { background: #ffe58a; }
+.lp-hz-sum i.t3 { background: #ddd1ff; } .lp-hz-sum i.t4 { background: #c9ecff; }
+.lp-hz-sheet .lp-hz-tier { font-weight: 900; }
 
 .lp-earlier { justify-self: center; min-height: 40px; padding: 0 16px; border-radius: 99px; border: 2px solid var(--lp-line); background: var(--lp-card); color: var(--lp-sub); font: 800 14px var(--ui-round); cursor: pointer; }
 .lp-end { text-align: center; color: var(--lp-sub); font: 700 15px/1.5 var(--ui-round); padding: 20px; }
@@ -168,14 +182,11 @@
   }
   .lp-sun-halo { fill: #f6efd0; opacity: .18; } .lp-sun { fill: #f3ead0; opacity: .85; }
   .lp-hill1 { fill: #183d33; } .lp-hill2 { fill: #14342b; }
-  .lp-crown { fill: #2a6b4d; } .lp-crown-hi { fill: #3c8460; } .lp-trunk { fill: #4d3a2a; }
   .lp-top { background: linear-gradient(180deg, #14213a 70%, #14213a00); }
   .lp-pill { box-shadow: 0 3px 0 #0e1714; }
-  .lp-tree { background: #ffffff14; }
-  .lp-tree.full { background: #3a3218; box-shadow: 0 4px 0 #1f1a0b, 0 0 30px #ffd77a40; }
   .lp-pop.locked { --hc: #26332e; --he: #141d1a; }
 }
-@media (prefers-reduced-motion: reduce) { .lp-start { animation: none; } .lp-tree.grew canvas { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-start { animation: none; } .lp-hifz.grew .hz-badge { animation: none; } }
 html.lite .lp-start { animation: none; }
 
 /* Continue: always the next thing to do, just above the tab bar, with today's lessons ring beside it */
@@ -257,7 +268,9 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
 .lp-node.page, .lp-node.similar { width: 64px; height: 58px; }
 .lp-node.page.current { --hc: #12a594; --he: #0a7568; }
 .lp-node.similar.current { --hc: #7b5ce0; --he: #5a3fb4; }
-.lp-chest .chest { width: 86px; height: 86px; }
+.lp-chest .chest { width: 76px; height: 76px; }
+.lp-chest .chest.t1 { width: 84px; height: 84px; } .lp-chest .chest.t2 { width: 94px; height: 94px; }
+.lp-chest .chest.t3 { width: 104px; height: 104px; } .lp-chest .chest.t4 { width: 116px; height: 116px; }
 .lp-chest-hit { border: 0; background: none; padding: 0; cursor: pointer; }
 .lp-chest.locked .chest { filter: grayscale(.85) opacity(.7); }
 .ts-simfoot { position: sticky; bottom: 0; padding: 10px 0 calc(6px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--card) 30%); }
@@ -274,16 +287,19 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
   box-shadow: 0 5px 0 #d9d0f5; color: inherit;
 }
 .lp-gate-btn:active { translate: 0 3px; box-shadow: 0 2px 0 #d9d0f5; }
-.lp-gate.locked .lp-gate-btn canvas { filter: grayscale(.9) opacity(.55); }
+.lp-gate.locked .lp-gate-btn svg { filter: grayscale(.9) opacity(.55); }
 .lp-gate.current .lp-gate-btn { background: #f1ecff; box-shadow: 0 5px 0 #7b5ce0, 0 0 30px #9b85f080; }
 .lp-gate.done .lp-gate-btn { background: #fff8e0; box-shadow: 0 5px 0 #f1dc9a, 0 0 26px #ffd77a80; }
 .lp-gate .lp-start { color: #6a4cd0; }
-.lp-ggate canvas { filter: none; }
+
 @media (prefers-color-scheme: dark) {
   .lp-gate-btn { background: #ffffff14; box-shadow: 0 5px 0 #0e1714; }
   .lp-gate.current .lp-gate-btn { background: #2a2350; box-shadow: 0 5px 0 #4a36a0, 0 0 30px #7b5ce060; }
   .lp-gate.done .lp-gate-btn { background: #3a3218; box-shadow: 0 5px 0 #1f1a0b, 0 0 26px #ffd77a40; }
   .lp-gate .lp-kicker, .lp-gate .lp-start { color: #b3a2ff; }
+  .lp-hifz { background: #ffffff14; }
+  .lp-hifz.held { background: #3a3218; box-shadow: 0 4px 0 #1f1a0b, 0 0 30px #ffd77a40; }
+  .lp-hifz.held.due { background: #22303a; box-shadow: 0 4px 0 #121a20; }
   .lp-day { box-shadow: 0 4px 0 #0e1714, 0 10px 24px #0000004d; }
 }
 
