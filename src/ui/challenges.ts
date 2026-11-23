@@ -94,7 +94,7 @@ async function openChest(title: string, claim: () => Promise<ChallengeResult | n
 }
 
 /** One challenge as a card: an answer to give, a wait, the race, or a chest to open. */
-function card(c: Challenge, repaint: () => void): HTMLElement | null {
+export function card(c: Challenge, repaint: () => void): HTMLElement | null {
   const k = kindOf(c);
   const who = c.friend?.private ? '…' : c.friend?.name ?? '…';
   const head = h('div', { class: 'cl-head' }, h('span', { class: 'cl-kind-ic sm', 'aria-hidden': 'true' }, icon(ICON[k], 22)),

@@ -8,6 +8,7 @@ import { icon } from './icons';
 const iconOf = icon;
 import { lang, t, timeLeft, type Key } from '../i18n';
 import { rt, type RankKey } from '../i18n/ranks';
+import { nwt } from '../i18n/news';
 import { isNative, shareableLink } from '../native';
 import {
   LEAGUE, METRICS, POINTS, boardGoal, boardLink, boardPreview, boardRanks, createBoard, joinBoard, leaveBoard, myBoards, rankGlobal,
@@ -15,7 +16,7 @@ import {
   myChallenges, createChallenge, standing, lastHours, lastDays, rankHall, scheduleLeagueNote, leagueNoteOn, setLeagueNote, acceptChallenge, cancelChallenge, challengePreview, challengeLink, claimChallenge,
   type Act, type Board, type Hall, type Challenge, type Metric, type Row, type Status,
   StaleMiss, staleFirst, refreshCached, dropCache, rankPulse, socialPulse, isKept,
-  keptSince,
+  keptSince, featsFeed, featsNear, newestNews,
 } from '../together/ranks';
 import { updatedNote } from './updatedAgo';
 import { isOffline } from '../together/outbox';
@@ -169,7 +170,9 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
     const visit = !!r.pid && (r.me || !r.private);
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${danger ? ' danger' : ''}${visit ? ' visit' : ''}`,
       ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'),
-        onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
+        // Your own row opens "You" (look, shop, trophies, your profile): the avatar left the top bar for the Me tab.
+        onclick: () => r.me ? window.dispatchEvent(new CustomEvent('rank-you', { detail: r }))
+          : void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private || r.blocked ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.blocked ? null : r.figure),
@@ -191,10 +194,13 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   const hidden = () => root.classList.contains('screen-kept') || root.classList.contains('screen-warm');
   const whenShown = (f: () => void) => { if (hidden()) root.addEventListener('screen-shown', f, { once: true }); else f(); };
   whenShown(() => setTimeout(() => void import('../together/ranks').then((m) => m.friendMoments()), 2200)); // a friend streak milestone waiting
-  // Three tabs (owner 2026-11-18): League · Friends · Global; My boards and challenges sit inside Friends.
-  let view: View = (() => { try { const v = (sessionStorage.getItem('rankView') as View) || 'league'; return v === 'boards' ? 'friends' : v; } catch { return 'league'; } })();
+  // Three tabs (owner 2026-11-18): League · Friends · Global. Since 2026-11-23 Friends holds friend challenges only and My
+  // boards sit under Global; friends' news, streaks and follows are on the News page (#/news).
+  let view: View = (() => { try { const v = (sessionStorage.getItem('rankView') as View) || 'league'; return v === 'boards' ? 'global' : v; } catch { return 'league'; } })();
   let allTime = false;
   let hall = false;
+  // My boards live under Global now (owner request 2026-11-23: the Friends tab is for friend challenges only).
+  let boardsOn = (() => { try { return sessionStorage.getItem('rankView') === 'boards'; } catch { return false; } })();
   let metric: Metric = 'all';
   const metricChips = () => h('div', { class: 'chips rk-metrics', role: 'group', 'aria-label': rt('rk.measure') },
     ...METRICS.map((m) => h('button', { class: `chip${metric === m ? ' on' : ''}`, 'aria-pressed': String(metric === m),
@@ -210,7 +216,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     return { el: h('div', { class: 'rk-pane', 'data-v': v }, inn), inn, head: hd, body: bd, o: 0, t: 0, y: 0, painted: false, stale: false };
   };
   const panes: Record<PaneView, Pane> = { league: mkPane('league'), friends: mkPane('friends'), global: mkPane('global') };
-  const key = (v: View): PaneView => (v === 'boards' ? 'friends' : v);
+  const key = (v: View): PaneView => (v === 'boards' ? 'global' : v);
   let shown: PaneView = key(view);
   let head = panes[shown].head;
   let body = panes[shown].body;
@@ -225,16 +231,11 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     },
   }, label);
 
-  // Your avatar stays in the top bar even before the ranks load (signed out, or not counted yet): the character
-  // kept on this device, and a tap opens the builder.
-  const localAv = () => {
-    let fig: string | null = null;
-    try { fig = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
-    return h('button', { class: 'rk-me-av', 'aria-label': rt('fb.open'), onclick: () => openBuilder({ figure: fig, wins: 0 }, () => void paint(true)) },
-      avatar(fig ? 0 : null, 0, 36, 0, fig));
-  };
+  // Top bar (owner request 2026-11-23): your avatar moved to the Me tab; here, from the end: the bell, News, Light, ⓘ.
+  const newsBtn = () => h('button', { class: 'icon-btn rk-news-btn', 'aria-label': nwt('nw.title'), title: nwt('nw.title'),
+    onclick: () => { haptic(6); location.hash = '#/news'; } }, icon('news', 24), h('i', { class: 'rk-news-dot', hidden: true }));
   const signedOut = () => {
-    topActs.replaceChildren(infoBtn(), localAv());
+    topActs.replaceChildren(infoBtn(), newsBtn(), bell);
     head.replaceChildren();
     tabs.replaceChildren();
     // The other tabs' panes wait with "Loading…" for an account that is not there: empty them (no tabs to reach them).
@@ -302,7 +303,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     const s = await rankStatus(fresh);
     status = s;
     if (!s) {
-      topActs.replaceChildren(infoBtn(), localAv());
+      topActs.replaceChildren(infoBtn(), newsBtn(), bell);
       head.replaceChildren(h('div', { class: 'rk-me me-card' }, h('p', {}, rt('rk.notYet')), howBtn()));
       return;
     }
@@ -311,9 +312,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     keptBadge = head.querySelector<HTMLElement>('.rk-hero .du-badge');
     topActs.replaceChildren(
       infoBtn(),
-      bell,
       h('button', { class: 'chip rk-shop-btn', onclick: () => openShop(s), 'aria-label': rt('rk.shop') }, star(), num(lightLeft())),
-      h('button', { class: 'rk-me-av', 'aria-label': rt('rk.you'), onclick: () => openYou(s) }, avatar(s.private ? null : s.avatar, s.tier, 36, s.frame, s.figure)));
+      newsBtn(),
+      bell);
     head.replaceChildren(view === 'league' ? h('div', { class: 'rk-headbox' },
       // F33: a compact hero (your league's emblem, its name, your XP) holding the podium, then one strip for the quest
       // and the rival, so the list itself starts on the first screen.
@@ -399,7 +400,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     sheet(rt('rk.thisWeek'), h('div', { class: 'sheet-scroll rk-week' }, s.rival ? rivalCard(s.rival) : '', questCard(s), weekPrizeCard(s)));
   }
   /** You: name, tier, places, and the way to your look, the shop, your trophies and how points work. */
-  function openYou(s: Status) {
+  function openYou(s: Status, meRow?: Row) {
     const d = sheet(rt('rk.you'), h('div', { class: 'sheet-scroll rk-you-sheet' },
       h('div', { class: 'rk-me-top' },
         h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => { d.close(); openLook(s); } }, avatar(s.private ? null : s.avatar, s.tier, 64, s.frame, s.figure)),
@@ -413,6 +414,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
         h('span', { class: 'muted' }, rt('rk.allTime', { n: num(s.total), place: num(s.allPlace) }))),
       s.private ? h('p', { class: 'muted small' }, rt('rk.privateOn')) : '',
       h('div', { class: 'menu' },
+        meRow ? h('button', { class: 'menu-item', onclick: () => { d.close(); void import('./friends').then((m) => m.openProfile(meRow, () => { dropCache(); })); } }, icon('me', 18), nwt('nw.myProfile')) : '',
         h('button', { class: 'menu-item', onclick: () => { d.close(); openLook(s); } }, `◐  ${rt('rk.look')}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShop(s); } }, `✦  ${rt('rk.shop')} · ${num(lightLeft())}`),
         h('button', { class: 'menu-item', onclick: () => { d.close(); openShelf(prizes); } }, icon('trophy', 18), `${rt('rk.trophies')} · ${prizes.filter((p) => p.place).length}`),
@@ -680,16 +682,23 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       // Profiles a tap may open (top 3 first) and the Friends tab load ahead, so nothing shows a loading state.
       void import('./friends').then((m) => m.warmFriends(lg.players.filter((x) => x.me || !x.private).map((x) => x.pid)));
     } else if (view === 'friends' && !openBoard) {
+      // Friend challenges only (owner request 2026-11-23); friends' streaks, news and follows are on the News page.
       const m = await import('./friends');
-      const [tab, boards] = await Promise.all([m.friendsTab(fresh, () => void paint(true), key(view) !== shown), boardsSection(fresh)]);
-      body.replaceChildren(tab, ...boards);
-    } else if (view === 'global') {
-      const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; void paint(); } }, label);
-      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; metric = 'all'; void paint(); } }, icon('trophy', 18), rt('rk.hall'));
+      const chs = await myChallenges(fresh).catch(() => [] as Challenge[]);
+      body.replaceChildren(await m.challengesTab(fresh, () => void paint(true), challengeBox(chs), key(view) !== shown));
+    } else if (view === 'global' && !openBoard) {
+      const sw = (on: boolean, label: string) => h('button', { class: `chip${!hall && !boardsOn && allTime === on ? ' on' : ''}`, onclick: () => { allTime = on; hall = false; boardsOn = false; void paint(); } }, label);
+      const hallChip = () => h('button', { class: `chip${hall ? ' on' : ''}`, onclick: () => { hall = true; boardsOn = false; metric = 'all'; void paint(); } }, icon('trophy', 18), rt('rk.hall'));
+      const boardsChip = () => h('button', { class: `chip${boardsOn ? ' on' : ''}`, onclick: () => { boardsOn = true; hall = false; metric = 'all'; void paint(); } }, icon('users', 18), rt('rk.boards'));
+      if (boardsOn) {
+        body.replaceChildren(h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip(), boardsChip()),
+          ...await boardsSection(fresh));
+        return;
+      }
       if (hall) {
         const hf = await rankHall(fresh);
         body.replaceChildren(
-          h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()),
+          h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip(), boardsChip()),
           hallView(hf));
         return;
       }
@@ -698,7 +707,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
       const meIn = rows.some((r) => r.me);
       body.replaceChildren(
         metricChips(),
-        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip()) : '',
+        metric === 'all' ? h('div', { class: 'chips rk-switch' }, sw(false, rt('rk.thisWeek')), sw(true, rt('rk.allTimeTab')), hallChip(), boardsChip()) : '',
         rows.length ? list(rows, false, metric) : h('p', { class: 'muted' }, rt('rk.empty')),
         !meIn && s && metric === 'all' ? h('p', { class: 'rk-mine' }, allTime ? rt('rk.youAll', { place: num(s.allPlace), n: num(s.total) })
           : s.weekPlace ? rt('rk.youWeek', { place: num(s.weekPlace), n: num(s.week) }) : '') : '');
@@ -724,10 +733,9 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   }
 
   async function boardsSection(fresh: boolean): Promise<Node[]> {
-      const [boards, chs] = await Promise.all([myBoards(fresh), myChallenges(fresh).catch(() => [] as Challenge[])]);
+      const boards = await myBoards(fresh);
       const code = h('input', { class: 'search', maxlength: 8, placeholder: rt('rk.codePh'), 'aria-label': rt('rk.join'), autocapitalize: 'off' });
       return [
-        challengeBox(chs),
         h('h2', { class: 'me-h' }, rt('rk.boards')),
         boards.length ? h('div', { class: 'menu rk-boards' }, ...boards.map((b) => h('button', { class: 'menu-item', onclick: () => { openBoard = b; metric = 'all'; void paint(); } },
           h('span', {}, icon('users', 18), b.name), h('span', { class: 'muted small' }, ` · ${rt('rk.members', { n: b.members })}`))))
@@ -1133,13 +1141,28 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Only a real change of account repaints from the server: onAccount also calls back at once with the account already
   // here, and that fresh paint used to merge into the instant one above, so every open waited for the network (~1 s).
   let who = account()?.id ?? null;
+  const youOpen = (e: Event) => { if (status && !hidden()) openYou(status, (e as CustomEvent<Row>).detail); };
+  addEventListener('rank-you', youOpen);
+  // The News button's dot: news newer than the last visit to the News page (checked from what the phone kept; the
+  // two feeds are asked for in the background, at most once a minute).
+  const newsDot = () => {
+    let seen = 0;
+    try { seen = Number(localStorage.getItem('newsSeen') || 0); } catch { /* ignore */ }
+    const dot = topActs.querySelector<HTMLElement>('.rk-news-dot');
+    if (dot) dot.hidden = !(account() && newestNews() > seen);
+  };
+  const askNews = () => { if (account() && !root.classList.contains('screen-kept')) void Promise.allSettled([featsFeed(), featsNear()]).then(newsDot); };
+  addEventListener('rank-cache', newsDot);
+  root.addEventListener('screen-shown', askNews);
+  setTimeout(askNews, 1500);
   const off = onAccount((a) => { if ((a?.id ?? null) === who) return; who = a?.id ?? null; const p = paint(true); firstLoad(p); });
   const tick = window.setInterval(() => { if (!document.hidden) ends.textContent = rt('rk.ends', { left: left(weekEnds().getTime() - Date.now()) }); }, 30_000);
   // Live while open: others' points, names and characters show within seconds, not after a minute. Only what is on
   // screen is asked for again, every 8 s, slowing to 30 s while nothing changes (a quiet board costs the server little).
   const onScreen = (k: string) => k === 'status' || (view === 'league' ? k === 'league'
-    : view === 'friends' && !openBoard ? k === 'friends' || k === 'feats' || k === 'follows' || k === 'boards' || k === 'challenges' || k === 'cheers'
-      : view === 'global' ? k === `global:${metric === 'all' && allTime}:${metric}`
+    : view === 'friends' && !openBoard ? k === 'friends' || k === 'challenges' || k === 'cheers'
+      : view === 'global' && boardsOn && !openBoard ? k === 'boards'
+      : view === 'global' && !openBoard ? k === `global:${metric === 'all' && allTime}:${metric}`
         : k === 'boards' || k === 'challenges' || k === 'cheers' || k.startsWith('board:') || k.startsWith('goal:'));
   let quiet = 0, stopped = false, live = 0, lastPulse: string | null = null, fullAt = Date.now();
   const poll = async () => {
@@ -1168,7 +1191,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   document.addEventListener('visibilitychange', wake);
   root.addEventListener('screen-shown', wake);
   addEventListener('online', wake);
-  return () => { swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); removeEventListener('online', wake); };
+  return () => { removeEventListener('rank-you', youOpen); removeEventListener('rank-cache', newsDot); root.removeEventListener('screen-shown', askNews); swipeOff?.abort(); stopped = true; off(); clearInterval(tick); clearTimeout(live); document.removeEventListener('visibilitychange', wake); root.removeEventListener('screen-shown', wake); removeEventListener('online', wake); };
 }
 
 /** #/rb/{code}: a board invite. Signed in → join and open Ranks; else the board's name and a sign-in. */
@@ -1179,7 +1202,7 @@ export async function showBoardInvite(root: HTMLElement, code: string): Promise<
   if (!p) { box.replaceChildren(h('p', {}, rt('rk.badInvite'))); return () => {}; }
   const go = async () => {
     try { await joinBoard(code); } catch (e) { toast((e as Error).message); return; }
-    try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ }
+    try { sessionStorage.setItem('rankView', 'boards'); } catch { /* ignore */ }
     location.hash = '#/ranks';
   };
   box.replaceChildren(

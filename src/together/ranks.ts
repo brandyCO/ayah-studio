@@ -346,6 +346,7 @@ export async function setFigure(code: string | null) {
   }
   try { localStorage.setItem(FIG, code ?? ''); } catch { /* ignore */ }
   dropCache();
+  window.dispatchEvent(new Event('my-look'));
 }
 /** Your room as friends see it on a visit (round 5): sent when it changed, once signed in and playing. */
 const ROOM_SENT = 'rankRoomSent';
@@ -385,7 +386,10 @@ export async function setBoardGoal(id: string, pages: number | null) {
 /** Avatar (0–23, drawn in the app; no photos) and private mode. */
 export async function setLook(avatar: number, priv: boolean, frame = 0) {
   await rpc('rank_set_look', { my_avatar: avatar, is_private: priv, my_frame: frame });
+  // The Me tab shows the new look at once (src/ui/meTabAv.ts), before the status comes back.
+  try { localStorage.setItem('myLookNow', JSON.stringify({ who: account()?.id, avatar, frame })); } catch { /* ignore */ }
   dropCache();
+  window.dispatchEvent(new Event('my-look'));
 }
 
 export async function setRankName(name: string) {
@@ -878,6 +882,16 @@ export async function sendFeats(extra?: [FeatKind, number]) {
   } finally { featBusy = false; }
 }
 export const featsFeed = (fresh = false) => cached('feats', () => rpc<Feats>('rank_feats_feed'), fresh);
+/** News page (owner request 2026-11-23): milestones of readers you follow and readers near you (same flag, or clock). */
+export type NearFeat = FriendFeat & { scope: 'follow' | 'near' };
+/** When the newest news on the News page happened (ms), from what this device kept: Ranks' News button shows a dot
+ *  while it is newer than the last visit (`newsSeen`). */
+export function newestNews(): number {
+  const k = keptAll() as Record<string, unknown>;
+  const at = (xs: unknown) => (Array.isArray(xs) ? xs : []).reduce((m: number, x) => Math.max(m, Date.parse((x as { at?: string })?.at ?? '') || 0), 0);
+  return Math.max(at((k.feats as Feats | undefined)?.friends), at(k.near));
+}
+export const featsNear = (fresh = false) => cached('near', () => rpc<NearFeat[]>('rank_feats_near'), fresh);
 export async function cheerFeat(id: number): Promise<number> {
   let n: number;
   try { n = await rpc<number>('rank_feat_cheer', { id }); } catch (e) {
@@ -889,6 +903,8 @@ export async function cheerFeat(id: number): Promise<number> {
   }
   const c = cache.get('feats');
   if (c) { const f = (c.v as Feats).friends.find((x) => x.id === id); if (f) { f.cheered = true; f.cheers = n; } }
+  const nr = cache.get('near');
+  if (nr) { const f = (nr.v as NearFeat[]).find((x) => x.id === id); if (f) { f.cheered = true; f.cheers = n; } }
   return n;
 }
 let cheersAt = 0;

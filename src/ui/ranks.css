@@ -496,3 +496,7 @@ html[lang="ar"] .rk-hero.compact .rk-hero-sub { white-space: normal; }
 .rk-panes { position: relative; will-change: translate; }
 .rk-pane:not(.cur) { position: absolute; top: 0; inset-inline: 0; height: 100lvh; overflow: clip; contain: strict; }
 .rk-hero .updated-ago { color: inherit; opacity: .75; margin-top: 2px; }
+/* The News button (owner request 2026-11-23): bell's neighbour, a dot while there is news since the last visit. */
+.rk-news-btn { position: relative; }
+.rk-news-dot { position: absolute; top: 6px; inset-inline-end: 6px; width: 10px; height: 10px; border-radius: 50%; background: #ff4b4b; box-shadow: 0 0 0 2px var(--bg, #fff); }
+.rk-news-dot[hidden] { display: none; }

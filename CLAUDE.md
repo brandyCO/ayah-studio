@@ -2479,6 +2479,22 @@ duas/reflections section in Me.
       the cheer's keyframes (`warmGesture()` in `rig.ts`) are made ready in the gaps; the lantern moment no longer sways the
       whole screen (`.cel-lantern` was also the moment's kind class). Chest at 6× CPU: long tasks 5 (50–150 ms) → 0–1
       (≤ 66 ms), worst frame 100–150 → 50 ms, script 547 → ~340 ms, style ~1300 → ~950 ms over 9 s
+- [x] M32 News, Me avatar tab, gifts you open, try-on (owner request 2026-11-23): the **Me tab** shows the user's own avatar
+      in its frame (`src/ui/meTabAv.ts`); Ranks' top bar is bell · **News** (a dot when something is newer than `newsSeen`)
+      · Light · ⓘ, the avatar gone from it. **News** `#/news` (`src/ui/news.ts` + `news.css`, strings `src/i18n/news.ts`
+      `nwt()`, 30 languages): friend asks and new followers, friends with their streaks, then one feed of milestones from
+      friends, people you follow and readers near you (same flag, else a clock within an hour; `rank_feats_near`), each with
+      one MashaAllah (migration `20261123000000_rank_news.sql`, pgTAP `rank_news.test.sql`). Ranks → **Friends** holds only
+      friend challenges (pick a friend → kind). **Gift question**: "Send this gift to {name}?" before Light or a piece goes
+      (`confirmGift()` in giftSend.ts), then it is sent at once. **Opening a gift** (`src/ui/giftOpen.ts` + `.css`, art
+      `src/ui/giftArt.ts`): never a chest; the sender's character walks in carrying a wrapped present, which lands; taps
+      loosen it; four sizes by value (`giftTier`: < 50 kraft paper and twine, 50 printed paper in the sender's hue with a
+      satin ribbon, 100 silk with a champagne bow and rays, 200+ velvet with gold filigree, a gem and a pillar of light), each
+      with its own size, taps and way of opening; transform / opacity only, the reveal spread over three frames, lighter in
+      old-phone mode. A notification's Claim opens it in place (`openWaitingGifts()`); Me's gift card repaints on sign-in,
+      `gifts-changed` and return (it was painted once before the account was restored). Preview harness `bench/gift.html?t=0..3`.
+      **Try on**: room pieces preview in the room and the decorate sheet before buying (`setRoomTry()`, `roomLookShown()`,
+      not saved); the shop card has Without / With it for character, room and look pieces
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
