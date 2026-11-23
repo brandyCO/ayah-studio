@@ -12,6 +12,7 @@ import { icon } from './icons';
 import { lastRead } from './prefs';
 import { pendingRewards } from '../data/claims';
 import { followAlong, playerActive } from './player';
+import { onAccount } from '../cloud/auth';
 
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
@@ -56,12 +57,34 @@ export function hopKept(screen: HTMLElement) {
   b.classList.add('hop');
 }
 
+// The Me tab is your own avatar in its frame (owner request 2026-11-23): the picture kept on this device draws at once,
+// src/ui/meTabAv.ts (lazy) makes it again when your look or the account changes.
+const meAv = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem('meTabAv') ?? 'null');
+    if (v?.src) return h('span', { class: 'tab-av', 'aria-hidden': 'true' }, h('img', { src: v.src, alt: '', draggable: 'false' }));
+  } catch { /* ignore */ }
+  return null;
+};
+let meWatch = false;
+const repaintMe = () => void import('./meTabAv').then((m) => m.paintMeTabs()).catch(() => {});
+function watchMeTab() {
+  if (meWatch) return;
+  meWatch = true;
+  for (const ev of ['rank-cache', 'my-look']) window.addEventListener(ev, () => setTimeout(repaintMe, 50));
+  let first = true;
+  onAccount(() => { if (first) first = false; else setTimeout(repaintMe, 50); });
+  const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: object) => number }).requestIdleCallback;
+  if (idle) idle(repaintMe, { timeout: 4000 }); else setTimeout(repaintMe, 2500);
+}
+
 export function tabBar(active: Tab, on: TabHandlers = {}, auto = false): HTMLElement {
+  watchMeTab();
   const btn = (id: Tab, ic: string, label: string, act: () => void) =>
     h('button', {
       class: `tab-btn ${id}${id === active ? ' on' : ''}${id === active && hopped(id) ? ' hop' : ''}${id === 'me' && rewardWaiting() ? ' has-dot' : ''}`, 'aria-current': id === active ? 'page' : false,
       onclick: () => { haptic(); if (id !== active) hopNext(id); act(); },
-    }, icon(ic, 24), h('span', {}, label));
+    }, (id === 'me' && meAv()) || icon(ic, 24), h('span', {}, label));
   return h('nav', { class: `tabbar${auto ? ' auto' : ''}`, 'aria-label': t('tab.nav') },
     // Listening from another screen: Read goes back to the page being recited.
     btn('read', 'book', t('tab.read'), on.read ?? (() => (playerActive() ? followAlong() : goMushaf()))),

@@ -202,6 +202,8 @@ async function route() {
       c = await (await import('./ui/learnRoutes')).learnRoute(screen, a, b);
     } else if (view === 'ranks' || ((view === 'rb' || view === 'rc' || view === 'bp' || view === 'rf') && a)) {
       c = await (await import('./ui/ranks')).ranksRoute(screen, view, a);
+    } else if (view === 'news') {
+      c = await (await import('./ui/news')).showNews(screen);
     } else if (view === 'notifications') {
       c = await (await import('./ui/notifications')).showNotifications(screen);
     } else if (view === 'drafts') {

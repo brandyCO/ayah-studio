@@ -8,7 +8,7 @@ import { icon } from './icons';
 import { ft, type FriendKey } from '../i18n/friends';
 import { rt } from '../i18n/ranks';
 import {
-  SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, type Feat, type Feats, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
+  SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, featsNear, type NearFeat, type FriendFeat, type Feat, type Feats, type Challenge, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy, followPlayer, unfollowPlayer, followList, dropFollower, myFlag, setFlag, myFollows, newFollowers, markFollowersSeen, type Follower, type Follows,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
   profileAt, keptSince,
@@ -33,7 +33,9 @@ import { dayKey } from '../data/readLog';
 import { BADGES } from '../data/badges';
 import { badgeArt } from './badge';
 import { countryName, flagImg, pickFlag } from './flag';
+import { nwt } from '../i18n/news';
 import './friends.css';
+import './news.css';
 
 const num = (n: number) => n.toLocaleString();
 const PENDING = 'pendingFriend';
@@ -414,7 +416,34 @@ function challenge(pid: string | null | undefined, name: string, after?: () => v
   void import('./challenges').then((m) => m.openChallengePicker({ pid, name }, after));
 }
 
-/** The Friends tab on Ranks: asks waiting, your friends with their streaks, and an invite link. */
+/** Ranks → Friends (owner request 2026-11-23: "only for friends challenges"): answers to give, the challenges running
+ *  (`box`, drawn by ranks.ts), and your friends in a row, a tap each to challenge them. */
+export async function challengesTab(fresh: boolean, onChange: () => void, box: HTMLElement, hidden = false): Promise<HTMLElement> {
+  const [data, chs, cm] = await Promise.all([myFriends(fresh).catch(() => null), import('../together/ranks').then((r) => r.myChallenges(fresh)).catch(() => [] as Challenge[]),
+    import('./challenges')]);
+  if (data) friendsKept = data;
+  const asks = chs.filter((c) => c.incoming || c.asked).map((c) => cm.card(c, onChange)).filter((x): x is HTMLElement => !!x);
+  const friends = data?.friends ?? [];
+  const pick = friends.length ? h('section', { class: 'fr-pick' },
+    h('h2', { class: 'me-h' }, nwt('nw.chFriend')),
+    h('div', { class: 'fr-pick-row' }, ...friends.map((f) => {
+      const name = f.name ?? rt('rk.private');
+      return h('button', { class: 'fr-pick-one', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) },
+        h('span', { class: 'fr-pick-av' }, avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 52, f.frame ?? 0, f.figure),
+          h('span', { class: 'fr-pick-sw', 'aria-hidden': 'true' }, icon('swords', 14))),
+        h('span', { class: 'fr-pick-name' }, name),
+        f.streak ? h('span', { class: 'fr-pick-streak' }, h('span', { class: 'fr-mini-flame' }, flame(f.meToday && f.themToday ? 2 : 1, 12, true)), String(f.streak)) : '');
+    }))) : h('div', { class: 'fr-pick-empty me-card' },
+      h('p', {}, nwt('nw.chNoFriends')),
+      h('button', { class: 'primary brand-btn', onclick: () => { location.hash = '#/news'; } }, icon('news', 18), ' ', nwt('nw.findFriends')));
+  if (!hidden && data) setTimeout(() => void friendMilestone(data.friends), 900);
+  return h('div', { class: 'fr-tab fr-ch-tab' }, updatedNote(() => keptSince('challenges')),
+    asks.length ? h('div', { class: 'cl-list' }, ...asks) : '', pick, box,
+    h('button', { class: 'chip fr-to-news', onclick: () => { location.hash = '#/news'; } }, icon('news', 18), nwt('nw.seeNews'), h('span', { 'aria-hidden': 'true' }, ' ›')));
+}
+
+/** The News page (#/news, owner request 2026-11-23): asks waiting, your friends with their streaks, the news of friends,
+ *  people you follow and readers near you, and an invite link. */
 /** The Friends tab came on screen (it was built ahead): its new followers count as seen, a friend moment may play. */
 export function friendsShown() {
   void myFollows().then(markFollowersSeen, () => {});
@@ -422,8 +451,8 @@ export function friendsShown() {
 }
 /** `hidden`: built ahead beside another tab, so nothing is marked seen and no moment plays yet. */
 export async function friendsTab(fresh: boolean, onChange: () => void, hidden = false): Promise<HTMLElement> {
-  const [data, inv, feats, meta, follows] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null),
-    loadMeta().catch(() => null), myFollows(fresh).catch(() => null)]);
+  const [data, inv, feats, meta, follows, near] = await Promise.all([myFriends(fresh), myInvites(fresh).catch(() => null), featsFeed(fresh).catch(() => null),
+    loadMeta().catch(() => null), myFollows(fresh).catch(() => null), featsNear(fresh).catch(() => null)]);
   friendsKept = data;
   void preloadProfiles(data.friends.map((f) => f.pid));
   const invite = h('button', { class: 'fr-invite', onclick: async () => {
@@ -461,8 +490,10 @@ export async function friendsTab(fresh: boolean, onChange: () => void, hidden = 
   if (!hidden) setTimeout(() => void friendMilestone(data.friends), 900);
   const fresh2 = newFollowers(follows);
   if (!hidden) markFollowersSeen(follows);
-  return h('div', { class: 'fr-tab' }, updatedNote(() => keptSince('friends')), asks, newFollowersSection(fresh2, onChange), news(feats, meta),
-    cards.length ? h('div', { class: 'fr-cards' }, ...cards) : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
+  return h('div', { class: 'fr-tab' }, updatedNote(() => keptSince('friends')), asks, newFollowersSection(fresh2, onChange),
+    cards.length ? h('section', { class: 'nw-friends' }, h('h2', { class: 'me-h' }, nwt('nw.friends')), h('div', { class: 'fr-cards' }, ...cards))
+      : h('p', { class: 'muted fr-empty' }, ft('fr.empty')),
+    news(feats, meta, near),
     followingSection(follows, onChange),
     inviteRewards(inv, onChange),
     invite,
@@ -518,10 +549,15 @@ function ago(at: string) {
   const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
   return s < 60 ? ft('fn.now') : s < 3600 ? ft('fn.min', { n: Math.floor(s / 60) }) : s < 86400 ? ft('fn.h', { n: Math.floor(s / 3600) }) : ft('fn.d', { n: Math.floor(s / 86400) });
 }
-/** Friends' milestones of the week, each with one MashaAllah; then mine that friends cheered. */
-function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | string {
-  if (!feats || (!feats.friends.length && !feats.mine.length)) return '';
-  const rows = feats.friends.slice(0, 8).map((f) => {
+/** The feed (News page): milestones of friends, of people you follow and of readers near you, newest first, each with one
+ *  MashaAllah; chips narrow it. Then mine that others cheered. */
+type FeedRow = FriendFeat & { scope: 'friend' | 'follow' | 'near' };
+let feedFilter: 'all' | FeedRow['scope'] = 'all';
+function news(feats: Feats | null, meta: SurahMeta[] | null, near: NearFeat[] | null): HTMLElement | string {
+  const all: FeedRow[] = [...(feats?.friends ?? []).map((f) => ({ ...f, scope: 'friend' as const })), ...(near ?? [])]
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const flag = myFlag();
+  const row = (f: FeedRow) => {
     const btn = h('button', { class: `chip fn-cheer${f.cheered ? ' on' : ''}`, disabled: !!f.cheered, 'aria-pressed': String(!!f.cheered) },
       f.cheered ? ft('fn.cheered', { n: f.cheers ?? 1 }) : ft('fn.cheer'));
     btn.onclick = () => {
@@ -530,23 +566,39 @@ function news(feats: Feats | null, meta: SurahMeta[] | null): HTMLElement | stri
       btn.classList.add('on', 'pop');
       btn.textContent = ft('fn.cheered', { n: (f.cheers ?? 0) + 1 });
       void import('./sfx').then((m) => m.sfx.pop?.()).catch(() => {});
-      void cheerFeat(f.id).then((n) => { btn.textContent = ft('fn.cheered', { n }); },
+      void cheerFeat(f.id).then((n) => { f.cheered = true; f.cheers = n; btn.textContent = ft('fn.cheered', { n }); },
         (e) => { btn.disabled = false; btn.classList.remove('on', 'pop'); btn.textContent = ft('fn.cheer'); toast((e as Error).message); });
     };
-    return h('div', { class: `fn-row k-${f.kind}` },
-      avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 40, f.frame ?? 0, f.figure),
-      h('span', { class: 'fn-txt' }, h('b', {}, f.name ?? rt('rk.private')),
+    const tag = f.scope === 'friend' ? nwt('nw.tagFriend') : f.scope === 'follow' ? nwt('nw.tagFollow') : nwt('nw.tagNear');
+    return h('div', { class: `fn-row nw-card k-${f.kind} s-${f.scope}` },
+      h('button', { class: 'nw-who', 'aria-label': f.name ?? rt('rk.private'), onclick: () => { if (f.pid) void openProfile({ ...f, score: 0 } as Row); } },
+        avatar(f.private ? null : f.avatar ?? 0, f.tier ?? 0, 44, f.frame ?? 0, f.figure)),
+      h('span', { class: 'fn-txt' }, h('b', {}, f.private ? '' : flagImg(f.flag, 12), f.name ?? rt('rk.private'), h('span', { class: `nw-tag s-${f.scope}` }, tag)),
         h('span', { class: 'fn-what' }, h('span', { class: 'fn-ic', 'aria-hidden': 'true' }, featArt(f, 22)), featLabel(f, meta), h('small', {}, ` · ${ago(f.at)}`))),
       btn);
-  });
-  const mine = feats.mine.slice(0, 3).map((f) => {
+  };
+  const list = h('div', { class: 'nw-list' });
+  const chips = h('div', { class: 'chips nw-filter', role: 'tablist' });
+  const paint = () => {
+    const shown = all.filter((f) => feedFilter === 'all' || f.scope === feedFilter).slice(0, 30);
+    chips.replaceChildren(...(['all', 'friend', 'follow', 'near'] as const).map((k) => h('button', {
+      class: `chip${feedFilter === k ? ' on' : ''}`, role: 'tab', 'aria-selected': String(feedFilter === k),
+      onclick: () => { if (feedFilter === k) return; haptic(6); feedFilter = k; paint(); },
+    }, k === 'all' ? nwt('nw.fAll') : k === 'friend' ? nwt('nw.fFriends') : k === 'follow' ? nwt('nw.fFollowing') : nwt('nw.fNear'))));
+    list.replaceChildren(...(shown.length ? shown.map(row) : [h('p', { class: 'muted small nw-none' },
+      feedFilter === 'near' ? (flag ? nwt('nw.noneNear', { place: countryName(flag) }) : nwt('nw.noneNearNoFlag')) : nwt('nw.none'))]));
+    if (feedFilter === 'near' && !flag) list.append(h('button', { class: 'chip', onclick: () => pickFlag('', { title: ft('fr.flagPick'), sub: ft('fr.flagSub'), none: ft('fr.flagNone'), search: ft('fr.flagSearch') },
+      async (c) => { await setFlag(c); toast(nwt('nw.flagSet')); window.dispatchEvent(new Event('news-refresh')); }) }, icon('flag', 18), nwt('nw.setFlag')));
+  };
+  paint();
+  const mine = (feats?.mine ?? []).slice(0, 3).map((f) => {
     const by = (f.by ?? []).map((n) => n || ft('fn.someone'));
     return h('div', { class: 'fn-row fn-mine' }, h('span', { class: 'fn-ic big', 'aria-hidden': 'true' }, featArt(f, 40)),
       h('span', { class: 'fn-txt' }, h('b', {}, featLabel(f, meta)),
         h('span', { class: 'fn-what' }, by.length > 1 ? ft('fn.by2', { name: by[by.length - 1], n: by.length - 1 }) : ft('fn.by1', { name: by[0] ?? ft('fn.someone') }))));
   });
   return h('section', { class: 'fn-news' },
-    rows.length ? h('h3', {}, ft('fn.title')) : '', ...rows,
+    h('h2', { class: 'me-h' }, ft('fn.title')), chips, list,
     mine.length ? h('h3', {}, ft('fn.mine')) : '', ...mine);
 }
 
@@ -603,7 +655,7 @@ export async function showFriendInvite(root: HTMLElement, code: string): Promise
   root.append(h('header', { class: 'topbar' }, h('div', { class: 'brand' }, h('h1', {}, rt('rk.title')))), box, tabBar('ranks'));
   const p = await friendInvitePreview(code).catch(() => null);
   if (!p) { box.replaceChildren(h('p', {}, ft('fr.linkBad'))); return () => {}; }
-  const open = () => { try { sessionStorage.setItem('rankView', 'friends'); } catch { /* ignore */ } location.hash = '#/ranks'; };
+  const open = () => { location.hash = '#/news'; };
   const go = async () => {
     try { await joinFriend(code); toast(ft('fr.joined')); } catch (e) { toast((e as Error).message); return; }
     open();

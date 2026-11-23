@@ -237,7 +237,7 @@ let held = 0, coverT = 0, covered: Element[] = [];
 // browser restyle the whole document twice (~90 ms on a slow phone, once covering and once uncovering).
 const cover = () => {
   for (const c of document.body.children)
-    if (!c.classList.contains('cel') && !c.classList.contains('lt-fly-layer')) { c.classList.add('cel-off'); covered.push(c); }
+    if (!c.classList.contains('cel') && !c.classList.contains('gm') && !c.classList.contains('lt-fly-layer')) { c.classList.add('cel-off'); covered.push(c); }
 };
 /** Shows the page behind a moment again before the moment ends (while it stands still): its restyle happens then. */
 export function uncover() {
@@ -257,7 +257,7 @@ export function holdPage(on: boolean) {
     if (held <= 0 || covered.length) return;
     for (const a of running) {
       const el = (a.effect as KeyframeEffect | null)?.target;
-      if (a.playState !== 'running' || !el || el.closest('.cel, .lt-fly-layer')) continue;
+      if (a.playState !== 'running' || !el || el.closest('.cel, .gm, .lt-fly-layer')) continue;
       a.pause(); paused.push(a);
     }
     cover();
