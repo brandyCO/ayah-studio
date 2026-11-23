@@ -46,7 +46,12 @@ select is(rank_feats_feed() -> 'friends' -> 0 ->> 'cheered', 'true', 'the friend
 
 select pg_temp.act_as('cccccccc-0000-0000-0000-000000000083');
 select is(jsonb_array_length(rank_feats_feed() -> 'friends'), 0, 'not a friend: nothing shown');
-select throws_ok($$ select rank_feat_cheer((select v from ids where k = 'f')::bigint) $$, '22023', null, 'and no MashaAllah');
+reset role;
+update rank_players set private = true where user_id = 'aaaaaaaa-0000-0000-0000-000000000081';
+select pg_temp.act_as('cccccccc-0000-0000-0000-000000000083');
+select throws_ok($$ select rank_feat_cheer((select v from ids where k = 'f')::bigint) $$, '22023', null, 'not a friend and private: no MashaAllah');
+reset role;
+update rank_players set private = false where user_id = 'aaaaaaaa-0000-0000-0000-000000000081';
 
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000081');
 select throws_ok($$ select rank_live('play') $$, '22023', null, 'only reading or listening');

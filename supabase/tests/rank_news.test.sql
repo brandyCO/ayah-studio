@@ -49,6 +49,7 @@ update rank_players set private = true where user_id = 'cccccccc-0000-0000-0000-
 insert into rank_feats (user_id, kind, n) select 'cccccccc-0000-0000-0000-000000000083', 'level', 9;
 insert into ids select 'e', pid from rank_players where user_id = 'eeeeeeee-0000-0000-0000-000000000085';
 insert into ids select 'b', pid from rank_players where user_id = 'bbbbbbbb-0000-0000-0000-000000000082';
+insert into ids select 'd', id::text from rank_feats where user_id = 'cccccccc-0000-0000-0000-000000000083' limit 1;
 
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000081');
 select rank_follow((select v from ids where k = 'e'));
@@ -63,7 +64,7 @@ select ok((select bool_and(x ->> 'id' is not null) from feed, jsonb_array_elemen
 
 -- MashaAllah on a reader near you (not a friend).
 select is(rank_feat_cheer((select (x ->> 'id')::bigint from feed, jsonb_array_elements(f) x where x ->> 'name' = 'Bilal' limit 1)), 1, 'MashaAllah on a public reader');
-select throws_ok($$select rank_feat_cheer((select id from rank_feats where user_id = 'cccccccc-0000-0000-0000-000000000083' limit 1))$$,
+select throws_ok($$select rank_feat_cheer((select v from ids where k = 'd')::bigint)$$,
   '22023', null, 'not on a private reader who is not a friend');
 
 -- Friends stay in the friends feed, not here.
