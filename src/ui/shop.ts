@@ -7,6 +7,7 @@
 import './shop.css';
 import { icon } from './icons';
 import { sht, type ShopKey } from '../i18n/shop';
+import { nwt } from '../i18n/news';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
 import { lang, t, timeLeft } from '../i18n';
@@ -46,6 +47,8 @@ interface Ware {
   art: () => Node; state: () => State;
   /** The piece where it will live, for the large card: on you, in your room, on your board row. */
   big?: (got: boolean) => Node;
+  /** The same place without it (owner request 2026-11-23, "try it on before buying"): the card switches between them. */
+  bare?: () => Node;
   /** One true line on what having it does. */
   why?: ShopKey;
   /** Why it is locked, and a small line (when it comes back, progress). */
@@ -146,6 +149,11 @@ const figBig = (piece: string) => (got: boolean) => {
   if (!reduced()) setTimeout(() => (got ? a.cheer(1800) : a.hop(0.5)), got ? 120 : 420);
   return box;
 };
+/** You as you are now, without the piece. */
+const figBare = () => {
+  const a = actor('sh-actor', encode(parse(myFigureCode()) ?? DEFAULT));
+  return a ? h('span', { class: 'sh-big fig' }, a.el) : svgBox('', 'sh-svg fig');
+};
 const skyNow = (): 'dawn' | 'day' | 'dusk' | 'night' => { const hr = new Date().getHours(); return hr >= 5 && hr < 8 ? 'dawn' : hr >= 8 && hr < 16 ? 'day' : hr >= 16 && hr < 19 ? 'dusk' : 'night'; };
 /** A room piece standing in the user's own room, as it is now. */
 const roomBig = (it: RoomItem) => () => {
@@ -153,6 +161,8 @@ const roomBig = (it: RoomItem) => () => {
   const look = { ...roomLook(), [it.slot]: it.id };
   return svgBox(backSvg(skyNow(), best, false, look, seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
 };
+/** The user's room as it is now. */
+const roomBare = () => svgBox(backSvg(skyNow(), Math.max(streak().best, streak().days), false, roomLook(), seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
 const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
 const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary' };
 
@@ -180,7 +190,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     for (const [piece, price] of Object.entries(PRICE)) {
       out.push({
         id: `fg:${piece}`, sec: 'char', name: partName(piece), rar: partRar(price), price, for: 'sh.forChar', store: `fg:${piece}`,
-        art: figArt(piece), big: figBig(piece), why: 'sh.why.char', state: () => (shopHas(`fg:${piece}`) ? 'own' : 'buy'),
+        art: figArt(piece), big: figBig(piece), bare: figBare, why: 'sh.why.char', state: () => (shopHas(`fg:${piece}`) ? 'own' : 'buy'),
         doBuy: () => wallet() >= price && shopAdd(`fg:${piece}`, price),
         use: { label: 'sh.wear', done: 'sh.worn', active: () => wearingNow(piece), run: () => wear(piece) },
       });
@@ -189,7 +199,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       const win = !!it.win;
       out.push({
         id: `rm:${it.id}`, sec: win ? 'won' : 'room', name: rt(`rs.i.${it.id}` as RankKey), rar: win ? (it.win === 1 ? 'legendary' : 'epic') : it.r === 'legendary' ? (it.price! >= 2000 ? 'mythic' : 'legendary') : it.r as Rar,
-        price: it.price, for: 'sh.forRoom', art: () => svgBox(tileArt(it.slot, it.id), 'sh-svg room'), big: roomBig(it), why: 'sh.why.room', store: win ? undefined : `rm:${it.id}`,
+        price: it.price, for: 'sh.forRoom', art: () => svgBox(tileArt(it.slot, it.id), 'sh-svg room'), big: roomBig(it), bare: roomBare, why: 'sh.why.room', store: win ? undefined : `rm:${it.id}`,
         lim: !!it.limited,
         state: () => (ownsRoom(it) ? 'own' : win || (it.limited && limitedNow(week()) !== `rm:${it.id}`) ? 'locked' : 'buy'),
         how: win ? rt(`rs.win${it.win}` as RankKey) : it.limited ? sht('sh.limHow') : undefined,
@@ -213,23 +223,28 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34),
           h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
+    const lookBare = () => {
+      const av = (size: number) => avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, status?.frame ?? 0, status?.figure ?? myFigureCode());
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+        h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34), h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
+    };
     for (const it of ITEMS) {
       if (it.kind === 'icon') continue;
       const name = lookName(it.kind as 'avatar' | 'frame', it.ref as number, lang() === 'ar')
         ?? (it.kind === 'avatar' ? rt('rk.avatarN', { n: (it.ref as number) + 1 }) : rt('rk.frameN', { n: it.ref as number }));
       if (it.limited) {
         const name2 = sht(`sh.lim.${it.ref}` as ShopKey);
-        out.push({ id: it.id, sec: 'look', name: name2, rar: (it.price ?? 0) >= 1000 ? 'mythic' : 'legendary', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.look',
+        out.push({ id: it.id, sec: 'look', name: name2, rar: (it.price ?? 0) >= 1000 ? 'mythic' : 'legendary', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look',
           state: () => (shopHas(it.id) ? 'own' : limitedNow(week()) === it.id ? 'buy' : 'locked'),
           how: sht('sh.limHow'),
           when: () => { if (shopHas(it.id)) return ''; const n = limitedIn(it.id, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); },
           doBuy: () => buy(it, week()), use: lookUse(it) });
       } else if (it.price) {
-        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.look', store: it.id,
+        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
           state: () => (owns(it.kind as 'avatar' | 'frame', it.ref as number, wins()) ? 'own' : 'buy'), doBuy: () => buy(it), use: lookUse(it) });
       } else if (it.win) {
         const w = it.win;
-        out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), why: 'sh.why.won',
+        out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.won',
           state: () => (w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
           how: w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
           when: w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
@@ -246,7 +261,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       const season = isSeason(p.how);
       const need = streakNeed(p.how);
       out.push({
-        id: `fg:${piece}`, sec: season ? 'season' : 'won', name: partName(piece), rar: p.r, for: 'sh.forChar', art: figArt(piece), big: figBig(piece), why: season ? 'sh.why.season' : 'sh.why.won',
+        id: `fg:${piece}`, sec: season ? 'season' : 'won', name: partName(piece), rar: p.r, for: 'sh.forChar', art: figArt(piece), big: figBig(piece), bare: figBare, why: season ? 'sh.why.season' : 'sh.why.won',
         state: () => (ownsPiece(piece) ? 'own' : 'locked'),
         how: p.how === 'week' ? `${sht('sh.top3')} · ${rt('fb.how.week')}` : rt(`fb.how.${p.how}` as RankKey),
         when: season ? () => { const n = daysUntilSeason(p.how); return n === 0 ? sht('sh.onNow') : n > 0 ? sht('sh.backIn', { n }) : ''; }
@@ -494,12 +509,18 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const shut = () => sheet.close();
     sheet.addEventListener('click', (e) => { if (e.target === sheet) shut(); });
     sheet.addEventListener('close', () => sheet.remove());
+    let without = false;
     const paintCard = (justGot = false) => {
       const st = w.state();
       const left = wallet();
-      const big = w.big?.(justGot);
+      if (st === 'own') without = false;
+      const big = without && w.bare ? w.bare() : w.big?.(justGot);
       const art = h('div', { class: `sh-card-art${big ? ' wide' : ''}` }, h('i', { class: 'sh-rays', 'aria-hidden': 'true' }),
         ...sparks(w.rar, 8), big ?? w.art());
+      // Try it on: the same place with and without it, one tap apart.
+      const tryOn = w.bare && w.big && st !== 'own' ? h('div', { class: 'sh-try', role: 'group', 'aria-label': nwt('nw.tryOn') },
+        ...([false, true] as const).map((wear) => h('button', { class: `sh-try-b${without !== wear ? ' on' : ''}`, type: 'button', 'aria-pressed': String(without !== wear),
+          onclick: () => { if (without === !wear) return; without = !wear; haptic(6); sfx.tick(); paintCard(); } }, wear ? nwt('nw.tryWith') : nwt('nw.tryWithout')))) : '';
       const acts: Node[] = [];
       if (st === 'buy') {
         const price = w.price ?? 0;
@@ -530,6 +551,8 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         const price = w.price;
         acts.push(h('button', { class: `${st === 'own' ? 'primary brand-btn' : 'chip'} sh-gift-btn`, type: 'button', disabled: wallet() < price, onclick: async (e: Event) => {
           const b = e.currentTarget as HTMLButtonElement;
+          const { confirmGift } = await import('./giftSend');
+          if (!(await confirmGift(gift.name, h('span', { class: 'gs-confirm-amt' }, w.name ?? '', ' · ', star(), ` ${num(price)}`)))) return;
           b.disabled = true;
           try {
             const { giftPiece } = await import('../together/lightGifts');
@@ -551,6 +574,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         h('button', { class: 'icon-btn sh-card-x', 'aria-label': t('common.close'), onclick: shut }, '✕'),
         h('span', { class: 'sh-rar big' }, sht(`sh.r.${w.rar}` as ShopKey)),
         art,
+        tryOn,
         h('h2', {}, w.name),
         h('p', { class: 'muted small sh-for' }, sht(w.for), w.when && st !== 'locked' ? ` · ${w.when()}` : ''),
         w.why ? h('p', { class: 'sh-why' }, sht(w.why)) : '',

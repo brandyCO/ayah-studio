@@ -213,26 +213,33 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const goalsBox = h('section', { class: 'me-card' });
   // Gifts from friends (owner request 2026-11-12): each waits as a chest with who sent it.
   const giftSlot = h('div', { class: 'me-gifts' });
+  // Painted whenever it may have changed (sign-in finishing after Me was built, Me shown again, a gift opened
+  // elsewhere): Me stays alive between tabs, and a single paint at build time missed gifts for people whose account
+  // was still being restored then (owner report 2026-11-23, "some users don't see the gift card").
+  let giftsAt = 0;
   const paintGifts = () => {
-    if (!account()) return;
-    void import('../together/lightGifts').then(async (g) => {
-      const list = await g.myGifts().catch(() => []);
-      if (!giftSlot.isConnected && giftSlot.parentNode) return;
+    if (!account()) { giftSlot.replaceChildren(); return; }
+    giftsAt = Date.now();
+    void Promise.all([import('../together/lightGifts'), import('./giftArt')]).then(async ([g, art]) => {
+      const list = await g.myGifts().catch(() => null);
+      if (!list) return;
       giftSlot.replaceChildren(...list.map((x) => {
         const who = (x.from.private ? null : x.from.name) ?? mpt('mp.gift.someone');
+        const open = () => void play(async () => { await (await import('./giftOpen')).playGift(x); }, paintGifts);
+        const pic = h('button', { class: 'me-gift-go', type: 'button', 'aria-label': mpt('mp.gift.from', { name: who }), onclick: open });
+        pic.innerHTML = art.giftThumb(x.item ? 150 : x.light, x.from.pid ?? x.from.name ?? x.id);
         return h('div', { class: 'me-gift' },
-          h('span', { class: 'me-gift-ic', 'aria-hidden': 'true' }, icon('gift', 22)),
           h('span', { class: 'goal-txt' }, h('b', {}, mpt('mp.gift.from', { name: who })), h('span', { class: 'muted small' }, x.item ? mpt('mp.gift.piece') : mpt('mp.gift.light', { n: x.light }))),
-          chest(Math.max(10, x.light), 'ready', t('chest.open', { n: x.light }), (el) => void play(async () => {
-            if (!(await g.openGift(x))) return;
-            const c = await import('./celebrate');
-            const loot = x.item ? [{ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, icon('gift', 22)), label: mpt('mp.gift.piece'), rare: true }] : undefined;
-            await c.celebrate({ kind: 'chest', title: mpt('mp.gift.from', { name: who }), sub: mpt('mp.gift.sub'), kicker: mpt('mp.gift.kicker'), loot }, el, x.light);
-          }, paintGifts)));
+          pic);
       }));
     });
   };
   paintGifts();
+  const giftsAgain = () => { if (!root.classList.contains('screen-kept') && Date.now() - giftsAt > 20_000) paintGifts(); };
+  const offGiftAcct = onAccount(() => paintGifts());
+  const onGifts = () => paintGifts();
+  window.addEventListener('gifts-changed', onGifts);
+  root.addEventListener('screen-shown', giftsAgain);
   // The day's string of du'a lanterns (src/ui/dayLanterns.ts, loaded with Me).
   const duaBox = h('section', { class: 'me-card dl-card', hidden: dayOne });
   const paintDuas = () => { if (!dayOne) void import('./dayLanterns').then((m) => m.paintDayLanterns(duaBox)); };
@@ -301,7 +308,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   let opening = false;
   const waiting = () => [
     ...claimSlot.querySelectorAll<HTMLElement>('.claim-badge'),
-    ...giftSlot.querySelectorAll<HTMLElement>('.me-gift .chest'),
+    ...giftSlot.querySelectorAll<HTMLElement>('.me-gift .me-gift-go'),
     ...wardrobeSlot.querySelectorAll<HTMLElement>('.wd-card .chest'),
   ];
   const paintWait = () => {
@@ -324,8 +331,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         if (!next) break;
         next.click();
         // Wait for its moment to start, then to end.
-        for (let w = 0; w < 20 && !document.querySelector('.cel'); w++) await new Promise((r) => setTimeout(r, 100));
-        while (document.querySelector('.cel')) await new Promise((r) => setTimeout(r, 200));
+        for (let w = 0; w < 20 && !document.querySelector('.cel, .gm'); w++) await new Promise((r) => setTimeout(r, 100));
+        while (document.querySelector('.cel, .gm')) await new Promise((r) => setTimeout(r, 200));
         await new Promise((r) => setTimeout(r, 350));
         if (!root.isConnected) return;
       }
@@ -1454,7 +1461,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     }
     document.removeEventListener('close', onClose, true);
     offSync();
-    offAcct();
+    offAcct(); offGiftAcct(); window.removeEventListener('gifts-changed', onGifts);
     clearInterval(syncTick);
     window.removeEventListener('journey-changed', onArrive);
     clearInterval(tick);

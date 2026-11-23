@@ -14,7 +14,7 @@ import { rt, type RankKey } from '../i18n/ranks';
 import { badgeArt } from './badge';
 import { hifzBadge, parseHifz } from './hifzBadge';
 import { trophy } from './rankAvatars';
-import { SLOTS, readRoomCode, roomLook, type Slot } from '../data/roomItems';
+import { SLOTS, readRoomCode, roomLook, roomLookShown, type Slot } from '../data/roomItems';
 import { hijri, seasonNow } from '../data/wardrobe';
 import { floorArt, itemArt, rugArt, seasonArt, setGrow, specialArt, viewArt, wallArt, type Special } from './roomArt';
 import { lite, reduced } from './juice';
@@ -106,7 +106,7 @@ function buildScene(visit?: Visit): Built | null {
   const legendary = !visit && Object.entries(WARDROBE).some(([id, p]) => p.r === 'legendary' && ownsPiece(id));
   const scene = h('div', { class: `rm-scene sky-${sky}` });
   const draw = () => {
-    const html = backSvg(sky, best, legendary, look ?? roomLook(), seasonNow(), reduced() || lite(), { days: visit ? best : streak().days, special: specialNow() });
+    const html = backSvg(sky, best, legendary, look ?? roomLookShown(), seasonNow(), reduced() || lite(), { days: visit ? best : streak().days, special: specialNow() });
     const old = scene.querySelector('.rm-back');
     if (old) old.outerHTML = html; else scene.insertAdjacentHTML('afterbegin', html);
   };

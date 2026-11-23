@@ -105,3 +105,11 @@ body[data-view="me"]:has(.me-room-screen) .tabbar { display: none; }
 /* A friend's room, view only (round 5). */
 .rm-visit .rm-scene { margin: 2px 0 10px; }
 .rm-visit > p { margin: 0; }
+/* Trying a piece on before buying it (roomShop.ts). */
+.rs-tile.trying { box-shadow: 0 4px 0 #5b3fbf, inset 0 0 0 3px #8f7bff; }
+.rs-try { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; padding: 10px 12px; border-radius: 16px;
+  background: color-mix(in srgb, #8f7bff 14%, var(--card, #fff)); border: 2px solid color-mix(in srgb, #8f7bff 45%, transparent); }
+.rs-try[hidden] { display: none; }
+.rs-try-t { flex: 1 1 100%; font-weight: 900; }
+.rs-try .rs-how { flex: 1; font-size: 13px; }
+.rs-try-get { flex: 1; min-height: 44px; }

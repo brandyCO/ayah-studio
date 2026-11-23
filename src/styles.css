@@ -1291,9 +1291,9 @@ body[data-view="kids"] {
 }
 .tab-btn.on { color: var(--accent); }
 /* The tab just tapped: its icon jumps up, stretches, lands with a squash and settles (a spring as a curve). */
-.tab-btn.hop > svg { animation: tab-hop .5s var(--ease-spring); transform-origin: 50% 100%; }
+.tab-btn.hop > svg, .tab-btn.hop > .tab-av { animation: tab-hop .5s var(--ease-spring); transform-origin: 50% 100%; }
 @keyframes tab-hop { 0% { transform: scale(.8, 1.15); } 35% { transform: translateY(-7px); } 60% { transform: scale(1.12, .88); } }
-@media (prefers-reduced-motion: reduce) { .tab-btn.hop > svg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tab-btn.hop > svg, .tab-btn.hop > .tab-av { animation: none; } }
 .tab-btn:active { background: var(--sel); }
 .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .screen:has(> .tabbar:not(.auto)) { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
@@ -2022,3 +2022,8 @@ html.easy .tab-btn svg { width: 28px; height: 28px; }
 /* A tab's earlier screen shown while its fresh copy is built underneath (main.ts route()). */
 .screen-building { position: absolute; inset: 0 0 auto 0; visibility: hidden; pointer-events: none; }
 .screen-ghost { pointer-events: none; }
+
+/* The Me tab is your own avatar in its frame (owner request 2026-11-23, src/ui/meTabAv.ts). */
+.tab-btn .tab-av { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; box-sizing: content-box; padding: 0 5px; }
+.tab-btn .tab-av img { width: 37px; height: 37px; margin: -3.5px; display: block; pointer-events: none; }
+.tab-btn.me.on .tab-av { background: radial-gradient(circle, color-mix(in srgb, var(--pc) 22%, transparent) 60%, transparent 62%); }

@@ -10,7 +10,8 @@ const nav = (hash: string, store?: [string, string]) => () => {
   if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash;
 };
 const toClaim = nav('#/me', ['meFocus', 'claim']);
-const toFriends = nav('#/ranks', ['rankView', 'friends']);
+// Friends' asks, follows and news live on the News page (2026-11-23).
+const toFriends = nav('#/news');
 const toLeague = nav('#/ranks', ['rankView', 'league']);
 const toChallenges = nav('#/me', ['meGoalTab', 'ch']);
 
@@ -53,7 +54,9 @@ export function viewOf(e: NEntry, w: Words, waiting: Set<string>): NView {
     case 'fire': return { icon: 'flame', title: nt('nt.fire', { n: d.n ?? 0 }), sub: nt('nt.fireSub'), go: nav('#/me') };
     case 'chestCh': return { icon: 'swords', title: nt('nt.chestCh', { name }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, go: toChallenges };
     case 'pact': return { icon: 'moon', title: nt('nt.pact'), act: wait ? nt('nt.claim') : undefined, go: nav('#/me') };
-    case 'gift': return { icon: 'gift', title: ((d.n ?? 1) > 1 ? nt('nt.giftN', { n: d.n ?? 1 }) : nt('nt.gift1')), act: wait ? nt('nt.open') : undefined, go: nav('#/me') };
+    // Open plays the gift right here (owner 2026-11-23: it used to send people to Me, where they did not see it).
+    case 'gift': return { icon: 'gift', title: ((d.n ?? 1) > 1 ? nt('nt.giftN', { n: d.n ?? 1 }) : nt('nt.gift1')), act: wait ? nt('nt.open') : undefined,
+      go: () => void import('./giftOpen').then((m) => m.openWaitingGifts()) };
     case 'follow': return { icon: 'users', title: nt('nt.follow', { name }), act: nt('nt.see'), go: toFriends };
     case 'ask': return { icon: 'users', title: nt('nt.ask', { name }), act: nt('nt.see'), go: toFriends };
     case 'challenge': return { icon: 'swords', title: nt('nt.challenge', { name }), sub: d.kind ? w.clt(`cl.k.${d.kind}` as never) : undefined, act: nt('nt.see'), go: toChallenges };

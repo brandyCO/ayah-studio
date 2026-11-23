@@ -1,0 +1,55 @@
+/* The News page (src/ui/news.ts), friend challenges on Ranks (friends.ts challengesTab) and the gift question
+   (giftSend.ts confirmGift). Owner request 2026-11-23. */
+.nw-page { max-width: 640px; margin: 0 auto; padding: 8px 16px calc(110px + env(safe-area-inset-bottom)); }
+.nw-hero { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 14px 16px; border-radius: 22px; color: #fff;
+  background: linear-gradient(135deg, #6c5ce7, #a06cf0 60%, #f08ac0); box-shadow: 0 4px 0 #4b3bb8; }
+.nw-hero p { margin: 0; font-weight: 800; line-height: 1.3; }
+.nw-hero-ic { display: grid; place-items: center; width: 52px; height: 52px; flex: none; border-radius: 16px; background: rgba(255, 255, 255, .2); }
+.nw-out { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 20px; }
+.nw-out p { margin: 0; font-weight: 700; }
+.nw-friends { margin: 0 0 16px; }
+
+/* The feed: one card a milestone, the person first, then what they did, a MashaAllah on the side. */
+.nw-filter { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 2px 0 10px; padding-bottom: 2px; }
+.nw-filter::-webkit-scrollbar { display: none; }
+.nw-list { display: grid; gap: 8px; }
+.nw-card { position: relative; padding: 10px 12px; border-radius: 18px; background: var(--card); box-shadow: 0 2px 0 color-mix(in srgb, var(--text, #000) 8%, transparent);
+  border-inline-start: 4px solid var(--nw-c, #6c5ce7); }
+.nw-card.s-friend { --nw-c: #f59f00; }
+.nw-card.s-follow { --nw-c: #6c5ce7; }
+.nw-card.s-near { --nw-c: #12a594; }
+.nw-who { flex: none; display: flex; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
+.nw-tag { display: inline-block; margin-inline-start: 6px; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 800; vertical-align: 1px;
+  color: var(--nw-c, #6c5ce7); background: color-mix(in srgb, var(--nw-c, #6c5ce7) 14%, transparent); }
+.nw-tag.s-friend { --nw-c: #d98500; }
+.nw-tag.s-follow { --nw-c: #6c5ce7; }
+.nw-tag.s-near { --nw-c: #0e8c7d; }
+.nw-none { margin: 6px 2px; }
+.nw-list > .chip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Ranks → Friends: friend challenges only. */
+.fr-ch-tab .fr-to-news { align-self: center; display: inline-flex; align-items: center; gap: 6px; }
+.fr-pick { margin: 0; }
+.fr-pick-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px 8px; scroll-snap-type: x proximity; }
+.fr-pick-row::-webkit-scrollbar { display: none; }
+.fr-pick-one { flex: none; width: 84px; display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px; border: 0; border-radius: 18px; cursor: pointer;
+  background: var(--card); box-shadow: 0 3px 0 color-mix(in srgb, var(--text, #000) 10%, transparent); scroll-snap-align: start; color: inherit; font: inherit; }
+.fr-pick-one:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--text, #000) 10%, transparent); }
+.fr-pick-av { position: relative; display: flex; }
+.fr-pick-sw { position: absolute; inset-inline-end: -6px; bottom: -4px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: #6c5ce7; color: #fff; box-shadow: 0 0 0 2px var(--card); }
+.fr-pick-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 13px; }
+.fr-pick-streak { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 900; color: #d98500; }
+.fr-pick-empty { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 18px; }
+.fr-pick-empty p { margin: 0; font-weight: 700; }
+
+/* "Send this gift to Bilal?" */
+.gs-confirm { max-width: 360px; text-align: center; padding: 22px 20px 18px; border-radius: 24px; }
+.gs-confirm-art { display: inline-grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: #fff;
+  background: linear-gradient(135deg, #ff6b4a, #f59f00); box-shadow: 0 4px 0 #c2410c; }
+.gs-confirm h2 { margin: 12px 0 6px; font-size: var(--fs-l, 20px); }
+.gs-confirm-what { margin: 0 0 6px; font-size: 18px; font-weight: 900; }
+.gs-confirm-amt { display: inline-flex; align-items: center; gap: 4px; }
+.gs-confirm-amt .lt-chip-ic, .gs-confirm-amt svg { width: 20px; height: 20px; }
+.gs-confirm-acts { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+.gs-confirm-acts > * { flex: 1; min-height: 48px; }

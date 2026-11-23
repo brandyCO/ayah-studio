@@ -105,6 +105,19 @@ export function roomLook(): Partial<Record<Slot, string>> {
     return out;
   } catch { return {}; }
 }
+// Trying a piece on before buying it (owner request 2026-11-23): shown in the room while the decorate sheet is open,
+// never saved or synced.
+let trying: { slot: Slot; id: string | null } | null = null;
+export function setRoomTry(slot: Slot | null, id: string | null = null) {
+  trying = slot ? { slot, id } : null;
+}
+export const roomTrying = () => trying;
+/** The room as it shows now: what is placed, plus a piece being tried on. */
+export function roomLookShown(): Partial<Record<Slot, string>> {
+  const l = roomLook();
+  if (trying) { if (trying.id) l[trying.slot] = trying.id; else delete l[trying.slot]; }
+  return l;
+}
 export function setRoomLook(slot: Slot, id: string | null) {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}') as Record<string, string>;
