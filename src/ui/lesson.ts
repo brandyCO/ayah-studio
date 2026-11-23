@@ -16,7 +16,7 @@
 import { suraName } from './suraName';
 import './learn.css';
 import {
-  LIGHT, ayahPlaces, ensureTree, learnTo, linkTo, nextChunk, reciteWhole, stageOf, thirsty, tree, type Tree,
+  HIFZ_LIGHT, LIGHT, ayahPlaces, ensureTree, hifzAt, learnTo, linkTo, nextChunk, reciteWhole, thirsty, tree, type Tree,
 } from '../data/garden';
 import { nextQuick, noteGrowth, pathChunk } from '../data/learnPath';
 import { addFlawless, addLesson, addMemorised, claimGoal, goalClaimed } from '../data/journey';
@@ -47,7 +47,7 @@ import { follow, followWords, hintsFrom, type FollowWord } from '../engine/follo
 import { markStrong, markWeak, weakWords } from '../data/weakWords';
 import { recordPages } from '../data/pageMemory';
 import { h, haptic, toast } from './dom';
-import { drawTree, stageHeight, vignette } from './gardenArt';
+import { hifzBadge } from './hifzBadge';
 import { icon } from './icons';
 import { reduced } from './juice';
 import { reelReciter } from './prefs';
@@ -57,7 +57,6 @@ type Phase = 'meaning' | 'listen' | 'practice' | 'drill' | 'memory' | 'check' | 
 interface AyahAudio { src: string; from: number; to: number; words: WordTiming | null; heard: boolean[] }
 
 const TURN_EXTRA = 1.5;
-const night = () => matchMedia('(prefers-color-scheme: dark)').matches;
 
 function pref<T extends string>(key: string, ok: readonly T[], d: T): T {
   try { const v = localStorage.getItem(key) as T; return ok.includes(v) ? v : d; } catch { return d; }
@@ -163,9 +162,9 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     document.body.append(d);
     d.showModal();
   }
-  // Round 3: the tree in the corner says what it is (it grows with each lesson passed in this surah).
-  const treeTip = lt('learn.treeTip', { name: surahName(m) });
-  const art = h('button', { class: 'ls-tree', type: 'button', title: treeTip, 'aria-label': treeTip, onclick: () => { haptic(6); toast(treeTip); } });
+  // The surah's Hifz badge in the corner says what it is (earned by the whole surah from memory, kept by review).
+  const badgeTip = lt('learn.hzTip', { name: surahName(m) });
+  const art = h('button', { class: 'ls-badge', type: 'button', title: badgeTip, 'aria-label': badgeTip, onclick: () => { haptic(6); toast(badgeTip); } });
   // Focus page: the page fills the screen between two thin margins; the tools come up only when asked.
   const noorBtn = h('button', { class: 'ls-noor', type: 'button', 'aria-label': lt('learn.focusTools'), 'aria-expanded': 'false', onclick: () => peek(!root.classList.contains('peek')) }, h('i', { 'aria-hidden': 'true' }));
   const focusBtn = h('button', { class: 'icon-btn ls-focus-btn', type: 'button', onclick: () => { setPref('learnFocus', focusOn() ? 'off' : 'on'); paintFocus(); paintActions(); } });
@@ -258,7 +257,8 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     // The surah's name is the title just above, so the line under it names only the ayat.
     ref.textContent = range[0] === range[1] ? `${s}:${range[0]}` : `${s}:${range[0]}–${range[1]}`;
     const tr = tree(s)!;
-    art.replaceChildren(vignette(56, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: thirsty(tr), t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))));
+    const hz = hifzAt(tr);
+    art.replaceChildren(hifzBadge(s, hz?.tier ?? 0, 52, hz ? (hz.due ? 'due' : '') : 'locked'));
     if (practice) { stepsEl.replaceChildren(h('li', { class: 'on', 'aria-current': 'step' }, fe('pr.btn'))); return; }
     const list: [Step, LearnKey][] = step === 'water' ? [['water', 'learn.stepWater']] : [['new', 'learn.stepNew'], ['link', 'learn.stepLink'], ['whole', 'learn.stepWhole']];
     stepsEl.replaceChildren(...list.map(([id, k]) => h('li', { class: id === step ? 'on' : '' , 'aria-current': id === step ? 'step' : false }, lt(k))));
@@ -923,7 +923,6 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
   async function pass(smooth: boolean, from: Element | null) {
     stopAll();
     const before = tree(s)!;
-    const stage0 = stageOf(before, m.ayahs);
     const today = dayKey(new Date());
     const ref0 = uiRef(m, range[0], range[1]);
     let moment: Promise<void> | null = null;
@@ -950,14 +949,24 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     } else {
       const first = !before.full;
       const wasDry = thirsty(before);
-      reciteWhole(s, m.ayahs, smooth);
+      const hz = reciteWhole(s, m.ayahs, smooth);
+      const tierName = (k: number) => lt(`learn.hz${k}` as LearnKey);
       if (first) {
+        // The whole surah from memory: its Bronze Hifz badge.
         claimGoal(`gl:w:${s}`, LIGHT.whole);
-        moment = celebrate({ kind: 'star', kicker: lt('learn.celFull'), title: surahName(m), sub: lt('learn.celFullSub'), stats }, from, LIGHT.whole);
+        noteGrowth(s, -1);
+        moment = celebrate({ kind: 'hifz', s, step: 0, kicker: lt('learn.celHeld'), title: surahName(m), sub: lt('learn.celHeldSub'), stats }, from, LIGHT.whole);
+      } else if (hz && hz.to > hz.from) {
+        // Kept long enough with every review on time: the badge climbs a tier, the new one replacing the old.
+        const light = LIGHT.water + HIFZ_LIGHT[hz.to];
+        claimGoal(`gl:hz:${s}:${hz.to}:${today}`, light);
+        noteGrowth(s, hz.from);
+        moment = celebrate({ kind: 'hifz', s, step: hz.to, from: hz.from, kicker: lt('learn.celClimb', { tier: tierName(hz.to) }), title: surahName(m), sub: lt('learn.celClimbSub'), stats }, from, light);
       } else {
         const light = wasDry ? LIGHT.water : 0;
         if (light) claimGoal(`gl:wa:${s}:${today}`, light);
-        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celWater'), title: surahName(m), sub: lt(smooth ? 'learn.celWaterSub' : 'learn.celWaterSlips'), stats }, from, light);
+        const sub = hz && hz.to < hz.from ? lt('learn.celDropped', { tier: tierName(hz.to) }) : lt(smooth ? 'learn.celReviewSub' : 'learn.celWaterSlips');
+        moment = celebrate({ kind: 'lantern', kicker: lt('learn.celReview'), title: surahName(m), sub, stats }, from, light);
       }
     }
     addLesson();
@@ -966,8 +975,6 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     for (let x = range[0]; x <= range[1]; x++) covered.push(mushaf.pageOf(s, x));
     recordPages(covered, smooth ? 2 : 1);
     const after = tree(s)!;
-    const stage1 = stageOf(after, m.ayahs);
-    if (stage1 !== stage0) noteGrowth(s, stage0);
     await moment;
     const was = step;
     if (was === 'new' && range[0] > 1) { await plan('new'); startStep(); return; }
@@ -1017,9 +1024,9 @@ export async function showLesson(root: HTMLElement, s: number, mode?: string): P
     const next = tr.full ? null : nextChunk(tr.learned, m.ayahs, tr.chunk, typeof tr.chunk === 'number' ? [] : await places());
     const label = tr.full ? null : next ? lt(next[0] === next[1] ? 'learn.goAyah' : 'learn.goAyat', { a: next[0], b: next[1] }) : lt('learn.goWhole');
     doneEl.replaceChildren(
-      vignette(150, (c, x, y, u) => drawTree(c, x, y, u, { s, v: tr.v, stage: stageOf(tr, m.ayahs), thirsty: false, t: 0, night: night() }), night(), stageHeight(s, stageOf(tr, m.ayahs))),
-      h('h2', {}, lt(tr.full ? (was === 'whole' ? 'learn.doneFull' : 'learn.doneWatered') : 'learn.doneToday')),
-      h('p', { class: 'muted' }, tr.full ? lt('learn.doneFullSub') : lt('learn.doneSub', { n: tr.learned, of: m.ayahs })),
+      hifzBadge(s, hifzAt(tr)?.tier ?? 0, 132, tr.full ? '' : 'locked'),
+      h('h2', {}, lt(tr.full ? (was === 'whole' ? 'learn.doneHeld' : 'learn.doneReviewed') : 'learn.doneToday')),
+      h('p', { class: 'muted' }, tr.full ? lt('learn.doneHeldSub') : lt('learn.doneSub', { n: tr.learned, of: m.ayahs })),
       h('div', { class: 'ls-done-actions' },
         h('a', { class: label ? 'chip' : 'primary brand-btn', href: '#/learn' }, lt('learn.backToPath')),
         label ? h('button', { class: 'primary brand-btn', onclick: () => void plan().then(startStep) }, lt('learn.moreToday', { what: label })) : ''));

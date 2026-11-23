@@ -54,9 +54,14 @@ export interface PathStep {
   state: 'done' | 'current' | 'locked';
   /** Mushaf page ('page'). */
   p?: number;
+  /** A chest's place among the surah's chests (0 first). */
+  k?: number;
 }
-/** Light in a path chest. */
-export const PATH_CHEST = 15;
+/** The path's chests (owner request 2026-11-23, "a series that differs in size, material and quality"): a rhythm
+ *  of ten that grows richer and gives way to a small one again, so a big chest feels big. Each chest's place in
+ *  the rhythm comes from its surah and its place in the surah, so neighbours differ and nothing is random. */
+const CHEST_RHYTHM = [10, 20, 10, 35, 20, 60, 10, 35, 20, 100];
+export const chestLight = (s: number, k: number) => CHEST_RHYTHM[(s * 3 + k) % CHEST_RHYTHM.length];
 /** A chest after every this many lessons of a surah. */
 export const CHEST_EVERY = 4;
 /** Light for passing a juz checkpoint. */
@@ -165,7 +170,7 @@ export function unitsOf(m: SurahMeta, mushaf: Mushaf, open: boolean, ctx?: PathC
       simFrom = range[1] + 1;
     }
     for (const p of pages) (end ? tail : steps).push({ kind: 'page', s, range: [range[0], range[1]], p, state: 'locked' });
-    if (lessons % CHEST_EVERY === 0 && !end) steps.push({ kind: 'chest', s, range, state: 'locked' });
+    if (lessons % CHEST_EVERY === 0 && !end) steps.push({ kind: 'chest', s, range, state: 'locked', k: lessons / CHEST_EVERY - 1 });
   }
   steps.push({ kind: 'whole', s, range: [1, m.ayahs], state: 'locked' });
   const tailAt = steps.length;
@@ -193,13 +198,13 @@ export function unitsOf(m: SurahMeta, mushaf: Mushaf, open: boolean, ctx?: PathC
   return units;
 }
 
-/** Surahs in path order with where the path stands: index of the first surah not full grown. */
+/** Surahs in path order with where the path stands: index of the first surah not yet held by heart. */
 export function pathPosition(order: number[]): number {
   const i = order.findIndex((s) => !tree(s)?.full);
   return i < 0 ? order.length : i;
 }
 
-/** Review steps: thirsty trees, the longest waiting first (at most 3 on the path at once). */
+/** Review steps: surahs due for review, the longest waiting first (at most 3 on the path at once). */
 export const reviewSteps = () => thirstyTrees().slice(0, 3);
 
 // --- "Already know some?": a quick tasmi' of each picked surah, one after another ---
@@ -214,7 +219,7 @@ export function nextQuick(s: number): number {
   } catch { return 0; }
 }
 
-/** After a lesson: the tree that grew plays its growing moment once on the path. */
+/** After the whole surah from memory: the surah whose Hifz badge was earned or climbed glows once on the path. */
 export function noteGrowth(s: number, from: number) { try { sessionStorage.setItem('gardenGrow', `${s}:${from}`); } catch { /* ignore */ } }
 export function takeGrowth(): { s: number; from: number } | null {
   try {

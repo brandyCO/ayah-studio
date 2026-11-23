@@ -31,6 +31,7 @@ import { levelLabel, levelOf, levelProgress, myXp } from '../data/xp';
 import { withLevel } from './levelLook';
 import { dayKey } from '../data/readLog';
 import { BADGES } from '../data/badges';
+import { hifzBadge, parseHifz } from './hifzBadge';
 import { badgeArt } from './badge';
 import { countryName, flagImg, pickFlag } from './flag';
 import { nwt } from '../i18n/news';
@@ -192,6 +193,11 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const badges = defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
       h('h3', {}, ft('fr.badges'), p.badges && p.badges.n > defs.length ? h('small', {}, ` · ${ft('fr.badgesN', { n: p.badges.n })}`) : ''),
       defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
+    // Their Hifz badges: how many surahs they hold and the best two (sent among the badges, hifzBadge.ts).
+    const hz = parseHifz(p.badges?.top);
+    const hifz = hz.count ? h('section', { class: 'fr-shelf s-hifz' },
+      h('h3', {}, ft(mineP ? (hz.count === 1 ? 'fr.myHeart1' : 'fr.myHeartN') : hz.count === 1 ? 'fr.heart1' : 'fr.heartN', { n: hz.count })),
+      h('div', { class: 'fr-shelf-row' }, ...hz.list.map((x) => hifzBadge(x.s, x.tier, 52)))) : '';
     const cups = p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
       h('div', { class: 'fr-shelf-row' }, ...p.cups.map((place) => h('span', { class: `fr-cup p${place}`, title: `#${place}` }, trophy(place, 34))))) : '';
     // Your own profile: your flag, and what it shows (the stats above follow each switch).
@@ -226,7 +232,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       actions,
       f ? streakLine(f, name) : '',
       stats.childElementCount ? stats : '',
-      badges, cups, mine,
+      hifz, badges, cups, mine,
       f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
     if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
   };

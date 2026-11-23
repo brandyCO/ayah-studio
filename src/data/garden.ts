@@ -34,6 +34,10 @@ export interface Tree {
   full?: number;
   /** Review step: index into WATER_DAYS (a full tree). */
   step: number;
+  /** Hifz badge tier (0 Bronze … 4 Diamond) as of the last review (src/data/hifz.ts). */
+  hz?: number;
+  /** Since when the surah has been kept with every review on time (ms): the tier climbs with it. */
+  hk?: number;
   /** Last watered, or last lesson (ms). */
   water: number;
   planted: number;
@@ -109,6 +113,7 @@ function cleanTree(s: number, r: unknown): Tree | null {
     full: num(o.full) > 0 ? num(o.full) : undefined,
     step: Math.min(WATER_DAYS.length, Math.max(0, Math.round(num(o.step)))),
     water: num(o.water), planted: num(o.planted), at: num(o.at),
+    ...(num(o.full) > 0 ? { hz: Math.min(4, Math.max(0, Math.round(num(o.hz)))), hk: num(o.hk) > 0 ? num(o.hk) : num(o.full) } : {}),
   };
 }
 function cleanDeco(id: string, r: unknown): Deco | null {
@@ -323,17 +328,60 @@ export function linkTo(s: number, to: number) {
 }
 /** The whole surah from memory: the tree is full grown (or, already full, watered: when it was thirsty
  *  the next watering moves further away after a smooth recitation and closer after a few slips). */
-export function reciteWhole(s: number, ayahs: number, smooth: boolean) {
+export function reciteWhole(s: number, ayahs: number, smooth: boolean): { from: number; to: number } | null {
   const t = load().trees[s];
-  if (!t) return;
+  if (!t) return null;
   const now = Date.now();
   const due = thirsty(t, now);
   t.learned = t.linked = ayahs;
-  if (!t.full) { t.full = now; t.step = 0; }
-  else if (due) t.step = smooth ? Math.min(WATER_DAYS.length, t.step + 1) : Math.max(0, t.step - 1);
+  let out: { from: number; to: number };
+  if (!t.full) { t.full = now; t.step = 0; t.hz = 0; t.hk = now; out = { from: -1, to: 0 }; }
+  else {
+    // The Hifz badge: a review late past the grace drops it one tier for each interval missed (never below
+    // Bronze) and the time kept starts again; a smooth review on time climbs one tier once it is kept long enough.
+    const { tier, dropped } = hifzAt(t, now)!;
+    const from = t.hz ?? 0;
+    t.hz = tier;
+    if (dropped) t.hk = now;
+    if (smooth && !dropped) t.hz = Math.min(4, tier + (keptTier(now - (t.hk ?? t.full)) > tier ? 1 : 0));
+    out = { from, to: t.hz };
+    if (due) t.step = smooth ? Math.min(WATER_DAYS.length, t.step + 1) : Math.max(0, t.step - 1);
+  }
   t.water = now;
   touch(t);
   save();
+  return out;
+}
+
+// --- the Hifz badge (owner decision 2026-11-23) ---
+/** Days kept, every review on time, for each tier: Bronze when earned, Silver a week, Gold a month, Platinum
+ *  three months, Diamond a year. */
+export const HIFZ_DAYS = [0, 7, 30, 90, 365];
+/** Days after a review falls due before the badge drops. */
+export const HIFZ_GRACE = 2;
+/** Light added when a review climbs to each Hifz tier. */
+export const HIFZ_LIGHT = [0, 20, 40, 70, 120] as const;
+const keptTier = (ms: number) => HIFZ_DAYS.reduce((k, d, i) => (ms >= d * DAY ? i : k), 0);
+/** A surah's badge now: its tier (lowered for reviews missed past the grace), whether it dropped, and whether
+ *  a review is due (the badge shows dusty). Null until the whole surah was recited from memory. */
+export function hifzAt(t: Readonly<Tree>, now = Date.now()): { tier: number; dropped: boolean; due: boolean; dueAt: number } | null {
+  if (!t.full) return null;
+  const at = dueAt(t)!;
+  const late = now - at - HIFZ_GRACE * DAY;
+  const drops = late > 0 ? 1 + Math.floor(late / (30 * DAY)) : 0;
+  const tier = Math.max(0, (t.hz ?? 0) - drops);
+  return { tier, dropped: tier < (t.hz ?? 0), due: now >= at, dueAt: at };
+}
+/** The next tier's day count from when the surah has been kept on time, or null at Diamond. */
+export function hifzNext(t: Readonly<Tree>, now = Date.now()): { tier: number; inDays: number } | null {
+  const h = hifzAt(t, now);
+  if (!h || h.tier >= 4) return null;
+  const since = h.dropped ? now : (t.hk ?? t.full!);
+  return { tier: h.tier + 1, inDays: Math.max(0, Math.ceil((since + HIFZ_DAYS[h.tier + 1] * DAY - now) / DAY)) };
+}
+/** Every surah held: its badge tier, for the shelf and the profile. */
+export function hifzAll(now = Date.now()): { s: number; tier: number; due: boolean }[] {
+  return trees().filter((t) => t.full).map((t) => { const h = hifzAt(t, now)!; return { s: t.s, tier: h.tier, due: h.due }; }).sort((a, b) => a.s - b.s);
 }
 
 // --- the surah's chunks ---
