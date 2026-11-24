@@ -10,6 +10,8 @@ import { actor, sparkle } from './actor';
 import { h, haptic } from './dom';
 import { holdPage, noor, popIn, reduced } from './juice';
 import { sfx } from './sfx';
+import { two } from './roomHQ';
+import { flare } from './flare';
 
 const VB = 'viewBox="0 0 300 300" preserveAspectRatio="xMidYMax meet"';
 const svg = (inner: string) => `<svg ${VB} aria-hidden="true">${inner}</svg>`;
@@ -19,7 +21,7 @@ const layer = (cls: string, inner: string) => {
   return el;
 };
 /** A flat two-tone shape: the shade, the base shifted up-left over it. */
-const two = (d: string, base: string, shade: string) => `<path d="${d}" fill="${shade}"/><path d="${d}" fill="${base}" transform="translate(-2 -2)"/>`;
+
 
 // ---------- The shop: a lantern-lit stall ----------
 function shop() {
@@ -171,6 +173,7 @@ export function playUnlock(k: Reveal, go: () => void, later: () => void) {
     sfx.open(1, k === 'shop' ? 1 : k === 'room' ? 2 : 3);
     haptic(18);
     sparkle(scene, 16, 0.45);
+    flare(scene, 3, { size: scene.clientWidth * 1.4, under: true, hold: 0 });
     if (k === 'shop') scene.querySelectorAll<HTMLElement>('.ul-glow').forEach((g, i) => at(i * 140, () => { g.classList.add('on'); sfx.pop(i); }));
   });
   at(2000, () => { who?.cheer(1800); who?.face('happy', 2400); light?.cheer(); sfx.shimmer(); });

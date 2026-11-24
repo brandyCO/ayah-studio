@@ -4,6 +4,7 @@
 // opens until today's gift is taken, Me has a small card, Settings and the onboarding show it. Claiming plays the chest
 // moment with exactly what the tile showed, then the calendar comes back with the stamp landing; a gift that opens the
 // shop, the room or the wardrobe plays that unlock moment after it. Data: src/data/weekGift.ts.
+import { flare } from './flare';
 import './weekGifts.css';
 import { claimGift, giftsOn, giftView, jumuahPiece, lanternsLit, lanternsNeed, type Prize } from '../data/weekGift';
 import { daysOpened, markRevealed, type Reveal } from '../data/reveal';
@@ -179,7 +180,7 @@ export function openWeekGifts(stamp?: number, after?: () => void) {
     const tiles = [...grid.children] as HTMLElement[];
     requestAnimationFrame(() => stagger(tiles, (el, delay) => rise(el, 14, { delay, feel: 'bouncy' }), 45, 120));
   }
-  if (stamp) void import('./sfx').then((m) => setTimeout(() => m.sfx.pop?.(), 420));
+  if (stamp) void import('./sfx').then((m) => setTimeout(() => { m.sfx.pop?.(); const tile = grid.children[stamp] as HTMLElement | undefined; if (tile) flare(tile, stamp === 6 ? 3 : 1, { size: tile.clientWidth * 2.2, hold: 1400 }); }, 420));
 }
 
 /** Me's card: the seven tiles as dots, today's waiting or the next one coming. */

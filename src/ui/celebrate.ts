@@ -33,7 +33,9 @@ import { rewardPalette, rgba } from './theme';
 import './cel.css';
 import './celebrate.css';
 import { actor as makeActor } from './actor';
-import { edge, freezeArt, svgOf, two } from './flat';
+import { freezeArt, svgOf } from './flat';
+import { edge, two } from './roomHQ';
+import { flare, type Rarity } from './flare';
 import { bump, combo, drop, holdPage, uncover, noor as makeNoor, own, popIn, squash, takeOver, tick as tickNum } from './juice';
 import { sfx, warmSounds } from './sfx';
 import { warmGesture } from './rig';
@@ -600,6 +602,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       el.classList.remove('charging');
       if (epic) el.classList.add('epic');
       fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24 + epic * 40, 0.95 + tier * 0.1 + epic * 0.15);
+      { const s0 = sb ?? stage.getBoundingClientRect(); flare(stage, Math.min(4, tier + (epic ? 1 : 0)) as Rarity, { x: b.left + b.width / 2 - s0.left, y: b.top + b.height * 0.42 - s0.top, size: s0.width * 1.5, under: true, hold: 0 }); }
       if (epic) later(260, () => fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 50 + epic * 20, 1.1));
       const extra = up > 1 ? 480 + (up - 1) * 300 : 0;
       if (up > 1) { const s0 = sb ?? stage.getBoundingClientRect(); later(380, () => twins(s0, k)); }
@@ -871,6 +874,11 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         for (const c of el.querySelectorAll<HTMLElement>('.cel-flash, .cel-sweep')) for (const a of c.getAnimations()) { a.cancel(); a.play(); }
       }) : 0;
       const at0 = (f: () => void) => (up ? later(up, f) : f());
+      // The illustrated flare of the moment's rarity (flare.ts); the chest has its own when it opens.
+      if (!isChest) {
+        const rar = (isBadge ? bstep : m.kind === 'flame' ? (m.days >= 30 ? 3 : 2) : m.kind === 'star' ? 2 : 1) as Rarity;
+        at0(() => flare(stage, rar, { size: sb0.width * 1.5, under: true, hold: rar >= 3 ? 0 : 2600 }));
+      }
       if (bstep >= 3) at0(() => {
         el.classList.add('epic');
         later(280, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));

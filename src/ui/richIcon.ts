@@ -1,7 +1,8 @@
 // Premium icons (owner request 2026-11-16: "actual premium icons" for friends' news and Me's next step):
 // small objects in the reward art's flat two-tone style (src/ui/flat.ts), lit from the top left with a
 // chunky edge underneath. The streak is the app's own flame in the chosen theme's colours.
-import { two, edge, shine, raisedLine, starPath, circlePath, svgOf } from './flat';
+import { shine, raisedLine, starPath, circlePath, svgOf } from './flat';
+import { edge, two } from './roomHQ';
 import { flame } from './flame';
 import { icon } from './icons';
 import './richIcon.css';

@@ -27,3 +27,13 @@ night, Fanous festival, Laylat al-Qadr). Our own Islamic style, never copied art
 5. Full-frame video (WebP / MP4) only for one-off moments (chest and gift openings), never for items worn everywhere.
 6. Before shipping a batch: a 60 fps preview video for the owner (raw GitHub link), and the still grid checked at
    list size (36–48 px) so the item still reads small.
+
+## Moments (chests, gifts, unlocks, badges, streak, ranks, the week's gifts, a surah finished)
+Every reward moment bursts with the same illustrated flare, richer by rarity (`src/ui/flare.ts`, `flare(host, rarity)`):
+a bloom, a shock ring (two from epic), a khatam that turns open, four-pointed sparkles and, from rare up, a wheel of
+god rays behind the prize (legendary and mythic keep it turning while the prize is shown; mythic has two wheels in two
+colours). Pieces are SVG data-URL images drawn once per rarity; motion is WAAPI transform / opacity only; old-phone
+mode throws half the sparkles and keeps the rays still; reduced motion shows none. A new moment calls `flare()` at
+its reveal. Moment art uses the shaded `two` / `edge` from `roomHQ.ts`; the gift wrapping is lit and outlined in its
+own deep tone (`giftArt.ts`). The launch is Android's / iPhone's own splash with the character icon, redrawn from the
+shaded `figure.ts` by `scripts/make-character-icons.py` (also `--ios`, `--splash`).

@@ -2,6 +2,7 @@
 // line of light runs along the bottom edge of the page, right to left, and the pages goal shows its new
 // count for a moment; when the page finished a surah (every page of it read) or a juz, a calm card rises
 // from the bottom: the surah's name, its ayat, Continue. Tapping anywhere else lets it go.
+import { flare } from './flare';
 import type { SurahMeta } from '../data/quran';
 import { todayGoals } from '../data/goals';
 import { surahName, t } from '../i18n';
@@ -69,7 +70,7 @@ export function finished(surahs: SurahMeta[], juz: number[]) {
   if (me) { card.prepend(me.el); setTimeout(() => me.cheer(juz.length ? 2600 : 2000), 520); }
   document.body.append(card);
   haptic(14);
-  requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('show')));
+  requestAnimationFrame(() => requestAnimationFrame(() => { card.classList.add('show'); setTimeout(() => flare(card, juz.length ? 3 : 2, { y: card.clientHeight * 0.3, size: card.clientWidth * 1.1, under: true }), 260); }));
   setTimeout(() => document.addEventListener('pointerdown', outside, true), 300);
   window.addEventListener('hashchange', close);
 }

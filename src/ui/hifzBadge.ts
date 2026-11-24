@@ -8,7 +8,8 @@
 // The surah's number sits in the middle, a "HIFZ" ribbon below. A badge due for review is dusty (its colours
 // faded towards grey, a few specks); one not earned yet is a quiet slate outline of the Bronze coin.
 // Also the juz checkpoint's gate (an arch with a hanging lantern), which replaced the garden's gate.
-import { circlePath, edge, mix, shine, starPath, two } from './flat';
+import { circlePath, mix, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
 
 export type HifzState = '' | 'due' | 'locked';
 /** Each tier's metal: light, base, shade, deep edge. */

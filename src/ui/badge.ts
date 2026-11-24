@@ -8,7 +8,8 @@
 //            three stones, ice laurels, sapphire ribbons, twinkling glints
 // Locked badges are drawn in grey. SVG + CSS only.
 import type { BadgeIcon, BadgeTier } from '../data/badges';
-import { circlePath, edge, shine, starPath, two } from './flat';
+import { circlePath, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
 import { restOffscreen } from './offscreen';
 
 /** How far up the five steps a tier sits. */
