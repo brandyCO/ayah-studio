@@ -6,7 +6,10 @@
 # so a backup that would not restore fails loudly (and opens an issue). How to restore: docs/backup.md.
 name: Database backup
 on:
-  # Manual only (owner 2026-11-16: the repo is private, no run without his OK).
+  # The one scheduled workflow (owner OK 2026-11-24: "I approve on turning nightly backup on"); every other one is manual.
+  # ~3 GitHub minutes a night. GitHub may start it a few hours late.
+  schedule:
+    - cron: '15 1 * * *'
   workflow_dispatch:
 
 permissions:

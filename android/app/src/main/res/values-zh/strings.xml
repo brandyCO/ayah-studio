@@ -9,4 +9,8 @@
     <string name="sc_search_long">搜索古兰经</string>
     <string name="sc_reels">短视频</string>
     <string name="sc_reels_long">我的短视频</string>
+    <string name="daily_widget_label">今日经文</string>
+    <string name="daily_widget_description">大家同一节经文，每天更新。大尺寸时与你自己的经文一起显示。</string>
+    <string name="my_ayah_widget_label">我的经文</string>
+    <string name="my_ayah_widget_description">从你背诵和诵读的内容中挑选的一节经文。大尺寸时与今日经文一起显示。</string>
 </resources>

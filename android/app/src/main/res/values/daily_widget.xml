@@ -4,8 +4,10 @@
     <color name="daily_text">#1F2A26</color>
     <color name="daily_muted">#6B766F</color>
     <color name="daily_accent">#0A6E55</color>
-    <string name="daily_widget_label">Ayah of the day</string>
-    <string name="daily_widget_description">A calm ayah each day, with its translation</string>
+    <string name="daily_widget_label">Today’s ayah</string>
+    <string name="daily_widget_description">The same ayah for everyone, new each day. On a large widget, shown with your own ayah.</string>
+    <string name="my_ayah_widget_label">My ayah</string>
+    <string name="my_ayah_widget_description">An ayah picked from what you memorise and read. On a large widget, shown with today’s ayah.</string>
     <color name="tasbih_tap">#140A6E55</color>
     <string name="streak_widget_label">Daily streak</string>
     <string name="streak_widget_description">Your streak flame and this week</string>

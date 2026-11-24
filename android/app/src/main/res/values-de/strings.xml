@@ -9,4 +9,8 @@
     <string name="sc_search_long">Im Koran suchen</string>
     <string name="sc_reels">Reels</string>
     <string name="sc_reels_long">Meine Reels</string>
+    <string name="daily_widget_label">Vers des Tages</string>
+    <string name="daily_widget_description">Derselbe Vers für alle, jeden Tag neu. Groß zusammen mit deinem eigenen Vers.</string>
+    <string name="my_ayah_widget_label">Mein Vers</string>
+    <string name="my_ayah_widget_description">Ein Vers aus dem, was du lernst und liest. Groß zusammen mit dem Vers des Tages.</string>
 </resources>

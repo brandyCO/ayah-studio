@@ -9,4 +9,8 @@
     <string name="sc_search_long">گەڕان لە قورئان</string>
     <string name="sc_reels">ڕیلەکان</string>
     <string name="sc_reels_long">ڕیلەکانم</string>
+    <string name="daily_widget_label">ئایەتی ئەمڕۆ</string>
+    <string name="daily_widget_description">هەمان ئایەت بۆ هەمووان، هەموو ڕۆژێک نوێ. لە قەبارەی گەورەدا لەگەڵ ئایەتەکەی خۆت.</string>
+    <string name="my_ayah_widget_label">ئایەتەکەم</string>
+    <string name="my_ayah_widget_description">ئایەتێک لەوەی لەبەری دەکەیت و دەیخوێنیتەوە. لە قەبارەی گەورەدا لەگەڵ ئایەتی ئەمڕۆ.</string>
 </resources>

@@ -25,9 +25,10 @@ import { gzipSync } from 'node:zlib';
 // 2026-11-19: raised to 136 for instant tabs (kept tab screens, built ahead while idle; main.ts route()). 135.1 KB.
 // 2026-11-19: 137 for speed pass 4 (neighbour pages from their own small files, the whole layout read in one fast pass
 // while idle): 136.1 KB. A first visit on slow 3G also no longer fetches Nunito (38 KB) before the mushaf page.
-// 2026-11-23: 138: main was at 136.99 after the News / Hifz work; shared links opening the app (src/appLinks.ts, lazy)
-// add 23 bytes of loader. 137.01 KB.
-const BUDGET_KB = 138;
+// 2026-11-24: 137.5 for Ayah of the day + My ayah (all their code lazy; the entry only gains the lazy chunks' entries
+// in Vite's preload map, ~0.15 KB). 137.1 KB.
+// 2026-11-24: shared links opening the app (src/appLinks.ts, lazy) add ~23 bytes of loader.
+const BUDGET_KB = 137.5;
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);
 let total = 0;

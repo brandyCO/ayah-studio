@@ -9,4 +9,8 @@
     <string name="sc_search_long">جست‌وجو در قرآن</string>
     <string name="sc_reels">ریل‌ها</string>
     <string name="sc_reels_long">ریل‌های من</string>
+    <string name="daily_widget_label">آیه امروز</string>
+    <string name="daily_widget_description">یک آیه برای همه، هر روز تازه. در اندازه بزرگ همراه با آیه خودت.</string>
+    <string name="my_ayah_widget_label">آیه من</string>
+    <string name="my_ayah_widget_description">آیه‌ای از آنچه حفظ می‌کنی و می‌خوانی. در اندازه بزرگ همراه با آیه امروز.</string>
 </resources>

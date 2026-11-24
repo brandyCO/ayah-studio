@@ -10,5 +10,9 @@
 	<array>
 		<string>applinks:ayah-studio.brandlift-888.workers.dev</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.brandyco.ayahstudio</string>
+	</array>
 </dict>
 </plist>

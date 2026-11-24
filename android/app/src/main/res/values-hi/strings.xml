@@ -9,4 +9,8 @@
     <string name="sc_search_long">क़ुरआन में खोजें</string>
     <string name="sc_reels">रीलें</string>
     <string name="sc_reels_long">मेरी रीलें</string>
+    <string name="daily_widget_label">आज की आयत</string>
+    <string name="daily_widget_description">सबके लिए एक ही आयत, हर दिन नई। बड़े आकार में आपकी अपनी आयत के साथ।</string>
+    <string name="my_ayah_widget_label">मेरी आयत</string>
+    <string name="my_ayah_widget_description">आप जो हिफ़्ज़ करते और पढ़ते हैं, उसमें से चुनी गई आयत। बड़े आकार में आज की आयत के साथ।</string>
 </resources>

@@ -831,9 +831,10 @@ Pro and a load test come later, when the owner decides to pay).
       `ALLOWED_ORIGINS` follow it. GitHub Pages deploys only while the repo is public. busy.yml + limits.yml move to the
       Cloudflare Worker `ayah-studio-watch` (`watch/`, crons every 10 min + hourly, Supabase Management API SQL, issues via
       the secret `ALERTS_GITHUB_TOKEN`; `.github/workflows/watch.yml`, manual). Every workflow is manual only
-      (`workflow_dispatch`; no push / PR / schedule; ask the owner before any run — after a merge: pages.yml to deploy the site,
-      supabase.yml when migrations changed, proxy.yml when `proxy/` changed); busy.yml, limits.yml and uptime.yml are gone
-      (Sentry uptime monitors replace uptime.yml; backup.yml runs only by hand). Still to do: the owner flips the repo
+      (`workflow_dispatch`; no push / PR / schedule; ask the owner before any run — after a merge: supabase.yml when migrations
+      changed, then pages.yml to deploy the site (its first job stops when a migration is not live yet), proxy.yml when `proxy/`
+      changed); busy.yml, limits.yml and uptime.yml are gone (Sentry uptime monitors replace uptime.yml). The one exception is
+      backup.yml, nightly again at 01:15 UTC (owner OK 2026-11-24, ~3 min a night). Still to do: the owner flips the repo
 
 ### Optimization review (owner request 2026-11-13, thread "Find what to optimize in the app")
 - [x] Web first open: mushaf.json preloaded in index.html, start-up extras after the first screen, studio strings
@@ -989,8 +990,8 @@ save to gallery / share sheet; offline audio cache; settings.
       (`AppIcon` alternate icons for themes + tiers, `MediaScan` → Photos, `ExportService`, `Speech` → SFSpeechRecognizer,
       `Haptic` → `navigator.vibrate`); Sign in with Apple (`signIn('apple')`, guideline 4.8), Google there with
       `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
-      on the iPhone (WidgetKit later). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
-- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; WidgetKit widgets
+      on the iPhone (except the ayah widgets, 2026-11-24). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
+- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; the other widgets in WidgetKit
 - [x] Shared links open the app (owner request 2026-11-23): every shared link (`shareableLink()` in `src/native.ts`:
       invites to challenges, pacts, boards, friends, relights, reel templates, share cards) is
       `https://ayah-studio.brandlift-888.workers.dev/i/#/route`. Installed app → opens on that route (iPhone Universal Links:
@@ -1333,6 +1334,16 @@ tafsir only from published, credited editions; UI strings only are translated by
       same pick in Java, 30-min refresh) + `DailyPlugin.java` (`store`: the chosen translation's texts
       for the list; `takeLaunchHash`: the address a widget tap opened, read at start and on resume).
       Widget and notification only verifiable on the phone)
+      **Today's ayah + My ayah** (owner request 2026-11-24): Me → "Ayah of the day" card (`src/ui/ayahCards.ts`, lazy) with
+      two sides, Today's ayah (the same for everyone; also at the top of News) and **My ayah** (`src/data/myAyah.ts`: one ayah
+      a day from what this user does, seeded by the day — the surah being memorised (ayat learned so far), a surah due for
+      review, the ten ayat before where they stopped reading (≤ 14 days), a recent bookmark, else another curated ayah;
+      never today's shared one, short ayat preferred, with a line saying why); Listen · Read · Reel · Share; the Read bar's
+      Today card has a My ayah line. **Widgets** (Android + iPhone): "Today's ayah" and "My ayah", picked when added; the
+      large size (Android ≥ 300×160 dp) shows both side by side (iPhone: stacked), each panel opening its ayah; no switch.
+      The app hands over My ayah for 14 days (`storeWidgetTexts()` in `morning.ts`, again when the app is left, ≤ every
+      10 min). Android `MyAyahWidget` (extends `DailyAyahWidget`, `ayah_pair_widget.xml`); iPhone `ios/App/AyahWidgets`
+      (docs/ios.md). Strings `src/i18n/daily.ts` (`dyt()`), 30 languages
 - [x] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
       (built 2026-10-09: `src/ui/tour.ts` — three cards over a soft blur with line drawings, dots,
       Skip/Back/Next, swipe and arrow keys (RTL-aware), "Start reading" in the brand gradient;

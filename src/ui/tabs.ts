@@ -17,7 +17,7 @@ import { onAccount } from '../cloud/auth';
 const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
 
 export type Tab = 'read' | 'learn' | 'create' | 'ranks' | 'me';
-export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}`;
+export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}` | `play:${number}:${number}`;
 export interface TabHandlers { read?: () => void }
 
 export const goMushaf = (intent?: Intent) => {
@@ -39,7 +39,7 @@ export function takeTabIntent(): Intent | null {
   try {
     const v = sessionStorage.getItem('tabIntent');
     sessionStorage.removeItem('tabIntent');
-    return v && /^(listen|pick|bookmarks|reflections|ramadan|tour|page:\d+)$/.test(v) ? (v as Intent) : null;
+    return v && /^(listen|pick|bookmarks|reflections|ramadan|tour|page:\d+|play:\d+:\d+)$/.test(v) ? (v as Intent) : null;
   } catch { return null; }
 }
 

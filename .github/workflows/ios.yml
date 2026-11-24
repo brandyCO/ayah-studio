@@ -100,6 +100,7 @@ jobs:
       ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       TEAM: ${{ vars.APPLE_TEAM_ID }}
+      IOS_WIDGETS: ${{ vars.IOS_WIDGETS }}
       GOOGLE_IOS: ${{ vars.GOOGLE_IOS_CLIENT_ID || '674921848576-8oieva400a6iekagbkbdv8ureklp549d.apps.googleusercontent.com' }}
     steps:
       - name: Apple account set up?
@@ -155,7 +156,19 @@ jobs:
           # An unsigned app carries no entitlements, and the export keeps only what the app was signed with, so the
           # archived app is first signed ad hoc with ours (Sign in with Apple).
           APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
-          codesign --force --sign - --entitlements ios/App/App/App.entitlements --timestamp=none "$APP"
+          # The home-screen widgets (inside first, then the app) share the App Group with the app. Apple's API key cannot
+          # register an App Group, so until the owner has registered group.com.brandyco.ayahstudio in the developer portal
+          # (docs/ios.md) and set the repo variable IOS_WIDGETS=1, the widgets are left out and the app is signed without
+          # the group (the app's DailyPlugin then does nothing).
+          ENT="$RUNNER_TEMP/app.entitlements"; cp ios/App/App/App.entitlements "$ENT"
+          if [ "$IOS_WIDGETS" = 1 ]; then
+            codesign --force --sign - --entitlements ios/App/AyahWidgets/AyahWidgets.entitlements --timestamp=none "$APP/PlugIns/AyahWidgets.appex"
+            codesign -d --entitlements - --xml "$APP/PlugIns/AyahWidgets.appex" | grep -q application-groups
+          else
+            rm -rf "$APP/PlugIns/AyahWidgets.appex"; rmdir "$APP/PlugIns" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" "$ENT"  # plutil reads the dots as a path
+          fi
+          codesign --force --sign - --entitlements "$ENT" --timestamp=none "$APP"
           codesign -d --entitlements - --xml "$APP" | grep -q applesignin
           for DEST in export upload; do
           cat > "$RUNNER_TEMP/export.plist" <<EOF
@@ -179,6 +192,8 @@ jobs:
             plutil -p "$RUNNER_TEMP/ent.plist" || true
             grep -q applesignin "$RUNNER_TEMP/ent.plist" || { echo "::error::The signed app lacks the Sign in with Apple entitlement"; exit 1; }
             grep -q associated-domains "$RUNNER_TEMP/ent.plist" || echo "::warning::The signed app lacks Associated Domains: shared links will open the web, not the app. Turn on Associated Domains for com.brandyco.ayahstudio in Apple Developer → Identifiers."
+            [ "$IOS_WIDGETS" != 1 ] || codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app/PlugIns/AyahWidgets.appex" 2>/dev/null \
+              | grep -q application-groups || { echo "::error::The signed widget lacks the App Group"; exit 1; }
           fi
           done
           echo "Uploaded version $VERSION ($BUILD). It shows in App Store Connect → TestFlight after Apple's processing." | tee -a "$GITHUB_STEP_SUMMARY"

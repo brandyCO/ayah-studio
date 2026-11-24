@@ -45,6 +45,7 @@ public class WidgetsPlugin extends Plugin {
         if ("tasbih".equals(kind)) return TasbihWidget.class;
         if ("prayer".equals(kind)) return PrayerWidget.class;
         if ("daily".equals(kind)) return DailyAyahWidget.class;
+        if ("mine".equals(kind)) return MyAyahWidget.class;
         if ("duas".equals(kind)) return DuaWidget.class;
         return null;
     }
@@ -59,7 +60,7 @@ public class WidgetsPlugin extends Plugin {
     public void status(PluginCall call) {
         AppWidgetManager m = AppWidgetManager.getInstance(getContext());
         JSObject on = new JSObject();
-        for (String k : new String[] { "streak", "tasbih", "prayer", "daily", "duas" }) {
+        for (String k : new String[] { "streak", "tasbih", "prayer", "daily", "mine", "duas" }) {
             on.put(k, m.getAppWidgetIds(new ComponentName(getContext(), widget(k))).length);
         }
         JSObject r = new JSObject();

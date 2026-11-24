@@ -9,4 +9,8 @@
     <string name="sc_search_long">কুরআনে খুঁজুন</string>
     <string name="sc_reels">রিল</string>
     <string name="sc_reels_long">আমার রিল</string>
+    <string name="daily_widget_label">আজকের আয়াত</string>
+    <string name="daily_widget_description">সবার জন্য একই আয়াত, প্রতিদিন নতুন। বড় আকারে তোমার নিজের আয়াতের সাথে।</string>
+    <string name="my_ayah_widget_label">আমার আয়াত</string>
+    <string name="my_ayah_widget_description">তুমি যা মুখস্থ করো ও পড়ো তা থেকে বেছে নেওয়া আয়াত। বড় আকারে আজকের আয়াতের সাথে।</string>
 </resources>

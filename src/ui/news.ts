@@ -15,6 +15,9 @@ import { openAccount } from './account';
 
 export async function showNews(root: HTMLElement): Promise<() => void> {
   const body = h('div', { class: 'nw-body' }, skeletonRows(5, true));
+  // Today's ayah, the same for everyone: something to share and talk about (src/ui/ayahCards.ts).
+  const ayahSlot = h('div', { class: 'nw-ayah' });
+  void import('./ayahCards').then((m) => ayahSlot.replaceChildren(m.todayAyahCard()));
   const back = () => { haptic(6); if (history.length > 1) history.back(); else location.hash = '#/ranks'; };
   root.append(
     h('header', { class: 'topbar nw-top' },
@@ -24,6 +27,7 @@ export async function showNews(root: HTMLElement): Promise<() => void> {
     h('main', { class: 'nw-page' },
       h('div', { class: 'nw-hero', 'aria-hidden': 'true' }, h('span', { class: 'nw-hero-ic' }, icon('news', 30)),
         h('p', {}, nwt('nw.sub'))),
+      ayahSlot,
       body),
     tabBar('ranks'));
   const [{ friendsTab }, rk] = await Promise.all([import('./friends'), import('../together/ranks')]);

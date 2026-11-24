@@ -1387,13 +1387,16 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       tabBar('me'));
   } else {
     paintAsk();
+    // Ayah of the day: today's (everyone) and My ayah (src/ui/ayahCards.ts, its own chunk).
+    const ayahSlot = h('div', { class: 'me-ayah-slot' });
+    void import('./ayahCards').then((m) => ayahSlot.replaceChildren(m.ayahCard()));
     root.append(
       h('header', { class: 'topbar' },
         h('div', { class: 'brand' }, h('h1', {}, t('me.title'))),
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the

@@ -16,6 +16,7 @@ import { flame, flameTier } from './flame';
 import { dailyWidgetLang, setDailyWidgetLang } from './morning';
 import { tabBar } from './tabs';
 import { mpt } from '../i18n/mePages';
+import { dyt } from '../i18n/daily';
 import { WIDGETS, pinWidget, widgetStatus, type WidgetKind, type WidgetStatus } from './widgets';
 
 const timeFmt = () => new Intl.DateTimeFormat(locale(), { hour: 'numeric', minute: '2-digit' });
@@ -50,6 +51,12 @@ async function preview(kind: WidgetKind): Promise<HTMLElement> {
     return h('div', { class: 'wg-pv wg-duas' },
       h('div', {}, h('span', { class: 'wg-small' }, mpt('mp.wgDuas')), h('b', { class: 'wg-big' }, `${lit}/7`)),
       h('div', { class: 'wg-lanterns' }, ...Array.from({ length: 7 }, (_, i) => h('i', { class: i < lit ? 'on' : '' }))));
+  }
+  if (kind === 'mine') {
+    const [meta, d, mod] = await Promise.all([loadMeta(), todaysAyah(), import('../data/myAyah')]).catch(() => [null, null, null] as const);
+    const m = meta && d && mod ? await mod.myAyah(new Date(), d).catch(() => null) : null;
+    return h('div', { class: 'wg-pv wg-daily wg-mine' },
+      h('div', {}, h('span', { class: 'wg-small' }, dyt('dy.mine')), h('b', {}, m && meta ? uiRef(meta[m.s - 1], m.a) : dyt('dy.wgMine'))));
   }
   const item = await todaysAyah().catch(() => null);
   let ref = '';
@@ -88,9 +95,9 @@ export async function showMeWidgets(root: HTMLElement): Promise<() => void> {
         return h('section', { class: 'me-card wg-card' },
           pv,
           h('div', { class: 'wg-text' },
-            h('h3', {}, kind === 'duas' ? mpt('mp.wgDuas') : t(`wg.${kind}` as Key)),
-            h('p', { class: 'muted small' }, kind === 'duas' ? mpt('mp.wgDuasDesc') : t(`wg.${kind}Desc` as Key)),
-            kind === 'daily' ? langChips() : '',
+            h('h3', {}, kind === 'duas' ? mpt('mp.wgDuas') : kind === 'mine' ? dyt('dy.wgMine') : kind === 'daily' ? dyt('dy.today') : t(`wg.${kind}` as Key)),
+            h('p', { class: 'muted small' }, kind === 'duas' ? mpt('mp.wgDuasDesc') : kind === 'mine' ? dyt('dy.wgMineDesc') : kind === 'daily' ? dyt('dy.wgTodayDesc') : t(`wg.${kind}Desc` as Key)),
+            kind === 'mine' ? langChips() : '',
             h('div', { class: 'wg-actions' },
               count ? h('span', { class: 'wg-on' }, `✓ ${t('wg.onHome')}`) : '',
               native && status.canPin ? h('button', {
