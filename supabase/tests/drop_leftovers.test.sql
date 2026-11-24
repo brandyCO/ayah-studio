@@ -1,4 +1,4 @@
--- Leftovers of removed features are gone (supabase/migrations/20261124000000_drop_leftovers.sql);
+-- Leftovers of removed features are gone (supabase/migrations/20261124100000_drop_leftovers.sql);
 -- family circles still join, pass on and close as before.
 begin;
 create extension if not exists pgtap with schema extensions;
