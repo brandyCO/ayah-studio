@@ -18,7 +18,7 @@ if (q.get('prof')) {
     flag: 'LB', lamp: 3, relation: me ? 'me' : 'friend', show: 63, bestTier: 4, week: 1240, streak: 86, trophies: 4, pages: 312, listen: 940,
     friend: me ? undefined : { streak: 23, meToday: true, themToday: true }, follow: { on: true, back: true, followers: 128, following: 64 },
     badges: { top: ['streak-4', 'pages-3', 'juz-2', 'dhikr-3', 'listen-1', 'hz18-4', 'hz67-2', 'hzc12-0'], n: 41 }, cups: [1, 2, 3] };
-  try { localStorage.setItem('rankProfiles', JSON.stringify({ p: { p1: p } })); } catch { /* */ }
+  try { if (q.get('cold')) localStorage.removeItem('rankProfiles'); else localStorage.setItem('rankProfiles', JSON.stringify({ p: { p1: p } })); } catch { /* */ }
   void import('../src/ui/friends').then((m) => m.openProfile({ ...p, score: 0 } as never));
 } else if (q.get('chest')) {
   const up = +q.get('chest')!;

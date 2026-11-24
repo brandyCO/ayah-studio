@@ -72,8 +72,6 @@ function fromRow(row: Row): Profile {
 let friendsKept: Friends | null = null;
 const friendsNow = () => friendsKept;
 
-/** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
- *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
 // The banner's badge strip repeats badges drawn again further down, ~1,200 SVG nodes that made scrolling
 // the profile slower on a weak phone. Each is one picture instead (still vector), made once and reused.
 const flats = new Map<string, string>();
@@ -110,6 +108,8 @@ function stillRoom(scene: HTMLElement) {
   });
 }
 
+/** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
+ *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
 export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const pid = row.pid;
   if (!pid) return;
@@ -130,9 +130,17 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
-  const onPop = () => { pushed = false; d.close(); };
+  // Leaving pushes the page back out the side it came from, then closes it.
+  const leave = () => {
+    if (!d.open || d.classList.contains('leaving')) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { d.close(); return; }
+    d.classList.add('leaving');
+    const out = document.documentElement.dir === 'rtl' ? '-100%' : '100%';
+    d.animate([{ translate: '0 0' }, { translate: `${out} 0` }], { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }).finished.then(() => d.close(), () => d.close());
+  };
+  const onPop = () => { pushed = false; leave(); };
   window.addEventListener('popstate', onPop);
-  const close = () => { if (pushed) history.back(); else d.close(); };
+  const close = () => { if (pushed) history.back(); else leave(); };
   back.onclick = close;
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   // The bar over the banner turns solid (with the name) once the banner has scrolled away.
