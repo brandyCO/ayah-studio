@@ -3,6 +3,8 @@
 // stands in the page and speaks in a bubble, word by word; a question screen has it small beside its question and
 // the answers below; one big Continue at the bottom. What brings you here → its answer → how much each day → the
 // first goal. Saves exactly what the old sheets saved (`whyHere`, the pace, `tailor()`).
+import { comingPath } from './coming';
+import { daysOpened } from '../data/reveal';
 import './onboard.css';
 import { choosePace, goals, needsPace, setGoals } from '../data/goals';
 import { mark } from '../usage';
@@ -32,7 +34,7 @@ const LANG_ASK: Partial<Record<Lang, string>> = {
   ko: '어떤 언어로 할까요?',
 };
 
-type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'done';
+type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'coming' | 'done';
 const PAGES = [1, 2, 5, 10, 20] as const;
 const PAGE_MIN: Record<number, number> = { 1: 2, 2: 3, 5: 8, 10: 15, 20: 30 };
 const TASBIH = [33, 100, 300, 1000, 0] as const;
@@ -52,9 +54,11 @@ export function openOnboarding(resumed = false) {
   if (asked && !pace) return;
   if (document.querySelector('.ob')) return;
   const goalsPart: Screen[] = ['pages', 'pagesSay', 'tasbih', 'tasbihSay'];
+  // The first week's timeline (owner request 2026-11-24): only for someone new.
+  const comingPart: Screen[] = daysOpened() <= 2 ? ['coming'] : [];
   const screens: Screen[] = asked ? ['hi', ...goalsPart, 'done']
-    : pace ? ['lang', 'hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', 'done']
-    : ['lang', 'hi', 'why', 'react', 'heard', 'heardSay'];
+    : pace ? ['lang', 'hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', ...comingPart, 'done']
+    : ['lang', 'hi', 'why', 'react', 'heard', 'heardSay', ...comingPart];
   const picked = new Set<Why>();
   let pagesN: number | null = null;
   let tasbihN: number | null = null;
@@ -124,7 +128,7 @@ export function openOnboarding(resumed = false) {
     back.style.visibility = i && !(resumed && i === 1) ? 'visible' : 'hidden';
     skip.style.visibility = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' ? 'visible' : 'hidden';
     const bubble = h('p', { class: 'ob-say' });
-    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'lang';
+    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'lang' || s === 'coming';
     const a = who(!ask, s === 'pagesSay' ? 2 : s === 'tasbihSay' && tasbihN ? 1 : undefined);
     const body: HTMLElement[] = [];
     let line = '';
@@ -184,7 +188,10 @@ export function openOnboarding(resumed = false) {
         h('span', { class: `ob-ic h-${v}`, 'aria-hidden': 'true' }, icon(HEARD_IC[v], 22)),
         h('span', { class: 'ob-txt' }, h('b', {}, fe(`ob.h.${v}` as FrontKey)))], (v) => `h-${v}`, a));
     } else if (s === 'heardSay') line = fe(`ob.hs.${heard ?? 'other'}` as FrontKey);
-    else if (s === 'done') {
+    else if (s === 'coming') {
+      line = fe('co.say');
+      body.push(comingPath(true));
+    } else if (s === 'done') {
       line = pagesN === null ? fe('ob.doneLater') : t('fs.paceSet', { goal: goalText('pages', goals().pages) });
       go.textContent = fe('ob.start');
       flameEl = h('div', { class: 'ob-flame', 'aria-hidden': 'true' }, flame(1, 76));
@@ -215,6 +222,7 @@ export function openOnboarding(resumed = false) {
     else if (s === 'tasbihSay') setTimeout(() => (tasbihN ?? 0) >= 300 ? a?.cheer(2000) : tasbihN ? a?.hop(0.6) : a?.nod(), 420);
     else if (s === 'done') setTimeout(() => { a?.cheer(2200); sfx.shimmer(); }, 420);
     else if (s === 'few') setTimeout(() => a?.nod(), 400);
+    else if (s === 'coming') setTimeout(() => a?.wave(2000), 420);
   }
 
   /** The daily goals from the answers: the nearest pace as a base, then the pages and the tasbih as said. */

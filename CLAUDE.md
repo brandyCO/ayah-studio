@@ -2516,6 +2516,15 @@ duas/reflections section in Me.
       `gifts-changed` and return (it was painted once before the account was restored). Preview harness `bench/gift.html?t=0..3`.
       **Try on**: room pieces preview in the room and the decorate sheet before buying (`setRoomTry()`, `roomLookShown()`,
       not saved); the shop card has Without / With it for character, room and look pieces
+- [x] M33 Unlock moments + What's coming (owner "Yes", 2026-11-24): the day the shop, the room or the wardrobe first appears
+      (`src/data/reveal.ts`), Me plays its moment once (`src/ui/unlock.ts` + `.css`, localStorage `unlockPlayed`): the user's
+      character walks up in the dark and it comes alive — the stall's lanterns light one by one, the room's door swings open on
+      warm light, the wardrobe's doors open on the clothes; HTML layers moved by transform / opacity only; the card names
+      tomorrow's stop. **What's coming** (`src/ui/coming.ts` + `.css`): the first week as a path (Day 1 flame, 2 listen along,
+      3 Light shop, 4 room, 5 wardrobe, 7 days in a row, level 5 app icon), passed stops lit, the user's bust at today's, the rest
+      grey with Tomorrow / In n days; in the onboarding (`coming` screen, new users), a Me card while anything is ahead (≤ day 8),
+      Me → ⚙ → What's coming, and a pop-up only the day before an unlock (owner: not daily; `comingShown`). Strings `co.*`, 30
+      languages. Preview: `bench/unlock.html?k=shop|room|wardrobe`, `?co=1`
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
