@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(24);
+select plan(27);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000071', 'amal@example.com'),
@@ -46,6 +46,9 @@ select throws_ok($$ select rank_set_look(0, false, 9) $$, '42501', null, 'a priz
 select lives_ok($$ select rank_set_look(0, false, 22) $$, 'a Jumu''ah frame can be worn');
 select lives_ok($$ select rank_set_look(0, false, 37) $$, 'a legendary or mythic decoration can be worn');
 select throws_ok($$ select rank_set_look(0, false, 38) $$, '22023', null, 'no frame past 37');
+select lives_ok($$ select rank_set_look(57, false, 0) $$, 'a legendary or mythic avatar can be worn');
+select throws_ok($$ select rank_set_look(58, false, 0) $$, '22023', null, 'no avatar past 57');
+select throws_ok($$ select rank_set_look(45, false, 0) $$, '42501', null, 'a jewel avatar still needs its week won');
 
 -- 3. The lamp of Light.
 select lives_ok($$ select rank_set_lamp(9) $$, 'the lamp is reported');

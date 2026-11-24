@@ -43,3 +43,8 @@ html.lite .dk.live > img[data-a] { animation: none !important; }
 /* As the app's avatar (`.rk-av`): the decoration's own box, not the old grid of frame layers. */
 .dk.rk-av { display: inline-block; }
 .dk.rk-av > img { grid-area: auto; }
+/* Twinkles inside a legendary / mythic avatar (rankAvatars.ts premium): only on a live avatar, opacity + scale. */
+.dk.live .rk-tw { animation: rk-tw 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes rk-tw { 50% { opacity: .35; transform: scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .dk.live .rk-tw { animation: none; } }
+html.lite .dk.live .rk-tw { animation: none; }

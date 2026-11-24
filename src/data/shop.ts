@@ -43,6 +43,9 @@ export const ITEMS: Item[] = [
   // Profile effects (owner request 2026-11-24, item restyle batch 2): a scene over the profile card, common to mythic.
   // Rarity and names: src/ui/deco/effects.ts FX.
   ...FX_PRICES.map((p, i): Item => ({ id: `fx:${i + 1}`, kind: 'effect', ref: i + 1, price: p })),
+  // Legendary (2000) and mythic (3500) avatars (item restyle batch 5): little scenes, rankAvatars.ts premium().
+  ...range(52, 54).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, price: 2000 })),
+  ...range(55, 57).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, price: 3500 })),
   // App icons join here (bought or won) once their designs are in the app.
 ];
 

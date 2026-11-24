@@ -244,7 +244,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           when: () => { if (shopHas(it.id)) return ''; const n = limitedIn(it.id, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); },
           doBuy: () => buy(it, week()), use: lookUse(it) });
       } else if (it.price) {
-        out.push({ id: it.id, sec: 'look', name, rar: (it.kind === 'frame' && PREMIUM[it.ref as number]?.r) || (it.price >= 400 ? 'epic' : 'rare'), price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
+        out.push({ id: it.id, sec: 'look', name, rar: (it.kind === 'frame' && PREMIUM[it.ref as number]?.r) || (it.price >= 3000 ? 'mythic' : it.price >= 2000 ? 'legendary' : it.price >= 400 ? 'epic' : 'rare'), price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
           state: () => (owns(it.kind as 'avatar' | 'frame', it.ref as number, wins()) ? 'own' : 'buy'), doBuy: () => buy(it), use: lookUse(it) });
       } else if (it.win) {
         const w = it.win;
