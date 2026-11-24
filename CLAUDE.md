@@ -1282,7 +1282,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       lazy) are translated; references in the interface use `uiRef()` (Arabic surah name; reels keep `reference()`);
       the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
       start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
-      "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
+      "Default", export, listening, next prayer: renamed in place). The Device check panel too since 2026-11-24 (`src/i18n/device.ts`, `dvt()`)
       **30 interface languages** (owner request 2026-11-14, "it should be in all languages"): English, Arabic + Urdu,
       Indonesian, Bengali, Turkish, Persian, French, Malay, Hindi, Russian, Spanish, German, Portuguese, Swahili, Hausa,
       Somali, Pashto, Uzbek, Azerbaijani, Bosnian, Albanian, Kurdish (Sorani), Tamil, Malayalam, Chinese, Italian, Dutch,
