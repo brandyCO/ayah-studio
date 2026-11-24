@@ -403,7 +403,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   function openYou(s: Status, meRow?: Row) {
     const d = sheet(rt('rk.you'), h('div', { class: 'sheet-scroll rk-you-sheet' },
       h('div', { class: 'rk-me-top' },
-        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => { d.close(); openLook(s); } }, avatar(s.private ? null : s.avatar, s.tier, 64, s.frame, s.figure)),
+        h('button', { class: 'rk-me-av', 'aria-label': rt('rk.look'), onclick: () => { d.close(); openLook(s); } }, avatar(s.private ? null : s.avatar, s.tier, 64, s.frame, s.figure, true)),
         h('div', { class: 'rk-me-txt' },
           h('button', { class: 'rk-me-name', onclick: () => { d.close(); openName(); }, title: rt('rk.name') }, s.name, h('span', { class: 'muted small' }, ' ✎')),
           tierBadge(s.tier)),

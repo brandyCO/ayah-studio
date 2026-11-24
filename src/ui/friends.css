@@ -45,7 +45,6 @@
 .fr-card-pair { flex: none; width: 128px; height: 96px; }
 .fr-card-pair .fr-pair { height: 96px; border-radius: 14px; }
 .fr-card-pair .fr-pair.discs { gap: 4px; }
-.fr-card-pair .fr-pair.discs .rk-av { width: 44px !important; height: 44px !important; }
 .fr-card-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .fr-card-txt b { font-size: 17px; font-weight: 900; }
 .fr-card-streak { font-weight: 800; color: var(--rw-n1); }
@@ -200,9 +199,8 @@ dialog.fr-page::backdrop { background: transparent; }
   animation: fr-mote 5.5s var(--d) linear infinite; }
 @keyframes fr-mote { 0% { translate: 0 0; opacity: 0; } 15% { opacity: .9; } 80% { opacity: .7; } 100% { translate: 14px -170px; opacity: 0; } }
 .fr-avrow { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: -62px 16px 0; }
-.fr-av { position: relative; display: grid; place-items: center; width: 124px; height: 124px; border-radius: 50%; flex: none;
+.fr-av { position: relative; display: grid; place-items: center; width: 124px; height: 124px; border-radius: 50%; flex: none; margin-inline-start: 12px;
   background: var(--bg); box-shadow: 0 0 0 6px var(--bg); }
-.fr-av .rk-av { width: 112px !important; height: 112px !important; }
 .fr-strip { display: flex; align-items: center; gap: 4px; padding: 6px 8px; margin-bottom: 6px; border-radius: 12px;
   background: var(--card); box-shadow: 0 2px 0 color-mix(in srgb, var(--fg, #000) 8%, transparent); }
 .fr-strip > * { flex: none; }

@@ -221,15 +221,16 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), 84, it.ref as number, status?.figure ?? myFigureCode()));
     // Large: the piece big, then the user's own row on a board wearing it, as their league will see it.
     const lookBig = (it: Item) => () => {
-      const av = (size: number) => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), size, status?.frame ?? 0)
-        : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, it.ref as number, status?.figure ?? myFigureCode()));
-      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+      // Large and alone on screen, the piece plays its full motion (`live`); the board row stays still like a list.
+      const av = (size: number, live = false) => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), size, status?.frame ?? 0, undefined, live)
+        : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, it.ref as number, status?.figure ?? myFigureCode(), live));
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132, true)),
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34),
           h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
     const lookBare = () => {
-      const av = (size: number) => avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, status?.frame ?? 0, status?.figure ?? myFigureCode());
-      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+      const av = (size: number, live = false) => avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, status?.frame ?? 0, status?.figure ?? myFigureCode(), live);
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132, true)),
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34), h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
     for (const it of ITEMS) {
@@ -258,7 +259,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     }
     // Profile effects: a little profile card with the effect over it; large, the user's own card with it playing.
     const fxCard = (n: number, w: number, live: boolean, named: boolean) => {
-      const av = avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), Math.round(w * .44), status?.frame ?? 0, status?.figure ?? myFigureCode());
+      const av = avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), Math.round(w * .44), status?.frame ?? 0, status?.figure ?? myFigureCode(), live);
       return h('span', { class: `sh-fx${named ? ' big' : ''}`, style: `width:${w}px;height:${Math.round((w * 400) / 240)}px` },
         h('span', { class: 'sh-fx-ban' }), h('span', { class: 'sh-fx-av' }, av),
         named ? h('b', { class: 'sh-fx-name' }, status?.name || sht('sh.you')) : '', h('i', { class: 'sh-fx-ln' }), h('i', { class: 'sh-fx-ln short' }),
