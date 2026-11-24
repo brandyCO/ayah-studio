@@ -15,6 +15,8 @@ export interface Account {
   name: string;
   email: string;
   avatar: string | null;
+  /** When the account was made (ISO), so the first week's unlocks count from it on a new phone. */
+  created?: string;
 }
 
 // Known at once from the session stored on this device, so no screen asks a signed-in user to
@@ -48,6 +50,7 @@ function toAccount(u: User | null | undefined): Account | null {
     name: str(m.full_name) || str(m.name) || str(u.email).split('@')[0] || 'You',
     email: str(u.email),
     avatar: str(m.avatar_url) || str(m.picture) || null,
+    created: str(u.created_at) || undefined,
   };
 }
 

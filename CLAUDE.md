@@ -2525,6 +2525,14 @@ duas/reflections section in Me.
       grey with Tomorrow / In n days; in the onboarding (`coming` screen, new users), a Me card while anything is ahead (≤ day 8),
       Me → ⚙ → What's coming, and a pop-up only the day before an unlock (owner: not daily; `comingShown`). Strings `co.*`, 30
       languages. Preview: `bench/unlock.html?k=shop|room|wardrobe`, `?co=1`
+      **First screen like Duolingo** (owner "For both", 2026-11-24): a new install opens on `src/ui/firstScreen.ts` (+ `.css`; from
+      mushaf.ts's first visit) in the phone's language, with a small language switch (every interface language; another reloads
+      the app and the screen comes back): the character waves on the launch screen's violet, **Get started** → the onboarding
+      conversation (no language question any more) and **I already have an account** → Apple / Google sign-in, no questions, then
+      a **welcome back** (their character, streak, the next thing to unlock; "Bringing your progress…" until the first sync, ≤ 10 s;
+      sets `comebackSeen`). Web sign-in leaves the page: localStorage `fsSignIn` resumes it on return (`resumeSignIn()`). Signed
+      in, the first week counts from the account's creation (`Account.created`, `daysOpened()` in `reveal.ts`). Strings `fw.*`,
+      30 languages. Preview: `bench/unlock.html?fs=1`, `?fs=wb`
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

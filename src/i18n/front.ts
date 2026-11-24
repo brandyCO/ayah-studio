@@ -210,6 +210,16 @@ const en = {
   'co.icon': 'Level 5: a new app icon',
   'co.iconText': 'Earn XP to unlock your first special app icon.',
   'co.level': 'Level {n} of 5',
+  'fw.tagline': 'Read, learn and remember the Quran, a little every day.',
+  'fw.start': 'Get started',
+  'fw.have': 'I already have an account',
+  'fw.lang': 'Language',
+  'fw.signText': 'Sign in to bring back your streak, Light and character.',
+  'fw.wb': 'Welcome back, {name}!',
+  'fw.wbNo': 'Welcome back!',
+  'fw.bringing': 'Bringing your progress…',
+  'fw.streak': '{n, plural, one {{n}-day streak} other {{n}-day streak}}',
+  'fw.next': 'Next to unlock',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -420,6 +430,16 @@ const ar: Partial<Record<FrontKey, string>> = {
   'co.icon': 'المستوى 5: أيقونة جديدة للتطبيق',
   'co.iconText': 'اجمع نقاط الخبرة لتفتح أول أيقونة مميزة للتطبيق.',
   'co.level': 'المستوى {n} من 5',
+  'fw.tagline': 'اقرأ القرآن وتعلّمه واحفظه، قليلًا كل يوم.',
+  'fw.start': 'لنبدأ',
+  'fw.have': 'لديّ حساب بالفعل',
+  'fw.lang': 'اللغة',
+  'fw.signText': 'سجّل الدخول لتستعيد سلسلتك ونورك وشخصيتك.',
+  'fw.wb': 'أهلًا بعودتك يا {name}!',
+  'fw.wbNo': 'أهلًا بعودتك!',
+  'fw.bringing': 'نُحضر تقدّمك…',
+  'fw.streak': '{n, plural, one {يوم واحد متتالٍ} two {يومان متتاليان} few {{n} أيام متتالية} many {{n} يومًا متتاليًا} other {{n} يوم متتالٍ}}',
+  'fw.next': 'التالي للفتح',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

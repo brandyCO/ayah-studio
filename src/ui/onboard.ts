@@ -10,8 +10,7 @@ import { choosePace, goals, needsPace, setGoals } from '../data/goals';
 import { mark } from '../usage';
 import { account, signInAvailable } from '../cloud/auth';
 import { fe, type FrontKey } from '../i18n/front';
-import { lang, setLang, t, type Lang } from '../i18n';
-import { LANGS } from '../i18n/langs';
+import { t } from '../i18n';
 import { actor, myFigureCode, type Actor } from './actor';
 import { h, haptic } from './dom';
 import { DEFAULT, encode, normalize, parse } from './figure';
@@ -22,19 +21,7 @@ import { icon } from './icons';
 import { sfx } from './sfx';
 import { saveWhy, tailor, WHY_IC, WHYS, type Why } from './firstSteps';
 
-/** "Which language?" in each language, asked before anything else is read. */
-const LANG_ASK: Partial<Record<Lang, string>> = {
-  en: 'Which language?', ar: 'أي لغة تفضّل؟', ur: 'آپ کون سی زبان پسند کریں گے؟', id: 'Mau pakai bahasa apa?',
-  bn: 'কোন ভাষা পছন্দ করবেন?', tr: 'Hangi dili tercih edersin?', fa: 'کدام زبان را ترجیح می‌دهی؟', fr: 'Quelle langue préfères-tu ?',
-  ms: 'Bahasa mana pilihan anda?', hi: 'आप कौन सी भाषा चाहेंगे?', ru: 'Какой язык тебе удобнее?', es: '¿Qué idioma prefieres?',
-  de: 'Welche Sprache möchtest du?', pt: 'Qual idioma você prefere?', sw: 'Ungependa lugha gani?', ha: 'Wane harshe kake so?',
-  so: 'Luqaddee ayaad doorbidaysaa?', ps: 'کومه ژبه غوره کوې؟', uz: 'Qaysi tilni tanlaysiz?', az: 'Hansı dili seçirsən?',
-  bs: 'Koji jezik želiš?', sq: 'Cilën gjuhë preferon?', ckb: 'کام زمانت پێ باشترە؟', ta: 'எந்த மொழி வேண்டும்?',
-  ml: 'ഏത് ഭാഷ വേണം?', zh: '你想用哪种语言？', it: 'Quale lingua preferisci?', nl: 'Welke taal wil je?', ja: 'どの言語にしますか？',
-  ko: '어떤 언어로 할까요?',
-};
-
-type Screen = 'lang' | 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'coming' | 'done';
+type Screen = 'hi' | 'few' | 'why' | 'react' | 'pages' | 'pagesSay' | 'tasbih' | 'tasbihSay' | 'heard' | 'heardSay' | 'coming' | 'done';
 const PAGES = [1, 2, 5, 10, 20] as const;
 const PAGE_MIN: Record<number, number> = { 1: 2, 2: 3, 5: 8, 10: 15, 20: 30 };
 const TASBIH = [33, 100, 300, 1000, 0] as const;
@@ -44,10 +31,9 @@ type Heard = (typeof HEARD)[number];
 const HEARD_IC: Record<Heard, string> = { instagram: 'film', tiktok: 'film', youtube: 'play', friend: 'users', store: 'download', masjid: 'moon', search: 'search', other: 'sparkle' };
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Shows the flow (once: nothing when both questions were answered before). `resumed`: back after the
- *  language screen reloaded the app in the language picked. */
-export function openOnboarding(resumed = false) {
-  try { sessionStorage.removeItem('obResume'); } catch { /* private */ }
+/** Shows the flow (once: nothing when both questions were answered before). The language is the phone's, or the
+ *  one picked on the first screen (src/ui/firstScreen.ts), so it is not asked here (owner 2026-11-24). */
+export function openOnboarding() {
   let asked = false;
   try { asked = localStorage.getItem('whyHere') !== null; } catch { /* private */ }
   const pace = needsPace();
@@ -57,14 +43,13 @@ export function openOnboarding(resumed = false) {
   // The first week's timeline (owner request 2026-11-24): only for someone new.
   const comingPart: Screen[] = daysOpened() <= 2 ? ['coming'] : [];
   const screens: Screen[] = asked ? ['hi', ...goalsPart, 'done']
-    : pace ? ['lang', 'hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', ...comingPart, 'done']
-    : ['lang', 'hi', 'why', 'react', 'heard', 'heardSay', ...comingPart];
+    : pace ? ['hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', ...comingPart, 'done']
+    : ['hi', 'why', 'react', 'heard', 'heardSay', ...comingPart];
   const picked = new Set<Why>();
   let pagesN: number | null = null;
   let tasbihN: number | null = null;
   let heard: Heard | null = null;
-  let i = resumed && screens[0] === 'lang' ? 1 : 0;
-  let tongue = lang();
+  let i = 0;
   let typing = 0;
 
   const code = myFigureCode() ?? encode(normalize({ ...DEFAULT, face: 1 }));
@@ -125,32 +110,17 @@ export function openOnboarding(resumed = false) {
   function draw(dir = 1) {
     const s = screens[i];
     bar.style.width = `${Math.round(((i + 1) / screens.length) * 100)}%`;
-    back.style.visibility = i && !(resumed && i === 1) ? 'visible' : 'hidden';
+    back.style.visibility = i ? 'visible' : 'hidden';
     skip.style.visibility = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' ? 'visible' : 'hidden';
     const bubble = h('p', { class: 'ob-say' });
-    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'lang' || s === 'coming';
+    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'coming';
     const a = who(!ask, s === 'pagesSay' ? 2 : s === 'tasbihSay' && tasbihN ? 1 : undefined);
     const body: HTMLElement[] = [];
     let line = '';
     let flameEl: HTMLElement | null = null;
     go.textContent = fe('why.go');
     go.disabled = false;
-    if (s === 'lang') {
-      // Asked in both languages at once, before anything else is read.
-      line = '';
-      // The phone's language first (already picked), then every other one; each in its own words, with the
-      // English name under it.
-      const list = [...LANGS].sort((x, y) => Number(y.id === tongue) - Number(x.id === tongue));
-      const opts = list.map((l, k) => opt(`l-${l.id} c${k % 6}`, l.id === tongue, [
-        h('span', { class: 'ob-ic ob-lang', 'aria-hidden': 'true', lang: l.id }, l.mark),
-        h('span', { class: 'ob-txt' }, h('b', { lang: l.id, dir: l.dir }, l.name), l.id === 'en' ? '' : h('small', { lang: 'en' }, l.en)),
-        h('span', { class: 'ob-tick', 'aria-hidden': 'true' }, icon('check', 16))], () => {
-        tongue = l.id;
-        opts.forEach((o, j) => { const on = list[j].id === l.id; o.classList.toggle('on', on); o.setAttribute('aria-pressed', String(on)); });
-        sfx.pop(1); a?.hop(0.25); haptic(8);
-      }));
-      body.push(h('div', { class: 'ob-list langs' }, ...opts));
-    } else if (s === 'hi') line = fe('ob.hi');
+    if (s === 'hi') line = fe('ob.hi');
     else if (s === 'few') line = fe('ob.few');
     else if (s === 'react') line = picked.size > 1 ? fe('ob.many') : picked.size ? fe(`ob.${[...picked][0]}` as FrontKey) : fe('ob.none');
     else if (s === 'why') {
@@ -209,13 +179,7 @@ export function openOnboarding(resumed = false) {
       page.animate([{ opacity: 0, translate: `${48 * x}px 0` }, { opacity: 1, translate: '0 0' }], { duration: 360, delay: 120, easing: 'cubic-bezier(.2,.9,.3,1.15)', fill: 'backwards' });
     } else old?.remove();
     stage.append(page);
-    if (s === 'lang') {
-      // Asked in the phone's language, and in English (or Arabic, for an English phone) under it.
-      const second = tongue === 'en' ? 'ar' : 'en';
-      const line2 = (id: Lang) => h('span', { class: 'ob-two', lang: id, dir: LANGS.find((l) => l.id === id)?.dir ?? 'ltr' }, LANG_ASK[id] ?? LANG_ASK.en);
-      bubble.append(line2(tongue), line2(second));
-      a?.face('happy', 1200);
-    } else say(bubble, line, a);
+    say(bubble, line, a);
     if (s === 'hi') setTimeout(() => a?.wave(2400), 380);
     else if (s === 'react' || s === 'heardSay') setTimeout(() => a?.cheer(1700), 420);
     else if (s === 'pagesSay') setTimeout(() => (pagesN ?? 1) >= 5 ? a?.cheer(2000) : (a?.nod(), a?.hop(0.6)), 420);
@@ -246,12 +210,6 @@ export function openOnboarding(resumed = false) {
   };
   const next = () => {
     const s = screens[i];
-    if (s === 'lang' && tongue !== lang()) {
-      // The whole app changes language: reload in it and carry on from hello.
-      try { sessionStorage.setItem('obResume', '1'); } catch { /* private */ }
-      setLang(tongue);
-      return;
-    }
     if (s === 'why') saveWhy([...picked]);
     if (s === 'tasbihSay' || s === 'tasbih') apply();
     if (s === 'heard' && heard) { try { localStorage.setItem('heardFrom', heard); } catch { /* private */ } mark(`ev:heard-${heard}`); }
@@ -262,7 +220,7 @@ export function openOnboarding(resumed = false) {
     draw(1);
   };
   go.onclick = next;
-  const canBack = () => i > 0 && !(resumed && i === 1);
+  const canBack = () => i > 0;
   back.onclick = () => { if (canBack()) { i--; draw(-1); } };
   skip.onclick = () => {
     const s = screens[i];
