@@ -14,6 +14,7 @@ import { EDGE, installId, remoteConfig, timedFetch } from '../net';
 import { isFireDay, isFriendFireDay } from '../data/fireDays';
 import { dayTotals, islamicTotals, rankDay, utcOff, watchMaghrib, weekEndAt } from '../data/rankDay';
 import { Offline, isOffline, sendLater, watchOutbox } from './outbox';
+import { shopAdd } from '../data/garden';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   if (navigator.onLine === false) throw new Offline('offline');
@@ -135,6 +136,11 @@ export function watchRanks() {
   watchMaghrib(totals);
   watchOutbox((fn, args) => rpc(fn, args).then((v) => { dropCache(); return v; }));
   // An action kept offline that the server then refused (e.g. the player went private): say so once.
+  // A gift kept offline and now sent: its held Light becomes a purchase, as when it goes at once (lightGifts.ts).
+  addEventListener('outbox-done', (e) => {
+    const p = (e as CustomEvent<{ fn: string; hold?: number; result?: unknown }>).detail;
+    if (p.fn === 'rank_gift_send' && typeof p.result === 'string') shopAdd(`gf:${p.result}`, p.hold ?? 0);
+  });
   addEventListener('outbox-refused', (e) => { const m = (e as CustomEvent<{ message?: string }>).detail?.message; if (m) void import('../ui/dom').then((d) => d.toast(m)); });
   const soon = () => reportSoon();
   window.addEventListener('journey-changed', soon);

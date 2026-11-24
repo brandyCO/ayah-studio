@@ -3534,6 +3534,7 @@
   "sh.giftTo": "A gift for {name}",
   "sh.giftSub": "From your Light",
   "sh.giftSent": "Your gift is on its way to {name}",
+  "sh.giftQueued": "You are offline. Your gift to {name} goes as soon as you are back online",
   "sh.giftPiece": "Choose a piece from the shop",
   "sh.giftNote": "Up to 3 gifts a day. Your friend opens it as a chest.",
   "sh.giftThis": "Gift to {name}",

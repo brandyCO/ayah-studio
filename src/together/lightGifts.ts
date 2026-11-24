@@ -8,28 +8,42 @@ import { localMsg } from '../i18n';
 import { shopAdd, shopHas, wallet } from '../data/garden';
 import { claimGoal } from '../data/journey';
 import type { Row } from './ranks';
+import { Offline, isOffline, sendLater } from './outbox';
 
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+  if (navigator.onLine === false) throw new Offline('offline');
   const sb = await supabase();
-  const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new Error(localMsg(error.message));
+  const { data, error, status } = await sb.rpc(fn, args);
+  if (error) throw status === 0 ? new Offline(localMsg(error.message)) : new Error(localMsg(error.message));
   return data as T;
+}
+
+/** Sends a gift now, or with no connection keeps it to send when back online (outbox.ts) with its Light held,
+ *  so it cannot be spent twice. Resolves true when sent now, false when it waits. */
+async function send(args: { who: string; amount: number; piece: string | null }, price: number): Promise<boolean> {
+  try {
+    const id = await rpc<string>('rank_gift_send', args);
+    shopAdd(`gf:${id}`, price);
+    return true;
+  } catch (e) {
+    if (!isOffline(e)) throw e;
+    sendLater(`gift:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, 'rank_gift_send', args, undefined, price);
+    return false;
+  }
 }
 
 export const GIFT_LIGHT = [25, 50, 100, 200];
 export interface Gift { id: string; light: number; item: string | null; at: string; from: Omit<Row, 'score'> }
 
-/** Sends Light; throws when it cannot (not enough Light, not friends, 3 today). */
-export async function giftLight(pid: string, n: number): Promise<void> {
+/** Sends Light; throws when it cannot (not enough Light, not friends, 3 today). False: it waits for a connection. */
+export async function giftLight(pid: string, n: number): Promise<boolean> {
   if (wallet() < n) throw new Error('need');
-  const id = await rpc<string>('rank_gift_send', { who: pid, amount: n, piece: null });
-  shopAdd(`gf:${id}`, n);
+  return send({ who: pid, amount: n, piece: null }, n);
 }
-/** Sends a piece (its shop id, e.g. `rm:olive`) at its price. */
-export async function giftPiece(pid: string, piece: string, price: number): Promise<void> {
+/** Sends a piece (its shop id, e.g. `rm:olive`) at its price. False: it waits for a connection. */
+export async function giftPiece(pid: string, piece: string, price: number): Promise<boolean> {
   if (wallet() < price) throw new Error('need');
-  const id = await rpc<string>('rank_gift_send', { who: pid, amount: 0, piece });
-  shopAdd(`gf:${id}`, price);
+  return send({ who: pid, amount: 0, piece }, price);
 }
 
 const KEY = 'giftsWaiting';

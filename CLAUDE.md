@@ -2203,7 +2203,9 @@ duas/reflections section in Me.
       rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
       (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
       **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
-      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Offline (owner 2026-11-24): a gift waits in the outbox (`sendLater(…, hold)`) and goes when back
+      online; its Light is held meanwhile (`heldLight()` in `wallet()`), a refusal releases it, a send records the purchase
+      (`outbox-done` in ranks.ts). Migration `20261112210000_light_value.sql` (`rank_gifts`,
       `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
       multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
 - [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on

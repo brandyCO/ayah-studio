@@ -40,10 +40,10 @@ export function openGiftSheet(pid: string, name: string) {
         if (!(await confirmGift(name, h('span', { class: 'gs-confirm-amt' }, star(), ` ${n}`)))) return;
         b.disabled = true;
         try {
-          await giftLight(pid, n);
+          const now = await giftLight(pid, n);
           haptic(20);
           void import('./sfx').then((m) => { m.sfx.pop(0, true); m.sfx.shimmer(); });
-          toast(sht('sh.giftSent', { name }));
+          toast(sht(now ? 'sh.giftSent' : 'sh.giftQueued', { name }));
           d.close();
         } catch (err) { toast((err as Error).message === 'need' ? sht('sh.need', { n: n - wallet() }) : (err as Error).message); b.disabled = false; }
       } }, h('span', { class: 'gs-gift', 'aria-hidden': 'true' }, icon('gift', 22)), h('b', {}, star(), ` ${n}`)))),
