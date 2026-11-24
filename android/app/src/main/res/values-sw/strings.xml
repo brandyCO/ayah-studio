@@ -9,4 +9,8 @@
     <string name="sc_search_long">Tafuta ndani ya Qur\'ani</string>
     <string name="sc_reels">Reel</string>
     <string name="sc_reels_long">Reel zangu</string>
+    <string name="daily_widget_label">Aya ya leo</string>
+    <string name="daily_widget_description">Aya ileile kwa wote, mpya kila siku. Kwa ukubwa mkubwa, pamoja na aya yako.</string>
+    <string name="my_ayah_widget_label">Aya yangu</string>
+    <string name="my_ayah_widget_description">Aya iliyochaguliwa kutoka unachohifadhi na kusoma. Kwa ukubwa mkubwa, pamoja na aya ya leo.</string>
 </resources>

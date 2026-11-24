@@ -1,0 +1,31 @@
+/* Ayah of the day on Me (src/ui/ayahCards.ts): Today's ayah (everyone) and My ayah (this user). */
+.ayc { --ac: #12a594; padding: 16px 16px 12px; margin-bottom: 14px;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--ac) 12%, var(--card)), var(--card) 62%);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--ac) 24%, var(--line)); }
+.ayc.mine { --ac: #6c5ce7; }
+.ayc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ayc-head .me-h { margin: 0; font-size: var(--fs-l); }
+.ayc-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--ac) 12%, var(--card)); }
+.ayc-tab { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 800; font-size: var(--fs-s);
+  padding: 6px 12px; border-radius: 999px; min-height: 32px; cursor: pointer; transition: background .2s, color .2s; }
+.ayc-tab.on { background: var(--ac); color: #fff; box-shadow: 0 2px 0 color-mix(in srgb, var(--ac) 60%, #000); }
+.ayc-kicker { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; color: var(--ac); font-weight: 800; font-size: var(--fs-s); }
+.ayc-kicker svg { flex: none; }
+.ayc-ar { margin: 6px 0 8px; font-family: 'UthmanicHafs', 'AmiriQuran', serif; font-size: clamp(24px, 6.6vw, 32px);
+  line-height: 2; text-align: center; color: var(--text); }
+.ayc-tr { margin: 0 0 8px; line-height: 1.55; color: var(--text); opacity: .86; }
+.ayc-ref { margin: 0 0 12px; font-size: var(--fs-s); color: var(--muted); }
+.ayc-ref b { color: var(--text); font-weight: 800; }
+.ayc-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.ayc-act { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; min-height: 52px;
+  border: 0; border-radius: 14px; background: color-mix(in srgb, var(--ac) 9%, var(--card)); color: var(--ac);
+  font: inherit; font-weight: 800; font-size: var(--fs-xs); text-decoration: none; cursor: pointer;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--ac) 22%, var(--card)); }
+.ayc-act:active { translate: 0 2px; box-shadow: 0 1px 0 color-mix(in srgb, var(--ac) 22%, var(--card)); }
+.ayc-news .ayc-kicker { margin-top: 0; }
+.ayc-news .ayc-ar { font-size: clamp(22px, 6vw, 28px); }
+.ayc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ayc-foot .ayc-ref { margin: 0; }
+.ayc-share { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 8px 14px; min-height: 40px;
+  background: var(--ac); color: #fff; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 color-mix(in srgb, var(--ac) 60%, #000); }
+.ayc-share:active { translate: 0 2px; box-shadow: 0 1px 0 color-mix(in srgb, var(--ac) 60%, #000); }

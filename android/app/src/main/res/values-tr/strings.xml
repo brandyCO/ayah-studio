@@ -9,4 +9,8 @@
     <string name="sc_search_long">Kur\'an\'da ara</string>
     <string name="sc_reels">Reeller</string>
     <string name="sc_reels_long">Reellerim</string>
+    <string name="daily_widget_label">Günün ayeti</string>
+    <string name="daily_widget_description">Herkes için aynı ayet, her gün yeni. Büyük boyutta kendi ayetinle birlikte.</string>
+    <string name="my_ayah_widget_label">Benim ayetim</string>
+    <string name="my_ayah_widget_description">Ezberlediğin ve okuduğun yerlerden seçilen bir ayet. Büyük boyutta günün ayetiyle birlikte.</string>
 </resources>

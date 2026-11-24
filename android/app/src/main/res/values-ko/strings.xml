@@ -9,4 +9,8 @@
     <string name="sc_search_long">꾸란 검색</string>
     <string name="sc_reels">릴스</string>
     <string name="sc_reels_long">내 릴스</string>
+    <string name="daily_widget_label">오늘의 아야</string>
+    <string name="daily_widget_description">모두 같은 아야, 매일 새로워요. 큰 크기에서는 나의 아야와 함께 보여요.</string>
+    <string name="my_ayah_widget_label">나의 아야</string>
+    <string name="my_ayah_widget_description">외우고 읽는 것 중에서 고른 아야. 큰 크기에서는 오늘의 아야와 함께 보여요.</string>
 </resources>

@@ -9,4 +9,8 @@
     <string name="sc_search_long">قرآن میں تلاش</string>
     <string name="sc_reels">ریلز</string>
     <string name="sc_reels_long">میری ریلز</string>
+    <string name="daily_widget_label">آج کی آیت</string>
+    <string name="daily_widget_description">سب کے لیے ایک ہی آیت، ہر روز نئی۔ بڑے سائز میں آپ کی اپنی آیت کے ساتھ۔</string>
+    <string name="my_ayah_widget_label">میری آیت</string>
+    <string name="my_ayah_widget_description">آپ جو حفظ کرتے اور پڑھتے ہیں اس میں سے چنی گئی آیت۔ بڑے سائز میں آج کی آیت کے ساتھ۔</string>
 </resources>

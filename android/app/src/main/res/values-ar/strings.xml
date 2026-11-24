@@ -8,4 +8,8 @@
     <string name="sc_search_long">ابحث في القرآن</string>
     <string name="sc_reels">مقاطعي</string>
     <string name="sc_reels_long">مقاطعي</string>
+    <string name="daily_widget_label">آية اليوم</string>
+    <string name="daily_widget_description">الآية نفسها للجميع، جديدة كل يوم. وفي الحجم الكبير تظهر مع آيتك.</string>
+    <string name="my_ayah_widget_label">آيتي</string>
+    <string name="my_ayah_widget_description">آية مختارة مما تحفظ وتقرأ. وفي الحجم الكبير تظهر مع آية اليوم.</string>
 </resources>

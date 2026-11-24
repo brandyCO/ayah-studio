@@ -9,4 +9,8 @@
     <string name="sc_search_long">Kërko në Kuran</string>
     <string name="sc_reels">Reel-et</string>
     <string name="sc_reels_long">Reel-et e mia</string>
+    <string name="daily_widget_label">Ajeti i sotëm</string>
+    <string name="daily_widget_description">I njëjti ajet për të gjithë, i ri çdo ditë. Në madhësi të madhe, bashkë me ajetin tënd.</string>
+    <string name="my_ayah_widget_label">Ajeti im</string>
+    <string name="my_ayah_widget_description">Një ajet i zgjedhur nga ajo që mëson dhe lexon. Në madhësi të madhe, bashkë me ajetin e sotëm.</string>
 </resources>
