@@ -1341,8 +1341,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       `tourSeen` in localStorage (leaving the mushaf for another screen counts as skipping); shown by the mushaf on first launch, not to people who used the app
       before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
       ☰ → Tour)
-- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
-      flag until the owner confirms the licence (`docs/grow.md` §0)
+- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed); on since 2026-11-24
       (built 2026-10-09, **off**: `src/features.ts` (`feature('tafsir')`, default false; testers: Device
       check → "Tafsir beside the translation"). `src/data/tafsir.ts`: Ibn Kathir (abridged, id 169) per
       ayah from api.quran.com (qurancdn second), IndexedDB store `tafsir` (`db.ts` version 5, which also
@@ -1352,6 +1351,10 @@ tafsir only from published, credited editions; UI strings only are translated by
       the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
       passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
       names show in the Arabic interface. To ship: owner decision, then flip the default)
+      **On** (owner 2026-11-24, "do what Tarteel does"): Quran.com's tafsir library (the one Tarteel uses) — `TAFSIRS` in
+      `src/data/tafsir.ts`: 19 tafsirs in English, Arabic, Urdu, Bengali, Russian, Kurdish (Fi Zilal left out), a picker in the
+      panel (localStorage `tafsirPick`, synced), default in the interface language (Arabic: Al-Muyassar), each credited +
+      linked to its Quran.com page
 - [x] G5a Faster first load (measured)
       (2026-10-09, Playwright, 1.6 Mbps / 150 ms, mushaf page 1: FCP ≈ 1.55 s, page ready ≈ 2.2 s,
       19 requests / 623 KB (was 22 / 670 KB on the G4 branch). The circles screens, tour, tafsir data

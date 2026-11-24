@@ -1,8 +1,8 @@
 // Feature flags for things that wait on an owner decision (docs/grow.md §0). Off unless turned on
 // here or, for testing on one device, in Device check.
 const DEFAULTS = {
-  /** Tafsir beside the translation (G4): the licence of the abridged Ibn Kathir is not confirmed yet. */
-  tafsir: false,
+  /** Tafsir beside the translation (G4): on since 2026-11-24 (owner: "do what Tarteel does"). */
+  tafsir: true,
 };
 export type Feature = keyof typeof DEFAULTS;
 
