@@ -30,11 +30,10 @@ import { applyTheme } from './ui/theme';
 import { applyLite } from './lite';
 import { initErrors } from './errors';
 import { initUsage, markRoute } from './usage';
-import { showSurahList } from './ui/surahList';
 import { clearPass, kidsOn, usePass } from './data/kids';
 import { recordOpen } from './data/journey';
 import { watchVitals } from './perf';
-import { quietPlayer } from './ui/player';
+import { quietPlayer } from './ui/playerHub';
 
 const app = document.getElementById('app')!;
 let cleanup: (() => void) | null = null;
@@ -211,7 +210,7 @@ async function route() {
       c = await showDrafts(screen);
     } else {
       await import('./ui/screens.css').catch(() => {});
-      c = await showSurahList(screen, view === 'search');
+      c = await (await import('./ui/surahList')).showSurahList(screen, view === 'search'); // the app opens on the mushaf: loaded when wanted
     }
     dropSkel();
     unGhost();
