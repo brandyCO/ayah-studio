@@ -2,13 +2,23 @@
 // meet too many systems at once"): the shop from the 3rd day the app was opened, the room from the 4th, the wardrobe
 // from the 5th. Before that their doors stay out of sight (Light, pieces and the character are still earned and kept).
 // The day each one appears, Me shows it once as "New for you" (localStorage `revealSeen`, synced like every key).
+import { account } from '../cloud/auth';
 import { allDays } from './journey';
 
 export type Reveal = 'shop' | 'room' | 'wardrobe';
 const ORDER: Reveal[] = ['shop', 'room', 'wardrobe'];
 const FROM = 3;
 
-export const daysOpened = () => Object.values(allDays()).filter((r) => r.o).length;
+/** Days of the first week passed: the days the app was opened, or (signed in) the days since the account was made,
+ *  whichever is more (owner 2026-11-24: someone who signs in on a new phone is not new). */
+export const daysOpened = () => Math.max(Object.values(allDays()).filter((r) => r.o).length, accountDays());
+function accountDays(): number {
+  const at = Date.parse(account()?.created ?? '');
+  if (!Number.isFinite(at)) return 0;
+  const a = new Date(at), now = new Date();
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.max(0, Math.round((day(now) - day(a)) / 864e5)) + 1;
+}
 function seen(): Reveal[] {
   try { const v = JSON.parse(localStorage.getItem('revealSeen') ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }

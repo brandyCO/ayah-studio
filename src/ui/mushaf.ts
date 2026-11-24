@@ -774,9 +774,15 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     let returning = false;
     try { returning = !!localStorage.getItem('mushafHint'); } catch { /* ignore */ }
     // F1: no questions before the first ayah. The reciter is asked at the first Listen (welcome.ts).
-    markTourSeen();
-    if (!returning) touring = true;
-    firstVisitHint();
+    // A new install (owner 2026-11-24): the first screen first, Get started / I already have an account (firstScreen.ts).
+    const first = () => { markTourSeen(); firstVisitHint(); };
+    let signing = false;
+    try { signing = !!localStorage.getItem('fsSignIn'); } catch { /* ignore */ }
+    if (returning || (account() && !signing)) first();
+    else {
+      touring = true;
+      void import('./firstScreen').then((m) => (m.signInPending() ? m.resumeSignIn(first, () => m.openFirstScreen(first)) : m.openFirstScreen(first)));
+    }
   } else firstVisitHint();
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();

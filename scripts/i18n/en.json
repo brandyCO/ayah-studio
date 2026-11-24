@@ -2106,7 +2106,17 @@
   "co.fireLeft": "{n} of 7 days",
   "co.icon": "Level 5: a new app icon",
   "co.iconText": "Earn XP to unlock your first special app icon.",
-  "co.level": "Level {n} of 5"
+  "co.level": "Level {n} of 5",
+  "fw.tagline": "Read, learn and remember the Quran, a little every day.",
+  "fw.start": "Get started",
+  "fw.have": "I already have an account",
+  "fw.lang": "Language",
+  "fw.signText": "Sign in to bring back your streak, Light and character.",
+  "fw.wb": "Welcome back, {name}!",
+  "fw.wbNo": "Welcome back!",
+  "fw.bringing": "Bringing your progress…",
+  "fw.streak": "{n, plural, one {{n}-day streak} other {{n}-day streak}}",
+  "fw.next": "Next to unlock"
  },
  "notifs": {
   "nt.title": "Notifications",
