@@ -974,15 +974,12 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
     }
   }
   /** Ranks at once from last time, then the fresh answers (only repainted when something changed). */
-  // Nothing kept on this device yet (just signed in, a new phone): the wait becomes "Joining your league" (rankJoin.ts).
-  // The first-sign-in reveal (owner 2026-11-19 chose "Welcome to your league", src/ui/rankWelcome.ts).
-  const JOIN_REVEAL = true;
-  const JOIN_STYLE = 'welcome' as 'welcome' | 'seats'; // two designs shown to the owner (rankWelcome.ts, rankJoin.ts)
+  // Nothing kept on this device yet (just signed in, a new phone): the wait becomes "Welcome to your league"
+  // (owner 2026-11-19, src/ui/rankWelcome.ts).
   const firstLoad = (p: Promise<unknown>) => {
-    if (!JOIN_REVEAL || !account() || isKept('league') || isKept('status')) return;
+    if (!account() || isKept('league') || isKept('status')) return;
     const t = () => status?.tier ?? null;
-    if (JOIN_STYLE === 'welcome') void import('./rankWelcome').then((m) => m.welcomeReveal(p, t)).catch(() => {});
-    else void import('./rankJoin').then((m) => m.joinReveal(p, t)).catch(() => {});
+    void import('./rankWelcome').then((m) => m.welcomeReveal(p, t)).catch(() => {});
   };
   async function open() {
     if (!account()) { signedOut(); return; }

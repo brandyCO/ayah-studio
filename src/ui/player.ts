@@ -23,6 +23,7 @@ import { t } from '../i18n';
 import type { NightSource } from './night';
 import { sampleButton, stopSample } from './voiceSample';
 import { addListen } from '../data/journey';
+import { followAlong, hubView, markListeningAway, setShared } from './playerHub';
 
 interface Verse {
   a: number;
@@ -687,52 +688,20 @@ export function createPlayer(o: PlayerHooks) {
 // the surah list or anywhere else; the mushaf attaches to it while it is open (page tracking and lit
 // words), and elsewhere the bar sits above the tab bar with a button back to the page being recited.
 type Player = ReturnType<typeof createPlayer>;
-type PlayerView = Pick<PlayerHooks, 'onPosition' | 'onShow'>;
 let shared: Player | null = null;
-let view: PlayerView | null = null;
-const markAway = () => document.body.classList.toggle('listening-away', !!shared?.active() && !view);
 
 export function sharedPlayer(meta: SurahMeta[]): Player {
   if (!shared) {
     shared = createPlayer({
       meta,
-      onPosition: (pos) => view?.onPosition(pos),
-      onShow: (on) => { view?.onShow(on); markAway(); },
+      onPosition: (pos) => hubView()?.onPosition(pos),
+      onShow: (on) => { hubView()?.onShow(on); markListeningAway(); },
     });
+    setShared(shared);
     document.body.append(shared.bar);
   }
   return shared;
 }
 
-/** The mushaf follows the recitation while it is open; returns the detach. */
-export function attachPlayer(v: PlayerView): () => void {
-  view = v;
-  markAway();
-  return () => { if (view === v) { view = null; markAway(); } };
-}
-
-/** Once the attached view is built: what is playing now (the bar's room, the page, the lit ayah). */
-export function replayPosition() {
-  if (!view || !shared?.active()) return;
-  view.onShow(true);
-  const pos = shared.position();
-  if (pos) view.onPosition({ s: pos.s, a: pos.a, w: null });
-}
-
-export const playerActive = () => !!shared?.active();
-
-/** Open the page being recited (the mushaf then tracks it). */
-export function followAlong() {
-  const pos = shared?.position();
-  if (!pos) return;
-  try { sessionStorage.removeItem('tabIntent'); } catch { /* ignore */ }
-  location.hash = `#/s/${pos.s}/${Math.max(1, pos.a)}`;
-}
-
-/** Screens with their own sound (the studio) pause it; the Kids space stops it. */
-export function quietPlayer(stop = false) {
-  if (!shared?.active()) return;
-  if (stop) shared.stop(); else shared.pause();
-}
-// Screens loaded later (Learn lessons, page memory) pause the bar with this event instead of importing the player.
-window.addEventListener('player-quiet', () => quietPlayer());
+// The light half lives in playerHub.ts (loaded with the first page); kept here for the screens that import the player.
+export { attachPlayer, replayPosition, playerActive, followAlong, quietPlayer } from './playerHub';

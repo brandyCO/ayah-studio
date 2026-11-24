@@ -8,7 +8,6 @@ import { draftHash, listDrafts } from '../data/drafts';
 import { addRecentPage } from '../data/history';
 import { loadMeta, surahTranslation } from '../data/quran';
 import { todaysAyah } from '../data/daily';
-import { loadPopular } from '../data/popular';
 import { loadMushaf, loadMushafPage, loadPageFont, PAGE_COUNT, peekMushaf, releasePageFonts, surahFirstPage, type Mushaf, type MushafLine } from '../data/mushaf';
 import { keepWholeMushaf, unmetered } from '../data/mushafDownload';
 import { FONT_PACK, packWaiting } from '../data/fontPack';
@@ -21,7 +20,7 @@ import { markTourSeen, tourSeen } from './prefs';
 const showTour = (done?: () => void) => void import('./tour').then((m) => m.showTour(done));
 import { tafsirToggle } from './tafsir';
 import { applyTimeTint, crescent, fillToday, paintMarks, ramadanDay, registerMarks, registerToday } from './living';
-import { attachPlayer, replayPosition, sharedPlayer } from './player';
+import { attachPlayer, loadPlayer, playerActive, replayPosition } from './playerHub';
 import { setLastRead, setReaderMode } from './prefs';
 import { perfLaunch } from '../perf';
 import { wroteHere } from './wroteHere';
@@ -69,7 +68,7 @@ registerToday(async () => {
 registerToday(() => import('./ayahCards').then((m) => m.myAyahToday((s, a) => listenHere?.(s, a))));
 // Popular this week: the ayat people made reels of most (or the owner's weekly pick), one tap to a reel.
 registerToday(async () => {
-  const [meta, p] = await Promise.all([loadMeta(), loadPopular()]);
+  const [meta, p] = await Promise.all([loadMeta(), import('../data/popular').then((m) => m.loadPopular())]); // with the reciter list, after the page
   const a = p.ayat[0];
   if (!a) return [];
   return [{
@@ -191,7 +190,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   let firstPosition = true;
   let doneLater: (() => void) | null = null; // a "surah finished" card held until the recitation ends it
   // The app's one player: it keeps playing on other screens; here it tracks the page and lights the words.
-  const player = sharedPlayer(meta);
+  const player = () => loadPlayer(meta); // its code loads with the first play
   const detachPlayer = attachPlayer({
     onPosition: (pos) => {
       if (!ready) { void whole().then(replayPosition, () => {}); return; } // the page being recited: once the layout is in
@@ -236,7 +235,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
   }
 
   const playHere = (s: number, a: number) => void import('./welcome').then((w) => w.askReciterFirst(() => {
-    following = true; firstPosition = false; void player.playFrom(s, a);
+    following = true; firstPosition = false; void player().then((p) => p.playFrom(s, a));
   }));
   listenHere = (s, a) => { noteAyah(s, a); playHere(s, a); };
   const sel = selectionController({
@@ -251,7 +250,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     // While listening, tapping an ayah plays from it.
     onTap: (hit) => {
       if (markTapped) return; // a margin mark opens its own sheet (click handler below)
-      if (player.active() && hit && following) void player.playFrom(hit.s, hit.a);
+      if (playerActive() && hit && following) void player().then((p) => p.playFrom(hit.s, hit.a));
       else toggleBar();
     },
     onTranslate: (s) => void showTranslation(s),
@@ -268,7 +267,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
 
   const listenNow = () => {
     toggleBar(false);
-    if (player.active() && following) player.toggle(); // on another page: ▶ plays from this one
+    if (playerActive() && following) void player().then((p) => p.toggle()); // on another page: ▶ plays from this one
     else { const f = firstAyahOnPage(); playHere(f.s, f.a); }
   };
   const tabs = tabBar('read', { read: () => toggleBar(false) }, true);
@@ -708,7 +707,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (stopChecked || !el?.dataset.fit) return;
     stopChecked = true;
     const st = stopOn(page);
-    if (!st || player.active()) return;
+    if (!st || playerActive()) return;
     window.setTimeout(() => {
       if (mount !== mounts || !el.isConnected) return;
       void import('./stopGlow').then((m) => m.showStop(area, el, meta, st, (s, a) => playHere(s, a))).catch(() => {});
@@ -752,7 +751,7 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     if (e.target instanceof HTMLInputElement || document.querySelector('dialog[open]')) return;
     if (e.key === 'ArrowLeft') { following = false; go(page + 1); }
     else if (e.key === 'ArrowRight') { following = false; go(page - 1); }
-    else if (e.key === ' ' && player.active()) { e.preventDefault(); player.toggle(); }
+    else if (e.key === ' ' && playerActive()) { e.preventDefault(); void player().then((p) => p.toggle()); }
   };
   let resizeTimer = 0;
   const onResize = () => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(() => { refitAll(); place(); }, 120); };

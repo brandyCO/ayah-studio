@@ -51,6 +51,8 @@ const ROUTE_PRELOADS: Record<string, { mods: string[]; data?: string[]; fonts?: 
   '#/me': { mods: ['src/ui/me.ts', 'src/ui/wardrobeCard.ts', 'src/ui/actor.ts', 'src/together/ranks.ts', 'src/together/relight.ts'], data: ['meta.json'] },
   '#/learn': { mods: ['src/ui/learnRoutes.ts', 'src/ui/learnPath.ts', 'src/ui/pathBuddy.ts', 'src/ui/actor.ts'],
     data: ['meta.json', 'mushaf.json'] },
+  '#/': { mods: ['src/ui/surahList.ts'], data: ['meta.json'] },
+  '#/search': { mods: ['src/ui/surahList.ts'], data: ['meta.json'] },
 };
 // A first visit on a slow connection opening on the mushaf (speed pass 5): the app's code (~110 KB) waits until the
 // page's own file and font are in (at most 2.5 s), so they get the whole connection and index.html can draw the page
