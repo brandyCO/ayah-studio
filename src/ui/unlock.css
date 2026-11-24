@@ -71,3 +71,8 @@
   .ul-sky, .ul-sky::after, .ul-sil, .ul-door, .ul-dl, .ul-dr, .ul-hole, .ul-lamps, .ul-glow, .ul-rays, .ul-floor { transition: none; }
   .ul.lit .ul-rays { animation: none; }
 }
+.ul-mini { position: relative; display: block; width: 100%; height: 100%; }
+.ul-mini .ul-l { position: absolute; inset: 0; }
+.ul-mini .ul-lamps { opacity: 1; }
+.ul-next { margin: 0; padding: 6px 12px; border: 0; border-radius: 999px; background: #efeaff; color: #5b3fbf; font: inherit; font-weight: 900; font-size: var(--fs-s); cursor: pointer; }
+.ul-next[hidden] { display: none; }

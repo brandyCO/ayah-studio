@@ -63,7 +63,7 @@ import { openPicker } from './todayCard';
 import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
-import { markRevealed, newReveal, revealed } from '../data/reveal';
+import { daysOpened, markRevealed, newReveal, revealed } from '../data/reveal';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { smartReminder } from '../data/usualTime';
@@ -104,6 +104,17 @@ function setEasy(on: boolean) {
   try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
 }
 
+/** What's coming (src/ui/coming.ts): Me's card through the first week and the pop-up the day before an unlock. */
+function comingSlot(): HTMLElement | '' {
+  if (daysOpened() > 8) return '';
+  const slot = h('div', { class: 'co-slot' });
+  setTimeout(() => void import('./coming').then((m) => {
+    if (!slot.isConnected) return;
+    slot.replaceWith(m.comingCard());
+    m.comingPopup(!!newReveal() && !unlockPlayed().includes(newReveal()!));
+  }), 900);
+  return slot;
+}
 const unlockPlayed = (): string[] => { try { return JSON.parse(localStorage.getItem('unlockPlayed') ?? '[]'); } catch { return []; } };
 /** "New for you": the shop, the room or the wardrobe on the day it first appears (src/data/reveal.ts). */
 function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
@@ -1425,7 +1436,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, revealCard(dressUp), storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, revealCard(dressUp), comingSlot(), storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
@@ -1617,6 +1628,11 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
       row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
       row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
       row('app', 'gear', t('set.app'), t('set.rowApp')),
+      // What's coming (owner request 2026-11-24): the first week's timeline, any time
+      h('button', { class: 'set-row set-co', onclick: () => void import('./coming').then((m) => m.openComing()) },
+        h('span', { class: 'set-row-ic s-coming', 'aria-hidden': 'true' }, icon('calendar', 22)),
+        h('span', { class: 'set-row-txt' }, h('b', {}, fe('co.door')), h('span', { class: 'muted small' }, fe('co.doorSub'))),
+        icon('right', 18)),
       // Send feedback (owner request 2026-11-16): its own row in settings
       h('button', { class: 'set-row set-fb', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
         h('span', { class: 'set-row-ic s-feedback', 'aria-hidden': 'true' }, icon('feedback', 22)),

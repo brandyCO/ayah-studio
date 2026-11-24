@@ -123,11 +123,18 @@ export function playUnlock(k: Reveal, go: () => void, later: () => void) {
   const light = who ? null : noor('ul-noor');
   const body = who?.el ?? light!.el;
   const stage = h('div', { class: 'ul-stage', 'aria-hidden': 'true' }, scene, body, h('span', { class: 'ul-floor' }));
+  // Tomorrow's stop, when there is one (src/ui/coming.ts): something to come back for.
+  const next = h('button', { class: 'ul-next', hidden: true, onclick: () => { d.close(); void import('./coming').then((m) => m.openComing()); } });
+  void import('./coming').then((m) => {
+    const t = m.tomorrow();
+    if (t) { next.textContent = fe('co.tomorrowIs', { what: m.stepTitle(t.id) }); next.hidden = false; }
+  });
   const close = (then: () => void) => { haptic(10); d.close(); then(); };
   const card = h('div', { class: 'ul-card' },
     h('p', { class: 'ul-kicker' }, fe('rv.new')),
     h('h2', { class: 'ul-title' }, fe(`rv.${k}`)),
     h('p', { class: 'ul-text' }, fe(`rv.${k}Text`)),
+    next,
     h('button', { class: 'primary brand-btn ul-go', onclick: () => close(go) }, fe('rv.open')),
     h('button', { class: 'chip ul-later', onclick: () => close(later) }, fe('rv.later')));
   const d = h('dialog', { class: `ul k-${k}`, 'aria-label': fe(`rv.${k}`) },
@@ -168,4 +175,10 @@ export function playUnlock(k: Reveal, go: () => void, later: () => void) {
   });
   at(2000, () => { who?.cheer(1800); who?.face('happy', 2400); light?.cheer(); sfx.shimmer(); });
   at(2350, () => { card.classList.add('in'); popIn(card, { stiffness: 190, damping: 17 }); d.classList.add('done'); });
+}
+
+/** The piece as a still picture (the timeline in coming.ts), doors closed. */
+export function miniArt(k: Reveal): HTMLElement {
+  const parts = ART[k]().parts.filter((p) => !p.classList.contains('ul-sil') && !p.classList.contains('ul-hole'));
+  return h('span', { class: `ul-mini k-${k}`, 'aria-hidden': 'true' }, ...parts);
 }

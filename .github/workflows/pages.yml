@@ -171,6 +171,8 @@ jobs:
           echo "The web app is live at $site/" >> "$GITHUB_STEP_SUMMARY"
       - name: Let Google sign-ins come back to the new address
         if: env.CF_TOKEN_RAW != '' && env.SB_TOKEN != ''
+        # The address is already allowed (set by hand); a token without auth-config access must not fail the deploy.
+        continue-on-error: true
         run: |
           api=https://api.supabase.com/v1/projects/jposubjybzstfmnngews/config/auth
           list=$(curl -sf -H "Authorization: Bearer $SB_TOKEN" "$api" | jq -r '.uri_allow_list // ""')

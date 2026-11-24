@@ -8,7 +8,7 @@ export type Reveal = 'shop' | 'room' | 'wardrobe';
 const ORDER: Reveal[] = ['shop', 'room', 'wardrobe'];
 const FROM = 3;
 
-const daysOpened = () => Object.values(allDays()).filter((r) => r.o).length;
+export const daysOpened = () => Object.values(allDays()).filter((r) => r.o).length;
 function seen(): Reveal[] {
   try { const v = JSON.parse(localStorage.getItem('revealSeen') ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }

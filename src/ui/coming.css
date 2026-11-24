@@ -1,0 +1,65 @@
+/* ---------- What's coming (src/ui/coming.ts) ---------- */
+.co { width: 100%; max-width: 560px; height: 100%; max-height: 100%; margin: 0 auto; border: 0; padding: 0 16px max(16px, env(safe-area-inset-bottom));
+  background: var(--bg); color: var(--text); display: none; overflow-y: auto; }
+.co[open] { display: flex; flex-direction: column; }
+.co::backdrop { background: rgba(12, 10, 30, .55); }
+.co-head { position: relative; padding: max(16px, env(safe-area-inset-top)) 0 4px; text-align: center; }
+.co-head h2 { margin: 6px 0 4px; font-size: clamp(24px, 7vw, 30px); font-weight: 900; }
+.co-head p { margin: 0; }
+.co-x { position: absolute; inset-inline-start: -6px; top: max(10px, env(safe-area-inset-top)); }
+.co-kicker { display: inline-block; margin-top: 30px !important; padding: 6px 12px; border-radius: 999px; background: #efeaff; color: #5b3fbf;
+  font-weight: 900; font-size: var(--fs-s); }
+.co-foot { position: sticky; bottom: 0; padding-top: 12px; background: linear-gradient(transparent, var(--bg) 30%); }
+.co-foot .primary { width: 100%; font-size: 18px; padding: 15px; }
+
+.co-path { list-style: none; margin: 18px 0 8px; padding: 0; position: relative; display: flex; flex-direction: column; gap: 14px; }
+/* The line joining the stops; lit up to today. */
+.co-path::before { content: ''; position: absolute; inset-inline-start: 31px; top: 30px; bottom: 30px; width: 4px; border-radius: 2px; background: var(--line, #e3ddf3); }
+.co-step { position: relative; display: grid; grid-template-columns: 66px 1fr auto; align-items: center; gap: 12px; }
+.co-node { position: relative; width: 66px; height: 66px; }
+.co-art { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 22px; background: var(--card, #fff); overflow: hidden;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .08); border: 2px solid #e8e2f6; }
+.co-art .ul-mini { position: absolute; inset: 2px; }
+.co-art svg { color: #6c5ce7; }
+.s-done .co-art { border-color: #ffd25e; background: #fff8e3; }
+.s-today .co-art { border-color: #6c5ce7; background: #f2efff; }
+.s-today .co-node::after { content: ''; position: absolute; inset: -6px; border-radius: 26px; border: 3px solid #6c5ce7; opacity: .5; animation: co-ring 1.8s ease-out infinite; }
+@keyframes co-ring { from { scale: .92; opacity: .6; } to { scale: 1.12; opacity: 0; } }
+.s-next .co-art, .s-later .co-art { filter: grayscale(1); opacity: .6; }
+.s-next .co-art { opacity: .8; }
+.co-lock { position: absolute; inset-inline-end: 3px; bottom: 3px; width: 22px; height: 22px; filter: none; border-radius: 50%; display: grid; place-items: center;
+  background: #5b5470; color: #fff; }
+.co-tick { position: absolute; inset-inline-end: -4px; top: -4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: #4caf2a; color: #fff; box-shadow: 0 2px 0 #2f7d18; }
+.co-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.co-tag { font-weight: 900; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.s-today .co-tag { color: #6c5ce7; }
+.co-txt b { font-size: 17px; font-weight: 900; line-height: 1.25; }
+.co-sub { color: var(--muted); font-size: var(--fs-s); line-height: 1.35; }
+.co-when { font-weight: 800; font-size: var(--fs-s); color: var(--muted); white-space: nowrap; }
+.s-next .co-when { color: #5b3fbf; }
+.s-today .co-when { color: #fff; background: #6c5ce7; padding: 4px 10px; border-radius: 999px; }
+/* You are here: the user's own bust beside today's (or the next) stop. */
+.co-me { position: absolute; inset-inline-start: -14px; top: -12px; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: #fff;
+  border: 2px solid #6c5ce7; box-shadow: 0 2px 6px rgba(60, 40, 140, .3); z-index: 1; animation: co-bob 2.4s ease-in-out infinite; }
+.co-me svg { width: 100%; height: 100%; display: block; }
+@keyframes co-bob { 50% { translate: 0 -3px; } }
+.co-path.compact { gap: 8px; margin: 8px 0; }
+.co-path.compact .co-step { grid-template-columns: 52px 1fr auto; }
+.co-path.compact .co-node { width: 52px; height: 52px; }
+.co-path.compact::before { inset-inline-start: 24px; }
+.co-path.compact .co-txt b { font-size: 15px; }
+
+/* Me: the small card while something is ahead. */
+.co-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; cursor: pointer; }
+.co-card-art { position: relative; width: 48px; height: 48px; flex: none; }
+.co-card-art .co-art { border-radius: 16px; }
+.co-card-art .co-art { filter: grayscale(.6); }
+.co-card-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.co-card-txt small { font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6c5ce7; }
+.co-card-txt b { font-weight: 800; }
+@media (prefers-color-scheme: dark) {
+  .co-art { border-color: #2e2850; } .s-done .co-art { background: #3a3110; } .s-today .co-art { background: #241e48; }
+  .co-kicker { background: #2a2350; color: #c9bfff; } .co-path::before { background: #2e2850; }
+}
+@media (prefers-reduced-motion: reduce) { .s-today .co-node::after, .co-me { animation: none; } }
