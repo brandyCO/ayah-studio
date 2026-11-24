@@ -171,6 +171,16 @@ const en = {
   'fb.thanks': 'Thank you! Your feedback reached us.',
   'fb.later': 'You are offline. Your message will be sent when you are back online.',
   'fb.fail': 'It could not be sent. Please try again.',
+  'rv.new': 'New for you',
+  'rv.shop': 'The Light shop is open',
+  'rv.shopText': 'Spend the Light you gathered on pieces for your character, your room and more.',
+  'rv.room': 'Your room is ready',
+  'rv.roomText': 'Your character has a room of its own. Decorate it with what you win and buy.',
+  'rv.wardrobe': 'Your wardrobe is open',
+  'rv.wardrobeText': 'Pieces you earn with streaks and seasons wait here for your character.',
+  'rv.open': 'Take a look',
+  'rv.later': 'Later',
+  'rv.soon': 'Keep gathering Light. The shop opens on your third day.',
 };
 export type FrontKey = keyof typeof en;
 const ar: Partial<Record<FrontKey, string>> = {
@@ -342,6 +352,16 @@ const ar: Partial<Record<FrontKey, string>> = {
   'fb.thanks': 'شكرًا لك! وصلتنا ملاحظاتك.',
   'fb.later': 'أنت غير متصل. ستُرسل رسالتك عند عودة الاتصال.',
   'fb.fail': 'تعذّر الإرسال. حاول مرة أخرى.',
+  'rv.new': 'جديد لك',
+  'rv.shop': 'متجر النور مفتوح',
+  'rv.shopText': 'أنفق النور الذي جمعته على قطع لشخصيتك وغرفتك وغير ذلك.',
+  'rv.room': 'غرفتك جاهزة',
+  'rv.roomText': 'لشخصيتك غرفة خاصة بها. زيّنها بما تربحه وتشتريه.',
+  'rv.wardrobe': 'خزانتك مفتوحة',
+  'rv.wardrobeText': 'القطع التي تكسبها بالسلاسل والمواسم تنتظر شخصيتك هنا.',
+  'rv.open': 'ألقِ نظرة',
+  'rv.later': 'لاحقًا',
+  'rv.soon': 'واصل جمع النور. يُفتح المتجر في يومك الثالث.',
 };
 
 /** A string, with {name} placeholders filled from `vars`. */

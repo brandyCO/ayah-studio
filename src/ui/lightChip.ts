@@ -11,7 +11,12 @@ import { locale, t } from '../i18n';
 import { h, listenWhile } from './dom';
 
 /** Tapping it opens the shop (owner request 2026-11-12), unless the screen gives its own action. */
-export function lightChip(onclick: () => void = () => void import('./shop').then((m) => m.openShop())): HTMLElement {
+const openShop = () => void import('../data/reveal').then((r) => {
+  // Before the shop's day (src/data/reveal.ts): a word on when it opens instead.
+  if (r.revealed('shop')) void import('./shop').then((m) => m.openShop());
+  else void Promise.all([import('./dom'), import('../i18n/front')]).then(([d, f]) => d.toast(f.fe('rv.soon')));
+});
+export function lightChip(onclick: () => void = openShop): HTMLElement {
   const n = h('b', {});
   // Made on first paint (after the wallet loads), so its first-time set-up is not part of opening a screen.
   let nf: Intl.NumberFormat | null = null;

@@ -2067,7 +2067,17 @@
   "fb.sending": "Sending…",
   "fb.thanks": "Thank you! Your feedback reached us.",
   "fb.later": "You are offline. Your message will be sent when you are back online.",
-  "fb.fail": "It could not be sent. Please try again."
+  "fb.fail": "It could not be sent. Please try again.",
+  "rv.new": "New for you",
+  "rv.shop": "The Light shop is open",
+  "rv.shopText": "Spend the Light you gathered on pieces for your character, your room and more.",
+  "rv.room": "Your room is ready",
+  "rv.roomText": "Your character has a room of its own. Decorate it with what you win and buy.",
+  "rv.wardrobe": "Your wardrobe is open",
+  "rv.wardrobeText": "Pieces you earn with streaks and seasons wait here for your character.",
+  "rv.open": "Take a look",
+  "rv.later": "Later",
+  "rv.soon": "Keep gathering Light. The shop opens on your third day."
  },
  "notifs": {
   "nt.title": "Notifications",

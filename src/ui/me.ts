@@ -63,6 +63,7 @@ import { openPicker } from './todayCard';
 import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
+import { markRevealed, newReveal, revealed } from '../data/reveal';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { smartReminder } from '../data/usualTime';
@@ -101,6 +102,27 @@ const easyOn = () => document.documentElement.classList.contains('easy');
 function setEasy(on: boolean) {
   document.documentElement.classList.toggle('easy', on);
   try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
+}
+
+/** "New for you": the shop, the room or the wardrobe on the day it first appears (src/data/reveal.ts). */
+function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
+  const k = newReveal();
+  if (!k) return '';
+  const done = () => { markRevealed(k); card.remove(); };
+  const go = () => {
+    done();
+    if (k === 'shop') void import('./shop').then((m) => m.openShop());
+    else if (k === 'room') location.hash = '#/me/room';
+    else dressUp('wardrobe');
+  };
+  const card = h('section', { class: 'me-card day-card rv-card' },
+    h('span', { class: 'day-card-n' }, fe('rv.new')),
+    h('b', {}, fe(`rv.${k}`)),
+    h('p', { class: 'muted small' }, fe(`rv.${k}Text`)),
+    h('div', { class: 'chips' },
+      h('button', { class: 'chip on', onclick: go }, fe('rv.open')),
+      h('button', { class: 'chip', onclick: done }, fe('rv.later'))));
+  return card;
 }
 
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
@@ -206,7 +228,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
     b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); paintRoom(); }, tab);
   });
-  void import('./wardrobeCard').then((m) => {
+  if (revealed('wardrobe')) void import('./wardrobeCard').then((m) => {
     const c = m.wardrobeCard(() => dressUp('wardrobe'));
     if (c) wardrobeSlot.replaceChildren(c);
   });
@@ -445,7 +467,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
       // A tap greets you, then goes into the room.
-      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); if (revealed('room')) setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       // Me kept alive between tab taps (main.ts): it greets you again each time you come back to it.
       root.addEventListener('screen-shown', () => setTimeout(() => { if (a.el.isConnected) (look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()); }, 250));
@@ -506,7 +528,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       first ? h('span', { class: 'me-flame-aura', 'aria-hidden': 'true' }) : '', flame(tier, 104, reduced), first ? '' : freezeBadge(s));
     hero.classList.toggle('first', first);
     hero.replaceChildren(
-      hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
+      hasFig() && revealed('room') ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
         flameBox,
         h('div', { class: 'me-top-txt' },
@@ -1396,7 +1418,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, revealCard(dressUp), storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
