@@ -45,6 +45,19 @@ insert into public.rank_feat_cheers (feat, user_id)
   from public.rank_feats f join public.rank_friends r on r.a = f.user_id or r.b = f.user_id
   where (f.id + hashtext(r.a::text || r.b::text)) % 3 = 0
   on conflict do nothing;
+-- News page (rank_feats_near): flags as phones pick them (one country much bigger than the rest, a tenth without one),
+-- about 10 people followed each, and three more milestones each over the last week.
+update public.rank_players set flag = (array['EG','EG','EG','EG','SA','SA','PK','ID','LB',null])[1 + abs(hashtext(user_id::text)) % 10];
+insert into public.rank_follows (follower, followee, at)
+  select pg_temp.uid(i), pg_temp.uid(((i + k * 101 - 1) % :n) + 1), now() - (k * 3) * interval '1 hour'
+  from generate_series(1, :n) i, generate_series(1, 10) k
+  where ((i + k * 101 - 1) % :n) + 1 <> i
+  on conflict do nothing;
+insert into public.rank_feats (user_id, kind, n, day, at)
+  select pg_temp.uid(i), (array['streak','level','juz'])[k], 3 + i % 40 + k, current_date - (i + k) % 7,
+    now() - ((i + k) % 7) * interval '1 day' - (i % 600) * interval '1 minute'
+  from generate_series(1, :n) i, generate_series(1, 3) k
+  on conflict do nothing;
 -- Pending friend asks and "reading now".
 insert into public.rank_friend_asks (from_id, to_id)
   select pg_temp.uid(i), pg_temp.uid(((i + 4999) % :n) + 1) from generate_series(1, :n, 7) i on conflict do nothing;

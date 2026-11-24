@@ -14,7 +14,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The app must never go live before the database changes it calls (2026-11-23: News was live 3.5 h before its
+  # migration). Every migration in supabase/migrations must already be applied on the live database, else stop here
+  # and run "Database rules" (supabase.yml) first. Reads supabase_migrations.schema_migrations through the Management
+  # API with SUPABASE_ACCESS_TOKEN; without the token it only warns.
+  migrations:
+    runs-on: ubuntu-latest
+    env:
+      SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: jposubjybzstfmnngews
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every migration is live
+        run: |
+          if [ -z "$SB_TOKEN" ]; then echo "::warning::No SUPABASE_ACCESS_TOKEN: migrations not checked."; exit 0; fi
+          live=$(curl -sf -X POST -H "Authorization: Bearer $SB_TOKEN" -H 'Content-Type: application/json' \
+            -d '{"query":"select version from supabase_migrations.schema_migrations"}' \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" | jq -r '.[].version') \
+            || { echo "::error::Could not read the live migrations."; exit 1; }
+          missing=$(ls supabase/migrations/*.sql | sed 's#.*/##' | cut -d_ -f1 | sort | comm -23 - <(echo "$live" | sort))
+          if [ -n "$missing" ]; then
+            echo "::error::Not on the live database yet: $(echo $missing). Run \"Database rules\" (supabase.yml) on main first."
+            exit 1
+          fi
+          echo "All $(ls supabase/migrations/*.sql | wc -l) migrations are live."
+
   build:
+    needs: migrations
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
