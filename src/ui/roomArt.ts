@@ -2,11 +2,13 @@
 // 320×200 coordinates (src/ui/room.ts): the window at x 26–102, the flame frame at 120–164, the shelves at
 // 190–306, the floor from y 146, the rug round x 130. `still` leaves out the small SVG animations.
 import type { Slot } from '../data/roomItems';
-import { circlePath, edge, mix, shine, starPath, two } from './flat';
+import { circlePath, mix, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
+import { alhambra, astrolabe, auroraView, cosmos, hilal, nurRug, nurTop } from './roomPremium';
 
 /** The part of the room each place takes, for the shop's tiles (x, y, w, h). */
 export const SLOT_BOX: Record<Slot, [number, number, number, number]> = {
-  plant: [-4, 96, 50, 96], side: [226, 108, 94, 86], rug: [36, 150, 188, 38], curtain: [8, 10, 112, 100], hang: [99, 0, 24, 44],
+  plant: [-4, 96, 50, 96], side: [226, 108, 94, 86], rug: [36, 150, 188, 38], curtain: [8, 10, 112, 100], hang: [92, 0, 38, 50],
   wall: [146, 12, 100, 138], floor: [60, 146, 140, 54], view: [26, 26, 76, 78], seat: [34, 118, 70, 76], pet: [188, 146, 46, 46],
 };
 /** Living pieces read the day (round 5): the sprout grows with the streak. */
@@ -76,6 +78,7 @@ const steam = (x: number, y: number, night: boolean, still: boolean, n = 2) => s
   + `<animate attributeName="opacity" values="0;.6;0" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="0 3;0 -5" dur="3.6s" begin="${i * 1.8}s" repeatCount="indefinite"/></path>`).join('');
 
 function side(id: string, night: boolean, still: boolean): string {
+  if (id === 'astrolabe') return astrolabe(night);
   if (id === 'kursi') return kursi(night);
   if (id === 'lanterns') return lanterns(night, still);
   if (id === 'fountain') {
@@ -163,6 +166,7 @@ function side(id: string, night: boolean, still: boolean): string {
 
 /** The rug: the default or a bought one (shape always the same, so the character's place stays). */
 export function rugArt(id: string | undefined, night: boolean): string {
+  if (id === 'nur') return nurRug(night);
   const shape = 'M40 168Q130 150 220 168Q130 192 40 168Z', inner = 'M66 168Q130 156 194 168Q130 184 66 168Z';
   const glow = night ? '<ellipse cx="128" cy="166" rx="80" ry="34" fill="url(#rmglow)"/>' : '';
   const P: Record<string, [string, string, string, string]> = {
@@ -191,6 +195,7 @@ export function rugArt(id: string | undefined, night: boolean): string {
 /** The rug seen from above, for the shop's tiles (viewBox 0 0 100 100): the whole design, border, field and medallion,
  *  with its fringe, laid a little turned on the floor. */
 export function rugTop(id: string | undefined): string {
+  if (id === 'nur') return nurTop();
   const P: Record<string, [string, string, string, string, string]> = {
     // field, field shade, border, trim, accent
     kilim: ['#e9c48a', '#d4a866', '#8a5232', '#b23d55', '#5a3a8a'], prayer: ['#2f8a5a', '#1f6b45', '#13442c', '#f3d27a', '#c0473a'],
@@ -267,6 +272,7 @@ function curtain(id: string): string {
 }
 
 function hang(id: string, night: boolean, still: boolean): string {
+  if (id === 'hilal') return hilal(night);
   if (id === 'qandil') return qandil(night, still);
   if (id === 'chandelier') {
     // Legendary (2026-11-12): a gold chandelier of two rings, its small lamps lit, crystal drops below.
@@ -421,6 +427,8 @@ export function seasonArt(season: string | null, night: boolean, still: boolean)
 /** The wall (round 5): wood panels below a rail, a zellige dado, or plaster arches in relief. The window, frame and
  *  shelves are drawn over it. */
 export function wallArt(id: string | undefined, night: boolean): string {
+  if (id === 'alhambra') return alhambra(night);
+  if (id === 'cosmos') return cosmos(night);
   const wall = night ? '#3b3466' : '#f3e2c7', wallSh = night ? '#2e2852' : '#e6cfac';
   if (id === 'panels') {
     // Cedar panels under a brass rail, each with a carved star and a bevelled inner frame.
@@ -499,6 +507,7 @@ export function floorArt(id: string | undefined, night: boolean): string {
 /** The view from the window (round 5), inside the glass: desert dunes, the sea, mountains, an old city of domes. */
 export function viewArt(id: string | undefined, sky: string): string {
   if (!id) return '';
+  if (id === 'aurora') return auroraView();
   const night = sky === 'night', dim = (c: string) => (night ? mix(c, -0.55) : sky === 'dusk' || sky === 'dawn' ? mix(c, -0.12) : c);
   let g = '';
   if (id === 'desert') g = `<path d="M30 84Q50 74 70 82Q86 76 100 80V104H30Z" fill="${dim('#f0c27a')}"/><path d="M30 92Q56 82 80 92Q92 88 100 90V104H30Z" fill="${dim('#e0a85a')}"/>`

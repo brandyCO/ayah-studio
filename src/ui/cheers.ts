@@ -5,7 +5,8 @@
 import type { Actor } from './actor';
 import { myCheers, sendCheer, type Challenge, type Cheer } from '../together/ranks';
 import { rt, type RankKey } from '../i18n/ranks';
-import { edge, starPath, two } from './flat';
+import { starPath } from './flat';
+import { edge, two } from './roomHQ';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 

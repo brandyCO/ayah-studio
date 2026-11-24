@@ -6,6 +6,7 @@
 // back to its resting shape, "day streak" comes in, and this week's row fills today's day. All one canvas, flat solid
 // shapes drawn every frame from a few numbers (width, height, lean, squash), so the shapes morph into one another.
 // Theme colours (rewardPalette), sound and vibration (sfx). Reduced motion → the end picture, still.
+import { flare } from './flare';
 import { t, type Key } from '../i18n';
 import { h } from './dom';
 import { holdPage } from './juice';
@@ -132,7 +133,7 @@ export function streakMoment(days: number, week: WeekDay[], today: string, face 
         fling(0, -6, 14, 420, true);
         roll.animate([{ scale: 1 }, { scale: 1.18, offset: 0.35 }, { scale: 0.96, offset: 0.7 }, { scale: 1 }], { duration: 520, easing: 'ease-out' });
       } },
-      { at: B.shoot, run: (s) => { if (!s) sfx.ignite(1); } },
+      { at: B.shoot, run: (s) => { if (!s) { sfx.ignite(1); const st = cv.parentElement as HTMLElement; flare(st, days >= 30 || isMilestone(days) ? 3 : days >= 7 ? 2 : 1, { y: st.clientHeight * 0.62, under: true, hold: 0 }); } } },
       { at: B.label, run: () => el.classList.add('labelled') },
       { at: B.week, run: () => el.classList.add('weeked') },
       { at: B.fill, run: (s) => { el.classList.add('filled'); pips.find((p) => p.classList.contains('sx-now'))?.querySelector('.sx-c')?.append(dayMark('lit', !s)); if (!s) sfx.pop(3); } },

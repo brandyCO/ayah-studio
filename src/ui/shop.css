@@ -251,3 +251,12 @@ html:not(.lite) .sh-page:not(.still) .sh-spark, html:not(.lite) .sh-sheet .sh-sp
 .sh-try { display: inline-flex; gap: 4px; margin: 4px auto 6px; padding: 4px; border-radius: 99px; background: rgba(0, 0, 0, .08); }
 .sh-try-b { min-height: 36px; padding: 0 16px; border: 0; border-radius: 99px; background: none; font: 800 14px/1 var(--ui-round, system-ui); color: inherit; cursor: pointer; }
 .sh-try-b.on { background: var(--card, #fff); box-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+/* Profile effects: a little profile card with the effect laid over it (src/ui/deco/effects.ts). */
+.sh-fx { position: relative; display: block; overflow: hidden; border-radius: 8px; background: linear-gradient(#2a2148, #17122a); box-shadow: 0 2px 8px #0006; }
+.sh-fx.big { border-radius: 18px; margin: 0 auto; }
+.sh-fx-ban { position: absolute; inset: 0 0 auto; height: 30%; background: linear-gradient(135deg, #3a2a6a, #1f4a5a); }
+.sh-fx-av { position: absolute; left: 8%; top: 14%; line-height: 0; }
+.sh-fx-name { position: absolute; left: 8%; top: 50%; color: #f3eefc; font-size: 15px; }
+.sh-fx-ln { position: absolute; left: 8%; right: 10%; top: 62%; height: 6%; max-height: 8px; border-radius: 9px; background: #ffffff14; }
+.sh-fx-ln.short { top: 72%; right: 40%; }
+.sh-fx > .dk-fx { position: absolute; inset: 0; }

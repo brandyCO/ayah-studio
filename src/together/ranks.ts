@@ -42,7 +42,7 @@ export const LEAGUE = { size: 15, up: 3, down: 3, downFrom: 8 };
 export const POINTS = { page: 10, minute: 2, surah: 30, reel: 15, lesson: 15, flawless: 10, day: 20 };
 
 /** A player on a board. A private player shows no name or avatar (name null). */
-export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; blocked?: boolean; figure?: string | null; room?: string | null; flag?: string | null }
+export interface Row { name: string | null; score: number; me: boolean; lamp?: number; pid?: string | null; xp?: number | null; tier?: number; move?: number; avatar?: number | null; frame?: number; private?: boolean; blocked?: boolean; figure?: string | null; room?: string | null; flag?: string | null; fx?: number }
 export type Metric = 'all' | 'pages' | 'listen' | 'surahs' | 'reels';
 export const METRICS: Metric[] = ['all', 'pages', 'listen', 'surahs', 'reels'];
 /** This week's quest, the same for everyone (server: rank_quest). */
@@ -388,6 +388,17 @@ export const boardGoal = (id: string, fresh = false) => cached(`goal:${id}`, () 
 export async function setBoardGoal(id: string, pages: number | null) {
   await rpc('rank_set_board_goal', { board: id, pages });
   dropCache();
+}
+/** The profile effect worn (src/ui/deco/effects.ts; 0 = none), shown to others on the profile page. */
+export async function setEffect(fx: number) {
+  await rpc('rank_set_effect', { e: fx });
+  try { localStorage.setItem('myFx', JSON.stringify({ who: account()?.id, fx })); } catch { /* ignore */ }
+  dropCache();
+  window.dispatchEvent(new Event('my-look'));
+}
+/** The effect this device last set for the signed-in player (the profile and the shop show it before the server answers). */
+export function myEffect(): number {
+  try { const v = JSON.parse(localStorage.getItem('myFx') ?? 'null'); return v && v.who === account()?.id ? Number(v.fx) || 0 : 0; } catch { return 0; }
 }
 /** Avatar (0–23, drawn in the app; no photos) and private mode. */
 export async function setLook(avatar: number, priv: boolean, frame = 0) {

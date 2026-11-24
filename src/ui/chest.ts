@@ -9,7 +9,8 @@
 // lifts a crack with light behind it, heavier chests shake harder and more slowly), open (claimed:
 // lid up, quiet). The amount inside is always shown: never a random prize.
 import { h } from './dom';
-import { circlePath, edge, shine, starPath, two } from './flat';
+import { circlePath, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
 import { rewardPalette } from './theme';
 import './chest.css';
 

@@ -10,13 +10,15 @@ import { sht, type ShopKey } from '../i18n/shop';
 import { nwt } from '../i18n/news';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
-import { lang, t, timeLeft } from '../i18n';
+import { lang, t, timeLeft, tr as tr2 } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 import { reduced, popIn, squash, tick } from './juice';
 import { star } from './lightChip';
 import { freezeArt } from './flat';
 import { avatar, lookName } from './rankAvatars';
+import { PREMIUM } from './deco/frames';
+import { FX, effectLayer } from './deco/effects';
 import { DEFAULT, PIECES, bustMarkup, PRICE, PRIZE, WARDROBE, encode, figureSvg, options, parse, weekPiece, wearing, type Fig, type How, type Slot as FigSlot } from './figure';
 import { ROOM_ITEMS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem } from '../data/roomItems';
 import { tileArt } from './roomShop';
@@ -36,7 +38,7 @@ import { actor, myFigureCode } from './actor';
 import type { Status } from '../together/ranks';
 
 type Rar = 'common' | 'cute' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'prize';
-type Sec = 'power' | 'char' | 'room' | 'look' | 'won' | 'season' | 'icons';
+type Sec = 'power' | 'char' | 'room' | 'look' | 'fx' | 'won' | 'season' | 'icons';
 type State = 'own' | 'buy' | 'locked';
 interface Ware {
   id: string; sec: Sec; name: string; rar: Rar; price?: number; for: ShopKey;
@@ -165,7 +167,7 @@ const roomBig = (it: RoomItem) => () => {
 };
 /** The user's room as it is now. */
 const roomBare = () => svgBox(backSvg(skyNow(), Math.max(streak().best, streak().days), false, roomLook(), seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
-const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
+const partRar = (p: number): Rar => (p >= 3000 ? 'mythic' : p >= 1500 ? 'legendary' : p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
 const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary', friday: 'mythic' };
 
 export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void; /** Choosing a piece to give a friend. */ giftTo?: { pid: string; name: string } }
@@ -231,7 +233,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34), h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
     for (const it of ITEMS) {
-      if (it.kind === 'icon') continue;
+      if (it.kind === 'icon' || it.kind === 'effect') continue;
       const name = lookName(it.kind as 'avatar' | 'frame', it.ref as number, lang() === 'ar')
         ?? (it.kind === 'avatar' ? rt('rk.avatarN', { n: (it.ref as number) + 1 }) : rt('rk.frameN', { n: it.ref as number }));
       if (it.limited) {
@@ -242,7 +244,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           when: () => { if (shopHas(it.id)) return ''; const n = limitedIn(it.id, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); },
           doBuy: () => buy(it, week()), use: lookUse(it) });
       } else if (it.price) {
-        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
+        out.push({ id: it.id, sec: 'look', name, rar: (it.kind === 'frame' && PREMIUM[it.ref as number]?.r) || (it.price >= 3000 ? 'mythic' : it.price >= 2000 ? 'legendary' : it.price >= 400 ? 'epic' : 'rare'), price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
           state: () => (owns(it.kind as 'avatar' | 'frame', it.ref as number, wins()) ? 'own' : 'buy'), doBuy: () => buy(it), use: lookUse(it) });
       } else if (it.win) {
         const w = it.win;
@@ -253,6 +255,23 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
             : w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
           use: lookUse(it) });
       }
+    }
+    // Profile effects: a little profile card with the effect over it; large, the user's own card with it playing.
+    const fxCard = (n: number, w: number, live: boolean, named: boolean) => {
+      const av = avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), Math.round(w * .44), status?.frame ?? 0, status?.figure ?? myFigureCode());
+      return h('span', { class: `sh-fx${named ? ' big' : ''}`, style: `width:${w}px;height:${Math.round((w * 400) / 240)}px` },
+        h('span', { class: 'sh-fx-ban' }), h('span', { class: 'sh-fx-av' }, av),
+        named ? h('b', { class: 'sh-fx-name' }, status?.name || sht('sh.you')) : '', h('i', { class: 'sh-fx-ln' }), h('i', { class: 'sh-fx-ln short' }),
+        effectLayer(n, w, live) ?? '');
+    };
+    for (const it of ITEMS) {
+      if (it.kind !== 'effect') continue;
+      const n = it.ref as number, x = FX[n];
+      if (!x || !it.price) continue;
+      out.push({ id: it.id, sec: 'fx', name: lang() === 'ar' ? x.ar : tr2('extra', `fx.${n}`) ?? x.en, rar: x.r, price: it.price, for: 'sh.forProfile', store: it.id,
+        art: () => fxCard(n, 50, false, false), big: () => h('span', { class: 'sh-big look' }, fxCard(n, 168, !reduced(), true)), why: 'sh.why.fx',
+        state: () => (shopHas(it.id) ? 'own' : 'buy'), doBuy: () => buy(it),
+        use: { label: 'sh.use', done: 'sh.inUse', active: () => myFx() === n, run: () => useFx(n) } });
     }
     // The champion's outfit, the weekly prize pieces, streak and season pieces: earned, never sold.
     const best = () => Math.max(streak().best, streak().days);
@@ -274,7 +293,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       });
     }
     // Today's stall (owner request 2026-11-12): three pieces a day at 30 % off, the same for everyone that day.
-    const pool = out.filter((w) => w.store && w.price && !w.lim && (w.sec === 'char' || w.sec === 'room' || w.sec === 'look'));
+    const pool = out.filter((w) => w.store && w.price && !w.lim && (w.sec === 'char' || w.sec === 'room' || w.sec === 'look' || w.sec === 'fx'));
     for (const w of stallPick(pool)) {
       const p = Math.round((w.price! * 0.7) / 5) * 5, id = w.store!, after = w.sec === 'room' ? ROOM_ITEMS.find((r) => `rm:${r.id}` === id) : null;
       w.was = w.price; w.price = p;
@@ -314,6 +333,15 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       await setLook(status.avatar, status.private, it.ref as number);
       status.frame = it.ref as number;
     }
+  }
+  let fxNow = 0;
+  const myFx = () => fxNow;
+  void import('../together/ranks').then((m) => { fxNow = m.myEffect(); });
+  async function useFx(n: number) {
+    if (!status) { toast(sht('sh.signIn')); return; }
+    const { setEffect } = await import('../together/ranks');
+    await setEffect(n);
+    fxNow = n;
   }
   async function useIcon(id: AppIconId) {
     try { localStorage.setItem('appIconPick', id); } catch { /* ignore */ }
@@ -374,7 +402,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     counter.replaceChildren(h('span', { class: 'sh-noor' }));
   };
 
-  const CATS: (Sec | 'featured')[] = ['featured', 'power', 'char', 'room', 'look', 'won', 'season', 'icons'];
+  const CATS: (Sec | 'featured')[] = ['featured', 'power', 'char', 'room', 'look', 'fx', 'won', 'season', 'icons'];
   const catKey = (c: Sec | 'featured') => `sh.c.${c}` as ShopKey;
   const sections = new Map<string, HTMLElement>();
   let all: Ware[] = [];
@@ -465,6 +493,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       section('char', 'sh.charSub', by('char').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('room', 'sh.roomSub', by('room').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('look', 'sh.lookSub', by('look')),
+      section('fx', 'sh.fxSub', by('fx').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('won', 'sh.wonSub', won),
       section('season', 'sh.seasonSub', season),
       section('icons', 'sh.iconsSub', by('icons')),

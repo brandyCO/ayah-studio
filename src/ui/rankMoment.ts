@@ -7,7 +7,9 @@
 //            glides up past theirs, which step down, and the next one to catch is named.
 // Calm: no sound, a light vibration on the beats. Reduced motion: the still end picture.
 import { actor } from './actor';
-import { circlePath, edge, mix, raisedLine, shine, starPath, two } from './flat';
+import { circlePath, mix, raisedLine, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
+import { flare } from './flare';
 import { rt, type RankKey } from '../i18n/ranks';
 import { tierOf, type RankMoments, type Row, type Status } from '../together/ranks';
 import { h } from './dom';
@@ -133,6 +135,7 @@ function frame(kind: string, label: string, stage: HTMLElement, text: HTMLElemen
         const b = stage.getBoundingClientRect();
         const cr = canvas.getBoundingClientRect();
         fx?.burst(b.left + b.width / 2 - cr.left, b.top + b.height / 2 - cr.top + dy, n, p);
+        flare(stage, n >= 70 ? 3 : n >= 40 ? 2 : 1, { y: stage.clientHeight / 2 + dy, under: true, hold: n >= 70 ? 0 : 2600 });
       },
     });
   });

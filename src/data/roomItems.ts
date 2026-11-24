@@ -71,6 +71,14 @@ export const ROOM_ITEMS: RoomItem[] = [
   { id: 'tabby', slot: 'pet', r: 'rare', price: 200 },
   { id: 'snow', slot: 'pet', r: 'epic', price: 280 },
   { id: 'ink', slot: 'pet', r: 'epic', price: 280 },
+  // Item restyle (owner request 2026-11-24, "new mythics and legendary ones for each type of item"): always in the shop.
+  // Legendary (1800) and mythic (3500; the shop shows a legendary piece at 2000 or more as mythic).
+  { id: 'astrolabe', slot: 'side', r: 'legendary', price: 1800 },
+  { id: 'hilal', slot: 'hang', r: 'legendary', price: 1800 },
+  { id: 'alhambra', slot: 'wall', r: 'legendary', price: 1800 },
+  { id: 'cosmos', slot: 'wall', r: 'legendary', price: 3500 },
+  { id: 'aurora', slot: 'view', r: 'legendary', price: 3500 },
+  { id: 'nur', slot: 'rug', r: 'legendary', price: 3500 },
 ];
 export const roomItem = (id: string) => ROOM_ITEMS.find((i) => i.id === id) ?? null;
 
