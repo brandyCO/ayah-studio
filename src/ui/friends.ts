@@ -99,6 +99,9 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const close = () => { if (pushed) history.back(); else d.close(); };
   back.onclick = close;
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+  // The bar over the banner turns solid (with the name) once the banner has scrolled away.
+  const body = d.querySelector<HTMLElement>('.fr-page-body')!;
+  body.addEventListener('scroll', () => d.classList.toggle('scrolled', body.scrollTop > 110), { passive: true });
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 

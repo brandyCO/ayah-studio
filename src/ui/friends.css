@@ -243,3 +243,7 @@ dialog.fr-page.fr-dc { --fg: #fff; --muted: rgba(255, 255, 255, .68); --card: rg
 .fr-dc .fr-stat b { font-size: 17px; }
 .fr-dc .fr-stat { padding: 8px 6px; }
 .fr-dc .rk-tier { color: color-mix(in srgb, var(--tc, #6c5ce7) 55%, #fff); font-weight: 900; }
+.fr-dc .fr-page-top { transition: background-color .2s; }
+.fr-dc.scrolled .fr-page-top { background: color-mix(in srgb, var(--tc, #6c5ce7) 22%, #0f0a1f); text-shadow: none; }
+.fr-dc.scrolled .fr-page-top h2 { opacity: 1; transition: opacity .2s; }
+.fr-dc.scrolled .fr-page-top .icon-btn { background: transparent; }
