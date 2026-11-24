@@ -2,6 +2,7 @@
 // level; the top 3 move up a tier, the bottom 3 down), the global board (this week / all time), and
 // boards of your own with an invite link (#/rb/{code}). Scores come from the server only
 // (src/together/ranks.ts). Signed out: what Ranks is and a Google sign-in.
+import { busyNow } from '../quiet';
 import { flagImg } from './flag';
 import { account, onAccount } from '../cloud/auth';
 import { icon } from './icons';
@@ -1165,7 +1166,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   const poll = async () => {
     if (stopped) return;
     // A kept tab (hidden while another tab shows, main.ts) asks nothing until it is shown again.
-    if (!document.hidden && !root.classList.contains('screen-kept') && account() && !document.querySelector('dialog[open], .cel')) {
+    if (!document.hidden && !root.classList.contains('screen-kept') && account() && !busyNow()) {
       try {
         await report();
         // The league view first asks for one small fingerprint (rank_pulse) and loads the league and status only when

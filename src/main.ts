@@ -14,6 +14,7 @@
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
+import { busyNow, whenQuiet } from './quiet';
 import './styles.css';
 import { closeSheetsOnRoute } from './ui/backCloses';
 import { h, skeleton, studioShell, sweepListeners } from './ui/dom';
@@ -81,17 +82,8 @@ async function prebuild(key: 'me' | 'learn' | 'ranks') {
     if (busyNow()) whenQuiet(warm, 300); else warm();
   } catch (e) { console.warn('prebuild', key, e); screen.remove(); }
 }
-// Background work waits for a quiet moment (Marwan 2026-11-24, Tecno: the first screen, the onboarding and the gift
-// calendar lagged): building Me, Learn and Ranks ahead took the phone's main thread for 100–300 ms at a time, and on a
-// slow phone that landed exactly while a sheet popped in or closed, or under the finger. Nothing is built while a
-// dialog or a moment is on screen, or within 1.5 s of a touch; it carries on once the person is just looking.
-let lastInput = 0;
-for (const ev of ['pointerdown', 'keydown', 'wheel'] as const) addEventListener(ev, () => { lastInput = performance.now(); }, { capture: true, passive: true });
-const busyNow = () => performance.now() - lastInput < 1500 || !!document.querySelector('dialog[open], .cel, .ul');
-function whenQuiet(fn: () => void, ms: number) {
-  const tryIt = () => (busyNow() ? setTimeout(tryIt, 1500) : fn());
-  setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(tryIt, { timeout: 4000 }) : tryIt()), ms);
-}
+// Background work waits for a quiet moment (src/quiet.ts): nothing is built while a dialog or a moment is on screen,
+// or within 1.5 s of a touch.
 function prebuildTabs() {
   whenQuiet(() => void prebuild('me').then(() => whenQuiet(() => void prebuild('learn').then(() => whenQuiet(() => void prebuild('ranks'), 1500)), 1500)), 2500);
 }

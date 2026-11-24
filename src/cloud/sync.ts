@@ -8,6 +8,7 @@
 // newest edit wins). Everything else kept on the device follows too (cloud/kv.ts: one document per stored key,
 // merged so that neither device loses anything). Thumbnails, own media, voice recordings, downloads, caches
 // and the Kids space never leave the device.
+import { whenQuiet } from '../quiet';
 import { clearOtherJourneys } from '../data/journey';
 import { account, onAccount } from './auth';
 import { supabase } from './supabase';
@@ -236,7 +237,8 @@ const soon = (ms = 4000) => {
   if (!account()) return;
   clearTimeout(timer);
   pending = true;
-  timer = window.setTimeout(() => { pending = false; void syncNow(); }, Math.max(ms, backoff()));
+  // Its merging waits for a quiet moment (no sheet popping in, no finger on the screen), at most 10 s more.
+  timer = window.setTimeout(() => whenQuiet(() => { if (!pending) return; pending = false; void syncNow(); }, 0, 10_000), Math.max(ms, backoff()));
 };
 /** Leaving the app: send what is waiting now. A hidden app's timers stop (Android), so a streak lit or
  *  a reward claimed just before leaving would otherwise reach the other devices only at the next open.
