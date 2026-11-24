@@ -3625,6 +3625,7 @@
   "sh.c.char": "Character",
   "sh.c.room": "Room",
   "sh.c.look": "Avatars & frames",
+  "sh.c.fx": "Profile effects",
   "sh.c.won": "Only to win",
   "sh.c.season": "Seasonal",
   "sh.c.icons": "App icons",
@@ -3667,6 +3668,9 @@
   "sh.charSub": "Parts for your character, worn on the boards, in your room and in every moment.",
   "sh.roomSub": "One piece in each place of your room.",
   "sh.lookSub": "Shown beside your name on the boards.",
+  "sh.fxSub": "They play over your profile when someone opens it.",
+  "sh.forProfile": "On your profile",
+  "sh.why.fx": "Everyone who opens your profile sees it play around you.",
   "sh.wonSub": "Never sold. Earned by streaks, badges and weeks in Ranks.",
   "sh.iconsSub": "Wear one on your home screen instead of the theme icon.",
   "sh.owned": "Owned",
@@ -4128,6 +4132,18 @@
   "sm.111": "The Palm Fibre",
   "sm.112": "Sincerity",
   "sm.113": "The Dawn",
-  "sm.114": "Mankind"
+  "sm.114": "Mankind",
+  "fx.1": "Rising light",
+  "fx.2": "Gold dust",
+  "fx.3": "Jasmine fall",
+  "fx.4": "Rain of mercy",
+  "fx.5": "Rising lanterns",
+  "fx.6": "Starfall",
+  "fx.7": "Golden lattice",
+  "fx.8": "Aurora veil",
+  "fx.9": "Rose garden",
+  "fx.10": "Night of Qadr",
+  "fx.11": "Lantern festival",
+  "fx.12": "Celestial orbit"
  }
 }

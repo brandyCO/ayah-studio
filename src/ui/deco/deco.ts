@@ -24,16 +24,16 @@ export function decorated(avatar: HTMLElement, frame: number, tier: number, size
 }
 
 /** An item drawn on its own (shop card, room, profile effect): pieces in a w × h box shown at `width` px. */
-export function stage(pieces: Piece[], key: string, width: number, w = 240, h = 240, live = false): HTMLElement {
+export function stage(pieces: Piece[], key: string, width: number, w = 240, h = 240, live = false, only?: Piece['z']): HTMLElement {
   const box = document.createElement('span');
   box.className = `dk${live ? ' live' : ''}`;
   box.style.width = `${width}px`;
   box.style.height = `${(width * h) / w}px`;
-  layPieces(box, pieces, key, w, h);
+  layPieces(box, pieces, key, w, h, undefined, only);
   return box;
 }
 
-function layPieces(box: HTMLElement, pieces: Piece[], key: string, W: number, H: number, avatar?: HTMLElement) {
+function layPieces(box: HTMLElement, pieces: Piece[], key: string, W: number, H: number, avatar?: HTMLElement, only?: Piece['z']) {
   const px = (n: number) => `${((n / W) * 100).toFixed(3)}%`, py = (n: number) => `${((n / H) * 100).toFixed(3)}%`;
   const add = (p: Piece, i: number) => {
     const [x, y, w, h] = p.box ?? [0, 0, W, H];
@@ -49,12 +49,12 @@ function layPieces(box: HTMLElement, pieces: Piece[], key: string, W: number, H:
     }
     box.append(img);
   };
-  pieces.forEach((p, i) => { if (p.z === 'back') add(p, i); });
+  if (only !== 'front') pieces.forEach((p, i) => { if (p.z === 'back') add(p, i); });
   if (avatar) {
     const av = document.createElement('span');
     av.className = 'dk-av';
     av.append(avatar);
     box.append(av);
   }
-  pieces.forEach((p, i) => { if (p.z === 'front') add(p, i); });
+  if (only !== 'back') pieces.forEach((p, i) => { if (p.z === 'front') add(p, i); });
 }

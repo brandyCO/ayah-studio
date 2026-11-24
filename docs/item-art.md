@@ -21,7 +21,7 @@ night, Fanous festival, Laylat al-Qadr). Our own Islamic style, never copied art
 ## Light build (60 fps on very slow phones, Marwan's Tecno 20 Pro)
 1. Every piece is one SVG picture drawn **once** (data URL `<img>`); blur filters cost only that first draw.
 2. Movement is CSS **transform / opacity only** (`deco.css` keyframes), never SVG animation, never per-frame JS.
-3. Loops are 2 s or 4 s (or a full turn for rotations) so they repeat without a jump.
+3. Loops are 2 s, 4 s or 8 s (8 s only for slow rising or falling things that fade in and out; a full turn for rotations), so they repeat without a jump.
 4. Animate only where one avatar is big: Me, an open profile, the shop preview (`live`). Lists, Ranks rows,
    old-phone mode (`html.lite`) and reduced motion show the still.
 5. Full-frame video (WebP / MP4) only for one-off moments (chest and gift openings), never for items worn everywhere.

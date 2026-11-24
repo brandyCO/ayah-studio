@@ -11,7 +11,7 @@ import {
   SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, featsNear, type NearFeat, type FriendFeat, type Feat, type Feats, type Challenge, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy, followPlayer, unfollowPlayer, followList, dropFollower, myFlag, setFlag, myFollows, newFollowers, markFollowersSeen, type Follower, type Follows,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
-  profileAt, keptSince,
+  profileAt, keptSince, myEffect,
 } from '../together/ranks';
 import { updatedNote } from './updatedAgo';
 import { isOffline } from '../together/outbox';
@@ -66,7 +66,7 @@ const streakLine = (f: { streak: number; meToday: boolean; themToday: boolean },
 function fromRow(row: Row): Profile {
   const fr = friendsNow()?.friends.find((f) => f.pid === row.pid);
   return { name: row.name, pid: row.pid, figure: row.figure, avatar: row.avatar, frame: row.frame ?? 0, tier: row.tier, xp: row.xp, private: row.private,
-    room: row.room, me: row.me, relation: row.me ? 'me' : fr ? 'friend' : 'none', show: 0, bestTier: row.tier ?? 0,
+    room: row.room, fx: row.fx, me: row.me, relation: row.me ? 'me' : fr ? 'friend' : 'none', show: 0, bestTier: row.tier ?? 0,
     friend: fr ? { streak: fr.streak, meToday: fr.meToday, themToday: fr.themToday } : undefined };
 }
 let friendsKept: Friends | null = null;
@@ -88,7 +88,20 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const info = h('div', { class: 'fr-info' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
   const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info));
+  // Their profile effect (src/ui/deco/effects.ts) plays over the top of the page, like Discord's; it never takes a tap.
+  const fxBox = h('div', { class: 'fr-fx', 'aria-hidden': 'true' });
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info), fxBox);
+  let fxShown = 0;
+  const showFx = (n: number) => {
+    if (n === fxShown) return;
+    fxShown = n;
+    if (!n) { fxBox.replaceChildren(); return; }
+    void import('./deco/effects').then((m) => {
+      if (fxShown !== n || !d.isConnected) return;
+      const w = Math.min(520, d.clientWidth || innerWidth);
+      fxBox.replaceChildren(m.effectLayer(n, w, true) ?? '');
+    }).catch(() => {});
+  };
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
@@ -107,6 +120,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     if (prof?.blocked) {
       // Blocked: nothing of theirs shows, only the way back.
       pairSig = '';
+      showFx(0);
       title.textContent = ft('fr.blockedName');
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true, figure: null }));
       info.replaceChildren(h('p', { class: 'muted' }, ft('fr.blocked')),
@@ -119,6 +133,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       return;
     }
     const p = prof;
+    showFx(p.private ? 0 : p.relation === 'me' ? myEffect() || (p.fx ?? 0) : p.fx ?? 0);
     const name = p.name ?? rt('rk.private');
     const f = p.friend;
     const mineP = p.relation === 'me';

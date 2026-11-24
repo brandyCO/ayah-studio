@@ -174,3 +174,6 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-follow-xp { font-weight: 800; color: #6c5ce7; font-size: .9rem; white-space: nowrap; }
 .fr-new-followers .fr-follow-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: start; color: inherit; }
 .fr-tab > .updated-ago { align-self: flex-end; }
+/* A profile effect over the top of the page (src/ui/deco/effects.ts): it never takes a tap. */
+.fr-fx { position: absolute; top: 0; left: 50%; translate: -50% 0; z-index: 2; pointer-events: none; line-height: 0; }
+.fr-fx .dk-fx { display: block; }

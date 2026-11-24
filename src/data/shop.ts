@@ -9,11 +9,13 @@ export const FREEZE_PRICE = 250;
 export const FREEZE_MAX = 3;
 /** What can only be won, and how. */
 export type Win = 'sun' | 'p1' | 'p2' | 'p3' | 'w1' | 'w3' | 'w5' | 'w10' | 'week' | 'friday';
-export interface Item { id: string; kind: 'avatar' | 'frame' | 'icon'; ref: number | string; price?: number; win?: Win; limited?: boolean }
+export interface Item { id: string; kind: 'avatar' | 'frame' | 'icon' | 'effect'; ref: number | string; price?: number; win?: Win; limited?: boolean }
 /** What the player has won so far (from rank_status). */
 export interface Wins { bestTier: number; bestPlace: number | null; wins: number; items?: string[] }
 
 const LIMITED_PRICES = [600, 700, 800, 900, 1200, 1500];
+/** Profile effects 1–12 (src/ui/deco/effects.ts FX has the same prices). */
+export const FX_PRICES = [300, 500, 600, 900, 1000, 1200, 2000, 2200, 2400, 3500, 3500, 3500];
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 export const ITEMS: Item[] = [
   ...range(24, 31).map((n): Item => ({ id: `av:${n}`, kind: 'avatar', ref: n, price: 150 })),
@@ -38,6 +40,9 @@ export const ITEMS: Item[] = [
   // highest Light prices. Rarity: src/ui/deco/frames.ts PREMIUM.
   ...[29, 30, 31, 35, 36, 37].map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, price: 2000 })),
   ...[26, 27, 28, 32, 33, 34].map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, price: 3500 })),
+  // Profile effects (owner request 2026-11-24, item restyle batch 2): a scene over the profile card, common to mythic.
+  // Rarity and names: src/ui/deco/effects.ts FX.
+  ...FX_PRICES.map((p, i): Item => ({ id: `fx:${i + 1}`, kind: 'effect', ref: i + 1, price: p })),
   // App icons join here (bought or won) once their designs are in the app.
 ];
 

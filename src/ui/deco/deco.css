@@ -18,6 +18,12 @@
 .dk.live > img[data-a="burst"] { animation-name: dk-burst; animation-duration: 2s; animation-timing-function: ease-out; }
 .dk.live > img[data-a="orbitRev"] { animation-name: dk-orbit-rev; animation-duration: 16s; animation-timing-function: linear; }
 .dk.live > img[data-a="shoot"] { animation-name: dk-shoot; animation-duration: 4s; animation-timing-function: ease-in; }
+.dk.live > img[data-a="rain"] { animation-name: dk-rain; animation-duration: 2s; animation-timing-function: linear; }
+@keyframes dk-rain { 0% { transform: translate(0, 0); opacity: 0 } 10%, 80% { opacity: .9 } 100% { transform: translate(-40%, 1150%); opacity: 0 } }
+.dk.live > img[data-a="float"] { animation-name: dk-float; animation-duration: 8s; animation-timing-function: linear; }
+@keyframes dk-float { 0% { transform: translateY(0); opacity: 0 } 10%, 80% { opacity: 1 } 100% { transform: translateY(-380%); opacity: 0 } }
+/* A profile effect over a profile card: never takes a tap. */
+.dk.dk-fx { pointer-events: none; }
 @keyframes dk-shoot { 0%, 70% { transform: translate(0, 0); opacity: 0 } 74% { opacity: 1 } 90% { opacity: 1 } 100% { transform: translate(-260%, 70%); opacity: 0 } }
 @keyframes dk-rise { 0% { transform: translateY(0); opacity: 0 } 15%, 75% { opacity: 1 } 100% { transform: translateY(-1100%); opacity: 0 } }
 @keyframes dk-burst { 0% { transform: scale(.15); opacity: 0 } 12% { opacity: 1 } 60% { transform: scale(1); opacity: .95 } 100% { transform: scale(1.12); opacity: 0 } }

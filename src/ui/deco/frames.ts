@@ -5,7 +5,7 @@ import { HQ_DEFS, hqPieces } from './hq';
 import { hqFrame } from './hqframes';
 import { DEFS, OL, at, cloud, f, fanous, flower5, gem, khatam, leaf, ring, rose, sparkleD, star } from './art';
 
-export type Anim = 'tw' | 'sway' | 'pulse' | 'orbit' | 'orbitSlow' | 'bob' | 'drift' | 'fall' | 'bloom' | 'flag' | 'pop' | 'rise' | 'burst' | 'orbitRev' | 'shoot';
+export type Anim = 'tw' | 'sway' | 'pulse' | 'orbit' | 'orbitSlow' | 'bob' | 'drift' | 'fall' | 'bloom' | 'flag' | 'pop' | 'rise' | 'burst' | 'orbitRev' | 'shoot' | 'rain' | 'float';
 export interface Piece {
   z: 'back' | 'front';
   /** Markup in the 240 box. */
