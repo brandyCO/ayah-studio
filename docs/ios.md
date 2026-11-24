@@ -22,8 +22,13 @@ GitHub's macOS runners by `.github/workflows/ios.yml`, so no Mac is needed. The 
 | `Haptic` | `navigator.vibrate` → Taptic Engine (`src/iosHaptics.ts`) | built-in vibrate |
 
 Background recitation: `UIBackgroundModes audio` + `AVAudioSession .playback` (AppDelegate) + the page's Media Session.
-Not on the iPhone yet (hidden by `hasPlugin()` in `src/native.ts`): home-screen widgets and the lock-screen prayer line
-(need a WidgetKit extension + App Group), the Play font pack (every page font ships in the app), the Android media
+Home-screen widgets (2026-11-24): **Today's ayah** and **My ayah** (`ios/App/AyahWidgets`, a WidgetKit extension,
+bundle id `com.brandyco.ayahstudio.widgets`; small / medium show the ayah the widget was added for, large shows both). The
+app's `Daily` plugin (`DailyPlugin.swift`) writes the ayat by date, labels, theme colours and the Arabic pictures into the
+App Group `group.com.brandyco.ayahstudio` (in both entitlements; Apple account: Identifiers → App Groups, if automatic
+signing does not add it). Taps open `ayahstudio://open#/s/…`. ios.yml signs the widget (inside) before the app.
+Not on the iPhone yet (hidden by `hasPlugin()` in `src/native.ts`): the other widgets and the lock-screen prayer line,
+the Play font pack (every page font ships in the app), the Android media
 service. Local notifications: iOS keeps the 64 soonest, so prayer alerts are set 3 days ahead there (set again on
 every start); prayer sounds `prayer_adhan.caf` (the adhan's first 29.5 s: iOS plays ≤ 30 s) and `prayer_chime.caf`.
 

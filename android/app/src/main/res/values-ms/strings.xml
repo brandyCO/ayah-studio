@@ -9,4 +9,8 @@
     <string name="sc_search_long">Cari dalam Al-Quran</string>
     <string name="sc_reels">Reel</string>
     <string name="sc_reels_long">Reel saya</string>
+    <string name="daily_widget_label">Ayat hari ini</string>
+    <string name="daily_widget_description">Ayat yang sama untuk semua, baharu setiap hari. Dalam saiz besar, bersama ayat anda sendiri.</string>
+    <string name="my_ayah_widget_label">Ayat saya</string>
+    <string name="my_ayah_widget_description">Ayat yang dipilih daripada apa yang anda hafal dan baca. Dalam saiz besar, bersama ayat hari ini.</string>
 </resources>

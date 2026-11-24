@@ -9,4 +9,8 @@
     <string name="sc_search_long">Pretraži Kur\'an</string>
     <string name="sc_reels">Reelovi</string>
     <string name="sc_reels_long">Moji reelovi</string>
+    <string name="daily_widget_label">Današnji ajet</string>
+    <string name="daily_widget_description">Isti ajet za sve, svaki dan novi. U velikoj veličini zajedno s tvojim ajetom.</string>
+    <string name="my_ayah_widget_label">Moj ajet</string>
+    <string name="my_ayah_widget_description">Ajet izabran iz onoga što učiš i čitaš. U velikoj veličini zajedno s današnjim ajetom.</string>
 </resources>

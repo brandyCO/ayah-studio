@@ -9,4 +9,8 @@
     <string name="sc_search_long">Buscar en el Corán</string>
     <string name="sc_reels">Reels</string>
     <string name="sc_reels_long">Mis reels</string>
+    <string name="daily_widget_label">La aleya de hoy</string>
+    <string name="daily_widget_description">La misma aleya para todos, nueva cada día. En tamaño grande, junto a tu propia aleya.</string>
+    <string name="my_ayah_widget_label">Mi aleya</string>
+    <string name="my_ayah_widget_description">Una aleya elegida de lo que memorizas y lees. En tamaño grande, junto a la aleya de hoy.</string>
 </resources>

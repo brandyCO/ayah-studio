@@ -9,4 +9,8 @@
     <string name="sc_search_long">Ka raadi Quraanka</string>
     <string name="sc_reels">Reel-yo</string>
     <string name="sc_reels_long">Reel-yadayda</string>
+    <string name="daily_widget_label">Aayadda maanta</string>
+    <string name="daily_widget_description">Aayad isku mid ah oo dhammaan loogu talagalay, maalin kasta cusub. Cabbirka weyn, iyadoo la jirta aayaddaada.</string>
+    <string name="my_ayah_widget_label">Aayaddayda</string>
+    <string name="my_ayah_widget_description">Aayad laga doortay waxa aad xifdiso iyo akhrido. Cabbirka weyn, iyadoo la jirta aayadda maanta.</string>
 </resources>

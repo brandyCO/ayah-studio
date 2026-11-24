@@ -57,6 +57,14 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
+			<string>ayah-widgets</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ayahstudio</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
 			<string>google-sign-in</string>
 			<key>CFBundleURLSchemes</key>
 			<array>

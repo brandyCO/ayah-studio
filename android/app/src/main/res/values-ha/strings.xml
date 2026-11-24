@@ -9,4 +9,8 @@
     <string name="sc_search_long">Nema a cikin Alƙur\'ani</string>
     <string name="sc_reels">Bidiyo</string>
     <string name="sc_reels_long">Bidiyona</string>
+    <string name="daily_widget_label">Ayar yau</string>
+    <string name="daily_widget_description">Aya ɗaya ga kowa, sabuwa kowace rana. A babban girma, tare da ayarka.</string>
+    <string name="my_ayah_widget_label">Ayata</string>
+    <string name="my_ayah_widget_description">Aya da aka zaɓa daga abin da kake haddacewa da karantawa. A babban girma, tare da ayar yau.</string>
 </resources>

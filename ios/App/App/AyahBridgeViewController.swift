@@ -4,7 +4,7 @@ import Capacitor
 
 /// The app's web view (Capacitor), with Ayah Studio's own small iPhone plugins registered — the counterparts of the
 /// Android Java plugins with the same names, so the web code calls them the same way (src/native.ts, src/ui/theme.ts,
-/// src/ui/follow.ts). Plugins the iPhone has no counterpart for (home-screen widgets, the Play font pack, the Android
+/// src/ui/follow.ts). Plugins the iPhone has no counterpart for (the streak / tasbih / prayer widgets, the Play font pack, the Android
 /// media service) are simply not registered: `Capacitor.isPluginAvailable()` is false and the app hides or skips them.
 class AyahBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
@@ -13,6 +13,7 @@ class AyahBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(ExportServicePlugin())
         bridge?.registerPluginInstance(SpeechPlugin())
         bridge?.registerPluginInstance(HapticPlugin())
+        bridge?.registerPluginInstance(DailyPlugin())
         let launch = LaunchPlugin()
         launch.host = self
         bridge?.registerPluginInstance(launch)

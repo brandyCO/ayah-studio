@@ -9,4 +9,8 @@
     <string name="sc_search_long">Qurʼondan qidirish</string>
     <string name="sc_reels">Roliklar</string>
     <string name="sc_reels_long">Roliklarim</string>
+    <string name="daily_widget_label">Bugungi oyat</string>
+    <string name="daily_widget_description">Hamma uchun bir xil oyat, har kuni yangi. Katta o‘lchamda o‘z oyating bilan birga.</string>
+    <string name="my_ayah_widget_label">Mening oyatim</string>
+    <string name="my_ayah_widget_description">Yodlayotgan va o‘qiyotganlaringdan tanlangan oyat. Katta o‘lchamda bugungi oyat bilan birga.</string>
 </resources>

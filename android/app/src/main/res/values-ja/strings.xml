@@ -9,4 +9,8 @@
     <string name="sc_search_long">クルアーンを検索</string>
     <string name="sc_reels">リール</string>
     <string name="sc_reels_long">マイリール</string>
+    <string name="daily_widget_label">今日のアーヤ</string>
+    <string name="daily_widget_description">みんな同じアーヤ、毎日新しく。大サイズではあなたのアーヤと一緒に表示。</string>
+    <string name="my_ayah_widget_label">わたしのアーヤ</string>
+    <string name="my_ayah_widget_description">暗記・読誦している中から選んだアーヤ。大サイズでは今日のアーヤと一緒に表示。</string>
 </resources>

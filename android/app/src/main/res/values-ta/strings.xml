@@ -9,4 +9,8 @@
     <string name="sc_search_long">குர்ஆனில் தேடு</string>
     <string name="sc_reels">ரீல்கள்</string>
     <string name="sc_reels_long">என் ரீல்கள்</string>
+    <string name="daily_widget_label">இன்றைய ஆயத்</string>
+    <string name="daily_widget_description">அனைவருக்கும் ஒரே ஆயத், ஒவ்வொரு நாளும் புதியது. பெரிய அளவில் உங்கள் சொந்த ஆயத்துடன்.</string>
+    <string name="my_ayah_widget_label">என் ஆயத்</string>
+    <string name="my_ayah_widget_description">நீங்கள் மனனம் செய்வதிலும் ஓதுவதிலும் இருந்து தேர்ந்தெடுத்த ஆயத். பெரிய அளவில் இன்றைய ஆயத்துடன்.</string>
 </resources>

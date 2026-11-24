@@ -9,4 +9,8 @@
     <string name="sc_search_long">Quranda axtar</string>
     <string name="sc_reels">Rilslər</string>
     <string name="sc_reels_long">Rilslərim</string>
+    <string name="daily_widget_label">Günün ayəsi</string>
+    <string name="daily_widget_description">Hamı üçün eyni ayə, hər gün yeni. Böyük ölçüdə öz ayənlə birlikdə.</string>
+    <string name="my_ayah_widget_label">Mənim ayəm</string>
+    <string name="my_ayah_widget_description">Əzbərlədiyin və oxuduğun yerlərdən seçilmiş ayə. Böyük ölçüdə günün ayəsi ilə birlikdə.</string>
 </resources>

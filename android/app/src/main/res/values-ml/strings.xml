@@ -9,4 +9,8 @@
     <string name="sc_search_long">ഖുർആനിൽ തിരയുക</string>
     <string name="sc_reels">റീലുകൾ</string>
     <string name="sc_reels_long">എന്റെ റീലുകൾ</string>
+    <string name="daily_widget_label">ഇന്നത്തെ ആയത്ത്</string>
+    <string name="daily_widget_description">എല്ലാവർക്കും ഒരേ ആയത്ത്, ഓരോ ദിവസവും പുതിയത്. വലിയ വലുപ്പത്തിൽ നിങ്ങളുടെ സ്വന്തം ആയത്തിനൊപ്പം.</string>
+    <string name="my_ayah_widget_label">എന്റെ ആയത്ത്</string>
+    <string name="my_ayah_widget_description">നിങ്ങൾ മനഃപാഠമാക്കുന്നതിലും ഓതുന്നതിലും നിന്ന് തിരഞ്ഞെടുത്ത ആയത്ത്. വലിയ വലുപ്പത്തിൽ ഇന്നത്തെ ആയത്തിനൊപ്പം.</string>
 </resources>

@@ -989,8 +989,8 @@ save to gallery / share sheet; offline audio cache; settings.
       (`AppIcon` alternate icons for themes + tiers, `MediaScan` → Photos, `ExportService`, `Speech` → SFSpeechRecognizer,
       `Haptic` → `navigator.vibrate`); Sign in with Apple (`signIn('apple')`, guideline 4.8), Google there with
       `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
-      on the iPhone (WidgetKit later). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
-- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; WidgetKit widgets
+      on the iPhone (except the ayah widgets, 2026-11-24). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
+- [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; the other widgets in WidgetKit
 - [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice
@@ -1324,6 +1324,16 @@ tafsir only from published, credited editions; UI strings only are translated by
       same pick in Java, 30-min refresh) + `DailyPlugin.java` (`store`: the chosen translation's texts
       for the list; `takeLaunchHash`: the address a widget tap opened, read at start and on resume).
       Widget and notification only verifiable on the phone)
+      **Today's ayah + My ayah** (owner request 2026-11-24): Me → "Ayah of the day" card (`src/ui/ayahCards.ts`, lazy) with
+      two sides, Today's ayah (the same for everyone; also at the top of News) and **My ayah** (`src/data/myAyah.ts`: one ayah
+      a day from what this user does, seeded by the day — the surah being memorised (ayat learned so far), a surah due for
+      review, the ten ayat before where they stopped reading (≤ 14 days), a recent bookmark, else another curated ayah;
+      never today's shared one, short ayat preferred, with a line saying why); Listen · Read · Reel · Share; the Read bar's
+      Today card has a My ayah line. **Widgets** (Android + iPhone): "Today's ayah" and "My ayah", picked when added; the
+      large size (Android ≥ 300×160 dp) shows both side by side (iPhone: stacked), each panel opening its ayah; no switch.
+      The app hands over My ayah for 14 days (`storeWidgetTexts()` in `morning.ts`, again when the app is left, ≤ every
+      10 min). Android `MyAyahWidget` (extends `DailyAyahWidget`, `ayah_pair_widget.xml`); iPhone `ios/App/AyahWidgets`
+      (docs/ios.md). Strings `src/i18n/daily.ts` (`dyt()`), 30 languages
 - [x] G3 First-run tour (Read the mushaf · Make a reel · Together), once, again from ☰
       (built 2026-10-09: `src/ui/tour.ts` — three cards over a soft blur with line drawings, dots,
       Skip/Back/Next, swipe and arrow keys (RTL-aware), "Start reading" in the brand gradient;

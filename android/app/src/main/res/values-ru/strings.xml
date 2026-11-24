@@ -9,4 +9,8 @@
     <string name="sc_search_long">Поиск по Корану</string>
     <string name="sc_reels">Ролики</string>
     <string name="sc_reels_long">Мои ролики</string>
+    <string name="daily_widget_label">Аят дня</string>
+    <string name="daily_widget_description">Один аят для всех, каждый день новый. В большом размере — вместе с твоим аятом.</string>
+    <string name="my_ayah_widget_label">Мой аят</string>
+    <string name="my_ayah_widget_description">Аят из того, что ты учишь и читаешь. В большом размере — вместе с аятом дня.</string>
 </resources>

@@ -155,6 +155,9 @@ jobs:
           # An unsigned app carries no entitlements, and the export keeps only what the app was signed with, so the
           # archived app is first signed ad hoc with ours (Sign in with Apple).
           APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          # The home-screen widgets (inside first, then the app): both share the App Group with the app.
+          codesign --force --sign - --entitlements ios/App/AyahWidgets/AyahWidgets.entitlements --timestamp=none "$APP/PlugIns/AyahWidgets.appex"
+          codesign -d --entitlements - --xml "$APP/PlugIns/AyahWidgets.appex" | grep -q application-groups
           codesign --force --sign - --entitlements ios/App/App/App.entitlements --timestamp=none "$APP"
           codesign -d --entitlements - --xml "$APP" | grep -q applesignin
           for DEST in export upload; do
@@ -178,6 +181,8 @@ jobs:
             codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app" > "$RUNNER_TEMP/ent.plist" 2>/dev/null || true
             plutil -p "$RUNNER_TEMP/ent.plist" || true
             grep -q applesignin "$RUNNER_TEMP/ent.plist" || { echo "::error::The signed app lacks the Sign in with Apple entitlement"; exit 1; }
+            codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app/PlugIns/AyahWidgets.appex" 2>/dev/null \
+              | grep -q application-groups || { echo "::error::The signed widget lacks the App Group"; exit 1; }
           fi
           done
           echo "Uploaded version $VERSION ($BUILD). It shows in App Store Connect → TestFlight after Apple's processing." | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1719,6 +1719,28 @@
   "tq.them": "{name} {n}",
   "tq.title": "Team quest"
  },
+ "daily": {
+  "dy.title": "Ayah of the day",
+  "dy.today": "Today’s ayah",
+  "dy.todaySub": "The same ayah for everyone today",
+  "dy.mine": "My ayah",
+  "dy.why.memorising": "From {surah}, which you are memorising",
+  "dy.why.review": "From {surah}, ready for your review",
+  "dy.why.reading": "From {surah}, which you are reading",
+  "dy.why.bookmark": "From your bookmarks",
+  "dy.why.picked": "Picked for you today",
+  "dy.listen": "Listen",
+  "dy.reel": "Reel",
+  "dy.share": "Share",
+  "dy.read": "Read",
+  "dy.shareTitle": "Today’s ayah",
+  "dy.shareInvite": "Read it with me on Ayah Studio:",
+  "dy.wgMine": "My ayah",
+  "dy.wgMineDesc": "An ayah picked from what you memorise and read. On a large widget, shown with today’s ayah.",
+  "dy.wgTodayDesc": "The same ayah for everyone, new each day. On a large widget, shown with your own ayah.",
+  "dy.newsHead": "Today’s ayah for everyone",
+  "dy.wgEmpty": "Open the app once to see the ayah here."
+ },
  "friends": {
   "fr.tab": "Friends",
   "fr.follow": "Follow",
