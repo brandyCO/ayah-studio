@@ -33,6 +33,49 @@ public class PlaybackService extends Service {
     /** Set by PlaybackServicePlugin: a notification button was tapped ("prev", "toggle", "next", "stop"). */
     static java.util.function.Consumer<String> onButton = null;
 
+    /** The running service (main thread only). Updates go to it directly: asking Android to start the foreground
+     *  service again for every ayah (as before) can be refused while the app is in the background, and a stop that
+     *  overtook such a start made Android close the app ("did not then call startForeground"). */
+    private static PlaybackService current = null;
+    /** hide() came while the service was still starting: it stops as soon as it is in the foreground. */
+    private static boolean stopWhenStarted = false;
+
+    static boolean isRunning() { return current != null; }
+
+    /** Main thread. True when the running service took the new title / state (no service start needed). */
+    static boolean update(String title, String text, String channel, boolean playing, String[] labels) {
+        PlaybackService s = current;
+        if (s == null) return false;
+        stopWhenStarted = false;
+        s.set(title, text, channel, playing, labels);
+        s.channel();
+        NotificationManager nm = (NotificationManager) s.getSystemService(Context.NOTIFICATION_SERVICE);
+        nm.notify(ID, s.build());
+        s.locks(playing);
+        return true;
+    }
+
+    /** Main thread. Ends the service safely, also one that is still starting. */
+    static void end(Context c) {
+        PlaybackService s = current;
+        if (s != null) {
+            s.stopForeground(true);
+            s.stopSelf();
+        } else {
+            stopWhenStarted = true; // started but not in the foreground yet (or not running: harmless, cleared on the next show)
+        }
+    }
+
+    static void starting() { stopWhenStarted = false; }
+
+    private void set(String title, String text, String channel, boolean playing, String[] labels) {
+        this.title = orEmpty(title);
+        this.text = orEmpty(text);
+        this.channelName = orEmpty(channel);
+        this.playing = playing;
+        if (labels != null && labels.length == 5) this.labels = labels;
+    }
+
     private PowerManager.WakeLock wake;
     private WifiManager.WifiLock wifi;
     private String title = "";
@@ -56,16 +99,25 @@ public class PlaybackService extends Service {
             return START_NOT_STICKY;
         }
         if (intent != null) {
-            title = orEmpty(intent.getStringExtra("title"));
-            text = orEmpty(intent.getStringExtra("text"));
-            channelName = orEmpty(intent.getStringExtra("channel"));
-            playing = intent.getBooleanExtra("playing", false);
-            String[] l = intent.getStringArrayExtra("labels");
-            if (l != null && l.length == 5) labels = l;
+            set(intent.getStringExtra("title"), intent.getStringExtra("text"), intent.getStringExtra("channel"),
+                intent.getBooleanExtra("playing", false), intent.getStringArrayExtra("labels"));
         }
         channel();
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
-        ServiceCompat.startForeground(this, ID, build(), type);
+        try {
+            // Always first: Android requires it within seconds of the start, even when the service is about to stop.
+            ServiceCompat.startForeground(this, ID, build(), type);
+        } catch (RuntimeException e) {
+            // Android 12+ can refuse (app in the background): end quietly instead of taking the app down.
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        current = this;
+        if (stopWhenStarted) {
+            stopWhenStarted = false;
+            end(this);
+            return START_NOT_STICKY;
+        }
         locks(playing);
         return START_NOT_STICKY;
     }
@@ -145,6 +197,7 @@ public class PlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        if (current == this) current = null;
         locks(false);
         super.onDestroy();
     }

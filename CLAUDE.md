@@ -728,6 +728,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [x] Error reports (`src/errors.ts`, Sentry, lazy-loaded): on since 2026-11-16 (the owner's DSN, EU region, is the
       default in `errors.ts`; the repo variable `SENTRY_DSN` overrides it); privacy page → Other services → Crash reports
+      **App closes on Android** (owner report 2026-11-24, "listening to Quran and suddenly it forced stop", nothing in
+      Sentry): the browser SDK cannot see a native crash or the WebView renderer dying. `AppActivity` now handles a dead
+      renderer (Capacitor left it unhandled, so Android closed the app): it notes why and rebuilds the page in place.
+      `ExitsPlugin.java` keeps that note and, Android 11+, the system's own exit records (crash, native crash, ANR with the
+      start of its trace, low memory, battery-manager kills while on screen or playing); `sendExits()` in `errors.ts`
+      sends each once on the next start, never sampled (tag `exit`; error sampling moved into `beforeSend`).
+      `PlaybackService` is no longer started again for every ayah: the running service updates its notification in
+      place, and hide ends it safely even mid-start (a stop overtaking a start made Android close the app)
 - [x] Whole-app speed pass (owner request 2026-11-19, "very, very fast … no matter the connection"; thread "Make the whole app
       fast"; report + offline-first plan: Claude Doc "Ayah Studio: fast everywhere, works offline"). **Bench**: `scripts/speed-bench.mjs
       [cpu] [runs]` (built `dist/`, `DIST=` another build; phone size, CPU ×6, outside hosts fail after 0.6 s or `HANG` ms; web cold
