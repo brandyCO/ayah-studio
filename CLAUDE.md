@@ -2025,7 +2025,7 @@ duas/reflections section in Me.
       Second pass (owner pick 2026-11-09, "all three"): **Noor speaks** (`src/ui/noor.ts` + `noor.css`, lazy): a small light
       and one line, from what is true now, never guilt — Me under the streak (pages left to light today / lit), the Read bar
       (page reading time / pages done), the Create sheet (reel goal / share an ayah), Learn above Today (thirsty trees /
-      plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
+      plant a seed); en + ar. Since 2026-11-24 (owner) the user's own character (bust) says the line when they have one; Noor's light only without. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
       chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
       with a ring and the streak count (→ Me)
 - [x] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").

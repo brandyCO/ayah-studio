@@ -1,6 +1,7 @@
 // Noor speaks (owner choice 2026-11-09, "full of life"): a small light with one short, kind line on
 // Read, Me, Create and Learn. The line follows what is true right now (goals, the flame, the garden);
-// it never guilts and never says anything about the religion itself. Loaded with each screen.
+// it never guilts and never says anything about the religion itself. Loaded with each screen. Since 2026-11-24 the
+// user's own character says it when they have one (owner request); Noor's light only without a character.
 import './noor.css';
 import { lang, locale, tr } from '../i18n';
 import { todayGoals } from '../data/goals';
@@ -8,6 +9,8 @@ import { pageSeconds, streak } from '../data/journey';
 import { started, thirstyTrees, trees } from '../data/garden';
 import { dayKey, readLogAll } from '../data/readLog';
 import { h } from './dom';
+import { bustMarkup, parse } from './figure';
+import { myFigureCode } from './actor';
 
 const en = {
   lit: 'Your flame is lit for today. See you tomorrow.',
@@ -84,10 +87,19 @@ export function noorText(where: Where): string {
   return say(trees().some(started) ? 'grow' : 'plant');
 }
 
-/** Noor (a small light, no face) beside a speech bubble. */
+/** Who says the line (owner 2026-11-24): the user's own character when they have one, else Noor's light. */
+function speaker(): HTMLElement {
+  const f = (() => { try { return parse(myFigureCode()); } catch { return null; } })();
+  if (!f) return h('span', { class: 'noor-dot', 'aria-hidden': 'true' });
+  const me = h('span', { class: 'noor-me', 'aria-hidden': 'true' });
+  me.innerHTML = `<svg viewBox="1 1 38 38" width="36" height="36">${bustMarkup(f, 18)}</svg>`;
+  return me;
+}
+
+/** The speaker beside a speech bubble. */
 export function noorLine(where: Where): HTMLElement {
   return h('div', { class: `noor-line at-${where}`, role: 'note' },
-    h('span', { class: 'noor-dot', 'aria-hidden': 'true' }),
+    speaker(),
     h('span', { class: 'noor-say' }, noorText(where)));
 }
 
@@ -104,7 +116,7 @@ export function noorInto(box: Element, where: Where) {
   }
   const old = box.querySelector(':scope > .noor-line');
   const text = noorText(where);
-  if (old) { old.querySelector('.noor-say')!.textContent = text; box.append(old); return; }
+  if (old) { old.querySelector('.noor-say')!.textContent = text; old.firstElementChild!.replaceWith(speaker()); box.append(old); return; }
   box.append(noorLine(where));
 }
 
