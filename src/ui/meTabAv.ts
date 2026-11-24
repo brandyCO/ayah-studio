@@ -30,31 +30,60 @@ function myLook(): Look | null {
   return { avatar: av, tier: s?.tier ?? 0, frame: now?.frame ?? s?.frame ?? 0, figure };
 }
 
-/** The look as one picture (a data: URL of the same SVG the boards draw). */
-function picture(l: Look): string | null {
+/** The look as one picture: the avatar's decoration box (frame pieces around the disc, each its own picture since
+ *  the item restyle) laid into one SVG at the box's places, then made a small PNG for the tab. */
+async function picture(l: Look): Promise<string | null> {
   const el = avatar(l.avatar, l.tier, 30, l.frame, l.figure);
-  const img = el.querySelector('img') ?? (el.tagName === 'IMG' ? el as HTMLImageElement : null);
-  if (img?.getAttribute('src')) return img.getAttribute('src');
-  const svg = el.tagName.toLowerCase() === 'svg' ? el : el.querySelector('svg');
-  if (!svg) return null;
-  const c = svg.cloneNode(true) as SVGElement;
-  c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  c.setAttribute('viewBox', '-10 -10 60 60');
-  c.setAttribute('width', '60');
-  c.setAttribute('height', '60');
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(c))}`;
+  const S = 90; // user units of the decoration box (1.5 × the disc, as `.dk`)
+  const pct = (v: string) => (parseFloat(v) || 0) / 100 * S;
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const svgOf = (n: Element) => {
+    const c = n.cloneNode(true) as SVGElement;
+    c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(c))}`;
+  };
+  let body = '';
+  if (el.classList.contains('dk')) {
+    for (const k of el.children) {
+      if (k.tagName === 'IMG') {
+        const st = (k as HTMLElement).style;
+        body += `<image href="${esc((k as HTMLImageElement).getAttribute('src') ?? '')}" x="${pct(st.left)}" y="${pct(st.top)}" width="${pct(st.width)}" height="${pct(st.height)}" preserveAspectRatio="none"/>`;
+      } else if (k.classList.contains('dk-av')) {
+        const inner = k.querySelector('svg') ?? k.querySelector('img');
+        const src = inner?.tagName === 'IMG' ? inner.getAttribute('src') : inner ? svgOf(inner) : null;
+        if (src) body += `<clipPath id="c"><circle cx="45" cy="45" r="30"/></clipPath><image href="${esc(src)}" x="15" y="15" width="60" height="60" clip-path="url(#c)"/><circle cx="45" cy="45" r="31.5" fill="none" stroke="#24123a" stroke-width="3"/>`;
+      }
+    }
+    // The disc sits under the frame pieces that come after it, over those before it (DOM order kept).
+  } else {
+    const svg = el.tagName.toLowerCase() === 'svg' ? el : el.querySelector('svg');
+    if (!svg) return null;
+    body = `<image href="${esc(svgOf(svg))}" x="15" y="15" width="60" height="60"/>`;
+  }
+  const whole = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">${body}</svg>`)}`;
+  // A small PNG: the tab never parses the frame's SVGs again (and localStorage keeps ~20 KB, not ~250 KB).
+  try {
+    const im = new Image();
+    im.src = whole;
+    await im.decode();
+    const px = 120;
+    const c = document.createElement('canvas');
+    c.width = c.height = px;
+    c.getContext('2d')!.drawImage(im, 0, 0, px, px);
+    return c.toDataURL('image/png');
+  } catch { return whole; }
 }
 
 let last = '';
 /** Draws (or takes away) the avatar on every Me tab on screen and keeps it for the next start. */
-export function paintMeTabs() {
+export async function paintMeTabs() {
   const l = myLook();
-  const k = l ? `${account()?.id ?? ''}|${l.avatar}|${l.tier}|${l.frame}|${l.figure ?? ''}` : '';
+  const k = l ? `v2|${account()?.id ?? ''}|${l.avatar}|${l.tier}|${l.frame}|${l.figure ?? ''}` : '';
   let src: string | null = null;
   if (l) {
     try { const v = JSON.parse(localStorage.getItem(KEY) ?? 'null'); if (v?.k === k) src = v.src; } catch { /* ignore */ }
     if (!src) {
-      src = picture(l);
+      src = await picture(l);
       try { if (src) localStorage.setItem(KEY, JSON.stringify({ k, src })); } catch { /* full */ }
     }
   } else {

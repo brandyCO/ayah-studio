@@ -783,7 +783,18 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
       touring = true;
       void import('./firstScreen').then((m) => (m.signInPending() ? m.resumeSignIn(first, () => m.openFirstScreen(first)) : m.openFirstScreen(first)));
     }
-  } else firstVisitHint();
+  } else {
+    firstVisitHint();
+    // Onboarding left half way (the app was closed): back to it — within a week on the same screen, later from the
+    // welcome screen with the answers kept (onboard.ts).
+    let ob: { at?: number } | null = null;
+    try { ob = JSON.parse(localStorage.getItem('obProgress') ?? 'null'); } catch { /* ignore */ }
+    if (ob && typeof ob.at === 'number') {
+      touring = true;
+      if (Date.now() - ob.at < 7 * 864e5) void import('./onboard').then((m) => setTimeout(m.openOnboarding, 300));
+      else void import('./firstScreen').then((m) => m.openFirstScreen(() => {}));
+    }
+  }
   // A tab tapped on another screen (Listen, Me, Create → Choose ayat) lands here.
   const intent = takeTabIntent();
   if (intent && !ready) await whole().catch(() => {});

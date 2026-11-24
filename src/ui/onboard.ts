@@ -34,22 +34,29 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Shows the flow (once: nothing when both questions were answered before). The language is the phone's, or the
  *  one picked on the first screen (src/ui/firstScreen.ts), so it is not asked here (owner 2026-11-24). */
 export function openOnboarding() {
+  if (document.querySelector('.ob')) return;
+  // Picked up where it was left (owner 2026-11-24): every answer and the screen are kept as they go; back within a
+  // week → that screen, later → from the start with the answers already chosen.
+  const kept = keptProgress();
+  const fresh = !!kept && Date.now() - kept.at < RESUME_MS;
   let asked = false;
   try { asked = localStorage.getItem('whyHere') !== null; } catch { /* private */ }
-  const pace = needsPace();
+  if (kept) asked = kept.asked;
+  const pace = kept ? true : needsPace();
   if (asked && !pace) return;
-  if (document.querySelector('.ob')) return;
   const goalsPart: Screen[] = ['pages', 'pagesSay', 'tasbih', 'tasbihSay'];
   // The first week's timeline (owner request 2026-11-24): only for someone new.
   const comingPart: Screen[] = daysOpened() <= 2 ? ['coming'] : [];
-  const screens: Screen[] = asked ? ['hi', ...goalsPart, 'done']
+  const screens: Screen[] = kept?.screens.length ? kept.screens : asked ? ['hi', ...goalsPart, 'done']
     : pace ? ['hi', 'few', 'why', 'react', ...goalsPart, 'heard', 'heardSay', ...comingPart, 'done']
     : ['hi', 'why', 'react', 'heard', 'heardSay', ...comingPart];
-  const picked = new Set<Why>();
-  let pagesN: number | null = null;
-  let tasbihN: number | null = null;
-  let heard: Heard | null = null;
-  let i = 0;
+  const picked = new Set<Why>(kept?.picked ?? []);
+  let pagesN: number | null = kept?.pagesN ?? null;
+  let tasbihN: number | null = kept?.tasbihN ?? null;
+  let heard: Heard | null = kept?.heard ?? null;
+  let i = fresh ? Math.min(Math.max(0, kept!.i), screens.length - 1) : 0;
+  let ending = false;
+  const persist = () => keepProgress({ at: Date.now(), asked, screens, i, picked: [...picked], pagesN, tasbihN, heard });
   let typing = 0;
 
   const code = myFigureCode() ?? encode(normalize({ ...DEFAULT, face: 1 }));
@@ -88,9 +95,39 @@ export function openOnboarding() {
   };
 
   /** The character; `hold` puts something in its hands for this screen (2 the mushaf, 1 the masbaha). */
-  const who = (big: boolean, hold?: number) => {
+  const make = (big: boolean, hold?: number) => {
     const f = parse(code);
     return actor(`ob-actor${big ? ' big' : ''}`, f && hold !== undefined ? encode(normalize({ ...f, hold })) : code);
+  };
+  // The next screen's character is built in a quiet moment while this one is read, so Continue only slides
+  // (building a character is the one heavy step of a screen on a slow phone).
+  const ready = new Map<string, Actor | null>();
+  const keyOf = (big: boolean, hold?: number) => `${big}|${hold ?? ''}`;
+  const who = (big: boolean, hold?: number) => {
+    const k = keyOf(big, hold);
+    if (ready.has(k)) { const a = ready.get(k)!; ready.delete(k); return a; }
+    return make(big, hold);
+  };
+  const castOf = (s: Screen): [boolean, number | undefined] => {
+    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'coming';
+    return [!ask, s === 'pagesSay' ? 2 : s === 'tasbihSay' && tasbihN ? 1 : undefined];
+  };
+  let warmT = 0;
+  const warmNext = () => {
+    window.clearTimeout(warmT);
+    const s = screens[i + 1];
+    if (!s) return;
+    warmT = window.setTimeout(() => {
+      const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+      const run = () => {
+        const [big, hold] = castOf(s);
+        const k = keyOf(big, hold);
+        if (!ready.has(k) && !ending) ready.set(k, make(big, hold));
+        // The first number formatted loads the language's number rules (~90 ms on a slow phone): done here, not on a tap.
+        goalText('pages', 2); fe('ob.min', { n: 2 });
+      };
+      if (idle) idle(run, { timeout: 1500 }); else run();
+    }, 700);
   };
   /** One answer of several (a single choice): the row lights, the character hops. */
   const single = <T,>(vals: readonly T[], cur: () => T | null, set: (v: T) => void, row: (v: T) => (Node | string)[], cls: (v: T) => string, a: Actor | null) => {
@@ -105,16 +142,18 @@ export function openOnboarding() {
   };
 
   const opt = (cls: string, on: boolean, kids: (Node | string)[], onclick: () => void) =>
-    h('button', { class: `ob-opt ${cls}${on ? ' on' : ''}`, 'aria-pressed': String(on), onclick }, ...kids);
+    h('button', { class: `ob-opt ${cls}${on ? ' on' : ''}`, 'aria-pressed': String(on), onclick: () => { onclick(); persist(); warmNext(); } }, ...kids);
 
   function draw(dir = 1) {
+    if (!ending) persist();
     const s = screens[i];
     bar.style.width = `${Math.round(((i + 1) / screens.length) * 100)}%`;
     back.style.visibility = i ? 'visible' : 'hidden';
     skip.style.visibility = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' ? 'visible' : 'hidden';
     const bubble = h('p', { class: 'ob-say' });
-    const ask = s === 'why' || s === 'pages' || s === 'tasbih' || s === 'heard' || s === 'coming';
-    const a = who(!ask, s === 'pagesSay' ? 2 : s === 'tasbihSay' && tasbihN ? 1 : undefined);
+    const [big, hold] = castOf(s);
+    const ask = !big;
+    const a = who(big, hold);
     const body: HTMLElement[] = [];
     let line = '';
     let flameEl: HTMLElement | null = null;
@@ -180,6 +219,7 @@ export function openOnboarding() {
     } else old?.remove();
     stage.append(page);
     say(bubble, line, a);
+    warmNext();
     if (s === 'hi') setTimeout(() => a?.wave(2400), 380);
     else if (s === 'react' || s === 'heardSay') setTimeout(() => a?.cheer(1700), 420);
     else if (s === 'pagesSay') setTimeout(() => (pagesN ?? 1) >= 5 ? a?.cheer(2000) : (a?.nod(), a?.hop(0.6)), 420);
@@ -200,10 +240,10 @@ export function openOnboarding() {
     tailor(asked ? whyNow() : [...picked]);
   };
   const whyNow = (): Why[] => { try { return JSON.parse(localStorage.getItem('whyHere') ?? '[]'); } catch { return []; } };
-  let ending = false;
   const finish = () => {
     if (ending) return;
     ending = true;
+    keepProgress(null);
     window.clearTimeout(typing);
     d.classList.add('out');
     setTimeout(() => d.close(), reduced() ? 0 : 300);
@@ -242,4 +282,18 @@ export function openOnboarding() {
   document.body.append(d);
   d.showModal();
   draw(1);
+}
+
+/** How long a half-finished onboarding reopens on the screen it was left at (after that, from the start). */
+const RESUME_MS = 7 * 864e5;
+interface Progress { at: number; asked: boolean; screens: Screen[]; i: number; picked: Why[]; pagesN: number | null; tasbihN: number | null; heard: Heard | null }
+const KEY = 'obProgress';
+function keptProgress(): Progress | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Progress | null;
+    return v && typeof v.at === 'number' && Array.isArray(v.screens) ? v : null;
+  } catch { return null; }
+}
+function keepProgress(p: Progress | null) {
+  try { if (p) localStorage.setItem(KEY, JSON.stringify(p)); else localStorage.removeItem(KEY); } catch { /* private */ }
 }
