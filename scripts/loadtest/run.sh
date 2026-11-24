@@ -26,6 +26,7 @@ as_player my_pulse "select public.rank_my_pulse(current_date)"
 as_player full_pulse "select public.rank_pulse(current_date)"
 as_player friends "select public.rank_my_friends(current_date)"
 as_player feats "select public.rank_feats_feed()"
+as_player news_near "select public.rank_feats_near()"
 as_player my_social "select public.rank_my_social(current_date)"
 as_player duel "select public.rank_my_duel(current_date)"
 as_player global "select public.rank_global(current_date, false, 'all')"
@@ -60,7 +61,7 @@ select public.rank_player_pulse(array(select p.pid from public.rank_friends f jo
 SQL
 
 # How often phones send each call, roughly (per player-minute while the app is open; Ranks open part of the time).
-declare -A WEIGHT=( [report]=6 [status]=2 [league]=2 [my_pulse]=2 [full_pulse]=1 [friends]=1 [feats]=1 [my_social]=2 [duel]=1
+declare -A WEIGHT=( [report]=6 [status]=2 [league]=2 [my_pulse]=2 [full_pulse]=1 [friends]=1 [feats]=1 [news_near]=1 [my_social]=2 [duel]=1
   [global]=1 [live]=3 [sync_pull]=4 [sync_push]=4 [league_pulse]=3 [player_pulse]=3
   [learn_sync]=2 [learn_flawless]=1 [learn_clip_check]=1 [learn_follow_stat]=1 [shop_gifts]=1 [shop_lamp_wall]=1 [shop_look]=1 [shop_lamp]=1 )
 
