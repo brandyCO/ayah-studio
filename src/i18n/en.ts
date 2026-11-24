@@ -293,6 +293,7 @@ const en = {
   'tafsir.explains': 'Explains {ref} together',
   'tafsir.none': 'No separate tafsir for this ayah; it is explained with the ayat around it.',
   'tafsir.source': 'Read it on Quran.com',
+  'tafsir.pick': 'Choose a tafsir',
   'tafsir.failed': 'Could not load the tafsir — check your connection',
   // night listening (docs/light.md, L1)
   'fav.notif': 'Downloading {name}',

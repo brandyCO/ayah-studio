@@ -737,6 +737,7 @@ const ar: Partial<Record<Key, string>> & Record<string, string> = {
   'tafsir.explains': 'يشرح {ref} معًا',
   'tafsir.none': 'لا يوجد تفسير منفصل لهذه الآية؛ فهي مشروحة مع الآيات المحيطة بها.',
   'tafsir.source': 'اقرأه على Quran.com',
+  'tafsir.pick': 'اختر التفسير',
   'tafsir.failed': 'تعذّر تحميل التفسير — تحقّق من الاتصال',
   // night listening
   'fav.notif': 'تنزيل {name}',

@@ -1,12 +1,12 @@
 // Send later (thread "Make the whole app fast", 2026-11-19, owner: "works offline like Duolingo, then syncs"): a small
 // social action done with no connection (follow, unfollow, answering a friend ask, MashaAllah on a friend's news, a
-// challenge gesture) is kept on the phone and sent, in order, as soon as the connection is back. Its own UI shows the
+// challenge gesture, a gift of Light or a piece — its Light held meanwhile, `hold`) is kept on the phone and sent, in order, as soon as the connection is back. Its own UI shows the
 // result at once, as if it had gone. Two actions on the same thing collapse into the last one (follow then unfollow
 // offline = nothing to send). A refused action (the server said no, not the network) is dropped and announced with the
 // event `outbox-refused`, so a screen can put things back. Kept per account (localStorage `rankOutbox`).
 import { account, onAccount } from '../cloud/auth';
 
-export interface Pending { key: string; fn: string; args: Record<string, unknown>; at: number; tries?: number }
+export interface Pending { key: string; fn: string; args: Record<string, unknown>; at: number; tries?: number; hold?: number }
 type Send = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
 
 const STORE = 'rankOutbox';
@@ -29,6 +29,13 @@ function save(q: Pending[]) {
   window.dispatchEvent(new Event('outbox'));
 }
 
+/** Light held by gifts waiting to be sent (not spendable meanwhile; released if the server refuses one). */
+export function heldLight(): number {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE) ?? 'null');
+    return v && Array.isArray(v.q) ? v.q.reduce((a: number, p: Pending) => a + (p.hold ?? 0), 0) : 0;
+  } catch { return 0; }
+}
 /** How many actions wait for a connection. */
 export const pendingCount = () => load().length;
 /** Whether an action on `key` waits (e.g. `follow:{pid}`): screens can show the state it will have. */
@@ -39,12 +46,12 @@ export class Offline extends Error { offline = true; }
 export const isOffline = (e: unknown) => !!(e && typeof e === 'object' && (e as { offline?: boolean }).offline);
 
 /** Keeps an action to send later; one waiting on the same `key` is replaced (or, with `cancels`, both go). */
-export function sendLater(key: string, fn: string, args: Record<string, unknown>, cancels?: (old: Pending) => boolean) {
+export function sendLater(key: string, fn: string, args: Record<string, unknown>, cancels?: (old: Pending) => boolean, hold?: number) {
   if (!account()) return;
   let q = load();
   const old = q.find((p) => p.key === key);
   q = q.filter((p) => p.key !== key);
-  if (!(old && cancels?.(old))) q.push({ key, fn, args, at: Date.now() });
+  if (!(old && cancels?.(old))) q.push({ key, fn, args, at: Date.now(), ...(hold ? { hold } : {}) });
   save(q.slice(-MAX));
   soon(4_000);
 }
@@ -59,7 +66,8 @@ export async function flushOutbox(): Promise<void> {
       const p = q[0];
       if (!p) break;
       try {
-        await sender(p.fn, p.args);
+        const result = await sender(p.fn, p.args);
+        window.dispatchEvent(new CustomEvent('outbox-done', { detail: { ...p, result } }));
       } catch (e) {
         if (isOffline(e)) {
           p.tries = (p.tries ?? 0) + 1;

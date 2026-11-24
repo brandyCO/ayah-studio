@@ -1287,7 +1287,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       lazy) are translated; references in the interface use `uiRef()` (Arabic surah name; reels keep `reference()`);
       the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
       start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
-      "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
+      "Default", export, listening, next prayer: renamed in place). The Device check panel too since 2026-11-24 (`src/i18n/device.ts`, `dvt()`)
       **30 interface languages** (owner request 2026-11-14, "it should be in all languages"): English, Arabic + Urdu,
       Indonesian, Bengali, Turkish, Persian, French, Malay, Hindi, Russian, Spanish, German, Portuguese, Swahili, Hausa,
       Somali, Pashto, Uzbek, Azerbaijani, Bosnian, Albanian, Kurdish (Sorani), Tamil, Malayalam, Chinese, Italian, Dutch,
@@ -1346,8 +1346,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       `tourSeen` in localStorage (leaving the mushaf for another screen counts as skipping); shown by the mushaf on first launch, not to people who used the app
       before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
       ☰ → Tour)
-- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
-      flag until the owner confirms the licence (`docs/grow.md` §0)
+- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed); on since 2026-11-24
       (built 2026-10-09, **off**: `src/features.ts` (`feature('tafsir')`, default false; testers: Device
       check → "Tafsir beside the translation"). `src/data/tafsir.ts`: Ibn Kathir (abridged, id 169) per
       ayah from api.quran.com (qurancdn second), IndexedDB store `tafsir` (`db.ts` version 5, which also
@@ -1357,6 +1356,10 @@ tafsir only from published, credited editions; UI strings only are translated by
       the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
       passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
       names show in the Arabic interface. To ship: owner decision, then flip the default)
+      **On** (owner 2026-11-24, "do what Tarteel does"): Quran.com's tafsir library (the one Tarteel uses) — `TAFSIRS` in
+      `src/data/tafsir.ts`: 19 tafsirs in English, Arabic, Urdu, Bengali, Russian, Kurdish (Fi Zilal left out), a picker in the
+      panel (localStorage `tafsirPick`, synced), default in the interface language (Arabic: Al-Muyassar), each credited +
+      linked to its Quran.com page
 - [x] G5a Faster first load (measured)
       (2026-10-09, Playwright, 1.6 Mbps / 150 ms, mushaf page 1: FCP ≈ 1.55 s, page ready ≈ 2.2 s,
       19 requests / 623 KB (was 22 / 670 KB on the G4 branch). The circles screens, tour, tafsir data
@@ -2027,7 +2030,7 @@ duas/reflections section in Me.
       Second pass (owner pick 2026-11-09, "all three"): **Noor speaks** (`src/ui/noor.ts` + `noor.css`, lazy): a small light
       and one line, from what is true now, never guilt — Me under the streak (pages left to light today / lit), the Read bar
       (page reading time / pages done), the Create sheet (reel goal / share an ayah), Learn above Today (thirsty trees /
-      plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
+      plant a seed); en + ar. Since 2026-11-24 (owner) the user's own character (bust) says the line when they have one; Noor's light only without. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
       chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
       with a ring and the streak count (→ Me)
 - [x] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
@@ -2205,7 +2208,9 @@ duas/reflections section in Me.
       rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
       (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
       **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
-      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Offline (owner 2026-11-24): a gift waits in the outbox (`sendLater(…, hold)`) and goes when back
+      online; its Light is held meanwhile (`heldLight()` in `wallet()`), a refusal releases it, a send records the purchase
+      (`outbox-done` in ranks.ts). Migration `20261112210000_light_value.sql` (`rank_gifts`,
       `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
       multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
 - [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on

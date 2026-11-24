@@ -556,9 +556,9 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           b.disabled = true;
           try {
             const { giftPiece } = await import('../together/lightGifts');
-            await giftPiece(gift.pid, w.store!, price);
+            const now = await giftPiece(gift.pid, w.store!, price);
             sfx.pop(0, true); sfx.shimmer(); haptic(20);
-            toast(sht('sh.giftSent', { name: gift.name }));
+            toast(sht(now ? 'sh.giftSent' : 'sh.giftQueued', { name: gift.name }));
             shut(); close();
           } catch (err) { toast((err as Error).message === 'need' ? sht('sh.need', { n: price - wallet() }) : (err as Error).message); b.disabled = false; }
         } }, icon('gift', 18), `${sht('sh.giftThis', { name: gift.name })} · `, star(), num(price)));
