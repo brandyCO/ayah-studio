@@ -23,13 +23,18 @@ function seen(): Reveal[] {
   try { const v = JSON.parse(localStorage.getItem('revealSeen') ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
+/** Tiles taken in the seven days of gifts (data/weekGift.ts): day 3's gift opens the shop, 4 the room, 5 the wardrobe. */
+const giftsGot = () => {
+  try { const v = JSON.parse(localStorage.getItem('weekGift') ?? '{}') as { got?: number; old?: boolean }; return v.old ? 0 : v.got ?? 0; } catch { return 0; }
+};
+
 /** Whether this part of the app is shown yet. */
-export const revealed = (k: Reveal): boolean => daysOpened() >= FROM + ORDER.indexOf(k) || seen().includes(k);
+export const revealed = (k: Reveal): boolean => Math.max(daysOpened(), giftsGot()) >= FROM + ORDER.indexOf(k) || seen().includes(k);
 
 /** The part that just appeared and has not been introduced yet (at most one; everything once day 5 has passed). */
 export function newReveal(): Reveal | null {
-  const n = daysOpened();
-  if (n > FROM + ORDER.length) return null; // people who used the app before this came in: nothing to introduce
+  const n = Math.max(daysOpened(), giftsGot());
+  if (daysOpened() > FROM + ORDER.length) return null; // people who used the app before this came in: nothing to introduce
   const s = seen();
   return ORDER.find((k) => n >= FROM + ORDER.indexOf(k) && !s.includes(k)) ?? null;
 }

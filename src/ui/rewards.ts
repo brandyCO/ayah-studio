@@ -61,6 +61,10 @@ export function watchRewards() {
   setTimeout(comeback, 2600);
   void import('../cloud/sync').then((sy) => sy.onSyncStatus((st) => { if (st.state === 'ok') setTimeout(comeback, 600); }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(comeback, 1400); });
+  // Seven days of gifts (src/ui/weekGifts.ts): the calendar when the app opens, while today's gift waits.
+  const gifts = () => void import('./weekGifts').then((m) => m.maybeWeekGifts());
+  setTimeout(gifts, 2200);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(gifts, 1600); });
   // Du'a notes on: a soft banner after each adhan / salah while the app is open (src/ui/prayerAlerts.ts).
   try { if (/"(duas|salah)":true/.test(localStorage.getItem('prayerAlerts') ?? '')) void import('./prayerAlerts').then((m) => m.watchDuaBanners()); } catch { /* ignore */ }
 }

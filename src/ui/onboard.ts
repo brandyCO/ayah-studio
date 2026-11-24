@@ -3,7 +3,7 @@
 // stands in the page and speaks in a bubble, word by word; a question screen has it small beside its question and
 // the answers below; one big Continue at the bottom. What brings you here → its answer → how much each day → the
 // first goal. Saves exactly what the old sheets saved (`whyHere`, the pace, `tailor()`).
-import { comingPath } from './coming';
+import { giftGrid } from './weekGifts';
 import { daysOpened } from '../data/reveal';
 import './onboard.css';
 import { choosePace, goals, needsPace, setGoals } from '../data/goals';
@@ -159,8 +159,8 @@ export function openOnboarding() {
         h('span', { class: 'ob-txt' }, h('b', {}, fe(`ob.h.${v}` as FrontKey)))], (v) => `h-${v}`, a));
     } else if (s === 'heardSay') line = fe(`ob.hs.${heard ?? 'other'}` as FrontKey);
     else if (s === 'coming') {
-      line = fe('co.say');
-      body.push(comingPath(true));
+      line = fe('wg.say');
+      body.push(giftGrid({ small: true }));
     } else if (s === 'done') {
       line = pagesN === null ? fe('ob.doneLater') : t('fs.paceSet', { goal: goalText('pages', goals().pages) });
       go.textContent = fe('ob.start');

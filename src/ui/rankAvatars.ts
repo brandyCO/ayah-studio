@@ -8,10 +8,10 @@
 import { h } from './dom';
 import { tr } from '../i18n';
 import { bustMarkup, parse } from './figure';
-import { circlePath, edge, mix, shine, two } from './flat';
+import { circlePath, edge, mix, shine, starPath, two } from './flat';
 
 export const AVATARS = 52;
-export const FRAMES = 20;
+export const FRAMES = 26;
 export const TIER_RING = ['#c47a4c', '#a9b0f2', '#5fcfc0', '#e891aa', '#f2c14e']; // Dar al-Arqam clay, Hijrah night, Badr water, Al-Khandaq dusk, Fath Makkah gold
 const LAUREL = ['#f2c14e', '#cfd6de', '#d08a4e'];
 
@@ -168,6 +168,8 @@ const FR_NAMES: Record<number, [string, string]> = {
   1: ['Golden glow', 'الوهج الذهبي'], 2: ['Emerald setting', 'إطار الزمرد'], 3: ['Starry night', 'ليلة النجوم'], 4: ['Sun crown', 'تاج الشمس'],
   5: ['Gold laurel', 'إكليل الذهب'], 6: ['Silver laurel', 'إكليل الفضة'], 7: ['Bronze laurel', 'إكليل البرونز'], 8: ['String of pearls', 'عقد اللؤلؤ'],
   9: ['Crescent crown', 'تاج الهلال'], 10: ['Mosaic', 'الفسيفساء'], 11: ['Aurora', 'الشفق'], 12: ['Lantern ring', 'حلقة الفوانيس'], 13: ['Rosette', 'الوردة'],
+  // The Jumu'ah collection (2026-11-24): only from the calendar's Friday chest.
+  20: ['Kiswah', 'الكسوة'], 21: ['Domes and minarets', 'القباب والمآذن'], 22: ['Iznik tulips', 'زهور إزنيق'], 23: ['Maghrib', 'المغرب'], 24: ['Khatam stars', 'نجوم الخاتم'], 25: ['Pearl and rose', 'اللؤلؤ والورد'],
 };
 /** A name for avatar n or frame n, or null where there is none (the free ones; limited frames have their own). */
 export function lookName(kind: 'avatar' | 'frame', n: number, ar = false): string | null {
@@ -397,6 +399,72 @@ function frameArt(f: number, tier: number): string {
         st += `${edge(d, '#4f5a66', .55)}${two(d, '#ffffff', '#b9e6ff', -.3, -.3)}<path d="M${(x - r * .5).toFixed(2)} ${y.toFixed(2)}H${(x + r * .5).toFixed(2)}" stroke="#7cc7f2" stroke-width=".3"/>`;
       }
       return `<circle cx="20" cy="20" r="22.6" fill="none" stroke="#dff4ff" stroke-width="1.2" opacity=".35"/>${rim(18.8, 2.6, METAL.silver)}${glint(18.8, 2.6)}${st}`;
+    }
+    // Frames 20–25 (owner request 2026-11-24): the Jumu'ah collection, won only from the calendar's Friday chest.
+    case 20: { // kiswah: a black band embroidered in gold, gold bands on both edges, a gold boss at the top
+      const K: [string, string, string, string] = ['#24222a', '#121116', '#000000', '#5a5766'];
+      let em = '';
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2 - Math.PI / 2, x = 20 + Math.cos(a) * 18.7, y = 20 + Math.sin(a) * 18.7, deg = (a * 180) / Math.PI + 90;
+        em += k % 2
+          ? `<path d="${starD(x, y, 1.15)}" fill="${G[0]}" transform="rotate(${deg.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})"/>`
+          : `<g transform="rotate(${deg.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})"><path d="M${(x - 1.6).toFixed(2)} ${y.toFixed(2)}Q${x.toFixed(2)} ${(y - 1.5).toFixed(2)} ${(x + 1.6).toFixed(2)} ${y.toFixed(2)}Q${x.toFixed(2)} ${(y + 1.5).toFixed(2)} ${(x - 1.6).toFixed(2)} ${y.toFixed(2)}Z" fill="none" stroke="${G[0]}" stroke-width=".5"/><circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".45" fill="${G[3]}"/></g>`;
+      }
+      return `<circle cx="20" cy="20" r="22.4" fill="none" stroke="#ffcf55" stroke-width=".8" opacity=".35"/>${rim(18.7, 4.4, K)}
+        <circle cx="20" cy="20" r="16.55" fill="none" stroke="${G[0]}" stroke-width=".7"/><circle cx="20" cy="20" r="20.85" fill="none" stroke="${G[0]}" stroke-width=".7"/>${em}${glint(18.7, 4)}
+        ${metalStar(20, .4, 3.4, G, 8)}<circle cx="20" cy=".4" r="1.1" fill="#24222a"/>`;
+    }
+    case 21: { // domes: a teal band with a gold dome rising at the top between two slim minarets
+      const T: [string, string, string, string] = ['#2fb3a6', '#16786f', '#05332f', '#b8fff2'];
+      const dome = 'M13.6 2.4Q13.6 -5.4 20 -6.6Q26.4 -5.4 26.4 2.4Z';
+      const mina = (x: number) => { const d = `M${x - .9} 4V-4.6H${x + .9}V4Z`, cap = `M${x - 1.1} -4.6Q${x} -8.4 ${x + 1.1} -4.6Z`;
+        return `${edge(d, G[2], .5)}${two(d, G[3], G[0], -.3, 0)}<path d="M${x - 1.3} -1.6H${x + 1.3}" stroke="${G[2]}" stroke-width=".5"/>${two(cap, G[0], G[1], -.2, -.2)}<path d="M${x} -8.2V-9.6" stroke="${G[1]}" stroke-width=".4"/>`; };
+      return `<circle cx="20" cy="-1" r="9.6" fill="#fff0b0" opacity=".28"/>${mina(10.4)}${mina(29.6)}${edge(dome, G[2], .8)}${two(dome, G[3], G[0], -1, -.6)}
+        <path d="M20 -6.6V-9.4" stroke="${G[1]}" stroke-width=".6"/><path d="M18.9 -10.3a1.3 1.3 0 1 0 2.2 0a1 1 0 1 1 -2.2 0z" fill="${G[0]}"/>
+        <path d="M16.4 2.4V-.2Q16.4 -1.6 17.4 -1.6Q18.4 -1.6 18.4 -.2V2.4ZM21.6 2.4V-.2Q21.6 -1.6 22.6 -1.6Q23.6 -1.6 23.6 -.2V2.4Z" fill="${T[1]}"/>
+        ${rim(18.6, 3.2, T)}${glint(18.6, 3.2)}${[3, 5, 7, 9, 11, 13].map((k) => { const a = (k / 16) * Math.PI * 2 - Math.PI / 2 + Math.PI / 4; return gemAt(20 + Math.cos(a) * 18.6, 20 + Math.sin(a) * 18.6, .9, '#ffffff', '#cfe9ff', G[2]); }).join('')}`;
+    }
+    case 22: { // iznik: a white glazed band painted with cobalt tulips and coral buds
+      const W: [string, string, string, string] = ['#fbfbf6', '#d9dfe8', '#3a4a7a', '#ffffff'];
+      let p = '';
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2, x = 20 + Math.cos(a) * 18.6, y = 20 + Math.sin(a) * 18.6, deg = (a * 180) / Math.PI + 90;
+        const b = a + Math.PI / 8, bx = 20 + Math.cos(b) * 18.6, by = 20 + Math.sin(b) * 18.6;
+        p += `<g transform="rotate(${deg.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})"><path d="M${x} ${(y + 1.9).toFixed(2)}V${(y - .2).toFixed(2)}" stroke="#2f8a5a" stroke-width=".45"/>
+          <path d="M${(x - 1.3).toFixed(2)} ${(y - 1.9).toFixed(2)}Q${(x - 1.4).toFixed(2)} ${(y + .5).toFixed(2)} ${x.toFixed(2)} ${(y + .5).toFixed(2)}Q${(x + 1.4).toFixed(2)} ${(y + .5).toFixed(2)} ${(x + 1.3).toFixed(2)} ${(y - 1.9).toFixed(2)}L${(x + .6).toFixed(2)} ${(y - .9).toFixed(2)}L${x.toFixed(2)} ${(y - 2.2).toFixed(2)}L${(x - .6).toFixed(2)} ${(y - .9).toFixed(2)}Z" fill="#2b58c8"/></g>
+          <circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r=".95" fill="#e2483d"/><circle cx="${(bx - .3).toFixed(2)}" cy="${(by - .3).toFixed(2)}" r=".3" fill="#ffd0c8"/>`;
+      }
+      return `${rim(18.6, 4.2, W)}<circle cx="20" cy="20" r="16.5" fill="none" stroke="#2b58c8" stroke-width=".6"/><circle cx="20" cy="20" r="20.7" fill="none" stroke="#2b58c8" stroke-width=".6"/>${p}${glint(18.6, 4)}`;
+    }
+    case 23: { // maghrib: a sunset band (amber into violet) with a masjid's dome and minaret against the sun at the top
+      const gid = `rkf${++uid}`;
+      const sil = 'M12.6 3.2V-.4H14.6V-5.6L15.4 -7.4L16.2 -5.6V-.4H17.2Q17.2 -4.4 21.4 -5.2Q25.6 -4.4 25.6 -.4H27.4V3.2Z';
+      return `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".45" stop-color="#f0657a"/><stop offset="1" stop-color="#6a3fb8"/></linearGradient></defs>
+        <circle cx="20" cy="-.4" r="7.4" fill="#ffd27a" opacity=".4"/><circle cx="20" cy="-.4" r="4.6" fill="#ffe7a6"/>
+        <path d="${ringD(18.6, 3.4)}" fill="#2a1450" fill-rule="evenodd" transform="translate(.25 1)"/><circle cx="20" cy="20" r="18.6" fill="none" stroke="url(#${gid})" stroke-width="3.4"/>
+        <path d="${arc(18.7, Math.PI * 1.08, Math.PI * 1.55)}" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".6"/>${glint(18.6, 3.4)}
+        <path d="${sil}" fill="#3a1d63" transform="translate(.2 .6)"/><path d="${sil}" fill="#2a1450"/><path d="M21 -6.2a1 1 0 1 0 1.4 0a.8 .8 0 1 1 -1.4 0z" fill="#ffd27a"/>
+        ${[[5, 34], [35, 34], [2.6, 22], [37.4, 22]].map(([x, y]) => `<path d="${starD(x, y, 1.2)}" fill="#ffe7f0" opacity=".9"/>`).join('')}`;
+    }
+    case 24: { // khatam: a gold band set with eight turquoise eight-pointed stars
+      let st = '';
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2, x = 20 + Math.cos(a) * 18.6, y = 20 + Math.sin(a) * 18.6;
+        const d = starPath(x, y, 3, 1.9, 8);
+        st += `${edge(d, '#0a4f47', .6)}${two(d, '#3fd8c2', '#139c8a', -.4, -.4)}<path d="${starPath(x, y, 1.5, 1, 8)}" fill="${G[0]}"/>`;
+      }
+      return `<circle cx="20" cy="20" r="22.6" fill="none" stroke="#7ff0de" stroke-width="1" opacity=".3"/>${rim(18.6, 3, G)}${glint(18.6, 3)}${st}`;
+    }
+    case 25: { // pearl and rose: a pearl band with rose enamel lozenges in silver filigree
+      let lz = '';
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2 - Math.PI / 2, x = 20 + Math.cos(a) * 18.6, y = 20 + Math.sin(a) * 18.6, deg = (a * 180) / Math.PI + 90;
+        const d = `M${x} ${(y - 3).toFixed(2)}L${(x + 2).toFixed(2)} ${y.toFixed(2)}L${x} ${(y + 3).toFixed(2)}L${(x - 2).toFixed(2)} ${y.toFixed(2)}Z`;
+        lz += `<g transform="rotate(${deg.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})">${edge(d, '#4f5a66', .5)}<path d="${d}" fill="${METAL.silver[0]}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(1.22) translate(${(-x).toFixed(2)} ${(-y).toFixed(2)})"/>${two(d, '#ff9ab8', '#d9557f', -.3, -.3)}<circle cx="${(x - .4).toFixed(2)}" cy="${(y - .9).toFixed(2)}" r=".4" fill="#fff"/></g>`;
+        for (const o of [-1, 1]) { const b = a + o * Math.PI / 12; const px = 20 + Math.cos(b) * 18.6, py = 20 + Math.sin(b) * 18.6;
+          lz += `${two(circlePath(px, py, 1), METAL.pearl[0], METAL.pearl[1], -.3, -.3)}<circle cx="${(px - .3).toFixed(2)}" cy="${(py - .3).toFixed(2)}" r=".3" fill="#fff"/>`; }
+      }
+      return `<circle cx="20" cy="20" r="22.4" fill="none" stroke="#ffd6e4" stroke-width="1.1" opacity=".35"/>${rim(18.6, 2.4, METAL.pearl)}${glint(18.6, 2.4)}${lz}`;
     }
     default: return rim(18.6, 2.8, tierM);
   }

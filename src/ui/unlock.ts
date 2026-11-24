@@ -124,7 +124,7 @@ export function playUnlock(k: Reveal, go: () => void, later: () => void) {
   const body = who?.el ?? light!.el;
   const stage = h('div', { class: 'ul-stage', 'aria-hidden': 'true' }, scene, body, h('span', { class: 'ul-floor' }));
   // Tomorrow's stop, when there is one (src/ui/coming.ts): something to come back for.
-  const next = h('button', { class: 'ul-next', hidden: true, onclick: () => { d.close(); void import('./coming').then((m) => m.openComing()); } });
+  const next = h('button', { class: 'ul-next', hidden: true, onclick: () => { d.close(); void import('./weekGifts').then((m) => m.openWeekGifts()); } });
   void import('./coming').then((m) => {
     const t = m.tomorrow();
     if (t) { next.textContent = fe('co.tomorrowIs', { what: m.stepTitle(t.id) }); next.hidden = false; }

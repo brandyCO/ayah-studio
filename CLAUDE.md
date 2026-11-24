@@ -1771,7 +1771,9 @@ duas/reflections section in Me.
       chest holding its Light (`src/ui/chest.ts`, SVG drawn in code): wood ≤ 10, brass 15–20, cedar with a star 25–45,
       emerald and gold 50–99, pearl and gold with light 100+ (`chestTier()`). Resting (breathing, muted) until the goal is
       met, then shaking with the lid peeking and light behind it (heavier chests shake harder and slower), open once
-      claimed. The amount inside is always shown, never random (no loot boxes). A day chest row for every goal met
+      claimed. The amount inside is always shown; since 2026-11-24 (owner pick, "like Brawl Stars") taps can upgrade it
+      ×2 / ×3 / ×4 at random (about 1 in 7 / 20 / 70, `rollUp()` in me.ts, never below the seeded ×2 surprise; `Moment.up`:
+      the badge climbs on random taps before it can open, the extra chests drop in beside it), only ever adding Light. A day chest row for every goal met
       (`ALL_LIGHT`) replaces the Claim-all button; the adhkar session's finish shows its chest too. Tap → full-screen
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
@@ -2533,6 +2535,23 @@ duas/reflections section in Me.
       sets `comebackSeen`). Web sign-in leaves the page: localStorage `fsSignIn` resumes it on return (`resumeSignIn()`). Signed
       in, the first week counts from the account's creation (`Account.created`, `daysOpened()` in `reveal.ts`). Strings `fw.*`,
       30 languages. Preview: `bench/unlock.html?fs=1`, `?fs=wb`
+      **Seven days of gifts** (owner request 2026-11-24, "a 7 days of a week popup … like many of the 4X games"; replaces
+      What's coming on Me, in Settings and in the onboarding; the day-before pop-up is gone): `src/data/weekGift.ts` +
+      `src/ui/weekGifts.ts` (+ `.css`, classes `gw-*`). A new user's **first week** is their own Day 1–7 (50 Light, a freeze,
+      100 + opens the shop, the date palm + opens the room, the lantern + opens the wardrobe, 150, 300 + the gold frame
+      `fr:2`); a missed day never resets it, and a taken tile opens its part at once (`giftsGot()` in reveal.ts, then its
+      unlock moment). After it, **every week Saturday → Friday** (owner: "Friday is the most important day"): 20, 25, a
+      freeze, 30, 35, 40, and Friday (Jumu'ah) 150; a day not opened fades as Missed, Friday's is always there; people who
+      used the app before it came in start here. The sheet pops up when the app opens while today's gift waits
+      (`maybeWeekGifts()` from rewards.ts, once a launch, never over another dialog, the studio or the Kids space); Claim →
+      the chest moment with exactly the tile's prize → the sheet again with the stamp landing. Credited once each (claim ids
+      `wg:0:{day}` / `wg:{saturday}:{weekday}`); localStorage `weekGift`, synced. Strings `wg.*`, 30 languages. Preview:
+      `bench/unlock.html?wg=1` or `?wg={state json}`; `?chest=N` a chest upgraded to ×N. **Weekly prizes** (owner 2026-11-24, no
+      streak repair anywhere): Sat 20 Light, Sun a lamp refill (`giftLamps()`), Mon 30, Tue Double Light for the next 3 chests
+      on Me (`useBoost()`, localStorage `lightBoost`), Wed 40, Thu lamps, Fri 150 + six lanterns lit by Sat → Thu; all six (days
+      before the calendar began not asked) → the week's **Jumu'ah frame** (`JUMUAH` fr:20–25 in turn, +100 Light if owned; shop →
+      Only to win, `wg.jmHow`) and a streak freeze. Migration `20261124200000_jumuah_frames.sql` (frames 0–25). Still to do: a
+      Thursday evening note; the rest of the collection's art once the owner picks a style
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

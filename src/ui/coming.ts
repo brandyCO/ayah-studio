@@ -41,7 +41,7 @@ export function tomorrow(): Step | null {
 }
 export const stepTitle = (id: Id) => fe(`co.${id}` as FrontKey);
 
-function art(s: Step): HTMLElement {
+export function art(s: Step): HTMLElement {
   const box = h('span', { class: 'co-art', 'aria-hidden': 'true' });
   if (REVEAL.includes(s.id)) box.append(miniArt(s.id as Reveal));
   else if (s.id === 'flame' || s.id === 'fire') box.append(flame(s.id === 'fire' ? 3 : 1, 44, true));
