@@ -10,11 +10,27 @@ import { t } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { icon } from './icons';
 import { lastRead } from './prefs';
-import { pendingRewards } from '../data/claims';
-import { followAlong, playerActive } from './player';
+import { followAlong, playerActive } from './playerHub';
 import { onAccount } from '../cloud/auth';
 
-const rewardWaiting = () => { try { return pendingRewards().length > 0; } catch { return false; } };
+// The Me tab's dot: the claims code (with the goals) loads a moment after the first screen, then marks it.
+let pending: (() => unknown[]) | null = null;
+let asked = false;
+const rewardWaiting = () => {
+  if (!pending) {
+    if (asked) return false;
+    asked = true;
+    const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: object) => number }).requestIdleCallback;
+    const later = (f: () => void) => (idle ? idle(f, { timeout: 2500 }) : setTimeout(f, 1200));
+    later(() => void import('../data/claims').then((m) => {
+      pending = m.pendingRewards;
+      const on = rewardWaiting();
+      document.querySelectorAll('.tab-btn.me').forEach((b) => b.classList.toggle('has-dot', on));
+    }).catch(() => { asked = false; }));
+    return false;
+  }
+  try { return pending().length > 0; } catch { return false; }
+};
 
 export type Tab = 'read' | 'learn' | 'create' | 'ranks' | 'me';
 export type Intent = 'listen' | 'pick' | 'bookmarks' | 'reflections' | 'ramadan' | 'tour' | `page:${number}` | `play:${number}:${number}`;

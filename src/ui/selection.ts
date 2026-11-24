@@ -5,10 +5,8 @@
 // and data-a (ayah).
 import { icon } from './icons';
 import { type SurahMeta } from '../data/quran';
-import { DEFAULT_RECITER, reciterFor } from '../data/reciters';
 import { MAX_AYAT } from '../engine/limits';
 import { h, toast } from './dom';
-import { openCopy } from './copyAyat';
 import { t, uiRef } from '../i18n';
 import { reelLook, reelReciter } from './prefs';
 
@@ -56,7 +54,7 @@ export function selectionController(o: SelectionOptions) {
     label,
     o.onListen && h('button', { class: 'icon-btn', 'aria-label': t('sel.listen'), title: t('sel.listenTitle'), onclick: () => { const sel = current(); if (sel) o.onListen!(sel); } }, '▶'),
     o.onBookmark && h('button', { class: 'icon-btn', 'aria-label': t('sel.bookmark'), title: t('sel.bookmarkTitle'), onclick: () => { const sel = current(); if (sel) o.onBookmark!(sel); } }, icon('bookmark', 22)),
-    h('button', { class: 'icon-btn', 'aria-label': t('sel.copy'), title: t('sel.copyTitle'), onclick: () => { const sel = current(); if (sel) openCopy(o.meta[sel.surah - 1], sel.lo, sel.hi); } }, icon('copy', 20)),
+    h('button', { class: 'icon-btn', 'aria-label': t('sel.copy'), title: t('sel.copyTitle'), onclick: () => { const sel = current(); if (sel) void import('./copyAyat').then((m) => m.openCopy(o.meta[sel.surah - 1], sel.lo, sel.hi)); } }, icon('copy', 20)),
     o.onTranslate && h('button', { class: 'chip', onclick: () => { const sel = current(); if (sel) o.onTranslate!(sel); } }, t('sel.translation')),
     o.onReflect && h('button', { class: 'chip', title: t('sel.reflectTitle'), onclick: () => { const sel = current(); if (sel) o.onReflect!(sel); } }, icon('pen', 18), t('sel.reflect')),
     h('button', { class: 'primary brand-btn', onclick: () => {
@@ -87,9 +85,10 @@ export function selectionController(o: SelectionOptions) {
   async function showEstimate(sel: Sel) {
     const req = ++estReq;
     estimate.textContent = '';
-    const r = reciterFor(reelReciter(DEFAULT_RECITER), sel.surah);
-    if (r.qdc === false && !r.mp3quran) return; // no timings to estimate from
     try {
+      const { DEFAULT_RECITER, reciterFor } = await import('../data/reciters');
+      const r = reciterFor(reelReciter(DEFAULT_RECITER), sel.surah);
+      if (r.qdc === false && !r.mp3quran) return; // no timings to estimate from
       // The recitation and reel code loads only here (not with the app's first screen).
       const [{ mp3quranSurah }, { qdcSurah }, { applyLook, newProject, pacing }, { clipBounds, pacingExtra, reelDuration }] = await Promise.all([
         import('../data/mp3quran'), import('../data/qdc'), import('../engine/project'), import('../engine/recitation')]);
