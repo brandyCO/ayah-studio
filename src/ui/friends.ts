@@ -303,7 +303,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
       h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-motes' }, ...motes)),
       h('div', { class: 'fr-avrow' },
-        h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig)),
+        h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig, true)),
         strip.length ? h('span', { class: 'fr-strip' }, ...strip) : '')));
     const box = (cls: string, ...kids: (Node | string)[]) => h('section', { class: `fr-box ${cls}` }, ...kids);
     const roomCard = p.private ? '' : box('fr-roombox', h('h3', {}, ft('fr.visit')), stage);
@@ -572,7 +572,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void, hidden = 
     const name = f.name ?? rt('rk.private');
     const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, icon('swords', 18), chLabel);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
-      h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
+      h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak, 44)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, f.private ? '' : flagImg(f.flag, 13), name, f.private ? '' : lampPill(f.lamp)),
         f.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(f.live === 'listen' ? 'fn.listening' : 'fn.reading')) : '',
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),
