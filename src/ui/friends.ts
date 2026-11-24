@@ -74,6 +74,42 @@ const friendsNow = () => friendsKept;
 
 /** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
  *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
+// The banner's badge strip repeats badges drawn again further down, ~1,200 SVG nodes that made scrolling
+// the profile slower on a weak phone. Each is one picture instead (still vector), made once and reused.
+const flats = new Map<string, string>();
+function flat(key: string, make: () => Element, size: number): HTMLElement {
+  let src = flats.get(key);
+  if (!src) {
+    const el = make();
+    src = svgSrc(el.querySelector('svg') ?? el, size);
+    if (flats.size > 200) flats.clear();
+    flats.set(key, src);
+  }
+  return h('img', { src, width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+function svgSrc(svg: Element, size?: number): string {
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (size) { svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size)); }
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+}
+function svgImg(svg: Element, size: number): HTMLElement {
+  return h('img', { src: svgSrc(svg, size), width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+
+// The room on a profile is a preview (a tap opens the living room), so its wall and shelves are pictures: drawn
+// once instead of ~900 SVG nodes painted again each time the card scrolls into view. The character stays alive.
+function stillRoom(scene: HTMLElement) {
+  const back = scene.querySelector('svg.rm-back');
+  if (back) {
+    back.querySelectorAll('animate, animateTransform, animateMotion, set').forEach((x) => x.remove());
+    back.replaceWith(h('img', { class: 'rm-back', src: svgSrc(back), alt: '', 'aria-hidden': 'true', draggable: 'false', style: 'object-fit:cover' }));
+  }
+  scene.querySelectorAll<HTMLElement>('.rm-shelf .badge-art, .rm-shelf .hz-badge, .rm-cup > *').forEach((b) => {
+    const svg = b.tagName.toLowerCase() === 'svg' ? b : b.querySelector('svg');
+    if (svg) b.replaceWith(svgImg(svg, 30));
+  });
+}
+
 export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const pid = row.pid;
   if (!pid) return;
@@ -139,6 +175,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
         if (pairSig !== sig || !d.isConnected) return;
         const scene = m.roomStage(mineP ? undefined : { figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top, best: p.streak });
         if (!scene) return;
+        stillRoom(scene);
         const room = h('button', { class: 'fr-room', 'aria-label': ft('fr.visit'), onclick: () => {
           if (mineP) { close(); location.hash = '#/me/room'; } else m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top });
         } }, scene);
@@ -236,8 +273,9 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const tier = p.tier ?? 0;
     const fig = p.private ? null : mineP ? myFigureCode() : p.figure;
     const motes = Array.from({ length: 9 }, (_, i) => h('i', { style: `--x:${(i * 37 + 11) % 100}%;--d:${(i * 0.7) % 5}s;--s:${0.6 + (i % 3) * 0.3}` }));
-    const strip = [...hz.list.slice(0, 1).map((x) => hifzBadge(x.s, x.tier, 26)), ...defs.slice(0, 4).map((x) => badgeArt(x.tier, x.icon, true, 26)),
-      ...(p.cups ?? []).slice(0, 2).map((place) => trophy(place, 24))];
+    const strip = [...hz.list.slice(0, 1).map((x) => flat(`h${x.s}:${x.tier}`, () => hifzBadge(x.s, x.tier, 26), 26)),
+      ...defs.slice(0, 4).map((x) => flat(`b${x.tier}:${x.icon}`, () => badgeArt(x.tier, x.icon, true, 26), 26)),
+      ...(p.cups ?? []).slice(0, 2).map((place) => flat(`t${place}`, () => trophy(place, 24), 24))];
     d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
     heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
       h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-fx' }, ...motes)),
