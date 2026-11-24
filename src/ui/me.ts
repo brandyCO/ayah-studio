@@ -1185,7 +1185,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const got = all.filter((b) => b.earned).length;
     const tap = (b: BadgeState) => (e: Event) => (b.earned && !badgeDone(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b));
     const tile = (b: BadgeState) => h('button', { class: `bd-tile t-${b.def.tier}${b.earned ? ' earned' : ''}`, onclick: tap(b) },
-      badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
+      badgeArt(b.def.tier, b.def.icon, !!b.earned, 68, true),
       h('span', { class: 'bd-name' }, badgeName(b.def)),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
     // One row per family: its five tiers, and a bar towards the next one.
@@ -1199,7 +1199,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
         // F42: what is earned and the next medal only, not five grey ones.
         h('div', { class: 'bdf-tiers' }, ...list.filter((b) => b.earned || b === next).map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
-          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
+          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60, true),
           b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
         next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
           h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
@@ -1217,7 +1217,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         const got = rows.flat().filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
         return [h('details', { class: 'bdf-fold' },
           h('summary', {}, h('b', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)),
-            h('span', { class: 'bdf-peek', 'aria-hidden': 'true' }, ...got.slice(0, 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 26))),
+            h('span', { class: 'bdf-peek', 'aria-hidden': 'true' }, ...got.slice(0, 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 26, true))),
             h('span', { class: 'muted small' }, `${got.length} / ${rows.flat().length}`),
             h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, icon('down', 18))),
           ...rows.map(famRow))];

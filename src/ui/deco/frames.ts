@@ -326,5 +326,28 @@ export const PREMIUM: Record<number, { r: 'legendary' | 'mythic'; name: string }
 /** One piece as a standalone SVG image (its own defs, cropped to its box). */
 export function pieceSvg(p: Piece): string {
   const [x, y, w, h] = p.box ?? [0, 0, 240, 240];
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}" overflow="visible">${DEFS}${HQ_DEFS}${p.svg}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}" overflow="visible">${defsFor(p.svg)}${p.svg}</svg>`;
+}
+
+// Only the gradients and filters a piece uses go into its picture (speed pass 2026-11-24): with every def in every
+// piece, each one was a ~30 KB SVG with 19 filters that the browser parsed on the main thread (25–45 ms at 6× CPU).
+let defMap: Map<string, string> | null = null;
+const refs = (s: string) => Array.from(s.matchAll(/(?:url\(#|href="#)([\w-]+)/g), (m) => m[1]);
+function defsFor(svg: string): string {
+  if (!defMap) {
+    defMap = new Map();
+    for (const src of [DEFS, HQ_DEFS]) {
+      const body = src.replace(/^\s*<defs>/, '').replace(/<\/defs>\s*$/, '');
+      for (const m of body.matchAll(/<(linearGradient|radialGradient|filter|pattern|clipPath|mask|symbol)\b[^>]*\bid="([\w-]+)"[\s\S]*?<\/\1>/g)) defMap.set(m[2], m[0]);
+    }
+  }
+  const want = new Set<string>(), todo = refs(svg);
+  while (todo.length) {
+    const k = todo.pop()!;
+    const d = defMap.get(k);
+    if (!d || want.has(k)) continue;
+    want.add(k);
+    todo.push(...refs(d));
+  }
+  return want.size ? `<defs>${Array.from(want, (k) => defMap!.get(k)).join('')}</defs>` : '';
 }

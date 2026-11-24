@@ -36,6 +36,7 @@ import { dayKey } from '../data/readLog';
 import { rankWeek, weekEndAt } from '../data/rankDay';
 import { actor, myFigureCode } from './actor';
 import type { Status } from '../together/ranks';
+import { backCloses } from './backCloses';
 
 type Rar = 'common' | 'cute' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'prize';
 type Sec = 'power' | 'char' | 'room' | 'look' | 'fx' | 'won' | 'season' | 'icons';
@@ -368,13 +369,15 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const d: HTMLDialogElement = h('dialog', { class: `sh-page${reduced() ? ' still' : ''}`, 'aria-label': sht('sh.title') }, giftBar, stall, cats, body);
 
   let pushed = false;
+  /** Closes the piece open over the page (Esc on the page goes to it first). */
+  let topSheet: (() => void) | null = null;
   try { history.pushState({ shop: 1 }, ''); pushed = true; } catch { /* ignore */ }
   const onPop = () => { pushed = false; d.close(); };
   window.addEventListener('popstate', onPop);
   const close = () => { if (pushed) history.back(); else d.close(); };
   back.onclick = close;
-  d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
-  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); io.disconnect(); vis.disconnect(); clearTimeout(filling); d.remove(); o.onChange?.(); });
+  d.addEventListener('cancel', (e) => { e.preventDefault(); if (topSheet) topSheet(); else close(); });
+  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); io.disconnect(); vis.disconnect(); clearTimeout(filling); clearTimeout(lighting); d.remove(); o.onChange?.(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
   let shown = -1;
@@ -435,7 +438,29 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     if (queue.length) later();
   }, { rootMargin: '300px 0px' });
   // Only tiles on screen twinkle and shine (each moving sparkle is a layer the page composites every frame).
-  const vis = new IntersectionObserver((es) => { for (const e of es) e.target.classList.toggle('on', e.isIntersecting); });
+  // A tile's twinkles start and stop only when the page is still: switched during a scroll, every tile coming into view
+  // added and dropped layers frame after frame. While a piece is open they all rest: `.on` comes off the few on screen
+  // (a class on the page itself restyled every tile, 20–90 ms at 6× CPU) and goes back when it closes.
+  const onScreen = new Set<Element>(), lit = new Set<Element>();
+  let lighting = 0;
+  const light = () => {
+    lighting = 0;
+    const held = d.classList.contains('held');
+    if (!held && Date.now() - lastScroll < 160) { lighting = window.setTimeout(light, 180); return; }
+    const want = held ? new Set<Element>() : onScreen;
+    for (const t of lit) if (!want.has(t)) { t.classList.remove('on'); lit.delete(t); }
+    for (const t of want) if (!lit.has(t)) { t.classList.add('on'); lit.add(t); }
+  };
+  const vis = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) onScreen.add(e.target); else onScreen.delete(e.target);
+    if (!lighting) lighting = window.setTimeout(light, 0);
+  });
+  const hold = (on: boolean) => {
+    if (on === d.classList.contains('held')) return;
+    d.classList.toggle('held', on);
+    clearTimeout(lighting); lighting = 0;
+    if (on) light(); else lighting = window.setTimeout(light, 0);
+  };
   const lazyArt = (w: Ware, cls = 'sh-art') => { const el = h('span', { class: cls }); pending.set(el, w); io.observe(el); return el; };
 
   const tile = (w: Ware) => {
@@ -571,7 +596,10 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   function openWare(w: Ware) {
     haptic();
     const card = h('div', { class: `sh-card r-${w.rar}` });
-    const sheet = h('dialog', { class: 'sh-sheet' }, card);
+    const dim = h('i', { class: 'sh-dim', 'aria-hidden': 'true' });
+    // Opened with show() inside the shop page, not showModal(): a second modal makes everything behind it inert, and
+    // that alone restyled every element of the shop (~5,000) on open and again on close (0.25–0.7 s at 6× CPU).
+    const sheet = h('dialog', { class: 'sh-sheet in-page', 'aria-modal': 'true' }, dim, card);
     // Closing slides the card away first (transform only), then the dialog goes.
     let shutting = false;
     const shut = () => {
@@ -583,9 +611,15 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         .finished.then(() => sheet.close(), () => sheet.close());
     };
     sheet.addEventListener('cancel', (e) => { e.preventDefault(); shut(); });
-    sheet.addEventListener('click', (e) => { if (e.target === sheet) shut(); });
-    sheet.addEventListener('close', () => { sheet.remove(); if (!document.querySelector('dialog.sh-sheet')) d.classList.remove('held'); });
-    d.classList.add('held');
+    sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target === dim) shut(); });
+    sheet.addEventListener('close', () => {
+      sheet.remove();
+      if (topSheet === shut) topSheet = null;
+      // The stall wakes a moment later, not in the same frame as the card leaves (two smaller frames on a slow phone).
+      setTimeout(() => { if (!d.querySelector('dialog.sh-sheet')) hold(false); }, 220);
+    });
+    topSheet = shut;
+    hold(true);
     let without = false;
     const paintCard = (justGot = false) => {
       const st = w.state();
@@ -662,17 +696,27 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         void import('./actor').then((m) => m.sparkle(art, 18, 0.5));
       }
     };
-    paintCard();
-    document.body.append(sheet);
-    if (reduced()) { sheet.showModal(); return; }
-    // Made ready unseen (pictures decoded, laid out), then it springs in on transform / opacity alone.
+    d.append(sheet);
+    // The open attribute rather than show(): show() moves focus at once, which lays out the whole shop in the click
+    // (~130 ms at 6× CPU); the close button takes focus once the card is built.
+    sheet.setAttribute('open', '');
+    backCloses(sheet);
+    const focusX = () => card.querySelector<HTMLElement>('.sh-card-x')?.focus({ preventScroll: true });
+    if (reduced()) { paintCard(); focusX(); return; }
+    // The tap answers at once: the dim fades in this frame (on the compositor), the card is built in the next task
+    // and made ready unseen (pictures decoded, laid out), then it springs in on transform / opacity alone.
     card.style.opacity = '0';
-    sheet.showModal();
-    const imgs = [...card.querySelectorAll('img')].map((i) => i.decode().catch(() => {}));
     const frame = () => new Promise((r) => requestAnimationFrame(r));
-    void Promise.race([Promise.all(imgs), new Promise((r) => setTimeout(r, 450))]).then(frame).then(frame).then(() => {
-      card.style.opacity = '';
-      popIn(card, { stiffness: 260, damping: 18 });
+    void frame().then(() => new Promise((r) => setTimeout(r, 0))).then(() => {
+      if (!sheet.open) return;
+      paintCard();
+      const imgs = [...card.querySelectorAll('img')].map((i) => i.decode().catch(() => {}));
+      return Promise.race([Promise.all(imgs), new Promise((r) => setTimeout(r, 450))]).then(frame).then(frame).then(() => {
+        if (!sheet.open) return;
+        card.style.opacity = '';
+        popIn(card, { stiffness: 260, damping: 18 });
+        focusX();
+      });
     });
   }
 

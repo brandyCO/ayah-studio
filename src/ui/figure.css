@@ -198,3 +198,15 @@ html.reciting .fg-lay .fg-bb { animation-duration: 6s; }
 .fg.cheer:not([class*='xp-']) .fg-x-happy, .fg.waving:not(.cheer):not([class*='xp-']) .fg-x-happy, .fg.sleepy:not(.cheer):not(.waving):not([class*='xp-']) .fg-x-sleepy { display: inline; }
 html.reciting .fg:not(.cheer):not(.waving):not(.sleepy):not([class*='xp-']) .fg-x0 { display: none; }
 html.reciting .fg:not(.cheer):not(.waving):not(.sleepy):not([class*='xp-']) .fg-x-calm { display: inline; }
+/* Twinkles, glows and the aura's rays on HTML layers (actor.ts `backLayers()` / `twinkles()`, speed pass 2026-11-24):
+   the compositor fades and turns them, so the character is never repainted for them. */
+.fg-lay > .fg-bk { position: absolute; inset: 0; display: block; overflow: hidden; pointer-events: none; }
+.fg-lay > .fg-bk > i { position: absolute; inset: 0; display: block; }
+.fg-lay .fg-fxs { display: block; width: 100%; height: auto; overflow: visible; }
+.fg-lay .fg-tw { position: absolute; inset: 0; display: block; pointer-events: none; animation: fg-tw-l 2.6s ease-in-out infinite; }
+.fg-lay .fg-tw.b { animation-delay: -1.3s; }
+.fg-lay > .fg-bk.glow { animation: fg-glow 2.4s ease-in-out infinite; }
+.fg-lay > .fg-bk.spin > i { animation: fg-spin 64s linear infinite; }
+@keyframes fg-tw-l { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .fg-lay .fg-tw, .fg-lay > .fg-bk.glow, .fg-lay > .fg-bk.spin > i { animation: none; } }
+.fg-actor.fg-off :is(.fg-tw, .fg-bk.glow, .fg-bk.spin > i), html.lite .fg-actor :is(.fg-tw, .fg-bk.glow, .fg-bk.spin > i) { animation-play-state: paused !important; }

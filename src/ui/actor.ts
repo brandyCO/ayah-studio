@@ -39,6 +39,7 @@ export function layer(root: Element) {
   const svg = root.querySelector<SVGSVGElement>('svg.fg');
   if (!svg || svg.parentElement?.classList.contains('fg-bb')) return;
   const kidHead = !!svg.querySelector('g[transform="translate(0 20)"] > .fg-head');
+  const back = backLayers(svg);
   const copy = (sel: string) => {
     const c = svg.cloneNode(true) as SVGSVGElement;
     c.removeAttribute('role'); c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true');
@@ -63,13 +64,81 @@ export function layer(root: Element) {
   const lay = h('span', { class: `fg-lay${kidHead ? ' kid' : ''}` });
   const bb = h('span', { class: 'fg-bb' });
   svg.replaceWith(lay);
-  bb.append(svg, ...(rig ? [rig] : []), h('span', { class: 'fg-hd' }, h('span', { class: 'fg-hn' }, head)), h('span', { class: 'fg-pt' }, up), h('span', { class: 'fg-wa' }, wave));
+  if (rig) rig.querySelectorAll<SVGSVGElement>(':scope svg').forEach((c) => { c.after(...twinkles(c)); });
+  bb.append(svg, ...twinkles(svg), ...(rig ? [rig] : []), h('span', { class: 'fg-hd' }, h('span', { class: 'fg-hn' }, head, ...twinkles(head))),
+    h('span', { class: 'fg-pt' }, up, ...twinkles(up)), h('span', { class: 'fg-wa' }, wave, ...twinkles(wave)));
+  lay.append(...back);
   // One motion per layer (motion engine pass 2026-11-19): a CSS loop and a scripted move on the same element, or two
   // moves on the same one, push all of its motion onto the main thread (the chest lagged on slow phones). So the idle
   // loops keep their own layers (`fg-hd` sway, `fg-bb` breath, `fg-sh` shadow) and the scripted moves get the ones
   // inside or around them: `fg-hn` the head's nods and glances, `fg-ln` leans and sinks, `fg-mv` hops and gestures,
   // the shadow's `i` its squash.
   lay.append(h('span', { class: 'fg-sh' }, h('i', {})), h('span', { class: 'fg-mv' }, h('span', { class: 'fg-ln' }, bb)));
+}
+
+// Speed pass 2026-11-24 (owner: "each preview lags on opening"): a twinkle, a glow or the aura's turning rays animated
+// inside the drawing made the browser repaint the whole character every frame (a mythic robe in the shop: 18 fps at
+// 6× CPU). They move on HTML layers now, which the compositor fades and turns; nothing inside an SVG animates.
+const PLAIN = /^(defs|linearGradient|radialGradient|pattern|clipPath|mask|filter|symbol|style)$/i;
+const FX = ['fg-twinkle', 'fg-glow', 'fg-spin'];
+/** A copy of `svg` holding only `keep` (and every gradient), its animation classes taken off. */
+function fxCopy(svg: SVGSVGElement, keep: Element[]): SVGSVGElement {
+  const c = svg.cloneNode(true) as SVGSVGElement;
+  c.setAttribute('class', 'fg-fxs'); c.removeAttribute('role'); c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true');
+  const src = [...svg.querySelectorAll('*')], dst = [...c.querySelectorAll('*')];
+  const kept = new Set(keep.map((k) => dst[src.indexOf(k)]));
+  const walk = (n: Element) => {
+    for (const ch of [...n.children]) {
+      if (kept.has(ch) || PLAIN.test(ch.tagName)) continue;
+      if ([...kept].some((k) => ch.contains(k))) walk(ch); else ch.remove();
+    }
+  };
+  walk(c);
+  c.querySelectorAll(FX.map((x) => `.${x}`).join(',')).forEach((e) => { e.classList.remove(...FX); (e as SVGElement).style.animationDelay = ''; });
+  return c;
+}
+/** The light behind the character (a mythic aura, a legendary glow: drawn outside the body group, so it never bobs)
+ *  taken out of the drawing onto layers of its own, behind it: the still part, the turning rays, the pulsing glows. */
+function backLayers(svg: SVGSVGElement): HTMLElement[] {
+  const els = [...svg.children].filter((e) => !PLAIN.test(e.tagName) && !e.matches('.fg-act, .fg-shadow'));
+  if (!els.length) return [];
+  els.forEach((e) => e.remove());
+  // Put them back for the copy only (the copies are made from `svg`, which no longer holds them).
+  const host = svg.cloneNode(false) as SVGSVGElement;
+  for (const e of svg.children) if (PLAIN.test(e.tagName)) host.append(e.cloneNode(true));
+  host.append(...els);
+  const all = [...host.querySelectorAll('*')];
+  const spin = all.filter((e) => e.classList.contains('fg-spin'));
+  const glow = all.filter((e) => e.classList.contains('fg-glow') && !spin.some((s) => s.contains(e)));
+  const tw = all.filter((e) => e.classList.contains('fg-twinkle') && !spin.some((s) => s.contains(e)));
+  const moving = new Set([...spin, ...glow, ...tw]);
+  const still = els.filter((e) => !moving.has(e) && ![...moving].some((m) => e.contains(m)));
+  const out: HTMLElement[] = [];
+  const lay = (keep: Element[], cls: string, inner = false) => {
+    if (!keep.length) return;
+    const c = fxCopy(host, keep);
+    out.push(h('span', { class: `fg-bk ${cls}` }, inner ? h('i', {}, c) : c));
+  };
+  lay(still, 'still');
+  for (const s of spin) {
+    const o = (s as SVGElement).style.transformOrigin.match(/([\d.]+)px ([\d.]+)px/);
+    lay([s], 'spin', true);
+    if (o) (out[out.length - 1].firstElementChild as HTMLElement).style.transformOrigin = `${(+o[1] / 2).toFixed(2)}% ${(+o[2] / 2.62).toFixed(2)}%`;
+  }
+  lay(glow, 'glow');
+  lay(tw.filter((_, i) => i % 2 === 0), 'tw');
+  lay(tw.filter((_, i) => i % 2 === 1), 'tw b');
+  return out;
+}
+/** Twinkles inside one copy: lifted onto two layers over it (alternate twinkles out of step); glows stay, still. */
+function twinkles(svg: SVGSVGElement): HTMLElement[] {
+  svg.querySelectorAll('.fg-glow, .fg-spin').forEach((e) => e.classList.remove('fg-glow', 'fg-spin'));
+  const tw = [...svg.querySelectorAll('.fg-twinkle')];
+  if (!tw.length) return [];
+  const out = [tw.filter((_, i) => i % 2 === 0), tw.filter((_, i) => i % 2 === 1)].filter((g) => g.length)
+    .map((g, i) => h('span', { class: `fg-tw${i ? ' b' : ''}` }, fxCopy(svg, g)));
+  tw.forEach((e) => e.remove());
+  return out;
 }
 
 /** Sets a pose class (cheer, waving, sleepy) on the character: on every layer of a layered one. */

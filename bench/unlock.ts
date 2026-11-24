@@ -20,6 +20,9 @@ if (q.get('prof')) {
     badges: { top: ['streak-4', 'pages-3', 'juz-2', 'dhikr-3', 'listen-1', 'hz18-4', 'hz67-2', 'hzc12-0'], n: 41 }, cups: [1, 2, 3] };
   try { if (q.get('cold')) localStorage.removeItem('rankProfiles'); else localStorage.setItem('rankProfiles', JSON.stringify({ p: { p1: p } })); } catch { /* */ }
   void import('../src/ui/friends').then((m) => m.openProfile({ ...p, score: 0 } as never));
+} else if (q.get('shop')) {
+  // ?shop=1 the shop (bench: scripts in the speed pass).
+  void import('../src/ui/shop').then((m) => m.openShop());
 } else if (q.get('chest')) {
   const up = +q.get('chest')!;
   void Promise.all([import('../src/ui/celebrate'), import('../src/ui/dom'), import('../src/i18n/front')]).then(([c, d, f]) => c.celebrate({ kind: 'chest', title: 'Read 5 pages', sub: 'Goal met', up,
