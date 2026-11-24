@@ -169,7 +169,7 @@ export function openBuilder(s: Pick<Status, 'figure' | 'wins'>, done: () => void
     } else if (tab === 'skin' || tab === 'bg') kids.push(swatches(tab));
     else {
       const c = COLOUR[tab];
-      if (c && (tab !== 'head' || f.head !== 0) && (tab !== 'beard' || f.beard !== 0)) kids.push(swatches(c));
+      if (c && (tab !== 'head' || (f.head !== 0 && f.head < 8)) && (tab !== 'beard' || f.beard !== 0)) kids.push(swatches(c));
       kids.push(h('div', { class: 'fb-grid' }, ...options(tab, f).filter((v) => !piece(tab as Slot, v) || owned(tab as Slot, v)).map((v) => tile(tab as Slot, v))));
       if (tab === 'hold' && f.hold === 3) kids.push(h('p', { class: 'muted small' }, rt('fb.standNote')));
     }

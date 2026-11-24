@@ -167,7 +167,7 @@ const roomBig = (it: RoomItem) => () => {
 };
 /** The user's room as it is now. */
 const roomBare = () => svgBox(backSvg(skyNow(), Math.max(streak().best, streak().days), false, roomLook(), seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
-const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
+const partRar = (p: number): Rar => (p >= 3000 ? 'mythic' : p >= 1500 ? 'legendary' : p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
 const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary', friday: 'mythic' };
 
 export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void; /** Choosing a piece to give a friend. */ giftTo?: { pid: string; name: string } }
