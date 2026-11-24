@@ -26,6 +26,8 @@ import { lampNext, lampOf } from '../data/shop';
 import { lwt } from '../i18n/lampWall';
 import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, limitedIn, limitedNow, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
 import { shopAdd, shopHas, wallet } from '../data/garden';
+import { jumuahIn } from '../data/weekGift';
+import { fe } from '../i18n/front';
 import { ownsPiece, hijri, seasonNow, streakNeed } from '../data/wardrobe';
 import { lightOn, stats, streak } from '../data/journey';
 import { dayKey } from '../data/readLog';
@@ -164,7 +166,7 @@ const roomBig = (it: RoomItem) => () => {
 /** The user's room as it is now. */
 const roomBare = () => svgBox(backSvg(skyNow(), Math.max(streak().best, streak().days), false, roomLook(), seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
 const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
-const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary' };
+const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary', friday: 'mythic' };
 
 export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void; /** Choosing a piece to give a friend. */ giftTo?: { pid: string; name: string } }
 
@@ -245,9 +247,10 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       } else if (it.win) {
         const w = it.win;
         out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.won',
-          state: () => (w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
-          how: w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
-          when: w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
+          state: () => (w === 'friday' ? shopHas(it.id) : w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
+          how: w === 'friday' ? fe('wg.jmHow') : w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
+          when: w === 'friday' ? () => { if (shopHas(it.id)) return ''; const n = jumuahIn(it.id); return n === 0 ? sht('sh.thisWeek') : n === 1 ? sht('sh.nextWeek') : n > 0 ? sht('sh.backWeeks', { n }) : ''; }
+            : w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
           use: lookUse(it) });
       }
     }

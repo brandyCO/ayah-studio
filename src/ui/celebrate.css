@@ -116,3 +116,23 @@
 @keyframes cel-actor-in { from { transform: translateY(30px) scale(.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cel.go .cel-stage .cel-actor { animation: none; } }
 .cel-stage .cel-actor.big { inset-inline-start: auto; inset-inline-end: -30%; bottom: -10%; width: 40%; }
+/* Upgrades while tapping (×2, ×3, ×4; ×4 the rarest): a glow round the chest in the level's colour and a badge
+   that climbs; on opening the extra chests drop in beside it. Transform / opacity only. */
+.cel-chest-box { --up: #6fd0ff; --up2: #2a8be0; }
+.cel-chest-box.u3 { --up: #c79bff; --up2: #7a3fe0; }
+.cel-chest-box.u4 { --up: #ffe07a; --up2: #ff7a3c; }
+.cel-up-aura { position: absolute; inset: -14%; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--up) 70%, transparent) 0 30%, color-mix(in srgb, var(--up2) 35%, transparent) 52%, transparent 70%); }
+.cel-chest-box.u2 .cel-up-aura, .cel-chest-box.u3 .cel-up-aura, .cel-chest-box.u4 .cel-up-aura { opacity: .85; }
+.cel-chest-box.u4 .cel-up-aura { background: conic-gradient(from 0deg, #ffe07a55, #ff7ab855, #7ad7ff55, #a6ff7a55, #ffe07a55);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%); mask: radial-gradient(circle, #000 30%, transparent 70%); animation: spin 6s linear infinite; }
+.cel-up { position: absolute; z-index: 4; top: 4%; inset-inline-end: 0; display: grid; place-items: center; min-width: 30%; aspect-ratio: 1;
+  border-radius: 50%; opacity: 0; color: #fff; font: 1000 clamp(20px, 7vw, 30px)/1 var(--ui-round, system-ui);
+  background: radial-gradient(circle at 35% 30%, #fff 0 8%, var(--up) 40%, var(--up2) 80%); box-shadow: 0 4px 0 color-mix(in srgb, var(--up2) 70%, #000), 0 0 22px var(--up);
+  text-shadow: 0 2px 0 color-mix(in srgb, var(--up2) 70%, #000); border: 3px solid #fff; }
+.cel-chest-box.u3 .cel-up, .cel-up.u3 { --up: #c79bff; --up2: #7a3fe0; }
+.cel-chest-box.u4 .cel-up, .cel-up.u4 { --up: #ffe07a; --up2: #ff7a3c; color: #5a2400; text-shadow: 0 1px 0 #fff6; }
+.cel-up.on { opacity: 1; }
+.cel-twin { inset: auto; width: 54%; height: 54%; z-index: 1; }
+.cel-twin.open { animation: cel-chest-pop .5s cubic-bezier(.2, 1.6, .4, 1) both !important; }
+@media (prefers-reduced-motion: reduce) { .cel-chest-box.u4 .cel-up-aura { animation: none; } }

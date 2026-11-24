@@ -64,7 +64,7 @@ import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
 import { daysOpened, markRevealed, newReveal, revealed } from '../data/reveal';
-import { giftsOn } from '../data/weekGift';
+import { boostsLeft, giftsOn, useBoost } from '../data/weekGift';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { smartReminder } from '../data/usualTime';
@@ -607,12 +607,22 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   };
   const openAdhkarSession = (p: 's' | 'm') => { haptic(); void import('./adhkar').then((m) => m.openAdhkar(p)); };
   // A chest: its Light, and now and then a surprise inside (double the Light), shown as a prize of its own.
-  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element) => {
-    const x = surprise(id);
-    const n = base * x;
+  const rollUp = (id: string) => {
+    const r = Math.random();
+    return Math.max(surprise(id), r < 1 / 70 ? 4 : r < 1 / 70 + 1 / 20 ? 3 : r < 1 / 70 + 1 / 20 + 1 / 7 ? 2 : 1);
+  };
+  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element, up?: number) => {
+    // Tapping can upgrade the chest (owner 2026-11-24, "like Brawl Stars", ×4 the rarest): ×2 about 1 in 7, ×3 1 in 20,
+    // ×4 1 in 70; a day's seeded surprise is at least ×2. Only ever adds Light, never costs any.
+    const x = up ?? rollUp(id);
+    // Double Light from the gift calendar: the next chests hold twice their Light (taken as the chest opens).
+    const b = useBoost();
+    const n = base * x * b;
+    const tag = (txt: string, label: string) => ({ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, txt), label, rare: true });
+    const extra = [...(x > 1 ? [tag(`×${x}`, fe('ch.up', { n: x }))] : []), ...(b > 1 ? [tag('×2', fe('wg.boostOn'))] : [])];
     return play(
       () => import('./celebrate').then((c) => c.celebrate({ kind: 'chest', ...m,
-        loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
+        loot: extra.length ? [{ kind: 'light', n }, ...extra] : undefined, up: x }, from, n)),
       () => claimGoal(id, n));
   };
   // Fewer, bigger moments: one daily goal is a quiet tick (the chest pops open where it is and its Light flies to the
@@ -638,9 +648,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       void import('./nudges').then((m) => m.maybeAskNudges());
     }
   };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => !g.week && from && surprise(g.id) === 1
-    ? quietChest(g.id, lightFor(g), from)
-    : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  const claimGoalRow = (g: GoalProgress, from?: Element) => {
+    // A daily goal opens quietly in place, unless its chest got upgraded or Double Light is on: then the full moment.
+    const x = rollUp(g.id);
+    return !g.week && from && x === 1 && !boostsLeft()
+      ? quietChest(g.id, lightFor(g), from)
+      : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from, x);
+  };
   const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
   const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => {
@@ -736,7 +750,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = waitingChests();
     if (list.length < 2) return;
     haptic();
-    for (const c of list) c.light *= surprise(c.id);
+    for (const c of list) c.light *= surprise(c.id) * useBoost();
     void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
   };
   const harvestBtn = () => {

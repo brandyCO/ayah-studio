@@ -69,6 +69,9 @@ export function refillLamps(): boolean {
   return true;
 }
 
+/** All five lit again, free (a gift from the seven days of gifts). */
+export function giftLamps() { write({ d: dayKey(), n: LAMPS, t: Date.now() }); }
+
 // --- flawless lessons: no wrong answer and recited from memory without a slip ---
 const FKEY = 'learnFlawless';
 function flawSet(): Set<string> {

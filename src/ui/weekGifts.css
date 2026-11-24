@@ -85,7 +85,32 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
 .gw-grid.small .gw-tile.d7 .gw-art { width: 72px; height: 64px; }
 .gw-grid.small .gw-tile.d7 .gw-art .ck-art { width: 68px; }
 
+/* Weekday prizes: the lamp refill, Double Light. */
+.gw-lamps { display: inline-flex; align-items: flex-end; gap: 1px; }
+.gw-lamps svg { flex: none; }
+.gw-x2 { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; rotate: -6deg;
+  background: linear-gradient(180deg, #ffe27a, #ffb52e); color: #5a3300; font: 1000 20px/1 var(--ui-round, system-ui);
+  box-shadow: 0 3px 0 #c98a12, inset 0 -3px 0 rgba(0, 0, 0, .08); }
+.gw-tile.d7 .gw-x2 { width: 64px; height: 64px; font-size: 28px; }
+/* Friday (Jumu'ah): the big chest with the week's frame rising out of it, and six lanterns lit by Saturday → Thursday. */
+.gw-jm { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.gw-jm .ck-art { width: 86px; translate: 0 10px; }
+.gw-jm-piece { position: absolute; top: -12px; left: 50%; translate: -50% 0; filter: drop-shadow(0 3px 6px rgba(120, 70, 0, .35)); }
+.gw-tile.s-today .gw-jm-piece { animation: gw-bob 1.6s ease-in-out infinite; }
+.gw-grid.small .gw-jm .ck-art { width: 62px; }
+.gw-grid.small .gw-jm-piece svg { width: 40px; height: 40px; }
+.gw-fri { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.gw-plus { font: 900 11.5px/1.2 var(--ui-round, system-ui); color: #8a5a00; }
+.gw-six { display: inline-flex; gap: 3px; }
+.gw-six i { display: grid; place-items: center; }
+.gw-six i.off { opacity: .3; }
+.gw-six i.lit svg { animation: gw-flick 2.4s ease-in-out infinite; }
+.gw-six i.lit:nth-child(2n) svg { animation-delay: -.8s; }
+@keyframes gw-flick { 50% { scale: 1.06; } }
+.gw-six-t { font: 800 10.5px/1.2 var(--ui-round, system-ui); color: #7a6cae; }
+.gw-fri.full .gw-six-t { color: #3f8f1e; }
+
 @media (prefers-reduced-motion: reduce) {
-  .gw-tile.s-today::after, .gw-tile.s-today .gw-art, .gw-stamp.land { animation: none; }
+  .gw-tile.s-today::after, .gw-tile.s-today .gw-art, .gw-stamp.land, .gw-six i.lit svg, .gw-tile.s-today .gw-jm-piece { animation: none; }
 }
 .gw-x:focus:not(:focus-visible) { outline: none; }

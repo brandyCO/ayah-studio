@@ -1771,7 +1771,9 @@ duas/reflections section in Me.
       chest holding its Light (`src/ui/chest.ts`, SVG drawn in code): wood ≤ 10, brass 15–20, cedar with a star 25–45,
       emerald and gold 50–99, pearl and gold with light 100+ (`chestTier()`). Resting (breathing, muted) until the goal is
       met, then shaking with the lid peeking and light behind it (heavier chests shake harder and slower), open once
-      claimed. The amount inside is always shown, never random (no loot boxes). A day chest row for every goal met
+      claimed. The amount inside is always shown; since 2026-11-24 (owner pick, "like Brawl Stars") taps can upgrade it
+      ×2 / ×3 / ×4 at random (about 1 in 7 / 20 / 70, `rollUp()` in me.ts, never below the seeded ×2 surprise; `Moment.up`:
+      the badge climbs on random taps before it can open, the extra chests drop in beside it), only ever adding Light. A day chest row for every goal met
       (`ALL_LIGHT`) replaces the Claim-all button; the adhkar session's finish shows its chest too. Tap → full-screen
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
@@ -2544,8 +2546,12 @@ duas/reflections section in Me.
       (`maybeWeekGifts()` from rewards.ts, once a launch, never over another dialog, the studio or the Kids space); Claim →
       the chest moment with exactly the tile's prize → the sheet again with the stamp landing. Credited once each (claim ids
       `wg:0:{day}` / `wg:{saturday}:{weekday}`); localStorage `weekGift`, synced. Strings `wg.*`, 30 languages. Preview:
-      `bench/unlock.html?wg=1` or `?wg={state json}`. Next (owner 2026-11-24): a Jumu'ah collection of calendar-only pieces
-      and frames rotating on Fridays
+      `bench/unlock.html?wg=1` or `?wg={state json}`; `?chest=N` a chest upgraded to ×N. **Weekly prizes** (owner 2026-11-24, no
+      streak repair anywhere): Sat 20 Light, Sun a lamp refill (`giftLamps()`), Mon 30, Tue Double Light for the next 3 chests
+      on Me (`useBoost()`, localStorage `lightBoost`), Wed 40, Thu lamps, Fri 150 + six lanterns lit by Sat → Thu; all six (days
+      before the calendar began not asked) → the week's **Jumu'ah frame** (`JUMUAH` fr:20–25 in turn, +100 Light if owned; shop →
+      Only to win, `wg.jmHow`) and a streak freeze. Migration `20261124200000_jumuah_frames.sql` (frames 0–25). Still to do: a
+      Thursday evening note; the rest of the collection's art once the owner picks a style
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
