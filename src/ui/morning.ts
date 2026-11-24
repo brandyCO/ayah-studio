@@ -6,12 +6,18 @@ import { registerPlugin } from '@capacitor/core';
 import { loadMeta, surahText, surahTranslation } from '../data/quran';
 import { loadDaily, pick } from '../data/daily';
 import { currentTranslation, translationInfo } from '../data/translations';
-import { lang, t, uiRef } from '../i18n';
+import { lang, surahName, t, uiRef } from '../i18n';
 import { hasPlugin, isNative } from '../native';
 import { h, toast } from './dom';
 
 const Daily = registerPlugin<{
-  store(o: { texts: Record<string, string>; names: Record<string, string>; credit: string; lang: DailyLang; images: Record<string, string> }): Promise<void>;
+  store(o: {
+    texts: Record<string, string>; names: Record<string, string>; credit: string; lang: DailyLang; images: Record<string, string>;
+    /** My ayah by local date (YYYY-MM-DD) for the next two weeks, and the widgets' labels. */
+    mine: Record<string, MineEntry>; labels: { today: string; mine: string };
+    /** iPhone only (its widget has no copy of the list): today's ayah by local date, and the theme's colours. */
+    today: Record<string, { key: string; ref: string; text: string; credit: string; hash: string }>; theme: Record<string, string>;
+  }): Promise<void>;
   takeLaunchHash(): Promise<{ hash?: string }>;
 }>('Daily');
 
@@ -38,6 +44,11 @@ function setMorning(s: MorningSettings) {
     /* ignore */
   }
 }
+
+interface MineEntry { key: string; ref: string; text: string; why: string; hash: string }
+const MINE_DAYS = 14;
+// Local date as YYYY-MM-DD (as readLog's dayKey; kept here so readLog stays in its first-load chunk).
+const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const key = (x: { s: number; from: number; to: number }) => `${x.s}:${x.from}${x.to > x.from ? `-${x.to}` : ''}`;
 
@@ -131,19 +142,37 @@ async function storeWidgetTexts() {
   for (const x of d.items) {
     const tr = await surahTranslation(x.s, info.id);
     texts[key(x)] = tr.slice(x.from - 1, x.to).join(' ');
-    names[String(x.s)] = meta[x.s - 1].en;
+    names[String(x.s)] = surahName(meta[x.s - 1]);
   }
   const images: Record<string, string> = {};
+  const now = new Date();
+  const dayAt = (i: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
   if (lang === 'ar') {
-    const now = new Date();
     for (let i = 0; i < AR_DAYS; i++) {
-      const x = pick(d, new Date(now.getFullYear(), now.getMonth(), now.getDate() + i));
+      const x = pick(d, dayAt(i));
       if (images[key(x)]) continue;
       const ar = await surahText(x.s);
       images[key(x)] = await arabicPicture(ar.slice(x.from - 1, x.to).join(' '));
     }
   }
-  await Daily.store({ texts, names, credit: info.translator, lang, images });
+  // My ayah for the next two weeks, as things stand now (worked out again whenever the app opens or is left).
+  const [{ myAyah }, { dyt }, { whyLine }] = await Promise.all([import('../data/myAyah'), import('../i18n/daily'), import('./ayahCards')]);
+  const mine: Record<string, MineEntry> = {};
+  for (let i = 0; i < MINE_DAYS; i++) {
+    const date = dayAt(i);
+    const m = await myAyah(date, pick(d, date));
+    const k = `${m.s}:${m.a}`;
+    const tr = await surahTranslation(m.s, info.id);
+    mine[dayKey(date)] = { key: k, ref: `${surahName(meta[m.s - 1])} · ${m.s}:${m.a}`, text: tr[m.a - 1], why: whyLine(meta, m), hash: `#/s/${m.s}/${m.a}` };
+    if (lang === 'ar' && !images[k]) images[k] = await arabicPicture((await surahText(m.s))[m.a - 1]);
+  }
+  const today: Record<string, { key: string; ref: string; text: string; credit: string; hash: string }> = {};
+  for (let i = 0; i < AR_DAYS; i++) {
+    const x = pick(d, dayAt(i));
+    today[dayKey(dayAt(i))] = { key: key(x), ref: `${names[String(x.s)]} · ${x.s}:${x.from}${x.to > x.from ? `–${x.to}` : ''}`, text: texts[key(x)], credit: info.translator, hash: `#/s/${x.s}/${x.from}` };
+  }
+  const { widgetTheme } = await import('./widgets');
+  await Daily.store({ texts, names, credit: info.translator, lang, images, mine, labels: { today: dyt('dy.today'), mine: dyt('dy.mine') }, today, theme: widgetTheme() });
 }
 
 /** App start (Android): taps on the widget or a notification open the ayah; keep the widget and the
@@ -162,6 +191,13 @@ export async function initDailyNative() {
   const sync = () => { if (hasPlugin('Daily')) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e)); void scheduleMorning().catch(() => {}); };
   sync();
   window.addEventListener('translation-changed', sync);
+  // My ayah follows what the user does: hand the widgets a fresh pick when the app is left (at most every 10 min).
+  let synced = Date.now();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden || Date.now() - synced < 600_000 || !hasPlugin('Daily')) return;
+    synced = Date.now();
+    void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e));
+  });
 }
 
 /** Settings → Morning ayah (Android app): on/off and the time. */

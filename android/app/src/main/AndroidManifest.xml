@@ -390,6 +390,19 @@
                 android:resource="@xml/daily_ayah_widget_info" />
         </receiver>
 
+        <!-- Home-screen widget: My ayah (picked from what the user memorises and reads) -->
+        <receiver
+            android:name=".MyAyahWidget"
+            android:label="@string/my_ayah_widget_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/my_ayah_widget_info" />
+        </receiver>
+
         <!-- Me tab widgets (StreakWidget, TasbihWidget, PrayerWidget) and the prayer alarm -->
         <receiver android:name=".StreakWidget" android:label="@string/streak_widget_label" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

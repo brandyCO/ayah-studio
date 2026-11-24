@@ -9,4 +9,8 @@
     <string name="sc_search_long">Zoeken in de Koran</string>
     <string name="sc_reels">Reels</string>
     <string name="sc_reels_long">Mijn reels</string>
+    <string name="daily_widget_label">Vers van de dag</string>
+    <string name="daily_widget_description">Hetzelfde vers voor iedereen, elke dag nieuw. Groot samen met je eigen vers.</string>
+    <string name="my_ayah_widget_label">Mijn vers</string>
+    <string name="my_ayah_widget_description">Een vers uit wat je leert en leest. Groot samen met het vers van de dag.</string>
 </resources>

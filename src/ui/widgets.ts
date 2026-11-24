@@ -33,10 +33,10 @@ const Widgets = registerPlugin<{
   pin(o: { kind: WidgetKind }): Promise<{ ok: boolean }>;
 }>('Widgets');
 
-export const WIDGETS = ['streak', 'tasbih', 'prayer', 'duas', 'daily'] as const;
+export const WIDGETS = ['streak', 'tasbih', 'prayer', 'duas', 'daily', 'mine'] as const;
 export type WidgetKind = (typeof WIDGETS)[number];
 export interface WidgetStatus { canPin: boolean; on: Record<WidgetKind, number> }
-const NONE: WidgetStatus = { canPin: false, on: { streak: 0, tasbih: 0, prayer: 0, duas: 0, daily: 0 } };
+const NONE: WidgetStatus = { canPin: false, on: { streak: 0, tasbih: 0, prayer: 0, duas: 0, daily: 0, mine: 0 } };
 /** Which widgets are on the home screen (Android); web: none, and none can be added. */
 export async function widgetStatus(): Promise<WidgetStatus> {
   if (!isNative()) return NONE;
@@ -190,7 +190,7 @@ export function initWidgets() {
 }
 
 /** The theme colours for the widgets (hex): the flame, the week's checks, the glow and the night. */
-function widgetTheme(): Record<string, string> {
+export function widgetTheme(): Record<string, string> {
   const p = rewardPalette();
   const hsl = (hue: number, sat: number, l: number) => {
     const a = (sat / 100) * Math.min(l / 100, 1 - l / 100);

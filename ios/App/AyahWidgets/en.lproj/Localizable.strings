@@ -1,0 +1,5 @@
+"today.name" = "Today’s ayah";
+"today.desc" = "The same ayah for everyone, new each day. On a large widget, shown with your own ayah.";
+"mine.name" = "My ayah";
+"mine.desc" = "An ayah picked from what you memorise and read. On a large widget, shown with today’s ayah.";
+"empty" = "Open the app once to see the ayah here.";

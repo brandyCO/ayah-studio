@@ -64,6 +64,8 @@ registerToday(async () => {
     ],
   }];
 });
+// My ayah (owner request 2026-11-24): the personal one, picked from what this user memorises and reads.
+registerToday(() => import('./ayahCards').then((m) => m.myAyahToday((s, a) => listenHere?.(s, a))));
 // Popular this week: the ayat people made reels of most (or the owner's weekly pick), one tap to a reel.
 registerToday(async () => {
   const [meta, p] = await Promise.all([loadMeta(), import('../data/popular').then((m) => m.loadPopular())]); // with the reciter list, after the page
@@ -796,6 +798,8 @@ export async function showMushaf(root: HTMLElement, n: number, focusAyah?: numbe
     window.setTimeout(() => pulseNotes({ s, a }), 450); // after the page has slid in
   });
   else if (intent?.startsWith('page:')) { const p = Number(intent.slice(5)); if (valid(p)) go(p); }
+  // Listen on a card elsewhere (Me → Ayah of the day): this ayah, from here.
+  else if (intent?.startsWith('play:')) { const [, ps, pa] = intent.split(':').map(Number); listenHere?.(ps, pa); }
   // Ramadan (T7): the first night's moment, Eid's recap, and today's reminders (Android app).
   // Never over the tour: the moment waits for the next start.
   {

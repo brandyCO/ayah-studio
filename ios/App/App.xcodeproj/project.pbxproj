@@ -28,7 +28,35 @@
 		DA87B5ECEEBB336884494988 /* MediaScanPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AE5B9F13D7D0E6E50101B64 /* MediaScanPlugin.swift */; };
 		DE2B89A8F2D9733DEDE69B10 /* opening.webp in Resources */ = {isa = PBXBuildFile; fileRef = F6B421CD4268674ACF557F17 /* opening.webp */; };
 		F995398F8D3F811D6DFABAC1 /* LaunchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D2A991E76DE85492D96595 /* LaunchPlugin.swift */; };
+		5AFCE67B136E3C3060635DD6 /* DailyPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B951937CD05E268A3A33E17A /* DailyPlugin.swift */; };
+		A5D05015E73DAAC8FCB50457 /* AyahWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C6CEAA9436B4A7143B88E52 /* AyahWidgets.swift */; };
+		FB7125B27118EDB699F4AFA8 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = FA0C7BF98232BBDF7BA71A68 /* Localizable.strings */; };
+		9D26E6B665AFC9D2B6AA8A14 /* AyahWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F10A820DA918EC7882CE487D /* AyahWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1382FBE3072E4C5BDCB93355 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2FE5CB7D8C40FAB0CAC6CBBA;
+			remoteInfo = AyahWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E12EA0384B5F0B8F935D7224 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9D26E6B665AFC9D2B6AA8A14 /* AyahWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		01CEE6834C37D9CFF21DBE5A /* ml */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ml; path = ml.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -84,6 +112,41 @@
 		EBE3EE95E8C70123EC40F447 /* ps */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ps; path = ps.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F6B421CD4268674ACF557F17 /* opening.webp */ = {isa = PBXFileReference; includeInIndex = 1; path = opening.webp; sourceTree = "<group>"; };
 		FB79F5EC0929ACA8DEE02855 /* de */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		B951937CD05E268A3A33E17A /* DailyPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DailyPlugin.swift; sourceTree = "<group>"; };
+		2C6CEAA9436B4A7143B88E52 /* AyahWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AyahWidgets.swift; sourceTree = "<group>"; };
+		3BB00AD47612EB0B2D737FF3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4A2862AD705FBB4B0D4AC6E3 /* AyahWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = AyahWidgets.entitlements; sourceTree = "<group>"; };
+		F10A820DA918EC7882CE487D /* AyahWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AyahWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EA9E7C324A9A86C6612DC00 /* ar */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
+		2B2DFA2FB50211E260DE7DF0 /* az */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = az; path = az.lproj/Localizable.strings; sourceTree = "<group>"; };
+		2AC30CD4C6AF36B158377A60 /* bn */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = bn; path = bn.lproj/Localizable.strings; sourceTree = "<group>"; };
+		989DE90D6466DC12571208D8 /* bs */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = bs; path = bs.lproj/Localizable.strings; sourceTree = "<group>"; };
+		B93FBB8195C9279454D4FA69 /* ckb */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ckb; path = ckb.lproj/Localizable.strings; sourceTree = "<group>"; };
+		19D2D9418C1BCB544ABE27AA /* de */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8081128545C36A23D3F28607 /* en */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		09BA2AAA9352C0B8E86ADA9C /* es */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1FF67EC8AF34FF87306C2B9F /* fa */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = fa; path = fa.lproj/Localizable.strings; sourceTree = "<group>"; };
+		7BC1D66F802AD7D995695E80 /* fr */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		BAFF5F562B9188ED6C5302ED /* ha */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ha; path = ha.lproj/Localizable.strings; sourceTree = "<group>"; };
+		B237F25B13C15A2CA7AB032C /* hi */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = hi; path = hi.lproj/Localizable.strings; sourceTree = "<group>"; };
+		72CE48C19A69120484685FEC /* id */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = id; path = id.lproj/Localizable.strings; sourceTree = "<group>"; };
+		2168BA87519CEF73A77D09B9 /* it */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8D9D82E252C14D3022F2A2BE /* ja */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		165825311AEAA6BEF13FD95B /* ko */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		CB7DFF86DC7DEF4032BC0ED0 /* ml */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ml; path = ml.lproj/Localizable.strings; sourceTree = "<group>"; };
+		721F6C8A201839292C21EB52 /* ms */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ms; path = ms.lproj/Localizable.strings; sourceTree = "<group>"; };
+		0E54ABC5B5F788A014023F2F /* nl */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
+		E7AFA65542FF24FDEEBD603D /* ps */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ps; path = ps.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8A6722E84FA970618236CAAA /* pt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = pt; path = pt.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1770350D88F37385C156F1D5 /* ru */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		CC3553B80C179864B6244DFB /* so */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = so; path = so.lproj/Localizable.strings; sourceTree = "<group>"; };
+		618AACD7F98F995568356BC6 /* sq */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = sq; path = sq.lproj/Localizable.strings; sourceTree = "<group>"; };
+		99F21642448B6C2930E3181D /* sw */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = sw; path = sw.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5C2947AF3D8787B4260CA595 /* ta */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ta; path = ta.lproj/Localizable.strings; sourceTree = "<group>"; };
+		E8F32FCF577B6DCD7DC193C4 /* tr */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C07D0C5B06451E0FE8E9FE3B /* ur */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = ur; path = ur.lproj/Localizable.strings; sourceTree = "<group>"; };
+		978A281F34FD0E90A35B86E4 /* uz */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = uz; path = uz.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1C61EDF2955D353CFD9E7805 /* zh-Hans */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +158,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C17250D7CBD2996E999DD79F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -103,6 +173,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				E976C9374C18621315F1DAB1 /* AyahWidgets */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -111,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				F10A820DA918EC7882CE487D /* AyahWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -140,8 +212,20 @@
 				9C653A83206BF49C20251EAF /* HapticPlugin.swift */,
 				C8D2A991E76DE85492D96595 /* LaunchPlugin.swift */,
 				F6B421CD4268674ACF557F17 /* opening.webp */,
+				B951937CD05E268A3A33E17A /* DailyPlugin.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		E976C9374C18621315F1DAB1 /* AyahWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				2C6CEAA9436B4A7143B88E52 /* AyahWidgets.swift */,
+				3BB00AD47612EB0B2D737FF3 /* Info.plist */,
+				4A2862AD705FBB4B0D4AC6E3 /* AyahWidgets.entitlements */,
+				FA0C7BF98232BBDF7BA71A68 /* Localizable.strings */,
+			);
+			path = AyahWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -154,10 +238,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				E12EA0384B5F0B8F935D7224 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D154A5CE8D526EC45C0E82EE /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -166,6 +252,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		2FE5CB7D8C40FAB0CAC6CBBA /* AyahWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE304257EAC01F8209FCA82E /* Build configuration list for PBXNativeTarget "AyahWidgets" */;
+			buildPhases = (
+				937CAC7687B2DD49A8D870FC /* Sources */,
+				C17250D7CBD2996E999DD79F /* Frameworks */,
+				2045DB17A34F0FBA39E15D94 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AyahWidgets;
+			productName = AyahWidgets;
+			productReference = F10A820DA918EC7882CE487D /* AyahWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -179,6 +282,10 @@
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
+						ProvisioningStyle = Automatic;
+					};
+					2FE5CB7D8C40FAB0CAC6CBBA = {
+						CreatedOnToolsVersion = 15.0;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -229,6 +336,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				2FE5CB7D8C40FAB0CAC6CBBA /* AyahWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -252,6 +360,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2045DB17A34F0FBA39E15D94 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB7125B27118EDB699F4AFA8 /* Localizable.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -268,10 +384,27 @@
 				03CB584A04C84F86795AC439 /* SpeechPlugin.swift in Sources */,
 				66BEEC21E4EE01FA07BBA5B7 /* HapticPlugin.swift in Sources */,
 				F995398F8D3F811D6DFABAC1 /* LaunchPlugin.swift in Sources */,
+				5AFCE67B136E3C3060635DD6 /* DailyPlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		937CAC7687B2DD49A8D870FC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A5D05015E73DAAC8FCB50457 /* AyahWidgets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D154A5CE8D526EC45C0E82EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2FE5CB7D8C40FAB0CAC6CBBA /* AyahWidgets */;
+			targetProxy = 1382FBE3072E4C5BDCB93355 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		2C58A50368BFED8C1AF6F1DA /* InfoPlist.strings */ = {
@@ -325,6 +458,43 @@
 				504EC3111FED79650016851F /* Base */,
 			);
 			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		FA0C7BF98232BBDF7BA71A68 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9EA9E7C324A9A86C6612DC00 /* ar */,
+				2B2DFA2FB50211E260DE7DF0 /* az */,
+				2AC30CD4C6AF36B158377A60 /* bn */,
+				989DE90D6466DC12571208D8 /* bs */,
+				B93FBB8195C9279454D4FA69 /* ckb */,
+				19D2D9418C1BCB544ABE27AA /* de */,
+				8081128545C36A23D3F28607 /* en */,
+				09BA2AAA9352C0B8E86ADA9C /* es */,
+				1FF67EC8AF34FF87306C2B9F /* fa */,
+				7BC1D66F802AD7D995695E80 /* fr */,
+				BAFF5F562B9188ED6C5302ED /* ha */,
+				B237F25B13C15A2CA7AB032C /* hi */,
+				72CE48C19A69120484685FEC /* id */,
+				2168BA87519CEF73A77D09B9 /* it */,
+				8D9D82E252C14D3022F2A2BE /* ja */,
+				165825311AEAA6BEF13FD95B /* ko */,
+				CB7DFF86DC7DEF4032BC0ED0 /* ml */,
+				721F6C8A201839292C21EB52 /* ms */,
+				0E54ABC5B5F788A014023F2F /* nl */,
+				E7AFA65542FF24FDEEBD603D /* ps */,
+				8A6722E84FA970618236CAAA /* pt */,
+				1770350D88F37385C156F1D5 /* ru */,
+				CC3553B80C179864B6244DFB /* so */,
+				618AACD7F98F995568356BC6 /* sq */,
+				99F21642448B6C2930E3181D /* sw */,
+				5C2947AF3D8787B4260CA595 /* ta */,
+				E8F32FCF577B6DCD7DC193C4 /* tr */,
+				C07D0C5B06451E0FE8E9FE3B /* ur */,
+				978A281F34FD0E90A35B86E4 /* uz */,
+				1C61EDF2955D353CFD9E7805 /* zh-Hans */,
+			);
+			name = Localizable.strings;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
@@ -495,6 +665,54 @@
 			};
 			name = Release;
 		};
+		181B6DEE2C09FF15AB46F66A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AyahWidgets/AyahWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AyahWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.brandyco.ayahstudio.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		CE1FCC08E86E9FA5C92F8183 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AyahWidgets/AyahWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AyahWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.brandyco.ayahstudio.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -512,6 +730,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AE304257EAC01F8209FCA82E /* Build configuration list for PBXNativeTarget "AyahWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				181B6DEE2C09FF15AB46F66A /* Debug */,
+				CE1FCC08E86E9FA5C92F8183 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

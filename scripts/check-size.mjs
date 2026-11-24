@@ -25,6 +25,7 @@ import { gzipSync } from 'node:zlib';
 // 2026-11-19: raised to 136 for instant tabs (kept tab screens, built ahead while idle; main.ts route()). 135.1 KB.
 // 2026-11-19: 137 for speed pass 4 (neighbour pages from their own small files, the whole layout read in one fast pass
 // while idle): 136.1 KB. A first visit on slow 3G also no longer fetches Nunito (38 KB) before the mushaf page.
+// 2026-11-24: Ayah of the day + My ayah (lazy; ~0.15 KB in the entry's preload map).
 // 2026-11-24: the player (with the reciter list), the surah list, popular, claims + goals and copy load when wanted: 106.2 KB.
 const BUDGET_KB = 115; // kept low on purpose: ~9 KB of room for new first-screen code
 const html = readFileSync('dist/index.html', 'utf8');

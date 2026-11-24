@@ -9,4 +9,8 @@
     <string name="sc_search_long">Cerca nel Corano</string>
     <string name="sc_reels">Reel</string>
     <string name="sc_reels_long">I miei reel</string>
+    <string name="daily_widget_label">Il versetto di oggi</string>
+    <string name="daily_widget_description">Lo stesso versetto per tutti, nuovo ogni giorno. In formato grande, insieme al tuo versetto.</string>
+    <string name="my_ayah_widget_label">Il mio versetto</string>
+    <string name="my_ayah_widget_description">Un versetto scelto tra ciò che memorizzi e leggi. In formato grande, insieme al versetto di oggi.</string>
 </resources>
