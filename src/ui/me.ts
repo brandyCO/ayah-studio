@@ -104,6 +104,7 @@ function setEasy(on: boolean) {
   try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
 }
 
+const unlockPlayed = (): string[] => { try { return JSON.parse(localStorage.getItem('unlockPlayed') ?? '[]'); } catch { return []; } };
 /** "New for you": the shop, the room or the wardrobe on the day it first appears (src/data/reveal.ts). */
 function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
   const k = newReveal();
@@ -122,6 +123,12 @@ function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
     h('div', { class: 'chips' },
       h('button', { class: 'chip on', onclick: go }, fe('rv.open')),
       h('button', { class: 'chip', onclick: done }, fe('rv.later'))));
+  // Its moment (src/ui/unlock.ts): once, a moment after Me shows, when nothing else is on screen.
+  if (!unlockPlayed().includes(k)) setTimeout(() => {
+    if (!card.isConnected || unlockPlayed().includes(k) || document.querySelector('dialog[open], .cel')) return;
+    try { localStorage.setItem('unlockPlayed', JSON.stringify([...unlockPlayed(), k])); } catch { /* storage blocked */ }
+    void import('./unlock').then((m) => m.playUnlock(k, go, done));
+  }, 1200);
   return card;
 }
 

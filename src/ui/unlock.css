@@ -1,0 +1,73 @@
+/* ---------- Unlock moments (src/ui/unlock.ts) ---------- */
+.ul { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border: 0; padding: 0; overflow: hidden;
+  background: #191433; color: var(--text); display: none; }
+.ul[open] { display: block; }
+.ul::backdrop { background: #191433; }
+/* Night first, then the warm sky the moment it comes alive: two layers, opacity only. */
+.ul-sky { position: absolute; inset: 0; background: linear-gradient(#141030, #2a2156 60%, #3b2d6e); opacity: 0; transition: opacity .5s ease; }
+.ul-sky::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .9s ease;
+  background: linear-gradient(#5b3fbf 0%, #9a63c9 38%, #ffb98a 78%, #ffd9a8 100%); }
+.ul.k-room .ul-sky::after { background: linear-gradient(#3a3f74 0%, #a0617a 45%, #ffbf8a 85%, #ffdfae 100%); }
+.ul.k-wardrobe .ul-sky::after { background: linear-gradient(#2f6c8f 0%, #6fb5c9 40%, #ffd6b0 85%, #ffe9c9 100%); }
+.ul.up .ul-sky { opacity: 1; }
+.ul.lit .ul-sky::after { opacity: 1; }
+.ul-sky i { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff; opacity: .7; transition: opacity .9s; }
+.ul-sky i:nth-child(1) { left: 14%; top: 12%; } .ul-sky i:nth-child(2) { left: 78%; top: 8%; scale: .7; } .ul-sky i:nth-child(3) { left: 62%; top: 22%; scale: .5; }
+.ul.lit .ul-sky i { opacity: 0; }
+
+.ul-stage { position: absolute; left: 0; right: 0; top: max(5vh, env(safe-area-inset-top)); height: 52vh; }
+.ul-floor { position: absolute; left: 50%; bottom: 0; width: 120vmin; height: 9%; margin-left: -60vmin; border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: #2b2350; transition: background .9s; }
+.ul.lit .ul-floor { background: #e9b77c; }
+.ul.k-room.lit .ul-floor { background: #c9906a; } .ul.k-wardrobe.lit .ul-floor { background: #e6c49a; }
+
+.ul-scene { position: absolute; left: 50%; bottom: 6%; width: min(76vmin, 400px); aspect-ratio: 1; translate: -38% 0; perspective: 900px; }
+.ul-l { position: absolute; inset: 0; display: block; pointer-events: none; }
+.ul-l svg { width: 100%; height: 100%; display: block; }
+/* Dark silhouette over the drawing; it fades away as the lights come on. */
+.ul-sil { transition: opacity .55s ease; }
+.ul.lit .ul-sil { opacity: 0; }
+/* Doors swing out towards the viewer, each on its own hinge (positions match the drawings' viewBox). */
+.ul-door { transform-origin: 33.3% 50%; transition: transform 1s cubic-bezier(.2, 1.25, .4, 1); }
+.ul.lit .ul-door { transform: rotateY(-78deg); }
+.ul-dl { transform-origin: 26% 50%; transition: transform 1s cubic-bezier(.2, 1.25, .4, 1); }
+.ul-dr { transform-origin: 74% 50%; transition: transform 1s cubic-bezier(.2, 1.25, .4, 1) .08s; }
+.ul.lit .ul-dl { transform: rotateY(-80deg); }
+.ul.lit .ul-dr { transform: rotateY(80deg); }
+.ul-hole { transition: opacity .5s ease .15s; }
+.ul.lit .ul-hole { opacity: 0; }
+.ul-lamps { opacity: .25; transition: opacity .3s ease .1s; }
+.ul.lit .ul-lamps { opacity: 1; }
+
+/* Soft round light behind the piece; scaled and faded, never resized. */
+.ul-glow { position: absolute; width: 56%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0; scale: .4;
+  background: radial-gradient(circle, rgba(255, 236, 170, .95) 0 18%, rgba(255, 214, 120, .45) 42%, transparent 70%);
+  transition: opacity .6s ease, scale .8s cubic-bezier(.2, 1.3, .4, 1); }
+.ul.k-shop .ul-glow { width: 26%; }
+.ul.lit:not(.k-shop) .ul-glow, .ul-glow.on { opacity: 1; scale: 1; }
+.ul.k-room .ul-glow { width: 90%; }
+.ul.k-wardrobe .ul-glow { width: 86%; }
+
+.ul-rays { position: absolute; left: 50%; top: 46%; width: 220%; aspect-ratio: 1; translate: -50% -50%; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .28) 0deg 6deg, transparent 6deg 22.5deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0 8%, transparent 46%); mask-image: radial-gradient(circle, #000 0 8%, transparent 46%);
+  transition: opacity 1s ease .2s; }
+.ul.lit .ul-rays { opacity: 1; animation: ul-turn 50s linear infinite; }
+@keyframes ul-turn { to { rotate: 360deg; } }
+
+.ul-actor { position: absolute; z-index: 2; bottom: 4%; inset-inline-start: max(4%, calc(50% - min(76vmin, 400px) * .78)); width: min(36vmin, 190px); height: min(36vmin, 190px); }
+.ul-noor { position: absolute !important; z-index: 2; bottom: 22%; inset-inline-start: 14%; scale: 2.2; }
+
+.ul-card { position: absolute; left: 16px; right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto;
+  padding: 22px 18px 14px; border-radius: 28px; background: var(--card, #fff); box-shadow: 0 6px 0 rgba(0, 0, 0, .08), 0 18px 40px -18px rgba(40, 20, 80, .5);
+  text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; translate: 0 24px; }
+.ul-card.in { opacity: 1; translate: 0 0; }
+.ul-kicker { margin: 0; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; font-size: var(--fs-s); color: #6c5ce7; }
+.ul-title { margin: 0; font-size: clamp(24px, 7vw, 30px); font-weight: 900; line-height: 1.2; }
+.ul-text { margin: 0; color: var(--muted); line-height: 1.45; }
+.primary.ul-go { width: 100%; max-width: 360px; font-size: 18px; padding: 15px 18px; margin-top: 6px; }
+.ul-later { background: transparent; color: var(--text); box-shadow: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .ul-sky, .ul-sky::after, .ul-sil, .ul-door, .ul-dl, .ul-dr, .ul-hole, .ul-lamps, .ul-glow, .ul-rays, .ul-floor { transition: none; }
+  .ul.lit .ul-rays { animation: none; }
+}
