@@ -70,15 +70,30 @@ async function prebuild(key: 'me' | 'learn' | 'ranks') {
     alive.set(key, { el: screen, c, at: Date.now(), y: 0 });
     // Laid out and painted once, unseen (a kept screen that never rendered would do it all on its first tap); then
     // `content-visibility: hidden` keeps that work for the tap.
-    screen.classList.replace('screen-kept', 'screen-warm');
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-      if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
-    }, 50)));
+    const warm = () => {
+      if (!screen.classList.contains('screen-kept')) return;
+      screen.classList.replace('screen-kept', 'screen-warm');
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
+      }, 50)));
+    };
+    // Its unseen layout and paint wait for a quiet moment too (a sheet may have opened while it was built).
+    if (busyNow()) whenQuiet(warm, 300); else warm();
   } catch (e) { console.warn('prebuild', key, e); screen.remove(); }
 }
+// Background work waits for a quiet moment (Marwan 2026-11-24, Tecno: the first screen, the onboarding and the gift
+// calendar lagged): building Me, Learn and Ranks ahead took the phone's main thread for 100–300 ms at a time, and on a
+// slow phone that landed exactly while a sheet popped in or closed, or under the finger. Nothing is built while a
+// dialog or a moment is on screen, or within 1.5 s of a touch; it carries on once the person is just looking.
+let lastInput = 0;
+for (const ev of ['pointerdown', 'keydown', 'wheel'] as const) addEventListener(ev, () => { lastInput = performance.now(); }, { capture: true, passive: true });
+const busyNow = () => performance.now() - lastInput < 1500 || !!document.querySelector('dialog[open], .cel, .ul');
+function whenQuiet(fn: () => void, ms: number) {
+  const tryIt = () => (busyNow() ? setTimeout(tryIt, 1500) : fn());
+  setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(tryIt, { timeout: 4000 }) : tryIt()), ms);
+}
 function prebuildTabs() {
-  const idle = (fn: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : fn()), ms);
-  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn').then(() => idle(() => void prebuild('ranks'), 1500)), 1500)), 2500);
+  whenQuiet(() => void prebuild('me').then(() => whenQuiet(() => void prebuild('learn').then(() => whenQuiet(() => void prebuild('ranks'), 1500)), 1500)), 2500);
 }
 /** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
 function replaceScreens(...els: HTMLElement[]) {
@@ -286,13 +301,12 @@ later(() => setTimeout(() => {
   const go = () => {
     // One screen's code per quiet moment: starting the three at once listed ~200 files in one task (~100 ms on a
     // slow phone, a felt pause a few seconds after opening).
-    const quiet = (f: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 3000 }) : f()), ms);
     void import('./ui/me').catch(() => {});
-    quiet(() => void import('./ui/learnPath').catch(() => {}), 300);
-    quiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
+    whenQuiet(() => void import('./ui/learnPath').catch(() => {}), 300);
+    whenQuiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
     prebuildTabs(); // then Me and Learn built ahead, hidden, so their first tap is instant too
   };
-  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
+  whenQuiet(go, 0);
 }, 2500));
 watchVitals(); // real-use speed (this device only, Device check)
 if (isIOS()) void import('./iosHaptics').then((m) => m.installIosHaptics()); // taps felt on the iPhone too
