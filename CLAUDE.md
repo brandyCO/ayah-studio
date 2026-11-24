@@ -783,6 +783,11 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       font are in (≤ 2.5 s), so they get the whole connection. Taps do nothing until the reader takes over. Benches report
       "page shown" (prepaint or reader) and "reader ready". 6× CPU, slow 3G HTTP/2: page shown 5.8 → 2.6 s, reader ready
       5.8 → 6.3 s
+      **Lighter first load** (owner approval 2026-11-24): the player and everything it brings (reciter list, timings,
+      downloads) load with the first play (`src/ui/playerHub.ts` holds what the mushaf, tab bar and router need: attach,
+      active, follow along, quiet; `loadPlayer()`); the surah list (`#/`, `#/search`, route preloads), Popular this week,
+      the Me tab's dot (claims + goals, while idle) and Copy load when wanted. First load 137.0 → 106.2 KB (budget 115);
+      6× CPU: slow 3G reader ready 7.2 → 6.2 s, app reopen ~0.65 → 0.5 s. The unused "Joining your league" design is gone
 
 ### Scale readiness (owner request 2026-10-31: "ready to hold 100,000 users at once", free plans for now)
 Plan: Claude Doc "Ayah Studio: ready for 100,000 users at once" (hosting → Cloudflare Pages + R2, Supabase
@@ -2447,7 +2452,7 @@ duas/reflections section in Me.
       **Ranks right after sign-in** (owner report 2026-11-19, "ranks started loading after I signed in"): the league is
       fetched the moment sign-in finishes, alongside the first report; with nothing kept for the account yet
       (`isKept()` in `together/ranks.ts`) **Welcome to your league** covers the first load (`src/ui/rankWelcome.ts` + `.css`,
-      lazy; owner pick from two designs, the other, `rankJoin.ts`, kept behind `JOIN_STYLE`): on a light screen the
+      lazy; owner pick from two designs, the other removed 2026-11-24): on a light screen the
       league's emblem falls, squashes and settles (spring physics simulated once, played as 60 fps keyframes), the user's
       character waves, a bold title and the one rule come in, and a chunky Continue button fills like a loading bar; when
       the league is there it pops ready and the character hops once and cheers (never two hops in a row, owner); Continue
