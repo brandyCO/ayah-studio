@@ -11,7 +11,16 @@ const q = new URLSearchParams(location.search);
 const fig = q.get('fig');
 try { if (fig === 'none') localStorage.removeItem('rankFigure'); else localStorage.setItem('rankFigure', fig ?? encode(DEFAULT)); } catch { /* */ }
 await initI18n();
-if (q.get('chest')) {
+if (q.get('prof')) {
+  // ?prof=1 another player's Discord-style profile (friend), ?prof=me your own.
+  const me = q.get('prof') === 'me';
+  const p = { name: me ? 'Marwan' : 'Yusuf', pid: 'p1', me, figure: fig === 'none' ? null : encode(DEFAULT), avatar: 3, frame: +(q.get('frame') ?? 21), tier: +(q.get('tier') ?? 3), xp: 52340,
+    flag: 'LB', lamp: 3, relation: me ? 'me' : 'friend', show: 63, bestTier: 4, week: 1240, streak: 86, trophies: 4, pages: 312, listen: 940,
+    friend: me ? undefined : { streak: 23, meToday: true, themToday: true }, follow: { on: true, back: true, followers: 128, following: 64 },
+    badges: { top: ['streak-4', 'pages-3', 'juz-2', 'dhikr-3', 'listen-1', 'hz18-4', 'hz67-2', 'hzc12-0'], n: 41 }, cups: [1, 2, 3] };
+  try { localStorage.setItem('rankProfiles', JSON.stringify({ p: { p1: p } })); } catch { /* */ }
+  void import('../src/ui/friends').then((m) => m.openProfile({ ...p, score: 0 } as never));
+} else if (q.get('chest')) {
   const up = +q.get('chest')!;
   void Promise.all([import('../src/ui/celebrate'), import('../src/ui/dom'), import('../src/i18n/front')]).then(([c, d, f]) => c.celebrate({ kind: 'chest', title: 'Read 5 pages', sub: 'Goal met', up,
     loot: [{ kind: 'light', n: 30 * up }, ...(up > 1 ? [{ kind: 'item' as const, art: d.h('span', { class: 'cel-x2' }, `×${up}`), label: f.fe('ch.up', { n: up }), rare: true }] : [])] }, null, 30 * up));

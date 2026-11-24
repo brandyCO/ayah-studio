@@ -16,7 +16,7 @@ import {
 import { updatedNote } from './updatedAgo';
 import { isOffline } from '../together/outbox';
 import { myFigureCode, actor } from './actor';
-import { avatar, trophy } from './rankAvatars';
+import { TIER_RING, avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, sheet, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
@@ -86,9 +86,11 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
+  // Discord-style (owner 2026-11-24): a banner, the avatar in its frame over the banner's edge, then cards.
+  const heroBox = h('div', { class: 'fr-herobox' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
   const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info));
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page fr-dc' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, heroBox, ago, info));
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
@@ -109,13 +111,15 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       pairSig = '';
       title.textContent = ft('fr.blockedName');
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true, figure: null }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.blocked')),
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.blocked')),
         h('button', { class: 'chip', onclick: () => void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onChange(); return refresh(); }).catch((e) => toast((e as Error).message)) }, ft('fr.unblock')));
       return;
     }
     if (!prof) {
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.private')));
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.private')));
       return;
     }
     const p = prof;
@@ -224,15 +228,32 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           return b;
         })));
     })() : '';
+    // The hero: a banner in their league's colour with a slow drift of light (their profile effect), the avatar in its
+    // frame breaking over the banner's lower edge, and their best badges in a strip beside it.
+    const tier = p.tier ?? 0;
+    const fig = p.private ? null : mineP ? myFigureCode() : p.figure;
+    const motes = Array.from({ length: 9 }, (_, i) => h('i', { style: `--x:${(i * 37 + 11) % 100}%;--d:${(i * 0.7) % 5}s;--s:${0.6 + (i % 3) * 0.3}` }));
+    const strip = [...hz.list.slice(0, 1).map((x) => hifzBadge(x.s, x.tier, 26)), ...defs.slice(0, 4).map((x) => badgeArt(x.tier, x.icon, true, 26)),
+      ...(p.cups ?? []).slice(0, 2).map((place) => trophy(place, 24))];
+    d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
+    heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
+      h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-fx' }, ...motes)),
+      h('div', { class: 'fr-avrow' },
+        h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig)),
+        strip.length ? h('span', { class: 'fr-strip' }, ...strip) : '')));
+    const box = (cls: string, ...kids: (Node | string)[]) => h('section', { class: `fr-box ${cls}` }, ...kids);
+    const roomCard = p.private ? '' : box('fr-roombox', h('h3', {}, ft('fr.visit')), stage);
     info.replaceChildren(
-      h('div', { class: 'fr-who' }, h('h3', {}, p.private ? '' : flagImg(p.flag, 18), mineP ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
-      counts,
-      p.xp != null ? levelLine(p.xp) : '',
-      p.private ? '' : lampLine(p.lamp),
-      actions,
-      f ? streakLine(f, name) : '',
-      stats.childElementCount ? stats : '',
-      hifz, badges, cups, mine,
+      box('fr-main',
+        h('div', { class: 'fr-who' }, h('h3', {}, mineP ? `${name} · ${ft('fr.you2')}` : name, p.private ? '' : flagImg(p.flag, 20)),
+          h('div', { class: 'fr-tags' }, p.tier !== undefined ? tierBadge(p.tier) : '', p.private ? '' : lampPill(p.lamp, true))),
+        counts,
+        p.xp != null ? levelLine(p.xp) : '',
+        actions),
+      f ? box('fr-streakbox', streakLine(f, name)) : '',
+      stats.childElementCount ? box('fr-statbox', stats) : '',
+      roomCard,
+      hifz, badges, cups, mine ? box('fr-minebox', mine) : '',
       f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
     if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
   };
