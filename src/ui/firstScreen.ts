@@ -173,6 +173,7 @@ export function resumeSignIn(done: () => void, fallback: () => void) {
 /** A quick welcome back after signing in on this phone: their character, streak and the next thing to unlock, once
  *  their progress has arrived ("Bringing your progress…" until then, at most ~10 s; offline it shows what is here). */
 export async function welcomeBack() {
+  set('obProgress', null); // signed in: no questions left to finish
   set(FLAG, null);
   set('comebackSeen', dayKey(new Date())); // one welcome is enough today
   if (document.querySelector('dialog.fs1-wb')) return;

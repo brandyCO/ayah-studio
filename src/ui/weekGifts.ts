@@ -42,6 +42,24 @@ const frameNo = (id: string) => +id.split(':')[1];
 const frameArtEl = (id: string, size: number) => avatar(0, 0, size, frameNo(id), myFigureCode());
 const frameLabel = (id: string) => lookName('frame', frameNo(id), document.documentElement.lang === 'ar') ?? fe('wg.frame');
 
+/** A chest at rest as one picture (Marwan 2026-11-24: the calendar lagged opening on a slow phone): its still layers
+ *  (shadow, box, lid) joined into one SVG image, made once per tier and theme, instead of ~6 stacked SVGs a tile
+ *  the phone has to lay out and paint. The moving parts (aura, open mouth, glints) are left out; they show only
+ *  when a chest is ready to open, which the calendar never shows. */
+const stills = new Map<string, string>();
+function stillChest(tier: ReturnType<typeof chestTier>): HTMLElement {
+  const key = `${tier}|${getComputedStyle(document.documentElement).getPropertyValue('--rw-n3')}`;
+  let src = stills.get(key);
+  if (!src) {
+    const art = chestArt(tier);
+    art.querySelectorAll('.ck-aura, .ck-mouth, .ck-glints').forEach((x) => x.remove());
+    const inner = [...art.querySelectorAll('svg')].map((sv) => sv.innerHTML).join('');
+    src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 76" overflow="visible">${inner}</svg>`)}`;
+    stills.set(key, src);
+  }
+  return h('img', { class: 'gw-chest', src, alt: '', draggable: 'false', decoding: 'async' });
+}
+
 /** The prize's picture: a chest sized by its Light, or the piece itself. */
 function prizeArt(p: Prize, big = false): HTMLElement {
   const box = h('span', { class: 'gw-art', 'aria-hidden': 'true' });
@@ -50,8 +68,8 @@ function prizeArt(p: Prize, big = false): HTMLElement {
   else if (p.freeze) box.append(freezeArt());
   else if (p.lamps) box.append(h('span', { class: 'gw-lamps' }, lantern(true, 22), lantern(true, 30), lantern(true, 22)));
   else if (p.boost) box.append(h('span', { class: 'gw-x2' }, '×2'));
-  else if (p.jumuah) box.append(h('span', { class: 'gw-jm' }, chestArt(4), h('span', { class: 'gw-jm-piece' }, frameArtEl(jumuahPiece(), 54))));
-  else box.append(chestArt(chestTier(p.light ?? 0)));
+  else if (p.jumuah) box.append(h('span', { class: 'gw-jm' }, stillChest(4), h('span', { class: 'gw-jm-piece' }, frameArtEl(jumuahPiece(), 54))));
+  else box.append(stillChest(chestTier(p.light ?? 0)));
   return box;
 }
 function prizeLabel(p: Prize): string {
@@ -176,9 +194,20 @@ export function openWeekGifts(stamp?: number, after?: () => void) {
   document.body.append(d);
   d.showModal();
   if (!reduced()) {
-    popIn(d.querySelector('.gw-card')!);
+    // Slow phones (Marwan 2026-11-24): the sheet is laid out, painted and its pictures decoded while still
+    // invisible, and only then pops in, so the pop and the tiles' rise are pure compositor moves.
+    const card = d.querySelector<HTMLElement>('.gw-card')!;
+    card.style.opacity = '0';
     const tiles = [...grid.children] as HTMLElement[];
-    requestAnimationFrame(() => stagger(tiles, (el, delay) => rise(el, 14, { delay, feel: 'bouncy' }), 45, 120));
+    const pics = [...d.querySelectorAll('img')].map((im) => im.decode().catch(() => undefined));
+    const ready = Promise.race([Promise.all(pics), new Promise((r) => setTimeout(r, 450))]);
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r(undefined)));
+    void ready.then(frame).then(frame).then(() => {
+      if (!d.open) return;
+      card.style.opacity = '';
+      popIn(card);
+      stagger(tiles, (el, delay) => rise(el, 14, { delay, feel: 'bouncy' }), 45, 120);
+    });
   }
   if (stamp) void import('./sfx').then((m) => setTimeout(() => { m.sfx.pop?.(); const tile = grid.children[stamp] as HTMLElement | undefined; if (tile) flare(tile, stamp === 6 ? 3 : 1, { size: tile.clientWidth * 2.2, hold: 1400 }); }, 420));
 }

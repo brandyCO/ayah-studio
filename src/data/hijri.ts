@@ -19,7 +19,7 @@ export function hijriDate(d: Date): { year: number; month: number; day: number }
       v = Number.isInteger(r.year) && Number.isInteger(r.month) && Number.isInteger(r.day) ? r : null;
     } catch { v = null; }
   }
-  if (memo.size > 200) memo.clear();
+  if (memo.size > 1000) memo.clear(); // room for a year looked ahead (the shop's seasons)
   memo.set(key, v);
   return v;
 }

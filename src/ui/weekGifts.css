@@ -1,6 +1,6 @@
 /* ---------- Seven days of gifts (src/ui/weekGifts.ts) ---------- */
 dialog.gw { border: 0; padding: 0; background: transparent; width: min(100% - 24px, 440px); max-height: calc(100% - 24px); margin: auto; overflow: visible; }
-dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
+dialog.gw::backdrop { background: rgba(16, 10, 40, .82); }
 .gw-card { position: relative; padding: 18px 14px 14px; border-radius: 28px; color: #fff; overflow: hidden;
   background: linear-gradient(180deg, #6a4ad8 0%, #4b2fb0 58%, #3a2392 100%); box-shadow: 0 8px 0 #2a1870, 0 18px 40px rgba(20, 10, 60, .45); }
 /* A soft lantern light behind the title. */
@@ -25,10 +25,10 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gw-tile.jumua .gw-day { color: #8a5a00; }
 .gw-art { display: grid; place-items: center; width: 58px; height: 54px; }
-.gw-art .ck-art { width: 54px; }
+.gw-art .gw-chest { width: 54px; }
 .gw-art > svg { width: 46px; height: 46px; }
 .gw-tile.d7 .gw-art { width: 96px; height: 86px; }
-.gw-tile.d7 .gw-art .ck-art { width: 92px; }
+.gw-tile.d7 .gw-art .gw-chest { width: 92px; }
 .gw-name { font: 900 13.5px/1.2 var(--ui-round, system-ui); overflow-wrap: anywhere; }
 .gw-tile.d7 .gw-name { font-size: 17px; }
 .gw-extra { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 13px; }
@@ -66,7 +66,7 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
 .gw-card-me { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; cursor: pointer; }
 .gw-me-art { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; background: #f2efff; }
 .gw-me-art .gw-art { width: 50px; height: 46px; }
-.gw-me-art .gw-art .ck-art { width: 46px; }
+.gw-me-art .gw-art .gw-chest { width: 46px; }
 .gw-card-me.ready .gw-me-art { background: #fff4d0; }
 .gw-me-txt { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
 .gw-me-txt small { font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6c5ce7; }
@@ -81,9 +81,9 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
 .gw-grid.small { gap: 7px; margin: 8px 0; }
 .gw-grid.small .gw-tile { box-shadow: 0 3px 0 #cfc5ef; padding: 6px 3px 7px; }
 .gw-grid.small .gw-art { width: 46px; height: 42px; }
-.gw-grid.small .gw-art .ck-art { width: 42px; }
+.gw-grid.small .gw-art .gw-chest { width: 42px; }
 .gw-grid.small .gw-tile.d7 .gw-art { width: 72px; height: 64px; }
-.gw-grid.small .gw-tile.d7 .gw-art .ck-art { width: 68px; }
+.gw-grid.small .gw-tile.d7 .gw-art .gw-chest { width: 68px; }
 
 /* Weekday prizes: the lamp refill, Double Light. */
 .gw-lamps { display: inline-flex; align-items: flex-end; gap: 1px; }
@@ -94,10 +94,10 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
 .gw-tile.d7 .gw-x2 { width: 64px; height: 64px; font-size: 28px; }
 /* Friday (Jumu'ah): the big chest with the week's frame rising out of it, and six lanterns lit by Saturday → Thursday. */
 .gw-jm { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
-.gw-jm .ck-art { width: 86px; translate: 0 10px; }
+.gw-jm .gw-chest { width: 86px; translate: 0 10px; }
 .gw-jm-piece { position: absolute; top: -12px; left: 50%; translate: -50% 0; filter: drop-shadow(0 3px 6px rgba(120, 70, 0, .35)); }
 .gw-tile.s-today .gw-jm-piece { animation: gw-bob 1.6s ease-in-out infinite; }
-.gw-grid.small .gw-jm .ck-art { width: 62px; }
+.gw-grid.small .gw-jm .gw-chest { width: 62px; }
 .gw-grid.small .gw-jm-piece svg { width: 40px; height: 40px; }
 .gw-fri { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .gw-plus { font: 900 11.5px/1.2 var(--ui-round, system-ui); color: #8a5a00; }
@@ -114,3 +114,4 @@ dialog.gw::backdrop { background: rgba(16, 10, 40, .62); }
   .gw-tile.s-today::after, .gw-tile.s-today .gw-art, .gw-stamp.land, .gw-six i.lit svg, .gw-tile.s-today .gw-jm-piece { animation: none; }
 }
 .gw-x:focus:not(:focus-visible) { outline: none; }
+.gw-chest { display: block; height: auto; aspect-ratio: 80 / 76; overflow: visible; }
