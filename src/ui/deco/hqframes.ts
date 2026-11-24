@@ -15,6 +15,11 @@ export function solid(d: string, grad: string, ol: string, k = 3, sw = 3.2, eo =
   <g clip-path="url(#${c})"><path d="${d}" fill="${ol}" opacity=".55"${rule}/><path d="${d}" fill="url(#${grad})" transform="translate(${-k * .7} ${-k})"${rule}/>
   <path d="${d}" fill="none" stroke="#fff" stroke-width="${k * 1.1}" opacity=".7" transform="translate(${k * .8} ${k})" filter="url(#b2)"/></g>`;
 }
+/** Sun rays from (x, y) that fade out with distance (not grey on a dark page). */
+export function rays(x: number, y: number, n: number, R: number, half: number, c = '#ffe08a', o = .5): string {
+  const m = id('rf');
+  return `<defs><mask id="${m}" maskUnits="userSpaceOnUse" x="-200" y="-200" width="640" height="640"><circle cx="${x}" cy="${y}" r="${R}" fill="url(#mFade)"/></mask></defs><g mask="url(#${m})" opacity="${o}">${Array.from({ length: n }, (_, k) => `<path d="M${P(x, y)}L${P(...at(R, (k * 360) / n - half, x, y))}L${P(...at(R, (k * 360) / n + half, x, y))}Z" fill="${c}"/>`).join('')}</g>`;
+}
 /** A shaded sphere (pearl, planet, bead). */
 export function sphere(x: number, y: number, r: number, grad: string, ol: string): string {
   return `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r + 1.6)}" fill="${ol}"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="url(#${grad})"/>
@@ -86,8 +91,14 @@ export function hqFrame(fr: number, tier = 0): Piece[] | null {
     case 10: { const tiles = Array.from({ length: 16 }, (_, k) => { const a = k * 22.5; return solid(`M${P(...at(86, a - 9))}L${P(...at(116, a))}L${P(...at(86, a + 9))}L${P(...at(98, a))}Z`, ['mTealG', 'mCobalt', 'mAmberG', 'mRuby'][k % 4], '#1a1a4a', 1.4, 1.8); }).join('');
       return [glowP('mHaloT', 118), back(tiles, [-10, -10, 260, 260], { anim: 'orbitSlow', origin: [120, 120] }), front(`${band(86, 8, 'mGlaze', '#1a2a6a')}${[0, 90, 180, 270].map((a) => solid(khatam(...at(86, a - 90), 10), 'mTealG', '#0a3a4a', 1.4, 2)).join('')}`), tw(206, 30, 7, 0), tw(30, 210, 6, 1.2)];
     }
-    case 11: return [back(`<g filter="url(#b5)"><path d="M-10 120C30 40 70 160 120 70C170 -10 200 110 250 50V0H-10Z" fill="url(#mAur1)" opacity=".9"/><path d="M-10 90C40 20 90 130 130 40C170 -30 210 70 250 20" stroke="url(#mAur2)" stroke-width="26" fill="none" opacity=".8"/></g>`, [-20, -40, 280, 180], { anim: 'bob' }),
-      glowP('mHaloT', 114), front(band(86, 7, 'mSilver', '#3a4458')), tw(30, 30, 7, 0), tw(210, 60, 6, .9), tw(206, 200, 6, 1.8), tw(40, 196, 5, 2.6), mote(80, 220, 1.8, 0, '#b8fff0'), mote(170, 226, 1.8, 2, '#e8c8ff')];
+    case 11: { const cur = (y: number, a: number, grad: string, w: number) => `<path d="M-20 ${y}C30 ${y - a} 70 ${y + a} 120 ${y - a * .4}C170 ${y - a * 1.4} 210 ${y + a * .6} 260 ${y - a * .6}" stroke="url(#${grad})" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+      const fade = (cy: number, rx: number, ry: number, inner: string) => { const m = id('af'); return `<defs><mask id="${m}" maskUnits="userSpaceOnUse" x="-200" y="-200" width="640" height="640"><ellipse cx="120" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#mFade)"/></mask></defs><g mask="url(#${m})">${inner}</g>`; };
+      return [back(fade(50, 170, 110, `<g filter="url(#b5)">${cur(40, 30, 'mAurora2', 34)}${cur(40, 30, 'mAurora2', 20)}</g><g filter="url(#b10)">${cur(60, 26, 'mAurora2', 50)}</g>`), [-60, -70, 360, 240], { anim: 'bob' }),
+        back(fade(40, 150, 70, `<g filter="url(#b5)" opacity=".9">${cur(40, 22, 'mAurora2', 18)}</g>`), [-40, -40, 320, 160], { anim: 'bob', delay: 2 }),
+        glowP('mHaloT', 114), front(band(86, 7, 'mSilver', '#3a4458')),
+        front(`<g filter="url(#ds)">${[[40, 210, 9], [200, 214, 8], [120, 226, 6]].map(([x, y, r]) => solid(star(x, y, r, 6, .45), 'mCrystal', '#3a4a9a', 1.4, 1.8)).join('')}</g>`, [20, 190, 200, 50]),
+        tw(30, 30, 7, 0), tw(210, 40, 6, .9), tw(206, 170, 6, 1.8), tw(40, 160, 5, 2.6), mote(80, 220, 1.8, 0, '#b8fff0'), mote(170, 226, 1.8, 2, '#e8c8ff')];
+    }
     case 12: return hqPieces(112);
     case 13: { const petals = Array.from({ length: 16 }, (_, k) => solid(leafD(...at(78, k * 22.5), k * 22.5, 44, 13), k % 2 ? 'mGold' : 'mAmberG', GOLD_OL, 2, 2)).join('');
       return [glowP('mHalo', 120), back(petals, [-10, -10, 260, 260], { anim: 'orbitSlow', origin: [120, 120] }), front(band(86, 8, 'mGold', GOLD_OL)),
@@ -104,8 +115,8 @@ export function hqFrame(fr: number, tier = 0): Piece[] | null {
         front(`<g filter="url(#ds)">${leafHQ(196, 50, -30, 20, 8)}${roseHQ(196, 40, 12)}</g>`, [170, 14, 60, 56], { anim: 'bloom', origin: [196, 40] }),
         front(solid('M0 -7C6 -7 8 -2 8 0C8 5 3 8 0 8C-3 5 -5 0 0 -7Z', 'mRose', '#7a0a34', 1.4, 1.6).replace(/M0 -7/, 'M0 -7'), undefined, {}) && front(`<g transform="translate(206 70)">${solid('M0 -7C6 -7 8 -2 8 0C8 5 3 8 0 8C-3 5 -5 0 0 -7Z', 'mRose', '#7a0a34', 1.4, 1.6)}</g>`, [194, 58, 24, 24], { anim: 'fall', delay: 0, origin: [206, 70] }),
         front(`<g transform="translate(150 20)">${solid('M0 -7C6 -7 8 -2 8 0C8 5 3 8 0 8C-3 5 -5 0 0 -7Z', 'mRose', '#7a0a34', 1.4, 1.6)}</g>`, [138, 8, 24, 24], { anim: 'fall', delay: 2, origin: [150, 20] }), tw(210, 140, 6, .6), tw(120, 10, 5, 1.8)]; }
-    case 17: { const rays = Array.from({ length: 12 }, (_, k) => `<path d="M${P(186, 150)}L${P(...at(170, k * 30 - 3, 186, 150))}L${P(...at(170, k * 30 + 3, 186, 150))}Z" fill="#ffe8a0" opacity=".22"/>`).join('');
-      return [back(`<g filter="url(#b2)">${rays}</g>`, [0, -40, 360, 360], { anim: 'orbitSlow', origin: [186, 150] }), back(`<g filter="url(#b10)">${halo(186, 150, 70)}</g>${sphere(186, 150, 40, 'mSun', '#a04a0a')}`, [120, 84, 132, 132], { anim: 'pulse', origin: [186, 150] }),
+    case 17: { const r = rays(186, 150, 12, 170, 3.4, '#ffd68a', .6);
+      return [back(r, [0, -40, 360, 360], { anim: 'orbitSlow', origin: [186, 150] }), back(`<g filter="url(#b10)">${halo(186, 150, 70)}</g>${sphere(186, 150, 40, 'mSun', '#a04a0a')}`, [120, 84, 132, 132], { anim: 'pulse', origin: [186, 150] }),
         front(`<g filter="url(#ds)">${cloudBank([[100, 228, 18], [130, 212, 24], [166, 204, 30], [204, 214, 26], [236, 228, 16]], 246, '#ffd0a0')}</g>`, [70, 166, 186, 86], { anim: 'bob' }),
         front(`<g filter="url(#ds)">${cloudBank([[6, 214, 16], [30, 200, 22], [58, 214, 16]], 232, '#ffd0a0')}</g>`, [-16, 172, 96, 66], { anim: 'bob', delay: 2 }), tw(40, 40, 7, 0), tw(70, 14, 5, 1.2), tw(150, 30, 5, 2.4)]; }
     case 18: { const arch = solid('M14 240V112C14 52 62 14 120 -6C178 14 226 52 226 112V240H200V112C200 66 164 38 120 22C76 38 40 66 40 112V240Z', 'mJade', '#0a4a36', 3, 3);
@@ -144,10 +155,10 @@ export function hqFrame(fr: number, tier = 0): Piece[] | null {
       return [glowP('mHaloR', 114), front(pearls), front(`<g filter="url(#ds)">${leafHQ(96, 212, 170, 24, 9)}${leafHQ(144, 212, 10, 24, 9)}${roseHQ(104, 208, 13)}${roseHQ(136, 208, 13)}${roseHQ(120, 220, 15)}</g>`, [66, 186, 108, 56]),
         front(`<path d="M120 8V22" stroke="#8a7aa8" stroke-width="2"/>${solid('M120 20L130 34L120 48L110 34Z', 'mRoseGold', '#7a3a2a', 2, 2.2)}${sphere(120, 34, 4, 'mRose', '#7a0a34')}`, [104, 4, 32, 50], { anim: 'sway', origin: [120, 8] }), tw(200, 50, 7, 0), tw(40, 60, 6, 1.2)]; }
     case 26: return hqPieces(126);
-    case 27: { const rays = Array.from({ length: 14 }, (_, k) => `<path d="M120 120L${P(...at(170, k * (360 / 14) - 4))}L${P(...at(170, k * (360 / 14) + 4))}Z" fill="#fff6c8" opacity=".3"/>`).join('');
+    case 27: { const rr = rays(120, 120, 14, 170, 4, '#fff0b0', .6);
       const door = (x: number, flip: number) => `<g transform="translate(${x} 0) scale(${flip} 1)">${solid('M0 244V96C0 58 26 30 60 16V244Z', 'mGold', GOLD_OL, 3, 3)}${[56, 100, 144, 188].map((y) => solid(khatam(30, y, 12), 'mAmberG', GOLD_OL, 1.4, 1.8) + sphere(30, y, 3.6, 'mTealG', '#0a3a4a')).join('')}</g>`;
       const flower = (x: number, y: number, s: number) => `<g transform="translate(${x} ${y}) scale(${s})">${[0, 72, 144, 216, 288].map((a) => `<g transform="rotate(${a})">${solid('M0 0C-8 -6 -7 -20 0 -22C7 -20 8 -6 0 0Z', 'mPearl', '#8a6a8a', 1.4, 1.6)}</g>`).join('')}${sphere(0, 0, 4.4, 'mGold', GOLD_OL)}</g>`;
-      return [back(`<g filter="url(#b2)">${rays}</g>`, [-60, -60, 360, 360], { anim: 'orbitSlow', origin: [120, 120] }), glowP('mHalo', 120),
+      return [back(rr, [-60, -60, 360, 360], { anim: 'orbitSlow', origin: [120, 120] }), glowP('mHalo', 120),
         back(`<g filter="url(#ds)">${door(-2, 1)}${door(242, -1)}</g>`, [-8, 8, 256, 240]),
         front(`<g filter="url(#ds)">${leafHQ(34, 214, 200, 26, 9)}${leafHQ(206, 214, -20, 26, 9)}${flower(30, 206, 1.1)}${flower(210, 206, 1.1)}</g>`, [0, 176, 240, 60]),
         front(`<g filter="url(#ds)">${flower(120, 22, 1.25)}</g>`, [90, -8, 60, 60], { anim: 'bloom', origin: [120, 22] }), tw(60, 40, 8, 0), tw(180, 40, 8, 1.2), tw(120, 230, 6, 2.4), mote(80, 226, 2.2, 0, '#fff'), mote(160, 226, 2.2, 2, '#fff'), mote(120, 230, 1.8, 1, '#fff')]; }
@@ -177,6 +188,57 @@ export function hqFrame(fr: number, tier = 0): Piece[] | null {
         front(`<g filter="url(#ds)">${palm(-6, 1)}${palm(246, -1)}</g>`, [-30, 0, 300, 246]),
         front(`<g filter="url(#ds)">${solid('M4 222C50 208 190 208 236 222C206 240 34 240 4 222Z', 'mWater', '#0a4a5a', 2, 2.6)}</g><path d="M40 222H86M124 226H176M96 230H112" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85"/>`, [-4, 200, 248, 44], { anim: 'bob' }),
         tw(90, 222, 5, 0), tw(160, 220, 5, 1.3), tw(120, 20, 7, 2), tw(196, 110, 5, 3)]; }
+    case 32: { // MYTHIC · Celestial khatam: a huge star of light turning behind, an aurora veil, crystal shards orbiting
+      const big = `<path d="${khatam(120, 120, 122)}" fill="url(#mHaloV)" opacity=".6"/><path d="${khatam(120, 120, 118)}" fill="none" stroke="url(#mAurora2)" stroke-width="5"/><path d="${khatam(120, 120, 108)}" fill="none" stroke="#fff" stroke-width="1.4" opacity=".6"/>`;
+      const shards = [0, 60, 120, 180, 240, 300].map((a) => { const [x, y] = at(104, a); return `<g transform="rotate(${a + 90} ${f(x)} ${f(y)})">${solid(`M${P(x, y - 12)}L${P(x + 6, y)}L${P(x, y + 12)}L${P(x - 6, y)}Z`, 'mCrystal', '#3a4a9a', 1.4, 1.8)}</g>`; }).join('');
+      return [glowP('mHaloV', 124), back(`<g filter="url(#bloom)">${big}</g>`, [-10, -10, 260, 260], { anim: 'orbitSlow', origin: [120, 120] }),
+        back((() => { const m = id('af'); return `<defs><mask id="${m}" maskUnits="userSpaceOnUse" x="-200" y="-200" width="640" height="640"><ellipse cx="120" cy="30" rx="150" ry="70" fill="url(#mFade)"/></mask></defs><g mask="url(#${m})"><g filter="url(#b5)"><path d="M-20 60C40 0 90 80 130 20C170 -30 220 40 260 0" stroke="url(#mAurora2)" stroke-width="30" fill="none" opacity=".8"/></g></g>`; })(), [-30, -50, 300, 160], { anim: 'bob' }),
+        front(band(86, 8, 'mCrystal', '#3a4a9a')), front(`<g filter="url(#ds)">${shards}</g>`, [-6, -6, 252, 252], { anim: 'orbit', origin: [120, 120] }),
+        front(`<g filter="url(#bloom)"><g filter="url(#ds)">${solid(khatam(120, 20, 16), 'mCrystal', '#3a4a9a', 2, 2.4)}${sphere(120, 20, 5, 'mVioletG', '#2a1a6a')}</g></g>`, [96, -6, 48, 52], { anim: 'bob' }),
+        tw(26, 40, 9, 0, '#e8dcff'), tw(214, 60, 7, 1, '#e8dcff'), tw(222, 196, 8, 2, '#e8dcff'), tw(18, 200, 6, 3, '#e8dcff'), mote(60, 226, 2.4, 0, '#e8dcff'), mote(120, 230, 2, 1.3, '#e8dcff'), mote(180, 226, 2.4, 2.6, '#e8dcff')];
+    }
+    case 33: { // MYTHIC · Eternal garden: an arch of flowering vines, roses and jasmine opening, a river of light below, petals drifting
+      const vine = (flip: number) => `<g transform="translate(${flip < 0 ? 240 : 0} 0) scale(${flip} 1)"><path d="M28 236C10 170 20 90 70 40C90 22 108 14 120 12" stroke="#0a4a22" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M28 236C10 170 20 90 70 40C90 22 108 14 120 12" stroke="#3ab84a" stroke-width="4" fill="none" stroke-linecap="round"/>${[[18, 190, 200], [16, 140, 170], [26, 96, 220], [48, 60, 240], [84, 30, 260], [34, 110, 10], [60, 48, 40]].map(([x, y, a]) => leafHQ(x, y, a, 22, 8)).join('')}</g>`;
+      const jas = (x: number, y: number, s2: number) => `<g transform="translate(${x} ${y}) scale(${s2})">${[0, 72, 144, 216, 288].map((a) => `<g transform="rotate(${a})">${solid('M0 0C-6 -5 -6 -16 0 -18C6 -16 6 -5 0 0Z', 'mPearl', '#8a6a8a', 1.2, 1.4)}</g>`).join('')}${sphere(0, 0, 3.6, 'mGold', GOLD_OL)}</g>`;
+      const roseHQ = (x: number, y: number, r: number) => `${sphere(x, y, r, 'mRose', '#7a0a34')}<path d="M${P(x - r * .5, y)}C${P(x - r * .5, y - r * .6)} ${P(x + r * .5, y - r * .6)} ${P(x + r * .45, y + r * .1)}M${P(x - r * .7, y + r * .35)}C${P(x - r * .2, y + r * .75)} ${P(x + r * .4, y + r * .7)} ${P(x + r * .7, y + r * .3)}" stroke="#7a0a34" stroke-width="1.6" fill="none" opacity=".75"/>`;
+      const petal = (x: number, y: number, d: number): Piece => front(`<g transform="translate(${x} ${y})">${solid('M0 -6C5 -6 7 -2 7 0C7 4 3 7 0 7C-3 4 -4 0 0 -6Z', 'mRose', '#7a0a34', 1.2, 1.4)}</g>`, [x - 10, y - 10, 20, 20], { anim: 'fall', delay: d, origin: [x, y] });
+      return [glowP('mHaloG', 124), back(`<g filter="url(#ds)">${vine(1)}${vine(-1)}</g>`, [-4, 0, 248, 244]),
+        front(`<g filter="url(#ds)">${roseHQ(22, 150, 12)}${roseHQ(218, 120, 12)}${roseHQ(56, 52, 10)}</g>`, [0, 30, 240, 140]),
+        ...[[26, 104, 0], [214, 170, 1.3], [180, 46, 2.6], [120, 10, 2]].map(([x, y, d]) => front(`<g filter="url(#ds)">${jas(x, y, 1.1)}</g>`, [x - 24, y - 24, 48, 48], { anim: 'bloom', delay: d, origin: [x, y] })),
+        front(`<g filter="url(#b5)"><path d="M0 226C60 214 180 214 240 226V244H0Z" fill="url(#mWater)"/></g><path d="M0 226C60 214 180 214 240 226" stroke="#e0fffa" stroke-width="2.4" fill="none" opacity=".9"/><path d="M40 232H90M140 234H200" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>`, [-6, 206, 252, 42], { anim: 'bob' }),
+        petal(196, 70, 0), petal(60, 20, 1.3), petal(150, 10, 2.6), tw(90, 230, 5, 0), tw(170, 232, 5, 1.5), tw(30, 60, 7, 2), mote(70, 226, 2.2, .5, '#e0ffe8'), mote(170, 226, 2.2, 2.5, '#e0ffe8')];
+    }
+    case 34: { // MYTHIC · Zamzam of light: arcs of glowing water rising round the avatar into a crystal basin, drops of light
+      const arc = (side: number) => `<path d="M${120 + side * 30} 236C${120 + side * 120} 200 ${120 + side * 120} 40 ${120 + side * 16} 8" stroke="#3ad8c8" stroke-width="10" fill="none" stroke-linecap="round" opacity=".55" filter="url(#b5)"/><path d="M${120 + side * 30} 236C${120 + side * 120} 200 ${120 + side * 120} 40 ${120 + side * 16} 8" stroke="#c8fff6" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      const drops = (k0: number) => Array.from({ length: 8 }, (_, k) => { const a = (k0 + k) * 40; const [x, y] = at(100, a); return `<circle cx="${f(x)}" cy="${f(y)}" r="5" fill="#3ad8c8" opacity=".5" filter="url(#b2)"/><path d="M${f(x)} ${f(y - 5)}C${f(x + 4)} ${f(y)} ${f(x + 4)} ${f(y + 4)} ${f(x)} ${f(y + 4)}C${f(x - 4)} ${f(y + 4)} ${f(x - 4)} ${f(y)} ${f(x)} ${f(y - 5)}Z" fill="#e0fffa"/>`; }).join('');
+      return [glowP('mHaloT', 124), back(`${arc(1)}${arc(-1)}`, [-10, -4, 260, 248], { anim: 'pulse', origin: [120, 236] }),
+        back(drops(0), [-6, -6, 252, 252], { anim: 'orbit', origin: [120, 120] }), front(band(86, 8, 'mWater', '#0a4a5a')),
+        front(`<g filter="url(#ds)">${solid('M56 214H184C180 232 156 244 120 244C84 244 60 232 56 214Z', 'mCrystal', '#2a3a8a', 2.4, 2.6)}${solid('M50 208H190V218H50Z', 'mWater', '#0a4a5a', 1.4, 2)}</g>`, [40, 200, 160, 50]),
+        front(`<g filter="url(#bloom)">${drops(0.5).split('</path>').join('')}</g>`, [-6, -6, 252, 252], { anim: 'orbitRev', origin: [120, 120] }),
+        tw(120, 6, 9, 0, '#e0fffa'), tw(30, 120, 7, 1, '#e0fffa'), tw(210, 120, 7, 2, '#e0fffa'), mote(80, 210, 2.4, 0, '#c8fff6'), mote(160, 210, 2.4, 2, '#c8fff6'), mote(120, 214, 2, 1, '#c8fff6')];
+    }
+    case 35: { // LEGENDARY · Lantern bridge: five lanterns on a gold chain arching over the avatar, each swinging in its own time
+      const xs = [26, 72, 120, 168, 214], glass: [string, string, string][] = [['mTealG', 'mAmberG', 'mVioletG'], ['mRedG', 'mAmberG', 'mTealG'], ['mAmberG', 'mRedG', 'mAmberG'], ['mTealG', 'mAmberG', 'mRedG'], ['mVioletG', 'mAmberG', 'mTealG']];
+      const yAt = (x: number) => 30 - Math.sin(((x - 6) / 228) * Math.PI) * 26;
+      return [glowP('mHalo', 120), back(`<path d="M-4 40Q120 -40 244 40" stroke="${GOLD_OL}" stroke-width="4" fill="none"/><path d="M-4 40Q120 -40 244 40" stroke="url(#mGold)" stroke-width="2" fill="none"/>`, [-10, -10, 260, 60]),
+        ...xs.map((x, k) => front(`<g transform="translate(${x} ${f(yAt(x))}) scale(${k === 2 ? .5 : .4})" filter="url(#ds)">${bigFanous(glass[k])}</g><circle cx="${x}" cy="${f(yAt(x) + 34)}" r="14" fill="url(#mHalo)" filter="url(#b5)" opacity=".8"/>`, [x - 18, yAt(x) - 4, 36, 72], { anim: 'sway', delay: k * .8, origin: [x, yAt(x)] })),
+        front(band(86, 8, 'mGold', GOLD_OL)), tw(50, 110, 6, 0), tw(190, 110, 6, 1.3), mote(60, 220, 2.2, 0), mote(120, 226, 2, 1.4), mote(180, 220, 2.2, 2.8)];
+    }
+    case 36: { // LEGENDARY · Desert night: golden dunes rolling in front, a crescent and the stars behind, a lone palm
+      const starsS = Array.from({ length: 18 }, (_, k) => `<circle cx="${20 + ((k * 61) % 200)}" cy="${16 + ((k * 37) % 90)}" r="${k % 4 ? 1 : 1.8}" fill="#fff4c8"/>`).join('');
+      return [back(`<circle cx="120" cy="120" r="120" fill="url(#mSky)"/>`, [-4, -4, 248, 248]), back(starsS, [0, 0, 240, 120], { anim: 'pulse' }),
+        back(`<g filter="url(#b10)">${halo(56, 50, 40)}</g><g filter="url(#bloom)">${bigMoon(56, 50, 26, 12, -8, 22)}</g>`, [0, 0, 112, 104], { anim: 'bob' }),
+        front(`<g filter="url(#ds)">${solid('M-10 214C40 186 90 196 130 212C170 194 210 190 250 206V250H-10Z', 'mSun', '#7a3a06', 3, 2.8)}${solid('M-10 230C50 210 120 224 160 236C190 222 220 220 250 228V250H-10Z', 'mGold', GOLD_OL, 3, 2.8)}<path d="M20 200C50 190 80 194 104 204" stroke="#fff3c0" stroke-width="2.4" fill="none" opacity=".7"/></g>`, [-14, 176, 268, 76]),
+        front(`<g filter="url(#ds)"><path d="M206 214C206 190 204 168 198 150" stroke="#3a1a06" stroke-width="7" fill="none"/><path d="M206 214C206 190 204 168 198 150" stroke="url(#mWood)" stroke-width="3.6" fill="none"/>${[[-150, 30], [-115, 34], [-75, 32], [-35, 28], [-185, 24]].map(([a, L]) => leafHQ(198, 150, a, L, 8)).join('')}</g>`, [160, 110, 80, 108], { anim: 'sway', origin: [204, 214] }),
+        front(band(86, 7, 'mGold', GOLD_OL)), tw(200, 40, 7, 0), tw(150, 20, 5, 1.2), tw(20, 120, 5, 2.4)];
+    }
+    case 37: { // LEGENDARY · Royal mashrabiya: a carved screen arch behind, light shining through it, gold inlay
+      const lattice = Array.from({ length: 7 }, (_, r) => Array.from({ length: 9 }, (_, k) => `<path d="${khatam(16 + k * 26 + (r % 2) * 13, 30 + r * 30, 10)}" fill="none" stroke="#3a1606" stroke-width="3.6"/>`).join('')).join('');
+      const m = id('ms');
+      return [glowP('mHalo', 124), back(`<defs><clipPath id="${m}"><path d="M10 244V110C10 50 60 10 120 -4C180 10 230 50 230 110V244Z"/></clipPath></defs>${solid('M10 244V110C10 50 60 10 120 -4C180 10 230 50 230 110V244Z', 'mWood', '#3a1606', 3, 3)}<g clip-path="url(#${m})"><rect x="0" y="-10" width="240" height="260" fill="url(#mHalo)" opacity=".85"/>${lattice}</g><path d="M10 244V110C10 50 60 10 120 -4C180 10 230 50 230 110V244" stroke="url(#mGold)" stroke-width="5" fill="none"/>`, [0, -12, 240, 258]),
+        front(`<g filter="url(#ds)">${gemHQ(120, 8, 10, 'mRuby')}${gemHQ(18, 130, 7, 'mEmerald')}${gemHQ(222, 130, 7, 'mEmerald')}</g>`, [0, -10, 240, 160]),
+        front(band(86, 8, 'mGold', GOLD_OL)), tw(60, 40, 7, 0), tw(180, 40, 7, 1.2), mote(70, 226, 2.2, 0), mote(170, 226, 2.2, 2)];
+    }
   }
   return null;
 }

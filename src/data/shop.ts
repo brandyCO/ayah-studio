@@ -34,6 +34,10 @@ export const ITEMS: Item[] = [
   // The Jumu'ah collection (owner request 2026-11-24): only from Friday's full chest in the gift calendar, one a week in
   // turn (data/weekGift.ts JUMUAH); kept as a shop entry, never sold.
   ...range(20, 25).map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, win: 'friday' })),
+  // Legendary and mythic decorations (owner request 2026-11-24, "make users die to own it"): always in the shop, the
+  // highest Light prices. Rarity: src/ui/deco/frames.ts PREMIUM.
+  ...[29, 30, 31, 35, 36, 37].map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, price: 2000 })),
+  ...[26, 27, 28, 32, 33, 34].map((n): Item => ({ id: `fr:${n}`, kind: 'frame', ref: n, price: 3500 })),
   // App icons join here (bought or won) once their designs are in the app.
 ];
 

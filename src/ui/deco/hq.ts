@@ -58,6 +58,7 @@ export const HQ_DEFS = `<defs>
 <linearGradient id="mNightB" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#5a6ad8"/><stop offset=".35" stop-color="#26307a"/><stop offset=".8" stop-color="#121848"/><stop offset="1" stop-color="#0a0c2a"/></linearGradient>
 <linearGradient id="mAurora2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7affd8"/><stop offset=".5" stop-color="#7ab8ff"/><stop offset="1" stop-color="#d88aff"/></linearGradient>
 <linearGradient id="mRoseGold" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#fff0e6"/><stop offset=".4" stop-color="#f7b49a"/><stop offset="1" stop-color="#b45a48"/></linearGradient>
+<radialGradient id="mFade" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <linearGradient id="mCloudD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#9a86e8"/><stop offset="1" stop-color="#5a44b8"/></linearGradient>
 <radialGradient id="mSky" cx=".5" cy=".45" r=".5"><stop offset="0" stop-color="#3a2a9a"/><stop offset=".6" stop-color="#1e1460"/><stop offset="1" stop-color="#0e0a30" stop-opacity="0"/></radialGradient>
 </defs>`;

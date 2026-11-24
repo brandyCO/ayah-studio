@@ -315,10 +315,12 @@ function premiumPieces(fr: number): Piece[] {
 }
 
 /** The decoration ids that exist: the 20 frames and the premium ones. */
-export const DECO_IDS = Array.from({ length: 32 }, (_, i) => i);
+export const DECO_IDS = Array.from({ length: 38 }, (_, i) => i);
 export const PREMIUM: Record<number, { r: 'legendary' | 'mythic'; name: string }> = {
   26: { r: 'mythic', name: 'Laylat al-Qadr' }, 27: { r: 'mythic', name: 'Gates of light' }, 28: { r: 'mythic', name: 'Celestial orbit' },
   29: { r: 'legendary', name: 'Golden masjid' }, 30: { r: 'legendary', name: 'Eid fireworks' }, 31: { r: 'legendary', name: 'Oasis' },
+  32: { r: 'mythic', name: 'Celestial khatam' }, 33: { r: 'mythic', name: 'Eternal garden' }, 34: { r: 'mythic', name: 'Zamzam of light' },
+  35: { r: 'legendary', name: 'Lantern bridge' }, 36: { r: 'legendary', name: 'Desert night' }, 37: { r: 'legendary', name: 'Royal mashrabiya' },
 };
 
 /** One piece as a standalone SVG image (its own defs, cropped to its box). */

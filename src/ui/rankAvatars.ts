@@ -12,7 +12,7 @@ import { decorated } from './deco/deco';
 import { circlePath, edge, mix, shine, starPath, two } from './flat';
 
 export const AVATARS = 52;
-export const FRAMES = 26;
+export const FRAMES = 38;
 export const TIER_RING = ['#c47a4c', '#a9b0f2', '#5fcfc0', '#e891aa', '#f2c14e']; // Dar al-Arqam clay, Hijrah night, Badr water, Al-Khandaq dusk, Fath Makkah gold
 const LAUREL = ['#f2c14e', '#cfd6de', '#d08a4e'];
 
@@ -171,6 +171,8 @@ const FR_NAMES: Record<number, [string, string]> = {
   9: ['Crescent crown', 'تاج الهلال'], 10: ['Mosaic', 'الفسيفساء'], 11: ['Aurora', 'الشفق'], 12: ['Lantern ring', 'حلقة الفوانيس'], 13: ['Rosette', 'الوردة'],
   // The Jumu'ah collection (2026-11-24): only from the calendar's Friday chest.
   20: ['Kiswah', 'الكسوة'], 21: ['Domes and minarets', 'القباب والمآذن'], 22: ['Iznik tulips', 'زهور إزنيق'], 23: ['Maghrib', 'المغرب'], 24: ['Khatam stars', 'نجوم الخاتم'], 25: ['Pearl and rose', 'اللؤلؤ والورد'],
+  // Legendary and mythic decorations (2026-11-24): Light only, the finest in the shop.
+  26: ['Laylat al-Qadr', 'ليلة القدر'], 27: ['Gates of light', 'أبواب النور'], 28: ['Celestial orbit', 'المدار السماوي'], 29: ['Golden masjid', 'المسجد الذهبي'], 30: ['Eid fireworks', 'ألعاب العيد النارية'], 31: ['Oasis', 'الواحة'], 32: ['Celestial khatam', 'الخاتم السماوي'], 33: ['Eternal garden', 'الحديقة الخالدة'], 34: ['Zamzam of light', 'زمزم النور'], 35: ['Lantern bridge', 'جسر الفوانيس'], 36: ['Desert night', 'ليل الصحراء'], 37: ['Royal mashrabiya', 'المشربية الملكية'],
 };
 /** A name for avatar n or frame n, or null where there is none (the free ones; limited frames have their own). */
 export function lookName(kind: 'avatar' | 'frame', n: number, ar = false): string | null {
