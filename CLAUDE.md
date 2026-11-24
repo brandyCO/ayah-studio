@@ -2533,6 +2533,19 @@ duas/reflections section in Me.
       sets `comebackSeen`). Web sign-in leaves the page: localStorage `fsSignIn` resumes it on return (`resumeSignIn()`). Signed
       in, the first week counts from the account's creation (`Account.created`, `daysOpened()` in `reveal.ts`). Strings `fw.*`,
       30 languages. Preview: `bench/unlock.html?fs=1`, `?fs=wb`
+      **Seven days of gifts** (owner request 2026-11-24, "a 7 days of a week popup … like many of the 4X games"; replaces
+      What's coming on Me, in Settings and in the onboarding; the day-before pop-up is gone): `src/data/weekGift.ts` +
+      `src/ui/weekGifts.ts` (+ `.css`, classes `gw-*`). A new user's **first week** is their own Day 1–7 (50 Light, a freeze,
+      100 + opens the shop, the date palm + opens the room, the lantern + opens the wardrobe, 150, 300 + the gold frame
+      `fr:2`); a missed day never resets it, and a taken tile opens its part at once (`giftsGot()` in reveal.ts, then its
+      unlock moment). After it, **every week Saturday → Friday** (owner: "Friday is the most important day"): 20, 25, a
+      freeze, 30, 35, 40, and Friday (Jumu'ah) 150; a day not opened fades as Missed, Friday's is always there; people who
+      used the app before it came in start here. The sheet pops up when the app opens while today's gift waits
+      (`maybeWeekGifts()` from rewards.ts, once a launch, never over another dialog, the studio or the Kids space); Claim →
+      the chest moment with exactly the tile's prize → the sheet again with the stamp landing. Credited once each (claim ids
+      `wg:0:{day}` / `wg:{saturday}:{weekday}`); localStorage `weekGift`, synced. Strings `wg.*`, 30 languages. Preview:
+      `bench/unlock.html?wg=1` or `?wg={state json}`. Next (owner 2026-11-24): a Jumu'ah collection of calendar-only pieces
+      and frames rotating on Fridays
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

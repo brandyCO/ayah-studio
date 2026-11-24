@@ -64,6 +64,7 @@ import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
 import { daysOpened, markRevealed, newReveal, revealed } from '../data/reveal';
+import { giftsOn } from '../data/weekGift';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { smartReminder } from '../data/usualTime';
@@ -104,15 +105,22 @@ function setEasy(on: boolean) {
   try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
 }
 
-/** What's coming (src/ui/coming.ts): Me's card through the first week and the pop-up the day before an unlock. */
+/** Seven days of gifts (src/ui/weekGifts.ts): Me's card, kept current when a gift is taken. */
 function comingSlot(): HTMLElement | '' {
-  if (daysOpened() > 8) return '';
+  giftsOn(daysOpened());
   const slot = h('div', { class: 'co-slot' });
-  setTimeout(() => void import('./coming').then((m) => {
-    if (!slot.isConnected) return;
-    slot.replaceWith(m.comingCard());
-    m.comingPopup(!!newReveal() && !unlockPlayed().includes(newReveal()!));
-  }), 900);
+  void import('./weekGifts').then((m) => {
+    let el: HTMLElement | '' = slot;
+    const paint = () => {
+      if (el && !el.isConnected) return;
+      const next = m.weekGiftCard();
+      if (el && next) el.replaceWith(next);
+      else if (el) el.remove();
+      el = next;
+    };
+    paint();
+    window.addEventListener('weekgift-changed', paint);
+  });
   return slot;
 }
 const unlockPlayed = (): string[] => { try { return JSON.parse(localStorage.getItem('unlockPlayed') ?? '[]'); } catch { return []; } };
@@ -1628,10 +1636,10 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
       row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
       row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
       row('app', 'gear', t('set.app'), t('set.rowApp')),
-      // What's coming (owner request 2026-11-24): the first week's timeline, any time
-      h('button', { class: 'set-row set-co', onclick: () => void import('./coming').then((m) => m.openComing()) },
+      // Seven days of gifts (owner request 2026-11-24), any time
+      h('button', { class: 'set-row set-co', onclick: () => void import('./weekGifts').then((m) => m.openWeekGifts()) },
         h('span', { class: 'set-row-ic s-coming', 'aria-hidden': 'true' }, icon('calendar', 22)),
-        h('span', { class: 'set-row-txt' }, h('b', {}, fe('co.door')), h('span', { class: 'muted small' }, fe('co.doorSub'))),
+        h('span', { class: 'set-row-txt' }, h('b', {}, fe('wg.title')), h('span', { class: 'muted small' }, fe('wg.doorSub'))),
         icon('right', 18)),
       // Send feedback (owner request 2026-11-16): its own row in settings
       h('button', { class: 'set-row set-fb', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
