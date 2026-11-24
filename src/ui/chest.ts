@@ -26,7 +26,7 @@ const MATS: Mat[] = [
   { body: ['#bd6a3a', '#8a4421'], edge: '#4e2512', metal: ['#ffd877', '#cf9530'], line: '#6a3216', planks: true },
   { body: ['#7c4428', '#542b17'], edge: '#2a140b', metal: ['#ffe08a', '#d39a2e'], line: '#3a1d0e', star: true },
   { body: ['#19a67b', '#0b6b4e'], edge: '#043427', metal: ['#ffe39a', '#d6a033'], line: '#075a41', star: true, gems: true },
-  { body: ['#fff8e6', '#e6d3a0'], edge: '#b59f62', metal: ['#fff0b8', '#e2ad3f'], line: '#cdb67a', star: true, gems: true, glow: true },
+  { body: ['#ffcd45', '#d18a1c'], edge: '#6e4508', metal: ['#fffaf0', '#d6cdb8'], line: '#c58f2c', star: true, gems: true, glow: true },
 ];
 
 let uid = 0;
