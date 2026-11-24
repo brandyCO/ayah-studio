@@ -65,9 +65,12 @@
 
 /* The profile as a full page (owner 2026-11-11): both characters large on a soft sky, details below. */
 dialog.fr-page { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
-  color: var(--fg); background: var(--bg); display: flex; flex-direction: column; overflow: hidden; animation: fr-in var(--dur-2, .22s) var(--ease-spring, ease-out); }
+  color: var(--fg); background: var(--bg); display: flex; flex-direction: column; overflow: hidden; animation: fr-push .3s cubic-bezier(.2, .8, .2, 1); }
 dialog.fr-page::backdrop { background: transparent; }
-@keyframes fr-in { from { opacity: 0; translate: 0 18px; } }
+/* Opened from any board (Marwan 2026-11-24: it rose like a sheet, then filled the screen): one whole page pushed in
+   from the side, opaque from the first frame, and pushed back out on close (friends.ts). Compositor only. */
+@keyframes fr-push { from { translate: var(--push, 100%) 0; } }
+[dir="rtl"] dialog.fr-page { --push: -100%; }
 .fr-page-top { display: flex; align-items: center; gap: 6px; padding: max(8px, env(safe-area-inset-top)) 12px 6px; }
 .fr-page-top h2 { margin: 0; font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fr-back { font-size: 30px; line-height: 1; width: 44px; height: 44px; }
@@ -174,6 +177,79 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-follow-xp { font-weight: 800; color: #6c5ce7; font-size: .9rem; white-space: nowrap; }
 .fr-new-followers .fr-follow-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: start; color: inherit; }
 .fr-tab > .updated-ago { align-self: flex-end; }
+
+/* Discord-style profile (owner request 2026-11-24): a banner in the league's colour with a slow drift of light (the
+   profile effect), the avatar in its frame breaking over the banner's lower edge, the best badges in a strip, then
+   cards. Motion on transform / opacity only. */
+.fr-page .fr-page-body { padding-top: 0; gap: 12px; }
+.fr-page .fr-page-top { position: absolute; inset: 0 0 auto; z-index: 3; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+.fr-page .fr-page-top .icon-btn { color: #fff; background: rgba(0, 0, 0, .22); border-radius: 50%; box-shadow: none; }
+.fr-page .fr-page-top h2 { opacity: 0; }
+.fr-herobox { width: calc(100% + 32px); max-width: 552px; margin: 0 -16px; }
+.fr-herobox:empty { display: none; }
+.fr-hero { position: relative; padding-bottom: 4px; }
+.fr-banner { position: relative; height: calc(150px + env(safe-area-inset-top)); overflow: hidden;
+  background: radial-gradient(90% 120% at 85% 0%, color-mix(in srgb, var(--tc) 75%, #fff) 0, transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--tc) 85%, #1b1040), color-mix(in srgb, var(--tc) 35%, #120a30)); }
+.fr-khatam { position: absolute; inset: 0; opacity: .16;
+  background: conic-gradient(from 22.5deg, #fff 0 12.5%, transparent 0 25%, #fff 0 37.5%, transparent 0 50%, #fff 0 62.5%, transparent 0 75%, #fff 0 87.5%, transparent 0) 0 0 / 46px 46px;
+  -webkit-mask: radial-gradient(circle at 70% 40%, #000, transparent 75%); mask: radial-gradient(circle at 70% 40%, #000, transparent 75%); }
+.fr-motes { position: absolute; inset: 0; }
+.fr-motes i { position: absolute; left: var(--x); bottom: -12px; width: 8px; height: 8px; border-radius: 50%; opacity: 0; scale: var(--s);
+  background: radial-gradient(circle, #fff 0 25%, color-mix(in srgb, var(--tc) 60%, #ffe9a8) 45%, transparent 70%);
+  animation: fr-mote 5.5s var(--d) linear infinite; }
+@keyframes fr-mote { 0% { translate: 0 0; opacity: 0; } 15% { opacity: .9; } 80% { opacity: .7; } 100% { translate: 14px -170px; opacity: 0; } }
+.fr-avrow { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: -62px 16px 0; }
+.fr-av { position: relative; display: grid; place-items: center; width: 124px; height: 124px; border-radius: 50%; flex: none;
+  background: var(--bg); box-shadow: 0 0 0 6px var(--bg); }
+.fr-av .rk-av { width: 112px !important; height: 112px !important; }
+.fr-strip { display: flex; align-items: center; gap: 4px; padding: 6px 8px; margin-bottom: 6px; border-radius: 12px;
+  background: var(--card); box-shadow: 0 2px 0 color-mix(in srgb, var(--fg, #000) 8%, transparent); }
+.fr-strip > * { flex: none; }
+.fr-page .fr-info { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; }
+.fr-box, .fr-page .fr-shelf { width: 100%; padding: 14px; border-radius: 18px; background: var(--card);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--fg, #000) 8%, transparent); }
+.fr-box > h3, .fr-page .fr-shelf > h3 { margin: 0 0 10px; font-size: var(--fs-xs); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.fr-main { display: flex; flex-direction: column; gap: 10px; }
+.fr-main .fr-who { align-items: flex-start; }
+.fr-main .fr-who h3 { display: flex; align-items: center; gap: 8px; font-size: 26px; line-height: 1.1; }
+.fr-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fr-main .fr-counts { justify-content: flex-start; }
+.fr-main .fr-level { width: 100%; }
+.fr-main .fr-acts { justify-content: stretch; }
+.fr-main .fr-acts > * { flex: 1; }
+.fr-streakbox .fr-streak { width: 100%; box-shadow: none; }
+.fr-statbox .fr-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+.fr-roombox { padding-bottom: 6px; }
+.fr-roombox .fr-stage { background: none; padding: 0; }
+.fr-roombox .fr-room { width: 100%; }
+.fr-page .fr-shelf-row { justify-content: flex-start; }
+.fr-minebox .fr-mine .chips { justify-content: flex-start; }
+@media (prefers-reduced-motion: reduce) { .fr-motes i { animation: none; opacity: .5; translate: 0 -60px; } }
+html.lite .fr-motes { display: none; }
+.fr-page .fr-shelf { align-items: stretch; }
+.fr-page .fr-shelf-row { padding: 0; background: none; box-shadow: none; }
+/* The whole profile wears its theme, like a Discord profile: deep night tinted with the league's colour, glassy cards. */
+dialog.fr-page.fr-dc { --fg: #fff; --muted: rgba(255, 255, 255, .68); --card: rgba(255, 255, 255, .07); --chip: rgba(255, 255, 255, .09); --bg: color-mix(in srgb, var(--tc, #6c5ce7) 22%, #0f0a1f);
+  color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--tc, #6c5ce7) 30%, #120b26) 0, #0e0a1c 70%); }
+.fr-dc .fr-box, .fr-dc .fr-shelf { background: rgba(10, 6, 24, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); -webkit-backdrop-filter: none; }
+.fr-dc .fr-strip { background: rgba(10, 6, 24, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.fr-dc .fr-av { background: color-mix(in srgb, var(--tc, #6c5ce7) 30%, #120b26); box-shadow: 0 0 0 6px color-mix(in srgb, var(--tc, #6c5ce7) 30%, #120b26); }
+.fr-dc .fr-stat, .fr-dc .fr-count { background: rgba(255, 255, 255, .07); color: #fff; }
+.fr-dc .chip { background: rgba(255, 255, 255, .1); color: #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, .35); border-color: transparent; }
+.fr-dc .fr-badge { color: #7ff0c8; background: rgba(127, 240, 200, .14); }
+.fr-dc .fr-page-top .icon-btn { border: 0; outline: 0; background: rgba(0, 0, 0, .35); }
+.fr-dc .fr-shelf > h3, .fr-dc .fr-box > h3 { text-align: start; color: rgba(255, 255, 255, .6); }
+.fr-dc .fr-streak { background: rgba(255, 255, 255, .06); color: #fff; }
+.fr-dc .fr-help { color: rgba(255, 255, 255, .55); }
+.fr-dc .fr-khatam { opacity: .09; background-size: 30px 30px; }
+.fr-dc .fr-stat b { font-size: 17px; }
+.fr-dc .fr-stat { padding: 8px 6px; }
+.fr-dc .rk-tier { color: color-mix(in srgb, var(--tc, #6c5ce7) 55%, #fff); font-weight: 900; }
+.fr-dc .fr-page-top { transition: background-color .2s; }
+.fr-dc.scrolled .fr-page-top { background: color-mix(in srgb, var(--tc, #6c5ce7) 22%, #0f0a1f); text-shadow: none; }
+.fr-dc.scrolled .fr-page-top h2 { opacity: 1; transition: opacity .2s; }
+.fr-dc.scrolled .fr-page-top .icon-btn { background: transparent; }
 /* A profile effect over the top of the page (src/ui/deco/effects.ts): it never takes a tap. */
 .fr-fx { position: absolute; top: 0; left: 50%; translate: -50% 0; z-index: 2; pointer-events: none; line-height: 0; }
 .fr-fx .dk-fx { display: block; }
