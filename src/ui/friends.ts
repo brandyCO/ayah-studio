@@ -3,6 +3,7 @@
 // friends at once. Two friends keep a friend streak (the days in a row both earned points, counted by the server). While
 // both have earned points today their characters stand on fire together, and on 7 / 30 / 100 / 365 days they power up
 // together full screen (powerUp.ts). Simple on purpose: no explaining needed beyond one line.
+import { coverWhileOpen } from './coverPage';
 import { account } from '../cloud/auth';
 import { icon } from './icons';
 import { ft, type FriendKey } from '../i18n/friends';
@@ -351,6 +352,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   paint();
   document.body.append(d);
   d.showModal();
+  coverWhileOpen(d);
   void refresh();
 }
 /** Followers or Following of a player: a sheet of rows (tap → that profile), with Follow / Remove on your own. */

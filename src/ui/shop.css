@@ -194,9 +194,8 @@
 /* The passing shine: one band crossing the tile now and then, each tile at its own moment. */
 .sh-tile.r-epic::after, .sh-tile.r-legendary::after, .sh-tile.r-mythic::after, .sh-tile.r-prize::after { content: ''; position: absolute; inset: -20% -60%; z-index: 2; pointer-events: none;
   background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%); translate: -70% 0; opacity: 0; }
-html:not(.lite) .sh-page:not(.still) .sh-tile.on.r-epic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.on.r-legendary::after,
-html:not(.lite) .sh-page:not(.still) .sh-tile.on.r-mythic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.on.r-prize::after {
-  animation: sh-tile-shine 6.5s ease-in-out infinite; }
+/* Lists stay still (Discord-style, Marwan 2026-11-24): every moving shine or twinkle in the grid was a layer the phone
+   composited each frame. The shine and twinkles play in the piece's own card when it is opened. */
 .sh-tile:nth-child(3n+1)::after { animation-delay: .4s !important; } .sh-tile:nth-child(3n+2)::after { animation-delay: 2.6s !important; } .sh-tile:nth-child(3n)::after { animation-delay: 4.5s !important; }
 .sh-tile.r-legendary::after, .sh-tile.r-mythic::after { animation-duration: 4.8s !important; }
 @keyframes sh-tile-shine { 0% { translate: -70% 0; opacity: 0; } 4% { opacity: 1; } 22% { translate: 70% 0; opacity: 1; } 26%, 100% { translate: 70% 0; opacity: 0; } }
@@ -207,7 +206,7 @@ html:not(.lite) .sh-page:not(.still) .sh-tile.on.r-mythic::after, html:not(.lite
   filter: drop-shadow(0 0 3px #ffd36b);
   top: calc(10% + (var(--i) * 37 % 55) * 1%); left: calc(8% + (var(--i) * 53 % 84) * 1%); }
 .r-mythic .sh-spark { filter: drop-shadow(0 0 3px #b48cff); }
-html:not(.lite) .sh-page:not(.still) .sh-tile.on .sh-spark, html:not(.lite) .sh-sheet .sh-spark { animation: sh-twinkle 2.8s calc(var(--i) * -.83s) ease-in-out infinite; }
+html:not(.lite) .sh-sheet .sh-spark { animation: sh-twinkle 2.8s calc(var(--i) * -.83s) ease-in-out infinite; }
 @keyframes sh-twinkle { 0%, 55%, 100% { opacity: 0; scale: .3; rotate: 0deg; } 70% { opacity: 1; scale: 1; rotate: 45deg; } 85% { opacity: .2; scale: .5; rotate: 90deg; } }
 .s-locked .sh-spark { display: none; }
 
@@ -278,3 +277,10 @@ html:not(.lite) .sh-page:not(.still) .sh-tile.on .sh-spark, html:not(.lite) .sh-
 .sh-sheet.out .sh-dim { opacity: 0; }
 @keyframes sh-dim-in { from { opacity: 0; } }
 @media (min-width: 640px) { .sh-sheet.in-page { justify-content: center; } }
+
+/* Light lists (Marwan 2026-11-24, "how would Discord have it"): a tile off screen is skipped entirely (not styled,
+   laid out or drawn; its size remembered), and art landing in a tile is laid out inside its own fixed box only. */
+.sh-art { contain: size layout style; }
+.sh-tile .sh-spark { opacity: .85; scale: .7; filter: none; rotate: 45deg; }
+.sh-tile .sh-spark:nth-child(2n) { opacity: .5; scale: .5; }
+.sh-tile:not(.r-common) .sh-art > * { filter: none; }

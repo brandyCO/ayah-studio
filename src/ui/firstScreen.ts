@@ -5,6 +5,7 @@
 // what unlocks next). Shown once, on the first launch of a new install (mushaf.ts); the language switch reloads the
 // app in the language picked and the screen comes back. On the web, sign-in leaves for Google and returns: the flag
 // `fsSignIn` brings the welcome back after the return.
+import { coverWhileOpen } from './coverPage';
 import './firstScreen.css';
 import { account, appleSignInAvailable, googleSignInAvailable, onAccount, signIn, signInAvailable, type SignInWith } from '../cloud/auth';
 import { streak } from '../data/journey';
@@ -96,6 +97,7 @@ export function openFirstScreen(done: () => void) {
   d.addEventListener('close', () => d.remove());
   document.body.append(d);
   d.showModal();
+  coverWhileOpen(d);
   if (reduced()) { d.classList.add('up'); return; }
   requestAnimationFrame(() => d.classList.add('up'));
   // The character springs up out of the launch screen's place, the name and the buttons follow.
