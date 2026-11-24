@@ -115,8 +115,8 @@
 .sh-tag { font: 1000 12px var(--ui-round, inherit); color: #ffe08a; }
 .sh-crescent { position: absolute; top: -22px; inset-inline-end: -14px; width: 92px; height: 92px; border-radius: 50%; box-shadow: -14px 10px 0 0 #ffe7a6; opacity: .55; pointer-events: none; }
 .sh-page:not(.still) .sh-feat.week::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.18) 50%, transparent 65%) -200% 0 / 200% 100% no-repeat; animation: sh-shine 5s 1s ease-in-out infinite; }
-@keyframes sh-shine { 0%, 70% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.18) 50%, transparent 65%); translate: -100% 0; animation: sh-shine 5s 1s ease-in-out infinite; }
+@keyframes sh-shine { 0%, 70% { translate: -100% 0; } 100% { translate: 100% 0; } }
 
 /* One piece, large. */
 .sh-sheet { width: 100%; max-width: 440px; margin: auto auto 0; padding: 0; border: 0; background: transparent; overflow: visible; }
@@ -194,8 +194,8 @@
 /* The passing shine: one band crossing the tile now and then, each tile at its own moment. */
 .sh-tile.r-epic::after, .sh-tile.r-legendary::after, .sh-tile.r-mythic::after, .sh-tile.r-prize::after { content: ''; position: absolute; inset: -20% -60%; z-index: 2; pointer-events: none;
   background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%); translate: -70% 0; opacity: 0; }
-html:not(.lite) .sh-page:not(.still) .sh-tile.r-epic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.r-legendary::after,
-html:not(.lite) .sh-page:not(.still) .sh-tile.r-mythic::after, html:not(.lite) .sh-page:not(.still) .sh-tile.r-prize::after {
+html:not(.lite) .sh-page:not(.still):not(.held) .sh-tile.on.r-epic::after, html:not(.lite) .sh-page:not(.still):not(.held) .sh-tile.on.r-legendary::after,
+html:not(.lite) .sh-page:not(.still):not(.held) .sh-tile.on.r-mythic::after, html:not(.lite) .sh-page:not(.still):not(.held) .sh-tile.on.r-prize::after {
   animation: sh-tile-shine 6.5s ease-in-out infinite; }
 .sh-tile:nth-child(3n+1)::after { animation-delay: .4s !important; } .sh-tile:nth-child(3n+2)::after { animation-delay: 2.6s !important; } .sh-tile:nth-child(3n)::after { animation-delay: 4.5s !important; }
 .sh-tile.r-legendary::after, .sh-tile.r-mythic::after { animation-duration: 4.8s !important; }
@@ -207,7 +207,7 @@ html:not(.lite) .sh-page:not(.still) .sh-tile.r-mythic::after, html:not(.lite) .
   filter: drop-shadow(0 0 3px #ffd36b);
   top: calc(10% + (var(--i) * 37 % 55) * 1%); left: calc(8% + (var(--i) * 53 % 84) * 1%); }
 .r-mythic .sh-spark { filter: drop-shadow(0 0 3px #b48cff); }
-html:not(.lite) .sh-page:not(.still) .sh-spark, html:not(.lite) .sh-sheet .sh-spark { animation: sh-twinkle 2.8s calc(var(--i) * -.83s) ease-in-out infinite; }
+html:not(.lite) .sh-page:not(.still):not(.held) .sh-tile.on .sh-spark, html:not(.lite) .sh-sheet .sh-spark { animation: sh-twinkle 2.8s calc(var(--i) * -.83s) ease-in-out infinite; }
 @keyframes sh-twinkle { 0%, 55%, 100% { opacity: 0; scale: .3; rotate: 0deg; } 70% { opacity: 1; scale: 1; rotate: 45deg; } 85% { opacity: .2; scale: .5; rotate: 90deg; } }
 .s-locked .sh-spark { display: none; }
 
@@ -260,3 +260,11 @@ html:not(.lite) .sh-page:not(.still) .sh-spark, html:not(.lite) .sh-sheet .sh-sp
 .sh-fx-ln { position: absolute; left: 8%; right: 10%; top: 62%; height: 6%; max-height: 8px; border-radius: 9px; background: #ffffff14; }
 .sh-fx-ln.short { top: 72%; right: 40%; }
 .sh-fx > .dk-fx { position: absolute; inset: 0; }
+/* Sections off screen are not laid out or painted, and their sparkles rest. */
+.sh-sec:not(.sec-featured) { content-visibility: auto; contain-intrinsic-size: auto 640px; }
+.sh-sheet::backdrop { transition: opacity .18s; }
+.sh-sheet.out::backdrop { opacity: 0; }
+.sh-page .sh-art > * { animation: sh-art-in .28s ease-out both; }
+@keyframes sh-art-in { from { opacity: 0; } }
+/* Behind an open piece the stall rests. */
+.sh-page.held .sh-lanterns i, .sh-page.held .sh-feat::after { animation-play-state: paused; }
