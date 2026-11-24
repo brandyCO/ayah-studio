@@ -25,8 +25,12 @@ Background recitation: `UIBackgroundModes audio` + `AVAudioSession .playback` (A
 Home-screen widgets (2026-11-24): **Today's ayah** and **My ayah** (`ios/App/AyahWidgets`, a WidgetKit extension,
 bundle id `com.brandyco.ayahstudio.widgets`; small / medium show the ayah the widget was added for, large shows both). The
 app's `Daily` plugin (`DailyPlugin.swift`) writes the ayat by date, labels, theme colours and the Arabic pictures into the
-App Group `group.com.brandyco.ayahstudio` (in both entitlements; Apple account: Identifiers → App Groups, if automatic
-signing does not add it). Taps open `ayahstudio://open#/s/…`. ios.yml signs the widget (inside) before the app.
+App Group `group.com.brandyco.ayahstudio` (in both entitlements). Taps open `ayahstudio://open#/s/…`. Apple's API key cannot
+register an App Group (first try 2026-11-24: "No profiles … Authentication failed"), so ios.yml leaves the widgets out and
+signs the app without the group until the owner (1) registers the App Group `group.com.brandyco.ayahstudio` at
+developer.apple.com → Identifiers → App Groups, (2) ticks it under App Groups for the identifiers `com.brandyco.ayahstudio`
+and `com.brandyco.ayahstudio.widgets` (register the second as an App ID first), and (3) sets the repo variable
+`IOS_WIDGETS=1`; then ios.yml signs the widget (inside) before the app.
 Not on the iPhone yet (hidden by `hasPlugin()` in `src/native.ts`): the other widgets and the lock-screen prayer line,
 the Play font pack (every page font ships in the app), the Android media
 service. Local notifications: iOS keeps the 64 soonest, so prayer alerts are set 3 days ahead there (set again on
