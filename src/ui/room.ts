@@ -130,7 +130,7 @@ function buildScene(visit?: Visit): Built | null {
   const got = visit ? (visit.badges ?? []).map((id) => BADGES.find((b) => b.id === id)).filter((d) => !!d).slice(0, 4).map((def) => ({ def: def! })) : badgeStates().filter((b) => b.earned).sort((a, b) => order[a.def.tier] - order[b.def.tier]).slice(0, 4);
   // The Hifz badges held (the best two) stand first on the lower shelf.
   const hz = visit ? parseHifz(visit.badges).list : hifzAll().sort((x, y) => y.tier - x.tier || y.s - x.s).slice(0, 2);
-  const low = h('div', { class: 'rm-shelf low' }, ...hz.map((x) => hifzBadge(x.s, x.tier, 30)), ...got.slice(0, hz.length ? 3 : 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 30)));
+  const low = h('div', { class: 'rm-shelf low' }, ...hz.map((x) => hifzBadge(x.s, x.tier, 30)), ...got.slice(0, hz.length ? 3 : 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 30, true)));
   if (!got.length && !hz.length && !visit) low.append(h('span', { class: 'rm-empty' }, rt('room.emptyBadges')));
   // The character on its cushion: reading by day, its lantern at night.
   const sit = encode(normalize({ ...f, pose: 1, hold: night ? 5 : f.hold === 0 || f.hold === 1 ? 2 : f.hold }));

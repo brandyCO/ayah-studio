@@ -32,7 +32,7 @@ import { withLevel } from './levelLook';
 import { dayKey } from '../data/readLog';
 import { BADGES } from '../data/badges';
 import { hifzBadge, parseHifz } from './hifzBadge';
-import { badgeArt } from './badge';
+import { badgeArt, badgePic } from './badge';
 import { countryName, flagImg, pickFlag } from './flag';
 import { nwt } from '../i18n/news';
 import './friends.css';
@@ -164,7 +164,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
 
   let unfriend: (() => void) | null = null;
   more.onclick = () => playerMenu(unfriend, pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
-  let pairSig = '';
+  let pairSig = '', paints = 0;
   const paint = () => {
     if (prof?.blocked) {
       // Blocked: nothing of theirs shows, only the way back.
@@ -192,18 +192,21 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const sig = JSON.stringify([mineP, p.figure, mineP ? myFigureCode() : '', p.room ?? null, p.badges?.top ?? [], p.xp ?? null]);
     if (sig !== pairSig) {
       pairSig = sig;
-      stage.replaceChildren(h('div', { class: 'fr-solo' }, pairSolo(p)));
+      const solo = () => stage.replaceChildren(h('div', { class: 'fr-solo' }, pairSolo(p)));
       const fig = mineP ? myFigureCode() : p.figure;
-      if (fig && !p.private) void import('./room').then((m) => {
+      // The room is drawn after the page has slid in (first paint), like the rest below the fold; the character alone
+      // stands there only when there is no room to show.
+      if (!fig || p.private) solo();
+      else void new Promise((r) => setTimeout(r, paints ? 0 : 360)).then(() => import('./room')).then((m) => {
         if (pairSig !== sig || !d.isConnected) return;
         const scene = m.roomStage(mineP ? undefined : { figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top, best: p.streak });
-        if (!scene) return;
+        if (!scene) { solo(); return; }
         stillRoom(scene);
         const room = h('button', { class: 'fr-room', 'aria-label': ft('fr.visit'), onclick: () => {
           if (mineP) { close(); location.hash = '#/me/room'; } else m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top });
         } }, scene);
         stage.replaceChildren(room);
-      });
+      }).catch(() => { if (pairSig === sig) solo(); });
     }
     title.textContent = mineP ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
@@ -257,15 +260,15 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       !mineP && fw.back ? h('span', { class: 'fr-back-pill' }, ft('fr.followsYou')) : '') : '';
     // Badges they earned (the rarest first), and their trophies.
     const defs = (p.badges?.top ?? []).map((id) => BADGES.find((x) => x.id === id)).filter((x): x is NonNullable<typeof x> => !!x);
-    const badges = defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
+    const badges = () => defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
       h('h3', {}, ft('fr.badges'), p.badges && p.badges.n > defs.length ? h('small', {}, ` · ${ft('fr.badgesN', { n: p.badges.n })}`) : ''),
-      defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
+      defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48, true))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
     // Their Hifz badges: how many surahs they hold and the best two (sent among the badges, hifzBadge.ts).
     const hz = parseHifz(p.badges?.top);
-    const hifz = hz.count ? h('section', { class: 'fr-shelf s-hifz' },
+    const hifz = () => hz.count ? h('section', { class: 'fr-shelf s-hifz' },
       h('h3', {}, ft(mineP ? (hz.count === 1 ? 'fr.myHeart1' : 'fr.myHeartN') : hz.count === 1 ? 'fr.heart1' : 'fr.heartN', { n: hz.count })),
       h('div', { class: 'fr-shelf-row' }, ...hz.list.map((x) => hifzBadge(x.s, x.tier, 52)))) : '';
-    const cups = p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
+    const cups = () => p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
       h('div', { class: 'fr-shelf-row' }, ...p.cups.map((place) => h('span', { class: `fr-cup p${place}`, title: `#${place}` }, trophy(place, 34))))) : '';
     // Your own profile: your flag, and what it shows (the stats above follow each switch).
     const mine = mineP ? (() => {
@@ -297,7 +300,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const fig = p.private ? null : mineP ? myFigureCode() : p.figure;
     const motes = Array.from({ length: 9 }, (_, i) => h('i', { style: `--x:${(i * 37 + 11) % 100}%;--d:${(i * 0.7) % 5}s;--s:${0.6 + (i % 3) * 0.3}` }));
     const strip = [...hz.list.slice(0, 1).map((x) => flat(`h${x.s}:${x.tier}`, () => hifzBadge(x.s, x.tier, 26), 26)),
-      ...defs.slice(0, 4).map((x) => flat(`b${x.tier}:${x.icon}`, () => badgeArt(x.tier, x.icon, true, 26), 26)),
+      ...defs.slice(0, 4).map((x) => h('span', { class: 'fr-bpic', 'aria-hidden': 'true' }, h('img', { src: badgePic(x.tier, x.icon), alt: '', draggable: 'false' }))),
       ...(p.cups ?? []).slice(0, 2).map((place) => flat(`t${place}`, () => trophy(place, 24), 24))];
     d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
     heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
@@ -316,10 +319,17 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
         actions),
       f ? box('fr-streakbox', streakLine(f, name)) : '',
       stats.childElementCount ? box('fr-statbox', stats) : '',
-      roomCard,
-      hifz, badges, cups, mine ? box('fr-minebox', mine) : '',
-      f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
-    if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
+      roomCard);
+    // The rest (room, Hifz badges, badges, trophies, your switches) is below the fold: on the first paint it is added
+    // once the page has slid in, so the slide's first frame only lays out the top (~0.6 s → ~0.25 s at 6× CPU).
+    const rest = () => {
+      info.append(...[hifz(), badges(), cups(), mine ? box('fr-minebox', mine) : '',
+        f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : ''].filter((x) => x));
+      if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
+    };
+    const n = ++paints;
+    if (n > 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) rest();
+    else setTimeout(() => { if (paints === n && d.isConnected) rest(); }, 340);
   };
   const refresh = async () => {
     try {
