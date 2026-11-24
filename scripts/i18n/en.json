@@ -2115,7 +2115,7 @@
   "fw.wb": "Welcome back, {name}!",
   "fw.wbNo": "Welcome back!",
   "fw.bringing": "Bringing your progress…",
-  "fw.streak": "{n, plural, one {{n}-day streak} other {{n}-day streak}}",
+  "fw.streak": "{n}-day streak",
   "fw.next": "Next to unlock"
  },
  "notifs": {

@@ -218,7 +218,7 @@ const en = {
   'fw.wb': 'Welcome back, {name}!',
   'fw.wbNo': 'Welcome back!',
   'fw.bringing': 'Bringing your progress…',
-  'fw.streak': '{n, plural, one {{n}-day streak} other {{n}-day streak}}',
+  'fw.streak': '{n}-day streak',
   'fw.next': 'Next to unlock',
 };
 export type FrontKey = keyof typeof en;
@@ -438,7 +438,7 @@ const ar: Partial<Record<FrontKey, string>> = {
   'fw.wb': 'أهلًا بعودتك يا {name}!',
   'fw.wbNo': 'أهلًا بعودتك!',
   'fw.bringing': 'نُحضر تقدّمك…',
-  'fw.streak': '{n, plural, one {يوم واحد متتالٍ} two {يومان متتاليان} few {{n} أيام متتالية} many {{n} يومًا متتاليًا} other {{n} يوم متتالٍ}}',
+  'fw.streak': 'أيام متتالية: {n}',
   'fw.next': 'التالي للفتح',
 };
 
