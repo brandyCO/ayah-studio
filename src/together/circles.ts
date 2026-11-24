@@ -16,7 +16,7 @@ export interface Circle {
   status: 'open' | 'complete';
   due_date: string | null;
   completed_at: string | null;
-  kind?: 'khatm' | 'family'; // family circles (docs/kids.md K6) have children instead of juz parts
+  kind?: 'family'; // family circles (docs/kids.md K6); khatm circles and their juz parts were removed (2026-11-24)
 }
 export interface Member {
   circle_id: string;
@@ -25,19 +25,9 @@ export interface Member {
   color: number;
   joined_at: string;
 }
-export interface Part {
-  circle_id: string;
-  round: number;
-  juz: number;
-  user_id: string | null;
-  status: 'free' | 'taken' | 'done';
-  taken_at: string | null;
-  done_at: string | null;
-}
 export interface CircleState {
   circle: Circle;
   members: Member[];
-  parts: Part[]; // the current round's 30 parts, by juz
 }
 
 /** A readable message from a Supabase/Postgres error. */
@@ -81,7 +71,7 @@ function writeCache(circles: CircleState[]) {
 /** The last known state of the user's circles (no network). */
 export const cachedCircles = (): CircleState[] => readCache();
 
-/** Loads all the user's circles with their members and current parts. */
+/** Loads all the user's circles with their members. */
 export async function loadCircles(): Promise<CircleState[]> {
   const sb = await supabase();
   const { data: circles, error } = await sb.from('circles').select('*').order('created_at');
@@ -91,15 +81,11 @@ export async function loadCircles(): Promise<CircleState[]> {
     writeCache([]);
     return [];
   }
-  const [{ data: members, error: e1 }, { data: parts, error: e2 }] = await Promise.all([
-    sb.from('circle_members').select('*').in('circle_id', ids).order('joined_at'),
-    sb.from('circle_parts').select('*').in('circle_id', ids).order('juz'),
-  ]);
-  if (e1 || e2) throw new Error(errorText(e1 ?? e2));
+  const { data: members, error: e1 } = await sb.from('circle_members').select('*').in('circle_id', ids).order('joined_at');
+  if (e1) throw new Error(errorText(e1));
   const out = (circles as Circle[]).map((circle) => ({
     circle,
     members: (members as Member[]).filter((m) => m.circle_id === circle.id),
-    parts: (parts as Part[]).filter((p) => p.circle_id === circle.id && p.round === circle.round),
   }));
   writeCache(out);
   return out;

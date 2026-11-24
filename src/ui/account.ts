@@ -126,26 +126,18 @@ async function exportData() {
   if (error) throw error;
   const { data: profile } = await sb.from('profiles').select('name,created_at').maybeSingle();
   await loadReflections();
-  // Khatm circles you are in (names you gave and the juz you took); none if circles are not set up yet.
-  const { data: circles } = await sb.from('circle_members').select('name,joined_at,circles(name,round,status)');
-  const { data: parts } = await sb.from('circle_parts').select('circle_id,round,juz,status,taken_at,done_at').eq('user_id', a.id);
-  // Gifts you sent and the replies they received (references, names and messages only).
-  const { data: gifts } = await sb.rpc('my_gifts');
-  // Ayah walls you host (with every entry on them) and your own entries on other walls.
-  const { data: walls } = await sb.from('walls').select('title,occasion,join_code,status,reciter,created_at,closed_at,wall_entries(name,dua,surah,ayah_from,ayah_to,hidden,created_at)').eq('host_id', a.id);
+  // Circles you are in (family circles).
+  const { data: circles } = await sb.from('circle_members').select('name,joined_at,circles(name)');
   // Family circles (docs/kids.md K6): the children you added (with their surahs) and the notes you wrote.
   const { data: children } = await sb.from('circle_children').select('name,created_at,circles(name),family_parts(surah,status,at)').eq('added_by', a.id);
   const { data: notes } = await sb.from('family_notes').select('child_id,surah,from_name,body,created_at,seen_at').eq('from_id', a.id);
   // Harakat clips you shared to improve the check (their words and labels; the sound stays with the teachers).
   const { data: harakatClips } = await sb.rpc('harakat_my_clips');
-  const { data: entries } = await sb.from('wall_entries').select('wall_id,name,dua,surah,ayah_from,ayah_to,hidden,created_at').eq('user_id', a.id);
   const file = {
     exported: new Date().toISOString(),
     account: { name: a.name, email: a.email, created: profile?.created_at ?? null },
     synced: docs,
-    circles: { memberships: circles ?? [], juz: parts ?? [] },
-    gifts: gifts ?? [],
-    walls: { hosted: walls ?? [], myEntries: entries ?? [] },
+    circles: { memberships: circles ?? [] },
     family: { childrenYouAdded: children ?? [], notesYouWrote: notes ?? [] },
     harakatClips: harakatClips ?? [],
     thisDevice: {

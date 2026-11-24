@@ -3,13 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(14);
+select plan(9);
 
-select ok(valid_gift_look('{"highlight":true,"grain":false,"vignette":true}'), 'highlight, grain and vignette are accepted');
-select ok(valid_gift_look('{"colors":{"ar":"#ffffff","hl":"#f2c46b"}}'), 'the highlight colour is accepted');
-select ok(not valid_gift_look('{"highlight":"yes"}'), 'highlight must be a boolean');
-select ok(not valid_gift_look('{"colors":{"hl":"gold"}}'), 'the highlight colour must be #rrggbb');
-select ok(valid_gift_look('{"transition":"lightbloom","scenes":["light:dawn"]}'), 'earlier looks still pass');
 select ok(valid_reciter(1001) and valid_reciter(1006) and valid_reciter(7), 'the new reciters and the earlier ones are known');
 select ok(valid_reciter(1026) and valid_reciter(1211) and not valid_reciter(1212) and not valid_reciter(1000), 'the everyayah and mp3quran reciters are known, an unknown one is rejected');
 
