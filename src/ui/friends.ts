@@ -286,7 +286,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       ...(p.cups ?? []).slice(0, 2).map((place) => flat(`t${place}`, () => trophy(place, 24), 24))];
     d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
     heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
-      h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-fx' }, ...motes)),
+      h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-motes' }, ...motes)),
       h('div', { class: 'fr-avrow' },
         h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig)),
         strip.length ? h('span', { class: 'fr-strip' }, ...strip) : '')));

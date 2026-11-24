@@ -194,8 +194,8 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-khatam { position: absolute; inset: 0; opacity: .16;
   background: conic-gradient(from 22.5deg, #fff 0 12.5%, transparent 0 25%, #fff 0 37.5%, transparent 0 50%, #fff 0 62.5%, transparent 0 75%, #fff 0 87.5%, transparent 0) 0 0 / 46px 46px;
   -webkit-mask: radial-gradient(circle at 70% 40%, #000, transparent 75%); mask: radial-gradient(circle at 70% 40%, #000, transparent 75%); }
-.fr-fx { position: absolute; inset: 0; }
-.fr-fx i { position: absolute; left: var(--x); bottom: -12px; width: 8px; height: 8px; border-radius: 50%; opacity: 0; scale: var(--s);
+.fr-motes { position: absolute; inset: 0; }
+.fr-motes i { position: absolute; left: var(--x); bottom: -12px; width: 8px; height: 8px; border-radius: 50%; opacity: 0; scale: var(--s);
   background: radial-gradient(circle, #fff 0 25%, color-mix(in srgb, var(--tc) 60%, #ffe9a8) 45%, transparent 70%);
   animation: fr-mote 5.5s var(--d) linear infinite; }
 @keyframes fr-mote { 0% { translate: 0 0; opacity: 0; } 15% { opacity: .9; } 80% { opacity: .7; } 100% { translate: 14px -170px; opacity: 0; } }
@@ -225,8 +225,8 @@ dialog.fr-page::backdrop { background: transparent; }
 .fr-roombox .fr-room { width: 100%; }
 .fr-page .fr-shelf-row { justify-content: flex-start; }
 .fr-minebox .fr-mine .chips { justify-content: flex-start; }
-@media (prefers-reduced-motion: reduce) { .fr-fx i { animation: none; opacity: .5; translate: 0 -60px; } }
-html.lite .fr-fx { display: none; }
+@media (prefers-reduced-motion: reduce) { .fr-motes i { animation: none; opacity: .5; translate: 0 -60px; } }
+html.lite .fr-motes { display: none; }
 .fr-page .fr-shelf { align-items: stretch; }
 .fr-page .fr-shelf-row { padding: 0; background: none; box-shadow: none; }
 /* The whole profile wears its theme, like a Discord profile: deep night tinted with the league's colour, glassy cards. */
