@@ -5,7 +5,8 @@
 // night) and hops when tapped. Share sends the character card (charCard.ts). Drawn flat in the reward style.
 import { actor, myFigureCode, type Actor } from './actor';
 import { encode, normalize, parse, WARDROBE } from './figure';
-import { circlePath, edge, mix, shine, starPath, two } from './flat';
+import { circlePath, mix, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
 import { BADGES, badgeStates } from '../data/badges';
 import { hifzAll, prizeWins } from '../data/garden';
 import { streak } from '../data/journey';
@@ -51,10 +52,15 @@ export function backSvg(sky: Sky, best: number, star: boolean, look: Partial<Rec
   const flame = 'M142 28Q151 37 150 44Q149 51 142 52Q135 51 134 44Q134 39 138 35Q139 40 142 40Q144 34 142 28Z';
   return `<svg class="rm-back" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs><linearGradient id="rmsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s2}"/><stop offset="1" stop-color="${s1}"/></linearGradient>
-      <radialGradient id="rmglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>
+      <radialGradient id="rmglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rmwin" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${night ? '#b8c8ff' : '#fff4c8'}" stop-opacity="${night ? .22 : .5}"/><stop offset="1" stop-color="${night ? '#b8c8ff' : '#fff4c8'}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="rmpool" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night ? '#c8d4ff' : '#fff2c0'}" stop-opacity="${night ? .2 : .42}"/><stop offset="1" stop-color="${night ? '#c8d4ff' : '#fff2c0'}" stop-opacity="0"/></linearGradient>
+      <radialGradient id="rmsh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1a0c08" stop-opacity=".42"/><stop offset=".6" stop-color="#1a0c08" stop-opacity=".18"/><stop offset="1" stop-color="#1a0c08" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rmvig" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="#140a26" stop-opacity="0"/><stop offset="1" stop-color="#140a26" stop-opacity="${night ? .45 : .28}"/></radialGradient></defs>
     <clipPath id="rmglass"><path d="${glass}"/></clipPath>
     <rect width="320" height="146" fill="${wall}"/><rect y="132" width="320" height="14" fill="${wallSh}"/>
     ${wallArt(look.wall, night)}
+    <ellipse cx="64" cy="70" rx="78" ry="64" fill="url(#rmwin)"/>
     ${edge(win, night ? '#1c1838' : '#a8784a', 3)}${two(win, night ? '#8a6bb0' : '#e0b07a', night ? '#634a8a' : '#c08a52')}
     <path d="${glass}" fill="url(#rmsky)"/>${sun}${viewArt(look.view, sky)}${sea.window}${sp.window}
     <path d="M64 33V98M33 66H95" stroke="${night ? '#634a8a' : '#c08a52'}" stroke-width="3"/>
@@ -68,10 +74,15 @@ export function backSvg(sky: Sky, best: number, star: boolean, look: Partial<Rec
     ${two('M0 146H320V200H0Z', night ? '#5b4a7a' : '#c99a6a', night ? '#463a62' : '#b5875a', 0, -3)}
     ${look.floor ? floorArt(look.floor, night) : [160, 176, 190].map((y) => `<path d="M0 ${y}H320" stroke="${mix(night ? '#463a62' : '#b5875a', 0.12)}" stroke-width="1.2" opacity=".6"/>`).join('')}
     ${sp.room}${rugArt(look.rug, night)}
+    <path d="M34 146H100L196 200H52Z" fill="url(#rmpool)"/>
+    ${look.seat ? '<ellipse cx="70" cy="190" rx="40" ry="7" fill="url(#rmsh)"/>' : ''}${look.plant ? '<ellipse cx="22" cy="188" rx="22" ry="5" fill="url(#rmsh)"/>' : ''}
+    ${look.side ? '<ellipse cx="272" cy="192" rx="46" ry="7" fill="url(#rmsh)"/>' : ''}${look.pet ? '<ellipse cx="211" cy="191" rx="20" ry="4" fill="url(#rmsh)"/>' : ''}
     ${look.seat ? itemArt(look.seat, 'seat', night, still) : ''}
     ${look.plant ? itemArt(look.plant, 'plant', night, still) : ''}${look.side ? itemArt(look.side, 'side', night, still) : ''}
     ${look.pet ? itemArt(look.pet, 'pet', night, still) : ''}
     ${look.hang ? itemArt(look.hang, 'hang', night, still) : ''}${sea.top}
+    ${night && look.hang ? '<ellipse cx="111" cy="46" rx="60" ry="46" fill="url(#rmglow)" opacity=".7"/><ellipse cx="111" cy="186" rx="70" ry="12" fill="url(#rmglow)" opacity=".5"/>' : ''}
+    <rect width="320" height="200" fill="url(#rmvig)" pointer-events="none"/>
   </svg>`;
 }
 
