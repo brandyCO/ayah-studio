@@ -16,7 +16,7 @@ import {
 import { updatedNote } from './updatedAgo';
 import { isOffline } from '../together/outbox';
 import { myFigureCode, actor } from './actor';
-import { avatar, trophy } from './rankAvatars';
+import { TIER_RING, avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, sheet, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
@@ -72,6 +72,42 @@ function fromRow(row: Row): Profile {
 let friendsKept: Friends | null = null;
 const friendsNow = () => friendsKept;
 
+// The banner's badge strip repeats badges drawn again further down, ~1,200 SVG nodes that made scrolling
+// the profile slower on a weak phone. Each is one picture instead (still vector), made once and reused.
+const flats = new Map<string, string>();
+function flat(key: string, make: () => Element, size: number): HTMLElement {
+  let src = flats.get(key);
+  if (!src) {
+    const el = make();
+    src = svgSrc(el.querySelector('svg') ?? el, size);
+    if (flats.size > 200) flats.clear();
+    flats.set(key, src);
+  }
+  return h('img', { src, width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+function svgSrc(svg: Element, size?: number): string {
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (size) { svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size)); }
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+}
+function svgImg(svg: Element, size: number): HTMLElement {
+  return h('img', { src: svgSrc(svg, size), width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+
+// The room on a profile is a preview (a tap opens the living room), so its wall and shelves are pictures: drawn
+// once instead of ~900 SVG nodes painted again each time the card scrolls into view. The character stays alive.
+function stillRoom(scene: HTMLElement) {
+  const back = scene.querySelector('svg.rm-back');
+  if (back) {
+    back.querySelectorAll('animate, animateTransform, animateMotion, set').forEach((x) => x.remove());
+    back.replaceWith(h('img', { class: 'rm-back', src: svgSrc(back), alt: '', 'aria-hidden': 'true', draggable: 'false', style: 'object-fit:cover' }));
+  }
+  scene.querySelectorAll<HTMLElement>('.rm-shelf .badge-art, .rm-shelf .hz-badge, .rm-cup > *').forEach((b) => {
+    const svg = b.tagName.toLowerCase() === 'svg' ? b : b.querySelector('svg');
+    if (svg) b.replaceWith(svgImg(svg, 30));
+  });
+}
+
 /** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
  *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
 export async function openProfile(row: Row, onChange: () => void = () => {}) {
@@ -86,17 +122,30 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
+  // Discord-style (owner 2026-11-24): a banner, the avatar in its frame over the banner's edge, then cards.
+  const heroBox = h('div', { class: 'fr-herobox' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
   const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info));
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page fr-dc' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, heroBox, ago, info));
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
-  const onPop = () => { pushed = false; d.close(); };
+  // Leaving pushes the page back out the side it came from, then closes it.
+  const leave = () => {
+    if (!d.open || d.classList.contains('leaving')) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { d.close(); return; }
+    d.classList.add('leaving');
+    const out = document.documentElement.dir === 'rtl' ? '-100%' : '100%';
+    d.animate([{ translate: '0 0' }, { translate: `${out} 0` }], { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }).finished.then(() => d.close(), () => d.close());
+  };
+  const onPop = () => { pushed = false; leave(); };
   window.addEventListener('popstate', onPop);
-  const close = () => { if (pushed) history.back(); else d.close(); };
+  const close = () => { if (pushed) history.back(); else leave(); };
   back.onclick = close;
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+  // The bar over the banner turns solid (with the name) once the banner has scrolled away.
+  const body = d.querySelector<HTMLElement>('.fr-page-body')!;
+  body.addEventListener('scroll', () => d.classList.toggle('scrolled', body.scrollTop > 110), { passive: true });
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
@@ -109,13 +158,15 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       pairSig = '';
       title.textContent = ft('fr.blockedName');
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true, figure: null }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.blocked')),
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.blocked')),
         h('button', { class: 'chip', onclick: () => void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onChange(); return refresh(); }).catch((e) => toast((e as Error).message)) }, ft('fr.unblock')));
       return;
     }
     if (!prof) {
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.private')));
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.private')));
       return;
     }
     const p = prof;
@@ -132,6 +183,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
         if (pairSig !== sig || !d.isConnected) return;
         const scene = m.roomStage(mineP ? undefined : { figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top, best: p.streak });
         if (!scene) return;
+        stillRoom(scene);
         const room = h('button', { class: 'fr-room', 'aria-label': ft('fr.visit'), onclick: () => {
           if (mineP) { close(); location.hash = '#/me/room'; } else m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top });
         } }, scene);
@@ -224,15 +276,33 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           return b;
         })));
     })() : '';
+    // The hero: a banner in their league's colour with a slow drift of light (their profile effect), the avatar in its
+    // frame breaking over the banner's lower edge, and their best badges in a strip beside it.
+    const tier = p.tier ?? 0;
+    const fig = p.private ? null : mineP ? myFigureCode() : p.figure;
+    const motes = Array.from({ length: 9 }, (_, i) => h('i', { style: `--x:${(i * 37 + 11) % 100}%;--d:${(i * 0.7) % 5}s;--s:${0.6 + (i % 3) * 0.3}` }));
+    const strip = [...hz.list.slice(0, 1).map((x) => flat(`h${x.s}:${x.tier}`, () => hifzBadge(x.s, x.tier, 26), 26)),
+      ...defs.slice(0, 4).map((x) => flat(`b${x.tier}:${x.icon}`, () => badgeArt(x.tier, x.icon, true, 26), 26)),
+      ...(p.cups ?? []).slice(0, 2).map((place) => flat(`t${place}`, () => trophy(place, 24), 24))];
+    d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
+    heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
+      h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-motes' }, ...motes)),
+      h('div', { class: 'fr-avrow' },
+        h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig)),
+        strip.length ? h('span', { class: 'fr-strip' }, ...strip) : '')));
+    const box = (cls: string, ...kids: (Node | string)[]) => h('section', { class: `fr-box ${cls}` }, ...kids);
+    const roomCard = p.private ? '' : box('fr-roombox', h('h3', {}, ft('fr.visit')), stage);
     info.replaceChildren(
-      h('div', { class: 'fr-who' }, h('h3', {}, p.private ? '' : flagImg(p.flag, 18), mineP ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
-      counts,
-      p.xp != null ? levelLine(p.xp) : '',
-      p.private ? '' : lampLine(p.lamp),
-      actions,
-      f ? streakLine(f, name) : '',
-      stats.childElementCount ? stats : '',
-      hifz, badges, cups, mine,
+      box('fr-main',
+        h('div', { class: 'fr-who' }, h('h3', {}, mineP ? `${name} · ${ft('fr.you2')}` : name, p.private ? '' : flagImg(p.flag, 20)),
+          h('div', { class: 'fr-tags' }, p.tier !== undefined ? tierBadge(p.tier) : '', p.private ? '' : lampPill(p.lamp, true))),
+        counts,
+        p.xp != null ? levelLine(p.xp) : '',
+        actions),
+      f ? box('fr-streakbox', streakLine(f, name)) : '',
+      stats.childElementCount ? box('fr-statbox', stats) : '',
+      roomCard,
+      hifz, badges, cups, mine ? box('fr-minebox', mine) : '',
       f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
     if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
   };
