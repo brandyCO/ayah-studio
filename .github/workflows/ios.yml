@@ -166,7 +166,7 @@ jobs:
             codesign -d --entitlements - --xml "$APP/PlugIns/AyahWidgets.appex" | grep -q application-groups
           else
             rm -rf "$APP/PlugIns/AyahWidgets.appex"; rmdir "$APP/PlugIns" 2>/dev/null || true
-            plutil -remove com.apple.security.application-groups "$ENT"
+            /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" "$ENT"  # plutil reads the dots as a path
           fi
           codesign --force --sign - --entitlements "$ENT" --timestamp=none "$APP"
           codesign -d --entitlements - --xml "$APP" | grep -q applesignin
