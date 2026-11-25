@@ -151,8 +151,10 @@ function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
   return card;
 }
 
-/** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
-export const ME_PAGES = ['room', 'prayer', 'stats', 'library'] as const;
+/** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library; and each notification
+ *  kind its own (owner 2026-11-25): #/me/streak (the flame), #/me/goals (and #/me/challenges), #/me/badges, #/me/level,
+ *  #/me/wardrobe. */
+export const ME_PAGES = ['room', 'prayer', 'stats', 'library', 'streak', 'goals', 'badges', 'level', 'wardrobe'] as const;
 export type MePage = (typeof ME_PAGES)[number];
 
 function dialog(title: string, ...body: (Node | string | false)[]) {
@@ -201,6 +203,8 @@ const clockIcon = () => svgIcon('goal-reset-ic', '<circle cx="12" cy="12" r="8.5
 let lanternWas: number | undefined;
 
 export async function showMe(root: HTMLElement, at?: string): Promise<() => void> {
+  // #/me/challenges is the goals screen on its Challenges tab.
+  if (at === 'challenges') { goalTab = 'ch'; at = 'goals'; }
   const page = (ME_PAGES as readonly string[]).includes(at ?? '') ? at as MePage : undefined;
   // Sent here to a tab (the inbox's friend challenges): open on it.
   try { const v = sessionStorage.getItem('meGoalTab'); if (v === 'ch' || v === 'week' || v === 'day') { goalTab = v; sessionStorage.removeItem('meGoalTab'); } } catch { /* ignore */ }
@@ -325,6 +329,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   };
   const badgeBox = h('section', { class: 'me-card' });
   const libBox = h('section', { class: 'me-card' });
+  // The streak and level screens' own parts (src/ui/meScreens.ts, loaded with them).
+  const streakBox = h('section', { class: 'me-card sk-card' });
+  const levelBox = h('section', { class: 'me-card lv-card' });
+  const paintPages = () => {
+    if (page === 'streak') void import('./meScreens').then((m) => m.paintStreakPage(streakBox));
+    else if (page === 'level') void import('./meScreens').then((m) => m.paintLevelPage(levelBox));
+  };
   const prayerBox = h('section', { class: 'me-card' });
   // A prize waiting (owner request 2026-11-19, "something so beautiful to claim"): the user's own character peeks
   // round the card's edge at it, and a tap lifts the card before the claim moment takes over.
@@ -555,7 +566,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     hero.classList.toggle('first', first);
     hero.replaceChildren(
       hasFig() && revealed('room') ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
-      h('div', { class: 'me-top' },
+      h('div', page ? { class: 'me-top' } : { class: 'me-top me-top-go', role: 'link', tabindex: '0', 'aria-label': mpt('mp.stOpen'),
+        onclick: () => { haptic(6); location.hash = '#/me/streak'; },
+        onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') location.hash = '#/me/streak'; } },
         flameBox,
         h('div', { class: 'me-top-txt' },
           first ? h('div', { class: 'me-count me-first' }, h('b', {}, fe('g2.title')))
@@ -567,7 +580,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         !loading && s.days > 0 ? fireChip(s.days, s.litToday) : '',
         s.weeks ? h('span', { class: 'me-chip' }, t(s.weeks === 1 ? 'me.week1' : 'me.weeks', { n: s.weeks })) : '',
         s.best > s.days ? h('span', { class: 'me-chip' }, t('me.best', { n: s.best })) : '',
-        myXp() > 0 ? h('a', { class: 'me-chip me-level', href: '#/ranks' }, levelLabel(levelOf(myXp()))) : ''));
+        myXp() > 0 ? h('a', { class: 'me-chip me-level', href: page === 'level' ? '#/ranks' : '#/me/level' }, levelLabel(levelOf(myXp()))) : ''));
     placeActor(catchNow);
     if (fromOther) {
       if (countFrom >= 0) tickNum(num, s.days, { from: countFrom, ms: 900 });
@@ -1226,22 +1239,22 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     // On Me: the newest earned first, then the next tier of each family, closest first.
     const earned = all.filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : b.earned! < a.earned! ? -1 : b.def.step - a.def.step));
     const next = [...fams.values()].map((l) => l.find((b) => !b.earned)).filter((b): b is BadgeState => !!b).sort((a, b) => b.have / b.def.need - a.have / a.def.need);
-    const seeAll = () => dialog(t('bd.badges'), h('div', { class: 'sheet-scroll' }, ...byFamily()));
     const waiting = earned.filter((b) => !badgeDone(b.def.id)).sort((a, b) => b.def.step - a.def.step);
-    const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
+    const full = page === 'stats' || page === 'badges';
+    const shown = full ? waiting : waiting.slice(0, 3);
     claimSlot.dataset.more = String(waiting.length - shown.length);
     claimSlot.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge prize-card t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, liftCard(e.currentTarget as HTMLElement)) },
+      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge prize-card t-${b.def.tier}`, 'data-id': b.def.id, onclick: (e: Event) => void claimBadgeNow(b.def, liftCard(e.currentTarget as HTMLElement)) },
         h('span', { class: 'pc-art', 'aria-hidden': 'true' }, badgeArt(b.def.tier, b.def.icon, true, 60)),
         h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def)), h('span', { class: 'pc-light' }, `✦ ${BADGE_LIGHT[b.def.tier]}`)),
         h('span', { class: 'cb-go' }, t('cel.claim')),
         peek())),
-        waiting.length > shown.length ? h('a', { class: 'chip claim-more', href: '#/me/stats' }, `+${waiting.length - shown.length}`) : '') : '',
+        waiting.length > shown.length ? h('a', { class: 'chip claim-more', href: '#/me/badges' }, `+${waiting.length - shown.length}`) : '') : '',
       page ? '' : newIconCard() ?? '');
     badgeBox.replaceChildren(
       h('div', { class: 'me-row' }, h('h2', { class: 'me-h' }, t('bd.badges')),
-        h('button', { class: 'chip', onclick: seeAll }, got ? t('bd.all', { n: got, of: all.length }) : fe('g3.toEarn', { n: all.length }))),
-      page === 'stats' ? h('div', { class: 'bdf-list' }, ...byFamily()) : h('div', { class: 'bd-row' }, ...[...earned, ...next].slice(0, 4).map(tile)));
+        page === 'badges' ? '' : h('a', { class: 'chip', href: '#/me/badges' }, got ? t('bd.all', { n: got, of: all.length }) : fe('g3.toEarn', { n: all.length }))),
+      full ? h('div', { class: 'bdf-list' }, ...byFamily()) : h('div', { class: 'bd-row' }, ...[...earned, ...next].slice(0, 4).map(tile)));
     if (page === 'stats') badgeBox.append(iconCard());
   };
 
@@ -1370,7 +1383,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   // Repaint at most once a frame, however many changes arrive (a burst of tasbih taps, a sync).
   let queued = 0;
   let missed = false, paintedDay = '';
-  const paintAll = () => { queued = 0; missed = false; paintedDay = new Date().toDateString(); paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); maybeStreak(); };
+  const paintAll = () => { queued = 0; missed = false; paintedDay = new Date().toDateString(); paintHero(); paintSafe(); paintGoals(); paintDuas(); paintStats(); paintBadges(); paintDoors(); paintPages(); maybeStreak(); };
   // Kept alive while another tab shows (main.ts): nothing is painted then; it catches up when shown again.
   const refresh = () => { if (root.classList.contains('screen-kept')) missed = true; else if (!queued) queued = requestAnimationFrame(paintAll); };
   paintAll();
@@ -1438,8 +1451,12 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     root.append(roomSlot);
   } else if (page) {
     // A door's full screen: the same live sections, on their own.
-    const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib') }[page];
-    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, shelfSlot(), badgeBox], library: [libBox] }[page];
+    const title = { room: mpt('mp.room'), prayer: mpt('mp.prayer'), stats: mpt('mp.stats'), library: mpt('mp.lib'), streak: mpt('mp.streak'),
+      goals: mpt('mp.goals'), badges: t('bd.badges'), level: mpt('mp.level'), wardrobe: mpt('mp.wardrobe') }[page];
+    const wardrobeBox = h('section', { class: 'me-card wd-page' }, h('p', { class: 'muted' }, mpt('mp.wardrobeText')),
+      h('button', { class: 'primary', type: 'button', onclick: () => dressUp('wardrobe') }, icon('shirt', 20), mpt('mp.wardrobeGo')));
+    const content = { room: [roomSlot], prayer: [prayerBox], stats: [claimSlot, statsBox, shelfSlot(), badgeBox], library: [libBox],
+      streak: [hero, streakBox], goals: [goalsBox], badges: [claimSlot, badgeBox], level: [levelBox], wardrobe: [wardrobeSlot, wardrobeBox] }[page];
     root.append(
       h('header', { class: 'topbar' },
         h('a', { class: 'icon-btn back-btn', href: '#/me', 'aria-label': mpt('mp.back'), onclick: backToMe }, icon('back', 22)),
@@ -1480,6 +1497,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   paintRoom();
 
   // A lantern tapped on the home-screen widget (#/me/du:wake, #/me/du:salah:fajr…): its session opens over Me.
+  // A dhikr reminder tapped (#/me/tasbih): the tasbih counter opens over Me.
+  if (at === 'tasbih') {
+    history.replaceState(null, '', '#/me');
+    setTimeout(() => void import('./tasbih').then((x) => x.openTasbih()), 350);
+  }
   if (at?.startsWith('du:')) {
     const [m, p] = at.slice(3).split(':');
     history.replaceState(null, '', '#/me');
@@ -1500,6 +1522,21 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         c.classList.add('focus');
         setTimeout(() => c.classList.remove('focus'), 2600);
       }, 450);
+    }
+  } catch { /* private window */ }
+  // A badge's notification: its prize card glows when it waits for its Claim, else its sheet opens.
+  try {
+    const id = sessionStorage.getItem('meBadge');
+    if (id && page === 'badges') {
+      sessionStorage.removeItem('meBadge');
+      const b = badgeStates().find((x) => x.def.id === id);
+      if (b) setTimeout(() => {
+        const card = b.earned && !badgeDone(id) ? root.querySelector<HTMLElement>(`.claim-badge[data-id="${CSS.escape(id)}"]`) : null;
+        if (!card) { openBadge(b); return; }
+        card.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+        card.classList.add('focus');
+        setTimeout(() => card.classList.remove('focus'), 2600);
+      }, 400);
     }
   } catch { /* private window */ }
   window.addEventListener('journey-changed', refresh);

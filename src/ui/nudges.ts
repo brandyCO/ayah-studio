@@ -107,7 +107,7 @@ async function notifyNow(title: string, body: string) {
     await LocalNotifications.schedule({ notifications: [{
       id: NOW_ID, title, body, smallIcon: 'ic_stat_crescent',
       schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true },
-      extra: { hash: '#/me', focus: 'claim' },
+      extra: { hash: '#/me/goals', focus: 'claim' },
     }] });
   } catch { /* an older build or notifications off */ }
 }
@@ -127,7 +127,7 @@ function tabTick() {
 export function banner(title: string, body: string) {
   if (document.documentElement.classList.contains('calm')) return; // night calm: it waits on Me until morning
   document.querySelector('.nudge')?.remove();
-  const el = h('a', { class: 'nudge', href: '#/me', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
+  const el = h('a', { class: 'nudge', href: '#/me/goals', role: 'status', onclick: () => { focusClaim(); el.remove(); } },
     h('span', { class: 'nudge-spark', 'aria-hidden': 'true' }),
     h('span', { class: 'nudge-txt' }, h('b', {}, title), h('span', {}, body)),
     h('span', { class: 'nudge-go' }, t('nudge.open')));
@@ -172,7 +172,7 @@ export async function scheduleRisk() {
         title: days > 1 ? t('nudge.riskTitleN', { n: days }) : t('nudge.riskTitle'),
         body: t(smart?.learned ? 'nudge.riskBodyUsual' : 'nudge.riskBody'),
         schedule: { at, allowWhileIdle: true },
-        extra: { hash: '#/me' },
+        extra: { hash: '#/me/streak' },
       });
     }
     if (list.length) await LocalNotifications.schedule({ notifications: list });
@@ -185,11 +185,7 @@ const focusClaim = () => { try { sessionStorage.setItem('meFocus', 'claim'); } c
 
 export function initNudges() {
   if (!isNative()) return;
-  // A goal note tapped in the notification shade: Me opens (widgets.ts follows the hash) on the Claim.
-  void import('@capacitor/local-notifications').then(({ LocalNotifications }) =>
-    LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-      if (e.notification.extra?.focus === 'claim') { focusClaim(); if (location.hash === '#/me') window.dispatchEvent(new HashChangeEvent('hashchange')); }
-    })).catch(() => {});
+  // A goal note tapped in the notification shade opens the goals screen on the Claim (src/ui/notifTap.ts).
   void scheduleRisk();
   window.addEventListener('journey-changed', scheduleRiskSoon);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRiskSoon(); });

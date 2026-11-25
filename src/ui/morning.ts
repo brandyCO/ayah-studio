@@ -183,11 +183,6 @@ export async function initDailyNative() {
   await takeHash();
   const { App } = await import('@capacitor/app');
   void App.addListener('resume', () => void takeHash());
-  const { LocalNotifications } = await import('@capacitor/local-notifications');
-  void LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-    const hash = e.notification.extra?.hash;
-    if (typeof hash === 'string' && hash.startsWith('#/s/')) location.hash = hash;
-  });
   const sync = () => { if (hasPlugin('Daily')) void storeWidgetTexts().catch((e) => console.warn('Widget texts not stored', e)); void scheduleMorning().catch(() => {}); };
   sync();
   window.addEventListener('translation-changed', sync);

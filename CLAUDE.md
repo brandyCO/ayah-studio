@@ -2554,6 +2554,19 @@ duas/reflections section in Me.
       Thursday evening note; the rest of the collection's art once the owner picks a style
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
+- [x] M31 A screen for each notification (owner request 2026-11-25, "many notifications open the Me tab"): Me's own full
+      screens grow to `#/me/streak` (the streak card + `src/ui/meScreens.ts`: days / best / weeks / freezes, next fire day, a
+      month of lit days from `dayStates()` in journey.ts, back 12 months), `#/me/goals` (and `#/me/challenges` = its Challenges
+      tab), `#/me/badges` (every family; `meBadge` in sessionStorage → that badge's prize card glows or its sheet opens),
+      `#/me/level` (level, XP to the next, the next look bands and app icons won by level) and `#/me/wardrobe`; `#/me/tasbih`
+      opens the counter over Me. Opened from their spot: the flame + count on Me → streak, the level chip → level, "all badges"
+      → badges. Every notification carries its screen in `extra` (`hash`, `sk`/`sv` = a sessionStorage note, `focus`, `run`,
+      `du`/`dus`) and **one** listener, `src/ui/notifTap.ts`, registered first at start, takes it there (the plugin hands a tap
+      that started the app to the first listener only; it used to be widgets.ts, which only knew `#/me`). Destinations: goal
+      notes → goals, evening flame reminder → streak, dhikr reminders → tasbih, prayer / du'a notes → `#/me/prayer`, league note
+      → Ranks league, the Notifications log's phone notes → each entry's own screen (`NView.to` in `notifText.ts`), the streak
+      widget → streak, the lock-screen prayer line → prayer. Still pictures only (no running effects)
+
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)
 Ideas doc: Claude Doc "Kids space: ideas to grow it" (section "Learn tab: the juz gardens").
 - [x] Tab bar **Read · Learn · Create · Me**: Listen left the bar (▶ in the mushaf's top bar `mushaf.listen`, ▶ on a

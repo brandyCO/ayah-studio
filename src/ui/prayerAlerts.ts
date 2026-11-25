@@ -160,7 +160,7 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
           smallIcon: 'ic_stat_crescent',
           channelId: 'prayer_duas',
           schedule: { at: new Date(pTime), allowWhileIdle: true },
-          extra: { hash: '#/me', du: name },
+          extra: { hash: '#/me/prayer', du: name },
         });
       }
       const sTime = times[PRAYERS.indexOf(name)].getTime() + SALAH_AFTER[name] * 60_000;
@@ -172,7 +172,7 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
           smallIcon: 'ic_stat_crescent',
           channelId: 'prayer_duas',
           schedule: { at: new Date(sTime), allowWhileIdle: true },
-          extra: { hash: '#/me', dus: name },
+          extra: { hash: '#/me/prayer', dus: name },
         });
       }
       if (!a.on[name]) continue;
@@ -191,7 +191,7 @@ async function scheduleNow(ask: boolean): Promise<boolean> {
         ...(isIOS() ? iosSound(a.sound) : {}),
         schedule: { at: new Date(at), allowWhileIdle: true },
         isExactNotification: exact,
-        extra: { hash: '#/me' },
+        extra: { hash: '#/me/prayer' },
       });
     }
   }
@@ -232,13 +232,7 @@ export function initPrayerAlerts() {
   };
   refresh();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-  // A du'a note tapped: Me opens (the note's address), then the session for that prayer.
-  void import('@capacitor/local-notifications').then(({ LocalNotifications }) => LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-    const p = e.notification.extra?.du as AlertPrayer | undefined;
-    if (p && (ALERT_PRAYERS as readonly string[]).includes(p)) setTimeout(() => void import('./adhkar').then((m) => m.openDuas('adhan', p)), 1400);
-    const sp = e.notification.extra?.dus as AlertPrayer | undefined;
-    if (sp && (ALERT_PRAYERS as readonly string[]).includes(sp)) setTimeout(() => void import('./adhkar').then((m) => m.openDuas('salah', sp)), 1400);
-  }));
+  // A du'a note tapped: the prayer screen opens, then the session for that prayer (src/ui/notifTap.ts).
   let timer = 0;
   window.addEventListener('prayer-changed', () => {
     clearTimeout(timer);
