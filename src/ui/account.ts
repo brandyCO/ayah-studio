@@ -2,6 +2,7 @@
 // the sync state; export or delete the account's data. Everything works without signing in.
 import { errMsg, locale, t } from '../i18n';
 import { icon } from './icons';
+import { appleLogo } from './appleLogo';
 import { account, appleSignInAvailable, deleteAccount, googleSignInAvailable, onAccount, signIn, signInAvailable, signOut, type SignInWith } from '../cloud/auth';
 import { onSyncStatus, syncNow, syncStatus, type SyncStatus } from '../cloud/sync';
 import { supabase } from '../cloud/supabase';
@@ -126,26 +127,18 @@ async function exportData() {
   if (error) throw error;
   const { data: profile } = await sb.from('profiles').select('name,created_at').maybeSingle();
   await loadReflections();
-  // Khatm circles you are in (names you gave and the juz you took); none if circles are not set up yet.
-  const { data: circles } = await sb.from('circle_members').select('name,joined_at,circles(name,round,status)');
-  const { data: parts } = await sb.from('circle_parts').select('circle_id,round,juz,status,taken_at,done_at').eq('user_id', a.id);
-  // Gifts you sent and the replies they received (references, names and messages only).
-  const { data: gifts } = await sb.rpc('my_gifts');
-  // Ayah walls you host (with every entry on them) and your own entries on other walls.
-  const { data: walls } = await sb.from('walls').select('title,occasion,join_code,status,reciter,created_at,closed_at,wall_entries(name,dua,surah,ayah_from,ayah_to,hidden,created_at)').eq('host_id', a.id);
+  // Circles you are in (family circles).
+  const { data: circles } = await sb.from('circle_members').select('name,joined_at,circles(name)');
   // Family circles (docs/kids.md K6): the children you added (with their surahs) and the notes you wrote.
   const { data: children } = await sb.from('circle_children').select('name,created_at,circles(name),family_parts(surah,status,at)').eq('added_by', a.id);
   const { data: notes } = await sb.from('family_notes').select('child_id,surah,from_name,body,created_at,seen_at').eq('from_id', a.id);
   // Harakat clips you shared to improve the check (their words and labels; the sound stays with the teachers).
   const { data: harakatClips } = await sb.rpc('harakat_my_clips');
-  const { data: entries } = await sb.from('wall_entries').select('wall_id,name,dua,surah,ayah_from,ayah_to,hidden,created_at').eq('user_id', a.id);
   const file = {
     exported: new Date().toISOString(),
     account: { name: a.name, email: a.email, created: profile?.created_at ?? null },
     synced: docs,
-    circles: { memberships: circles ?? [], juz: parts ?? [] },
-    gifts: gifts ?? [],
-    walls: { hosted: walls ?? [], myEntries: entries ?? [] },
+    circles: { memberships: circles ?? [] },
     family: { childrenYouAdded: children ?? [], notesYouWrote: notes ?? [] },
     harakatClips: harakatClips ?? [],
     thisDevice: {
@@ -167,13 +160,3 @@ async function exportData() {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** Apple's logo for the Sign in with Apple button. */
-function appleLogo(): SVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 814 1000');
-  svg.setAttribute('aria-hidden', 'true');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'M788 341c-6 4-108 62-108 190 0 148 130 200 134 202-1 3-21 72-69 142-43 62-88 124-156 124s-86-40-165-40c-77 0-104 41-167 41s-106-57-156-128C43 790 0 670 0 556 0 373 119 276 236 276c62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 93zM554 170c29-35 50-83 50-131 0-7-1-14-2-19-48 2-104 32-138 71-27 30-52 78-52 127 0 7 1 15 2 17 3 1 8 1 13 1 43 0 97-29 127-66z');
-  svg.append(path);
-  return svg;
-}

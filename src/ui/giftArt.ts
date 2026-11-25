@@ -14,12 +14,18 @@ export function hueOf(s: string): number {
 
 // --- the art: each part on the same 200 × 200 box so the layers stack exactly ---
 export const svg = (body: string) => `<svg viewBox="0 0 200 200" aria-hidden="true">${body}</svg>`;
-export interface Pal { a: string; b: string; c: string; rib: string; ribB: string; trim?: string; gem?: string }
+export interface Pal { a: string; b: string; c: string; rib: string; ribB: string; trim?: string; gem?: string; d: string; ribD: string }
+// The approved item-art level (docs/item-art.md): each part lit from the top left by one shared gradient, a rim of
+// light on its lit edge and an outline in its own deep tone. Same shapes, same layers, nothing that moves differently.
+const LIT = '<defs><linearGradient id="gaLit" x1="0" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs>';
+const lit = (x: number, y: number, w: number, hh: number, rx: number, d: string) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${rx}" fill="url(#gaLit)"/>`
+  + `<path d="M${x + 3} ${y + hh - rx}V${y + rx + 1}q0-${rx - 1} ${rx} -${rx - 1}H${x + w - rx - 2}" stroke="#fff" stroke-width="2" fill="none" opacity=".45" stroke-linecap="round"/>`
+  + `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${rx}" fill="none" stroke="${d}" stroke-width="3"/>`;
 export function pal(t: GiftTier, hue: number): Pal {
-  if (t === 0) return { a: '#cfa06a', b: '#b5854f', c: '#e3bd8a', rib: '#f4e7c9', ribB: '#d9c49a', trim: `hsl(${hue} 62% 48%)` };
-  if (t === 1) return { a: `hsl(${hue} 68% 57%)`, b: `hsl(${hue} 60% 45%)`, c: `hsl(${hue} 85% 74%)`, rib: '#fff7e8', ribB: '#ead9b8' };
-  if (t === 2) return { a: `hsl(${hue} 55% 40%)`, b: `hsl(${hue} 58% 29%)`, c: `hsl(${hue} 70% 62%)`, rib: '#f5dc9f', ribB: '#d6b064' };
-  return { a: `hsl(${hue} 46% 23%)`, b: `hsl(${hue} 48% 15%)`, c: `hsl(${hue} 50% 34%)`, rib: '#f0cf72', ribB: '#c99a34', trim: '#ecc66a', gem: `hsl(${(hue + 180) % 360} 75% 58%)` };
+  if (t === 0) return { a: '#cfa06a', b: '#b5854f', c: '#e3bd8a', rib: '#f4e7c9', ribB: '#d9c49a', trim: `hsl(${hue} 62% 48%)`, d: '#7a5129', ribD: '#a3895a' };
+  if (t === 1) return { a: `hsl(${hue} 68% 57%)`, b: `hsl(${hue} 60% 45%)`, c: `hsl(${hue} 85% 74%)`, rib: '#fff7e8', ribB: '#ead9b8', d: `hsl(${hue} 62% 30%)`, ribD: '#b89a66' };
+  if (t === 2) return { a: `hsl(${hue} 55% 40%)`, b: `hsl(${hue} 58% 29%)`, c: `hsl(${hue} 70% 62%)`, rib: '#f5dc9f', ribB: '#d6b064', d: `hsl(${hue} 62% 17%)`, ribD: '#9c7a2e' };
+  return { a: `hsl(${hue} 46% 23%)`, b: `hsl(${hue} 48% 15%)`, c: `hsl(${hue} 50% 34%)`, rib: '#f0cf72', ribB: '#c99a34', trim: '#ecc66a', gem: `hsl(${(hue + 180) % 360} 75% 58%)`, d: `hsl(${hue} 50% 7%)`, ribD: '#8f6a1c' };
 }
 /** The box's front, whole or one half (x0–x1), with its wrapping drawn on it. */
 export function front(t: GiftTier, p: Pal, x0 = 34, x1 = 166): string {
@@ -38,7 +44,7 @@ export function front(t: GiftTier, p: Pal, x0 = 34, x1 = 166): string {
   if (t === 0 && x0 <= 34 && x1 >= 166) s += `<rect x="34" y="136" width="132" height="4" fill="${p.rib}"/><circle cx="140" cy="160" r="10" fill="${p.trim}"/><circle cx="140" cy="160" r="5.5" fill="none" stroke="#fff" stroke-width="1.6" opacity=".8"/>`;
   if (t === 0 && x1 <= 100) s += `<rect x="${x0}" y="136" width="${w}" height="4" fill="${p.rib}"/>`;
   if (t === 0 && x0 >= 100) s += `<rect x="${x0}" y="136" width="${w}" height="4" fill="${p.rib}"/><circle cx="140" cy="160" r="10" fill="${p.trim}"/><circle cx="140" cy="160" r="5.5" fill="none" stroke="#fff" stroke-width="1.6" opacity=".8"/>`;
-  return s;
+  return LIT + s + lit(x0, 96, w, 84, t === 0 ? 6 : 8, p.d);
 }
 export function lid(t: GiftTier, p: Pal): string {
   let s = `<rect x="26" y="74" width="148" height="28" rx="${t === 0 ? 5 : 7}" fill="${p.c}"/><rect x="26" y="92" width="148" height="10" rx="4" fill="${p.b}" opacity=".5"/>`;
@@ -46,17 +52,17 @@ export function lid(t: GiftTier, p: Pal): string {
   if (t === 2) s += `<path d="M40 74h30L52 102H30Z" fill="#fff" opacity=".25"/>`;
   if (t === 3) s += `<rect x="31" y="78" width="138" height="20" rx="4" fill="none" stroke="${p.trim}" stroke-width="2"/>`;
   s += t === 0 ? `<rect x="98" y="74" width="4" height="28" fill="${p.rib}"/>` : `<rect x="92" y="74" width="16" height="28" fill="${p.rib}"/><rect x="92" y="74" width="4" height="28" fill="${p.ribB}"/>`;
-  return s;
+  return LIT + s + lit(26, 74, 148, 28, t === 0 ? 5 : 7, p.d);
 }
 export function bow(t: GiftTier, p: Pal): string {
   if (t === 0) return `<g fill="none" stroke="${p.rib}" stroke-width="4" stroke-linecap="round"><path d="M100 76c-14-18-30-10-22 0s22 0 22 0c14-18 30-10 22 0s-22 0-22 0"/><path d="M100 77l-10 16M100 77l12 15"/></g><circle cx="100" cy="76" r="4" fill="${p.ribB}"/>`;
   const k = t === 1 ? 1 : t === 2 ? 1.25 : 1.35;
   const lw = 30 * k, lh = 17 * k;
-  let s = `<path d="M100 78l-${16 * k} ${26 * k}l${7 * k}-2l3 ${7 * k}zM100 78l${16 * k} ${26 * k}l-${7 * k}-2l-3 ${7 * k}z" fill="${p.ribB}"/>`;
-  s += `<ellipse cx="${100 - lw * 0.62}" cy="${70 - lh * 0.4}" rx="${lw * 0.66}" ry="${lh * 0.72}" transform="rotate(-18 ${100 - lw * 0.62} ${70 - lh * 0.4})" fill="${p.rib}"/>`;
-  s += `<ellipse cx="${100 + lw * 0.62}" cy="${70 - lh * 0.4}" rx="${lw * 0.66}" ry="${lh * 0.72}" transform="rotate(18 ${100 + lw * 0.62} ${70 - lh * 0.4})" fill="${p.rib}"/>`;
+  let s = `<path d="M100 78l-${16 * k} ${26 * k}l${7 * k}-2l3 ${7 * k}zM100 78l${16 * k} ${26 * k}l-${7 * k}-2l-3 ${7 * k}z" fill="${p.ribB}" stroke="${p.ribD}" stroke-width="2" stroke-linejoin="round"/>`;
+  s += `<ellipse cx="${100 - lw * 0.62}" cy="${70 - lh * 0.4}" rx="${lw * 0.66}" ry="${lh * 0.72}" transform="rotate(-18 ${100 - lw * 0.62} ${70 - lh * 0.4})" fill="${p.rib}" stroke="${p.ribD}" stroke-width="2.4"/>`;
+  s += `<ellipse cx="${100 + lw * 0.62}" cy="${70 - lh * 0.4}" rx="${lw * 0.66}" ry="${lh * 0.72}" transform="rotate(18 ${100 + lw * 0.62} ${70 - lh * 0.4})" fill="${p.rib}" stroke="${p.ribD}" stroke-width="2.4"/>`;
   s += `<ellipse cx="${100 - lw * 0.55}" cy="${70 - lh * 0.35}" rx="${lw * 0.3}" ry="${lh * 0.3}" fill="${p.ribB}" opacity=".7"/><ellipse cx="${100 + lw * 0.55}" cy="${70 - lh * 0.35}" rx="${lw * 0.3}" ry="${lh * 0.3}" fill="${p.ribB}" opacity=".7"/>`;
-  s += `<rect x="${100 - 8 * k}" y="${70 - 8 * k}" width="${16 * k}" height="${15 * k}" rx="${5 * k}" fill="${p.rib}"/>`;
+  s += `<rect x="${100 - 8 * k}" y="${70 - 8 * k}" width="${16 * k}" height="${15 * k}" rx="${5 * k}" fill="${p.rib}" stroke="${p.ribD}" stroke-width="2.4"/><path d="M${100 - 4 * k} ${70 - 5 * k}h${6 * k}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>`;
   if (t === 2) s += `<path d="M${100 - lw * 0.9} ${66 - lh * 0.6}q${lw * 0.3}-${lh * 0.5} ${lw * 0.6} 0" stroke="#fff" stroke-width="2.5" fill="none" opacity=".6"/>`;
   if (t === 3 && p.gem) s += `<path d="M100 ${62 - 2}l8 8-8 9-8-9z" fill="${p.gem}"/><path d="M100 60l4 6h-8z" fill="#fff" opacity=".6"/>`;
   return s;

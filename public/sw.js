@@ -79,6 +79,8 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+const SHARE = /^(s|t|rf|rc|rb|bp|relight|join)\//;
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -94,6 +96,11 @@ self.addEventListener('fetch', (event) => {
   if (ours) {
     // Shared links (i/) and the app-link files go straight to the network: the app's page must never be kept under them.
     if (path === 'i' || path.startsWith('i/') || path.startsWith('.well-known/')) return;
+    // Share links (`/s/11/90`, `/rf/CODE`…; files/share.js): a small preview page that sends the visitor on to
+    // `#/s/11/90`. Never kept as the app's page; offline, go straight to the app address.
+    if (req.mode === 'navigate' && SHARE.test(path)) {
+      return event.respondWith(fetch(req).catch(() => Response.redirect(`${SCOPE.href}#/${path}`, 302)));
+    }
     if (req.mode === 'navigate' || path === '' || path === 'index.html') {
       // A good connection answers well within 0.8 s (and brings an update at once); a weak one no longer
       // keeps the app waiting: the kept copy opens, and the fresh page is stored for the next open.

@@ -1,0 +1,50 @@
+/* Discord-style decorations: pieces are pictures, moved only with transform / opacity (compositor work). */
+.dk { position: relative; display: inline-block; flex: none; line-height: 0; }
+.dk > .dk-av { position: absolute; left: 16.667%; top: 16.667%; width: 66.667%; height: 66.667%; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 3px #24123a; }
+.dk > .dk-av > * { width: 100% !important; height: 100% !important; }
+.dk > img { position: absolute; max-width: none; pointer-events: none; user-select: none; }
+.dk.live > img[data-a] { will-change: transform, opacity; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.dk.live > img[data-a="tw"] { animation-name: dk-tw; animation-duration: 2s; }
+.dk.live > img[data-a="sway"] { animation-name: dk-sway; animation-duration: 4s; }
+.dk.live > img[data-a="pulse"] { animation-name: dk-pulse; animation-duration: 2s; }
+.dk.live > img[data-a="orbit"] { animation-name: dk-orbit; animation-duration: 16s; animation-timing-function: linear; }
+.dk.live > img[data-a="orbitSlow"] { animation-name: dk-orbit-slow; animation-duration: 64s; animation-timing-function: linear; }
+.dk.live > img[data-a="bob"] { animation-name: dk-bob; animation-duration: 4s; }
+.dk.live > img[data-a="drift"] { animation-name: dk-drift; animation-duration: 4s; animation-timing-function: linear; }
+.dk.live > img[data-a="fall"] { animation-name: dk-fall; animation-duration: 4s; animation-timing-function: linear; }
+.dk.live > img[data-a="bloom"] { animation-name: dk-bloom; animation-duration: 4s; }
+.dk.live > img[data-a="pop"] { animation-name: dk-pop; animation-duration: 4s; }
+.dk.live > img[data-a="rise"] { animation-name: dk-rise; animation-duration: 4s; animation-timing-function: linear; }
+.dk.live > img[data-a="burst"] { animation-name: dk-burst; animation-duration: 2s; animation-timing-function: ease-out; }
+.dk.live > img[data-a="orbitRev"] { animation-name: dk-orbit-rev; animation-duration: 16s; animation-timing-function: linear; }
+.dk.live > img[data-a="shoot"] { animation-name: dk-shoot; animation-duration: 4s; animation-timing-function: ease-in; }
+.dk.live > img[data-a="rain"] { animation-name: dk-rain; animation-duration: 2s; animation-timing-function: linear; }
+@keyframes dk-rain { 0% { transform: translate(0, 0); opacity: 0 } 10%, 80% { opacity: .9 } 100% { transform: translate(-40%, 1150%); opacity: 0 } }
+.dk.live > img[data-a="float"] { animation-name: dk-float; animation-duration: 8s; animation-timing-function: linear; }
+@keyframes dk-float { 0% { transform: translateY(0); opacity: 0 } 10%, 80% { opacity: 1 } 100% { transform: translateY(-380%); opacity: 0 } }
+/* A profile effect over a profile card: never takes a tap. */
+.dk.dk-fx { pointer-events: none; }
+@keyframes dk-shoot { 0%, 70% { transform: translate(0, 0); opacity: 0 } 74% { opacity: 1 } 90% { opacity: 1 } 100% { transform: translate(-260%, 70%); opacity: 0 } }
+@keyframes dk-rise { 0% { transform: translateY(0); opacity: 0 } 15%, 75% { opacity: 1 } 100% { transform: translateY(-1100%); opacity: 0 } }
+@keyframes dk-burst { 0% { transform: scale(.15); opacity: 0 } 12% { opacity: 1 } 60% { transform: scale(1); opacity: .95 } 100% { transform: scale(1.12); opacity: 0 } }
+@keyframes dk-orbit-rev { to { transform: rotate(-360deg) } }
+@keyframes dk-tw { 0%, 100% { transform: scale(.35); opacity: .25 } 50% { transform: scale(1); opacity: 1 } }
+@keyframes dk-sway { 0%, 100% { transform: rotate(-6deg) } 50% { transform: rotate(6deg) } }
+@keyframes dk-pulse { 0%, 100% { opacity: .55; transform: scale(.94) } 50% { opacity: 1; transform: scale(1.04) } }
+@keyframes dk-orbit { to { transform: rotate(360deg) } }
+@keyframes dk-orbit-slow { to { transform: rotate(360deg) } }
+@keyframes dk-bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-2.5%) } }
+@keyframes dk-drift { to { transform: translateX(-16.667%) } }
+@keyframes dk-fall { 0% { transform: translate(0, 0) rotate(0); opacity: 0 } 12%, 85% { opacity: 1 } 100% { transform: translate(-160%, 1300%) rotate(320deg); opacity: 0 } }
+@keyframes dk-bloom { 0%, 100% { transform: scale(.88) rotate(-8deg) } 50% { transform: scale(1.06) rotate(8deg) } }
+@keyframes dk-pop { 0%, 70%, 100% { transform: scale(1); opacity: .85 } 80% { transform: scale(1.25); opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .dk.live > img[data-a] { animation: none !important; } }
+html.lite .dk.live > img[data-a] { animation: none !important; }
+/* As the app's avatar (`.rk-av`): the decoration's own box, not the old grid of frame layers. */
+.dk.rk-av { display: inline-block; }
+.dk.rk-av > img { grid-area: auto; }
+/* Twinkles inside a legendary / mythic avatar (rankAvatars.ts premium): only on a live avatar, opacity + scale. */
+.dk.live .rk-tw { animation: rk-tw 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes rk-tw { 50% { opacity: .35; transform: scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .dk.live .rk-tw { animation: none; } }
+html.lite .dk.live .rk-tw { animation: none; }

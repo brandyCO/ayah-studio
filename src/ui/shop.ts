@@ -10,13 +10,15 @@ import { sht, type ShopKey } from '../i18n/shop';
 import { nwt } from '../i18n/news';
 import { rt, type RankKey } from '../i18n/ranks';
 import { bt, type BadgeKey } from '../i18n/badges';
-import { lang, t, timeLeft } from '../i18n';
+import { lang, t, timeLeft, tr as tr2 } from '../i18n';
 import { h, haptic, toast } from './dom';
 import { sfx } from './sfx';
 import { reduced, popIn, squash, tick } from './juice';
 import { star } from './lightChip';
 import { freezeArt } from './flat';
 import { avatar, lookName } from './rankAvatars';
+import { PREMIUM } from './deco/frames';
+import { FX, effectLayer } from './deco/effects';
 import { DEFAULT, PIECES, bustMarkup, PRICE, PRIZE, WARDROBE, encode, figureSvg, options, parse, weekPiece, wearing, type Fig, type How, type Slot as FigSlot } from './figure';
 import { ROOM_ITEMS, buyRoom, ownsRoom, roomLook, setRoomLook, type RoomItem } from '../data/roomItems';
 import { tileArt } from './roomShop';
@@ -26,15 +28,18 @@ import { lampNext, lampOf } from '../data/shop';
 import { lwt } from '../i18n/lampWall';
 import { ITEMS, FREEZE_MAX, FREEZE_PRICE, bankedFreezes, buy, buyFreeze, limitedIn, limitedNow, owns, weekPrize, weeksUntil, won, type Item, type Wins } from '../data/shop';
 import { shopAdd, shopHas, wallet } from '../data/garden';
+import { jumuahIn } from '../data/weekGift';
+import { fe } from '../i18n/front';
 import { ownsPiece, hijri, seasonNow, streakNeed } from '../data/wardrobe';
 import { lightOn, stats, streak } from '../data/journey';
 import { dayKey } from '../data/readLog';
 import { rankWeek, weekEndAt } from '../data/rankDay';
 import { actor, myFigureCode } from './actor';
 import type { Status } from '../together/ranks';
+import { backCloses } from './backCloses';
 
 type Rar = 'common' | 'cute' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'prize';
-type Sec = 'power' | 'char' | 'room' | 'look' | 'won' | 'season' | 'icons';
+type Sec = 'power' | 'char' | 'room' | 'look' | 'fx' | 'won' | 'season' | 'icons';
 type State = 'own' | 'buy' | 'locked';
 interface Ware {
   id: string; sec: Sec; name: string; rar: Rar; price?: number; for: ShopKey;
@@ -163,8 +168,8 @@ const roomBig = (it: RoomItem) => () => {
 };
 /** The user's room as it is now. */
 const roomBare = () => svgBox(backSvg(skyNow(), Math.max(streak().best, streak().days), false, roomLook(), seasonNow(), reduced(), { days: streak().days, special: specialNow() }), 'sh-big room');
-const partRar = (p: number): Rar => (p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
-const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary' };
+const partRar = (p: number): Rar => (p >= 3000 ? 'mythic' : p >= 1500 ? 'legendary' : p >= 150 ? 'epic' : p >= 100 ? 'rare' : 'common');
+const RANK_RAR: Record<string, Rar> = { sun: 'epic', p1: 'legendary', p2: 'epic', p3: 'epic', w1: 'epic', w3: 'epic', w5: 'legendary', w10: 'mythic', week: 'legendary', friday: 'mythic' };
 
 export interface ShopOpts { focus?: Sec | 'featured'; onChange?: () => void; /** Choosing a piece to give a friend. */ giftTo?: { pid: string; name: string } }
 
@@ -217,19 +222,20 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), 84, it.ref as number, status?.figure ?? myFigureCode()));
     // Large: the piece big, then the user's own row on a board wearing it, as their league will see it.
     const lookBig = (it: Item) => () => {
-      const av = (size: number) => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), size, status?.frame ?? 0)
-        : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, it.ref as number, status?.figure ?? myFigureCode()));
-      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+      // Large and alone on screen, the piece plays its full motion (`live`); the board row stays still like a list.
+      const av = (size: number, live = false) => (it.kind === 'avatar' ? avatar(it.ref as number, tier(), size, status?.frame ?? 0, undefined, live)
+        : avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, it.ref as number, status?.figure ?? myFigureCode(), live));
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132, true)),
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34),
           h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
     const lookBare = () => {
-      const av = (size: number) => avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, status?.frame ?? 0, status?.figure ?? myFigureCode());
-      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132)),
+      const av = (size: number, live = false) => avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), size, status?.frame ?? 0, status?.figure ?? myFigureCode(), live);
+      return h('span', { class: 'sh-big look' }, h('span', { class: 'sh-big-av' }, av(132, true)),
         h('span', { class: 'sh-row', 'aria-hidden': 'true' }, h('b', { class: 'sh-row-n' }, '1'), av(34), h('span', { class: 'sh-row-name' }, status?.name || sht('sh.you'))));
     };
     for (const it of ITEMS) {
-      if (it.kind === 'icon') continue;
+      if (it.kind === 'icon' || it.kind === 'effect') continue;
       const name = lookName(it.kind as 'avatar' | 'frame', it.ref as number, lang() === 'ar')
         ?? (it.kind === 'avatar' ? rt('rk.avatarN', { n: (it.ref as number) + 1 }) : rt('rk.frameN', { n: it.ref as number }));
       if (it.limited) {
@@ -240,16 +246,34 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           when: () => { if (shopHas(it.id)) return ''; const n = limitedIn(it.id, week()); return n === 0 ? sht('sh.limLeft') : n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n }); },
           doBuy: () => buy(it, week()), use: lookUse(it) });
       } else if (it.price) {
-        out.push({ id: it.id, sec: 'look', name, rar: it.price >= 400 ? 'epic' : 'rare', price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
+        out.push({ id: it.id, sec: 'look', name, rar: (it.kind === 'frame' && PREMIUM[it.ref as number]?.r) || (it.price >= 3000 ? 'mythic' : it.price >= 2000 ? 'legendary' : it.price >= 400 ? 'epic' : 'rare'), price: it.price, for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.look', store: it.id,
           state: () => (owns(it.kind as 'avatar' | 'frame', it.ref as number, wins()) ? 'own' : 'buy'), doBuy: () => buy(it), use: lookUse(it) });
       } else if (it.win) {
         const w = it.win;
         out.push({ id: it.id, sec: 'won', name, rar: RANK_RAR[w], for: 'sh.forBoards', art: lookArt(it), big: lookBig(it), bare: lookBare, why: 'sh.why.won',
-          state: () => (w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
-          how: w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
-          when: w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
+          state: () => (w === 'friday' ? shopHas(it.id) : w === 'week' ? wonItems.includes(it.id) : won(w, wins())) ? 'own' : 'locked',
+          how: w === 'friday' ? fe('wg.jmHow') : w === 'week' ? (it.kind === 'avatar' ? `${sht('sh.first')} · ${rt('rk.win.week')}` : `${sht('sh.top23')} · ${rt('rk.win.week')}`) : rt(`rk.win.${w}` as RankKey),
+          when: w === 'friday' ? () => { if (shopHas(it.id)) return ''; const n = jumuahIn(it.id); return n === 0 ? sht('sh.thisWeek') : n === 1 ? sht('sh.nextWeek') : n > 0 ? sht('sh.backWeeks', { n }) : ''; }
+            : w === 'week' ? () => { const n = weeksUntil(it.id, week()); return n === 0 ? sht('sh.thisWeek') : n > 0 ? (n === 1 ? sht('sh.nextWeek') : sht('sh.backWeeks', { n })) : ''; } : undefined,
           use: lookUse(it) });
       }
+    }
+    // Profile effects: a little profile card with the effect over it; large, the user's own card with it playing.
+    const fxCard = (n: number, w: number, live: boolean, named: boolean) => {
+      const av = avatar(status?.private ? 0 : status?.avatar ?? 0, tier(), Math.round(w * .44), status?.frame ?? 0, status?.figure ?? myFigureCode(), live);
+      return h('span', { class: `sh-fx${named ? ' big' : ''}`, style: `width:${w}px;height:${Math.round((w * 400) / 240)}px` },
+        h('span', { class: 'sh-fx-ban' }), h('span', { class: 'sh-fx-av' }, av),
+        named ? h('b', { class: 'sh-fx-name' }, status?.name || sht('sh.you')) : '', h('i', { class: 'sh-fx-ln' }), h('i', { class: 'sh-fx-ln short' }),
+        effectLayer(n, w, live) ?? '');
+    };
+    for (const it of ITEMS) {
+      if (it.kind !== 'effect') continue;
+      const n = it.ref as number, x = FX[n];
+      if (!x || !it.price) continue;
+      out.push({ id: it.id, sec: 'fx', name: lang() === 'ar' ? x.ar : tr2('extra', `fx.${n}`) ?? x.en, rar: x.r, price: it.price, for: 'sh.forProfile', store: it.id,
+        art: () => fxCard(n, 50, false, false), big: () => h('span', { class: 'sh-big look' }, fxCard(n, 168, !reduced(), true)), why: 'sh.why.fx',
+        state: () => (shopHas(it.id) ? 'own' : 'buy'), doBuy: () => buy(it),
+        use: { label: 'sh.use', done: 'sh.inUse', active: () => myFx() === n, run: () => useFx(n) } });
     }
     // The champion's outfit, the weekly prize pieces, streak and season pieces: earned, never sold.
     const best = () => Math.max(streak().best, streak().days);
@@ -271,7 +295,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       });
     }
     // Today's stall (owner request 2026-11-12): three pieces a day at 30 % off, the same for everyone that day.
-    const pool = out.filter((w) => w.store && w.price && !w.lim && (w.sec === 'char' || w.sec === 'room' || w.sec === 'look'));
+    const pool = out.filter((w) => w.store && w.price && !w.lim && (w.sec === 'char' || w.sec === 'room' || w.sec === 'look' || w.sec === 'fx'));
     for (const w of stallPick(pool)) {
       const p = Math.round((w.price! * 0.7) / 5) * 5, id = w.store!, after = w.sec === 'room' ? ROOM_ITEMS.find((r) => `rm:${r.id}` === id) : null;
       w.was = w.price; w.price = p;
@@ -312,6 +336,15 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       status.frame = it.ref as number;
     }
   }
+  let fxNow = 0;
+  const myFx = () => fxNow;
+  void import('../together/ranks').then((m) => { fxNow = m.myEffect(); });
+  async function useFx(n: number) {
+    if (!status) { toast(sht('sh.signIn')); return; }
+    const { setEffect } = await import('../together/ranks');
+    await setEffect(n);
+    fxNow = n;
+  }
   async function useIcon(id: AppIconId) {
     try { localStorage.setItem('appIconPick', id); } catch { /* ignore */ }
     (await import('./theme')).refreshAppIcon();
@@ -336,13 +369,15 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const d: HTMLDialogElement = h('dialog', { class: `sh-page${reduced() ? ' still' : ''}`, 'aria-label': sht('sh.title') }, giftBar, stall, cats, body);
 
   let pushed = false;
+  /** Closes the piece open over the page (Esc on the page goes to it first). */
+  let topSheet: (() => void) | null = null;
   try { history.pushState({ shop: 1 }, ''); pushed = true; } catch { /* ignore */ }
   const onPop = () => { pushed = false; d.close(); };
   window.addEventListener('popstate', onPop);
   const close = () => { if (pushed) history.back(); else d.close(); };
   back.onclick = close;
-  d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
-  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); d.remove(); o.onChange?.(); });
+  d.addEventListener('cancel', (e) => { e.preventDefault(); if (topSheet) topSheet(); else close(); });
+  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); io.disconnect(); vis.disconnect(); clearTimeout(filling); clearTimeout(lighting); d.remove(); o.onChange?.(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
   let shown = -1;
@@ -371,10 +406,62 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     counter.replaceChildren(h('span', { class: 'sh-noor' }));
   };
 
-  const CATS: (Sec | 'featured')[] = ['featured', 'power', 'char', 'room', 'look', 'won', 'season', 'icons'];
+  const CATS: (Sec | 'featured')[] = ['featured', 'power', 'char', 'room', 'look', 'fx', 'won', 'season', 'icons'];
   const catKey = (c: Sec | 'featured') => `sh.c.${c}` as ShopKey;
   const sections = new Map<string, HTMLElement>();
   let all: Ware[] = [];
+
+  // Grid art is drawn only as it comes near the screen, a few per frame, so opening never builds hundreds at once.
+  const pending = new Map<Element, Ware>();
+  const queue: Element[] = [];
+  let filling = 0;
+  // Pictures are made between motions: never while the page springs open, a piece is open or a finger scrolls.
+  let quietUntil = Date.now() + 450, lastScroll = 0;
+  const later = () => { if (!filling) filling = window.setTimeout(() => requestAnimationFrame(fill), 50); };
+  const fill = () => {
+    filling = 0;
+    if (!queue.length) return;
+    if (d.classList.contains('held') || Date.now() < quietUntil || Date.now() - lastScroll < 140) { later(); return; }
+    const t0 = performance.now();
+    while (queue.length && performance.now() - t0 < 6) {
+      const el = queue.shift()!, w = pending.get(el);
+      if (!w) continue;
+      pending.delete(el);
+      el.replaceChildren(w.art());
+      // A drawn SVG picture is parsed when it lands: one such piece at a time keeps every frame short.
+      if (el.querySelector('img')) break;
+    }
+    if (queue.length) later();
+  };
+  const io = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting && pending.has(e.target)) { io.unobserve(e.target); queue.push(e.target); }
+    if (queue.length) later();
+  }, { rootMargin: '300px 0px' });
+  // Only tiles on screen twinkle and shine (each moving sparkle is a layer the page composites every frame).
+  // A tile's twinkles start and stop only when the page is still: switched during a scroll, every tile coming into view
+  // added and dropped layers frame after frame. While a piece is open they all rest: `.on` comes off the few on screen
+  // (a class on the page itself restyled every tile, 20–90 ms at 6× CPU) and goes back when it closes.
+  const onScreen = new Set<Element>(), lit = new Set<Element>();
+  let lighting = 0;
+  const light = () => {
+    lighting = 0;
+    const held = d.classList.contains('held');
+    if (!held && Date.now() - lastScroll < 160) { lighting = window.setTimeout(light, 180); return; }
+    const want = held ? new Set<Element>() : onScreen;
+    for (const t of lit) if (!want.has(t)) { t.classList.remove('on'); lit.delete(t); }
+    for (const t of want) if (!lit.has(t)) { t.classList.add('on'); lit.add(t); }
+  };
+  const vis = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) onScreen.add(e.target); else onScreen.delete(e.target);
+    if (!lighting) lighting = window.setTimeout(light, 0);
+  });
+  const hold = (on: boolean) => {
+    if (on === d.classList.contains('held')) return;
+    d.classList.toggle('held', on);
+    clearTimeout(lighting); lighting = 0;
+    if (on) light(); else lighting = window.setTimeout(light, 0);
+  };
+  const lazyArt = (w: Ware, cls = 'sh-art') => { const el = h('span', { class: cls }); pending.set(el, w); io.observe(el); return el; };
 
   const tile = (w: Ware) => {
     const st = w.state();
@@ -382,10 +469,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const el = h('button', { class: `sh-tile r-${w.rar} s-${st}${st === 'buy' && (w.price ?? 0) > left ? ' short' : ''}`, type: 'button', onclick: () => openWare(w) },
       h('span', { class: 'sh-rar' }, sht(`sh.r.${w.rar}` as ShopKey)),
       ...sparks(w.rar, 3),
-      h('span', { class: 'sh-art' }, w.art()),
+      lazyArt(w),
       h('span', { class: 'sh-name' }, w.name),
       foot(w, st));
     el.dataset.id = w.id;
+    vis.observe(el);
     return el;
   };
   const foot = (w: Ware, st: State) => {
@@ -415,7 +503,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
     const weekCard = h('div', { class: 'sh-feat week' },
       h('div', { class: 'sh-feat-head' }, h('b', {}, icon('trophy', 18), sht('sh.weekTitle')), h('span', { class: 'sh-pill' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
       h('div', { class: 'sh-feat-row' }, ...prizes.map((w, i) => h('button', { class: `sh-prize r-${w.rar}`, type: 'button', onclick: () => openWare(w) },
-        h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag' }, tags[i])))),
+        lazyArt(w), h('span', { class: 'sh-tag' }, tags[i])))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.weekSub')));
     // The next season and what it brings.
     const seasonal = all.filter((w) => w.sec === 'season');
@@ -425,19 +513,19 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       h('span', { class: 'sh-crescent', 'aria-hidden': 'true' }),
       h('div', { class: 'sh-feat-head' }, h('b', {}, on ? sht('sh.seasonNow') : sht('sh.seasonTitle')),
         Number.isFinite(next) && !on ? h('span', { class: 'sh-pill gold' }, sht('sh.seasonIn', { n: next })) : ''),
-      h('div', { class: 'sh-feat-row' }, ...seasonal.slice(0, 4).map((w) => h('span', { class: `sh-prize sm r-${w.rar}` }, h('span', { class: 'sh-art' }, w.art())))));
+      h('div', { class: 'sh-feat-row' }, ...seasonal.slice(0, 4).map((w) => h('span', { class: `sh-prize sm r-${w.rar}` }, lazyArt(w)))));
     const deals = all.filter((w) => w.was);
     const nextDay = new Date(); nextDay.setHours(24, 0, 0, 0);
     const ml = nextDay.getTime() - Date.now();
     const stallCard = deals.length ? h('div', { class: 'sh-feat stall' },
       h('div', { class: 'sh-feat-head' }, h('b', {}, icon('lamp', 18), sht('sh.stallTitle')), h('span', { class: 'sh-pill' }, sht('sh.stallEnds', { t: timeLeft(ml) }))),
       h('div', { class: 'sh-feat-row' }, ...deals.map((w) => h('button', { class: `sh-prize r-${w.rar}${w.state() === 'own' ? ' own' : ''}`, type: 'button', onclick: () => openWare(w) },
-        h('span', { class: 'sh-art' }, w.art()), h('span', { class: 'sh-tag deal' }, w.state() === 'own' ? `✓ ${sht('sh.owned')}` : '−30%')))),
+        lazyArt(w), h('span', { class: 'sh-tag deal' }, w.state() === 'own' ? `✓ ${sht('sh.owned')}` : '−30%')))),
       h('p', { class: 'small sh-feat-sub' }, sht('sh.stallSub'))) : '';
     const lim = all.find((w) => w.id === limitedNow(week()));
     const limCard = lim ? h('button', { class: `sh-feat limited r-${lim.rar}`, type: 'button', onclick: () => openWare(lim) },
       h('div', { class: 'sh-feat-head' }, h('b', {}, `✦ ${sht('sh.limTitle')}`), h('span', { class: 'sh-pill gold' }, sht('sh.weekEnds', { t: timeLeft(left) }))),
-      h('div', { class: 'sh-lim-row' }, h('span', { class: 'sh-art big' }, lim.art()),
+      h('div', { class: 'sh-lim-row' }, lazyArt(lim, 'sh-art big'),
         h('span', { class: 'sh-lim-txt' }, h('b', {}, lim.name), h('span', { class: 'small' }, lim.state() === 'own' ? `✓ ${sht('sh.owned')}` : sht('sh.limSub')),
           lim.state() === 'own' ? '' : h('span', { class: 'sh-foot price' }, star(), num(lim.price ?? 0))))) : '';
     // The lamp wall: Light spent on a du'a for someone who passed away.
@@ -450,6 +538,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   };
 
   const paint = () => {
+    io.disconnect(); vis.disconnect(); pending.clear(); queue.length = 0;
     all = wares();
     sections.clear();
     const by = (c: Sec) => all.filter((w) => w.sec === c);
@@ -462,6 +551,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       section('char', 'sh.charSub', by('char').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('room', 'sh.roomSub', by('room').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('look', 'sh.lookSub', by('look')),
+      section('fx', 'sh.fxSub', by('fx').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
       section('won', 'sh.wonSub', won),
       section('season', 'sh.seasonSub', season),
       section('icons', 'sh.iconsSub', by('icons')),
@@ -481,6 +571,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   // The chip of the section in view lights up as the page scrolls.
   let curCat = 'featured';
   d.addEventListener('scroll', () => {
+    lastScroll = Date.now();
     const y = d.scrollTop + cats.offsetHeight + 40;
     let cur = 'featured';
     const base = d.getBoundingClientRect().top - d.scrollTop;
@@ -505,10 +596,30 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   function openWare(w: Ware) {
     haptic();
     const card = h('div', { class: `sh-card r-${w.rar}` });
-    const sheet = h('dialog', { class: 'sh-sheet' }, card);
-    const shut = () => sheet.close();
-    sheet.addEventListener('click', (e) => { if (e.target === sheet) shut(); });
-    sheet.addEventListener('close', () => sheet.remove());
+    const dim = h('i', { class: 'sh-dim', 'aria-hidden': 'true' });
+    // Opened with show() inside the shop page, not showModal(): a second modal makes everything behind it inert, and
+    // that alone restyled every element of the shop (~5,000) on open and again on close (0.25–0.7 s at 6× CPU).
+    const sheet = h('dialog', { class: 'sh-sheet in-page', 'aria-modal': 'true' }, dim, card);
+    // Closing slides the card away first (transform only), then the dialog goes.
+    let shutting = false;
+    const shut = () => {
+      if (shutting) return;
+      shutting = true;
+      if (reduced() || !sheet.open) { sheet.close(); return; }
+      sheet.classList.add('out');
+      card.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(40%)', opacity: 0 }], { duration: 180, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' })
+        .finished.then(() => sheet.close(), () => sheet.close());
+    };
+    sheet.addEventListener('cancel', (e) => { e.preventDefault(); shut(); });
+    sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target === dim) shut(); });
+    sheet.addEventListener('close', () => {
+      sheet.remove();
+      if (topSheet === shut) topSheet = null;
+      // The stall wakes a moment later, not in the same frame as the card leaves (two smaller frames on a slow phone).
+      setTimeout(() => { if (!d.querySelector('dialog.sh-sheet')) hold(false); }, 220);
+    });
+    topSheet = shut;
+    hold(true);
     let without = false;
     const paintCard = (justGot = false) => {
       const st = w.state();
@@ -556,9 +667,9 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
           b.disabled = true;
           try {
             const { giftPiece } = await import('../together/lightGifts');
-            await giftPiece(gift.pid, w.store!, price);
+            const now = await giftPiece(gift.pid, w.store!, price);
             sfx.pop(0, true); sfx.shimmer(); haptic(20);
-            toast(sht('sh.giftSent', { name: gift.name }));
+            toast(sht(now ? 'sh.giftSent' : 'sh.giftQueued', { name: gift.name }));
             shut(); close();
           } catch (err) { toast((err as Error).message === 'need' ? sht('sh.need', { n: price - wallet() }) : (err as Error).message); b.disabled = false; }
         } }, icon('gift', 18), `${sht('sh.giftThis', { name: gift.name })} · `, star(), num(price)));
@@ -585,10 +696,28 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         void import('./actor').then((m) => m.sparkle(art, 18, 0.5));
       }
     };
-    paintCard();
-    document.body.append(sheet);
-    sheet.showModal();
-    if (!reduced()) popIn(card, { stiffness: 260, damping: 18 });
+    d.append(sheet);
+    // The open attribute rather than show(): show() moves focus at once, which lays out the whole shop in the click
+    // (~130 ms at 6× CPU); the close button takes focus once the card is built.
+    sheet.setAttribute('open', '');
+    backCloses(sheet);
+    const focusX = () => card.querySelector<HTMLElement>('.sh-card-x')?.focus({ preventScroll: true });
+    if (reduced()) { paintCard(); focusX(); return; }
+    // The tap answers at once: the dim fades in this frame (on the compositor), the card is built in the next task
+    // and made ready unseen (pictures decoded, laid out), then it springs in on transform / opacity alone.
+    card.style.opacity = '0';
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    void frame().then(() => new Promise((r) => setTimeout(r, 0))).then(() => {
+      if (!sheet.open) return;
+      paintCard();
+      const imgs = [...card.querySelectorAll('img')].map((i) => i.decode().catch(() => {}));
+      return Promise.race([Promise.all(imgs), new Promise((r) => setTimeout(r, 450))]).then(frame).then(frame).then(() => {
+        if (!sheet.open) return;
+        card.style.opacity = '';
+        popIn(card, { stiffness: 260, damping: 18 });
+        focusX();
+      });
+    });
   }
 
   // Updates the "back in / this week" lines and the week's time left once a minute.
@@ -597,6 +726,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   paintCats('featured');
   document.body.append(d);
   d.showModal();
+  quietUntil = Date.now() + 500;
   void paintCounter();
   if (!reduced()) { sfx.whoosh(); popIn(purse); }
   if (o.focus && o.focus !== 'featured') requestAnimationFrame(() => jump(o.focus!));

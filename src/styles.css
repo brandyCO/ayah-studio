@@ -1555,6 +1555,8 @@ button.lt-chip { cursor: pointer; }
 .badge-art { position: relative; display: inline-block; flex: none; }
 .badge-art svg { display: block; overflow: visible; }
 .badge-art.earned svg { filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .28)); }
+.badge-art .bd-pic { position: absolute; left: -20%; top: -20%; width: 140%; height: 140%; max-width: none; display: block; pointer-events: none; }
+.badge-art.earned .bd-pic { filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .28)); }
 .badge-art.locked { filter: grayscale(1) contrast(.85); opacity: .38; }
 .badge-art .bd-fill { fill: var(--bd-ic, currentColor); stroke: none; }
 .badge-art .bd-shine-l { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -1948,8 +1950,8 @@ html[data-script="malayalam"] body { line-height: 1.6; }
   animation: bd-glint 4s ease-in-out infinite; filter: drop-shadow(0 0 3px #bfefff); }
 @keyframes bd-glint { 0%, 70%, 100% { opacity: 0; scale: .3; } 80% { opacity: 1; scale: 1; rotate: 45deg; } 90% { opacity: 0; scale: .5; rotate: 90deg; } }
 @media (prefers-reduced-motion: reduce) { .badge-art .bd-glint { animation: none; opacity: .8; scale: .7; } }
-.badge-art.earned.t-diamond svg { filter: drop-shadow(0 3px 6px rgba(0, 40, 90, .3)) drop-shadow(0 0 8px rgba(150, 225, 255, .55)); }
-.badge-art.earned.t-platinum svg { filter: drop-shadow(0 3px 6px rgba(20, 20, 60, .3)) drop-shadow(0 0 5px rgba(200, 195, 255, .45)); }
+.badge-art.earned.t-diamond svg, .badge-art.earned.t-diamond .bd-pic { filter: drop-shadow(0 3px 6px rgba(0, 40, 90, .3)) drop-shadow(0 0 8px rgba(150, 225, 255, .55)); }
+.badge-art.earned.t-platinum svg, .badge-art.earned.t-platinum .bd-pic { filter: drop-shadow(0 3px 6px rgba(20, 20, 60, .3)) drop-shadow(0 0 5px rgba(200, 195, 255, .45)); }
 
 /* Rows that scroll sideways fade out at the far edge while more is hidden there (F27), so a cut-off
    "Tajweed colou…" reads as "there is more". Scroll-driven: no fade when everything fits or at the end. */

@@ -4,7 +4,7 @@
 // The plugins are loaded only inside the app; the web build never downloads them.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { PUBLIC_URL } from './cloud/config';
-import { t } from './i18n';
+import { lang, t } from './i18n';
 
 export const isNative = () => Capacitor.isNativePlatform();
 /** The iPhone app (ios/, docs/ios.md). */
@@ -120,11 +120,20 @@ export async function shareTextFile(name: string, text: string) {
   await shareFile(uri, name);
 }
 
-/** A link to an app address (e.g. `#/rc/CODE`) that works for anyone: https://<site>/i/#/… opens the
- *  installed app on that address (iPhone Universal Links, Android App Links: `public/.well-known/`), else the
- *  store listing once `public/i/stores.json` says the app is there, else the web app (`public/i/index.html`).
- *  Always the public site, also from the web app on another address and inside the apps (https://localhost). */
-export const shareableLink = (hash: string) => `${PUBLIC_URL}i/${hash}`;
+/** Addresses with their own link preview (files/share.js on the public web app): an ayah or surah, a reel look,
+ *  and the invites. Shared as real paths (`/s/11/90`), because link previews never see what follows a `#`. */
+const PREVIEWED = /^#\/((?:s|t|rf|rc|rb|bp|relight|join)\/[^?#]+)$/;
+
+/** A link to an app address (e.g. `#/rc/CODE`) that works for anyone. It opens the installed app on that address
+ *  (iPhone Universal Links, Android App Links: `public/.well-known/`, AndroidManifest), else the store listing once
+ *  `public/i/stores.json` says the app is there, else the web app (`public/i/index.html`). Addresses with a preview
+ *  become `{PUBLIC_URL}s/11/90` (own banner and title; Arabic titles with `?l=ar`; files/share.js sends the visitor
+ *  on through /i/), the rest `{PUBLIC_URL}i/#/…`. Always the public site, also inside the apps (https://localhost). */
+export const shareableLink = (hash: string) => {
+  const m = PREVIEWED.exec(hash);
+  if (m) return `${PUBLIC_URL}${m[1]}${lang() === 'ar' ? '?l=ar' : ''}`;
+  return `${PUBLIC_URL}i/${hash}`;
+};
 
 /** Our native foreground service (android/…/ExportService.java): keeps an export running in the background. */
 interface ExportServicePlugin {

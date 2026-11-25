@@ -34,13 +34,18 @@ function goBackQuietly() {
 const showModal = HTMLDialogElement.prototype.showModal;
 HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
   showModal.call(this);
-  openedAt.set(this, performance.now());
-  if (SELF_MANAGED.some((c) => this.classList.contains(c))) return;
-  if (stack.some((s) => s.d === this)) return;
+  backCloses(this);
+};
+
+/** Gives an open sheet its history entry, so back closes it. Called by `showModal()`; a sheet opened with `show()`
+ *  inside a full page (no `inert` on everything behind it, which restyles the whole page) calls it itself. */
+export function backCloses(d: HTMLDialogElement) {
+  openedAt.set(d, performance.now());
+  if (SELF_MANAGED.some((c) => d.classList.contains(c))) return;
+  if (stack.some((s) => s.d === d)) return;
   const id = ++seq;
   try { history.pushState({ ...(history.state ?? {}), __sheet: id }, ''); } catch { return; }
-  stack.push({ d: this, id });
-  const d = this;
+  stack.push({ d, id });
   d.addEventListener('close', function onClose() {
     d.removeEventListener('close', onClose);
     const i = stack.findIndex((s) => s.id === id);
@@ -49,7 +54,7 @@ HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
     // already navigated somewhere (then that entry stays as it is).
     if (history.state?.__sheet === id) goBackQuietly();
   });
-};
+}
 
 // Registered at start-up, so it runs before any screen's own popstate
 // listener and can keep a sheet's back press from reaching them.

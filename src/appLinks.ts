@@ -8,7 +8,11 @@ import { isNative } from './native';
 export function routeOf(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.host !== new URL(PUBLIC_URL).host || !/^\/i(\/|$)/.test(u.pathname)) return null;
+    if (u.host !== new URL(PUBLIC_URL).host) return null;
+    // Preview paths (files/share.js): /s/11/90?l=ar → #/s/11/90.
+    const p = /^\/((?:s|t|rf|rc|rb|bp|relight|join)\/[^?#]+)$/.exec(u.pathname.replace(/\/+$/, ''));
+    if (p) return `#/${p[1]}`;
+    if (!/^\/i(\/|$)/.test(u.pathname)) return null;
     const r = u.hash.startsWith('#/') ? u.hash : u.searchParams.get('r') ?? '';
     return r.startsWith('#/') ? r : null;
   } catch {

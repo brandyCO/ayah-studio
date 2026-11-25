@@ -28,7 +28,9 @@ export const BG: Pair[] = [['#5b8cf0', '#2f5fc4'], ['#3fd0b4', '#13836f'], ['#a9
   // 8 aurora and 9 sun rays: weekly prize pieces (PIECES)
   ['#3dd1ad', '#5b3fc4'], ['#ffd25e', '#e0761f'],
   // 10 night garden (a 30-day streak), 11 Eid lights (Eid al-Adha), 12 Night of Qadr (the last ten nights of Ramadan)
-  ['#33459a', '#0d1433'], ['#ff9a6b', '#b23a6e'], ['#4b3a9e', '#0c0a2c']];
+  ['#33459a', '#0d1433'], ['#ff9a6b', '#b23a6e'], ['#4b3a9e', '#0c0a2c'],
+  // 13 Andalusian dusk (legendary), 14 celestial garden (mythic): bought with Light (item-art pass 2026-11-24)
+  ['#ffab76', '#7a2e6e'], ['#6a4fd8', '#0b0a2e']];
 export const SWATCH: Record<'skin' | 'hairC' | 'headC' | 'outC' | 'bg', Pair[]> = { skin: SKIN, hairC: HAIR, headC: HEADC, outC: CLOTH, bg: BG };
 
 const MAN = 0, WOMAN = 1, BOY = 2, GIRL = 3;
@@ -44,12 +46,12 @@ export function options(slot: Slot, f: Fig): number[] {
     case 'hair': return b === WOMAN ? [] : b === GIRL ? [4, 5, 10, 11, 2, 9] : b === BOY ? [1, 6, 7, 8, 2, 3, 9] : [1, 6, 7, 8, 2, 3, 9, 0];
     case 'hairC': return n(HAIR.length);
     case 'beard': return b === MAN ? [0, 1, 2, 3] : [];
-    case 'head': return b === MAN ? [0, 1, 7, 2, 3, 6] : b === BOY ? [0, 1, 7, 2, 6] : b === WOMAN ? [4, 5] : [0, 4, 6];
+    case 'head': return b === MAN ? [0, 1, 7, 2, 3, 6, 8, 9] : b === BOY ? [0, 1, 7, 2, 6, 8, 9] : b === WOMAN ? [4, 5, 10, 11] : [0, 4, 6, 10, 11];
     case 'headC': return n(HEADC.length);
-    case 'outfit': return [...(b === MAN ? [0, 1, 2, 12, 13, 14, 15, 19, 20, 6] : b === BOY ? [0, 1, 2, 12, 13, 14, 19, 20] : b === WOMAN ? [3, 4, 12, 13, 15, 16, 17, 18, 21, 22, 6] : [3, 2, 12, 13, 16, 17, 18, 22]), 7, 8, 9, 10, 11];
+    case 'outfit': return [...(b === MAN ? [0, 1, 2, 12, 13, 14, 15, 19, 20, 6] : b === BOY ? [0, 1, 2, 12, 13, 14, 19, 20] : b === WOMAN ? [3, 4, 12, 13, 15, 16, 17, 18, 21, 22, 6] : [3, 2, 12, 13, 16, 17, 18, 22]), 7, 8, 9, 10, 11, 23, 24];
     case 'outC': return n(CLOTH.length);
-    case 'glasses': return [0, 1, 2, 3];
-    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+    case 'glasses': return [0, 1, 2, 3, 4, 5];
+    case 'hold': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     case 'pose': return [0, 1];
     case 'bg': return n(BG.length);
     // Round 5. The face slots keep their value while the face is off (the builder hides them then).
@@ -58,7 +60,7 @@ export function options(slot: Slot, f: Fig): number[] {
     case 'mouth': return [0, 1, 2, 3];
     case 'cheeks': return [0, 1, 2, 3, 4];
     case 'age': return [0, 1];
-    case 'wrap': return f.head === 4 || f.head === 5 ? [0, 1, 2, 3] : [];
+    case 'wrap': return covers(f) ? [0, 1, 2, 3] : [];
     case 'pattern': return PATTERNED.has(f.outfit) ? [0, 1, 2, 3, 4] : [];
     case 'acc': return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   }
@@ -66,7 +68,9 @@ export function options(slot: Slot, f: Fig): number[] {
 /** Outfits a pattern can go on (the earned robes and the champion's keep their own look). */
 const PATTERNED = new Set([0, 1, 2, 3, 4, 12, 13, 14, 15, 16]);
 /** Whether the head is covered so no hair shows (shemagh, turban, hijab, niqab). */
-export const hairHidden = (f: Fig) => f.head >= 2 && f.head <= 5;
+export const hairHidden = (f: Fig) => (f.head >= 2 && f.head <= 5) || f.head >= 8;
+/** A hijab or niqab (4, 5 and the legendary / mythic hijabs 10, 11). */
+const covers = (f: Fig) => f.head === 4 || f.head === 5 || f.head === 10 || f.head === 11;
 /** Whether the hair shows (not covered, not bald). */
 export const hairShows = (f: Fig) => !hairHidden(f) && f.hair > 0 && options('hair', f).length > 0;
 
@@ -76,7 +80,10 @@ export const PRICE: Record<string, number> = { 'head:3': 150, 'outfit:1': 120, '
   // Couture and new things to hold (2026-11-14).
   'outfit:17': 220, 'outfit:18': 200, 'outfit:19': 220, 'outfit:20': 160, 'outfit:21': 200, 'outfit:22': 240,
   'acc:5': 140, 'acc:6': 160, 'acc:7': 150, 'acc:8': 110, 'acc:9': 170, 'acc:10': 90,
-  'hold:12': 140, 'hold:13': 120, 'hold:14': 120, 'hold:15': 90, 'hold:16': 80, 'hold:17': 110 };
+  'hold:12': 140, 'hold:13': 120, 'hold:14': 120, 'hold:15': 90, 'hold:16': 80, 'hold:17': 110,
+  // Legendary (1800) and mythic (3500) pieces for every part (item-art pass 2026-11-24).
+  'outfit:23': 1800, 'outfit:24': 3500, 'hold:18': 1800, 'hold:19': 3500, 'head:8': 1800, 'head:9': 3500, 'head:10': 1800, 'head:11': 3500,
+  'glasses:4': 1800, 'glasses:5': 3500, 'bg:13': 1800, 'bg:14': 3500 };
 export const PRIZE = 'outfit:6';
 /** Weekly prize pieces (owner request 2026-11-10): a league's top 3 win the week's piece, in turn, back after
  *  6 weeks (server: rank_prize_piece); never sold. Kept as `fg:{slot}:{value}` once claimed. */
@@ -156,8 +163,20 @@ let uid = 0;
 /** A shape in two tones: the shade underneath, the base shifted up-left and clipped to the shape. */
 function S(d: string, base: string, shade: string, dx = -6, dy = -5) {
   const id = `fg${++uid}`;
-  return `<clipPath id="${id}"><path d="${d}"/></clipPath><path d="${d}" fill="${shade}"/><path d="${d}" fill="${base}" transform="translate(${dx} ${dy})" clip-path="url(#${id})"/>`;
+  // Item-art pass (2026-11-24, docs/item-art.md): the lit side gets a soft gradient (one per character, LIT) and every
+  // shape a hue-matched outline in its own deepest tone, so each part reads as an illustration at any size.
+  const ink = /^#[0-9a-f]{6}$/i.test(shade) ? deep(shade) : shade;
+  return `<clipPath id="${id}"><path d="${d}"/></clipPath><path d="${d}" fill="${shade}"/><g clip-path="url(#${id})"><path d="${d}" fill="${base}" transform="translate(${dx} ${dy})"/>`
+    + `${LIT ? `<path d="${d}" fill="url(#${LIT})" transform="translate(${dx} ${dy})"/>` : ''}</g><path d="${d}" fill="none" stroke="${ink}" stroke-width="1.7" stroke-linejoin="round" opacity=".75"/>`;
 }
+/** A shape's outline colour: its shade made deeper and a little richer. */
+const deep = (hex: string) => shade(hex, -.42);
+/** The lit-side gradient of the character being drawn (set by figureSvg / bustMarkup, which add its definition). */
+let LIT = '';
+const litDefs = () => {
+  LIT = `fgL${++uid}`;
+  return `<defs><linearGradient id="${LIT}" x1="0" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient></defs>`;
+};
 const circ = (x: number, y: number, r: number) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`;
 const ell = (x: number, y: number, rx: number, ry: number) => `M${x - rx} ${y}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`;
 /** A sleeve (premium pass 2026-11-14): a soft tapered shape from the shoulder in two tones, with a cuff at the wrist. */
@@ -214,6 +233,8 @@ function robeBody(f: Fig): string {
     }
     return s + shine('M58 168Q60 156 72 152', 4, 0.22) + `<ellipse cx="100" cy="${hem}" rx="54" ry="5" fill="#ffe7a3" opacity=".25" class="fg-glow"/>`;
   }
+  if (f.outfit === 23) return s + andalus(robe, hem, sit);
+  if (f.outfit === 24) return s + nightRobe(robe, hem, sit);
   if (f.outfit >= 17) return s + couture(f, robe, hem, sit);
   if (f.outfit >= 12) return s + ummah(f, robe, hem, sit);
   const outfit = f.outfit === 6 ? 0 : f.outfit;
@@ -666,6 +687,8 @@ function robeOf(f: Fig, robe: string, hem: number, sit: boolean): string {
 /** The sleeve colour: the outfit's, the champion's (white thobe / black abaya) or the robe of light's emerald. */
 function sleeve(f: Fig): Pair {
   if (f.outfit === 7) return ['#16a37a', '#0a5a43'];
+  if (f.outfit === 23) return ['#c02d44', '#6e1424'];
+  if (f.outfit === 24) return ['#3b2b96', '#170f4a'];
   if (f.outfit === 18) return f.outC <= 2 ? ['#f6efe0', '#d6c9ad'] : ['#26262e', '#121218'];
   if (f.outfit === 20 && f.outC === 5) return CLOTH[0];
   if (f.outfit === 10) return eidCloth(f);
@@ -853,6 +876,12 @@ function holds(f: Fig): string {
         + [[146, 160], [152, 152], [138, 152], [158, 162]].map(([x, y]) => `<path d="M${x} ${y - 3}q2.4 3 0 5q-2.4 -2 0 -5z" fill="#ffd2dc"/>`).join('');
       return s + hand(74, 206) + hand(138, 200);
     }
+    case 18:
+      s += arm(70, 160, 74, 204, k) + arm(130, 160, 140, 182, k);
+      return s + mishkat() + hand(74, 206) + hand(142, 186);
+    case 19:
+      s += arm(70, 160, 82, 206, k) + arm(130, 160, 118, 206, k);
+      return s + heavensOrb() + hand(86, 210) + hand(114, 210);
     default:
       s += arm(70, 160, 74, 204, k) + arm(130, 160, 140, 192, k);
       s += '<circle cx="142" cy="224" r="30" fill="#ffd36b" opacity=".18" class="fg-glow"/><path d="M142 196v10" stroke="#8a5a1c" stroke-width="3"/>';
@@ -860,6 +889,245 @@ function holds(f: Fig): string {
         + '<rect x="136" y="214" width="12" height="22" rx="4" fill="#fff3c4"/><path d="M142 219q5 6 0 12q-5 -6 0 -12z" fill="#ff9d2e"/>' + S('M130 240h24l-3 5h-18z', '#d6952b', '#8f5c14', -1, -1);
       return s + hand(74, 206) + hand(142, 196);
   }
+}
+
+// --- Legendary and mythic parts (item-art pass 2026-11-24, docs/item-art.md) ---
+// Glows are radial gradients, never blur filters: the character moves (bob, sway, arms), so nothing here may cost a
+// re-filter per frame. Twinkles and glows use the existing fg-twinkle / fg-glow opacity loops.
+const GOLD = '#f2c14e', GOLDD = '#a8740f', GOLDL = '#fff2b8';
+/** A soft round glow. */
+const glowIn = (...a: Parameters<typeof glow>) => glow(...a);
+function glow(x: number, y: number, r: number, c: string, o = .6, cls = 'fg-glow', ry = r, attr = ''): string {
+  const id = `fg${++uid}`;
+  return `<radialGradient id="${id}"><stop offset="0" stop-color="${c}" stop-opacity="${o}"/><stop offset=".5" stop-color="${c}" stop-opacity="${(o * .32).toFixed(3)}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`
+    + `<ellipse${cls ? ` class="${cls}"` : ''} cx="${x}" cy="${y}" rx="${r}" ry="${ry}" fill="url(#${id})"${attr}/>`;
+}
+const twinkle = (x: number, y: number, r: number, c = '#fff6d6', d = 0) =>
+  `<path class="fg-twinkle" style="animation-delay:-${d}s" d="${star4(x, y, r)}" fill="${c}"/>`;
+/** A raised gold line: its deep edge, the gold, a thread of light. */
+const goldLine = (d: string, w: number) => `<path d="${d}" stroke="${GOLDD}" stroke-width="${w + 1.4}" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(.4 .9)"/>`
+  + `<path d="${d}" stroke="${GOLD}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+  + `<path d="${d}" stroke="${GOLDL}" stroke-width="${(w * .3).toFixed(2)}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".75" transform="translate(-.3 -.4)"/>`;
+/** A cut gem in a gold setting. */
+const jewel = (x: number, y: number, r: number, c: string, cd: string) => `<circle cx="${x}" cy="${y + .9}" r="${r + 1.6}" fill="${GOLDD}"/><circle cx="${x}" cy="${y}" r="${r + 1.4}" fill="${GOLD}"/>`
+  + `<circle cx="${x}" cy="${y}" r="${r}" fill="${cd}"/><circle cx="${x - r * .18}" cy="${y - r * .18}" r="${r * .74}" fill="${c}"/>`
+  + `<path d="M${x - r * .55} ${y - r * .1}L${x - r * .1} ${y - r * .55}" stroke="#fff" stroke-width="${(r * .26).toFixed(2)}" stroke-linecap="round" opacity=".85"/>`;
+/** An eight-pointed star (khatam). */
+const khatam = (x: number, y: number, R: number, r: number) => 'M' + Array.from({ length: 16 }, (_, i) => {
+  const a = (i / 16) * Math.PI * 2 - Math.PI / 2, k = i % 2 ? r : R;
+  return `${(x + Math.cos(a) * k).toFixed(2)} ${(y + Math.sin(a) * k).toFixed(2)}`;
+}).join('L') + 'Z';
+/** A crescent opening to the right (outer circle centre x, y, radius r). */
+const crescentAt = (x: number, y: number, r: number) => {
+  const px = (x + r * .5).toFixed(2), t = (y - r * .866).toFixed(2), b = (y + r * .866).toFixed(2), r2 = (r * .78).toFixed(2);
+  return `M${px} ${t}A${r} ${r} 0 1 0 ${px} ${b}A${r2} ${r2} 0 0 1 ${px} ${t}Z`;
+};
+/** Light behind the whole character for the finest pieces worn (drawn before the body, so it never tints it): a mythic
+ *  piece's aura, else a legendary piece's soft gold glow. */
+function backLight(f: Fig): string {
+  if (f.outfit === 24 || f.hold === 19 || f.head === 9 || f.head === 11 || f.glasses === 5) return aura(f.head === 9 || f.head === 11 ? 150 : 172);
+  if (f.outfit === 23 || f.hold === 18 || f.head === 8 || f.head === 10 || f.glasses === 4) return glow(100, 160, 100, '#ffe7a3', .6);
+  return '';
+}
+/** A mythic piece's aura: violet light round the whole character with gold at its heart and motes rising in it. */
+const aura = (y = 170) => `<g class="fg-spin" style="transform-origin:100px ${y}px">${Array.from({ length: 16 }, (_, i) => {
+  const a = (i / 16) * Math.PI * 2, w = .09, R = 130, P = (t: number) => `${(100 + Math.cos(t) * R).toFixed(1)} ${(y + Math.sin(t) * R).toFixed(1)}`;
+  return `<path d="M100 ${y}L${P(a - w)}L${P(a + w)}Z" fill="#fff6d6" opacity="${i % 2 ? .1 : .2}"/>`;
+}).join('')}</g>` + glow(100, y, 112, '#d29bff', .85, '') + glow(100, y + 6, 78, '#fff2c4', .62, 'fg-glow', 96)
+  + [[30, 200, 2.6, 0], [170, 180, 3, .7], [44, 120, 2.2, 1.4], [158, 236, 2.4, 2], [22, 150, 1.8, 1.1], [178, 120, 2, 1.8]]
+    .map(([x, yy, r, d]) => `<circle class="fg-twinkle" style="animation-delay:-${d}s" cx="${x}" cy="${yy}" r="${r}" fill="#fff6d6"/>`).join('');
+const LAP = 'M40 224Q100 196 160 224Q166 240 150 242H50Q34 240 40 224Z';
+
+/** Robe of Andalus (legendary): emerald brocade under an open crimson over-robe edged in gold, a khatam medallion,
+ *  a jewelled belt and a band of horseshoe arches at the hem. */
+function andalus(robe: string, hem: number, sit: boolean): string {
+  const c: Pair = ['#14916f', '#07493a'], red: Pair = ['#c02d44', '#6e1424'];
+  let s = glow(100, hem - 4, 66, '#ffd98a', .38, 'fg-glow', 10);
+  if (sit) s += S(LAP, c[0], c[1]);
+  s += S(robe, c[0], c[1], -8, -4) + folds(robe, c[1], hem);
+  s += clipped(robe, `<g fill="none" stroke="${GOLD}" stroke-width="1.2" opacity=".3">` + Array.from({ length: 24 }, (_, i) => {
+    const x = 58 + (i % 6) * 17 + (Math.floor(i / 6) % 2) * 8.5, y = 170 + Math.floor(i / 6) * 17;
+    return `<path d="${khatam(x, y, 5.6, 3.4)}"/>`;
+  }).join('') + '</g>');
+  const L = `M66 150Q48 158 46 184L40 ${hem - 4}Q40 ${hem + 2} 50 ${hem + 2}H78L88 154Z`;
+  const R = `M134 150Q152 158 154 184L160 ${hem - 4}Q160 ${hem + 2} 150 ${hem + 2}H122L112 154Z`;
+  s += S(L, red[0], red[1], -4, -3) + S(R, red[0], red[1], -4, -3);
+  s += clipped(L + R, `<g fill="${GOLD}" opacity=".5">` + Array.from({ length: 16 }, (_, i) => `<path d="${star4(i < 8 ? 56 + (i % 2) * 10 : 134 + (i % 2) * 10, 172 + (i % 8) * 9, 2.4)}"/>`).join('') + '</g>');
+  s += goldLine(`M88 154L78 ${hem + 1}`, 3) + goldLine(`M112 154L122 ${hem + 1}`, 3);
+  // The hem: a band of horseshoe arches on the emerald.
+  const top = hem - 20;
+  s += clipped(robe, `<path d="M78 ${top}H122V${hem + 6}H78Z" fill="${c[1]}" opacity=".55"/>` + [0, 1, 2, 3].map((i) => {
+    const x = 81 + i * 10;
+    return `<path d="M${x} ${hem + 4}V${top + 9}a5 5.6 0 1 1 8 0V${hem + 4}" fill="#0a5a46" stroke="${GOLD}" stroke-width="1.6"/>`;
+  }).join('') + `<path d="M78 ${top}H122" stroke="${GOLD}" stroke-width="2"/>`);
+  s += goldLine('M82 150Q100 168 118 150', 4);
+  s += goldLine('M60 198Q100 190 140 198', 5) + [72, 86, 114, 128].map((x, i) => jewel(x, 195 - (i === 1 || i === 2 ? 1.6 : .4), 1.9, i % 2 ? '#4fb3ff' : '#ff6b81', i % 2 ? '#1f5fb0' : '#a01a36')).join('');
+  s += `<path d="${khatam(100, 178, 11, 8)}" fill="${GOLDD}" transform="translate(.5 1)"/><path d="${khatam(100, 178, 11, 8)}" fill="${GOLD}"/>`
+    + `<path d="${khatam(100, 178, 8, 5.6)}" fill="none" stroke="${GOLDL}" stroke-width="1"/>` + jewel(100, 178, 3.4, '#3ddc9a', '#0f6e4c');
+  return s + twinkle(152, 176, 3.4, GOLDL, .4) + twinkle(48, 214, 3, GOLDL, 1.3);
+}
+
+/** Robe of the night sky (mythic): a starry midnight robe with a nebula's colours moving under it, gold constellations,
+ *  a glowing crescent clasp, the hem dissolving into light, an aura round the whole character. */
+function nightRobe(robe: string, hem: number, sit: boolean): string {
+  const c: Pair = ['#3b2b96', '#170f4a'];
+  let s = glow(100, hem, 74, '#ffd98a', .5, 'fg-glow', 16);
+  if (sit) s += S(LAP, c[0], c[1]);
+  s += S(robe, c[0], c[1], -8, -4);
+  s += clipped(robe, glow(66, 196, 44, '#ff7ac8', .5, '') + glow(136, 222, 40, '#4fe0d0', .42, '') + glow(100, hem + 4, 60, '#ffe7a3', .7, '', 22));
+  s += folds(robe, c[1], hem);
+  const pts: [number, number][] = [[62, 184], [76, 204], [70, 226], [92, 214], [124, 182], [138, 200], [130, 222], [110, 230]];
+  s += `<path d="M62 184L76 204L70 226M76 204L92 214M124 182L138 200L130 222L110 230" stroke="${GOLDL}" stroke-width="1" fill="none" opacity=".6"/>`;
+  s += pts.filter(([, y]) => y < hem - 6).map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 3.4 : 5}" fill="#fff3c4" opacity=".25"/><circle cx="${x}" cy="${y}" r="${i % 3 ? 1.3 : 2}" fill="#fff"/>`).join('');
+  for (const [x, y, r] of [[84, 192, 2.2], [118, 206, 2.6], [58, 210, 1.8], [146, 186, 2], [100, 236, 2.2]] as [number, number, number][]) if (y < hem - 6) s += `<path d="${star4(x, y, r)}" fill="#e8eeff" opacity=".9"/>`;
+  s += goldLine('M84 151L100 172L116 151', 2.6);
+  s += goldLine(`M50 ${hem - 4}Q100 ${hem - 14} 150 ${hem - 4}`, 2.2);
+  s += glow(102, 164, 16, '#fff2c4', .8) + `<path d="${crescentAt(100, 164, 7.5)}" fill="${GOLDD}" transform="translate(.5 .9)"/><path d="${crescentAt(100, 164, 7.5)}" fill="${GOLD}"/>`
+    + `<path d="${star4(108, 160, 3)}" fill="#fff"/>`;
+  return s + twinkle(34, 168, 4.4, '#fff6d6', 0) + twinkle(168, 150, 5, '#fff6d6', .8) + twinkle(28, 220, 3.4, '#cfe6ff', 1.6)
+    + twinkle(174, 214, 3.8, '#ffe0f0', 2.1) + twinkle(52, 120, 3, '#fff6d6', 1.1) + twinkle(150, 112, 3.2, '#cfe6ff', .3);
+}
+
+/** The mishkat (legendary): a gilded mosque lamp of glass hung on three chains, a pearly light inside. */
+function mishkat(): string {
+  return `<g transform="translate(142 186) scale(1.15) translate(-142 -196)">${mishkatArt()}</g>`;
+}
+function mishkatArt(): string {
+  let s = glow(142, 226, 52, '#ffd36b', .5) + glow(142, 226, 22, '#fff6d6', .7);
+  s += `<path d="M142 194L130 208M142 194V206M142 194L154 208" stroke="${GOLDD}" stroke-width="1.6"/><circle cx="142" cy="193" r="3.4" fill="none" stroke="${GOLD}" stroke-width="2.2"/>`;
+  const glass = 'M128 206H156L152 214Q160 220 158 230Q156 240 146 242H138Q128 240 126 230Q124 220 132 214Z';
+  s += S(glass, '#fff4d6', '#e4b85e', -2, -2);
+  s += clipped(glass, glow(142, 228, 16, '#fffbe8', 1, '') + `<path d="${star4(142, 227, 6.5)}" fill="#fff" opacity=".95"/>`);
+  s += goldLine('M128 207H156', 2.4) + goldLine('M127 222Q142 226 157 222', 2.2) + goldLine('M134 243H150', 2.2);
+  s += [130.5, 137, 147, 153.5].map((x, i) => `<circle cx="${x}" cy="${222.6 + (i === 0 || i === 3 ? -.6 : .8)}" r="1.5" fill="${i % 2 ? '#3d7fe0' : '#d0283e'}"/>`).join('');
+  s += S('M136 243H148L150 250H134Z', GOLD, GOLDD, -1, -1);
+  s += `<path d="M131 214Q127 224 131 234" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75"/>`;
+  return s + twinkle(166, 210, 3.4, GOLDL, .3) + twinkle(120, 236, 2.8, GOLDL, 1.2) + twinkle(160, 246, 2.4, '#fff', 1.9);
+}
+
+/** Orb of the heavens (mythic): a glass sphere holding a crescent and stars, a gold ring turning round it, light all
+ *  about the hands. */
+function heavensOrb(): string {
+  const x = 100, y = 188, r = 21;
+  const gid = `fg${++uid}`;
+  let s = glow(x, y, 40, '#fff2c4', .6);
+  s += `<path d="M${x - 30} ${y + 4}A30 9 0 0 1 ${x + 30} ${y + 4}" stroke="${GOLDD}" stroke-width="3.4" fill="none" transform="rotate(-14 ${x} ${y})"/>`
+    + `<path d="M${x - 30} ${y + 4}A30 9 0 0 1 ${x + 30} ${y + 4}" stroke="${GOLD}" stroke-width="2" fill="none" transform="rotate(-14 ${x} ${y})"/>`;
+  s += `<radialGradient id="${gid}" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#7f6bff"/><stop offset=".6" stop-color="#2c1f86"/><stop offset="1" stop-color="#120a46"/></radialGradient>`
+    + `<circle cx="${x}" cy="${y}" r="${r + 1.6}" fill="#0b0630"/><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${gid})"/>`;
+  s += clipped(circ(x, y, r), glow(x + 8, y + 8, 18, '#ff7ac8', .5, '') + glow(x - 8, y - 4, 14, '#4fe0d0', .4, '')
+    + [[-11, 7, .9], [9, -12, 1.1], [13, 4, .8], [-4, 14, .7], [-14, -6, .8], [4, 10, .6]].map(([a, b, k]) => `<circle cx="${x + a}" cy="${y + b}" r="${k}" fill="#fff"/>`).join(''));
+  s += glow(x - 2, y - 2, 12, '#fff2c4', .8, '') + `<path d="${crescentAt(x - 3, y - 2, 8.5)}" fill="${GOLD}"/><path d="${star4(x + 7, y - 7, 3.4)}" fill="#fff"/>`;
+  s += `<path d="M${x - 15} ${y - 9}A17 17 0 0 1 ${x - 3} ${y - 18}" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/>`
+    + `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#c9c2ff" stroke-width="1.2" opacity=".8"/>`;
+  s += `<path d="M${x - 30} ${y + 4}A30 9 0 0 0 ${x + 30} ${y + 4}" stroke="${GOLDD}" stroke-width="3.4" fill="none" transform="rotate(-14 ${x} ${y})"/>`
+    + `<path d="M${x - 30} ${y + 4}A30 9 0 0 0 ${x + 30} ${y + 4}" stroke="${GOLD}" stroke-width="2" fill="none" transform="rotate(-14 ${x} ${y})"/>`
+    + `<path d="M${x - 30} ${y + 4}A30 9 0 0 0 ${x + 30} ${y + 4}" stroke="${GOLDL}" stroke-width=".7" fill="none" transform="rotate(-14 ${x} ${y}) translate(0 -.6)"/>`;
+  s += S('M86 208Q100 200 114 208L110 216H90Z', GOLD, GOLDD, -1, -1);
+  return s + twinkle(66, 166, 4.6, '#fff6d6', 0) + twinkle(136, 160, 4, '#cfe6ff', .9) + twinkle(140, 208, 3.4, '#ffe0f0', 1.7)
+    + twinkle(60, 206, 3, '#fff6d6', 2.3) + twinkle(100, 148, 3.2, '#fff', 1.3);
+}
+
+/** The new turbans (8 Andalusian, legendary; 9 of stars, mythic), drawn over the head like the imama. */
+function turbanHQ(f: Fig): string {
+  const mythic = f.head === 9;
+  const c: Pair = mythic ? ['#33268a', '#150e46'] : ['#fbf6ea', '#d8c9a8'];
+  let s = '';
+  s += S('M142 78Q164 102 152 140Q146 120 134 108Z', c[0], c[1], -2, -2) + goldLine('M147 96Q154 116 151 134', 1.6);
+  const dome = 'M54 84Q48 34 100 32Q152 34 146 84Q100 72 54 84Z';
+  s += S(dome, c[0], c[1], -6, -5);
+  if (mythic) s += clipped(dome, glow(80, 50, 30, '#ff7ac8', .45, '') + glow(126, 60, 26, '#4fe0d0', .38, '')
+    + [[70, 48], [86, 40], [118, 44], [130, 64], [74, 68]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 2 ? .9 : 1.3}" fill="#fff"/>`).join(''));
+  s += `<g fill="none" stroke="${c[1]}" stroke-width="2.6" stroke-linecap="round" opacity=".8"><path d="M58 70Q96 48 140 58"/><path d="M60 80Q104 54 144 72"/><path d="M66 52Q100 40 130 46"/></g>`;
+  s += goldLine('M57 78Q100 66 143 78', 2.2) + goldLine('M62 60Q98 44 136 52', 1.4);
+  if (mythic) {
+    s += glow(100, 60, 18, '#fff2c4', .85) + `<path d="${crescentAt(98, 60, 9)}" fill="${GOLDD}" transform="translate(.5 1)"/><path d="${crescentAt(98, 60, 9)}" fill="${GOLD}"/><path d="${star4(107, 56, 3.6)}" fill="#fff"/>`;
+    return s + twinkle(56, 30, 4, '#fff6d6', .2) + twinkle(146, 26, 4.6, '#cfe6ff', 1.1) + twinkle(160, 64, 3, '#fff6d6', 1.8) + twinkle(40, 66, 3, '#ffe0f0', 2.4);
+  }
+  // The aigrette: a white plume rising from an emerald brooch ringed with pearls.
+  s += `<path d="M102 56Q98 30 116 10Q112 32 106 56Z" fill="#fffdf6" stroke="#d8c9a8" stroke-width="1.2"/><path d="M103 54Q104 32 114 14" stroke="${GOLD}" stroke-width="1.2" fill="none"/>`
+    + Array.from({ length: 5 }, (_, i) => `<path d="M${(104 + i * 2.2).toFixed(1)} ${48 - i * 8}l${(-4 + i * .4).toFixed(1)} -3" stroke="#e8dcc0" stroke-width="1" stroke-linecap="round"/>`).join('');
+  s += Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * Math.PI * 2; return `<circle cx="${(100 + Math.cos(a) * 8.4).toFixed(1)}" cy="${(62 + Math.sin(a) * 9.4).toFixed(1)}" r="1.7" fill="#fbf7ff" stroke="#b9b2c8" stroke-width=".5"/>`; }).join('')
+    + jewel(100, 62, 5, '#3ddc9a', '#0f6e4c');
+  return glow(100, 58, 44, '#ffe7a3', .3) + s + twinkle(124, 18, 3.4, GOLDL, .6) + twinkle(64, 40, 2.6, GOLDL, 1.5);
+}
+
+/** The new hijabs' cloth (10 pearl, legendary; 11 starlit, mythic), drawn over the plain hijab cloth. */
+const HIJAB = 'M50 104Q46 44 100 42Q154 44 150 104Q154 148 124 160L100 166L76 160Q46 148 50 104Z';
+function hijabCloth(f: Fig): string {
+  if (f.head === 11) return clipped(HIJAB, glow(72, 70, 36, '#ff7ac8', .42, '') + glow(134, 120, 34, '#4fe0d0', .36, '')
+    + [[62, 60], [80, 48], [124, 50], [140, 76], [58, 120], [144, 132], [112, 46]].map(([x, y], i) => i % 3 ? `<circle cx="${x}" cy="${y}" r="1.1" fill="#fff"/>` : `<path d="${star4(x, y, 2.6)}" fill="#e8eeff"/>`).join(''));
+  return clipped(HIJAB, `<g fill="none" stroke="${GOLD}" stroke-width="1" opacity=".32">` + Array.from({ length: 14 }, (_, i) => {
+    const x = 58 + (i % 5) * 21 + (Math.floor(i / 5) % 2) * 10, y = 56 + Math.floor(i / 5) * 40;
+    return `<path d="${khatam(x, y, 6, 3.8)}"/>`;
+  }).join('') + '</g>');
+}
+/** The new hijabs' finish over the face: a gold edge round the face, pearls or stars, a jewelled pin. */
+function hijabFinish(f: Fig, fy: number): string {
+  let s = goldLine(`M67 ${fy + 14}Q63 ${fy - 34} 100 ${fy - 37}Q137 ${fy - 34} 133 ${fy + 14}`, 2);
+  if (f.head === 10) {
+    s += Array.from({ length: 13 }, (_, i) => {
+      const t = i / 12, x = 72 + t * 56, y = fy - 27 - Math.sin(t * Math.PI) * 7;
+      return `<circle cx="${x.toFixed(1)}" cy="${(y + .5).toFixed(1)}" r="2" fill="#b9b2c8"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#fbf7ff"/><circle cx="${(x - .6).toFixed(1)}" cy="${(y - .6).toFixed(1)}" r=".7" fill="#fff"/>`;
+    }).join('') + `<path d="M100 ${fy - 33}q4 5 0 9q-4 -4 0 -9z" fill="#3ddc9a" stroke="${GOLD}" stroke-width="1.2"/>` + jewel(118, fy + 36, 3.4, '#3ddc9a', '#0f6e4c');
+    return glow(100, fy - 30, 30, '#ffe7a3', .3) + s + twinkle(146, 60, 3.2, GOLDL, .5) + twinkle(52, 84, 2.6, GOLDL, 1.6);
+  }
+  s += glow(118, fy + 36, 12, '#fff2c4', .85) + `<path d="${crescentAt(117, fy + 36, 6)}" fill="${GOLD}"/><path d="${star4(123, fy + 33, 2.4)}" fill="#fff"/>`;
+  return s + twinkle(44, 60, 4, '#fff6d6', .1) + twinkle(158, 52, 4.4, '#cfe6ff', .9) + twinkle(162, 118, 3, '#fff6d6', 1.7) + twinkle(38, 128, 3.2, '#ffe0f0', 2.3);
+}
+
+/** The new glasses (4 khatam spectacles, legendary; 5 moonlight lenses, mythic). */
+function glassesHQ(f: Fig, ey: number): string {
+  if (f.glasses === 4) {
+    const rim = `<circle cx="82" cy="${ey}" r="12.5"/><circle cx="118" cy="${ey}" r="12.5"/><path d="M94.5 ${ey - 2}q5.5 -4 11 0"/>`;
+    return `<circle cx="82" cy="${ey}" r="12.5" fill="#ffd6e0" opacity=".18"/><circle cx="118" cy="${ey}" r="12.5" fill="#ffd6e0" opacity=".18"/>`
+      + `<g fill="none" stroke-width="3"><g stroke="${GOLDD}" transform="translate(.5 1)">${rim}</g><g stroke="${GOLD}">${rim}</g></g>`
+      + [[69, ey - 3], [131, ey - 3]].map(([x, y]) => `<path d="${khatam(x, y, 5, 3.4)}" fill="${GOLDD}" transform="translate(.4 .8)"/><path d="${khatam(x, y, 5, 3.4)}" fill="${GOLD}"/><circle cx="${x}" cy="${y}" r="1.6" fill="#d0283e"/>`).join('')
+      + `<circle cx="100" cy="${ey - 4.6}" r="1.8" fill="#3ddc9a" stroke="${GOLD}" stroke-width=".8"/>`;
+  }
+  const gid = `fg${++uid}`;
+  return glow(82, ey, 22, '#7ff5e0', .32) + glow(118, ey, 22, '#7ff5e0', .32)
+    + `<radialGradient id="${gid}" cx=".4" cy=".35"><stop offset="0" stop-color="#fff6d6" stop-opacity=".55"/><stop offset=".6" stop-color="#7ff5e0" stop-opacity=".28"/><stop offset="1" stop-color="#5b3fc4" stop-opacity=".4"/></radialGradient>`
+    + `<circle cx="82" cy="${ey}" r="12.5" fill="url(#${gid})"/><circle cx="118" cy="${ey}" r="12.5" fill="url(#${gid})"/>`
+    + `<g fill="none" stroke="${GOLD}" stroke-width="1.4"><circle cx="82" cy="${ey}" r="12.5"/><circle cx="118" cy="${ey}" r="12.5"/></g>`
+    + [82, 118].map((x) => `<path d="M${x - 13} ${ey - 1}A13 13 0 0 1 ${x + 13} ${ey - 1}A15 11 0 0 0 ${x - 13} ${ey - 1}Z" fill="${GOLD}" stroke="${GOLDD}" stroke-width=".8"/>`).join('')
+    + goldLine(`M95 ${ey - 3}q5 -3 10 0`, 1.6) + twinkle(66, ey - 12, 3.4, '#fff6d6', .3) + twinkle(134, ey - 12, 3.4, '#cfe6ff', 1.2) + twinkle(140, ey + 8, 2.4, '#fff6d6', 2);
+}
+
+/** The new backdrops' art (13 Andalusian dusk, legendary; 14 celestial garden, mythic), kept inside the disc. */
+function bgHQ(bg: number, x: number, y: number, r: number): string {
+  const cid = `fg${++uid}`;
+  const f = (n: number) => n.toFixed(2);
+  const clip = `<clipPath id="${cid}"><circle cx="${x}" cy="${y}" r="${r}"/></clipPath>`;
+  const glow = (gx: number, gy: number, gr: number, c: string, o: number) => glowIn(gx, gy, gr, c, o, '', gr, ` clip-path="url(#${cid})"`);
+  const st = (a: number, b: number, k: number, c = '#fff') => `<path d="${star4(x + a * r, y + b * r, k * r)}" fill="${c}"/>`;
+  const dot = (a: number, b: number, k: number, o = .9) => `<circle cx="${f(x + a * r)}" cy="${f(y + b * r)}" r="${f(k * r)}" fill="#fff" opacity="${o}"/>`;
+  if (bg === 13) {
+    // A low sun behind a row of horseshoe arches on slim columns, two lanterns hanging in them, the first stars.
+    const arches = [-.62, -.2, .22, .64].map((a) => {
+      const cx = x + a * r, w = r * .17, top = y + r * .12;
+      return `M${f(cx - w)} ${f(y + r * 1.1)}V${f(top + w)}A${f(w)} ${f(w * 1.1)} 0 1 1 ${f(cx + w)} ${f(top + w)}V${f(y + r * 1.1)}Z`;
+    }).join('');
+    const lantern = (a: number, b: number) => {
+      const cx = x + a * r, cy = y + b * r, w = r * .045;
+      return `<path d="M${f(cx)} ${f(y + r * .08)}V${f(cy - w * 1.6)}" stroke="#5a2440" stroke-width="${f(r * .012)}"/>` + glow(cx, cy, r * .14, '#ffd36b', .7)
+        + `<path d="M${f(cx - w)} ${f(cy - w * 1.4)}H${f(cx + w)}L${f(cx + w * 1.2)} ${f(cy + w)}L${f(cx)} ${f(cy + w * 2)}L${f(cx - w * 1.2)} ${f(cy + w)}Z" fill="#ffcf55" stroke="#a8740f" stroke-width="${f(r * .01)}"/>`;
+    };
+    return clip + glow(x, y + r * .25, r * .9, '#ffe2a3', .75) + `<circle cx="${x}" cy="${f(y + r * .3)}" r="${f(r * .3)}" fill="#fff1c8" opacity=".85"/>`
+      + `<path d="M${f(x - r)} ${f(y + r * .02)}H${f(x + r)}V${f(y + r * 1.1)}H${f(x - r)}Z${arches}" fill="#5a2a52" fill-rule="evenodd" opacity=".82" clip-path="url(#${cid})"/>`
+      + `<path d="M${f(x - r)} ${f(y + r * .02)}H${f(x + r)}" stroke="#f2c14e" stroke-width="${f(r * .025)}" opacity=".8" clip-path="url(#${cid})"/>`
+      + lantern(-.2, .5) + lantern(.64, .42) + st(-.5, -.55, .06, '#fff6d6') + st(.42, -.68, .05, '#fff6d6') + dot(.1, -.8, .018) + dot(-.2, -.7, .014) + dot(.7, -.3, .016);
+  }
+  // 14: a violet sky with drifting nebula, a great crescent, a beam of light onto the domes of a garden mosque.
+  const dome = (a: number, w: number, h: number) => { const cx = x + a * r; return `M${f(cx - w * r)} ${f(y + r * .7)}Q${f(cx - w * r)} ${f(y + r * (.7 - h))} ${f(cx)} ${f(y + r * (.7 - h * 1.25))}Q${f(cx + w * r)} ${f(y + r * (.7 - h))} ${f(cx + w * r)} ${f(y + r * .7)}Z`; };
+  const sky = glow(x - r * .4, y - r * .1, r * .7, '#ff7ac8', .42) + glow(x + r * .45, y + r * .2, r * .6, '#4fe0d0', .32) + glow(x + r * .4, y - r * .5, r * .45, '#fff2c4', .5);
+  const beam = `<path d="M${f(x + r * .3)} ${f(y - r)}L${f(x + r * .52)} ${f(y - r)}L${f(x + r * .1)} ${f(y + r)}L${f(x - r * .3)} ${f(y + r)}Z" fill="#fff6d6" opacity=".14" clip-path="url(#${cid})"/>`;
+  const town = `<path d="${dome(0, .2, .3)}${dome(-.42, .13, .2)}${dome(.42, .13, .2)}M${f(x - r * .7)} ${f(y + r * .7)}V${f(y + r * .1)}H${f(x - r * .64)}V${f(y + r * .7)}ZM${f(x + r * .64)} ${f(y + r * .7)}V${f(y + r * .05)}H${f(x + r * .7)}V${f(y + r * .7)}ZM${f(x - r)} ${f(y + r * .68)}H${f(x + r)}V${f(y + r * 1.1)}H${f(x - r)}Z" fill="#120c3a" opacity=".88" clip-path="url(#${cid})"/>`;
+  const lights = [[-.42, .62], [0, .6], [.42, .62], [-.15, .64], [.15, .64]].map(([a, b]) => `<circle cx="${f(x + a * r)}" cy="${f(y + b * r)}" r="${f(r * .022)}" fill="#ffd36b"/>`).join('');
+  return clip + sky + beam + st(-.62, -.42, .055) + st(.08, -.72, .045, '#cfe6ff') + st(-.2, -.2, .035) + st(.72, .12, .04, '#ffe0f0')
+    + [[-.4, -.7], [-.75, .05], [.2, -.4], [.6, -.75], [-.05, .05], [.78, -.25], [-.55, .32]].map(([a, b], i) => dot(a, b, i % 2 ? .012 : .018, .85)).join('')
+    + glow(x + r * .42, y - r * .46, r * .32, '#fff2c4', .7) + `<path d="${crescentAt(x + r * .4, y - r * .46, r * .2)}" fill="#ffe7a3"/>`
+    + town + lights;
 }
 
 /** Expressions (round 5) an actor can show for a moment: classes `xp-{name}` on the character (actor.ts). */
@@ -1001,15 +1269,17 @@ function features(f: Fig, xp: Xp | null, ey: number, fr: number): string {
 }
 
 function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
-  const sk = SKIN[f.skin], hc = HAIR[f.hairC], wc = HEADC[f.headC];
-  const covered = f.head === 4 || f.head === 5;
+  const sk = SKIN[f.skin], hc = HAIR[f.hairC];
+  // The legendary and mythic hijabs keep their own cloth.
+  const wc: Pair = f.head === 10 ? ['#fbf3e4', '#dcc8a6'] : f.head === 11 ? ['#3b2b96', '#170f4a'] : HEADC[f.headC];
+  const covered = covers(f);
   const wrap = covered ? f.wrap : 0;
   const hx = 100, hy = 96;
   let s = '';
   // Behind the face: a khimar's cape, a wrapped hijab's volume, the cloth, back hair.
   if (wrap === 1) s += S('M40 142Q100 116 160 142L168 198Q100 220 32 198Z', wc[0], wc[1], -7, -4) + `<path d="M44 186Q100 206 156 186" stroke="${wc[1]}" stroke-width="2.4" fill="none" opacity=".6"/>`;
   if (wrap === 3) s += S(circ(100, 44, 24), wc[0], wc[1], -4, -4);
-  if (covered) s += S('M50 104Q46 44 100 42Q154 44 150 104Q154 148 124 160L100 166L76 160Q46 148 50 104Z', wc[0], wc[1], -7, -5) + `<path d="M76 158Q100 150 124 158" stroke="${wc[1]}" stroke-width="3" fill="none"/>`;
+  if (covered) s += S(HIJAB, wc[0], wc[1], -7, -5) + (f.head >= 10 ? hijabCloth(f) : '') + `<path d="M76 158Q100 150 124 158" stroke="${wc[1]}" stroke-width="3" fill="none"/>`;
   if (wrap === 3) s += `<g fill="none" stroke="${wc[1]}" stroke-width="3" stroke-linecap="round" opacity=".85"><path d="M60 66Q96 40 140 54"/><path d="M58 58Q104 34 136 46"/></g>`;
   if (f.head === 2) {
     // Shemagh: white cloth with a red (or the chosen colour's) check.
@@ -1041,6 +1311,7 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
   if (f.glasses === 1) s += `<g fill="none" stroke="#1e2733" stroke-width="3.2"><circle cx="82" cy="${ey}" r="12.5"/><circle cx="118" cy="${ey}" r="12.5"/><path d="M94.5 ${ey - 1}h11"/></g>`;
   if (f.glasses === 2) s += `<g fill="none" stroke="#1e2733" stroke-width="3.2"><rect x="68" y="${ey - 10}" width="27" height="20" rx="6"/><rect x="105" y="${ey - 10}" width="27" height="20" rx="6"/><path d="M95 ${ey - 2}h10"/></g>`;
   if (f.glasses === 3) s += `<g fill="none" stroke-width="3.4"><g stroke="#a8740f" transform="translate(.6 1.2)"><circle cx="82" cy="${ey}" r="13"/><circle cx="118" cy="${ey}" r="13"/><path d="M95 ${ey - 2}q5 -4 10 0"/></g><g stroke="#f2c14e"><circle cx="82" cy="${ey}" r="13"/><circle cx="118" cy="${ey}" r="13"/><path d="M95 ${ey - 2}q5 -4 10 0"/></g></g>`;
+  if (f.glasses >= 4) s += glassesHQ(f, ey);
   if (f.glasses) s += `<path d="M74 ${ey - 6}l5 -3M110 ${ey - 6}l5 -3" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>`;
   if (hair) s += hairFront(f, hc);
   if (f.head === 1) s += S('M58 82Q58 42 100 42Q142 42 142 82Q100 72 58 82Z', wc[0], wc[1], -5, -4) + `<path d="M60 78Q100 68 140 78" stroke="${wc[1]}" stroke-width="3" fill="none"/>`
@@ -1058,6 +1329,7 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
     s += S('M58 84Q56 38 100 38Q144 38 142 84Z', wc[0], wc[1], -5, -4) + S('M54 76Q100 64 146 76V90Q100 78 54 90Z', wc[0], wc[1], -2, -3);
     s += `<g stroke="${wc[1]}" stroke-width="2" opacity=".7">${Array.from({ length: 9 }, (_, i) => `<path d="M${62 + i * 10} ${77 - Math.sin((i / 8) * Math.PI) * 4}v10"/>`).join('')}</g>`;
   }
+  if (f.head === 8 || f.head === 9) s += turbanHQ(f);
   if (f.head === 7) {
     // Peci (songkok): a black velvet cap with a flat top, worn straight.
     const p: Pair = f.headC === 0 ? ['#2a2b33', '#0e0e13'] : wc;
@@ -1073,7 +1345,8 @@ function head(f: Fig, o: { xp?: Xp; all?: boolean } = {}): string {
     // The cloth's drape: two soft folds down each side and a small pin under the chin.
     s += `<g fill="none" stroke="${wc[1]}" stroke-linecap="round" opacity=".3"><path d="M58 84Q53 112 62 144" stroke-width="2"/><path d="M142 84Q147 112 138 144" stroke-width="2"/></g>`
       + shine('M62 70Q80 50 100 48', 5, 0.24);
-    if (f.head === 4 && wrap !== 2) s += `<circle cx="${hx + 18}" cy="${fy + 36}" r="3.2" fill="#a8740f"/><circle cx="${hx + 17.4}" cy="${fy + 35.2}" r="2.4" fill="#f2c14e"/><circle cx="${hx + 16.6}" cy="${fy + 34.4}" r=".9" fill="#fff"/>`;
+    if (f.head >= 10) s += hijabFinish(f, fy);
+    else if (f.head === 4 && wrap !== 2) s += `<circle cx="${hx + 18}" cy="${fy + 36}" r="3.2" fill="#a8740f"/><circle cx="${hx + 17.4}" cy="${fy + 35.2}" r="2.4" fill="#f2c14e"/><circle cx="${hx + 16.6}" cy="${fy + 34.4}" r=".9" fill="#fff"/>`;
   }
   return s;
 }
@@ -1223,6 +1496,7 @@ const kid = (f: Fig) => f.body === BOY || f.body === GIRL;
 /** The whole character, standing on the ground. `cls` adds classes to the moving group. */
 export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: boolean; actor?: boolean; cheer?: boolean; xp?: Xp } = {}): string {
   const k = kid(f);
+  const defs = litDefs();
   // An actor (a character in a moment) also carries raised arms for a cheer and a wave, shown by class.
   // `cheer` draws the arms raised for good (a picture, e.g. the character card).
   const arms = o.actor ? `<g class="fg-arms">${holds(f)}</g>` : o.cheer ? raised(f, 'up') : holds(f);
@@ -1234,10 +1508,11 @@ export function figureSvg(f: Fig, o: { label?: string; size?: number; still?: bo
     ? `<g ${kidT}>${body(f)}${arms}</g><g transform="translate(0 20)"><g class="fg-head">${hd}</g></g>${up ? `<g ${kidT}>${up}</g>` : ''}`
     : `${body(f)}${arms}<g class="fg-head">${hd}</g>${up}`;
   const size = o.size ? ` width="${o.size}" height="${Math.round(o.size * 1.31)}"` : '';
-  return `<svg viewBox="0 0 200 262"${size} class="fg${o.still ? ' still' : ''}" ${o.label ? `role="img" aria-label="${o.label}"` : 'aria-hidden="true"'}><ellipse class="fg-shadow" cx="100" cy="250" rx="62" ry="9" fill="#1d2440" opacity=".2"/><g class="fg-act"><g class="fg-bob">${inner}</g></g></svg>`;
+  return `<svg viewBox="0 0 200 262"${size} class="fg${o.still ? ' still' : ''}" ${o.label ? `role="img" aria-label="${o.label}"` : 'aria-hidden="true"'}>${defs}${backLight(f)}<ellipse class="fg-shadow" cx="100" cy="250" rx="62" ry="9" fill="#1d2440" opacity=".2"/><g class="fg-act"><g class="fg-bob">${inner}</g></g></svg>`;
 }
 /** The prize backgrounds' own touches (centre x, y, radius r): stars on the aurora, rays on the sun. */
 export function bgDeco(bg: number, x: number, y: number, r: number): string {
+  if (bg === 13 || bg === 14) return bgHQ(bg, x, y, r);
   if (bg === 8) return [[-.55, -.5, .09], [.5, -.62, .07], [.62, .1, .06], [-.7, .25, .05], [.1, -.8, .05]].map(([a, b, k]) => {
     const cx = x + a * r, cy = y + b * r, R = k * r;
     return `<path d="M${cx} ${cy - R}L${cx + R * .3} ${cy - R * .3}L${cx + R} ${cy}L${cx + R * .3} ${cy + R * .3}L${cx} ${cy + R}L${cx - R * .3} ${cy + R * .3}L${cx - R} ${cy}L${cx - R * .3} ${cy - R * .3}Z" fill="#fff" opacity=".85"/>`;
@@ -1274,6 +1549,7 @@ export function bgDeco(bg: number, x: number, y: number, r: number): string {
 /** Head and shoulders for an avatar disc: SVG markup in the disc's own units (centre 20,20, radius r). */
 export function bustMarkup(f: Fig, r = 17, zoom = false): string {
   const k = kid(f);
+  const defs = litDefs();
   const inner = k
     ? `<g transform="translate(100 248) scale(.86 .8) translate(-100 -248)">${body(f)}${holds(f)}</g><g transform="translate(0 20)"><g class="fg-head">${head(f)}</g></g>`
     : `${body(f)}${holds(f)}<g class="fg-head">${head(f)}</g>`;
@@ -1281,7 +1557,7 @@ export function bustMarkup(f: Fig, r = 17, zoom = false): string {
   const [a, b] = BG[f.bg];
   // A window of 136 units round the head, a little below its middle so the shoulders show.
   const cy = zoom ? (k ? 118 : 98) : k ? 120 : 102, w = zoom ? 88 : 136, s = (2 * r) / w;
-  return `<defs><clipPath id="${id}"><circle cx="20" cy="20" r="${r}"/></clipPath><linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>`
-    + `<circle cx="20" cy="20" r="${r}" fill="url(#${id}g)"/>${bgDeco(f.bg, 20, 20, r)}<circle cx="14" cy="12" r="${r * 0.7}" fill="#fff" opacity=".12"/>`
+  return `${defs}<defs><clipPath id="${id}"><circle cx="20" cy="20" r="${r}"/></clipPath><linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>`
+    + `<circle cx="20" cy="20" r="${r}" fill="url(#${id}g)"/>${bgDeco(f.bg, 20, 20, r)}<circle cx="14" cy="12" r="${r * 0.7}" fill="#fff" opacity=".12" clip-path="url(#${id})"/><circle cx="20" cy="20" r="${r - r * .04}" fill="none" stroke="${shade(b, -.35)}" stroke-width="${r * .08}" opacity=".45"/>`
     + `<g clip-path="url(#${id})"><g transform="translate(${20 - r} ${20 - r}) scale(${s.toFixed(4)}) translate(${-(100 - w / 2)} ${-(cy - w / 2)})">${inner}</g></g>`;
 }

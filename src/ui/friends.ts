@@ -11,12 +11,12 @@ import {
   SHOW, socialUnchanged, markSocialSeen, answerFriend, cheerFeat, featsFeed, featsNear, type NearFeat, type FriendFeat, type Feat, type Feats, type Challenge, friendMilestoneDue, askFriend, claimInvite, friendInvite, friendInviteLink, friendInvitePreview, joinFriend, myFriends, myInvites, myShow, peekProfile, preloadProfiles, rankProfile, removeFriend, sendProfile,
   blockPlayer, unblockPlayer, myBlocks, reportPlayer, type ReportWhy, followPlayer, unfollowPlayer, followList, dropFollower, myFlag, setFlag, myFollows, newFollowers, markFollowersSeen, type Follower, type Follows,
   type Friend, type Friends, type Invites, type Profile, type Row, type ShowKey,
-  profileAt, keptSince,
+  profileAt, keptSince, myEffect,
 } from '../together/ranks';
 import { updatedNote } from './updatedAgo';
 import { isOffline } from '../together/outbox';
 import { myFigureCode, actor } from './actor';
-import { avatar, trophy } from './rankAvatars';
+import { TIER_RING, avatar, trophy } from './rankAvatars';
 import { blazingPair, powerLevel, powerUp } from './powerUp';
 import { ptsIcon, share, sheet, tierBadge } from './ranks';
 import { lampLine, lampPill } from './lampPill';
@@ -32,7 +32,7 @@ import { withLevel } from './levelLook';
 import { dayKey } from '../data/readLog';
 import { BADGES } from '../data/badges';
 import { hifzBadge, parseHifz } from './hifzBadge';
-import { badgeArt } from './badge';
+import { badgeArt, badgePic } from './badge';
 import { countryName, flagImg, pickFlag } from './flag';
 import { nwt } from '../i18n/news';
 import './friends.css';
@@ -66,11 +66,47 @@ const streakLine = (f: { streak: number; meToday: boolean; themToday: boolean },
 function fromRow(row: Row): Profile {
   const fr = friendsNow()?.friends.find((f) => f.pid === row.pid);
   return { name: row.name, pid: row.pid, figure: row.figure, avatar: row.avatar, frame: row.frame ?? 0, tier: row.tier, xp: row.xp, private: row.private,
-    room: row.room, me: row.me, relation: row.me ? 'me' : fr ? 'friend' : 'none', show: 0, bestTier: row.tier ?? 0,
+    room: row.room, fx: row.fx, me: row.me, relation: row.me ? 'me' : fr ? 'friend' : 'none', show: 0, bestTier: row.tier ?? 0,
     friend: fr ? { streak: fr.streak, meToday: fr.meToday, themToday: fr.themToday } : undefined };
 }
 let friendsKept: Friends | null = null;
 const friendsNow = () => friendsKept;
+
+// The banner's badge strip repeats badges drawn again further down, ~1,200 SVG nodes that made scrolling
+// the profile slower on a weak phone. Each is one picture instead (still vector), made once and reused.
+const flats = new Map<string, string>();
+function flat(key: string, make: () => Element, size: number): HTMLElement {
+  let src = flats.get(key);
+  if (!src) {
+    const el = make();
+    src = svgSrc(el.querySelector('svg') ?? el, size);
+    if (flats.size > 200) flats.clear();
+    flats.set(key, src);
+  }
+  return h('img', { src, width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+function svgSrc(svg: Element, size?: number): string {
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (size) { svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size)); }
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+}
+function svgImg(svg: Element, size: number): HTMLElement {
+  return h('img', { src: svgSrc(svg, size), width: String(size), height: String(size), alt: '', 'aria-hidden': 'true', draggable: 'false' });
+}
+
+// The room on a profile is a preview (a tap opens the living room), so its wall and shelves are pictures: drawn
+// once instead of ~900 SVG nodes painted again each time the card scrolls into view. The character stays alive.
+function stillRoom(scene: HTMLElement) {
+  const back = scene.querySelector('svg.rm-back');
+  if (back) {
+    back.querySelectorAll('animate, animateTransform, animateMotion, set').forEach((x) => x.remove());
+    back.replaceWith(h('img', { class: 'rm-back', src: svgSrc(back), alt: '', 'aria-hidden': 'true', draggable: 'false', style: 'object-fit:cover' }));
+  }
+  scene.querySelectorAll<HTMLElement>('.rm-shelf .badge-art, .rm-shelf .hz-badge, .rm-cup > *').forEach((b) => {
+    const svg = b.tagName.toLowerCase() === 'svg' ? b : b.querySelector('svg');
+    if (svg) b.replaceWith(svgImg(svg, 30));
+  });
+}
 
 /** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
  *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
@@ -86,39 +122,69 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   const back = h('button', { class: 'icon-btn fr-back back-btn', 'aria-label': t('common.close') }, icon('back', 22));
   const stage = h('div', { class: 'fr-stage' });
   const info = h('div', { class: 'fr-info' });
+  // Discord-style (owner 2026-11-24): a banner, the avatar in its frame over the banner's edge, then cards.
+  const heroBox = h('div', { class: 'fr-herobox' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
   const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
-  const d: HTMLDialogElement = h('dialog', { class: 'fr-page' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, ago, stage, info));
+  // Their profile effect (src/ui/deco/effects.ts) plays over the top of the page, like Discord's; it never takes a tap.
+  const fxBox = h('div', { class: 'fr-fx', 'aria-hidden': 'true' });
+  const d: HTMLDialogElement = h('dialog', { class: 'fr-page fr-dc' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, heroBox, ago, info), fxBox);
+  let fxShown = 0;
+  const showFx = (n: number) => {
+    if (n === fxShown) return;
+    fxShown = n;
+    if (!n) { fxBox.replaceChildren(); return; }
+    void import('./deco/effects').then((m) => {
+      if (fxShown !== n || !d.isConnected) return;
+      const w = Math.min(520, d.clientWidth || innerWidth);
+      fxBox.replaceChildren(m.effectLayer(n, w, true) ?? '');
+    }).catch(() => {});
+  };
   // Back (and Android's back button) closes the page.
   let pushed = false;
   try { history.pushState({ frPage: pid }, ''); pushed = true; } catch { /* ignore */ }
-  const onPop = () => { pushed = false; d.close(); };
+  // Leaving pushes the page back out the side it came from, then closes it.
+  const leave = () => {
+    if (!d.open || d.classList.contains('leaving')) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { d.close(); return; }
+    d.classList.add('leaving');
+    const out = document.documentElement.dir === 'rtl' ? '-100%' : '100%';
+    d.animate([{ translate: '0 0' }, { translate: `${out} 0` }], { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }).finished.then(() => d.close(), () => d.close());
+  };
+  const onPop = () => { pushed = false; leave(); };
   window.addEventListener('popstate', onPop);
-  const close = () => { if (pushed) history.back(); else d.close(); };
+  const close = () => { if (pushed) history.back(); else leave(); };
   back.onclick = close;
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+  // The bar over the banner turns solid (with the name) once the banner has scrolled away.
+  const body = d.querySelector<HTMLElement>('.fr-page-body')!;
+  body.addEventListener('scroll', () => d.classList.toggle('scrolled', body.scrollTop > 110), { passive: true });
   d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); d.remove(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
   let unfriend: (() => void) | null = null;
   more.onclick = () => playerMenu(unfriend, pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
-  let pairSig = '';
+  let pairSig = '', paints = 0;
   const paint = () => {
     if (prof?.blocked) {
       // Blocked: nothing of theirs shows, only the way back.
       pairSig = '';
+      showFx(0);
       title.textContent = ft('fr.blockedName');
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true, figure: null }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.blocked')),
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.blocked')),
         h('button', { class: 'chip', onclick: () => void unblockPlayer(pid).then(() => { toast(ft('fr.unblocked')); onChange(); return refresh(); }).catch((e) => toast((e as Error).message)) }, ft('fr.unblock')));
       return;
     }
     if (!prof) {
       stage.replaceChildren(pairSolo({ ...fromRow(row), private: true }));
-      info.replaceChildren(h('p', { class: 'muted' }, ft('fr.private')));
+      heroBox.replaceChildren();
+      info.replaceChildren(stage, h('p', { class: 'muted' }, ft('fr.private')));
       return;
     }
     const p = prof;
+    showFx(p.private ? 0 : p.relation === 'me' ? myEffect() || (p.fx ?? 0) : p.fx ?? 0);
     const name = p.name ?? rt('rk.private');
     const f = p.friend;
     const mineP = p.relation === 'me';
@@ -126,17 +192,21 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
     const sig = JSON.stringify([mineP, p.figure, mineP ? myFigureCode() : '', p.room ?? null, p.badges?.top ?? [], p.xp ?? null]);
     if (sig !== pairSig) {
       pairSig = sig;
-      stage.replaceChildren(h('div', { class: 'fr-solo' }, pairSolo(p)));
+      const solo = () => stage.replaceChildren(h('div', { class: 'fr-solo' }, pairSolo(p)));
       const fig = mineP ? myFigureCode() : p.figure;
-      if (fig && !p.private) void import('./room').then((m) => {
+      // The room is drawn after the page has slid in (first paint), like the rest below the fold; the character alone
+      // stands there only when there is no room to show.
+      if (!fig || p.private) solo();
+      else void new Promise((r) => setTimeout(r, paints ? 0 : 360)).then(() => import('./room')).then((m) => {
         if (pairSig !== sig || !d.isConnected) return;
         const scene = m.roomStage(mineP ? undefined : { figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top, best: p.streak });
-        if (!scene) return;
+        if (!scene) { solo(); return; }
+        stillRoom(scene);
         const room = h('button', { class: 'fr-room', 'aria-label': ft('fr.visit'), onclick: () => {
           if (mineP) { close(); location.hash = '#/me/room'; } else m.openVisit({ name: p.name, figure: p.figure ?? null, room: p.room ?? null, badges: p.badges?.top });
         } }, scene);
         stage.replaceChildren(room);
-      });
+      }).catch(() => { if (pairSig === sig) solo(); });
     }
     title.textContent = mineP ? ft('fr.mine') : name;
     const stat = (k: ShowKey, label: string, v: number | undefined, icon: Node | string = '') =>
@@ -190,15 +260,15 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
       !mineP && fw.back ? h('span', { class: 'fr-back-pill' }, ft('fr.followsYou')) : '') : '';
     // Badges they earned (the rarest first), and their trophies.
     const defs = (p.badges?.top ?? []).map((id) => BADGES.find((x) => x.id === id)).filter((x): x is NonNullable<typeof x> => !!x);
-    const badges = defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
+    const badges = () => defs.length || (mineP && p.badges) ? h('section', { class: 'fr-shelf s-badges' },
       h('h3', {}, ft('fr.badges'), p.badges && p.badges.n > defs.length ? h('small', {}, ` · ${ft('fr.badgesN', { n: p.badges.n })}`) : ''),
-      defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
+      defs.length ? h('div', { class: 'fr-shelf-row' }, ...defs.map((x) => badgeArt(x.tier, x.icon, true, 48, true))) : h('p', { class: 'muted small' }, ft('fr.badgesNone'))) : '';
     // Their Hifz badges: how many surahs they hold and the best two (sent among the badges, hifzBadge.ts).
     const hz = parseHifz(p.badges?.top);
-    const hifz = hz.count ? h('section', { class: 'fr-shelf s-hifz' },
+    const hifz = () => hz.count ? h('section', { class: 'fr-shelf s-hifz' },
       h('h3', {}, ft(mineP ? (hz.count === 1 ? 'fr.myHeart1' : 'fr.myHeartN') : hz.count === 1 ? 'fr.heart1' : 'fr.heartN', { n: hz.count })),
       h('div', { class: 'fr-shelf-row' }, ...hz.list.map((x) => hifzBadge(x.s, x.tier, 52)))) : '';
-    const cups = p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
+    const cups = () => p.cups?.length ? h('section', { class: 'fr-shelf' }, h('h3', {}, ft('fr.trophies')),
       h('div', { class: 'fr-shelf-row' }, ...p.cups.map((place) => h('span', { class: `fr-cup p${place}`, title: `#${place}` }, trophy(place, 34))))) : '';
     // Your own profile: your flag, and what it shows (the stats above follow each switch).
     const mine = mineP ? (() => {
@@ -224,17 +294,42 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
           return b;
         })));
     })() : '';
+    // The hero: a banner in their league's colour with a slow drift of light (their profile effect), the avatar in its
+    // frame breaking over the banner's lower edge, and their best badges in a strip beside it.
+    const tier = p.tier ?? 0;
+    const fig = p.private ? null : mineP ? myFigureCode() : p.figure;
+    const motes = Array.from({ length: 9 }, (_, i) => h('i', { style: `--x:${(i * 37 + 11) % 100}%;--d:${(i * 0.7) % 5}s;--s:${0.6 + (i % 3) * 0.3}` }));
+    const strip = [...hz.list.slice(0, 1).map((x) => flat(`h${x.s}:${x.tier}`, () => hifzBadge(x.s, x.tier, 26), 26)),
+      ...defs.slice(0, 4).map((x) => h('span', { class: 'fr-bpic', 'aria-hidden': 'true' }, h('img', { src: badgePic(x.tier, x.icon), alt: '', draggable: 'false' }))),
+      ...(p.cups ?? []).slice(0, 2).map((place) => flat(`t${place}`, () => trophy(place, 24), 24))];
+    d.style.setProperty('--tc', TIER_RING[tier] ?? TIER_RING[0]);
+    heroBox.replaceChildren(h('div', { class: `fr-hero t${tier}`, style: `--tc:${TIER_RING[tier] ?? TIER_RING[0]}` },
+      h('div', { class: 'fr-banner', 'aria-hidden': 'true' }, h('span', { class: 'fr-khatam' }), h('span', { class: 'fr-motes' }, ...motes)),
+      h('div', { class: 'fr-avrow' },
+        h('span', { class: 'fr-av' }, avatar(p.private ? null : p.avatar ?? 0, tier, 112, p.frame ?? 0, fig, true)),
+        strip.length ? h('span', { class: 'fr-strip' }, ...strip) : '')));
+    const box = (cls: string, ...kids: (Node | string)[]) => h('section', { class: `fr-box ${cls}` }, ...kids);
+    const roomCard = p.private ? '' : box('fr-roombox', h('h3', {}, ft('fr.visit')), stage);
     info.replaceChildren(
-      h('div', { class: 'fr-who' }, h('h3', {}, p.private ? '' : flagImg(p.flag, 18), mineP ? `${name} · ${ft('fr.you2')}` : name), p.tier !== undefined ? tierBadge(p.tier) : ''),
-      counts,
-      p.xp != null ? levelLine(p.xp) : '',
-      p.private ? '' : lampLine(p.lamp),
-      actions,
-      f ? streakLine(f, name) : '',
-      stats.childElementCount ? stats : '',
-      hifz, badges, cups, mine,
-      f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : '');
-    if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
+      box('fr-main',
+        h('div', { class: 'fr-who' }, h('h3', {}, mineP ? `${name} · ${ft('fr.you2')}` : name, p.private ? '' : flagImg(p.flag, 20)),
+          h('div', { class: 'fr-tags' }, p.tier !== undefined ? tierBadge(p.tier) : '', p.private ? '' : lampPill(p.lamp, true))),
+        counts,
+        p.xp != null ? levelLine(p.xp) : '',
+        actions),
+      f ? box('fr-streakbox', streakLine(f, name)) : '',
+      stats.childElementCount ? box('fr-statbox', stats) : '',
+      roomCard);
+    // The rest (room, Hifz badges, badges, trophies, your switches) is below the fold: on the first paint it is added
+    // once the page has slid in, so the slide's first frame only lays out the top (~0.6 s → ~0.25 s at 6× CPU).
+    const rest = () => {
+      info.append(...[hifz(), badges(), cups(), mine ? box('fr-minebox', mine) : '',
+        f ? h('p', { class: 'muted small fr-help' }, ft('fr.help')) : !mineP && known ? h('p', { class: 'muted small fr-help' }, ft('fr.friendHint')) : ''].filter((x) => x));
+      if (mineP) { const bits = myShow(); for (const [k, v] of Object.entries(SHOW)) info.querySelector(`.s-${k}`)?.classList.toggle('off', !(bits & v)); }
+    };
+    const n = ++paints;
+    if (n > 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) rest();
+    else setTimeout(() => { if (paints === n && d.isConnected) rest(); }, 340);
   };
   const refresh = async () => {
     try {
@@ -487,7 +582,7 @@ export async function friendsTab(fresh: boolean, onChange: () => void, hidden = 
     const name = f.name ?? rt('rk.private');
     const ch = h('button', { class: 'chip fr-ch-btn', 'aria-label': `${chLabel} ${name}`, onclick: () => challenge(f.pid, name, onChange) }, icon('swords', 18), chLabel);
     return h('div', { class: 'fr-card-wrap' }, ch, h('button', { class: `fr-card${on ? ' on' : ''}`, onclick: () => void openProfile({ ...f, score: f.week }, onChange) },
-      h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak)),
+      h('span', { class: 'fr-card-pair' }, pair(me, f, on, f.streak, 44)),
       h('span', { class: 'fr-card-txt' }, h('b', {}, f.private ? '' : flagImg(f.flag, 13), name, f.private ? '' : lampPill(f.lamp)),
         f.live ? h('span', { class: 'fr-live' }, h('i', { 'aria-hidden': 'true' }), ft(f.live === 'listen' ? 'fn.listening' : 'fn.reading')) : '',
         h('span', { class: 'fr-card-streak' }, h('span', { class: 'fr-mini-flame' }, flame(on ? 2 : f.streak ? 1 : 0, 16, true)), f.streak ? ft('fr.streak', { n: f.streak }) : ft('fr.streak0')),

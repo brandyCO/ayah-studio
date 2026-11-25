@@ -15,13 +15,13 @@ export function liteSetting(): LiteSetting {
 }
 
 /** What Auto decides for this device, and why (shown in Device check). */
-export function liteAuto(): { on: boolean; why: string } {
+export function liteAuto(): { on: boolean; saveData?: boolean; mem?: number; cores?: number } {
   const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
   const mem = nav.deviceMemory, cores = navigator.hardwareConcurrency;
-  if (nav.connection?.saveData) return { on: true, why: 'Data Saver is on' };
-  if (mem && mem <= 3) return { on: true, why: `${mem} GB memory` };
-  if (cores && cores <= 4) return { on: true, why: `${cores} CPU cores` };
-  return { on: false, why: `${mem ? `${mem} GB memory, ` : ''}${cores ?? '?'} CPU cores` };
+  if (nav.connection?.saveData) return { on: true, saveData: true };
+  if (mem && mem <= 3) return { on: true, mem };
+  if (cores && cores <= 4) return { on: true, cores };
+  return { on: false, mem, cores };
 }
 
 export const liteMode = (): boolean => {

@@ -23,6 +23,7 @@ import { liteMode } from '../lite';
 import { h, haptic, toast } from './dom';
 import { hifzBadge, juzGateArt } from './hifzBadge';
 import { motifEl, themeVars } from './surahTheme';
+import { loadSuraFont, suraName } from './suraName';
 import { icon } from './icons';
 import { lightChip } from './lightChip';
 import { isFlawless } from '../data/learnLamps';
@@ -308,30 +309,47 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       hifzBadge(m.n, hz?.tier ?? 0, 96, hz ? (hz.due ? 'due' : '') : 'locked'), h('span', { class: 'lp-cap' }, cap));
   }
 
-  function unitEl(u: PathUnit): HTMLElement {
+  /** A surah's unit. Reviews that are due come first, in their own blue block, so the banner and the step under it
+   *  are always the same surah (owner report 2026-11-24: "Al-Faatiha" over "Review Al-Israa" was confusing). */
+  function unitEl(u: PathUnit): HTMLElement[] {
     const m = meta[u.s - 1];
     const done = u.steps.filter((x) => x.state === 'done').length;
     const first = u.steps[0], lastNew = [...u.steps].reverse().find((x) => x.kind === 'new');
     const ayat = lastNew ? `${first.range[0]}–${lastNew.range[1]}` : `1–${m.ayahs}`;
     const kicker = u.of > 1 ? lt('learn.unitPart', { n: m.n, k: u.part, of: u.of }) : lt('learn.unitSurah', { n: m.n });
-    const banner = h('div', { class: 'lp-banner' }, motifEl(m.n),
+    const pct = u.steps.length ? Math.round((done / u.steps.length) * 100) : 0;
+    // The Arabic name is the hero, in the mushaf's own calligraphy inside an arch; the title, ayat and progress sit
+    // beside it. In the Arabic interface the title is the same name, so it is kept for screen readers only.
+    const arTitle = surahName(m) === m.ar || document.documentElement.lang === 'ar';
+    const banner = h('div', { class: 'lp-banner' },
       h('div', { class: 'lp-banner-t' },
         h('span', { class: 'lp-kicker' }, kicker),
-        h('h2', {}, surahName(m)),
-        h('span', { class: 'lp-banner-sub' }, lt('learn.unitSub', { ayat, done, of: u.steps.length }))),
-      // In the Arabic interface the title already is the Arabic name: it shows once (front-end review G7).
-      surahName(m) === m.ar || document.documentElement.lang === 'ar' ? '' : h('span', { class: 'lp-banner-ar', lang: 'ar', dir: 'rtl' }, m.ar),
-      h('button', { class: 'lp-banner-btn', type: 'button', 'aria-label': lt('learn.unitOptions', { name: surahName(m) }), onclick: () => openUnit(m) }, svg(G.dots, 22)));
+        h('h2', arTitle ? { class: 'lp-sr' } : {}, surahName(m)),
+        h('span', { class: 'lp-banner-sub' }, lt('learn.unitSub', { ayat, done, of: u.steps.length })),
+        h('span', { class: 'lp-banner-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${pct}%` }))),
+      archName(m),
+      h('button', { class: 'lp-banner-btn', type: 'button', 'aria-label': lt('learn.unitOptions', { name: surahName(m) }), onclick: () => openUnit(m) }, svg(G.dots, 20)));
     const steps: HTMLElement[] = [];
+    let before: HTMLElement | null = null;
     let i = 0;
     for (const st of u.steps) {
-      if (st.state === 'current' && due.length) { due.forEach((tr, q) => steps.push(reviewNode(tr.s, i++, q === 0 && !leadDone))); due = []; leadDone = true; }
+      if (st.state === 'current' && due.length) { before = reviewEl(due); due = []; leadDone = true; }
       const lead = st.state === 'current' && !leadDone;
       if (lead) leadDone = true;
       steps.push(nodeFor(st, i++, m, lead));
     }
     const box = h('section', { class: 'lp-unit', style: themeVars(m.n), 'aria-label': `${kicker} · ${surahName(m)}` }, banner, h('div', { class: 'lp-steps' }, ...steps));
     if (u.last) box.append(hifzEnd(m));
+    return before ? [before, box] : [box];
+  }
+
+  /** The surah's name in the calligraphy of the mushaf's header frame, inside a soft arch with its motif. */
+  function archName(m: SurahMeta): HTMLElement {
+    const cal = suraName(m.n);
+    cal.classList.add('lp-arch-cal');
+    const box = h('span', { class: 'lp-arch', 'aria-hidden': 'true' }, motifEl(m.n), cal);
+    // Until its tiny font is in, the number would show: wait, and fall back to the plain Arabic name.
+    loadSuraFont(m.n).then(() => box.classList.add('ready'), () => { cal.textContent = m.ar; cal.style.fontFamily = ''; cal.classList.add('plain'); box.classList.add('ready'); });
     return box;
   }
 
@@ -426,7 +444,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
     while (k < ord.length) {
       if (k >= lo && k < hi) {
         const q = k;
-        for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => [unitEl(u)] });
+        for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => unitEl(u) });
         const j = gates.get(k);
         if (j) parts.push({ big: false, make: () => gateWithReviews(j) });
         k++;
@@ -440,7 +458,7 @@ export async function showPath(root: HTMLElement): Promise<() => void> {
       const open = openRuns.has(key);
       parts.push({ big: false, make: () => [foldEl(run, j, key, open)] });
       for (let q = k; q < e; q++) {
-        if (open) for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => [unitEl(u)] });
+        if (open) for (const u of units(q, ord, pos)) parts.push({ big: true, make: () => unitEl(u) });
         const gj = gates.get(q);
         if (gj && (open || gateState(gj) === 'current')) parts.push({ big: false, make: () => gateWithReviews(gj) });
       }

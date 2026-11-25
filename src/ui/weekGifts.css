@@ -1,0 +1,117 @@
+/* ---------- Seven days of gifts (src/ui/weekGifts.ts) ---------- */
+dialog.gw { border: 0; padding: 0; background: transparent; width: min(100% - 24px, 440px); max-height: calc(100% - 24px); margin: auto; overflow: visible; }
+dialog.gw::backdrop { background: rgba(16, 10, 40, .82); }
+.gw-card { position: relative; padding: 18px 14px 14px; border-radius: 28px; color: #fff; overflow: hidden;
+  background: linear-gradient(180deg, #6a4ad8 0%, #4b2fb0 58%, #3a2392 100%); box-shadow: 0 8px 0 #2a1870, 0 18px 40px rgba(20, 10, 60, .45); }
+/* A soft lantern light behind the title. */
+.gw-card::before { content: ''; position: absolute; inset: -40% -20% auto; height: 70%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 214, 120, .32), transparent); }
+.gw-x { position: absolute; inset-inline-end: 6px; top: 6px; color: #fff; background: transparent; border: 0; box-shadow: none; z-index: 1; }
+.gw-head { position: relative; text-align: center; padding: 0 30px; }
+.gw-ribbon { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #ffd25e; color: #4a2a00;
+  font: 900 12px/1.2 var(--ui-round, system-ui); letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 3px 0 #c98f12; }
+.gw-head h2 { margin: 10px 0 4px; font: 900 clamp(22px, 6.6vw, 28px)/1.15 var(--ui-round, system-ui); }
+.gw-head p { margin: 0 auto; max-width: 320px; color: rgba(255, 255, 255, .84); font-weight: 700; font-size: var(--fs-s, 14px); line-height: 1.35; }
+
+.gw-grid { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 16px 0 14px; }
+.gw-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 8px 4px 9px;
+  border: 0; border-radius: 18px; background: #fff; color: #2c2250; font: inherit; text-align: center; box-shadow: 0 4px 0 #cfc5ef; }
+.gw-tile.d7 { grid-column: 1 / -1; display: grid; grid-template-columns: auto auto; grid-auto-flow: column; justify-content: center; align-items: center; column-gap: 14px; padding: 10px 12px 12px;
+  background: linear-gradient(180deg, #fff8e3, #ffe7a6); box-shadow: 0 4px 0 #d9a93a; }
+.gw-tile.d7 .gw-day { grid-column: 1 / -1; grid-row: 1; }
+.gw-tile.d7 .gw-art { grid-column: 1; grid-row: 2 / span 3; }
+.gw-tile.d7 > :not(.gw-day):not(.gw-art):not(.gw-stamp) { grid-column: 2; justify-self: start; }
+.gw-day { font: 900 11px/1.2 var(--ui-round, system-ui); letter-spacing: .03em; text-transform: uppercase; color: #7a6cae; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gw-tile.jumua .gw-day { color: #8a5a00; }
+.gw-art { display: grid; place-items: center; width: 58px; height: 54px; }
+.gw-art .gw-chest { width: 54px; }
+.gw-art > svg { width: 46px; height: 46px; }
+.gw-tile.d7 .gw-art { width: 96px; height: 86px; }
+.gw-tile.d7 .gw-art .gw-chest { width: 92px; }
+.gw-name { font: 900 13.5px/1.2 var(--ui-round, system-ui); overflow-wrap: anywhere; }
+.gw-tile.d7 .gw-name { font-size: 17px; }
+.gw-extra { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 13px; }
+.gw-opens { font: 800 10.5px/1.2 var(--ui-round, system-ui); color: #6c5ce7; }
+
+/* Today's: glowing, a ring breathing out, Claim. */
+.gw-tile.s-today { cursor: pointer; background: #fffdf3; box-shadow: 0 4px 0 #e0a820, 0 0 0 3px #ffd25e; }
+.gw-tile.s-today::after { content: ''; position: absolute; inset: -5px; border-radius: 22px; border: 3px solid #ffd25e; pointer-events: none;
+  animation: gw-ring 1.6s ease-out infinite; }
+@keyframes gw-ring { from { scale: .96; opacity: .8; } to { scale: 1.1; opacity: 0; } }
+.gw-tile.s-today .gw-art { animation: gw-bob 1.4s ease-in-out infinite; }
+@keyframes gw-bob { 50% { translate: 0 -3px; } }
+.gw-tile.s-today:active { translate: 0 3px; box-shadow: 0 1px 0 #e0a820, 0 0 0 3px #ffd25e; }
+.gw-claim { margin-top: 3px; padding: 4px 12px; border-radius: 999px; background: #4caf2a; color: #fff; font: 900 12.5px/1.2 var(--ui-round, system-ui);
+  box-shadow: 0 3px 0 #2f7d18; }
+.gw-tile.d7 .gw-claim { flex-basis: auto; }
+
+/* Taken: a gold stamp over a calm tile. */
+.gw-tile.s-got > :not(.gw-stamp):not(.gw-day) { opacity: .45; }
+.gw-stamp { position: absolute; top: 34%; left: 50%; translate: -50% -50%; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(180deg, #ffd25e, #f0a91c); color: #fff; box-shadow: 0 3px 0 #b77a07; }
+.gw-tile.d7 .gw-stamp { top: 50%; }
+.gw-stamp.land { animation: gw-stamp .5s .35s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes gw-stamp { from { scale: 2.4; opacity: 0; } 60% { opacity: 1; } to { scale: 1; opacity: 1; } }
+
+/* Not yet / missed / before the calendar began. */
+.gw-tile.s-later .gw-art { opacity: .9; }
+.gw-tile.s-missed, .gw-tile.s-none { background: rgba(255, 255, 255, .55); box-shadow: 0 4px 0 rgba(0, 0, 0, .12); }
+.gw-tile.s-missed .gw-art, .gw-tile.s-none .gw-art, .gw-tile.s-missed .gw-name, .gw-tile.s-none .gw-name { opacity: .35; filter: grayscale(1); }
+.gw-missed { font: 800 11px/1.2 var(--ui-round, system-ui); color: #6b5f8e; }
+
+.gw-foot .gw-go { width: 100%; font-size: 18px; padding: 15px; border-radius: 16px; }
+
+/* Me's card. */
+.gw-card-me { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; cursor: pointer; }
+.gw-me-art { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; background: #f2efff; }
+.gw-me-art .gw-art { width: 50px; height: 46px; }
+.gw-me-art .gw-art .gw-chest { width: 46px; }
+.gw-card-me.ready .gw-me-art { background: #fff4d0; }
+.gw-me-txt { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.gw-me-txt small { font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6c5ce7; }
+.gw-me-txt b { font-weight: 800; }
+.gw-dots { display: flex; gap: 5px; }
+.gw-dots i { width: 10px; height: 10px; border-radius: 50%; background: #e4def5; }
+.gw-dots i.got { background: #ffc531; }
+.gw-dots i.today { background: #4caf2a; box-shadow: 0 0 0 3px rgba(76, 175, 42, .25); }
+.gw-dots i.missed, .gw-dots i.none { background: #d3cde3; opacity: .5; }
+
+/* The onboarding's smaller copy (no buttons). */
+.gw-grid.small { gap: 7px; margin: 8px 0; }
+.gw-grid.small .gw-tile { box-shadow: 0 3px 0 #cfc5ef; padding: 6px 3px 7px; }
+.gw-grid.small .gw-art { width: 46px; height: 42px; }
+.gw-grid.small .gw-art .gw-chest { width: 42px; }
+.gw-grid.small .gw-tile.d7 .gw-art { width: 72px; height: 64px; }
+.gw-grid.small .gw-tile.d7 .gw-art .gw-chest { width: 68px; }
+
+/* Weekday prizes: the lamp refill, Double Light. */
+.gw-lamps { display: inline-flex; align-items: flex-end; gap: 1px; }
+.gw-lamps svg { flex: none; }
+.gw-x2 { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; rotate: -6deg;
+  background: linear-gradient(180deg, #ffe27a, #ffb52e); color: #5a3300; font: 1000 20px/1 var(--ui-round, system-ui);
+  box-shadow: 0 3px 0 #c98a12, inset 0 -3px 0 rgba(0, 0, 0, .08); }
+.gw-tile.d7 .gw-x2 { width: 64px; height: 64px; font-size: 28px; }
+/* Friday (Jumu'ah): the big chest with the week's frame rising out of it, and six lanterns lit by Saturday → Thursday. */
+.gw-jm { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.gw-jm .gw-chest { width: 86px; translate: 0 10px; }
+.gw-jm-piece { position: absolute; top: -12px; left: 50%; translate: -50% 0; filter: drop-shadow(0 3px 6px rgba(120, 70, 0, .35)); }
+.gw-tile.s-today .gw-jm-piece { animation: gw-bob 1.6s ease-in-out infinite; }
+.gw-grid.small .gw-jm .gw-chest { width: 62px; }
+.gw-grid.small .gw-jm-piece svg { width: 40px; height: 40px; }
+.gw-fri { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.gw-plus { font: 900 11.5px/1.2 var(--ui-round, system-ui); color: #8a5a00; }
+.gw-six { display: inline-flex; gap: 3px; }
+.gw-six i { display: grid; place-items: center; }
+.gw-six i.off { opacity: .3; }
+.gw-six i.lit svg { animation: gw-flick 2.4s ease-in-out infinite; }
+.gw-six i.lit:nth-child(2n) svg { animation-delay: -.8s; }
+@keyframes gw-flick { 50% { scale: 1.06; } }
+.gw-six-t { font: 800 10.5px/1.2 var(--ui-round, system-ui); color: #7a6cae; }
+.gw-fri.full .gw-six-t { color: #3f8f1e; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-tile.s-today::after, .gw-tile.s-today .gw-art, .gw-stamp.land, .gw-six i.lit svg, .gw-tile.s-today .gw-jm-piece { animation: none; }
+}
+.gw-x:focus:not(:focus-visible) { outline: none; }
+.gw-chest { display: block; height: auto; aspect-ratio: 80 / 76; overflow: visible; }

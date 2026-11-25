@@ -39,20 +39,36 @@
 /* Each surah's own colour (--hc / --he, set on the unit by surahTheme.ts) and a quiet white motif from its name. */
 .lp-banner {
   position: relative; overflow: hidden; isolation: isolate;
-  justify-self: stretch; display: flex; align-items: center; gap: 12px; padding: 14px 12px 14px 16px; border-radius: 20px;
+  justify-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 112px; padding: 14px 10px 14px 16px; padding-inline: 16px 10px; border-radius: 20px;
   background: var(--hc, #17a273); color: #fff; box-shadow: 0 5px 0 var(--he, #0e7d58);
 }
-.lp-banner > * { position: relative; }
-.lp-banner > .lp-motif { position: absolute; z-index: -1; inset-block: -6px; inset-inline-end: 52px; height: calc(100% + 12px); width: auto; opacity: .2; pointer-events: none; }
-.lp-banner-t { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.lp-banner-t { min-width: 0; display: grid; gap: 2px; padding-inline-end: 30px; }
 .lp-kicker { font: 900 12px var(--ui-round); letter-spacing: .08em; opacity: .88; }
-.lp-banner h2 { margin: 0; font-size: 21px; font-weight: 900; color: #fff; }
+.lp-banner h2 { margin: 0; font-size: 21px; line-height: 1.15; font-weight: 900; color: #fff; overflow-wrap: anywhere; }
 .lp-banner-sub { font: 700 13px var(--ui-round); opacity: .92; }
-.lp-banner-ar { font-family: 'AmiriQuran', serif; font-size: 26px; line-height: 1.2; flex: none; }
-.lp-banner-btn {
-  flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; border: 2px solid #ffffff59;
-  background: transparent; color: #fff; cursor: pointer;
+.lp-banner-bar { display: block; height: 6px; margin-block-start: 6px; max-width: 150px; border-radius: 3px; background: #0000002e; overflow: hidden; }
+.lp-banner-bar > i { display: block; height: 100%; border-radius: inherit; background: #fff; }
+.lp-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The arch: a soft niche at the inline end holding the calligraphed name, the surah's motif faint behind it. */
+.lp-arch {
+  position: relative; display: grid; place-items: center; width: 108px; align-self: stretch; margin-block: -2px -14px;
+  border-radius: 54px 54px 0 0; background: #ffffff1f; box-shadow: inset 0 0 0 2px #ffffff33; overflow: hidden;
 }
+.lp-arch > .lp-motif { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .14; pointer-events: none; }
+.lp-arch-cal {
+  position: relative; color: #fff; font-size: 74px; line-height: 1; padding-block-end: 6px;
+  opacity: 0; transition: opacity var(--dur-2, .2s);
+}
+.lp-arch-cal.plain { font-family: 'AmiriQuran', serif; font-size: 22px; line-height: 1.6; text-align: center; padding-inline: 6px; }
+.lp-arch.ready .lp-arch-cal { opacity: 1; }
+.lp-banner-btn {
+  position: absolute; inset-block-start: 8px; inset-inline-end: 124px; width: 34px; height: 34px;
+  display: grid; place-items: center; border-radius: 12px; border: 0; background: #0000001f; color: #fff; cursor: pointer;
+}
+/* Review block before the unit: no arch, the button-free banner keeps its old shape */
+.lp-review .lp-banner { min-height: 0; grid-template-columns: minmax(0, 1fr); }
+.lp-review .lp-banner-t { padding-inline-end: 0; }
 .hue-green { --hc: #17a273; --he: #0e7d58; }
 .hue-teal { --hc: #12a594; --he: #0a7568; }
 .hue-violet { --hc: #7b5ce0; --he: #5a3fb4; }
@@ -256,12 +272,11 @@ body:has(dialog[open]) .lp-dock { visibility: hidden; }
   .lp-top { gap: 6px; }
   .lp-pill-t { display: none; }
   .lp-pill { padding: 0 9px; }
-  .lp-banner { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding-inline: 14px 10px; }
-  .lp-banner-t { grid-area: 1 / 1; }
-  .lp-banner-ar { grid-area: 2 / 1; justify-self: start; font-size: 20px; }
-  .lp-banner-btn { grid-area: 1 / 2 / 3; align-self: center; }
+  .lp-banner { gap: 8px; padding-inline: 14px 8px; }
+  .lp-arch { width: 88px; }
+  .lp-arch-cal { font-size: 60px; }
+  .lp-banner-btn { inset-inline-end: 102px; }
   .lp-banner h2 { font-size: 19px; hyphens: none; }
-  .lp-banner-btn { width: 40px; height: 40px; }
 }
 
 /* More kinds of step */

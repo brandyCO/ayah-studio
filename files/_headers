@@ -16,3 +16,5 @@
   Cache-Control: public, max-age=3600
 /i/stores.json
   Cache-Control: no-store
+/og/*
+  Cache-Control: public, max-age=604800

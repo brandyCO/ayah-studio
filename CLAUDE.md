@@ -999,7 +999,8 @@ save to gallery / share sheet; offline audio cache; settings.
 - [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; the other widgets in WidgetKit
 - [x] Shared links open the app (owner request 2026-11-23): every shared link (`shareableLink()` in `src/native.ts`:
       invites to challenges, pacts, boards, friends, relights, reel templates, share cards) is
-      `https://ayah-studio.brandlift-888.workers.dev/i/#/route`. Installed app → opens on that route (iPhone Universal Links:
+      `https://ayah-studio.brandlift-888.workers.dev/i/#/route`, or for links with their own preview banner (`files/share.js`) the
+      path itself (`/s/11/90`, `/rf/CODE`…; app-link paths too, and the preview page sends a visitor on through `/i/`). Installed app → opens on that route (iPhone Universal Links:
       `applinks:` entitlement + `public/.well-known/apple-app-site-association`; Android App Links: `autoVerify` filter on
       AppActivity + `.well-known/assetlinks.json`, written by pages.yml from the signing key in the secrets and the repo
       variable `PLAY_SIGNING_SHA256` (Play's app-signing key, after the first Play upload); `src/appLinks.ts`). No app →
@@ -1296,7 +1297,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       lazy) are translated; references in the interface use `uiRef()` (Arabic surah name; reels keep `reference()`);
       the morning ayah note carries the Arabic ayat in the Arabic UI; the daily dhikr reminders are set again on every
       start (they repeat with the words they were set with); Android channel names follow the language (the plugin's
-      "Default", export, listening, next prayer: renamed in place). Still English: the Device check panel
+      "Default", export, listening, next prayer: renamed in place). The Device check panel too since 2026-11-24 (`src/i18n/device.ts`, `dvt()`)
       **30 interface languages** (owner request 2026-11-14, "it should be in all languages"): English, Arabic + Urdu,
       Indonesian, Bengali, Turkish, Persian, French, Malay, Hindi, Russian, Spanish, German, Portuguese, Swahili, Hausa,
       Somali, Pashto, Uzbek, Azerbaijani, Bosnian, Albanian, Kurdish (Sorani), Tamil, Malayalam, Chinese, Italian, Dutch,
@@ -1355,8 +1356,7 @@ tafsir only from published, credited editions; UI strings only are translated by
       `tourSeen` in localStorage (leaving the mushaf for another screen counts as skipping); shown by the mushaf on first launch, not to people who used the app
       before (`mushafHint` set) and never together with the Ramadan moment (that waits a start);
       ☰ → Tour)
-- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed) behind the `tafsir`
-      flag until the owner confirms the licence (`docs/grow.md` §0)
+- [x] G4 Tafsir beside the translation (Quran.com, cached ≤ 7 days, attributed); on since 2026-11-24
       (built 2026-10-09, **off**: `src/features.ts` (`feature('tafsir')`, default false; testers: Device
       check → "Tafsir beside the translation"). `src/data/tafsir.ts`: Ibn Kathir (abridged, id 169) per
       ayah from api.quran.com (qurancdn second), IndexedDB store `tafsir` (`db.ts` version 5, which also
@@ -1366,6 +1366,10 @@ tafsir only from published, credited editions; UI strings only are translated by
       the translation view — name + "Darussalam, via Quran.com", "Explains 94:1–8 together" for grouped
       passages, link to Quran.com. The UI font stack ends with AmiriQuran so Quranic marks in surah
       names show in the Arabic interface. To ship: owner decision, then flip the default)
+      **On** (owner 2026-11-24, "do what Tarteel does"): Quran.com's tafsir library (the one Tarteel uses) — `TAFSIRS` in
+      `src/data/tafsir.ts`: 19 tafsirs in English, Arabic, Urdu, Bengali, Russian, Kurdish (Fi Zilal left out), a picker in the
+      panel (localStorage `tafsirPick`, synced), default in the interface language (Arabic: Al-Muyassar), each credited +
+      linked to its Quran.com page
 - [x] G5a Faster first load (measured)
       (2026-10-09, Playwright, 1.6 Mbps / 150 ms, mushaf page 1: FCP ≈ 1.55 s, page ready ≈ 2.2 s,
       19 requests / 623 KB (was 22 / 670 KB on the G4 branch). The circles screens, tour, tafsir data
@@ -1427,6 +1431,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       The ★ sheets moved to `src/ui/favourite.ts` (lazy; `favStar.ts`). First-load budget 141 KB
       **Onboarding reciters** (owner request 2026-11-12): the first-launch welcome (`src/ui/welcome.ts`) lists every reciter
       like the player's picker — one row per reciter with his recordings as chips, ▶ preview, a search box
+- [x] Link previews per shared link (owner request 2026-11-25, "a banner for each invitation link, each unique on its own"):
+      `shareableLink()` (`src/native.ts`) shares ayah / surah / reel-look / invite addresses as real paths on the web app
+      (`{PUBLIC_URL}s/11/90`, `rf/CODE`, `rc/`, `rb/`, `bp/`, `relight/`, `join/`, `t/`; `?l=ar` in the Arabic UI), since link
+      previews never see a `#`. The `ayah-studio` worker runs `files/share.js` for those paths only (`files/wrangler.site.toml`,
+      `run_worker_first`): a small page with its own og:title / description / image that sends the visitor to `#/…`; invites
+      name the inviter from the anon preview functions (≤ 1.5 s). Banners by `scripts/make-share-cards.mjs` (Chromium, KFGQPC,
+      text never cut — an ayah too long for 1200×630 shows its surah name instead): `og/a/{s}/{a}.jpg` (6236), `og/s/{s}.jpg`,
+      `og/k/{kind}.jpg`, `og/m/{s}.json`; made in pages.yml's `cloudflare` job, cached by a hash of the script, text and fonts.
+      The service worker never keeps a share page as the app (`SHARE` in `public/sw.js`)
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
@@ -1777,7 +1790,9 @@ duas/reflections section in Me.
       chest holding its Light (`src/ui/chest.ts`, SVG drawn in code): wood ≤ 10, brass 15–20, cedar with a star 25–45,
       emerald and gold 50–99, pearl and gold with light 100+ (`chestTier()`). Resting (breathing, muted) until the goal is
       met, then shaking with the lid peeking and light behind it (heavier chests shake harder and slower), open once
-      claimed. The amount inside is always shown, never random (no loot boxes). A day chest row for every goal met
+      claimed. The amount inside is always shown; since 2026-11-24 (owner pick, "like Brawl Stars") taps can upgrade it
+      ×2 / ×3 / ×4 at random (about 1 in 7 / 20 / 70, `rollUp()` in me.ts, never below the seeded ×2 surprise; `Moment.up`:
+      the badge climbs on random taps before it can open, the extra chests drop in beside it), only ever adding Light. A day chest row for every goal met
       (`ALL_LIGHT`) replaces the Claim-all button; the adhkar session's finish shows its chest too. Tap → full-screen
       moment `kind: 'chest'` in `celebrate.ts` (shakes `tier + 2` times, bursts open, rays, sparks by tier), then the
       Light flies as dots into the Light chip at the top, which counts up (`flyLight()`, `lightChip.ts`). Badges keep
@@ -2036,7 +2051,7 @@ duas/reflections section in Me.
       Second pass (owner pick 2026-11-09, "all three"): **Noor speaks** (`src/ui/noor.ts` + `noor.css`, lazy): a small light
       and one line, from what is true now, never guilt — Me under the streak (pages left to light today / lit), the Read bar
       (page reading time / pages done), the Create sheet (reel goal / share an ayah), Learn above Today (thirsty trees /
-      plant a seed); en + ar. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
+      plant a seed); en + ar. Since 2026-11-24 (owner) the user's own character (bust) says the line when they have one; Noor's light only without. **List screens** (`src/ui/screens.css`, loaded with the surah list, search and drafts):
       chunky cards, teal number badges and tabs, coral drafts. **Read bar ring**: "n of m pages today" (the pages goal)
       with a ring and the streak count (→ Me)
 - [x] M14 Du'a moments through the day (owner pick 2026-11-10, "all six steps"; plan: Artifact "Du'a moments through the day").
@@ -2214,7 +2229,9 @@ duas/reflections section in Me.
       rotation, one a week, buyable only that week. **Today's stall** in the shop: 3 pieces a day at −30 %. **Lamp of Light**
       (`lampOf()`: 500 / 2000 / 5000 / 15000 Light spent) shown beside names on the boards (`rank_set_lamp`, `rank_face.lamp`).
       **Gifts to friends** (`src/together/lightGifts.ts`, `src/ui/giftSend.ts`): 25–200 Light or a shop piece from a friend's
-      profile; ≤ 3 a day; opened as a chest on Me / inbox. Migration `20261112210000_light_value.sql` (`rank_gifts`,
+      profile; ≤ 3 a day; opened as a chest on Me / inbox. Offline (owner 2026-11-24): a gift waits in the outbox (`sendLater(…, hold)`) and goes when back
+      online; its Light is held meanwhile (`heldLight()` in `wallet()`), a refusal releases it, a send records the purchase
+      (`outbox-done` in ranks.ts). Migration `20261112210000_light_value.sql` (`rank_gifts`,
       `rank_gift_send` / `_my_gifts` / `_open`; frames 0–19), pgTAP `light_value.test.sql` (22; other rank tests pin the
       multiplier to 1). (Learning time in lesson celebrations came from the Learn thread, #230.)
 - [x] M22 Feel + forgiving streak + honest progress (owner "yes yes yes", 2026-11-12): a soft paper swish + light tap on
@@ -2328,7 +2345,7 @@ duas/reflections section in Me.
       reward sounds rest, goal banners wait, the tab bar and Learn dock soften, and Next up offers the bedtime du'a once the
       flame is lit. **Big text and buttons** (Me → ⚙ → App, `html.easy`, localStorage `easyMode`): larger `--fs-*` and
       `--tap` tokens, chips, buttons, menu rows and tab icons
-      **What brings you here?** (since 2026-11-14 a full-page conversation, `openOnboarding()` in `src/ui/onboard.ts` + `onboard.css`, lazy: the user's own character — else the default one — speaks in a bubble word by word, its mouth and head moving; screens language (English / العربية, asked in both; a different pick reloads the app in it and the flow resumes at hello, sessionStorage `obResume`) → hello → two questions → what brings you here (pick any) → its answer → how many pages a day (1/2/5/10/20, minutes shown) → its own answer for each (holding a mushaf) → how much tasbih a day (33/100/300/1000/not now) → its own answer (holding the masbaha) → where did you hear about us (localStorage `heardFrom`, usage count `ev:heard-{source}`) → its own answer → the first goal with a flame; goals = the nearest pace as a base, then the pages and tasbih as answered, then `tailor()`; progress bar, back / Android back steps back, Skip on the questions; after the tour, once; localStorage `whyHere`,
+      **What brings you here?** (since 2026-11-14 a full-page conversation, `openOnboarding()` in `src/ui/onboard.ts` + `onboard.css`, lazy: the user's own character — else the default one — speaks in a bubble word by word, its mouth and head moving; screens language (English / العربية, asked in both; a different pick reloads the app in it and the flow resumes at hello, sessionStorage `obResume`) → hello → two questions → what brings you here (pick any) → its answer → how many pages a day (1/2/5/10/20, minutes shown) → its own answer for each (holding a mushaf) → how much tasbih a day (33/100/300/1000/not now) → its own answer (holding the masbaha) → where did you hear about us (localStorage `heardFrom`, usage count `ev:heard-{source}`) → its own answer → the first goal with a flame; goals = the nearest pace as a base, then the pages and tasbih as answered, then `tailor()`; progress bar, back / Android back steps back, Skip on the questions; left half way it picks up again (localStorage `obProgress`, device-only: screen + answers; the mushaf reopens it, within 7 days on that screen, later from the welcome screen with the answers kept; the next screen's character is built ahead while idle); after the tour, once; localStorage `whyHere`,
       synced): Read more / Memorise / Understand the meaning / Share ayat as reels / Remember Allah, any number; the pace sheet
       then recommends Steady for memorising, and the chosen pace leans towards the picks (`tailor()`: memorise → 1 ayah + 1 lesson
       a day, reels → 1 a week, dhikr → adhkar + 3 du'a lanterns); with every goal met, Next up offers the next lesson / reading
@@ -2520,6 +2537,40 @@ duas/reflections section in Me.
       `gifts-changed` and return (it was painted once before the account was restored). Preview harness `bench/gift.html?t=0..3`.
       **Try on**: room pieces preview in the room and the decorate sheet before buying (`setRoomTry()`, `roomLookShown()`,
       not saved); the shop card has Without / With it for character, room and look pieces
+- [x] M33 Unlock moments + What's coming (owner "Yes", 2026-11-24): the day the shop, the room or the wardrobe first appears
+      (`src/data/reveal.ts`), Me plays its moment once (`src/ui/unlock.ts` + `.css`, localStorage `unlockPlayed`): the user's
+      character walks up in the dark and it comes alive — the stall's lanterns light one by one, the room's door swings open on
+      warm light, the wardrobe's doors open on the clothes; HTML layers moved by transform / opacity only; the card names
+      tomorrow's stop. **What's coming** (`src/ui/coming.ts` + `.css`): the first week as a path (Day 1 flame, 2 listen along,
+      3 Light shop, 4 room, 5 wardrobe, 7 days in a row, level 5 app icon), passed stops lit, the user's bust at today's, the rest
+      grey with Tomorrow / In n days; in the onboarding (`coming` screen, new users), a Me card while anything is ahead (≤ day 8),
+      Me → ⚙ → What's coming, and a pop-up only the day before an unlock (owner: not daily; `comingShown`). Strings `co.*`, 30
+      languages. Preview: `bench/unlock.html?k=shop|room|wardrobe`, `?co=1`
+      **First screen like Duolingo** (owner "For both", 2026-11-24): a new install opens on `src/ui/firstScreen.ts` (+ `.css`; from
+      mushaf.ts's first visit) in the phone's language, with a small language switch (every interface language; another reloads
+      the app and the screen comes back): the character waves on the launch screen's violet, **Get started** → the onboarding
+      conversation (no language question any more) and **I already have an account** → Apple / Google sign-in, no questions, then
+      a **welcome back** (their character, streak, the next thing to unlock; "Bringing your progress…" until the first sync, ≤ 10 s;
+      sets `comebackSeen`). Web sign-in leaves the page: localStorage `fsSignIn` resumes it on return (`resumeSignIn()`). Signed
+      in, the first week counts from the account's creation (`Account.created`, `daysOpened()` in `reveal.ts`). Strings `fw.*`,
+      30 languages. Preview: `bench/unlock.html?fs=1`, `?fs=wb`
+      **Seven days of gifts** (owner request 2026-11-24, "a 7 days of a week popup … like many of the 4X games"; replaces
+      What's coming on Me, in Settings and in the onboarding; the day-before pop-up is gone): `src/data/weekGift.ts` +
+      `src/ui/weekGifts.ts` (+ `.css`, classes `gw-*`). A new user's **first week** is their own Day 1–7 (50 Light, a freeze,
+      100 + opens the shop, the date palm + opens the room, the lantern + opens the wardrobe, 150, 300 + the gold frame
+      `fr:2`); a missed day never resets it, and a taken tile opens its part at once (`giftsGot()` in reveal.ts, then its
+      unlock moment). After it, **every week Saturday → Friday** (owner: "Friday is the most important day"): 20, 25, a
+      freeze, 30, 35, 40, and Friday (Jumu'ah) 150; a day not opened fades as Missed, Friday's is always there; people who
+      used the app before it came in start here. The sheet pops up when the app opens while today's gift waits
+      (`maybeWeekGifts()` from rewards.ts, once a launch, never over another dialog, the studio or the Kids space); Claim →
+      the chest moment with exactly the tile's prize → the sheet again with the stamp landing. Credited once each (claim ids
+      `wg:0:{day}` / `wg:{saturday}:{weekday}`); localStorage `weekGift`, synced. Strings `wg.*`, 30 languages. Preview:
+      `bench/unlock.html?wg=1` or `?wg={state json}`; `?chest=N` a chest upgraded to ×N. **Weekly prizes** (owner 2026-11-24, no
+      streak repair anywhere): Sat 20 Light, Sun a lamp refill (`giftLamps()`), Mon 30, Tue Double Light for the next 3 chests
+      on Me (`useBoost()`, localStorage `lightBoost`), Wed 40, Thu lamps, Fri 150 + six lanterns lit by Sat → Thu; all six (days
+      before the calendar began not asked) → the week's **Jumu'ah frame** (`JUMUAH` fr:20–25 in turn, +100 Light if owned; shop →
+      Only to win, `wg.jmHow`) and a streak freeze. Migration `20261124200000_jumuah_frames.sql` (frames 0–25). Still to do: a
+      Thursday evening note; the rest of the collection's art once the owner picks a style
 - [ ] M5 Read-aloud page check (on-device speech recognition matched to the page; no audio kept)
 
 ### Phase 9 — Learn: the juz gardens (owner request 2026-11-02)

@@ -63,6 +63,8 @@ import { openPicker } from './todayCard';
 import { currentPlan, journeyState } from '../data/journeys';
 import { loadMushaf, type Mushaf } from '../data/mushaf';
 import { fe } from '../i18n/front';
+import { daysOpened, markRevealed, newReveal, revealed } from '../data/reveal';
+import { boostsLeft, giftsOn, useBoost } from '../data/weekGift';
 import { seasonCard } from './seasonCard';
 import { RISK_TIMES, nudgeSettings, setNudgeSettings } from './nudges';
 import { smartReminder } from '../data/usualTime';
@@ -101,6 +103,52 @@ const easyOn = () => document.documentElement.classList.contains('easy');
 function setEasy(on: boolean) {
   document.documentElement.classList.toggle('easy', on);
   try { localStorage.setItem('easyMode', on ? 'on' : 'off'); } catch { /* storage blocked */ }
+}
+
+/** Seven days of gifts (src/ui/weekGifts.ts): Me's card, kept current when a gift is taken. */
+function comingSlot(): HTMLElement | '' {
+  giftsOn(daysOpened());
+  const slot = h('div', { class: 'co-slot' });
+  void import('./weekGifts').then((m) => {
+    let el: HTMLElement | '' = slot;
+    const paint = () => {
+      if (el && !el.isConnected) return;
+      const next = m.weekGiftCard();
+      if (el && next) el.replaceWith(next);
+      else if (el) el.remove();
+      el = next;
+    };
+    paint();
+    window.addEventListener('weekgift-changed', paint);
+  });
+  return slot;
+}
+const unlockPlayed = (): string[] => { try { return JSON.parse(localStorage.getItem('unlockPlayed') ?? '[]'); } catch { return []; } };
+/** "New for you": the shop, the room or the wardrobe on the day it first appears (src/data/reveal.ts). */
+function revealCard(dressUp: (tab?: 'wardrobe') => void): HTMLElement | '' {
+  const k = newReveal();
+  if (!k) return '';
+  const done = () => { markRevealed(k); card.remove(); };
+  const go = () => {
+    done();
+    if (k === 'shop') void import('./shop').then((m) => m.openShop());
+    else if (k === 'room') location.hash = '#/me/room';
+    else dressUp('wardrobe');
+  };
+  const card = h('section', { class: 'me-card day-card rv-card' },
+    h('span', { class: 'day-card-n' }, fe('rv.new')),
+    h('b', {}, fe(`rv.${k}`)),
+    h('p', { class: 'muted small' }, fe(`rv.${k}Text`)),
+    h('div', { class: 'chips' },
+      h('button', { class: 'chip on', onclick: go }, fe('rv.open')),
+      h('button', { class: 'chip', onclick: done }, fe('rv.later'))));
+  // Its moment (src/ui/unlock.ts): once, a moment after Me shows, when nothing else is on screen.
+  if (!unlockPlayed().includes(k)) setTimeout(() => {
+    if (!card.isConnected || unlockPlayed().includes(k) || document.querySelector('dialog[open], .cel')) return;
+    try { localStorage.setItem('unlockPlayed', JSON.stringify([...unlockPlayed(), k])); } catch { /* storage blocked */ }
+    void import('./unlock').then((m) => m.playUnlock(k, go, done));
+  }, 1200);
+  return card;
 }
 
 /** The doors on Me open these full screens: #/me/room, #/me/prayer, #/me/stats, #/me/library. */
@@ -206,7 +254,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     try { code = localStorage.getItem('rankFigure') || null; } catch { /* ignore */ }
     b.openBuilder({ figure: code, wins: 0 }, () => { actorTried = false; meActor?.el.remove(); meActor = null; hero.querySelector('.me-ghost')?.remove(); placeActor(true); paintRoom(); }, tab);
   });
-  void import('./wardrobeCard').then((m) => {
+  if (revealed('wardrobe')) void import('./wardrobeCard').then((m) => {
     const c = m.wardrobeCard(() => dressUp('wardrobe'));
     if (c) wardrobeSlot.replaceChildren(c);
   });
@@ -445,7 +493,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
       // A tap greets you, then goes into the room.
-      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); setTimeout(() => { location.hash = '#/me/room'; }, 420); });
+      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); if (revealed('room')) setTimeout(() => { location.hash = '#/me/room'; }, 420); });
       hero.append(a.el);
       // Me kept alive between tab taps (main.ts): it greets you again each time you come back to it.
       root.addEventListener('screen-shown', () => setTimeout(() => { if (a.el.isConnected) (look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()); }, 250));
@@ -506,7 +554,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       first ? h('span', { class: 'me-flame-aura', 'aria-hidden': 'true' }) : '', flame(tier, 104, reduced), first ? '' : freezeBadge(s));
     hero.classList.toggle('first', first);
     hero.replaceChildren(
-      hasFig() ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
+      hasFig() && revealed('room') ? h('a', { class: 'me-room-btn', href: '#/me/room', 'aria-label': mpt('mp.room') }, roomIcon(), h('span', {}, mpt('mp.roomBtn'))) : '',
       h('div', { class: 'me-top' },
         flameBox,
         h('div', { class: 'me-top-txt' },
@@ -559,12 +607,22 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   };
   const openAdhkarSession = (p: 's' | 'm') => { haptic(); void import('./adhkar').then((m) => m.openAdhkar(p)); };
   // A chest: its Light, and now and then a surprise inside (double the Light), shown as a prize of its own.
-  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element) => {
-    const x = surprise(id);
-    const n = base * x;
+  const rollUp = (id: string) => {
+    const r = Math.random();
+    return Math.max(surprise(id), r < 1 / 70 ? 4 : r < 1 / 70 + 1 / 20 ? 3 : r < 1 / 70 + 1 / 20 + 1 / 7 ? 2 : 1);
+  };
+  const openChest = (id: string, base: number, m: { title: string; sub: string; kicker?: string }, from?: Element, up?: number) => {
+    // Tapping can upgrade the chest (owner 2026-11-24, "like Brawl Stars", ×4 the rarest): ×2 about 1 in 7, ×3 1 in 20,
+    // ×4 1 in 70; a day's seeded surprise is at least ×2. Only ever adds Light, never costs any.
+    const x = up ?? rollUp(id);
+    // Double Light from the gift calendar: the next chests hold twice their Light (taken as the chest opens).
+    const b = useBoost();
+    const n = base * x * b;
+    const tag = (txt: string, label: string) => ({ kind: 'item' as const, art: h('span', { class: 'cel-x2' }, txt), label, rare: true });
+    const extra = [...(x > 1 ? [tag(`×${x}`, fe('ch.up', { n: x }))] : []), ...(b > 1 ? [tag('×2', fe('wg.boostOn'))] : [])];
     return play(
       () => import('./celebrate').then((c) => c.celebrate({ kind: 'chest', ...m,
-        loot: x > 1 ? [{ kind: 'light', n }, { kind: 'item', art: h('span', { class: 'cel-x2' }, '×2'), label: mt('mt.cel.surprise'), rare: true }] : undefined }, from, n)),
+        loot: extra.length ? [{ kind: 'light', n }, ...extra] : undefined, up: x }, from, n)),
       () => claimGoal(id, n));
   };
   // Fewer, bigger moments: one daily goal is a quiet tick (the chest pops open where it is and its Light flies to the
@@ -590,9 +648,13 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       void import('./nudges').then((m) => m.maybeAskNudges());
     }
   };
-  const claimGoalRow = (g: GoalProgress, from?: Element) => !g.week && from && surprise(g.id) === 1
-    ? quietChest(g.id, lightFor(g), from)
-    : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from);
+  const claimGoalRow = (g: GoalProgress, from?: Element) => {
+    // A daily goal opens quietly in place, unless its chest got upgraded or Double Light is on: then the full moment.
+    const x = rollUp(g.id);
+    return !g.week && from && x === 1 && !boostsLeft()
+      ? quietChest(g.id, lightFor(g), from)
+      : openChest(g.id, lightFor(g), { title: goalLabel(g), sub: t('cel.goalSub') }, from, x);
+  };
   const claimAll = (from?: Element) => openChest('all', ALL_LIGHT, { title: t('cel.allTitle'), sub: t('cel.allSub'), kicker: t('cel.all') }, from);
   const claimKahf = (from?: Element) => openChest('kahf', KAHF_LIGHT, { title: mpt('mp.fri.kahf'), sub: mpt('mp.fri.kahfDone'), kicker: mpt('mp.fri.title') }, from);
   const claimBadgeNow = (b: BadgeDef, from?: Element) => {
@@ -688,7 +750,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const list = waitingChests();
     if (list.length < 2) return;
     haptic();
-    for (const c of list) c.light *= surprise(c.id);
+    for (const c of list) c.light *= surprise(c.id) * useBoost();
     void play(() => import('./harvest').then((m) => m.harvest(list)), () => { for (const c of list) claimGoal(c.id, c.light); });
   };
   const harvestBtn = () => {
@@ -1123,7 +1185,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const got = all.filter((b) => b.earned).length;
     const tap = (b: BadgeState) => (e: Event) => (b.earned && !badgeDone(b.def.id) ? void claimBadgeNow(b.def, e.currentTarget as Element) : openBadge(b));
     const tile = (b: BadgeState) => h('button', { class: `bd-tile t-${b.def.tier}${b.earned ? ' earned' : ''}`, onclick: tap(b) },
-      badgeArt(b.def.tier, b.def.icon, !!b.earned, 68),
+      badgeArt(b.def.tier, b.def.icon, !!b.earned, 68, true),
       h('span', { class: 'bd-name' }, badgeName(b.def)),
       b.earned ? '' : h('span', { class: 'bd-mini' }, h('span', { style: `width:${Math.round((100 * b.have) / b.def.need)}%` })));
     // One row per family: its five tiers, and a bar towards the next one.
@@ -1137,7 +1199,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
           h('span', { class: 'muted small' }, next ? bt('step', { tier: tierName(next.def.step) }) : bt('all'))),
         // F42: what is earned and the next medal only, not five grey ones.
         h('div', { class: 'bdf-tiers' }, ...list.filter((b) => b.earned || b === next).map((b) => h('button', { class: `bdf-t${b.earned ? ' earned' : ''}${b === next ? ' next' : ''}`, 'aria-label': badgeName(b.def), onclick: tap(b) },
-          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60),
+          badgeArt(b.def.tier, b.def.icon, !!b.earned, 60, true),
           b.earned && !badgeDone(b.def.id) ? h('i', { class: 'bdf-dot', 'aria-hidden': 'true' }) : ''))),
         next ? h('div', { class: 'bdf-bar' }, h('span', { style: `width:${Math.round((100 * next.have) / next.def.need)}%` }),
           h('b', {}, next.def.fam === 'league' ? badgeGoal(next.def) : `${next.have.toLocaleString()} / ${next.def.need.toLocaleString()}`)) : '');
@@ -1155,7 +1217,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         const got = rows.flat().filter((b) => b.earned).sort((a, b) => (b.earned! > a.earned! ? 1 : -1));
         return [h('details', { class: 'bdf-fold' },
           h('summary', {}, h('b', { class: 'bdf-group' }, bt(`g.${g}` as BadgeKey)),
-            h('span', { class: 'bdf-peek', 'aria-hidden': 'true' }, ...got.slice(0, 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 26))),
+            h('span', { class: 'bdf-peek', 'aria-hidden': 'true' }, ...got.slice(0, 4).map((b) => badgeArt(b.def.tier, b.def.icon, true, 26, true))),
             h('span', { class: 'muted small' }, `${got.length} / ${rows.flat().length}`),
             h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, icon('down', 18))),
           ...rows.map(famRow))];
@@ -1396,7 +1458,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         lightChip(),
         inboxBell(),
         h('a', { class: 'icon-btn me-gear', href: '#/me/settings', 'aria-label': t('me.settings'), title: t('me.settings') }, icon('gear', 22))),
-      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
+      prayerStrip, hero, syncLine, safeCard, dayCard() ?? nextBox, revealCard(dressUp), comingSlot(), storySlot, waitRow, wardrobeSlot, claimSlot, giftSlot, goalsBox, duaBox, duaAsk, ayahSlot, doors, seasonCard() ?? '',
       tabBar('me'));
     if (!dayOne) void widgetHint().then((card) => { if (card && hero.isConnected) hero.after(card); });
     // Quieter Me (front-end backlog): of the extra cards that come and go (the week's story, a new app icon, the
@@ -1588,6 +1650,11 @@ export function showMeSettings(root: HTMLElement, at?: string): () => void {
       row('notes', 'bell', t('set.rowNotes'), t('set.rowNotesSub')),
       row('quran', 'crescent', t('menu.gYours'), t('set.rowQuran')),
       row('app', 'gear', t('set.app'), t('set.rowApp')),
+      // Seven days of gifts (owner request 2026-11-24), any time
+      h('button', { class: 'set-row set-co', onclick: () => void import('./weekGifts').then((m) => m.openWeekGifts()) },
+        h('span', { class: 'set-row-ic s-coming', 'aria-hidden': 'true' }, icon('calendar', 22)),
+        h('span', { class: 'set-row-txt' }, h('b', {}, fe('wg.title')), h('span', { class: 'muted small' }, fe('wg.doorSub'))),
+        icon('right', 18)),
       // Send feedback (owner request 2026-11-16): its own row in settings
       h('button', { class: 'set-row set-fb', onclick: () => void import('./feedback').then((m) => m.openFeedback()) },
         h('span', { class: 'set-row-ic s-feedback', 'aria-hidden': 'true' }, icon('feedback', 22)),

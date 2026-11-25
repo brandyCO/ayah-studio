@@ -33,7 +33,9 @@ import { rewardPalette, rgba } from './theme';
 import './cel.css';
 import './celebrate.css';
 import { actor as makeActor } from './actor';
-import { edge, freezeArt, svgOf, two } from './flat';
+import { freezeArt, svgOf } from './flat';
+import { edge, two } from './roomHQ';
+import { flare, type Rarity } from './flare';
 import { bump, combo, drop, holdPage, uncover, noor as makeNoor, own, popIn, squash, takeOver, tick as tickNum } from './juice';
 import { sfx, warmSounds } from './sfx';
 import { warmGesture } from './rig';
@@ -45,7 +47,9 @@ let P = rewardPalette();
 
 export type Moment =
   | { kind: 'lantern' | 'star'; title: string; sub: string; kicker?: string; stats?: MomentStat[] }
-  | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[] }
+  /** `up`: what taps upgrade the chest to on the way (×2, ×3, ×4; owner 2026-11-24, "like Brawl Stars"). Decided by the
+   *  caller before the moment, so what is credited is what was shown; the loot's Light already includes it. */
+  | { kind: 'chest'; title: string; sub: string; kicker?: string; loot?: Loot[]; up?: number }
   | { kind: 'flame'; badge: BadgeDef; days: number }
   | { kind: 'rosette' | 'medal' | 'khatm'; badge: BadgeDef }
   /** A Hifz badge earned (step 0) or climbed to `step` from `from`. */
@@ -372,13 +376,20 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   // a little more), and it may lift its lid and slam shut again once before it gives. What is inside never
   // changes and is always shown afterwards; only the opening is uncertain.
   const [lo, hi] = CHEST_TAPS[tier];
-  const least = Math.max(2, lo - (roll ? 1 : 0)), most = Math.max(least + 1, hi - (roll ? 1 : 0));
+  const up = m.kind === 'chest' ? Math.max(1, Math.min(4, Math.round(m.up ?? 1))) : 1;
+  const least = Math.max(2, lo - (roll ? 1 : 0), up), most = Math.max(least + 1, hi - (roll ? 1 : 0));
   const need = least + Math.random() * (most - least);
   const almostAt = most >= 4 && Math.random() < (tier >= 2 ? 0.85 : 0.55) ? 0.5 + Math.random() * 0.3 : 2;
   const jolt = isChest ? h('div', { class: 'cel-chest-jolt' }, chestArt(tier), crackArt()) : null;
+  // Upgrades: on some of the taps before it can open (picked at random), the chest flares and its badge climbs
+  // ×2 → ×3 → ×4; when it opens, the extra chests drop in beside it.
+  const upAt = new Set<number>();
+  while (upAt.size < up - 1) upAt.add(1 + Math.floor(Math.random() * (least - 1)));
+  const upAura = up > 1 ? h('span', { class: 'cel-up-aura', 'aria-hidden': 'true' }) : null;
+  const upBadge = up > 1 ? h('span', { class: `cel-up${still ? ` u${up} on` : ''}`, 'aria-hidden': 'true' }, still ? `×${up}` : '') : null;
   // The idle nudge (CSS) on its own layer around the jolt (taps, squashes): one motion per layer, so the graphics
   // chip moves both (motion engine pass 2026-11-19; the chest lagged on slow phones).
-  const chestBox = isChest ? h('div', { class: 'cel-chest-box' }, h('div', { class: 'cel-chest-nudge' }, jolt!)) : null;
+  const chestBox = isChest ? h('div', { class: `cel-chest-box${still && up > 1 ? ` u${up}` : ''}` }, upAura ?? '', h('div', { class: 'cel-chest-nudge' }, jolt!), upBadge ?? '') : null;
   const hit = isChest ? h('button', { class: 'cel-chest-hit', 'aria-label': t('cel.tapOpen') }) : null;
   const tapLine = h('span', {}, t('cel.tapOpen'));
   // The Light inside counts up when it lands; the other prizes carry their own picture and name.
@@ -591,8 +602,11 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       el.classList.remove('charging');
       if (epic) el.classList.add('epic');
       fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24 + epic * 40, 0.95 + tier * 0.1 + epic * 0.15);
+      { const s0 = sb ?? stage.getBoundingClientRect(); flare(stage, Math.min(4, tier + (epic ? 1 : 0)) as Rarity, { x: b.left + b.width / 2 - s0.left, y: b.top + b.height * 0.42 - s0.top, size: s0.width * 1.5, under: true, hold: 0 }); }
       if (epic) later(260, () => fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 50 + epic * 20, 1.1));
-      later(roll ? 400 : 650 + epic * 250, pour);
+      const extra = up > 1 ? 480 + (up - 1) * 300 : 0;
+      if (up > 1) { const s0 = sb ?? stage.getBoundingClientRect(); later(380, () => twins(s0, k)); }
+      later((roll ? 400 : 650 + epic * 250) + extra, pour);
     };
     const paths = jolt ? [...jolt.querySelectorAll<SVGPathElement>('.cel-crack path:not(.seam)')] : [];
     let force = 0, lastTap = 0, almostDone = false, strainT = 0, hint = '';
@@ -658,6 +672,57 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         el.classList.remove('almost');
       });
     };
+    let level = 1;
+    const upgrade = (b: DOMRect, k: DOMRect) => {
+      level++;
+      upBadge!.textContent = `×${level}`;
+      upBadge!.className = `cel-up u${level} on`;
+      chestBox!.classList.remove(`u${level - 1}`);
+      chestBox!.classList.add(`u${level}`);
+      own(upBadge!);
+      upBadge!.animate([{ scale: '0', rotate: '-30deg' }, { scale: '1.6', rotate: '8deg', offset: 0.45 }, { scale: '.9', rotate: '-3deg', offset: 0.7 }, { scale: '1', rotate: '0deg' }], { duration: 520, easing: 'ease-out' });
+      own(upAura!);
+      upAura!.animate([{ scale: '.4', opacity: 0 }, { scale: '1.35', opacity: 1, offset: 0.3 }, { scale: '1', opacity: 0.85 }], { duration: 700, easing: 'ease-out' });
+      const cx = b.left + b.width / 2 - k.left, cy = b.top + b.height * 0.45 - k.top;
+      fx?.burst(cx, cy, 40 + level * 20, 0.9 + level * 0.15);
+      later(140, () => fx?.burst(cx, cy, 24 + level * 10, 1.1));
+      sfx.rare(260 + level * 90);
+      later(120, () => sfx.shimmer());
+      vibrate(level >= 4 ? [30, 60, 30, 60, 40] : [24, 50, 24]);
+      me?.face('wow', 1200);
+      me?.hop(1);
+      nr?.cheer();
+      hint = '';
+      tapLine.textContent = `×${level}!`;
+      bump(tapLine, 0.5);
+    };
+    // The extra chests (one for each step up) drop in beside it and burst open one after another.
+    const TWIN_AT = [[0.96, 0.7], [0.04, 0.7], [0.5, -0.06]];
+    const twins = (s: DOMRect, k: DOMRect) => {
+      for (let i = 0; i < up - 1; i++) {
+        const [fx0, fy0] = TWIN_AT[i];
+        const tj = h('div', { class: 'cel-chest-jolt' }, chestArt(tier));
+        const box = h('div', { class: `cel-chest-box cel-twin u${up}`, style: `left:${(fx0 - 0.27) * 100}%;top:${(fy0 - 0.27) * 100}%` }, tj);
+        later(i * 300, () => {
+          stage.append(box);
+          tj.animate([
+            { transform: 'translateY(-160%) scale(.7, 1.3)', opacity: 0 },
+            { transform: 'translateY(6%) scale(1.28, .74)', opacity: 1, offset: 0.55 },
+            { transform: 'translateY(-6%) scale(.92, 1.08)', offset: 0.78 },
+            { transform: 'none' },
+          ], { duration: 560, easing: 'cubic-bezier(.4, 0, .6, 1)' });
+          sfx.whoosh();
+          later(330, () => {
+            box.classList.add('open');
+            const x = s.left + s.width * fx0 - k.left, y = s.top + s.height * fy0 - k.top;
+            fx?.burst(x, y, 50, 0.95);
+            sfx.open(1, tier);
+            vibrate([18, 40, 18]);
+            me?.hop(0.6);
+          });
+        });
+      }
+    };
     const tapChest = (x: number | null, y: number | null) => {
       if (isOpen) return;
       // Where the chest has got to, read first, while nothing has changed since the last frame (read after the
@@ -703,6 +768,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       paths.forEach((q, i) => q.classList.toggle('on', i < lit));
       // Only on what reads it: set on the stage, the change restyled every node of the character too.
       for (const n of crackOn) n.style.setProperty('--crack', String(p));
+      if (upAt.has(taps)) upgrade(b, k);
       if (doAlmost) { almost(b, k); strain(); return; }
       if (!done) { setHint(p >= 0.62 ? 'cel.tapNear' : 'cel.tapMore'); strain(); return; }
       clearTimeout(strainT);
@@ -808,6 +874,11 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
         for (const c of el.querySelectorAll<HTMLElement>('.cel-flash, .cel-sweep')) for (const a of c.getAnimations()) { a.cancel(); a.play(); }
       }) : 0;
       const at0 = (f: () => void) => (up ? later(up, f) : f());
+      // The illustrated flare of the moment's rarity (flare.ts); the chest has its own when it opens.
+      if (!isChest) {
+        const rar = (isBadge ? bstep : m.kind === 'flame' ? (m.days >= 30 ? 3 : 2) : m.kind === 'star' ? 2 : 1) as Rarity;
+        at0(() => flare(stage, rar, { size: sb0.width * 1.5, under: true, hold: rar >= 3 ? 0 : 2600 }));
+      }
       if (bstep >= 3) at0(() => {
         el.classList.add('epic');
         later(280, () => fx?.burst(sb0.left + sb0.width / 2 - cr.left, sb0.top + sb0.height / 2 - cr.top, 70 + (bstep - 3) * 50, 1.25 + (bstep - 3) * 0.2));

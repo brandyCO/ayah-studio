@@ -20,7 +20,7 @@ function literal(src, start, file) {
 const out = {};
 out.core = literal(read('src/i18n/en.ts'), 'const en = {', 'en.ts');
 out.studio = literal(read('src/i18n/enStudio.ts'), 'const studio = {', 'enStudio.ts');
-for (const m of ['adhkar', 'badges', 'challenges', 'daily', 'friends', 'front', 'notifs', 'news', 'lampWall', 'learn', 'mePages', 'media', 'moments', 'ranks', 'season', 'shop']) {
+for (const m of ['adhkar', 'badges', 'challenges', 'daily', 'device', 'friends', 'front', 'notifs', 'news', 'lampWall', 'learn', 'mePages', 'media', 'moments', 'ranks', 'season', 'shop']) {
   out[m] = literal(read(`src/i18n/${m}.ts`), 'const en = {', `${m}.ts`);
 }
 out.noor = literal(read('src/ui/noor.ts'), 'const en = {', 'noor.ts');

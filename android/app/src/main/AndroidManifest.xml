@@ -17,13 +17,21 @@
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:exported="true">
-            <!-- Shared links (https://…/i/#/route, src/native.ts shareableLink) open the app when it is installed;
+            <!-- Shared links (https://…/i/#/route and the preview paths /s/11/90, /rf/CODE…, src/native.ts shareableLink) open the app when it is installed;
                  verified by public/.well-known/assetlinks.json. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="ayah-studio.brandlift-888.workers.dev" android:pathPrefix="/i" />
+                <data android:pathPrefix="/s/" />
+                <data android:pathPrefix="/t/" />
+                <data android:pathPrefix="/rf/" />
+                <data android:pathPrefix="/rc/" />
+                <data android:pathPrefix="/rb/" />
+                <data android:pathPrefix="/bp/" />
+                <data android:pathPrefix="/relight/" />
+                <data android:pathPrefix="/join/" />
             </intent-filter>
         </activity>
 

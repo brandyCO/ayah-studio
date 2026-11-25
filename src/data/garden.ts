@@ -12,6 +12,7 @@
 // Kept on this device (localStorage `garden`) and, when signed in, synced as one document merged per
 // tree / decoration / purchase (the newest change wins; purchases are never undone).
 import { stats } from './journey';
+import { heldLight } from '../together/outbox';
 import type { Mushaf } from './mushaf';
 
 export type ChunkSize = 1 | 2 | 3 | 5 | 'half' | 'page';
@@ -157,7 +158,7 @@ export const unplacedDecos = (): Readonly<Deco>[] => Object.values(load().decos)
 export const ownsVariety = (s: number, v: number) => v === 0 || load().owned[`v:${s}:${v}`] !== undefined;
 export const spent = () => Object.values(load().owned).reduce((a, b) => a + b, 0);
 /** Light to spend: everything earned (all devices) minus what was spent here and in the Ranks shop. */
-export const wallet = () => Math.max(0, stats('all').light - spent());
+export const wallet = () => Math.max(0, stats('all').light - spent() - heldLight());
 // The Ranks shop (src/data/shop.ts) keeps its purchases here too (`s:…` ids), so they sync and merge
 // like the garden's: a purchase counts once, freezes kept and used are ids that only ever get added.
 export const shopHas = (id: string) => load().owned[`s:${id}`] !== undefined;

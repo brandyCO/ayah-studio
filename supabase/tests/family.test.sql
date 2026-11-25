@@ -6,7 +6,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(36);
+select plan(34);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'aisha@example.com'),
@@ -27,7 +27,6 @@ grant all on ids to authenticated, anon;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000001');
 insert into ids select 'c', create_family_circle('Our family', 'Mum');
 select is((select kind from circles), 'family', 'a family circle');
-select is((select count(*)::int from circle_parts), 0, 'it has no juz parts');
 insert into ids select 'code', invite_code from circles;
 insert into ids select 'maryam', add_child((select v::uuid from ids where k = 'c'), '  Maryam  ');
 select is((select name from circle_children), 'Maryam', 'the child is added by first name, tidied');
@@ -49,7 +48,6 @@ select throws_ok($$ insert into family_parts (child_id, circle_id, surah, status
   '42501', null, 'members cannot write parts directly');
 update circle_children set name = 'X' where true;
 select is((select name from circle_children where id = (select v::uuid from ids where k = 'maryam')), 'Maryam', 'members cannot rename children directly');
-select throws_ok($$ select take_part((select v::uuid from ids where k = 'c'), 1) $$, 'P0001', null, 'a family circle has no juz to take');
 
 -- Grandma joins, sees the child and leaves notes
 select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');

@@ -17,6 +17,7 @@ import { nwt } from '../i18n/news';
 import type { Gift } from '../together/lightGifts';
 
 import { bow, front, giftTier, hueOf, inside, lid, mouth, pal, svg, type GiftTier } from './giftArt';
+import { flare } from './flare';
 export { giftTier, type GiftTier };
 const TAPS = [1, 2, 2, 3];
 const SIZE = [180, 215, 250, 285];
@@ -230,6 +231,7 @@ async function run(g: Gift, o: PlayOpts): Promise<boolean> {
         if (pillar) anim(pillar, [{ opacity: 0, transform: 'scaleY(0)' }, { opacity: 1, transform: 'scaleY(1)' }], 700, 520);
         anim(rays, [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)' }], 900, 640);
       }
+      flare(stage, ([1, 2, 3, 4] as const)[t], { y: gift.offsetTop + gift.offsetHeight / 2, size: Math.min(520, stage.clientWidth * 1.2), under: true, hold: t >= 2 ? 0 : 2600 });
       if (parts.mouth) anim(parts.mouth, [{ opacity: 0 }, { opacity: 1 }], 200, t === 1 ? 140 : 260);
       if (t < 2) anim(rays, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: 0.55, transform: 'scale(1)' }], 600, 200);
       if (!slow && !still) rays.classList.add('turn');

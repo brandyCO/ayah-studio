@@ -294,8 +294,6 @@ later(() => setTimeout(() => {
   };
   if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
 }, 2500));
-// The onboarding's language screen reloads the app in the language picked; carry on where it was.
-try { if (sessionStorage.getItem('obResume')) void import('./ui/onboard').then((m) => setTimeout(() => m.openOnboarding(true), 500)); } catch { /* private */ }
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./appLinks'); // a shared link opened the app: go to its route
 if (isIOS()) void import('./iosHaptics').then((m) => m.installIosHaptics()); // taps felt on the iPhone too

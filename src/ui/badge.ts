@@ -8,7 +8,8 @@
 //            three stones, ice laurels, sapphire ribbons, twinkling glints
 // Locked badges are drawn in grey. SVG + CSS only.
 import type { BadgeIcon, BadgeTier } from '../data/badges';
-import { circlePath, edge, shine, starPath, two } from './flat';
+import { circlePath, shine, starPath } from './flat';
+import { edge, two } from './roomHQ';
 import { restOffscreen } from './offscreen';
 
 /** How far up the five steps a tier sits. */
@@ -233,18 +234,36 @@ function draw(rank: number, ic: BadgeIcon, id: string): string {
 const SCALE = [0.78, 0.86, 0.94, 1, 1];
 let uid = 0;
 
-export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size = 72): HTMLElement {
+const pics = new Map<string, string>();
+/** The medallion alone as a picture URL (made once per tier and icon), with a 20-unit margin for its glows. */
+export function badgePic(tier: BadgeTier, ic: BadgeIcon, earned = true): string {
+  const key = `${tier}|${ic}|${earned ? 1 : 0}`;
+  let src = pics.get(key);
+  if (!src) {
+    const rank = RANK[tier], k = SCALE[rank], tx = 50 - 50 * k, ty = 50 - 50 * k + (1 - k) * 4;
+    src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 140 140" width="140" height="140"><defs><radialGradient id="bdg"><stop offset="0" stop-color="#bff0ff" stop-opacity=".9"/><stop offset=".55" stop-color="#9fe3fb" stop-opacity=".35"/><stop offset="1" stop-color="#9fe3fb" stop-opacity="0"/></radialGradient></defs><g transform="translate(${f(tx)} ${f(ty)}) scale(${k})">${draw(rank, ic, 'bd')}</g></svg>`)}`;
+    if (pics.size > 200) pics.clear();
+    pics.set(key, src);
+  }
+  return src;
+}
+/** `pic`: the medallion as one picture (made once per tier and icon, still vector) instead of ~100 SVG nodes, for
+ *  screens that show many (a profile's shelf, Stats & badges); its shine and glints still pass over it. */
+export function badgeArt(tier: BadgeTier, ic: BadgeIcon, earned: boolean, size = 72, pic = false): HTMLElement {
   const rank = RANK[tier];
-  const id = `bd${++uid}`;
+  const id = pic ? 'bd' : `bd${++uid}`;
   const el = document.createElement('span');
   el.className = `badge-art t-${tier}${earned ? ' earned' : ' locked'}`;
   el.style.width = el.style.height = `${size}px`;
   el.setAttribute('aria-hidden', 'true');
   const k = SCALE[rank], tx = 50 - 50 * k, ty = 50 - 50 * k + (1 - k) * 4;
-  el.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">
+  const svg = (x = '') => `<svg${x} viewBox="0 0 100 100" width="100%" height="100%">
     <defs><radialGradient id="${id}g"><stop offset="0" stop-color="#bff0ff" stop-opacity=".9"/><stop offset=".55" stop-color="#9fe3fb" stop-opacity=".35"/><stop offset="1" stop-color="#9fe3fb" stop-opacity="0"/></radialGradient></defs>
     <g transform="translate(${f(tx)} ${f(ty)}) scale(${k})">${draw(rank, ic, id)}</g>
-  </svg>${earned ? '<span class="bd-shine-l"><i class="bd-shine"></i></span>' : ''}${earned && rank === 4 ? GLINTS.map(([x, y, d]) => `<i class="bd-glint" style="left:${x}%;top:${y}%;animation-delay:${d}s"></i>`).join('') : ''}`;
+  </svg>`;
+  // The picture has a margin of 20 % on every side: the glows spill past the medallion as the drawn one does.
+  const art = pic ? `<img class="bd-pic" src="${badgePic(tier, ic, earned)}" alt="" draggable="false" decoding="async">` : svg();
+  el.innerHTML = `${art}${earned ? '<span class="bd-shine-l"><i class="bd-shine"></i></span>' : ''}${earned && rank === 4 ? GLINTS.map(([x, y, d]) => `<i class="bd-glint" style="left:${x}%;top:${y}%;animation-delay:${d}s"></i>`).join('') : ''}`;
   if (earned) { (el.querySelector('.bd-shine-l') as HTMLElement).style.cssText = shineMask(rank, k, tx, ty); restOffscreen(el); }
   return el;
 }
