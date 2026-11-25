@@ -26,11 +26,13 @@ export function sentry(): Promise<SentryMod | null> {
       tracesSampleRate: 0,
       // A share of the error reports is plenty to see a problem, and keeps a large crowd within the
       // free plan. VITE_SENTRY_RATE (0–1) changes it; default 0.25. (Feedback is never sampled.)
-      sampleRate: Math.min(1, Math.max(0, Number(import.meta.env.VITE_SENTRY_RATE) || 0.25)),
+      // Sampled in beforeSend instead of sampleRate, so reports of the app being closed (sendExits) always go.
+      sampleRate: 1,
       // Addresses can hold a draft id or a page: keep only the screen ("#/reel", "#/s"). No crash reports
       // from a dev server (feedback sent while testing still goes out).
       beforeSend(event) {
         if (!import.meta.env.PROD) return null;
+        if (!event.tags?.exit && Math.random() >= RATE) return null;
         if (event.request?.url) event.request.url = event.request.url.replace(/#\/([a-z]+).*/, '#/$1');
         return event;
       },
@@ -38,6 +40,32 @@ export function sentry(): Promise<SentryMod | null> {
     });
     return Sentry;
   }).catch(() => { loading = null; return null; /* offline: no reports this time */ });
+}
+
+const RATE = Math.min(1, Math.max(0, Number(import.meta.env.VITE_SENTRY_RATE) || 0.25));
+
+type Exit = { reason: string; description: string; time: number; importance?: string; status?: number;
+  pssKb?: number; rssKb?: number; process?: string; trace?: string; rendererPriority?: string };
+
+/** Android: why the app was closed last time when it was not the user (crash, native crash, hang, the page's renderer
+ *  dying, killed for memory or by the phone's battery manager). The browser SDK cannot see those (owner 2026-11-24:
+ *  "suddenly it forced stop", nothing in Sentry); ExitsPlugin.java keeps them and they go here once, never sampled. */
+async function sendExits(S: NonNullable<Awaited<ReturnType<typeof sentry>>>) {
+  const { Capacitor, registerPlugin } = await import('@capacitor/core');
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('Exits')) return;
+  const Exits = registerPlugin<{ take(): Promise<{ exits: Exit[]; sdk: number; maker: string; model: string; ramMb: number; lowRamDevice: boolean }> }>('Exits');
+  const r = await Exits.take().catch(() => null);
+  if (!r) return;
+  for (const e of r.exits) {
+    S.withScope((scope) => {
+      scope.setLevel('fatal');
+      scope.setTags({ exit: e.reason, exit_when: e.importance ?? '', android_sdk: String(r.sdk), maker: r.maker });
+      scope.setContext('exit', { ...e, trace: undefined, at: new Date(e.time).toISOString(), model: r.model, ramMb: r.ramMb, lowRamDevice: r.lowRamDevice });
+      if (e.trace) scope.setExtra('anr_trace', e.trace);
+      scope.setFingerprint(['app-exit', e.reason]);
+      S.captureMessage(`App closed: ${e.reason}${e.description ? ` (${e.description.slice(0, 120)})` : ''}`);
+    });
+  }
 }
 
 export function initErrors() {
@@ -54,6 +82,7 @@ export function initErrors() {
     removeEventListener('error', onError);
     removeEventListener('unhandledrejection', onReject);
     if (S) for (const e of early.splice(0)) S.captureException(e);
+    if (S) void sendExits(S).catch(() => {});
   });
   setTimeout(() => {
     if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 5000 });
