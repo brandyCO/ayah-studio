@@ -1421,6 +1421,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       The ★ sheets moved to `src/ui/favourite.ts` (lazy; `favStar.ts`). First-load budget 141 KB
       **Onboarding reciters** (owner request 2026-11-12): the first-launch welcome (`src/ui/welcome.ts`) lists every reciter
       like the player's picker — one row per reciter with his recordings as chips, ▶ preview, a search box
+- [x] Link previews per shared link (owner request 2026-11-25, "a banner for each invitation link, each unique on its own"):
+      `shareableLink()` (`src/native.ts`) shares ayah / surah / reel-look / invite addresses as real paths on the web app
+      (`{PUBLIC_URL}s/11/90`, `rf/CODE`, `rc/`, `rb/`, `bp/`, `relight/`, `join/`, `t/`; `?l=ar` in the Arabic UI), since link
+      previews never see a `#`. The `ayah-studio` worker runs `files/share.js` for those paths only (`files/wrangler.site.toml`,
+      `run_worker_first`): a small page with its own og:title / description / image that sends the visitor to `#/…`; invites
+      name the inviter from the anon preview functions (≤ 1.5 s). Banners by `scripts/make-share-cards.mjs` (Chromium, KFGQPC,
+      text never cut — an ayah too long for 1200×630 shows its surah name instead): `og/a/{s}/{a}.jpg` (6236), `og/s/{s}.jpg`,
+      `og/k/{kind}.jpg`, `og/m/{s}.json`; made in pages.yml's `cloudflare` job, cached by a hash of the script, text and fonts.
+      The service worker never keeps a share page as the app (`SHARE` in `public/sw.js`)
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
