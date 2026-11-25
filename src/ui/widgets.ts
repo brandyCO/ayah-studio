@@ -153,7 +153,7 @@ export async function setDhikrReminders(times: string[], ask = true): Promise<bo
         id: REMIND_IDS[REMINDER_TIMES.indexOf(time as (typeof REMINDER_TIMES)[number])],
         title: t('rem.title'), body: t('rem.body'), smallIcon: 'ic_stat_crescent',
         schedule: { on: { hour, minute }, allowWhileIdle: true },
-        extra: { hash: '#/me' },
+        extra: { hash: '#/me/tasbih' },
       };
     }),
   });
@@ -182,11 +182,7 @@ export function initWidgets() {
   refresh();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   for (const ev of ['journey-changed', 'prayer-changed', 'readlog-changed', 'theme-changed']) window.addEventListener(ev, () => syncWidgets());
-  void import('@capacitor/local-notifications').then(({ LocalNotifications }) =>
-    LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-      const hash = e.notification.extra?.hash;
-      if (hash === '#/me') location.hash = '#/me';
-    })).catch(() => {});
+  // Notification taps: src/ui/notifTap.ts (one handler for all).
 }
 
 /** The theme colours for the widgets (hex): the flame, the week's checks, the glow and the night. */

@@ -103,7 +103,7 @@ final class Widgets {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setContentIntent(openApp(c, "#/me", 7402));
+            .setContentIntent(openApp(c, "#/me/prayer", 7402));
         if (Build.VERSION.SDK_INT >= 24) b.setChronometerCountDown(true);
         if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_LOW);
         try {

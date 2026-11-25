@@ -76,10 +76,6 @@ const busy = () => !!document.querySelector('dialog[open]') || /^#\/(reel|kids)/
 /** App start: the season's reminders and notification taps, and the teaser once the account has synced. */
 export function initSeason() {
   if (isNative()) {
-    void import('@capacitor/local-notifications').then(({ LocalNotifications }) =>
-      LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-        if (e.notification.extra?.hash === '#/season') location.hash = '#/season';
-      })).catch(() => {});
     try { if (localStorage.getItem('seasonRemind') === '1') void scheduleSeasonReminders(); } catch { /* ignore */ }
   }
   if (teaserSeen() || kidsOn()) return;

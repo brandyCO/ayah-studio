@@ -2,18 +2,18 @@
 // when shown, so they follow the interface language even for entries kept from before a language change.
 import type { NEntry } from '../data/notifs';
 import { nt } from '../i18n/notifs';
+import { goTo, type NDest } from './notifTap';
 
-export interface NView { icon: string; title: string; sub?: string; act?: string; go: () => void }
+export type { NDest };
+export interface NView { icon: string; title: string; sub?: string; act?: string; go: () => void; to: NDest }
 
-const nav = (hash: string, store?: [string, string]) => () => {
-  if (store) try { sessionStorage.setItem(store[0], store[1]); } catch { /* private window */ }
-  if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash;
-};
-const toClaim = nav('#/me', ['meFocus', 'claim']);
+// Each kind opens its own screen (owner 2026-11-25: "a screen for each"), the one its spot in the app opens too.
+const nav = (hash: string, store?: [string, string]) => ({ to: { hash, store }, go: () => goTo({ hash, store }) });
+const toGoals = nav('#/me/goals', ['meFocus', 'claim']);
 // Friends' asks, follows and news live on the News page (2026-11-23).
 const toFriends = nav('#/news');
 const toLeague = nav('#/ranks', ['rankView', 'league']);
-const toChallenges = nav('#/me', ['meGoalTab', 'ch']);
+const toChallenges = nav('#/me/challenges');
 
 let mods: Promise<{
   rt: typeof import('../i18n/ranks').rt; ft: typeof import('../i18n/friends').ft; clt: typeof import('../i18n/challenges').clt;
@@ -41,44 +41,44 @@ export function viewOf(e: NEntry, w: Words, waiting: Set<string>): NView {
   switch (e.ty) {
     case 'goal': case 'weekGoal': {
       const goal = d.goal ? w.goalLabel(d.goal as never) : '';
-      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, go: toClaim };
+      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
     }
-    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, go: toClaim };
-    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, go: toClaim };
+    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
+    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
     case 'badge': {
       const id = d.id ?? '';
-      return { icon: 'medal', title: nt('nt.badge', { badge: w.badgeName({ fam: id.slice(0, -2), step: +id.slice(-1) }) }), act: wait ? nt('nt.claim') : undefined, go: toClaim };
+      return { icon: 'medal', title: nt('nt.badge', { badge: w.badgeName({ fam: id.slice(0, -2), step: +id.slice(-1) }) }), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/badges', ['meBadge', id]) };
     }
-    case 'pieces': return { icon: 'shirt', title: ((d.n ?? 1) > 1 ? nt('nt.piecesN', { n: d.n ?? 1 }) : nt('nt.pieces1')), act: wait ? nt('nt.claim') : undefined, go: toClaim };
-    case 'level': return { icon: 'sparkle', title: nt('nt.level', { n: d.n ?? 1 }), sub: nt('nt.levelSub'), go: nav('#/me') };
-    case 'fire': return { icon: 'flame', title: nt('nt.fire', { n: d.n ?? 0 }), sub: nt('nt.fireSub'), go: nav('#/me') };
-    case 'chestCh': return { icon: 'swords', title: nt('nt.chestCh', { name }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, go: toChallenges };
-    case 'pact': return { icon: 'moon', title: nt('nt.pact'), act: wait ? nt('nt.claim') : undefined, go: nav('#/me') };
+    case 'pieces': return { icon: 'shirt', title: ((d.n ?? 1) > 1 ? nt('nt.piecesN', { n: d.n ?? 1 }) : nt('nt.pieces1')), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/wardrobe') };
+    case 'level': return { icon: 'sparkle', title: nt('nt.level', { n: d.n ?? 1 }), sub: nt('nt.levelSub'), ...nav('#/me/level') };
+    case 'fire': return { icon: 'flame', title: nt('nt.fire', { n: d.n ?? 0 }), sub: nt('nt.fireSub'), ...nav('#/me/streak') };
+    case 'chestCh': return { icon: 'swords', title: nt('nt.chestCh', { name }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toChallenges };
+    case 'pact': return { icon: 'moon', title: nt('nt.pact'), act: wait ? nt('nt.claim') : undefined, ...nav('#/me') };
     // Open plays the gift right here (owner 2026-11-23: it used to send people to Me, where they did not see it).
     case 'gift': return { icon: 'gift', title: ((d.n ?? 1) > 1 ? nt('nt.giftN', { n: d.n ?? 1 }) : nt('nt.gift1')), act: wait ? nt('nt.open') : undefined,
-      go: () => void import('./giftOpen').then((m) => m.openWaitingGifts()) };
-    case 'follow': return { icon: 'users', title: nt('nt.follow', { name }), act: nt('nt.see'), go: toFriends };
-    case 'ask': return { icon: 'users', title: nt('nt.ask', { name }), act: nt('nt.see'), go: toFriends };
-    case 'challenge': return { icon: 'swords', title: nt('nt.challenge', { name }), sub: d.kind ? w.clt(`cl.k.${d.kind}` as never) : undefined, act: nt('nt.see'), go: toChallenges };
-    case 'gesture': return { icon: 'hands', title: `${name}: ${w.rt(`rk.g${d.n ?? 0}` as never)}`, go: toChallenges };
-    case 'cheer': return { icon: 'hands', title: (d.n ?? 1) > 1 ? nt('nt.cheerN', { n: d.n ?? 1 }) : nt('nt.cheer', { name }), sub: nt('nt.cheerSub', { what: what() }), go: toFriends };
-    case 'feat': return { icon: 'star', title: name, sub: what(), go: toFriends };
-    case 'passed': return { icon: 'trophy', title: nt('nt.passed', { name }), sub: nt('nt.place', { place: d.place ?? 0 }), go: toLeague };
-    case 'passedBy': return { icon: 'trophy', title: nt('nt.passedBy', { name }), sub: nt('nt.passedBySub', { place: d.place ?? 0 }), act: nt('nt.read'), go: nav('#/') };
-    case 'lastHours': return { icon: 'clock', title: nt('nt.lastHours'), sub: nt('nt.place', { place: d.place ?? 0 }), go: toLeague };
-    case 'result': return { icon: 'trophy', title: nt('nt.result', { place: d.place ?? 0, n: d.n ?? 0 }), sub: nt('nt.resultSub'), go: toLeague };
-    case 'prize': return { icon: 'trophy', title: nt('nt.prize'), act: wait ? nt('nt.claim') : undefined, go: toLeague };
-    case 'kahf': return { icon: 'book', title: nt('nt.kahf'), sub: nt('nt.kahfSub'), act: nt('nt.read'), go: nav('#/s/18') };
-    case 'season': return { icon: 'crescent', title: ((d.n ?? 0) > 1 ? nt('nt.seasonN', { n: d.n ?? 0 }) : nt('nt.season1')), sub: nt('nt.seasonSub'), go: nav('#/season') };
+      go: () => void import('./giftOpen').then((m) => m.openWaitingGifts()), to: { hash: '#/me', run: 'gifts' } };
+    case 'follow': return { icon: 'users', title: nt('nt.follow', { name }), act: nt('nt.see'), ...toFriends };
+    case 'ask': return { icon: 'users', title: nt('nt.ask', { name }), act: nt('nt.see'), ...toFriends };
+    case 'challenge': return { icon: 'swords', title: nt('nt.challenge', { name }), sub: d.kind ? w.clt(`cl.k.${d.kind}` as never) : undefined, act: nt('nt.see'), ...toChallenges };
+    case 'gesture': return { icon: 'hands', title: `${name}: ${w.rt(`rk.g${d.n ?? 0}` as never)}`, ...toChallenges };
+    case 'cheer': return { icon: 'hands', title: (d.n ?? 1) > 1 ? nt('nt.cheerN', { n: d.n ?? 1 }) : nt('nt.cheer', { name }), sub: nt('nt.cheerSub', { what: what() }), ...toFriends };
+    case 'feat': return { icon: 'star', title: name, sub: what(), ...toFriends };
+    case 'passed': return { icon: 'trophy', title: nt('nt.passed', { name }), sub: nt('nt.place', { place: d.place ?? 0 }), ...toLeague };
+    case 'passedBy': return { icon: 'trophy', title: nt('nt.passedBy', { name }), sub: nt('nt.passedBySub', { place: d.place ?? 0 }), act: nt('nt.read'), ...nav('#/') };
+    case 'lastHours': return { icon: 'clock', title: nt('nt.lastHours'), sub: nt('nt.place', { place: d.place ?? 0 }), ...toLeague };
+    case 'result': return { icon: 'trophy', title: nt('nt.result', { place: d.place ?? 0, n: d.n ?? 0 }), sub: nt('nt.resultSub'), ...toLeague };
+    case 'prize': return { icon: 'trophy', title: nt('nt.prize'), act: wait ? nt('nt.claim') : undefined, ...toLeague };
+    case 'kahf': return { icon: 'book', title: nt('nt.kahf'), sub: nt('nt.kahfSub'), act: nt('nt.read'), ...nav('#/s/18') };
+    case 'season': return { icon: 'crescent', title: ((d.n ?? 0) > 1 ? nt('nt.seasonN', { n: d.n ?? 0 }) : nt('nt.season1')), sub: nt('nt.seasonSub'), ...nav('#/season') };
   }
 }
 
 /** Title and line for a phone notification ("…and 2 more" folded into the line). */
-export async function notifText(e: NEntry, more: number): Promise<{ title: string; sub: string }> {
+export async function notifText(e: NEntry, more: number): Promise<{ title: string; sub: string; to: NDest }> {
   const w = await loadWords();
   const v = viewOf(e, w, new Set());
   const extra = more > 0 ? `+${more}` : '';
-  return { title: v.title, sub: [v.sub, extra].filter(Boolean).join(' · ') };
+  return { title: v.title, sub: [v.sub, extra].filter(Boolean).join(' · '), to: v.to };
 }
 
 /** Which kept entries are still waiting for their Claim (from what is waiting now, the same keys the log uses). */

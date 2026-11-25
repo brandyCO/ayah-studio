@@ -343,6 +343,20 @@ function computeStreak(k: string): Streak {
   };
 }
 
+export type DayState = Streak['week'][number]['state'];
+/** Each day from `from` to `to` (day keys, inclusive) as the streak shows it: the streak screen's month (≤ 62 days). */
+export function dayStates(from: string, to: string, now = new Date()): { day: string; state: DayState }[] {
+  const s = view();
+  const cov = covered(s);
+  const k = dayKey(now);
+  const out: { day: string; state: DayState }[] = [];
+  for (let day = from; day <= to && out.length < 62; day = addDays(day, 1)) {
+    out.push({ day, state: s.frozen.includes(day) ? 'frozen' : s.revived.includes(day) ? 'revived' : cov.has(day) ? 'lit'
+      : day === k ? 'today' : day < k ? 'missed' : 'future' });
+  }
+  return out;
+}
+
 // --- counting ---
 const surahPagesCache = new WeakMap<Mushaf, { pages: Map<number, number[]>; onPage: Map<number, number[]>; juz: Map<number, number[]> }>();
 function surahPages(m: Mushaf) {
