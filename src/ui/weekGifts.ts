@@ -8,6 +8,7 @@ import { flare } from './flare';
 import './weekGifts.css';
 import { claimGift, giftsOn, giftView, jumuahPiece, lanternsLit, lanternsNeed, type Prize } from '../data/weekGift';
 import { daysOpened, markRevealed, type Reveal } from '../data/reveal';
+import { firstSyncPending, syncNow } from '../cloud/sync';
 import { fe } from '../i18n/front';
 import { locale } from '../i18n';
 import { rt } from '../i18n/ranks';
@@ -161,6 +162,7 @@ function openUnlock(k: Reveal) {
 /** The calendar sheet. `stamp`: the day just claimed (its stamp lands); `after`: run when it closes. */
 export function openWeekGifts(stamp?: number, after?: () => void) {
   if (document.querySelector('dialog.gw')) return;
+  if (!giftsOn(daysOpened(), firstSyncPending())) { void syncNow(); return; }
   const v = giftView();
   const close = () => { haptic(8); d.close(); };
   const claim = async (tile: HTMLElement) => {
@@ -214,7 +216,7 @@ export function openWeekGifts(stamp?: number, after?: () => void) {
 
 /** Me's card: the seven tiles as dots, today's waiting or the next one coming. */
 export function weekGiftCard(): HTMLElement | '' {
-  giftsOn(daysOpened());
+  if (!giftsOn(daysOpened(), firstSyncPending())) return '';
   const v = giftView();
   const dots = v.states.map((st) => h('i', { class: st }));
   const next = v.states.findIndex((st) => st === 'later');
@@ -231,7 +233,7 @@ export function weekGiftCard(): HTMLElement | '' {
 /** When the app opens (and on each return, once a day at most per launch): the calendar, while today's gift waits. */
 let shownDay = '';
 export function maybeWeekGifts(tries = 4) {
-  if (!giftsOn(daysOpened()) || !giftView().ready) return;
+  if (!giftsOn(daysOpened(), firstSyncPending()) || !giftView().ready) return;
   const day = new Date().toDateString();
   if (shownDay === day) return;
   const busy = document.hidden || /^#\/(reel|kids|t\/)/.test(location.hash) || document.querySelector('dialog[open], .cel, .ul');

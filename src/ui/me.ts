@@ -107,7 +107,7 @@ function setEasy(on: boolean) {
 
 /** Seven days of gifts (src/ui/weekGifts.ts): Me's card, kept current when a gift is taken. */
 function comingSlot(): HTMLElement | '' {
-  giftsOn(daysOpened());
+  giftsOn(daysOpened(), firstSyncPending());
   const slot = h('div', { class: 'co-slot' });
   void import('./weekGifts').then((m) => {
     let el: HTMLElement | '' = slot;
