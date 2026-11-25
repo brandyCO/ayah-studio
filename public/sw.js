@@ -94,6 +94,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (ours) {
+    // Shared links (i/) and the app-link files go straight to the network: the app's page must never be kept under them.
+    if (path === 'i' || path.startsWith('i/') || path.startsWith('.well-known/')) return;
     // Share links (`/s/11/90`, `/rf/CODE`…; files/share.js): a small preview page that sends the visitor on to
     // `#/s/11/90`. Never kept as the app's page; offline, go straight to the app address.
     if (req.mode === 'navigate' && SHARE.test(path)) {

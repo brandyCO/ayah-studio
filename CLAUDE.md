@@ -997,6 +997,16 @@ save to gallery / share sheet; offline audio cache; settings.
       `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
       on the iPhone (except the ayah widgets, 2026-11-24). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
 - [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; the other widgets in WidgetKit
+- [x] Shared links open the app (owner request 2026-11-23): every shared link (`shareableLink()` in `src/native.ts`:
+      invites to challenges, pacts, boards, friends, relights, reel templates, share cards) is
+      `https://ayah-studio.brandlift-888.workers.dev/i/#/route`, or for links with their own preview banner (`files/share.js`) the
+      path itself (`/s/11/90`, `/rf/CODE`…; app-link paths too, and the preview page sends a visitor on through `/i/`). Installed app → opens on that route (iPhone Universal Links:
+      `applinks:` entitlement + `public/.well-known/apple-app-site-association`; Android App Links: `autoVerify` filter on
+      AppActivity + `.well-known/assetlinks.json`, written by pages.yml from the signing key in the secrets and the repo
+      variable `PLAY_SIGNING_SHA256` (Play's app-signing key, after the first Play upload); `src/appLinks.ts`). No app →
+      `public/i/index.html`: the store listing when `public/i/stores.json` says so (Android an intent with the Play page as
+      fallback, iPhone the App Store), else the web app on the route; desktop always the web. The service worker leaves
+      `i/` and `.well-known/` alone. Flip `stores.json` (web deploy only) when the app is live in each store
 - [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice

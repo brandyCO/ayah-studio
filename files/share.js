@@ -2,7 +2,9 @@
 // this only for the share paths below (`run_worker_first`); every other request is a static file, as before.
 // WhatsApp, Telegram, iMessage, X… never see a `#/…` address, so shared links are real paths (src/native.ts
 // `shareableLink()`): /s/11/90 → a tiny page with that ayah's own og:title, og:description and og:image (made by
-// scripts/make-share-cards.mjs, served from /og/), which sends a person straight on to the app at /#/s/11/90.
+// scripts/make-share-cards.mjs, served from /og/), which sends a person on to /i/#/s/11/90
+// (public/i/index.html: the store listing once the app is live there, else the web app; with the app installed the
+// phone opens it on the share path itself, src/appLinks.ts).
 // Invite links (/rf/, /rc/, /rb/, /bp/, /relight/, /join/) name who invited, read from the same public preview
 // functions the app uses (granted to anon), with one banner per kind. Free plan: one small JSON read per ayah link,
 // at most one Supabase call per invite link (1.5 s at most, then the generic text).
@@ -117,7 +119,7 @@ export async function share(req, env) {
       ? clip(lang === 'ar' ? m.q[ayah - 1] : m.t[ayah - 1], 300)
       : (lang === 'ar' ? `${AR_DIGITS(m.ayahs)} آية · اقرأ واستمع على Ayah Studio` : `${m.tr} · ${m.ayahs} ayat · read and listen on Ayah Studio`);
     const image = ayah ? `${origin}/og/a/${s}/${ayah}.jpg` : `${origin}/og/s/${s}.jpg`;
-    return page({ origin, url: u.href, app: `${origin}/${hash}`, title, description, image, lang });
+    return page({ origin, url: u.href, app: `${origin}/i/${hash}`, title, description, image, lang });
   }
 
   if (KINDS[view] && a && /^[A-Za-z0-9_-]{3,64}$/.test(a)) {
@@ -126,7 +128,7 @@ export async function share(req, env) {
     const raw = k.name(r);
     const who = typeof raw === 'string' && raw.trim() ? clip(raw.trim(), 40) : '';
     return page({
-      origin, url: u.href, app: `${origin}/#/${view}/${a}`, lang,
+      origin, url: u.href, app: `${origin}/i/#/${view}/${a}`, lang,
       title: lang === 'ar' ? k.ar(who, r) : k.en(who, r),
       description: lang === 'ar' ? k.dar : k.den,
       image: `${origin}/og/k/${view}.jpg`,

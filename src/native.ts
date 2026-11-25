@@ -124,14 +124,15 @@ export async function shareTextFile(name: string, text: string) {
  *  and the invites. Shared as real paths (`/s/11/90`), because link previews never see what follows a `#`. */
 const PREVIEWED = /^#\/((?:s|t|rf|rc|rb|bp|relight|join)\/[^?#]+)$/;
 
-/** A link to an app address (e.g. `#/s/11/90`) that works for anyone: inside the Android app the page
- *  lives at https://localhost, so shared links use the public web app instead. Addresses with a preview
- *  become `{PUBLIC_URL}s/11/90` (each with its own banner and title; Arabic titles with `?l=ar`), which
- *  opens `#/s/11/90` in the app. */
+/** A link to an app address (e.g. `#/rc/CODE`) that works for anyone. It opens the installed app on that address
+ *  (iPhone Universal Links, Android App Links: `public/.well-known/`, AndroidManifest), else the store listing once
+ *  `public/i/stores.json` says the app is there, else the web app (`public/i/index.html`). Addresses with a preview
+ *  become `{PUBLIC_URL}s/11/90` (own banner and title; Arabic titles with `?l=ar`; files/share.js sends the visitor
+ *  on through /i/), the rest `{PUBLIC_URL}i/#/…`. Always the public site, also inside the apps (https://localhost). */
 export const shareableLink = (hash: string) => {
   const m = PREVIEWED.exec(hash);
   if (m) return `${PUBLIC_URL}${m[1]}${lang() === 'ar' ? '?l=ar' : ''}`;
-  return `${isNative() ? PUBLIC_URL : location.origin + location.pathname}${hash}`;
+  return `${PUBLIC_URL}i/${hash}`;
 };
 
 /** Our native foreground service (android/…/ExportService.java): keeps an export running in the background. */
