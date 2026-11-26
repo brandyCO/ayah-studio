@@ -2446,7 +2446,7 @@ duas/reflections section in Me.
       owner reads them (view `rank_player_reports_v` in the SQL editor); a name 3 players report within 30 days becomes "Reader".
       Migration `20261118000000_rank_block_report.sql`, pgTAP `rank_block_report.test.sql` (22)
 - [x] M29 Follow, flags and the profile page (owner pick "A" 2026-11-18, plan artifact "App structure plan"): Ranks keeps its
-      name, tabs **League · Friends · Global** (My boards and challenges inside Friends). **Follow** is one tap, no request
+      name, tabs **League · Friends · Global** (My boards and challenges inside Friends). Your own row (League, Global, boards) and a tap on your character on Me open your own profile page (owner 2026-11-26; `myRankRow()`, `openMyProfile()`; its ⋯ holds the You menu: look, name, shop, trophies). **Follow** is one tap, no request
       (`rank_follow` / `rank_unfollow` / `rank_drop_follower`, ≤ 50 a day, ≤ 2000; refused when blocked or private; friends
       follow each other); **Add friend** stays apart (ask + accept: friend streak, challenges, gifts). **Flags**: a country the
       player picks (`src/ui/flag.ts`, 249 ISO codes, `public/flags/` flag-icons MIT, names from `Intl.DisplayNames`; never from
@@ -2467,7 +2467,7 @@ duas/reflections section in Me.
       fire days, chests), Friends (follows, asks, challenges, gestures, news, MashaAllahs, gifts), League (passed / passed
       by, last hours, result, prize), News (Friday Al-Kahf, Ramadan ahead); tabs with unread counts, Today / This week /
       Earlier, tap → where it leads (`src/ui/notifText.ts`). Long-press (or ✓) → select mode: Select all, Mark read,
-      Delete / Delete all, Undo (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
+      Delete / Delete all, Undo. **Mail** (owner 2026-11-26): a tap opens the notification as a game-style letter (`openMail()`: its group's colour, icon, message, time; a chest / gift / prize to claim goes to that very chest — `meFocusId`, Me opens it at once — or the gift itself; once taken the letter shows a Claimed stamp + a congratulation, and the row shows Claimed with no dot) (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
       3 a day while the app is in the background (ids 3650–3659), none in quiet hours; push while the app is closed waits
       on T2b (Firebase). Me's claim cards are **prize cards** (`.prize-card` in me.css): a sky in the badge's metal, the
       prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap

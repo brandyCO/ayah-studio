@@ -492,8 +492,18 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
         m.poseClass(a.el, 'sleepy', true);
         a.el.append(...['z', 'z', 'Z'].map((z, i) => h('i', { class: 'fg-z', style: `--i:${i}` }, z)));
       }
-      // A tap greets you, then goes into the room.
-      a.el.addEventListener('click', () => { if (look.mode === 'asleep') a.nod(); else a.wave(); haptic(8); if (revealed('room')) setTimeout(() => { location.hash = '#/me/room'; }, 420); });
+      // A tap greets you, then opens your own profile (owner 2026-11-26; the Room button stays on the card). Signed
+      // out or not in the ranks yet, it goes into the room as before. The page's code is fetched while it waves.
+      a.el.addEventListener('click', () => {
+        if (look.mode === 'asleep') a.nod(); else a.wave();
+        haptic(8);
+        const page = account() ? import('./friends') : null;
+        setTimeout(() => {
+          if (!a.el.isConnected) return;
+          void (page ? page.then((m) => m.openMyProfile()).catch(() => false) : Promise.resolve(false))
+            .then((shown) => { if (!shown && revealed('room')) location.hash = '#/me/room'; });
+        }, 380);
+      });
       hero.append(a.el);
       // Me kept alive between tab taps (main.ts): it greets you again each time you come back to it.
       root.addEventListener('screen-shown', () => setTimeout(() => { if (a.el.isConnected) (look.mode === 'asleep' || look.mode === 'night' ? a.nod() : a.wave()); }, 250));
@@ -683,7 +693,9 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   const goalChest = (id: string, light: number, met: boolean, open: (el: HTMLElement) => void, week = false) => {
     const claimed = week ? weekClaimed(id) : goalClaimed(id);
     const state = claimed ? 'open' : met ? 'ready' : 'locked';
-    return chest(light, state, t(claimed ? 'chest.opened' : met ? 'chest.open' : 'chest.locked', { n: light }), open);
+    const el = chest(light, state, t(claimed ? 'chest.opened' : met ? 'chest.open' : 'chest.locked', { n: light }), open);
+    el.dataset.gid = id; // a notification's Claim opens this very chest (meFocusId)
+    return el;
   };
   const goalRow = (g: GoalProgress) => {
     const met = g.done >= g.target;
@@ -1231,7 +1243,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const shown = page === 'stats' ? waiting : waiting.slice(0, 3);
     claimSlot.dataset.more = String(waiting.length - shown.length);
     claimSlot.replaceChildren(
-      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge prize-card t-${b.def.tier}`, onclick: (e: Event) => void claimBadgeNow(b.def, liftCard(e.currentTarget as HTMLElement)) },
+      waiting.length ? h('div', { class: 'claim-badges' }, ...shown.map((b) => h('button', { class: `claim-badge prize-card t-${b.def.tier}`, 'data-bid': b.def.id, onclick: (e: Event) => void claimBadgeNow(b.def, liftCard(e.currentTarget as HTMLElement)) },
         h('span', { class: 'pc-art', 'aria-hidden': 'true' }, badgeArt(b.def.tier, b.def.icon, true, 60)),
         h('span', { class: 'cb-txt' }, h('span', {}, t('cel.badge')), h('b', {}, badgeName(b.def)), h('span', { class: 'pc-light' }, `✦ ${BADGE_LIGHT[b.def.tier]}`)),
         h('span', { class: 'cb-go' }, t('cel.claim')),
@@ -1485,23 +1497,34 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     history.replaceState(null, '', '#/me');
     if (m === 'wake' || m === 'sleep' || m === 'salah') setTimeout(() => void import('./adhkar').then((x) => x.openDuas(m, p as never)), 350);
   }
-  // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow.
-  try {
-    if (sessionStorage.getItem('meFocus') === 'claim') {
+  // Opened from a goal note (banner or notification): bring the waiting Claim into view and let it glow. From the
+  // Notifications screen's Claim (meFocusId: that goal's chest, or `b:{badge}`), it opens at once (owner 2026-11-26).
+  const focusClaim = () => {
+    try {
+      if (sessionStorage.getItem('meFocus') !== 'claim') return;
       sessionStorage.removeItem('meFocus');
+      const want = sessionStorage.getItem('meFocusId');
+      sessionStorage.removeItem('meFocusId');
+      const pick = () => want?.startsWith('b:') ? root.querySelector<HTMLElement>(`.claim-badge[data-bid="${CSS.escape(want.slice(2))}"]`)
+        : want ? goalsBox.querySelector<HTMLElement>(`.chest.ready[data-gid="${CSS.escape(want)}"]`) : null;
       setTimeout(() => {
-        if (!goalsBox.querySelector('.chest.ready') && goalsBox.querySelector('.goal-seg-dot')) {
+        if (!pick() && !goalsBox.querySelector('.chest.ready') && goalsBox.querySelector('.goal-seg-dot')) {
           goalTab = goalTab === 'day' ? 'week' : 'day';
           paintGoals();
         }
-        const c = goalsBox.querySelector<HTMLElement>('.chest.ready') ?? root.querySelector<HTMLElement>('.claim-badge');
+        const mine = pick();
+        const c = mine ?? goalsBox.querySelector<HTMLElement>('.chest.ready') ?? root.querySelector<HTMLElement>('.claim-badge');
         if (!c) return;
-        c.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+        c.scrollIntoView({ block: 'center', behavior: 'auto' });
+        if (mine) { requestAnimationFrame(() => requestAnimationFrame(() => mine.click())); return; }
         c.classList.add('focus');
         setTimeout(() => c.classList.remove('focus'), 2600);
-      }, 450);
-    }
-  } catch { /* private window */ }
+      }, 380);
+    } catch { /* private window */ }
+  };
+  focusClaim();
+  // Me is kept alive between tabs: a Claim from Notifications comes back to the kept screen.
+  root.addEventListener('screen-shown', focusClaim);
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);
