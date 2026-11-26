@@ -378,6 +378,22 @@ export interface League { tier: number; players: Row[]; waiting?: boolean; until
 export const rankLeague = (fresh = false) => cached('league', () => rpc<League | null>('rank_league', { d: rankDay() }), fresh);
 export const rankGlobal = (allTime: boolean, metric: Metric = 'all', fresh = false) =>
   cached(`global:${allTime}:${metric}`, () => rpc<Row[]>('rank_global', { d: rankDay(), all_time: allTime, metric }), fresh);
+/** The user's own row from a board this phone kept (league first), else the league asked once: opens their own profile
+ *  from anywhere (Me's character, owner 2026-11-26). Null when signed out or not in the ranks yet. */
+export async function myRankRow(): Promise<Row | null> {
+  const find = (v: unknown): Row | null => {
+    const rows = Array.isArray(v) ? v as Row[] : (v as League | null)?.players;
+    return rows?.find((r) => r && r.me && r.pid) ?? null;
+  };
+  const vals = (key: string) => [cache.get(key)?.v, keptAll()[key]];
+  for (const v of vals('league')) { const r = find(v); if (r) return r; }
+  for (const key of new Set([...cache.keys(), ...Object.keys(keptAll())])) {
+    if (!key.startsWith('global:') && !key.startsWith('board:')) continue;
+    for (const v of vals(key)) { const r = find(v); if (r) return r; }
+  }
+  if (!account()) return null;
+  try { return find(await rankLeague()); } catch { return null; }
+}
 /** Weekly #1s, newest first, and the most weeks won (server: rank_hall). */
 export interface Hall { recent: (Row & { week: string; tier: number })[]; most: (Row & { wins: number })[] }
 export const rankHall = (fresh = false) => cached('hall', () => rpc<Hall>('rank_hall'), fresh);
