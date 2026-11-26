@@ -955,6 +955,10 @@ save to gallery / share sheet; offline audio cache; settings.
       `user_docs` row `setting/pref:{key}`, so another device writing its reading place can no longer put back an old
       theme; a device holding a newer choice than a pulled row sends it again; the old `prefs` row is still written). Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
+      Fix 2026-11-26 (owner: "themes not really working"): the theme's style sits before styles.css (boot script), so a plain
+      `:root` lost and every theme showed emerald's accent and buttons; its selectors are now `:root[data-theme]`. Following
+      the theme too: Me's prayer line, Next up, Today's ayah (My ayah stays violet); the Me flame redraws on `theme-changed`.
+      Fixed on purpose: goal colours, freeze blue, tab place colours, rarities / metals, up / down signals, Light gold, XP violet
       Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
       hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
       gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;

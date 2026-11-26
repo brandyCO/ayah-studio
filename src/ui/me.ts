@@ -541,7 +541,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     const s = streak();
     // Repaint only when something on the card changed (keeps the flame's animation running).
     const loading = firstSyncPending();
-    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp(), loading]);
+    const sig = JSON.stringify([s.days, s.litToday, s.weeks, s.best, s.freeze, s.extra, s.week, s.lost, hasFig(), myXp(), loading, document.documentElement.dataset.theme]); // the flame is drawn in the theme's colours
     if (sig === heroSig) return;
     heroSig = sig;
     const fromOther = arriving && !loading && shownDays >= 0;
@@ -1528,6 +1528,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);
+  window.addEventListener('theme-changed', refresh); // the flame redraws in the new theme's colours
   // A sheet or the tasbih counter closed: the streak moment may play now.
   const onClose = () => setTimeout(maybeStreak, 350);
   document.addEventListener('close', onClose, true);
@@ -1559,6 +1560,7 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
     window.removeEventListener('prayer-changed', onPrayer);
     window.removeEventListener('journey-changed', refresh);
     window.removeEventListener('readlog-changed', refresh);
+    window.removeEventListener('theme-changed', refresh);
   };
 }
 
