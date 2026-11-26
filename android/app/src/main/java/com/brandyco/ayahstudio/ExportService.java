@@ -43,6 +43,7 @@ public class ExportService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        ExitsPlugin.catchCrashes(this);
         String action = intent == null ? null : intent.getAction();
         if (ACTION_CANCEL.equals(action)) {
             Runnable r = onCancel;

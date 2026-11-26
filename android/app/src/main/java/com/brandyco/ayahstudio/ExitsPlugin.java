@@ -12,6 +12,8 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 
 /**
@@ -34,6 +36,28 @@ public class ExitsPlugin extends Plugin {
             .commit(); // commit: the process may be about to go
     }
 
+    private static volatile boolean handlerSet = false;
+
+    /** A Java crash: Android's exit record says only "crash", so keep the stack trace ourselves (2026-11-25: the owner's
+     *  phone reported a crash in the background with nothing more). Saved synchronously, then Android's own handler runs. */
+    static synchronized void catchCrashes(Context context) {
+        if (handlerSet) return;
+        handlerSet = true;
+        final Context c = context.getApplicationContext();
+        final Thread.UncaughtExceptionHandler next = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try {
+                StringWriter w = new StringWriter();
+                e.printStackTrace(new PrintWriter(w));
+                String s = "thread " + t.getName() + "\n" + w;
+                if (s.length() > 6000) s = s.substring(0, 6000);
+                c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putString("javaCrash", s).putLong("javaCrashAt", System.currentTimeMillis()).commit();
+            } catch (Throwable ignored) { /* never get in the way of the crash itself */ }
+            if (next != null) next.uncaughtException(t, e);
+        });
+    }
+
     @PluginMethod
     public void take(PluginCall call) {
         Context c = getContext();
@@ -49,6 +73,9 @@ public class ExitsPlugin extends Plugin {
             o.put("rendererPriority", f.length > 1 ? f[1] : "");
             out.put(o);
         }
+        String jc = p.getString("javaCrash", null);
+        long jcAt = p.getLong("javaCrashAt", 0);
+        boolean jcUsed = false;
         long seen = p.getLong("seen", 0);
         long newest = seen;
         if (Build.VERSION.SDK_INT >= 30) {
@@ -71,12 +98,26 @@ public class ExitsPlugin extends Plugin {
                     o.put("rssKb", e.getRss());
                     o.put("process", e.getProcessName());
                     if (e.getReason() == ApplicationExitInfo.REASON_ANR) o.put("trace", trace(e));
+                    else if (e.getReason() == ApplicationExitInfo.REASON_CRASH && jc != null && !jcUsed && Math.abs(jcAt - t) < 60000) {
+                        o.put("trace", jc);
+                        o.put("description", firstLine(jc));
+                        jcUsed = true;
+                    }
                     out.put(o);
                 }
                 if (newest == 0) newest = System.currentTimeMillis();
             } catch (Exception ignored) { /* no history on this phone */ }
         }
-        p.edit().remove("renderer").putLong("seen", Math.max(newest, seen == 0 ? 1 : seen)).apply();
+        if (jc != null && !jcUsed) {
+            // Older Android (no exit records), or the record was not found: report the crash on its own.
+            JSObject o = new JSObject();
+            o.put("reason", "crash");
+            o.put("description", firstLine(jc));
+            o.put("time", jcAt);
+            o.put("trace", jc);
+            out.put(o);
+        }
+        p.edit().remove("renderer").remove("javaCrash").remove("javaCrashAt").putLong("seen", Math.max(newest, seen == 0 ? 1 : seen)).apply();
         JSObject res = new JSObject();
         res.put("exits", out);
         res.put("sdk", Build.VERSION.SDK_INT);
@@ -108,6 +149,13 @@ public class ExitsPlugin extends Plugin {
                 // low memory, signalled, "user" / task-manager kills, other: only while it mattered (on screen or playing)
                 return e.getImportance() <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE;
         }
+    }
+
+    /** "java.lang.IllegalStateException: …" from the saved trace (its first line names the thread). */
+    private static String firstLine(String jc) {
+        String[] l = jc.split("\n", 3);
+        String s = l.length > 1 ? l[1] : l[0];
+        return s.length() > 200 ? s.substring(0, 200) : s;
     }
 
     private static String trace(ApplicationExitInfo e) {

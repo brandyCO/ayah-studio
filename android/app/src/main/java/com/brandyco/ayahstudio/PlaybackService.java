@@ -90,6 +90,7 @@ public class PlaybackService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        ExitsPlugin.catchCrashes(this);
         String action = intent == null ? null : intent.getAction();
         if (ACTION_BUTTON.equals(action)) {
             String b = intent.getStringExtra("b");
