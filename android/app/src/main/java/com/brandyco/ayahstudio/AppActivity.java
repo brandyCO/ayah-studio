@@ -20,7 +20,10 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import androidx.core.splashscreen.SplashScreen;
+import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.WebViewListener;
 
 public class AppActivity extends BridgeActivity {
     static final String EXTRA_HASH = "ayahstudio.hash";
@@ -57,6 +60,7 @@ public class AppActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        ExitsPlugin.catchCrashes(this);
         registerPlugin(MediaScanPlugin.class);
         registerPlugin(DailyPlugin.class);
         registerPlugin(ExportServicePlugin.class);
@@ -66,6 +70,7 @@ public class AppActivity extends BridgeActivity {
         registerPlugin(SpeechPlugin.class);
         registerPlugin(FontPackPlugin.class);
         registerPlugin(LaunchPlugin.class);
+        registerPlugin(ExitsPlugin.class);
         keepHash(getIntent());
         firstUp = false;
         final long start = SystemClock.uptimeMillis();
@@ -120,6 +125,7 @@ public class AppActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         // No stretch past the end of a page: Android 12+ stretched the whole web view, the tab bar with it.
         try { getBridge().getWebView().setOverScrollMode(android.view.View.OVER_SCROLL_NEVER); } catch (Exception ignored) { }
+        survivePageCrash();
         if (animate) {
             // On top from the first frame: between the system splash and the opening the (white) web view never shows.
             ensureCover();
@@ -225,6 +231,33 @@ public class AppActivity extends BridgeActivity {
                     }).start();
             }
         }, 40);
+    }
+
+    /**
+     * The page (WebView renderer) can die on its own: killed by Android to free memory, or crashed. Capacitor leaves
+     * that event unhandled, and then Android closes the whole app ("I was listening to Quran and suddenly it forced
+     * stop", owner 2026-11-24). Instead: note why (sent to Sentry on the next start, ExitsPlugin), let the media
+     * notification go (its sound died with the page) and start the page again in place.
+     */
+    private void survivePageCrash() {
+        getBridge().addWebViewListener(new WebViewListener() {
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                boolean crashed = Build.VERSION.SDK_INT >= 26 && detail != null && detail.didCrash();
+                int priority = Build.VERSION.SDK_INT >= 26 && detail != null ? detail.rendererPriorityAtExit() : -1;
+                ExitsPlugin.rendererGone(AppActivity.this, crashed, priority, PlaybackService.isRunning());
+                Log.w("AyahStudio", "page renderer gone, crashed=" + crashed + " priority=" + priority);
+                try { stopService(PlaybackService.intent(AppActivity.this, PlaybackService.ACTION_SHOW)); } catch (Exception ignored) { }
+                // A dead WebView cannot be used again: take it out and rebuild the activity (and with it the page).
+                try {
+                    ViewGroup parent = (ViewGroup) view.getParent();
+                    if (parent != null) parent.removeView(view);
+                    view.destroy();
+                } catch (Exception ignored) { }
+                if (!isFinishing()) recreate();
+                return true; // handled: the app stays open
+            }
+        });
     }
 
     @Override

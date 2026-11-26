@@ -359,19 +359,11 @@ async function reminderAt(date: Date): Promise<Date> {
   return new Date(maghrib.getTime() - r.before * 60_000);
 }
 
-let listening = false;
 /** (Re)schedules the reminders for the rest of Ramadan; returns a line about the next one. */
 export async function scheduleReminders(): Promise<string | null> {
   if (!isNative()) return null;
   try {
     const { LocalNotifications } = await import('@capacitor/local-notifications');
-    if (!listening) {
-      listening = true;
-      await LocalNotifications.addListener('localNotificationActionPerformed', (e) => {
-        const hash = e.notification.extra?.hash;
-        if (typeof hash === 'string' && hash.startsWith('#/')) location.hash = hash;
-      });
-    }
     await LocalNotifications.cancel({ notifications: IDS.map((id) => ({ id })) });
     const st = ramadanSettings();
     const now = ramadanNow();

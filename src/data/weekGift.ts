@@ -82,9 +82,13 @@ const saturday = (d = new Date()) => addDays(dayKey(d), -weekday(d));
 
 /** Sets the calendar up the first time it is looked at: a new user starts the first week; people who used the app
  *  before it came in (more than two days opened) go straight to the weekly calendar. Always true (everyone has it). */
-export function giftsOn(daysOpened: number): boolean {
+export function giftsOn(daysOpened: number, waiting = false): boolean {
   const s = load();
   if (s.from || s.got) return true;
+  // Signed in on a new phone: the account's own calendar (and its days) has not arrived yet. Deciding now started a
+  // second first week here, which the sync then mixed with the account's (owner report 2026-11-25: all seven tiles
+  // shown as taken on a fresh install). Wait for the first sync.
+  if (waiting) return false;
   if (daysOpened > 2) save({ got: 7, last: null, from: today(), wfrom: today(), old: true });
   else save({ ...s, from: today() });
   return true;
@@ -93,7 +97,7 @@ export function giftsOn(daysOpened: number): boolean {
 export type TileState = 'got' | 'today' | 'later' | 'missed' | 'none';
 export interface GiftView { first: boolean; prizes: Prize[]; states: TileState[]; ready: boolean; /** the tile to claim */ at: number }
 /** The first week stays on screen through the day its seventh tile is taken, then the weekly calendar. */
-const inFirst = (s: State) => s.got < 7 || s.last === today();
+const inFirst = (s: State) => !s.old && (s.got < 7 || s.last === today());
 
 export function giftView(): GiftView {
   const s = load();

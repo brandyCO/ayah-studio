@@ -25,8 +25,9 @@ if (q.get('prof')) {
   void import('../src/ui/shop').then((m) => m.openShop());
 } else if (q.get('chest')) {
   const up = +q.get('chest')!;
+  const lt = +(q.get('light') ?? 30);
   void Promise.all([import('../src/ui/celebrate'), import('../src/ui/dom'), import('../src/i18n/front')]).then(([c, d, f]) => c.celebrate({ kind: 'chest', title: 'Read 5 pages', sub: 'Goal met', up,
-    loot: [{ kind: 'light', n: 30 * up }, ...(up > 1 ? [{ kind: 'item' as const, art: d.h('span', { class: 'cel-x2' }, `×${up}`), label: f.fe('ch.up', { n: up }), rare: true }] : [])] }, null, 30 * up));
+    loot: [{ kind: 'light', n: lt * up }, ...(up > 1 ? [{ kind: 'item' as const, art: d.h('span', { class: 'cel-x2' }, `×${up}`), label: f.fe('ch.up', { n: up }), rare: true }] : [])] }, null, lt * up));
 } else if (q.get('wg')) {
   try { localStorage.setItem('weekGift', q.get('wg') === '1' ? JSON.stringify({ got: 0, last: null, from: '2026-11-24' }) : q.get('wg')!); } catch { /* */ }
   void import('../src/ui/weekGifts').then((m) => m.openWeekGifts());

@@ -629,7 +629,7 @@ export async function scheduleLeagueNote(players?: Row[]) {
           : st.kind === 'top' ? rt('rk.noteTop') : rt('rk.noteJoin');
     await LocalNotifications.schedule({ notifications: [{
       id: NOTE_ID, smallIcon: 'ic_stat_crescent', title: rt('rk.noteTitle', { h: 3 }), body,
-      schedule: { at, allowWhileIdle: true }, extra: { hash: '#/ranks' },
+      schedule: { at, allowWhileIdle: true }, extra: { hash: '#/ranks', sk: 'rankView', sv: 'league' },
     }] });
   } catch { /* an older build or notifications off */ }
 }

@@ -69,6 +69,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 body.has-selbar { padding-bottom: 96px; }
+body > .page-off { content-visibility: hidden; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
 .muted { color: var(--muted); }

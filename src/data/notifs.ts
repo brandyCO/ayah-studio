@@ -241,7 +241,7 @@ async function phone(add: NEntry[]) {
   const { notifText } = await import('../ui/notifText');
   const top = pick[0];
   const more = pick.filter((e) => e.g === top.g).length - 1;
-  const { title, sub } = await notifText(top, more);
+  const { title, sub, to } = await notifText(top, more);
   try {
     const { LocalNotifications } = await import('@capacitor/local-notifications');
     if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
@@ -249,7 +249,8 @@ async function phone(add: NEntry[]) {
     write(SENT, sent);
     await LocalNotifications.schedule({ notifications: [{
       id: PHONE_IDS[sent.n % PHONE_IDS.length], title, body: sub || ' ', smallIcon: 'ic_stat_crescent',
-      schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true }, extra: { hash: '#/notifications' },
+      // A tap opens the screen this notification is about (src/ui/notifTap.ts), not the list.
+      schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true }, extra: { hash: to.hash, sk: to.store?.[0], sv: to.store?.[1], run: to.run, fid: to.fid },
     }] });
   } catch { /* an older build */ }
 }

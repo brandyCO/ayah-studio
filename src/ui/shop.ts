@@ -4,6 +4,8 @@
 // then every piece the app has, by kind — power-ups, character parts, room pieces, avatars and frames (all for
 // Light), and what can only be won (streaks, Ranks weeks, badges, seasons, app icons), locked with how and when
 // it comes back. Tap a piece: a card with it large, and Get / Wear / Put in my room / Use. Never money, nothing random.
+import { coverWhileOpen } from './coverPage';
+import { flattenSvg, svgPictureFromMarkup } from './svgPicture';
 import './shop.css';
 import { icon } from './icons';
 import { sht, type ShopKey } from '../i18n/shop';
@@ -80,6 +82,8 @@ const num = (n: number) => nf().format(n);
 const sparks = (rar: Rar, n: number): Node[] => (rar === 'legendary' || rar === 'mythic' || rar === 'prize'
   ? Array.from({ length: rar === 'mythic' ? n + 2 : n }, (_, i) => h('i', { class: 'sh-spark', 'aria-hidden': 'true', style: `--i:${i}` })) : []);
 const svgBox = (markup: string, cls = 'sh-svg') => { const s = h('span', { class: cls }); s.innerHTML = markup; return s; };
+/** A list tile's art: the drawing as one still picture, made without parsing its shapes (svgPicture.ts). */
+const svgPic = (markup: string, cls = 'sh-svg') => { const p = svgPictureFromMarkup(markup); if (!p) return svgBox(markup, cls); const s = h('span', { class: cls }); s.append(p); return s; };
 
 /** Days until a season comes round again (0 = on now), from the Umm al-Qura calendar; −1 when unknown. */
 const seasonCache = new Map<string, number>();
@@ -127,10 +131,10 @@ const figArt = (piece: string) => () => {
   const f = figFor(piece);
   if (!f) return svgBox('', 'sh-svg fig');
   const slot = piece.split(':')[0];
-  if (slot === 'bg') return svgBox(`<svg viewBox="2 2 36 36">${bustMarkup(f, 18)}</svg>`, 'sh-svg fig disc');
+  if (slot === 'bg') return svgPic(`<svg viewBox="2 2 36 36">${bustMarkup(f, 18)}</svg>`, 'sh-svg fig disc');
   const crop = CROP[slot];
   const svg = figureSvg(f, { still: true });
-  return svgBox(crop ? svg.replace('viewBox="0 0 200 262"', `viewBox="${crop}"`) : svg, `sh-svg fig${crop ? ' crop' : ''}`);
+  return svgPic(crop ? svg.replace('viewBox="0 0 200 262"', `viewBox="${crop}"`) : svg, `sh-svg fig${crop ? ' crop' : ''}`);
 };
 /** A part's name as the builder shows it (the plain backgrounds are just "Background"). */
 const partName = (piece: string) => {
@@ -204,7 +208,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       const win = !!it.win;
       out.push({
         id: `rm:${it.id}`, sec: win ? 'won' : 'room', name: rt(`rs.i.${it.id}` as RankKey), rar: win ? (it.win === 1 ? 'legendary' : 'epic') : it.r === 'legendary' ? (it.price! >= 2000 ? 'mythic' : 'legendary') : it.r as Rar,
-        price: it.price, for: 'sh.forRoom', art: () => svgBox(tileArt(it.slot, it.id), 'sh-svg room'), big: roomBig(it), bare: roomBare, why: 'sh.why.room', store: win ? undefined : `rm:${it.id}`,
+        price: it.price, for: 'sh.forRoom', art: () => svgPic(tileArt(it.slot, it.id), 'sh-svg room'), big: roomBig(it), bare: roomBare, why: 'sh.why.room', store: win ? undefined : `rm:${it.id}`,
         lim: !!it.limited,
         state: () => (ownsRoom(it) ? 'own' : win || (it.limited && limitedNow(week()) !== `rm:${it.id}`) ? 'locked' : 'buy'),
         how: win ? rt(`rs.win${it.win}` as RankKey) : it.limited ? sht('sh.limHow') : undefined,
@@ -377,7 +381,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   const close = () => { if (pushed) history.back(); else d.close(); };
   back.onclick = close;
   d.addEventListener('cancel', (e) => { e.preventDefault(); if (topSheet) topSheet(); else close(); });
-  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); io.disconnect(); vis.disconnect(); clearTimeout(filling); clearTimeout(lighting); d.remove(); o.onChange?.(); });
+  d.addEventListener('close', () => { window.removeEventListener('popstate', onPop); clearInterval(clock); io.disconnect(); clearTimeout(filling); clearTimeout(lighting); d.remove(); o.onChange?.(); });
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
   let shown = -1;
@@ -412,56 +416,67 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   let all: Ware[] = [];
 
   // Grid art is drawn only as it comes near the screen, a few per frame, so opening never builds hundreds at once.
+  // One observer watches the shop's few sections, never its hundreds of tiles: each observed element is measured on
+  // every frame of a scroll (a tile each was ~0.5 s of main thread per scroll at 6× CPU), and so is every
+  // `content-visibility: auto` box. Which tiles are on screen is read once, when the page has come to rest.
   const pending = new Map<Element, Ware>();
-  const queue: Element[] = [];
+  const near = new Set<Element>();
   let filling = 0;
   // Pictures are made between motions: never while the page springs open, a piece is open or a finger scrolls.
   let quietUntil = Date.now() + 450, lastScroll = 0;
   const later = () => { if (!filling) filling = window.setTimeout(() => requestAnimationFrame(fill), 50); };
+  /** The waiting art within a screen of the view, nearest first (all places read before anything changes). */
+  const wanted = () => {
+    const vh = innerHeight, out: [Element, number][] = [];
+    for (const c of near) for (const el of c.querySelectorAll('.sh-art')) {
+      if (!pending.has(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.bottom > -vh && r.top < 2 * vh) out.push([el, r.top < 0 ? -r.bottom + vh : r.top > vh ? r.top : 0]);
+    }
+    return out.sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+  };
   const fill = () => {
     filling = 0;
-    if (!queue.length) return;
+    if (!pending.size || !near.size) return;
     if (d.classList.contains('held') || Date.now() < quietUntil || Date.now() - lastScroll < 140) { later(); return; }
+    const list = wanted();
     const t0 = performance.now();
-    while (queue.length && performance.now() - t0 < 6) {
-      const el = queue.shift()!, w = pending.get(el);
-      if (!w) continue;
+    while (list.length && performance.now() - t0 < 6) {
+      const el = list.shift()!, w = pending.get(el)!;
       pending.delete(el);
-      el.replaceChildren(w.art());
+      el.replaceChildren(flattenSvg(w.art()));
       // A drawn SVG picture is parsed when it lands: one such piece at a time keeps every frame short.
       if (el.querySelector('img')) break;
     }
-    if (queue.length) later();
+    if (list.length) later();
   };
-  const io = new IntersectionObserver((es) => {
-    for (const e of es) if (e.isIntersecting && pending.has(e.target)) { io.unobserve(e.target); queue.push(e.target); }
-    if (queue.length) later();
-  }, { rootMargin: '300px 0px' });
   // Only tiles on screen twinkle and shine (each moving sparkle is a layer the page composites every frame).
   // A tile's twinkles start and stop only when the page is still: switched during a scroll, every tile coming into view
   // added and dropped layers frame after frame. While a piece is open they all rest: `.on` comes off the few on screen
   // (a class on the page itself restyled every tile, 20–90 ms at 6× CPU) and goes back when it closes.
-  const onScreen = new Set<Element>(), lit = new Set<Element>();
+  const lit = new Set<Element>();
   let lighting = 0;
   const light = () => {
     lighting = 0;
     const held = d.classList.contains('held');
     if (!held && Date.now() - lastScroll < 160) { lighting = window.setTimeout(light, 180); return; }
-    const want = held ? new Set<Element>() : onScreen;
+    const want = new Set<Element>();
+    if (!held) for (const c of near) for (const t of c.querySelectorAll('.sh-tile')) { const r = t.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) want.add(t); }
     for (const t of lit) if (!want.has(t)) { t.classList.remove('on'); lit.delete(t); }
     for (const t of want) if (!lit.has(t)) { t.classList.add('on'); lit.add(t); }
   };
-  const vis = new IntersectionObserver((es) => {
-    for (const e of es) if (e.isIntersecting) onScreen.add(e.target); else onScreen.delete(e.target);
+  const io = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) near.add(e.target); else near.delete(e.target);
+    later();
     if (!lighting) lighting = window.setTimeout(light, 0);
-  });
+  }, { root: d, rootMargin: '100% 0px' });
   const hold = (on: boolean) => {
     if (on === d.classList.contains('held')) return;
     d.classList.toggle('held', on);
     clearTimeout(lighting); lighting = 0;
     if (on) light(); else lighting = window.setTimeout(light, 0);
   };
-  const lazyArt = (w: Ware, cls = 'sh-art') => { const el = h('span', { class: cls }); pending.set(el, w); io.observe(el); return el; };
+  const lazyArt = (w: Ware, cls = 'sh-art') => { const el = h('span', { class: cls }); pending.set(el, w); return el; };
 
   const tile = (w: Ware) => {
     const st = w.state();
@@ -473,7 +488,6 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       h('span', { class: 'sh-name' }, w.name),
       foot(w, st));
     el.dataset.id = w.id;
-    vis.observe(el);
     return el;
   };
   const foot = (w: Ware, st: State) => {
@@ -487,10 +501,16 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   };
 
   const section = (c: Sec, sub: ShopKey, list: Ware[]) => {
+    // While the page is still being built in quiet moments, a long section comes 12 tiles at a time.
+    const now = slowly ? list.slice(0, 12) : list;
+    const grid = h('div', { class: `sh-grid${c === 'power' ? ' wide' : ''}` }, ...now.map(tile));
+    const later: (() => void)[] = [];
+    for (let i = 12; slowly && i < list.length; i += 12) { const part = list.slice(i, i + 12); later.push(() => { grid.append(...part.map(tile)); }); }
+    rest.unshift(...later);
     const s = h('section', { class: `sh-sec sec-${c}`, id: `sh-${c}` },
-      h('h2', {}, sht(catKey(c))), h('p', { class: 'muted small' }, sht(sub)),
-      h('div', { class: `sh-grid${c === 'power' ? ' wide' : ''}` }, ...list.map(tile)));
+      h('h2', {}, sht(catKey(c))), h('p', { class: 'muted small' }, sht(sub)), grid);
     sections.set(c, s);
+    io.observe(s);
     return s;
   };
 
@@ -534,31 +554,52 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
         h('span', { class: 'sh-lim-txt' }, h('b', {}, lwt('lw.door')), h('span', { class: 'small' }, lwt('lw.doorSub')))));
     const s = h('section', { class: 'sh-sec sec-featured', id: 'sh-featured' }, limCard, stallCard, weekCard, lwCard, sCard);
     sections.set('featured', s);
+    io.observe(s);
     return s;
   };
 
-  const paint = () => {
-    io.disconnect(); vis.disconnect(); pending.clear(); queue.length = 0;
+  // The first screen (Featured, Power-ups) is built with the page; the other sections follow one per quiet moment once it
+  // has slid in, so opening never builds and styles ~200 tiles at once. A jump to a section not built yet builds the rest.
+  let rest: (() => HTMLElement | void)[] = [];
+  let resting = 0, slowly = false;
+  const buildRest = () => { clearTimeout(resting); resting = 0; for (const f of rest.splice(0)) { const el = f(); if (el) body.append(el); } };
+  const buildNext = () => {
+    resting = 0;
+    if (!rest.length || !d.isConnected) return;
+    if (d.classList.contains('held') || Date.now() - lastScroll < 200) { resting = window.setTimeout(buildNext, 250); return; }
+    slowly = true;
+    const el = rest.shift()!(); if (el) body.append(el);
+    slowly = false;
+    if (rest.length) resting = window.setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(buildNext, { timeout: 600 }) : buildNext()), 30);
+  };
+  const paint = (first = false) => {
+    io.disconnect(); pending.clear(); near.clear(); lit.clear();
+    clearTimeout(resting); resting = 0;
     all = wares();
     sections.clear();
     const by = (c: Sec) => all.filter((w) => w.sec === c);
     const rank: Record<Rar, number> = { mythic: 0, legendary: 1, prize: 2, epic: 3, rare: 4, cute: 5, common: 6 };
-    const won = by('won').sort((a, b) => Number(b.state() === 'own') - Number(a.state() === 'own') || rank[a.rar] - rank[b.rar]);
-    const season = by('season').sort((a, b) => daysUntilSeason(WARDROBE[a.id.slice(3)].how) - daysUntilSeason(WARDROBE[b.id.slice(3)].how));
-    body.replaceChildren(
-      featured(),
-      section('power', 'sh.powerSub', by('power')),
-      section('char', 'sh.charSub', by('char').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
-      section('room', 'sh.roomSub', by('room').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
-      section('look', 'sh.lookSub', by('look')),
-      section('fx', 'sh.fxSub', by('fx').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
-      section('won', 'sh.wonSub', won),
-      section('season', 'sh.seasonSub', season),
-      section('icons', 'sh.iconsSub', by('icons')),
-      h('p', { class: 'muted small sh-note' }, sht('sh.note')));
+    const parts: (() => HTMLElement)[] = [
+      featured,
+      () => section('power', 'sh.powerSub', by('power')),
+      () => section('char', 'sh.charSub', by('char').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
+      () => section('room', 'sh.roomSub', by('room').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
+      () => section('look', 'sh.lookSub', by('look')),
+      () => section('fx', 'sh.fxSub', by('fx').sort((a, b) => (a.price ?? 0) - (b.price ?? 0))),
+      () => section('won', 'sh.wonSub', by('won').sort((a, b) => Number(b.state() === 'own') - Number(a.state() === 'own') || rank[a.rar] - rank[b.rar])),
+      () => section('season', 'sh.seasonSub', by('season').sort((a, b) => daysUntilSeason(WARDROBE[a.id.slice(3)].how) - daysUntilSeason(WARDROBE[b.id.slice(3)].how))),
+      () => section('icons', 'sh.iconsSub', by('icons')),
+      () => h('p', { class: 'muted small sh-note' }, sht('sh.note')),
+    ];
+    if (first) {
+      body.replaceChildren(...parts.slice(0, 2).map((f) => f()));
+      rest = parts.slice(2);
+      resting = window.setTimeout(buildNext, 700);
+    } else { rest = []; body.replaceChildren(...parts.map((f) => f())); }
     paintPurse();
   };
   const jump = (c: Sec | 'featured') => {
+    if (!sections.has(c)) buildRest();
     const s = sections.get(c);
     if (!s) return;
     const top = s.getBoundingClientRect().top - d.getBoundingClientRect().top + d.scrollTop - cats.offsetHeight - 8;
@@ -570,8 +611,17 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
   }, sht(catKey(c)))));
   // The chip of the section in view lights up as the page scrolls.
   let curCat = 'featured';
+  // Measured at most every 120 ms (each read of the sections' places forced a layout per scroll event while art
+  // was landing in the tiles).
+  let catT = 0;
   d.addEventListener('scroll', () => {
     lastScroll = Date.now();
+    later();
+    if (!lighting) lighting = window.setTimeout(light, 180);
+    if (!catT) catT = window.setTimeout(pickCat, 120);
+  }, { passive: true });
+  function pickCat() {
+    catT = 0;
     const y = d.scrollTop + cats.offsetHeight + 40;
     let cur = 'featured';
     const base = d.getBoundingClientRect().top - d.scrollTop;
@@ -583,7 +633,7 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
       const on = cats.querySelector<HTMLElement>('.on');
       if (on) cats.scrollTo({ left: on.offsetLeft - (cats.clientWidth - on.offsetWidth) / 2, behavior: reduced() ? 'auto' : 'smooth' });
     }
-  }, { passive: true });
+  }
 
   const refresh = (id?: string) => {
     const y = d.scrollTop;
@@ -722,10 +772,11 @@ export async function openShop(o: ShopOpts = {}): Promise<void> {
 
   // Updates the "back in / this week" lines and the week's time left once a minute.
   const clock = window.setInterval(() => { if (d.open) paintPurse(); }, 60_000);
-  paint();
+  paint(true);
   paintCats('featured');
   document.body.append(d);
   d.showModal();
+  coverWhileOpen(d);
   quietUntil = Date.now() + 500;
   void paintCounter();
   if (!reduced()) { sfx.whoosh(); popIn(purse); }

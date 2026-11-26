@@ -1,6 +1,6 @@
 name: Android APK
 
-# Builds the Capacitor Android app (debug APK, sideloadable) as an artifact: Actions → this run →
+# Builds the Capacitor Android app (release APK, sideloadable) as an artifact: Actions → this run →
 # Artifacts → ayah-studio-apk. Signed with the app's key from the repo secrets
 # ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD (when set), so updates install over the old app.
 # Every build of main is also published as a one tap download (owner request 2026-11-15):
@@ -63,19 +63,23 @@ jobs:
           fi
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/app.keystore" >> "$GITHUB_ENV"
           echo "ANDROID_KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
-      - run: ./gradlew assembleDebug --no-daemon
+      # A release build, not a debug one (Marwan 2026-11-24, Tecno: slow install, laggy app): a debug APK is
+      # "debuggable", so Android runs its code (and the WebView's own Java side, which handles every touch)
+      # without its usual optimisations and installs it without precompiling. Same key, so it installs over
+      # the earlier debug builds. The emulator check (launch-check.yml) keeps the debug build.
+      - run: ./gradlew assembleRelease --no-daemon
         working-directory: android
       - uses: actions/upload-artifact@v4
         with:
           name: ayah-studio-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
       - name: Publish as the latest APK download
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/ayah-studio.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/ayah-studio.apk"
           notes="Latest build of main ($(git rev-parse --short HEAD), $(date -u +'%Y-%m-%d %H:%M UTC')). Test build for sideloading."
           if gh release view apk-latest > /dev/null 2>&1; then
             gh release edit apk-latest --notes "$notes" --prerelease

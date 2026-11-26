@@ -113,7 +113,7 @@ public class StreakWidget extends AppWidgetProvider {
                     v.setTextColor(LETTERS[i], "lit".equals(st) || "revived".equals(st) ? 0xD9FFFFFF : 0x80FFFFFF);
                 }
             }
-            v.setOnClickPendingIntent(R.id.st_root, Widgets.openApp(c, "#/me", 7410));
+            v.setOnClickPendingIntent(R.id.st_root, Widgets.openApp(c, "#/me/streak", 7410));
             m.updateAppWidget(id, v);
         }
     }

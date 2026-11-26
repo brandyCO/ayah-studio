@@ -543,3 +543,40 @@ html.lite .me-gift-go { animation: none; }
 .anim-off .prize-card::after, .anim-off .prize-card::before, .anim-off .prize-card .pc-art, .anim-off .prize-card .pc-peek { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .prize-card::after, .prize-card::before, .prize-card .pc-art, .prize-card .pc-peek { animation: none; } }
 html.lite .prize-card::after { animation: none; }
+/* Each notification's own screen (owner 2026-11-25): the streak, level and wardrobe screens. Still pictures only
+   (no running animation), so they stay smooth on slow phones. */
+.me-top-go { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 20px; }
+.me-top-go:focus-visible { outline: 2px solid #fff8; outline-offset: 4px; }
+.me-top-go:active .me-flame { scale: .96; }
+.sk-tiles { grid-template-columns: 1fr 1fr; }
+.sk-ice b { color: #4aa8e8; }
+.sk-fire { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-weight: 800; color: var(--rw-n2, #e8590c); }
+.sk-cal { border-radius: 18px; background: var(--bg); padding: 10px 8px 8px; }
+.sk-cal-head { justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.sk-cal-head b { font: 800 var(--fs-l) var(--ui-round); text-transform: capitalize; }
+.sk-nav:disabled { opacity: .3; }
+.sk-next svg, [dir='rtl'] .sk-nav:not(.sk-next) svg { transform: scaleX(-1); }
+[dir='rtl'] .sk-next svg { transform: none; }
+.sk-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px 2px; justify-items: center; }
+.sk-wd { font: 800 var(--fs-2xs) var(--ui-round); color: var(--muted); }
+.sk-day { width: auto; }
+.sk-day .me-pip-ic { width: 30px; height: 30px; }
+.sk-day.future { opacity: .35; }
+.sk-day.is-today .me-pip-d { font-weight: 900; color: var(--text); }
+.sk-lit { margin: 8px 4px 0; text-align: center; }
+.sk-how { margin: 12px 2px 0; }
+.lv-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 6px 4px 14px; }
+.lv-num { display: grid; place-items: center; width: 88px; height: 88px; border-radius: 50%; color: #fff;
+  font: 900 40px/1 var(--ui-round); background: linear-gradient(160deg, var(--rw-n1, #ffb347), var(--rw-n3, #e8590c));
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--rw-n3, #e8590c) 60%, #000); }
+.lv-name { font: 900 var(--fs-h2) var(--ui-round); }
+.lv-bar { width: min(280px, 90%); height: 12px; }
+.lv-step { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); }
+.lv-step-t { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.lv-ic { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.lv-glow { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; flex: none; color: #fff;
+  background: radial-gradient(circle, #ffe7a8, #f59f00); }
+.lv-step:not(.done) .lv-ic, .lv-step:not(.done) .lv-glow { filter: grayscale(.7); opacity: .7; }
+.lv-ok { font-weight: 800; color: var(--accent); font-size: var(--fs-s); }
+.lv-ranks { margin-top: 12px; }
+.wd-page { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }

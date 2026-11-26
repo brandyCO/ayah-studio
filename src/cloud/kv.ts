@@ -163,6 +163,27 @@ export function mergeValues(a: unknown, b: unknown): unknown {
   return stable(a) >= stable(b) ? a : b;
 }
 
+/** Keys whose value is one state that must not be mixed field by field. */
+const WHOLE: Record<string, (a: Record<string, unknown>, b: Record<string, unknown>) => unknown> = {
+  // Seven days of gifts (data/weekGift.ts): mixing a new phone's first week (got 1, last today) with the account's
+  // weekly state (got 7, old) showed all seven tiles taken (owner report 2026-11-25). One state wins whole: the
+  // weekly one (`old`, or a finished first week), else the one further on; a shared week's taken days are joined.
+  weekGift: (a, b) => {
+    const rank = (s: Record<string, unknown>): [number, number, string, string] => [s.old ? 1 : 0, Number(s.got) || 0, String(s.last ?? ''), stable(s)];
+    const ra = rank(a), rb = rank(b);
+    const i = ra.findIndex((x, n) => x !== rb[n]);
+    const [w, l] = i < 0 || ra[i] > rb[i] ? [a, b] : [b, a];
+    const out: Record<string, unknown> = { ...w };
+    if (typeof w.wk === 'string' && w.wk === l.wk && Array.isArray(w.taken) && Array.isArray(l.taken))
+      out.taken = [...new Set([...w.taken, ...l.taken])].sort();
+    for (const k of ['from', 'wfrom'] as const) {
+      const xs = [w[k], l[k]].filter((x): x is string => typeof x === 'string');
+      if (xs.length) out[k] = xs.sort()[0];
+    }
+    return out;
+  },
+};
+
 /** This device's documents: [key, { v, at }, fingerprint, removed]. */
 export function kvRecords(): { key: string; data: { v: string | null; at: number }; print: string; deleted: boolean }[] {
   const m = loadMeta();
@@ -202,7 +223,7 @@ export function mergeKv(key: string, data: unknown, deleted: boolean): { print?:
     const a = parse(local), b = parse(rv);
     if (a === undefined || b === undefined) next = rAt !== lAt ? (rAt > lAt ? rv : local) : (local >= rv ? local : rv);
     else {
-      let merged = mergeValues(b, a);
+      let merged = WHOLE[key] && isObj(a) && isObj(b) ? WHOLE[key](b, a) : mergeValues(b, a);
       if (isObj(merged) && isObj(a) && LOCAL_FIELDS[key]) merged = overlay(merged, LOCAL_FIELDS[key](a));
       next = stable(merged) === stable(a) ? local : JSON.stringify(merged);
     }

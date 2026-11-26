@@ -35,7 +35,7 @@ import './celebrate.css';
 import { actor as makeActor } from './actor';
 import { freezeArt, svgOf } from './flat';
 import { edge, two } from './roomHQ';
-import { flare, type Rarity } from './flare';
+import { flare, warmFlare, type Rarity } from './flare';
 import { bump, combo, drop, holdPage, uncover, noor as makeNoor, own, popIn, squash, takeOver, tick as tickNum } from './juice';
 import { sfx, warmSounds } from './sfx';
 import { warmGesture } from './rig';
@@ -397,7 +397,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
   const lootCards = loot.map((l) => {
     let art: Node, label: Node | string;
     if (l.kind === 'light') {
-      lootLight = h('b', {}, `+${still ? l.n : 0}`);
+      lootLight = h('b', { style: `--digits:${String(l.n).length + 1.2}ch` }, `+${still ? l.n : 0}`);
       art = h('span', { class: 'cel-orb' });
       label = h('span', {}, lootLight, ` ${t('me.light')}`);
     } else if (l.kind === 'freeze') { art = freezeArt(); label = t('cel.freeze'); } else { art = l.art; label = l.label; }
@@ -588,24 +588,35 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       lootTimers.push(window.setTimeout(reveal, lootCards.length * GAP + (roll ? 300 : 500)));
     };
     const openChest = () => {
-      const b = cb ??= chestBox!.getBoundingClientRect(), k = canvasBox();
+      const b = cb ??= chestBox!.getBoundingClientRect(), k = canvasBox(), s0 = sb ??= stage.getBoundingClientRect();
+      // The burst is spread over four frames (2026-11-26, Marwan: "the last opening reveal frames lag a bit"): it all
+      // used to start in one task, ~165 ms at 6× CPU, so the best moment of the chest began with a dropped frame.
+      // 1. The chest itself: it pops open, its sound, the sparks (drawn off the main thread).
       own(jolt!);
       // Released from the crouch: it stretches up, then wobbles and settles.
       squash(jolt!, -0.3, { stiffness: 300, damping: 10 });
       sfx.open(epic, tier);
-      nr?.cheer();
-      me?.cheer(epic ? 3000 : 2200);
-      if (epic) me?.face('star', 3000);
       chestBox!.classList.add('open');
       stage.classList.add('opened');
       el.classList.add('opened');
       el.classList.remove('charging');
       if (epic) el.classList.add('epic');
       fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 60 + tier * 24 + epic * 40, 0.95 + tier * 0.1 + epic * 0.15);
-      { const s0 = sb ?? stage.getBoundingClientRect(); flare(stage, Math.min(4, tier + (epic ? 1 : 0)) as Rarity, { x: b.left + b.width / 2 - s0.left, y: b.top + b.height * 0.42 - s0.top, size: s0.width * 1.5, under: true, hold: 0 }); }
+      // 2. The flare under it (bitmaps drawn while it waited).
+      requestAnimationFrame(() => {
+        if (done) return;
+        flare(stage, Math.min(4, tier + (epic ? 1 : 0)) as Rarity, { x: b.left + b.width / 2 - s0.left, y: b.top + b.height * 0.42 - s0.top, size: s0.width * 1.5, under: true, hold: 0 });
+        // 3. Its sparkles (flare.ts, the next frame), then 4. the character and Noor cheer.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (done) return;
+          nr?.cheer();
+          me?.cheer(epic ? 3000 : 2200);
+          if (epic) me?.face('star', 3000);
+        }));
+      });
       if (epic) later(260, () => fx?.burst(b.left + b.width / 2 - k.left, b.top + b.height * 0.42 - k.top, 50 + epic * 20, 1.1));
       const extra = up > 1 ? 480 + (up - 1) * 300 : 0;
-      if (up > 1) { const s0 = sb ?? stage.getBoundingClientRect(); later(380, () => twins(s0, k)); }
+      if (up > 1) later(380, () => twins(s0, k));
       later((roll ? 400 : 650 + epic * 250) + extra, pour);
     };
     const paths = jolt ? [...jolt.querySelectorAll<SVGPathElement>('.cel-crack path:not(.seam)')] : [];
@@ -849,6 +860,9 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       // The sound engine and the character's cheer are made ready in the gaps too, not at the moment they play.
       later(step * (parts.length + 0.5), warmSounds);
       if (me) later(step * (parts.length + 1), () => warmGesture('cheer'));
+      // The flare's pictures are drawn into bitmaps now, so the burst only has to start them moving.
+      const rar = (isChest ? Math.min(4, tier + (epic ? 1 : 0)) : isBadge ? bstep : m.kind === 'flame' ? (m.days >= 30 ? 3 : 2) : m.kind === 'star' ? 2 : 1) as Rarity;
+      later(step * (parts.length + 1.5), () => warmFlare(rar, box.width * 1.5));
     });
     vibrate([8]);
     const BURST = FLY + GATHER;
