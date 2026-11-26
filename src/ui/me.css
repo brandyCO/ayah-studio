@@ -166,14 +166,14 @@
   font: 900 var(--fs-s) var(--ui-round); box-shadow: 0 3px 0 rgba(0, 0, 0, .28); transition: transform .12s, box-shadow .12s; }
 .me-room-btn:active { transform: translateY(3px); box-shadow: 0 0 0 rgba(0, 0, 0, .28); }
 .me-room-ic { width: 18px; height: 18px; display: inline-flex; }
-/* Prayer times as one slim line at the top of Me. */
+/* Prayer times as one slim line at the top of Me, in the theme's colour. */
 .me-pr-strip { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; padding: 9px 12px; border-radius: 16px; text-decoration: none;
-  color: var(--text); background: color-mix(in srgb, #12a594 13%, var(--card)); box-shadow: 0 3px 0 color-mix(in srgb, #12a594 28%, var(--card));
+  color: var(--text); background: color-mix(in srgb, var(--accent) 13%, var(--card)); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 28%, var(--card));
   font: 800 var(--fs-s) var(--ui-round); transition: transform .12s, box-shadow .12s; }
 .me-pr-strip:active { transform: translateY(3px); box-shadow: none; }
 .me-pr-ic { font-size: 18px; }
 .me-pr-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.me-pr-go { font-size: 20px; color: #12a594; }
+.me-pr-go { font-size: 20px; color: var(--accent); }
 /* Reset countdown: a clock pill on its own line under the switch. */
 .goal-reset-row { display: flex; margin: 8px 0 2px; }
 .goal-reset-row .goal-reset { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 5px 9px; border-radius: 999px;
@@ -431,7 +431,7 @@ html.lite .me-gift-go { animation: none; }
 .goals-more { display: block; margin: 4px auto 0; }
 
 /* One clear next step (Me): kicker, the step with its icon, one big button. */
-.me-next { --nc: #12a594; display: flex; flex-direction: column; gap: 10px; }
+.me-next { --nc: var(--accent); display: flex; flex-direction: column; gap: 10px; }
 .me-next.nx-adhkar { --nc: #6c5ce7; } .me-next.nx-listen { --nc: #2f7fd6; } .me-next.nx-dhikr { --nc: #ff6b4a; }
 .me-next:is(.nx-lessons, .nx-memorise) { --nc: #4caf2a; } .me-next.nx-reels { --nc: #e8590c; } .me-next:is(.nx-duas, .nx-nights) { --nc: #6c5ce7; }
 .me-next.nx-done { --nc: #f59f00; }

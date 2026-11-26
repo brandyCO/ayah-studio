@@ -111,7 +111,7 @@ function stillRoom(scene: HTMLElement) {
 
 /** The profile of a player (from their row on a board): a full page with both characters, opened at once from what
  *  this device keeps (league profiles are fetched ahead), then brought up to date in place. */
-export async function openProfile(row: Row, onChange: () => void = () => {}) {
+export async function openProfile(row: Row, onChange: () => void = () => {}, mineMore?: () => void) {
   const pid = row.pid;
   if (!pid) return;
   const kept = peekProfile(pid);
@@ -126,7 +126,8 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   // Discord-style (owner 2026-11-24): a banner, the avatar in its frame over the banner's edge, then cards.
   const heroBox = h('div', { class: 'fr-herobox' });
   // ⋯ Report / Block (App Store guideline 1.2): on every other player's profile.
-  const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me ? true : undefined }, '⋯');
+  // On your own profile ⋯ opens your Ranks menu (look, name, shop, trophies) when the page came from Ranks.
+  const more = h('button', { class: 'icon-btn fr-more', 'aria-label': ft('fr.more'), hidden: row.me && !mineMore ? true : undefined }, '⋯');
   // Their profile effect (src/ui/deco/effects.ts) plays over the top of the page, like Discord's; it never takes a tap.
   const fxBox = h('div', { class: 'fr-fx', 'aria-hidden': 'true' });
   const d: HTMLDialogElement = h('dialog', { class: 'fr-page fr-dc' }, h('header', { class: 'fr-page-top' }, back, title, more), h('div', { class: 'fr-page-body' }, heroBox, ago, info), fxBox);
@@ -164,7 +165,7 @@ export async function openProfile(row: Row, onChange: () => void = () => {}) {
   window.addEventListener('hashchange', () => { pushed = false; d.close(); }, { once: true });
 
   let unfriend: (() => void) | null = null;
-  more.onclick = () => playerMenu(unfriend, pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
+  more.onclick = () => row.me ? mineMore?.() : playerMenu(unfriend, pid, prof?.blocked ? null : prof?.name ?? row.name ?? null, !!prof?.blocked, () => { onChange(); prof = { ...(prof ?? fromRow(row)), blocked: true, name: null, figure: null }; paint(); void refresh(); }, () => { onChange(); void refresh(); });
   let pairSig = '', paints = 0;
   const paint = () => {
     if (prof?.blocked) {
@@ -431,6 +432,15 @@ function openReport(pid: string, name: string | null, onBlocked: () => void) {
 }
 
 /** Me → Settings → App → Blocked players: everyone you blocked, each with Unblock. */
+/** Your own profile page, from anywhere (Me's character). False when there is none to show (signed out, not ranked). */
+export async function openMyProfile(): Promise<boolean> {
+  const { myRankRow } = await import('../together/ranks');
+  const row = await myRankRow();
+  if (!row) return false;
+  await openProfile(row);
+  return true;
+}
+
 export async function openBlocked() {
   const box = h('div', { class: 'fr-blocked-list' }, skeletonRows(3, true));
   sheet(ft('fr.blockedList'), box);

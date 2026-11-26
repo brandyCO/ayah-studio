@@ -250,7 +250,7 @@ async function phone(add: NEntry[]) {
     await LocalNotifications.schedule({ notifications: [{
       id: PHONE_IDS[sent.n % PHONE_IDS.length], title, body: sub || ' ', smallIcon: 'ic_stat_crescent',
       // A tap opens the screen this notification is about (src/ui/notifTap.ts), not the list.
-      schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true }, extra: { hash: to.hash, sk: to.store?.[0], sv: to.store?.[1], run: to.run },
+      schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true }, extra: { hash: to.hash, sk: to.store?.[0], sv: to.store?.[1], run: to.run, fid: to.fid },
     }] });
   } catch { /* an older build */ }
 }

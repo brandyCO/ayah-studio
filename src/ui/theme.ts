@@ -95,29 +95,31 @@ function hslHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-/** The CSS that overrides the brand tokens for a theme (emerald: only the night surfaces). */
+/** The CSS that overrides the brand tokens for a theme (emerald: only the night surfaces). Its selectors carry
+ *  [data-theme] so they win over styles.css's own :root tokens whatever the order (the boot script puts this style
+ *  before the stylesheet, where a plain :root lost and every theme showed emerald's accent and buttons). */
 export function themeCss(x: BrandTheme): string {
   const n = night(x);
   // Emerald keeps its built-in colours (styles.css) and only takes the calmer night surfaces.
   if (x.id === DEFAULT_THEME) return `@media (prefers-color-scheme: dark) {
-  :root { --bg: ${n.bg}; --card: ${n.card}; --line: ${n.line}; --muted: ${n.muted}; }
+  :root[data-theme] { --bg: ${n.bg}; --card: ${n.card}; --line: ${n.line}; --muted: ${n.muted}; }
 }
-body[data-view="reel"] { --bg: ${n.studio}; --card: ${n.studioCard}; --line: ${n.studioLine}; }`;
+[data-theme] body[data-view="reel"] { --bg: ${n.studio}; --card: ${n.studioCard}; --line: ${n.studioLine}; }`;
   const shadow = (a: number) => `0 8px 22px -10px ${rgba(x.neon[x.neon.length - 1], a)}`; // a soft glow under the main action only
-  return `:root {
+  return `:root[data-theme] {
   --accent: ${x.accentLight}; --sel-line: ${x.accentLight}; --sel: ${rgba(x.accentLight, 0.12)};
   --brand-fill: ${grad(45, x.fill)}; --brand-bar: ${grad(90, x.neon)}; --brand-text: ${grad(90, x.fill)};
   --brand-glow: ${rgba(x.neon[0], 0.18)}; --brand-shadow: ${shadow(0.28)};
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root[data-theme] {
     --bg: ${n.bg}; --card: ${n.card}; --line: ${n.line}; --muted: ${n.muted}; --sel: ${n.sel};
     --accent: ${x.accentDark}; --accent-ink: ${x.accentInkDark}; --sel-line: ${x.accentDark};
     --brand-bar: ${grad(90, x.neon)}; --brand-text: ${grad(90, x.neon)};
     --brand-glow: ${rgba(x.neon[0], 0.2)}; --brand-shadow: ${shadow(0.6)};
   }
 }
-body[data-view="reel"] {
+[data-theme] body[data-view="reel"] {
   --bg: ${n.studio}; --card: ${n.studioCard}; --line: ${n.studioLine};
   --accent: ${x.accentDark}; --accent-ink: ${x.accentInkDark};
   --brand-bar: ${grad(90, x.neon)}; --brand-shadow: ${shadow(0.6)};

@@ -9,7 +9,7 @@ import { locale, t } from '../i18n';
 import { isNative } from '../native';
 import { h, haptic } from './dom';
 import { icon } from './icons';
-import { loadWords, viewOf, waitingKeys } from './notifText';
+import { loadWords, viewOf, waitingKeys, type NView } from './notifText';
 import { tabBar } from './tabs';
 
 type Tab = 'all' | NGroup;
@@ -121,15 +121,24 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
   const row = (e: NEntry) => {
     const v = viewOf(e, words, waiting);
     const on = picked.has(e.k);
+    // A reward already taken is done: no dot, a quiet "Claimed" in place of its button (owner 2026-11-26).
+    if (v.claimed) fresh.delete(e.k);
     const el = h('div', {
-      class: `nt-row g-${e.g}${fresh.has(e.k) ? ' unread' : ''}${on ? ' picked' : ''}${v.act ? ' has-act' : ''}`,
+      class: `nt-row g-${e.g}${fresh.has(e.k) ? ' unread' : ''}${on ? ' picked' : ''}${v.act ? ' has-act' : ''}${v.claimed ? ' claimed' : ''}`,
       role: 'button', tabindex: '0', 'data-k': e.k, 'aria-pressed': selecting ? String(on) : false,
     },
       h('span', { class: `nt-box${on ? ' on' : ''}`, 'aria-hidden': 'true' }, icon('check', 14)), // shown only while selecting (CSS)
       h('span', { class: 'nt-ic', 'aria-hidden': 'true' }, icon(v.icon, 20)),
       h('span', { class: 'nt-txt' }, h('b', {}, v.title), v.sub ? h('span', { class: 'nt-sub' }, v.sub) : '', h('span', { class: 'nt-when' }, when(e.at))),
-      v.act ? h('button', { class: 'chip nt-act', tabindex: '-1', onclick: (ev: Event) => { ev.stopPropagation(); open(); } }, v.act) : '');
-    const open = () => { haptic(6); markRead([e.k]); v.go(); };
+      v.act ? h('button', { class: 'chip nt-act', tabindex: '-1', onclick: (ev: Event) => { ev.stopPropagation(); haptic(6); seen(); v.go(); } }, v.act)
+        : v.claimed ? h('span', { class: 'nt-done' }, icon('check', 14), nt('nt.claimed')) : '');
+    const seen = () => {
+      markRead([e.k]);
+      if (fresh.delete(e.k)) { el.classList.remove('unread'); paintTabs(); }
+    };
+    // A tap opens it like a letter in a game's mailbox (owner 2026-11-26): its message, and its chest or gift to claim,
+    // or "Claimed" once taken. The Claim chip on the row still goes straight to it.
+    const open = () => { haptic(6); seen(); openMail(e, v); };
     const toggle = () => { haptic(6); if (picked.has(e.k)) picked.delete(e.k); else picked.add(e.k); if (!picked.size) selecting = false; sync(); };
     // Press and hold: start selecting with this row; a tap while selecting toggles it.
     let timer = 0, held = false, sx = 0, sy = 0;
@@ -171,6 +180,8 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
   };
 
   const paint = () => {
+    // A reward already claimed is not "new" (owner 2026-11-26: its dot stayed after the chest was opened).
+    for (const e of visibleNotifs()) if (fresh.has(e.k) && viewOf(e, words, waiting).claimed) fresh.delete(e.k);
     paintTabs(); paintHead(); paintActions();
     const items = shown();
     if (!items.length) {
@@ -190,6 +201,39 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
     list.classList.toggle('selecting', selecting);
     hint.hidden = selecting || (() => { try { return !!localStorage.getItem('notifHint'); } catch { return true; } })();
   };
+
+  const KICK: Record<NGroup, NotifKey> = { win: 'nt.kWin', friend: 'nt.kFriend', league: 'nt.kLeague', news: 'nt.kNews' };
+  function openMail(e: NEntry, v: NView) {
+    const go = () => { shut(); setTimeout(() => v.go(), 160); };
+    const btns: Node[] = v.reward && v.claimed ? [h('button', { class: 'primary nt-mail-ok', onclick: () => shut() }, nt('nt.close'))]
+      : [h('button', { class: 'primary nt-mail-go', onclick: go }, v.act ?? (v.reward ? nt('nt.claim') : nt('nt.see'))),
+        h('button', { class: 'chip nt-mail-later', onclick: () => shut() }, nt('nt.close'))];
+    const card = h('div', { class: 'nt-mail-card' },
+      h('div', { class: 'nt-mail-band', 'aria-hidden': 'true' }, h('span', { class: 'nt-mail-ic' }, icon(v.icon, 30))),
+      h('div', { class: 'nt-mail-body' },
+        h('p', { class: 'nt-mail-kick' }, nt(KICK[e.g])),
+        h('h2', {}, v.title),
+        v.sub && !(v.reward && v.claimed) ? h('p', { class: 'nt-mail-sub' }, v.sub) : '',
+        v.reward && v.claimed ? h('div', { class: 'nt-mail-claimed' },
+          h('span', { class: 'nt-stamp' }, icon('check', 18), nt('nt.claimed')),
+          h('p', {}, nt('nt.claimedMsg'))) : '',
+        h('p', { class: 'nt-mail-when' }, when(e.at)),
+        h('div', { class: 'nt-mail-acts' }, ...btns)));
+    const d = h('dialog', { class: `nt-mail g-${e.g}${v.reward && v.claimed ? ' is-claimed' : ''}`, 'aria-label': v.title }, card) as HTMLDialogElement;
+    let closing = false;
+    function shut() {
+      if (closing || !d.open) return;
+      closing = true;
+      d.classList.add('out');
+      setTimeout(() => d.close(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 170);
+    }
+    d.addEventListener('cancel', (ev) => { ev.preventDefault(); shut(); });
+    d.addEventListener('click', (ev) => { if (ev.target === d) shut(); });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+    (d.querySelector('.nt-mail-acts .primary') as HTMLElement | null)?.focus({ preventScroll: true });
+  }
 
   function back() {
     if (history.length > 1) history.back();
@@ -243,7 +287,7 @@ export async function showNotifications(root: HTMLElement): Promise<() => void> 
     waiting = await waitingKeys(visibleNotifs());
     if (!selecting) paint();
   };
-  const evs = ['journey-changed', 'rank-cache', 'sync-arrived'];
+  const evs = ['journey-changed', 'rank-cache', 'sync-arrived', 'gifts-changed'];
   evs.forEach((e) => window.addEventListener(e, onChange));
   return () => {
     clearTimeout(readTimer);

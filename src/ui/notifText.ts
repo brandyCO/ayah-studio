@@ -5,11 +5,14 @@ import { nt } from '../i18n/notifs';
 import { goTo, type NDest } from './notifTap';
 
 export type { NDest };
-export interface NView { icon: string; title: string; sub?: string; act?: string; go: () => void; to: NDest }
+/** `reward`: it carries a chest, gift or prize; `claimed`: that was already taken (the mail shows "Claimed"). */
+export interface NView { icon: string; title: string; sub?: string; act?: string; go: () => void; to: NDest; reward?: boolean; claimed?: boolean }
 
 // Each kind opens its own screen (owner 2026-11-25: "a screen for each"), the one its spot in the app opens too.
-const nav = (hash: string, store?: [string, string]) => ({ to: { hash, store }, go: () => goTo({ hash, store }) });
-const toGoals = nav('#/me/goals', ['meFocus', 'claim']);
+// `fid`: the very chest to open there (owner 2026-11-26: "Claim opens that chest").
+const nav = (hash: string, store?: [string, string], fid?: string) => ({ to: { hash, store, fid }, go: () => goTo({ hash, store, fid }) });
+const toGoals = (fid?: string) => nav('#/me/goals', ['meFocus', 'claim'], fid);
+const REWARD = new Set<NEntry['ty']>(['goal', 'weekGoal', 'all', 'weekAll', 'badge', 'pieces', 'chestCh', 'pact', 'gift', 'prize']);
 // Friends' asks, follows and news live on the News page (2026-11-23).
 const toFriends = nav('#/news');
 const toLeague = nav('#/ranks', ['rankView', 'league']);
@@ -29,6 +32,11 @@ export const loadWords = () => (mods ??= Promise.all([
 type Words = Awaited<ReturnType<typeof loadWords>>;
 /** Synchronous once `loadWords()` has resolved (the screen awaits it first). `waiting`: rewards still to claim. */
 export function viewOf(e: NEntry, w: Words, waiting: Set<string>): NView {
+  const v = baseView(e, w, waiting);
+  if (!REWARD.has(e.ty)) return v;
+  return { ...v, reward: true, claimed: !waiting.has(e.k) };
+}
+function baseView(e: NEntry, w: Words, waiting: Set<string>): NView {
   const d = e.d ?? {};
   const name = d.name || nt('nt.someone');
   const what = () => {
@@ -41,10 +49,10 @@ export function viewOf(e: NEntry, w: Words, waiting: Set<string>): NView {
   switch (e.ty) {
     case 'goal': case 'weekGoal': {
       const goal = d.goal ? w.goalLabel(d.goal as never) : '';
-      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
+      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals(d.goal?.id) };
     }
-    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
-    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals };
+    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals('all') };
+    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals() };
     case 'badge': {
       const id = d.id ?? '';
       return { icon: 'medal', title: nt('nt.badge', { badge: w.badgeName({ fam: id.slice(0, -2), step: +id.slice(-1) }) }), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/badges', ['meBadge', id]) };

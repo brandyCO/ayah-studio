@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["K44PL6TP4Y.com.brandyco.ayahstudio"],
+        "components": [{ "/": "/i" }, { "/": "/i/*" }, { "/": "/s/*" }, { "/": "/t/*" }, { "/": "/rf/*" }, { "/": "/rc/*" }, { "/": "/rb/*" }, { "/": "/bp/*" }, { "/": "/relight/*" }, { "/": "/join/*" }]
+      }
+    ]
+  }
+}

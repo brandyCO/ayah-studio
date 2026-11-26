@@ -191,6 +191,7 @@ jobs:
             codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app" > "$RUNNER_TEMP/ent.plist" 2>/dev/null || true
             plutil -p "$RUNNER_TEMP/ent.plist" || true
             grep -q applesignin "$RUNNER_TEMP/ent.plist" || { echo "::error::The signed app lacks the Sign in with Apple entitlement"; exit 1; }
+            grep -q associated-domains "$RUNNER_TEMP/ent.plist" || echo "::warning::The signed app lacks Associated Domains: shared links will open the web, not the app. Turn on Associated Domains for com.brandyco.ayahstudio in Apple Developer → Identifiers."
             [ "$IOS_WIDGETS" != 1 ] || codesign -d --entitlements - --xml "$RUNNER_TEMP/export/Payload/App.app/PlugIns/AyahWidgets.appex" 2>/dev/null \
               | grep -q application-groups || { echo "::error::The signed widget lacks the App Group"; exit 1; }
           fi
