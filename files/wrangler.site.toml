@@ -1,0 +1,15 @@
+# The web app's address (https://ayah-studio.<account>.workers.dev/): the same static files as ayah-studio-files
+# (files/wrangler.toml) plus the link preview banners (og/, scripts/make-share-cards.mjs), and a small script that
+# runs only for share links (files/share.js): each shared ayah or invite gets its own og:image and title, then the
+# visitor goes on to the app. Every other request is a static file and never runs the script (free, unlimited).
+# Deployed by .github/workflows/pages.yml (job "cloudflare").
+name = "ayah-studio"
+main = "share.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[assets]
+directory = "./site"
+binding = "ASSETS"
+not_found_handling = "none"
+run_worker_first = ["/s/*", "/t/*", "/rf/*", "/rc/*", "/rb/*", "/bp/*", "/relight/*", "/join/*"]

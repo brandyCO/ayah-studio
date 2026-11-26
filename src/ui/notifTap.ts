@@ -3,28 +3,29 @@
 // never hear it), and that was often the one that only knew '#/me'. Now every notification carries where it leads in
 // `extra` and this, registered at start, takes it there:
 //   hash   the screen ('#/me/streak', '#/me/goals', '#/me/badges', '#/me/level', '#/me/prayer', '#/ranks', '#/s/2/255' …)
-//   sk/sv  a key and value noted in sessionStorage first (which goal tab, which badge, the league view)
+//   st     [key, value] pairs noted in sessionStorage first (which chest, which badge, the league view); sk/sv one pair
 //   focus  'claim': the goals screen brings the waiting chest into view
 //   run    'gifts': the waiting gifts play once there
 //   du/dus a prayer's du'a / after-salah adhkar open over the prayer screen
 import { isNative } from '../native';
 
 /** Where a notification leads (also each row of the Notifications screen, src/ui/notifText.ts). */
-export interface NDest { hash: string; store?: [string, string]; run?: 'gifts' }
+export interface NDest { hash: string; store?: [string, string][]; run?: 'gifts' }
 
 /** Goes to `to`. */
 export function goTo(to: NDest) {
-  if (to.store) try { sessionStorage.setItem(to.store[0], to.store[1]); } catch { /* private window */ }
+  for (const [k, v] of to.store ?? []) try { sessionStorage.setItem(k, v); } catch { /* private window */ }
   if (location.hash === to.hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = to.hash;
   if (to.run === 'gifts') setTimeout(() => void import('./giftOpen').then((m) => m.openWaitingGifts()), 400);
 }
 
-type Extra = { hash?: unknown; sk?: unknown; sv?: unknown; focus?: unknown; run?: unknown; du?: unknown; dus?: unknown } | undefined;
+type Extra = { hash?: unknown; sk?: unknown; sv?: unknown; st?: unknown; focus?: unknown; run?: unknown; du?: unknown; dus?: unknown } | undefined;
 
 export function handleNotifTap(x: Extra) {
   if (!x) return;
   const hash = typeof x.hash === 'string' && x.hash.startsWith('#/') ? x.hash : '';
-  const store: [string, string] | undefined = typeof x.sk === 'string' && typeof x.sv === 'string' ? [x.sk, x.sv] : undefined;
+  const store: [string, string][] = Array.isArray(x.st) ? x.st.filter((p): p is [string, string] => Array.isArray(p) && typeof p[0] === 'string' && typeof p[1] === 'string') : [];
+  if (typeof x.sk === 'string' && typeof x.sv === 'string') store.push([x.sk, x.sv]);
   if (x.focus === 'claim') try { sessionStorage.setItem('meFocus', 'claim'); } catch { /* private window */ }
   if (hash) goTo({ hash, store, run: x.run === 'gifts' ? 'gifts' : undefined });
   const du = typeof x.du === 'string' ? x.du : typeof x.dus === 'string' ? x.dus : '';

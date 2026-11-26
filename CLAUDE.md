@@ -955,6 +955,10 @@ save to gallery / share sheet; offline audio cache; settings.
       `user_docs` row `setting/pref:{key}`, so another device writing its reading place can no longer put back an old
       theme; a device holding a newer choice than a pulled row sends it again; the old `prefs` row is still written). Same limits as the logo
       gradient: never on the mushaf page, the Arabic text or the reel; the Kids space keeps its palette
+      Fix 2026-11-26 (owner: "themes not really working"): the theme's style sits before styles.css (boot script), so a plain
+      `:root` lost and every theme showed emerald's accent and buttons; its selectors are now `:root[data-theme]`. Following
+      the theme too: Me's prayer line, Next up, Today's ayah (My ayah stays violet); the Me flame redraws on `theme-changed`.
+      Fixed on purpose: goal colours, freeze blue, tab place colours, rarities / metals, up / down signals, Light gold, XP violet
       Calmer pass (owner, 2026-10-31: "calmer, but keep some glow"): night surfaces near-neutral grey with a
       hint of the hue (`night()`: bg 6 %, cards 10.5 %), emerald too; one hero action per screen in the deep
       gradient with white text (`--rw-hero`: "Every goal met" banner, Alhamdulillah) and a soft low glow;
@@ -997,6 +1001,16 @@ save to gallery / share sheet; offline audio cache; settings.
       `GOOGLE_IOS_CLIENT_ID`; Android-only parts check `hasPlugin()` (`src/native.ts`): widgets + lock-screen line hidden
       on the iPhone (except the ayah widgets, 2026-11-24). New native-only features: guard with `hasPlugin('Name')`, not `isNative()`
 - [ ] iPhone: owner's Apple account steps (docs/ios.md), TestFlight test on the phone, App Store listing; the other widgets in WidgetKit
+- [x] Shared links open the app (owner request 2026-11-23): every shared link (`shareableLink()` in `src/native.ts`:
+      invites to challenges, pacts, boards, friends, relights, reel templates, share cards) is
+      `https://ayah-studio.brandlift-888.workers.dev/i/#/route`, or for links with their own preview banner (`files/share.js`) the
+      path itself (`/s/11/90`, `/rf/CODE`…; app-link paths too, and the preview page sends a visitor on through `/i/`). Installed app → opens on that route (iPhone Universal Links:
+      `applinks:` entitlement + `public/.well-known/apple-app-site-association`; Android App Links: `autoVerify` filter on
+      AppActivity + `.well-known/assetlinks.json`, written by pages.yml from the signing key in the secrets and the repo
+      variable `PLAY_SIGNING_SHA256` (Play's app-signing key, after the first Play upload); `src/appLinks.ts`). No app →
+      `public/i/index.html`: the store listing when `public/i/stores.json` says so (Android an intent with the Play page as
+      fallback, iPhone the App Store), else the web app on the route; desktop always the web. The service worker leaves
+      `i/` and `.well-known/` alone. Flip `stores.json` (web deploy only) when the app is live in each store
 - [ ] Tauri Windows build; Play Store signing
 
 ### Phase 2 — practice
@@ -1421,6 +1435,15 @@ tafsir only from published, credited editions; UI strings only are translated by
       The ★ sheets moved to `src/ui/favourite.ts` (lazy; `favStar.ts`). First-load budget 141 KB
       **Onboarding reciters** (owner request 2026-11-12): the first-launch welcome (`src/ui/welcome.ts`) lists every reciter
       like the player's picker — one row per reciter with his recordings as chips, ▶ preview, a search box
+- [x] Link previews per shared link (owner request 2026-11-25, "a banner for each invitation link, each unique on its own"):
+      `shareableLink()` (`src/native.ts`) shares ayah / surah / reel-look / invite addresses as real paths on the web app
+      (`{PUBLIC_URL}s/11/90`, `rf/CODE`, `rc/`, `rb/`, `bp/`, `relight/`, `join/`, `t/`; `?l=ar` in the Arabic UI), since link
+      previews never see a `#`. The `ayah-studio` worker runs `files/share.js` for those paths only (`files/wrangler.site.toml`,
+      `run_worker_first`): a small page with its own og:title / description / image that sends the visitor to `#/…`; invites
+      name the inviter from the anon preview functions (≤ 1.5 s). Banners by `scripts/make-share-cards.mjs` (Chromium, KFGQPC,
+      text never cut — an ayah too long for 1200×630 shows its surah name instead): `og/a/{s}/{a}.jpg` (6236), `og/s/{s}.jpg`,
+      `og/k/{kind}.jpg`, `og/m/{s}.json`; made in pages.yml's `cloudflare` job, cached by a hash of the script, text and fonts.
+      The service worker never keeps a share page as the app (`SHARE` in `public/sw.js`)
 - [ ] G6 Recite & Compare (Phase 2): record, Sheikh vs Me A/B, side-by-side waveforms, saved locally — on hold (owner, 2026-10-09; the `recordings` store already exists in `db.ts` v5)
 
 ### Phase 7 — Light (owner request 2026-10-10)
@@ -2427,7 +2450,7 @@ duas/reflections section in Me.
       owner reads them (view `rank_player_reports_v` in the SQL editor); a name 3 players report within 30 days becomes "Reader".
       Migration `20261118000000_rank_block_report.sql`, pgTAP `rank_block_report.test.sql` (22)
 - [x] M29 Follow, flags and the profile page (owner pick "A" 2026-11-18, plan artifact "App structure plan"): Ranks keeps its
-      name, tabs **League · Friends · Global** (My boards and challenges inside Friends). **Follow** is one tap, no request
+      name, tabs **League · Friends · Global** (My boards and challenges inside Friends). Your own row (League, Global, boards) and a tap on your character on Me open your own profile page (owner 2026-11-26; `myRankRow()`, `openMyProfile()`; its ⋯ holds the You menu: look, name, shop, trophies). **Follow** is one tap, no request
       (`rank_follow` / `rank_unfollow` / `rank_drop_follower`, ≤ 50 a day, ≤ 2000; refused when blocked or private; friends
       follow each other); **Add friend** stays apart (ask + accept: friend streak, challenges, gifts). **Flags**: a country the
       player picks (`src/ui/flag.ts`, 249 ISO codes, `public/flags/` flag-icons MIT, names from `Intl.DisplayNames`; never from
@@ -2448,7 +2471,7 @@ duas/reflections section in Me.
       fire days, chests), Friends (follows, asks, challenges, gestures, news, MashaAllahs, gifts), League (passed / passed
       by, last hours, result, prize), News (Friday Al-Kahf, Ramadan ahead); tabs with unread counts, Today / This week /
       Earlier, tap → where it leads (`src/ui/notifText.ts`). Long-press (or ✓) → select mode: Select all, Mark read,
-      Delete / Delete all, Undo (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
+      Delete / Delete all, Undo. **Mail** (owner 2026-11-26): a tap opens the notification as a game-style letter (`openMail()`: its group's colour, icon, message, time; a chest / gift / prize to claim goes to that very chest — `meFocusId`, Me opens it at once — or the gift itself; once taken the letter shows a Claimed stamp + a congratulation, and the row shows Claimed with no dot) (select mode and deleting change the rows in place, off-screen rows `content-visibility: auto`; 4× and 6× CPU: open ~0.2 s, select / delete / scroll 60 fps). ⚙: per group In the app / On the phone, quiet hours (`notifPrefs`); Android sends at most
       3 a day while the app is in the background (ids 3650–3659), none in quiet hours; push while the app is closed waits
       on T2b (Firebase). Me's claim cards are **prize cards** (`.prize-card` in me.css): a sky in the badge's metal, the
       prize breathing, a light sweep, the Light amount, the user's character peeking from the corner; the card lifts on tap

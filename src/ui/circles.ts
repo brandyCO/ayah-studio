@@ -70,7 +70,7 @@ export function openCircles() {
     const code = h('input', { class: 'search', maxlength: 60, placeholder: t('circ.codePh'), 'aria-label': t('circ.codePh') });
     body.replaceChildren(h('form', { class: 'circle-form', onsubmit: (e: Event) => {
       e.preventDefault();
-      const c = code.value.trim().split('/').pop()!.toUpperCase();
+      const c = code.value.trim().split(/[?#]/)[0].replace(/\/+$/, '').split('/').pop()!.toUpperCase();
       if (!/^[A-HJ-NP-Z2-9]{8}$/.test(c)) return toast(t('circ.badCode'));
       d.close();
       location.hash = `#/join/${c}`;

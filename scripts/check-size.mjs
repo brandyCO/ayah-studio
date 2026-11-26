@@ -27,6 +27,7 @@ import { gzipSync } from 'node:zlib';
 // while idle): 136.1 KB. A first visit on slow 3G also no longer fetches Nunito (38 KB) before the mushaf page.
 // 2026-11-24: Ayah of the day + My ayah (lazy; ~0.15 KB in the entry's preload map).
 // 2026-11-24: the player (with the reciter list), the surah list, popular, claims + goals and copy load when wanted: 106.2 KB.
+// 2026-11-24: shared links opening the app (src/appLinks.ts, lazy) add ~23 bytes of loader.
 const BUDGET_KB = 115; // kept low on purpose: ~9 KB of room for new first-screen code
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);

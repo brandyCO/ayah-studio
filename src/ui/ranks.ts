@@ -170,9 +170,9 @@ function list(rows: Row[], zones = false, metric: Metric = 'all', meNote = '', w
     const visit = !!r.pid && (r.me || !r.private);
     items.push(h('li', { class: `rk-row${i < 3 ? ` r${i + 1}` : i < 10 ? ' r10' : ''}${r.me ? ' me' : ''}${up ? ' up' : ''}${down ? ' down' : ''}${danger ? ' danger' : ''}${visit ? ' visit' : ''}`,
       ...(visit ? { role: 'button', tabindex: '0', 'aria-label': r.blocked ? rt('rk.blocked') : r.name ?? rt('rk.private'),
-        // Your own row opens "You" (look, shop, trophies, your profile): the avatar left the top bar for the Me tab.
-        onclick: () => r.me ? window.dispatchEvent(new CustomEvent('rank-you', { detail: r }))
-          : void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); })),
+        // Your own row opens your own profile page (owner 2026-11-26); its ⋯ holds "You" (look, name, shop, trophies).
+        onclick: () => void import('./friends').then((m) => m.openProfile(r, () => { dropCache(); },
+          r.me ? () => window.dispatchEvent(new CustomEvent('rank-you', { detail: null })) : undefined)),
         onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } } } : {}) },
       h('span', { class: `rk-place p${i + 1}` }, String(i + 1)),
       avatar(r.private || r.blocked ? null : r.avatar ?? 0, r.tier ?? 0, 34, r.frame ?? 0, r.blocked ? null : r.figure),
@@ -1138,7 +1138,7 @@ export async function showRanks(root: HTMLElement): Promise<() => void> {
   // Only a real change of account repaints from the server: onAccount also calls back at once with the account already
   // here, and that fresh paint used to merge into the instant one above, so every open waited for the network (~1 s).
   let who = account()?.id ?? null;
-  const youOpen = (e: Event) => { if (status && !hidden()) openYou(status, (e as CustomEvent<Row>).detail); };
+  const youOpen = (e: Event) => { if (status && !hidden()) openYou(status, (e as CustomEvent<Row | null>).detail ?? undefined); };
   addEventListener('rank-you', youOpen);
   // The News button's dot: news newer than the last visit to the News page (checked from what the phone kept; the
   // two feeds are asked for in the background, at most once a minute).

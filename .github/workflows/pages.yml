@@ -57,6 +57,31 @@ jobs:
           VITE_HARAKAT_URL: ${{ vars.HARAKAT_URL }}
           # Cloudflare Turnstile site key (public) for the check before guest sign-ins; empty = no check.
       - run: node scripts/check-size.mjs # speed budget: first-load JS + CSS
+      # Android App Links: shared links (https://…/i/#/…) open the installed app only when the site lists the
+      # SHA-256 of the key the app is signed with. Taken from the signing key in the secrets (never stored), plus
+      # Google Play's app-signing key once the app is on Play (repo variable PLAY_SIGNING_SHA256, from Play Console →
+      # Test and release → App integrity), so both sideloaded and Play installs open links.
+      - name: Android App Links file
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PLAY_SHA: ${{ vars.PLAY_SIGNING_SHA256 }}
+        run: |
+          fps=()
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf %s "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/app.keystore"
+            PW=$(printf %s "$PW" | tr -d '[:space:]')
+            fp=$(keytool -list -v -keystore "$RUNNER_TEMP/app.keystore" -storetype PKCS12 -storepass "$PW" -alias ayahstudio 2>/dev/null | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -1)
+            rm -f "$RUNNER_TEMP/app.keystore"
+            [ -n "$fp" ] && fps+=("$fp") || echo "::warning::Could not read the app's signing key: links will open the web on Android"
+          fi
+          for f in $(printf %s "$PLAY_SHA" | tr ',;' '  '); do fps+=("$f"); done
+          if [ ${#fps[@]} -gt 0 ]; then
+            mkdir -p dist/.well-known
+            list=$(printf '"%s",' "${fps[@]}"); list="[${list%,}]"
+            printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.brandyco.ayahstudio","sha256_cert_fingerprints":%s}}]\n' "$list" > dist/.well-known/assetlinks.json
+            echo "assetlinks.json lists ${#fps[@]} key(s)"
+          fi
       # GitHub Pages only while the repo is public (a private repo on the free plan has no Pages site).
       - uses: actions/configure-pages@v5
         if: ${{ !github.event.repository.private }}
@@ -96,7 +121,10 @@ jobs:
       - uses: actions/checkout@v4
         if: env.CF_TOKEN_RAW != ''
         with:
-          sparse-checkout: files
+          sparse-checkout: |
+            files
+            scripts/make-share-cards.mjs
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         if: env.CF_TOKEN_RAW != ''
         with:
@@ -127,13 +155,47 @@ jobs:
           test "$n" -lt 20000
           test -z "$(find files/site -type f -size +24M)"
           test -s files/site/version.json
+      # Link preview banners (scripts/make-share-cards.mjs): one per ayah, surah and invite kind, only on the web app's
+      # address (files/wrangler.site.toml + files/share.js). Made again only when the script, the text or the fonts change
+      # (~3 min); otherwise restored from the cache.
+      - name: Share banners key
+        id: cards
+        if: env.CF_TOKEN_RAW != ''
+        run: |
+          key=$(cat scripts/make-share-cards.mjs files/site/data/meta.json files/site/data/quran-uthmani.json files/site/data/en-sahih.json \
+            files/site/fonts/UthmanicHafs.woff2 files/site/fonts/Nunito-latin.woff2 files/site/fonts/NotoSansArabic-Bold.woff2 \
+            files/site/fonts/suras/*.woff2 files/site/icon-b-192.png files/site/icon-b-512.png | sha256sum | cut -c1-16)
+          echo "key=share-cards-$key" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: cards-cache
+        if: env.CF_TOKEN_RAW != ''
+        with:
+          path: share-cards
+          key: ${{ steps.cards.outputs.key }}
+      - name: Make the share banners
+        if: env.CF_TOKEN_RAW != '' && steps.cards-cache.outputs.cache-hit != 'true'
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+          PUBLIC=files/site/ OUT=share-cards/ node scripts/make-share-cards.mjs
+          test "$(find share-cards/og/a -name '*.jpg' | wc -l)" -eq 6236
+      - uses: actions/cache/save@v4
+        if: env.CF_TOKEN_RAW != '' && steps.cards-cache.outputs.cache-hit != 'true'
+        with:
+          path: share-cards
+          key: ${{ steps.cards.outputs.key }}
       - name: Deploy
         if: env.CF_TOKEN_RAW != ''
         working-directory: files
         run: |
           set -o pipefail
           npx --yes wrangler@4 deploy 2>&1 | tee /tmp/deploy.log
-          npx --yes wrangler@4 deploy --name ayah-studio 2>&1 | tee /tmp/deploy-site.log
+          # The web app's address also gets the banners and the share-link script.
+          cp -r ../share-cards/og site/og
+          n=$(find site -type f | wc -l)
+          echo "$n files on the web app's address"
+          test "$n" -lt 20000
+          npx --yes wrangler@4 deploy --config wrangler.site.toml 2>&1 | tee /tmp/deploy-site.log
       - name: Check the copy answers with CORS and this build
         if: env.CF_TOKEN_RAW != ''
         run: |
@@ -167,6 +229,12 @@ jobs:
           # Cloudflare answers /privacy.html with a redirect to /privacy (html_handling auto-trailing-slash), so follow it.
           curl -sfL "$site/privacy.html" | grep -q 'id="delete"' || { echo "::error::$site/privacy.html missing"; exit 1; }
           curl -sf "$site/sw.js" > /dev/null || { echo "::error::$site/sw.js missing"; exit 1; }
+          curl -sf "$site/.well-known/apple-app-site-association" | grep -q applinks || echo "::warning::$site/.well-known/apple-app-site-association missing: links will not open the iPhone app"
+          curl -sf "$site/i/" | grep -q stores.json || echo "::warning::$site/i/ (shared links) missing"
+          # Share links answer with their own banner and title (files/share.js).
+          curl -sf "$site/s/11/90" | grep -q "og/a/11/90.jpg" || { echo "::error::$site/s/11/90 has no ayah banner"; exit 1; }
+          curl -sfI "$site/og/a/11/90.jpg" | grep -qi '^content-type: image/jpeg' || { echo "::error::$site/og/a/11/90.jpg missing"; exit 1; }
+          curl -sf "$site/rf/test" | grep -q "og/k/rf.jpg" || { echo "::error::$site/rf/… has no invite banner"; exit 1; }
           grep -q "$site/" files/site/assets/*.js || echo "::warning::The build's PUBLIC_URL is not $site/ (src/cloud/config.ts)"
           echo "The web app is live at $site/" >> "$GITHUB_STEP_SUMMARY"
       - name: Let Google sign-ins come back to the new address
