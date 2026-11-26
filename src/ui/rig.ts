@@ -135,20 +135,41 @@ function frames(name: Gesture, F: Record<Ch, number[]>): Frames {
   let k = framed.get(name);
   if (k) return k;
   const n = F.sq.length;
-  const fr = (f: (i: number) => Keyframe) => Array.from({ length: n }, (_, i) => f(i));
+  // Only the frames a straight line between neighbours would not give back (within a hair: a quarter degree, a few
+  // thousandths of a scale): the compositor draws the in-betweens. A cheer went from ~470 keyframes to well under
+  // half, and starting it no longer holds up the frame the chest bursts open in (2026-11-26).
+  const kept = (series: [number[], number][]) => {
+    const keep = new Set([0, n - 1]);
+    const walk = (a: number, b: number) => {
+      if (b - a < 2) return;
+      let worst = -1, at = -1;
+      for (let i = a + 1; i < b; i++) {
+        const u = (i - a) / (b - a);
+        for (const [v, tol] of series) {
+          const d = Math.abs(v[i] - (v[a] + (v[b] - v[a]) * u)) / tol;
+          if (d > worst) { worst = d; at = i; }
+        }
+      }
+      if (worst > 1) { keep.add(at); walk(a, at); walk(at, b); }
+    };
+    walk(0, n - 1);
+    return [...keep].sort((x, y) => x - y);
+  };
+  const fr = (f: (i: number) => Keyframe, series: [number[], number][]) => kept(series).map((i) => ({ ...f(i), offset: n > 1 ? i / (n - 1) : 0 }));
+  const A = 0.25, L = 0.15, S = 0.004;
   const pct = (u: number, of: number) => `${(u / of * 100).toFixed(3)}%`;
   // Left arm (screen left) turns clockwise to swing out, the right one the other way.
   k = {
-    ual: fr((i) => ({ transform: `rotate(${F.ual[i].toFixed(2)}deg)` })),
-    fal: fr((i) => ({ transform: `rotate(${F.fal[i].toFixed(2)}deg)` })),
-    uar: fr((i) => ({ transform: `rotate(${(-F.uar[i]).toFixed(2)}deg)` })),
-    far: fr((i) => ({ transform: `rotate(${(-F.far[i]).toFixed(2)}deg)` })),
+    ual: fr((i) => ({ transform: `rotate(${F.ual[i].toFixed(2)}deg)` }), [[F.ual, A]]),
+    fal: fr((i) => ({ transform: `rotate(${F.fal[i].toFixed(2)}deg)` }), [[F.fal, A]]),
+    uar: fr((i) => ({ transform: `rotate(${(-F.uar[i]).toFixed(2)}deg)` }), [[F.uar, A]]),
+    far: fr((i) => ({ transform: `rotate(${(-F.far[i]).toFixed(2)}deg)` }), [[F.far, A]]),
     mv: fr((i) => {
       const sy = 1 + F.sq[i], sx = 1 / Math.sqrt(Math.max(0.5, sy));
       return { transform: `translateY(${pct(-F.lift[i], 262)}) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` };
-    }),
-    hn: fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` })),
-    sh: fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` })),
+    }, [[F.lift, L], [F.sq, S]]),
+    hn: fr((i) => ({ rotate: `${(-F.tilt[i]).toFixed(2)}deg`, translate: `0 ${pct(F.dip[i] - F.lift[i] * 0.15, 262)}` }), [[F.tilt, A], [F.dip, L], [F.lift, L / 0.15]]),
+    sh: fr((i) => ({ scale: `${(1 - F.lift[i] / 40).toFixed(3)}` }), [[F.lift, 0.04]]),
   };
   framed.set(name, k);
   return k;
