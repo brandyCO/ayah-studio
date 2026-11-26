@@ -60,6 +60,7 @@ public class AppActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        ExitsPlugin.catchCrashes(this);
         registerPlugin(MediaScanPlugin.class);
         registerPlugin(DailyPlugin.class);
         registerPlugin(ExportServicePlugin.class);

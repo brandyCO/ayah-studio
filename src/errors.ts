@@ -61,8 +61,9 @@ async function sendExits(S: NonNullable<Awaited<ReturnType<typeof sentry>>>) {
       scope.setLevel('fatal');
       scope.setTags({ exit: e.reason, exit_when: e.importance ?? '', android_sdk: String(r.sdk), maker: r.maker });
       scope.setContext('exit', { ...e, trace: undefined, at: new Date(e.time).toISOString(), model: r.model, ramMb: r.ramMb, lowRamDevice: r.lowRamDevice });
-      if (e.trace) scope.setExtra('anr_trace', e.trace);
-      scope.setFingerprint(['app-exit', e.reason]);
+      if (e.trace) scope.setExtra('trace', e.trace);
+      // A Java crash carries its exception ("java.lang.X: …"): one issue per kind of crash, not one for all.
+      scope.setFingerprint(['app-exit', e.reason, e.trace && e.reason === 'crash' ? e.description.split(':')[0] : '']);
       S.captureMessage(`App closed: ${e.reason}${e.description ? ` (${e.description.slice(0, 120)})` : ''}`);
     });
   }
