@@ -107,7 +107,7 @@ function setEasy(on: boolean) {
 
 /** Seven days of gifts (src/ui/weekGifts.ts): Me's card, kept current when a gift is taken. */
 function comingSlot(): HTMLElement | '' {
-  giftsOn(daysOpened());
+  giftsOn(daysOpened(), firstSyncPending());
   const slot = h('div', { class: 'co-slot' });
   void import('./weekGifts').then((m) => {
     let el: HTMLElement | '' = slot;
@@ -1547,8 +1547,8 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
   focusClaim();
   // Me is kept alive between tabs: a Claim from Notifications comes back to the kept screen.
   root.addEventListener('screen-shown', focusClaim);
-  // A badge's notification: its prize card glows when it waits for its Claim, else its sheet opens.
-  const focusBadge = () => { try {
+  // A badge's notification (#/me/badges): its prize card opens its Claim when it waits, else its sheet opens.
+  try {
     const id = sessionStorage.getItem('meBadge');
     if (id && page === 'badges') {
       sessionStorage.removeItem('meBadge');
@@ -1556,14 +1556,11 @@ export async function showMe(root: HTMLElement, at?: string): Promise<() => void
       if (b) setTimeout(() => {
         const card = b.earned && !badgeDone(id) ? root.querySelector<HTMLElement>(`.claim-badge[data-bid="${CSS.escape(id)}"]`) : null;
         if (!card) { openBadge(b); return; }
-        card.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-        card.classList.add('focus');
-        setTimeout(() => card.classList.remove('focus'), 2600);
+        card.scrollIntoView({ block: 'center', behavior: 'auto' });
+        requestAnimationFrame(() => requestAnimationFrame(() => card.click()));
       }, 400);
     }
-  } catch { /* private window */ } };
-  focusBadge();
-  root.addEventListener('screen-shown', focusBadge);
+  } catch { /* private window */ }
   window.addEventListener('journey-changed', refresh);
   window.addEventListener('readlog-changed', refresh);
   window.addEventListener('prayer-changed', onPrayer);

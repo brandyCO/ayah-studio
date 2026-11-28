@@ -76,7 +76,8 @@ span.cel-lantern { transform-origin: 50% 52%; }
 @keyframes cel-rise { 0% { opacity: 0; scale: .15 .04; } 45% { opacity: 1; scale: 1.1 1.12; } 70% { scale: .97 .96; } 100% { scale: 1; } }
 @keyframes cel-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes cel-sweep { 0% { opacity: 1; transform: translateX(-45%); } 100% { opacity: 1; transform: translateX(45%); } }
-@keyframes cel-kick { from { opacity: 0; letter-spacing: .5em; } }
+/* Spread wide, then closing in: by scale, never by letter-spacing (which redid the layout every frame of the reveal). */
+@keyframes cel-kick { from { opacity: 0; transform: scaleX(1.35); } }
 @keyframes cel-title { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; } }
 @keyframes cel-sway { from { rotate: -2deg; } to { rotate: 2deg; } }
 @keyframes cel-core { 0% { opacity: .3; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }

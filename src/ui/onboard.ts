@@ -3,6 +3,7 @@
 // stands in the page and speaks in a bubble, word by word; a question screen has it small beside its question and
 // the answers below; one big Continue at the bottom. What brings you here → its answer → how much each day → the
 // first goal. Saves exactly what the old sheets saved (`whyHere`, the pace, `tailor()`).
+import { coverWhileOpen } from './coverPage';
 import { giftGrid } from './weekGifts';
 import { daysOpened } from '../data/reveal';
 import './onboard.css';
@@ -281,6 +282,7 @@ export function openOnboarding() {
   });
   document.body.append(d);
   d.showModal();
+  coverWhileOpen(d);
   draw(1);
 }
 

@@ -5,17 +5,13 @@ import { nt } from '../i18n/notifs';
 import { goTo, type NDest } from './notifTap';
 
 export type { NDest };
-/** `reward`: it carries a chest, gift or prize; `claimed`: that was already taken (the mail shows "Claimed"). `to`: where it
- *  leads, also carried by its phone notification. */
+/** `reward`: it carries a chest, gift or prize; `claimed`: that was already taken (the mail shows "Claimed"). */
 export interface NView { icon: string; title: string; sub?: string; act?: string; go: () => void; to: NDest; reward?: boolean; claimed?: boolean }
 
 // Each kind opens its own screen (owner 2026-11-25: "a screen for each"), the one its spot in the app opens too.
-const nav = (hash: string, ...store: [string, string][]) => {
-  const to: NDest = { hash, store: store.length ? store : undefined };
-  return { to, go: () => goTo(to) };
-};
-/** The goals screen, with that very chest (goal id) opened as it shows. */
-const claimAt = (id?: string) => id ? nav('#/me/goals', ['meFocus', 'claim'], ['meFocusId', id]) : nav('#/me/goals', ['meFocus', 'claim']);
+// `fid`: the very chest to open there (owner 2026-11-26: "Claim opens that chest").
+const nav = (hash: string, store?: [string, string], fid?: string) => ({ to: { hash, store, fid }, go: () => goTo({ hash, store, fid }) });
+const toGoals = (fid?: string) => nav('#/me/goals', ['meFocus', 'claim'], fid);
 const REWARD = new Set<NEntry['ty']>(['goal', 'weekGoal', 'all', 'weekAll', 'badge', 'pieces', 'chestCh', 'pact', 'gift', 'prize']);
 // Friends' asks, follows and news live on the News page (2026-11-23).
 const toFriends = nav('#/news');
@@ -53,13 +49,13 @@ function baseView(e: NEntry, w: Words, waiting: Set<string>): NView {
   switch (e.ty) {
     case 'goal': case 'weekGoal': {
       const goal = d.goal ? w.goalLabel(d.goal as never) : '';
-      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...claimAt(d.goal?.id) };
+      return { icon: 'gift', title: nt(e.ty === 'goal' ? 'nt.goal' : 'nt.weekGoal', { goal }), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals(d.goal?.id) };
     }
-    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...claimAt('all') };
-    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...claimAt() };
+    case 'all': return { icon: 'star', title: nt('nt.allGoals'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals('all') };
+    case 'weekAll': return { icon: 'star', title: nt('nt.weekAll'), sub: wait ? nt('nt.chestSub') : undefined, act: wait ? nt('nt.claim') : undefined, ...toGoals() };
     case 'badge': {
       const id = d.id ?? '';
-      return { icon: 'medal', title: nt('nt.badge', { badge: w.badgeName({ fam: id.slice(0, -2), step: +id.slice(-1) }) }), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/badges', ['meBadge', id], ['meFocus', 'claim'], ['meFocusId', `b:${id}`]) };
+      return { icon: 'medal', title: nt('nt.badge', { badge: w.badgeName({ fam: id.slice(0, -2), step: +id.slice(-1) }) }), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/badges', ['meBadge', id]) };
     }
     case 'pieces': return { icon: 'shirt', title: ((d.n ?? 1) > 1 ? nt('nt.piecesN', { n: d.n ?? 1 }) : nt('nt.pieces1')), act: wait ? nt('nt.claim') : undefined, ...nav('#/me/wardrobe') };
     case 'level': return { icon: 'sparkle', title: nt('nt.level', { n: d.n ?? 1 }), sub: nt('nt.levelSub'), ...nav('#/me/level') };
@@ -68,7 +64,7 @@ function baseView(e: NEntry, w: Words, waiting: Set<string>): NView {
     case 'pact': return { icon: 'moon', title: nt('nt.pact'), act: wait ? nt('nt.claim') : undefined, ...nav('#/me') };
     // Open plays the gift right here (owner 2026-11-23: it used to send people to Me, where they did not see it).
     case 'gift': return { icon: 'gift', title: ((d.n ?? 1) > 1 ? nt('nt.giftN', { n: d.n ?? 1 }) : nt('nt.gift1')), act: wait ? nt('nt.open') : undefined,
-      to: { hash: '#/me', run: 'gifts' }, go: () => void import('./giftOpen').then((m) => m.openWaitingGifts()) };
+      go: () => void import('./giftOpen').then((m) => m.openWaitingGifts()), to: { hash: '#/me', run: 'gifts' } };
     case 'follow': return { icon: 'users', title: nt('nt.follow', { name }), act: nt('nt.see'), ...toFriends };
     case 'ask': return { icon: 'users', title: nt('nt.ask', { name }), act: nt('nt.see'), ...toFriends };
     case 'challenge': return { icon: 'swords', title: nt('nt.challenge', { name }), sub: d.kind ? w.clt(`cl.k.${d.kind}` as never) : undefined, act: nt('nt.see'), ...toChallenges };

@@ -14,6 +14,7 @@
 //   #/ramadan          today's Ramadan portion (from a reminder)
 //   #/season           the Ramadan season: countdown and what unlocks (before), its home (during), the recap (Eid)
 //   #/kids[/N]         the Kids space (docs/kids.md): while it is on, every other address leads here
+import { busyNow, whenQuiet } from './quiet';
 import './styles.css';
 import { closeSheetsOnRoute } from './ui/backCloses';
 import { h, skeleton, studioShell, sweepListeners } from './ui/dom';
@@ -70,15 +71,21 @@ async function prebuild(key: 'me' | 'learn' | 'ranks') {
     alive.set(key, { el: screen, c, at: Date.now(), y: 0 });
     // Laid out and painted once, unseen (a kept screen that never rendered would do it all on its first tap); then
     // `content-visibility: hidden` keeps that work for the tap.
-    screen.classList.replace('screen-kept', 'screen-warm');
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-      if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
-    }, 50)));
+    const warm = () => {
+      if (!screen.classList.contains('screen-kept')) return;
+      screen.classList.replace('screen-kept', 'screen-warm');
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        if (screen.classList.contains('screen-warm')) screen.classList.replace('screen-warm', 'screen-kept');
+      }, 50)));
+    };
+    // Its unseen layout and paint wait for a quiet moment too (a sheet may have opened while it was built).
+    if (busyNow()) whenQuiet(warm, 300); else warm();
   } catch (e) { console.warn('prebuild', key, e); screen.remove(); }
 }
+// Background work waits for a quiet moment (src/quiet.ts): nothing is built while a dialog or a moment is on screen,
+// or within 1.5 s of a touch.
 function prebuildTabs() {
-  const idle = (fn: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 4000 }) : fn()), ms);
-  idle(() => void prebuild('me').then(() => idle(() => void prebuild('learn').then(() => idle(() => void prebuild('ranks'), 1500)), 1500)), 2500);
+  whenQuiet(() => void prebuild('me').then(() => whenQuiet(() => void prebuild('learn').then(() => whenQuiet(() => void prebuild('ranks'), 1500)), 1500)), 2500);
 }
 /** Puts `els` in #app in place of what was shown, leaving the kept (hidden) tab screens in it. */
 function replaceScreens(...els: HTMLElement[]) {
@@ -286,13 +293,12 @@ later(() => setTimeout(() => {
   const go = () => {
     // One screen's code per quiet moment: starting the three at once listed ~200 files in one task (~100 ms on a
     // slow phone, a felt pause a few seconds after opening).
-    const quiet = (f: () => void, ms: number) => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 3000 }) : f()), ms);
     void import('./ui/me').catch(() => {});
-    quiet(() => void import('./ui/learnPath').catch(() => {}), 300);
-    quiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
+    whenQuiet(() => void import('./ui/learnPath').catch(() => {}), 300);
+    whenQuiet(() => void import('./ui/ranks').catch(() => {}), 900); // Ranks too, a moment later
     prebuildTabs(); // then Me and Learn built ahead, hidden, so their first tap is instant too
   };
-  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 }); else go();
+  whenQuiet(go, 0);
 }, 2500));
 watchVitals(); // real-use speed (this device only, Device check)
 if (isNative()) void import('./appLinks'); // a shared link opened the app: go to its route

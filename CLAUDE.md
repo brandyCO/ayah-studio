@@ -728,6 +728,14 @@ with the KFGQPC Uthmanic Hafs font (rule 5).
       an export). Headless Chromium, 4× CPU: studio ready 1.0 s → ~0.4 s
 - [x] Error reports (`src/errors.ts`, Sentry, lazy-loaded): on since 2026-11-16 (the owner's DSN, EU region, is the
       default in `errors.ts`; the repo variable `SENTRY_DSN` overrides it); privacy page → Other services → Crash reports
+      **App closes on Android** (owner report 2026-11-24, "listening to Quran and suddenly it forced stop", nothing in
+      Sentry): the browser SDK cannot see a native crash or the WebView renderer dying. `AppActivity` now handles a dead
+      renderer (Capacitor left it unhandled, so Android closed the app): it notes why and rebuilds the page in place.
+      `ExitsPlugin.java` keeps that note and, Android 11+, the system's own exit records (crash, native crash, ANR with the
+      start of its trace, low memory, battery-manager kills while on screen or playing); `sendExits()` in `errors.ts`
+      sends each once on the next start, never sampled (tag `exit`; error sampling moved into `beforeSend`).
+      `PlaybackService` is no longer started again for every ayah: the running service updates its notification in
+      place, and hide ends it safely even mid-start (a stop overtaking a start made Android close the app)
 - [x] Whole-app speed pass (owner request 2026-11-19, "very, very fast … no matter the connection"; thread "Make the whole app
       fast"; report + offline-first plan: Claude Doc "Ayah Studio: fast everywhere, works offline"). **Bench**: `scripts/speed-bench.mjs
       [cpu] [runs]` (built `dist/`, `DIST=` another build; phone size, CPU ×6, outside hosts fail after 0.6 s or `HANG` ms; web cold
@@ -1809,6 +1817,15 @@ duas/reflections section in Me.
       them all. Goal / adhkar chests hold their Light; a Ranks prize holds its Light, the trophy, the freeze (#1) and the
       week's jewel avatar or rare frame. Enter / Space taps; reduced motion → the open chest with every prize. Styles in
       `src/ui/celebrate.css` (lazy)
+      **Reveal pass** (owner report 2026-11-26, "the last opening reveal frames lag a bit … smooth on any phone"): the burst is
+      spread over four frames (chest + sound + sparks, then the flare, its sparkles, then the character's cheer; was one
+      ~165 ms task at 6× CPU); flare pieces are drawn into bitmaps while the chest waits (`warmFlare()`; an SVG picture was
+      parsed and recorded in the burst's frame) and leave once played; the reveal's kicker scales instead of animating
+      letter-spacing (a layout every frame), the rare wash and the charging glow fade by opacity only (a background /
+      `filter` repainted every frame), the "Rare" ribbon is laid out with its card, the chest keeps its layers through the
+      reveal, the counting Light lays out only its own box; rig gestures keep only the keyframes a straight line would not
+      give back (a cheer 470 → 151); the smoothness meter counts one moment in four (its rAF cost ~20 % of the main thread).
+      6× CPU: longest main-thread task around the opening 109–277 → 50–110 ms. Bench: `bench/unlock.html?chest=N&light=L`
       **Craft pass + sounds** (owner request 2026-11-10, "inspired by Duolingo… lets try sounds"): `src/ui/juice.ts` — spring
       physics on WAAPI (`spring`, `squash`, `popIn`, `bump`: overshoot, then settle), `tick()` counters that pop on each step,
       `combo()` ("2 in a row" pill when rewards are claimed within 2 min of each other, sessionStorage `celCombo`) and **Noor**

@@ -56,6 +56,57 @@ function bloom([hi, c]: [string, string, string]): string {
 }
 
 interface Art { rays: string; rays2?: string; ring: string; khatam: string; spark: string; spark2?: string; bloom: string }
+type Piece = keyof Art;
+
+// Bitmaps (2026-11-26, Marwan: "the last opening reveal frames lag a bit … smooth on any phone"). An SVG picture is
+// parsed, laid out and recorded on the main thread the first time it paints, at its full size: the flare's eight to
+// twenty-five pictures did that in the very frame the chest burst open (~70 ms at 6× CPU). Each piece is now drawn once
+// into a bitmap ahead of time (`warmFlare`, a piece per quiet moment), which the phone decodes off the main thread; the
+// soft pieces (bloom, rays, sparkles) need no more than one pixel per CSS pixel, capped, so they upload quickly too.
+const bits = new Map<string, string>(); // rarity · piece · px → blob URL
+const pending = new Set<string>();
+const SOFT: Partial<Record<Piece, true>> = { rays: true, rays2: true, bloom: true, spark: true, spark2: true };
+const pxFor = (piece: Piece, css: number) => {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  return Math.max(32, Math.min(SOFT[piece] ? 640 : 900, Math.round(css * (SOFT[piece] ? 1 : dpr) / 32) * 32));
+};
+const bitKey = (r: Rarity, piece: Piece, px: number) => `${r}|${piece}|${px}`;
+async function drawBit(r: Rarity, piece: Piece, px: number): Promise<void> {
+  const key = bitKey(r, piece, px);
+  if (bits.has(key) || pending.has(key)) return;
+  const src = art(r)[piece];
+  if (!src) return;
+  pending.add(key);
+  try {
+    const im = new Image();
+    im.src = src;
+    await im.decode();
+    const c = document.createElement('canvas');
+    c.width = c.height = px;
+    c.getContext('2d')!.drawImage(im, 0, 0, px, px);
+    const blob = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/png'));
+    if (blob) bits.set(key, URL.createObjectURL(blob));
+  } catch { /* the SVG picture stays the fallback */ } finally { pending.delete(key); }
+}
+/** The pieces a flare of this rarity and size will show, as [piece, css px]. */
+function pieces(r: Rarity, S: number): [Piece, number][] {
+  const out: [Piece, number][] = [['bloom', S * 1.1], ['khatam', S * 0.62], ['ring', S * 0.7], ['spark', S * 0.13]];
+  if (r >= 1) out.unshift(['rays', S * (r >= 3 ? 1.5 : 1.25)]);
+  if (r === 4) out.push(['rays2', S * 1.3], ['spark2', S * 0.13]);
+  return out;
+}
+/** Draws a flare's pieces ahead of time, one per quiet moment, so the burst itself only starts animations. */
+export function warmFlare(r: Rarity, size: number) {
+  if (reduced()) return;
+  const todo = pieces(r, size).map(([p, css]) => [p, pxFor(p, css)] as const).filter(([p, px]) => !bits.has(bitKey(r, p, px)));
+  const next = () => {
+    const one = todo.shift();
+    if (!one) return;
+    const go = () => void drawBit(r, one[0], one[1]).then(next);
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 800 }); else setTimeout(go, 50);
+  };
+  next();
+}
 const cache = new Map<Rarity, Art>();
 function art(r: Rarity): Art {
   let a = cache.get(r);
@@ -84,17 +135,21 @@ export interface FlareOpts {
 export function flare(host: HTMLElement, r: Rarity, o: FlareOpts = {}): HTMLElement | null {
   if (reduced() || !host.isConnected) return null;
   const slow = lite();
-  if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+  // Positions and sizes given by the caller are used as they are: reading the host's style or size here forced the
+  // phone to restyle and lay out the whole moment in the frame of the burst.
+  const given = o.x != null && o.y != null && o.size != null;
+  if (!given && getComputedStyle(host).position === 'static') host.style.position = 'relative';
   const a = art(r);
-  const w = host.clientWidth || 300, hgt = host.clientHeight || 300;
+  const w = given ? 0 : host.clientWidth || 300, hgt = given ? 0 : host.clientHeight || 300;
   const S = o.size ?? Math.min(420, Math.min(w, hgt) * 0.9);
+  const pic = (piece: Piece, k: number) => bits.get(bitKey(r, piece, pxFor(piece, S * k))) ?? a[piece]!;
   const layer = document.createElement('span');
   layer.className = 'flare';
   layer.setAttribute('aria-hidden', 'true');
   layer.style.cssText = `position:absolute;left:${o.x ?? w / 2}px;top:${o.y ?? hgt / 2}px;width:0;height:0;pointer-events:none;z-index:${o.under ? 0 : 5}`;
-  const img = (src: string, k: number) => {
+  const img = (piece: Piece, k: number) => {
     const el = document.createElement('img');
-    el.src = src; el.alt = ''; el.decoding = 'sync';
+    el.src = pic(piece, k); el.alt = ''; el.decoding = 'sync';
     const d = S * k;
     el.style.cssText = `position:absolute;left:${-d / 2}px;top:${-d / 2}px;width:${d}px;height:${d}px;max-width:none;opacity:0;will-change:transform,opacity`;
     layer.append(el);
@@ -102,12 +157,20 @@ export function flare(host: HTMLElement, r: Rarity, o: FlareOpts = {}): HTMLElem
   };
   const E = 'cubic-bezier(.15,.75,.3,1)';
   const anims: Animation[] = [];
-  const go = (el: Element, k: Keyframe[], o2: KeyframeAnimationOptions) => { anims.push(el.animate(k, { fill: 'forwards', easing: E, ...o2 })); };
+  const wheelEls = new Set<Element>();
+  // A piece that has played out leaves at once: kept (invisible) it stayed a layer the phone re-layered and re-styled
+  // with every later frame of the moment (the chest keeps its flare until it closes).
+  const go = (el: Element, k: Keyframe[], o2: KeyframeAnimationOptions) => {
+    const an = el.animate(k, { fill: 'forwards', easing: E, ...o2 });
+    anims.push(an);
+    if (!wheelEls.has(el)) an.finished.then(() => el.remove(), () => {});
+  };
 
   // God rays: from rare up; legendary and mythic keep turning behind the prize while it is shown.
   const hold = o.hold ?? 2600;
   if (r >= 1) {
-    const wheels = [img(a.rays, r >= 3 ? 1.5 : 1.25), ...(a.rays2 ? [img(a.rays2, 1.3)] : [])];
+    const wheels = [img('rays', r >= 3 ? 1.5 : 1.25), ...(a.rays2 ? [img('rays2', 1.3)] : [])];
+    for (const w of wheels) wheelEls.add(w);
     wheels.forEach((el, i) => {
       const peak = r >= 3 ? 0.95 : 0.6, dir = i ? -1 : 1;
       go(el, [{ opacity: 0, transform: 'scale(.3) rotate(0deg)' }, { opacity: peak, transform: `scale(1) rotate(${dir * 20}deg)` }], { duration: 700 });
@@ -119,24 +182,27 @@ export function flare(host: HTMLElement, r: Rarity, o: FlareOpts = {}): HTMLElem
     });
   }
   // The bloom: a soft flash of the rarity's light.
-  go(img(a.bloom, 1.1), [{ opacity: 0, transform: 'scale(.2)' }, { opacity: 1, transform: 'scale(.9)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 900 + r * 120 });
+  go(img('bloom', 1.1), [{ opacity: 0, transform: 'scale(.2)' }, { opacity: 1, transform: 'scale(.9)', offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 900 + r * 120 });
   // The khatam turns open and fades; the shock ring runs out (twice from epic up).
-  go(img(a.khatam, 0.62), [{ opacity: 0, transform: 'scale(.2) rotate(-45deg)' }, { opacity: 1, transform: 'scale(.95) rotate(0deg)', offset: 0.4 }, { opacity: 0, transform: 'scale(1.35) rotate(22deg)' }], { duration: 1100 });
+  go(img('khatam', 0.62), [{ opacity: 0, transform: 'scale(.2) rotate(-45deg)' }, { opacity: 1, transform: 'scale(.95) rotate(0deg)', offset: 0.4 }, { opacity: 0, transform: 'scale(1.35) rotate(22deg)' }], { duration: 1100 });
   const rings = r >= 2 ? 2 : 1;
-  for (let i = 0; i < rings; i++) go(img(a.ring, 0.7), [{ opacity: 0.95, transform: 'scale(.15)' }, { opacity: 0, transform: `scale(${1.5 + i * 0.35})` }], { duration: 800 + i * 200, delay: 60 + i * 180 });
-  // Sparkles thrown out in a ring, each popping, turning and fading where it lands.
+  for (let i = 0; i < rings; i++) go(img('ring', 0.7), [{ opacity: 0.95, transform: 'scale(.15)' }, { opacity: 0, transform: `scale(${1.5 + i * 0.35})` }], { duration: 800 + i * 200, delay: 60 + i * 180 });
+  // Sparkles thrown out in a ring, each popping, turning and fading where it lands. They start a frame later, in
+  // their own task (they wait 80 ms anyway): starting twenty-odd animations with the rest held up the burst's frame.
   const n = slow ? Math.ceil(SPARKS[r] / 2) : SPARKS[r];
-  for (let i = 0; i < n; i++) {
+  const throwSparks = () => { if (!layer.isConnected) return; for (let i = 0; i < n; i++) {
     const ang = (i / n) * Math.PI * 2 + (i % 3) * 0.31, dist = S * (0.32 + ((i * 37) % 10) / 34);
     const k = 0.07 + ((i * 53) % 7) / 100;
-    const el = img(a.spark2 && i % 3 === 0 ? a.spark2 : a.spark, k);
+    const el = img(a.spark2 && i % 3 === 0 ? 'spark2' : 'spark', 0.13);
+    if (k !== 0.13) { const d = S * k; el.style.left = el.style.top = `${-d / 2}px`; el.style.width = el.style.height = `${d}px`; }
     const x = Math.cos(ang) * dist, y = Math.sin(ang) * dist;
     go(el, [{ opacity: 0, transform: 'translate(0,0) scale(.2) rotate(0deg)' },
       { opacity: 1, transform: `translate(${(x * 0.7).toFixed(1)}px,${(y * 0.7).toFixed(1)}px) scale(1.15) rotate(45deg)`, offset: 0.45 },
       { opacity: 0, transform: `translate(${x.toFixed(1)}px,${(y + 14).toFixed(1)}px) scale(.4) rotate(90deg)` }],
-    { duration: 900 + (i % 4) * 140, delay: 80 + (i % 5) * 40 });
-  }
+    { duration: 900 + (i % 4) * 140, delay: Math.max(0, 64 + (i % 5) * 40) });
+  } };
   if (o.under) host.prepend(layer); else host.append(layer);
+  requestAnimationFrame(throwSparks);
   const end = Math.max(1500, hold ? hold + 700 : 0);
   if (hold || r < 1) setTimeout(() => { for (const x of anims) x.cancel(); layer.remove(); }, end);
   return layer;

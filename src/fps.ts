@@ -11,9 +11,12 @@ export function fpsLog(): FpsEntry[] {
   } catch { return []; }
 }
 
-/** Starts counting frames for a moment; call the returned function when it ends. */
+/** Starts counting frames for a moment; call the returned function when it ends.
+ *  Counting asks for a main-thread frame on every vsync, and each one re-styles every moving part of the moment
+ *  (measured 2026-11-26: ~20 % of the main thread during a chest's reveal at 6× CPU), so only one moment in four is
+ *  counted; Device check shows the newest 40 counted. */
 export function fpsStart(name: string): () => void {
-  if (typeof requestAnimationFrame === 'undefined') return () => {};
+  if (typeof requestAnimationFrame === 'undefined' || Math.random() >= 0.25) return () => {};
   const gaps: number[] = [];
   let last = 0, raf = 0, done = false;
   const step = (t: number) => {
