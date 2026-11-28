@@ -545,7 +545,7 @@ export function celebrate(m: Moment, from?: Element | null, light = 0): Promise<
       ok.focus({ preventScroll: true });
       // While the user reads what they won, the page behind is brought back (its restyle done now, in a still
       // moment, not at Continue, where it held up the fade and the Light flying home).
-      later(1400, () => { if (!done) requestIdleCallback?.(() => { if (!done) uncover(); }, { timeout: 600 }) ?? uncover(); });
+      later(1400, () => { if (done) return; if ('requestIdleCallback' in window) requestIdleCallback(() => { if (!done) uncover(); }, { timeout: 600 }); else uncover(); });
     };
     const land = (i: number) => {
       const c = lootCards[i];
